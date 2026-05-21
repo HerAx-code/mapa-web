@@ -1,0 +1,86 @@
+{
+  "common": {
+    "appName": "MAPA",
+    "appFull": "Medical Assistance Portal Access",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No",
+    "english": "English",
+    "filipino": "Filipino",
+    "viewAll": "View all",
+    "noData": "No data yet"
+  },
+  "auth": {
+    "welcome": "Welcome to MAPA",
+    "subtitle": "Medical Assistance Portal Access · CRMC",
+    "email": "Email address",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "registerHere": "Register here",
+    "haveAccount": "Already have an account?",
+    "loginHere": "Sign in"
+  },
+  "patient": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "findPrograms": "Find Programs",
+      "myApplication": "My Application",
+      "myDocuments": "My Documents",
+      "interviews": "Interviews",
+      "messages": "Messages",
+      "userGuide": "User Guide"
+    },
+    "dashboard": {
+      "title": "My Dashboard",
+      "subtitle": "Welcome back, {{name}}.",
+      "noApplication": "You don't have an active application yet.",
+      "browseSomeAgencies": "Find Programs to start an application",
+      "progressTitle": "Application Progress",
+      "viewAllProgress": "See full timeline"
+    },
+    "track": {
+      "title": "My Application",
+      "subtitle": "Track the status of your application.",
+      "tabInProgress": "In Progress",
+      "tabPast": "Past Applications",
+      "emptyInProgress": "You have no active applications.",
+      "emptyPast": "No past applications yet.",
+      "withdraw": "Withdraw Application",
+      "withdrawConfirm": "Withdraw this application? This cannot be undone.",
+      "withdrawYes": "Yes, Withdraw",
+      "downloadGL": "Download Guarantee Letter",
+      "downloading": "Downloading..."
+    },
+    "status": {
+      "pending": "Pending Review",
+      "reviewing": "Under Review",
+      "interview": "Interview Scheduled",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "certificate": "Guarantee Letter Issued"
+    },
+    "gl": {
+      "title": "Guarantee Letter",
+      "amount": "Approved Amount",
+      "for": "For",
+      "payableTo": "Payable To",
+      "download": "Download",
+      "pending": "The signed copy will appear here once your agency uploads it.",
+      "ready": "Your Guarantee Letter is ready to download.",
+      "preparing": "Your Guarantee Letter has been issued. The agency is preparing the signed copy."
+    }
+  },
+  "registration": {
+    "accessCode": "Patient Access Code",
+    "accessCodeHint": "Enter the code issued by CRMC Medical Social Services."
+  }
+}

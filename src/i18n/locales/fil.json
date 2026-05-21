@@ -1,0 +1,86 @@
+{
+  "common": {
+    "appName": "MAPA",
+    "appFull": "Medical Assistance Portal Access",
+    "loading": "Naglo-load...",
+    "save": "I-save",
+    "cancel": "Kanselahin",
+    "close": "Isara",
+    "submit": "Isumite",
+    "back": "Bumalik",
+    "next": "Sunod",
+    "yes": "Oo",
+    "no": "Hindi",
+    "english": "English",
+    "filipino": "Filipino",
+    "viewAll": "Tingnan lahat",
+    "noData": "Walang data"
+  },
+  "auth": {
+    "welcome": "Maligayang pagdating sa MAPA",
+    "subtitle": "Medical Assistance Portal Access · CRMC",
+    "email": "Email address",
+    "password": "Password",
+    "signIn": "Mag-sign in",
+    "signingIn": "Nagsa-sign in...",
+    "forgotPassword": "Nakalimutan ang password?",
+    "noAccount": "Wala pang account?",
+    "registerHere": "Mag-register dito",
+    "haveAccount": "Mayroon nang account?",
+    "loginHere": "Mag-sign in"
+  },
+  "patient": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "findPrograms": "Maghanap ng Programa",
+      "myApplication": "Aking Aplikasyon",
+      "myDocuments": "Aking mga Dokumento",
+      "interviews": "Mga Panayam",
+      "messages": "Mga Mensahe",
+      "userGuide": "Gabay sa Paggamit"
+    },
+    "dashboard": {
+      "title": "Aking Dashboard",
+      "subtitle": "Maligayang pagbabalik, {{name}}.",
+      "noApplication": "Wala ka pang aktibong aplikasyon.",
+      "browseSomeAgencies": "Maghanap ng Programa upang magsimula",
+      "progressTitle": "Progreso ng Aplikasyon",
+      "viewAllProgress": "Tingnan ang buong timeline"
+    },
+    "track": {
+      "title": "Aking Aplikasyon",
+      "subtitle": "Subaybayan ang status ng inyong aplikasyon.",
+      "tabInProgress": "Kasalukuyang Aplikasyon",
+      "tabPast": "Mga Naunang Aplikasyon",
+      "emptyInProgress": "Wala kang aktibong aplikasyon.",
+      "emptyPast": "Wala pang nakaraang aplikasyon.",
+      "withdraw": "I-withdraw ang Aplikasyon",
+      "withdrawConfirm": "Sigurado kang i-withdraw ang aplikasyon? Hindi na ito mababawi.",
+      "withdrawYes": "Oo, I-withdraw",
+      "downloadGL": "I-download ang Guarantee Letter",
+      "downloading": "Nagda-download..."
+    },
+    "status": {
+      "pending": "Naghihintay ng Pagsusuri",
+      "reviewing": "Sinusuri",
+      "interview": "Naka-iskedyul ang Panayam",
+      "approved": "Aprubado",
+      "rejected": "Hindi Aprubado",
+      "certificate": "Naibigay na ang Guarantee Letter"
+    },
+    "gl": {
+      "title": "Guarantee Letter",
+      "amount": "Aprubadong Halaga",
+      "for": "Para sa",
+      "payableTo": "Babayaran kay",
+      "download": "I-download",
+      "pending": "Lalabas dito ang nilagdaang kopya kapag na-upload na ng inyong ahensya.",
+      "ready": "Handa nang i-download ang inyong Guarantee Letter.",
+      "preparing": "Naibigay na ang inyong Guarantee Letter. Inihahanda ng ahensya ang nilagdaang kopya."
+    }
+  },
+  "registration": {
+    "accessCode": "Patient Access Code",
+    "accessCodeHint": "Ipasok ang code na ibinigay ng CRMC Medical Social Services."
+  }
+}

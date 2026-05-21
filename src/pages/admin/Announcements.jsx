@@ -1,0 +1,565 @@
+import Layout from '../../components/Layout'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  collection, getDocs, addDoc, updateDoc, deleteDoc,
+  doc, serverTimestamp, query, orderBy, Timestamp,
+} from 'firebase/firestore'
+import { db } from '../../firebase'
+import { useAuth } from '../../contexts/AuthContext'
+import { notify } from '../../utils/notifications'
+import { logAudit } from '../../utils/auditLog'
+import {
+  MdAdd, MdEdit, MdDelete, MdClose, MdBuildCircle,
+  MdWarning, MdInfo, MdCampaign, MdSchedule, MdCheckCircle,
+} from 'react-icons/md'
+import toast from 'react-hot-toast'
+
+// ── Config ────────────────────────────────────────────────────────────────
+
+export const TYPE_CONFIG = {
+  maintenance: {
+    label:      'Maintenance',
+    icon:       MdBuildCircle,
+    emoji:      '⚙️',
+    bg:         'bg-amber-50',
+    border:     'border-amber-200',
+    badge:      'bg-amber-100 text-amber-700',
+    iconColor:  'text-amber-600',
+    pillActive: 'bg-amber-500 text-white',
+    pillInact:  'bg-white text-amber-700 border border-amber-300',
+  },
+  warning: {
+    label:      'Warning',
+    icon:       MdWarning,
+    emoji:      '⚠️',
+    bg:         'bg-red-50',
+    border:     'border-red-200',
+    badge:      'bg-red-100 text-red-700',
+    iconColor:  'text-red-600',
+    pillActive: 'bg-red-500 text-white',
+    pillInact:  'bg-white text-red-700 border border-red-300',
+  },
+  info: {
+    label:      'Info',
+    icon:       MdInfo,
+    emoji:      'ℹ️',
+    bg:         'bg-blue-50',
+    border:     'border-blue-200',
+    badge:      'bg-blue-100 text-blue-700',
+    iconColor:  'text-blue-600',
+    pillActive: 'bg-blue-500 text-white',
+    pillInact:  'bg-white text-blue-700 border border-blue-300',
+  },
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+const fmtDt = (ts) => {
+  if (!ts) return '—'
+  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  return d.toLocaleString([], {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+const getCountdown = (ts) => {
+  if (!ts) return null
+  const diff = (ts.toDate ? ts.toDate() : new Date(ts)).getTime() - Date.now()
+  if (diff <= 0) return null
+  const hrs  = Math.floor(diff / 3600000)
+  const mins = Math.floor((diff % 3600000) / 60000)
+  if (hrs > 48) return `${Math.floor(hrs / 24)} days`
+  if (hrs > 0)  return `${hrs}h ${mins}m`
+  return `${mins}m`
+}
+
+const getStatus = (ann) => {
+  const now   = Date.now()
+  const start = ann.startAt?.toDate?.()?.getTime() ?? 0
+  const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
+  if (!ann.active)            return 'inactive'
+  if (now >= start && now <= end) return 'active'
+  if (now < start)            return 'upcoming'
+  return 'expired'
+}
+
+const tsToInputs = (ts) => {
+  if (!ts) return { date: '', time: '' }
+  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  return {
+    date: d.toISOString().slice(0, 10),
+    time: d.toTimeString().slice(0, 5),
+  }
+}
+
+const inputsToTs = (date, time) => {
+  if (!date || !time) return null
+  return Timestamp.fromDate(new Date(`${date}T${time}`))
+}
+
+// ── Banner Preview (shared between form and management page) ───────────────
+
+function BannerPreview({ type, title, message, startAt, endAt }) {
+  const cfg  = TYPE_CONFIG[type] ?? TYPE_CONFIG.info
+  const Icon = cfg.icon
+  const countdown = endAt ? getCountdown(endAt) : null
+
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${cfg.bg} ${cfg.border}`}>
+      <Icon size={18} className={`${cfg.iconColor} flex-shrink-0 mt-0.5`} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900">
+          {title || <span className="text-gray-400 italic">Enter a title…</span>}
+        </p>
+        <p className="text-xs text-gray-600 mt-0.5">
+          {message || <span className="text-gray-400 italic">Enter a message…</span>}
+        </p>
+        {(startAt || endAt) && (
+          <p className="text-xs text-gray-500 mt-1">
+            {fmtDt(startAt)} – {fmtDt(endAt)}
+          </p>
+        )}
+      </div>
+      {countdown && (
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.badge}`}>
+          Ends in {countdown}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ── Create / Edit Modal ───────────────────────────────────────────────────
+
+function AnnouncementForm({ announcement, onClose, onSave }) {
+  const isEdit = !!announcement
+
+  const [type,      setType]      = useState(announcement?.type    ?? 'maintenance')
+  const [title,     setTitle]     = useState(announcement?.title   ?? '')
+  const [message,   setMessage]   = useState(announcement?.message ?? '')
+  const [saving,    setSaving]    = useState(false)
+
+  const startInputs = tsToInputs(announcement?.startAt)
+  const endInputs   = tsToInputs(announcement?.endAt)
+  const [startDate, setStartDate] = useState(startInputs.date)
+  const [startTime, setStartTime] = useState(startInputs.time || '08:00')
+  const [endDate,   setEndDate]   = useState(endInputs.date)
+  const [endTime,   setEndTime]   = useState(endInputs.time || '10:00')
+
+  const previewStartAt = startDate && startTime ? inputsToTs(startDate, startTime) : null
+  const previewEndAt   = endDate   && endTime   ? inputsToTs(endDate,   endTime)   : null
+
+  const handleSave = async () => {
+    if (!title.trim())   { toast.error('Title is required.'); return }
+    if (!message.trim()) { toast.error('Message is required.'); return }
+    if (!startDate || !startTime) { toast.error('Start date and time are required.'); return }
+    if (!endDate || !endTime)     { toast.error('End date and time are required.'); return }
+    const startTs = inputsToTs(startDate, startTime)
+    const endTs   = inputsToTs(endDate,   endTime)
+    if (endTs.toDate() <= startTs.toDate()) {
+      toast.error('End time must be after start time.')
+      return
+    }
+    setSaving(true)
+    try {
+      await onSave({ type, title: title.trim(), message: message.trim(), startAt: startTs, endAt: endTs })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+          <h2 className="text-base font-semibold text-gray-900">
+            {isEdit ? 'Edit Announcement' : 'New Announcement'}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+
+          {/* Type selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <div className="flex gap-2">
+              {Object.entries(TYPE_CONFIG).map(([key, cfg]) => {
+                const Icon = cfg.icon
+                const active = type === key
+                return (
+                  <button key={key} type="button"
+                    onClick={() => setType(key)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      active ? cfg.pillActive : cfg.pillInact
+                    }`}>
+                    <Icon size={15} /> {cfg.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">Title <span className="text-red-400">*</span></label>
+              <span className="text-xs text-gray-400">{title.length}/60</span>
+            </div>
+            <input className="input" placeholder="e.g. Scheduled System Maintenance"
+              value={title} onChange={e => setTitle(e.target.value.slice(0, 60))} />
+          </div>
+
+          {/* Message */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">Message <span className="text-red-400">*</span></label>
+              <span className="text-xs text-gray-400">{message.length}/300</span>
+            </div>
+            <textarea className="input resize-none" rows={3}
+              placeholder="Describe what users should expect during this period…"
+              value={message} onChange={e => setMessage(e.target.value.slice(0, 300))} />
+          </div>
+
+          {/* Date/time range */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start date <span className="text-red-400">*</span></label>
+              <input type="date" className="input text-sm" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start time <span className="text-red-400">*</span></label>
+              <input type="time" className="input text-sm" value={startTime} onChange={e => setStartTime(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End date <span className="text-red-400">*</span></label>
+              <input type="date" className="input text-sm" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End time <span className="text-red-400">*</span></label>
+              <input type="time" className="input text-sm" value={endTime} onChange={e => setEndTime(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Preview</p>
+            <BannerPreview
+              type={type} title={title} message={message}
+              startAt={previewStartAt} endAt={previewEndAt}
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              This is how the banner will appear to all users.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-5 pb-4 pt-3 flex gap-2 justify-end border-t border-gray-100 flex-shrink-0">
+          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
+          <button className="btn-primary text-sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Announcement'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────
+
+export default function Announcements() {
+  const { user }                        = useAuth()
+  const [announcements, setAnnouncements] = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [showForm, setShowForm]         = useState(false)
+  const [editing, setEditing]           = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [deleting, setDeleting]         = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const snap = await getDocs(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')))
+      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    } catch { toast.error('Failed to load announcements. Please refresh the page.') }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  // ── Actions ────────────────────────────────────────────────────────────
+
+  const handleSave = async (data) => {
+    try {
+      if (editing) {
+        await updateDoc(doc(db, 'announcements', editing.id), { ...data, updatedAt: serverTimestamp() })
+        logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: data.title, details: `Type: ${data.type}` })
+        toast.success('Announcement updated.')
+      } else {
+        const ref = await addDoc(collection(db, 'announcements'), {
+          ...data,
+          active:       true,
+          reminderSent: false,
+          createdAt:    serverTimestamp(),
+          createdBy:    user.name ?? 'Admin',
+          createdById:  user.uid,
+        })
+
+        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `Type: ${data.type} · ${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}` })
+
+        // Notify all users — fire-and-forget
+        const cfg = TYPE_CONFIG[data.type] ?? TYPE_CONFIG.info
+        const window = `${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}`
+        getDocs(collection(db, 'users')).then(snap =>
+          Promise.all(snap.docs.map(d =>
+            notify(d.id, {
+              type:  'system_announcement',
+              title: `${cfg.emoji} ${data.title}`,
+              body:  `${data.message} · ${window}`,
+            }).catch(() => {})
+          ))
+        ).catch(() => {})
+
+        toast.success('Announcement created and all users notified.')
+      }
+      setShowForm(false)
+      setEditing(null)
+      load()
+    } catch {
+      toast.error('Failed to save announcement.')
+    }
+  }
+
+  const handleToggleActive = async (ann) => {
+    try {
+      await updateDoc(doc(db, 'announcements', ann.id), { active: !ann.active })
+      logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: ann.title, details: ann.active ? 'Deactivated' : 'Activated' })
+      toast.success(ann.active ? 'Announcement deactivated.' : 'Announcement activated.')
+      load()
+    } catch { toast.error('Failed to update announcement. Please try again.') }
+  }
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      await deleteDoc(doc(db, 'announcements', confirmDelete.id))
+      logAudit(user, { action: 'announcement_deleted', targetType: 'announcement', targetName: confirmDelete.title, details: 'Announcement permanently deleted' })
+      toast.success('Announcement deleted.')
+      setConfirmDelete(null)
+      load()
+    } catch { toast.error('Failed to delete.') }
+    finally { setDeleting(false) }
+  }
+
+  // ── Group by status ────────────────────────────────────────────────────
+
+  const active   = announcements.filter(a => getStatus(a) === 'active')
+  const upcoming = announcements.filter(a => getStatus(a) === 'upcoming')
+  const past     = announcements.filter(a => ['expired', 'inactive'].includes(getStatus(a)))
+
+  const totalActive = active.length
+  const totalUpcoming = upcoming.length
+
+  // ── Card renderer ──────────────────────────────────────────────────────
+
+  const renderCard = (ann) => {
+    const status  = getStatus(ann)
+    const cfg     = TYPE_CONFIG[ann.type] ?? TYPE_CONFIG.info
+    const Icon    = cfg.icon
+    const isLive  = status === 'active'
+    const isUpcoming = status === 'upcoming'
+    const countdown  = isLive ? getCountdown(ann.endAt) : isUpcoming ? getCountdown(ann.startAt) : null
+    const isDeleting = confirmDelete?.id === ann.id
+
+    return (
+      <div key={ann.id} className={`card overflow-hidden ${!ann.active || status === 'expired' ? 'opacity-60' : ''}`}>
+        <div className={`flex items-start gap-4 p-4 ${isLive ? cfg.bg : ''}`}>
+          {/* Type icon */}
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.bg} border ${cfg.border}`}>
+            <Icon size={20} className={cfg.iconColor} />
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <p className="text-sm font-semibold text-gray-900">{ann.title}</p>
+              {/* Status badge */}
+              {isLive && (
+                <span className="flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                  LIVE
+                </span>
+              )}
+              {isUpcoming && (
+                <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                  UPCOMING
+                </span>
+              )}
+              {status === 'expired' && (
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Expired</span>
+              )}
+              {status === 'inactive' && (
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-1">{ann.message}</p>
+            <p className="text-xs text-gray-400">
+              <MdSchedule size={11} className="inline mr-0.5" />
+              {fmtDt(ann.startAt)} – {fmtDt(ann.endAt)}
+            </p>
+            {countdown && (
+              <p className={`text-xs font-medium mt-1 ${cfg.iconColor}`}>
+                {isLive ? `Ends in ${countdown}` : `Starts in ${countdown}`}
+              </p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">Created by {ann.createdBy}</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button title="Edit"
+              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+              onClick={() => { setEditing(ann); setShowForm(true) }}>
+              <MdEdit size={15} />
+            </button>
+            {(status === 'active' || status === 'upcoming') && ann.active && (
+              <button title="Deactivate"
+                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                onClick={() => handleToggleActive(ann)}>
+                <MdClose size={15} />
+              </button>
+            )}
+            {!ann.active && (
+              <button title="Activate"
+                className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                onClick={() => handleToggleActive(ann)}>
+                <MdCheckCircle size={15} />
+              </button>
+            )}
+            <button title="Delete"
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              onClick={() => setConfirmDelete(ann)}>
+              <MdDelete size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Delete confirmation */}
+        {isDeleting && (
+          <div className="border-t border-red-100 bg-red-50 px-4 py-3 flex items-center gap-3">
+            <MdWarning size={16} className="text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-700 flex-1">
+              Delete <strong>"{ann.title}"</strong>? The banner will disappear for all users immediately.
+            </p>
+            <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50"
+              onClick={() => setConfirmDelete(null)}>Cancel</button>
+            <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600"
+              onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Section renderer ───────────────────────────────────────────────────
+
+  const renderSection = (label, items, emptyText) => (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+        {label}
+        {items.length > 0 && (
+          <span className="text-gray-300 font-normal normal-case tracking-normal">({items.length})</span>
+        )}
+      </p>
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-400 italic py-3">{emptyText}</p>
+      ) : (
+        <div className="space-y-3">{items.map(renderCard)}</div>
+      )}
+    </div>
+  )
+
+  return (
+    <Layout breadcrumb="Announcements">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+
+        {/* Header */}
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h1 className="page-title">Announcements</h1>
+            <p className="page-sub">
+              Manage system-wide banners for scheduled maintenance and important notices.
+            </p>
+          </div>
+          <button className="btn-primary flex items-center gap-1.5 text-sm"
+            onClick={() => { setEditing(null); setShowForm(true) }}>
+            <MdAdd size={16} /> New Announcement
+          </button>
+        </div>
+
+        {/* Summary */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { label: 'Active Now',  value: totalActive,              color: totalActive > 0 ? 'text-green-600' : 'text-gray-400' },
+            { label: 'Upcoming',    value: totalUpcoming,            color: totalUpcoming > 0 ? 'text-blue-600' : 'text-gray-400' },
+            { label: 'Total',       value: announcements.length,     color: 'text-gray-800' },
+          ].map((m, i) => (
+            <div key={i} className="card p-4">
+              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
+              <p className={`text-3xl font-semibold ${m.color}`}>{loading ? '—' : m.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Info banner */}
+        <div className="bg-brand-50 border border-brand-100 rounded-xl p-3 mb-6 flex items-start gap-2">
+          <MdCampaign size={16} className="text-brand-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-brand-700">
+            When you create an announcement, all registered users receive an immediate notification in their bell.
+            A second reminder is automatically sent when the maintenance window is within 24 hours.
+            The banner appears to all logged-in users until it expires or is deactivated.
+          </p>
+        </div>
+
+        {/* Sections */}
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card p-4 animate-pulse">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 bg-gray-100 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-gray-100 rounded w-48" />
+                    <div className="h-2.5 bg-gray-100 rounded w-64" />
+                    <div className="h-2.5 bg-gray-100 rounded w-40" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {renderSection('Active Now', active, 'No announcements are currently live.')}
+            {renderSection('Upcoming', upcoming, 'No scheduled announcements.')}
+            {renderSection('Past / Inactive', past, 'No past announcements.')}
+          </div>
+        )}
+      </div>
+
+      {/* Form modal */}
+      {showForm && (
+        <AnnouncementForm
+          announcement={editing}
+          onClose={() => { setShowForm(false); setEditing(null) }}
+          onSave={handleSave}
+        />
+      )}
+    </Layout>
+  )
+}

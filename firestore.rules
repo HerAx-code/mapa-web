@@ -1,0 +1,267 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Reads the current user's role from their Firestore profile.
+    // Authenticated users always have a users/{uid} document (created on register/account-create).
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(uid())).data.role;
+    }
+
+    function userAgencyId() {
+      return get(/databases/$(database)/documents/users/$(uid())).data.agencyId;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && userRole() == 'super_admin';
+    }
+
+    // Covers both super_admin and staff_admin
+    function isAdmin() {
+      return isAuth() && userRole() in ['super_admin', 'staff_admin'];
+    }
+
+    function isAgencyAdmin() {
+      return isAuth() && userRole() == 'agency_admin';
+    }
+
+    // Convenience: covers both agency_admin (senior agency officer) and
+    // agency (coordinator). Most case-handling permissions apply to both.
+    function isAgency() {
+      return isAuth() && userRole() in ['agency_admin', 'agency'];
+    }
+
+    function isPatient() {
+      return isAuth() && userRole() == 'patient';
+    }
+
+    // ── users ─────────────────────────────────────────────────────────────────
+    // Patients own their profile.
+    // Admins and agencies can read all users (needed for messaging compose search
+    // and for agencies to fetch patient address/hospitalId in the Inbox AppModal).
+    match /users/{userId} {
+      allow read:   if isAuth() && (uid() == userId || isAdmin() || isAgency());
+      allow create: if isAuth();
+      // Self-edit allowed only for profile fields. role / agencyId / active /
+      // rank are managed by admins and the promote-to-agency-admin flow.
+      // Without this constraint, any user could self-promote to super_admin
+      // by writing to their own user doc.
+      allow update: if isAuth() && (
+        (uid() == userId &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.agencyId == resource.data.agencyId &&
+          request.resource.data.active == resource.data.active &&
+          request.resource.data.rank == resource.data.rank) ||
+        isAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── applications ──────────────────────────────────────────────────────────
+    // Patients read/create their own applications.
+    // Agencies read and update applications for their own agency.
+    // Admins read and update all applications.
+    match /applications/{appId} {
+      allow read: if isAuth() && (
+        resource.data.patientId == uid()  ||
+        (isAgency() && resource.data.agencyId == userAgencyId()) ||
+        isAdmin()
+      );
+      allow create: if isPatient();
+      allow update: if isAuth() && (
+        // Patient can make exactly two transitions on their own application:
+        //  1. pending → rejected (self-withdrawal)
+        //  2. awaiting_info → reviewing (responding to a "Request More Info"
+        //     by uploading a document; the client flips status as part of
+        //     the same write)
+        // Any other status transition by a patient is denied here.
+        (isPatient() && resource.data.patientId == uid() && (
+          (resource.data.status == 'pending'       && request.resource.data.status == 'rejected') ||
+          (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing')
+        )) ||
+        (isAgency() && resource.data.agencyId == userAgencyId()) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ── documents ─────────────────────────────────────────────────────────────
+    // Patients own their documents.
+    // Agencies can read all patient documents (needed for application review).
+    // Admins can read and update (verification status).
+    match /documents/{docId} {
+      allow read:   if isAuth() && (resource.data.patientId == uid() || isAdmin() || isAgency());
+      allow create: if isPatient();
+      allow update: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+      allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+    }
+
+    // ── agencies ──────────────────────────────────────────────────────────────
+    // Public read — landing page shows available programs to unauthenticated visitors.
+    // Updates split by authority:
+    //   - CRMC admin (super/staff): operational fields (name, enabled, slots,
+    //     contact info, defaultSignatory, assistanceTypes, etc.) — but NOT
+    //     budget.allocated / budget.committed / budget.disbursed.
+    //   - agency_admin: own agency only. Can write budget fields (the
+    //     allocation authority), plus the same operational fields.
+    //   - agency coordinator: own agency only. Slots and similar low-impact
+    //     operational fields (UI controls limit them to slot management today).
+    // Field-level constraints are enforced in the client UI; the rules here
+    // give the broad write permission. A tighter field-level guard can be
+    // added later (request.resource.data.budget == resource.data.budget for
+    // CRMC admin) once the UI gating is fully verified.
+    match /agencies/{agencyId} {
+      allow read:   if true;
+      allow create: if isSuperAdmin();
+      allow update: if isAdmin() || (isAgency() && userAgencyId() == agencyId);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── documentTypes ─────────────────────────────────────────────────────────
+    // All authenticated users can read (patients see requirements during apply).
+    // Only super_admin can modify.
+    match /documentTypes/{typeId} {
+      allow read:  if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── assistanceTypes ───────────────────────────────────────────────────────
+    match /assistanceTypes/{typeId} {
+      allow read:  if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── hospitalIds ───────────────────────────────────────────────────────────
+    // Unauthenticated single-document GET is needed for hospital ID verification
+    // during patient registration (user is not yet logged in at that point).
+    // Listing all IDs requires authentication.
+    // Patients can update (to link their UID when registering).
+    // Only super_admin can create or delete IDs.
+    match /hospitalIds/{hospitalId} {
+      allow get:    if true;
+      allow list:   if isAuth();
+      allow create: if isSuperAdmin();
+      allow update: if isAdmin() || isAuth();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── notifications ─────────────────────────────────────────────────────────
+    // Only the owner can read and manage their notifications.
+    // Any authenticated user can create a notification for any user (needed for
+    // cross-role notifications: agency notifies patient, admin notifies agency, etc.)
+    match /notifications/{userId}/items/{notifId} {
+      allow read:   if isAuth() && uid() == userId;
+      allow create: if isAuth();
+      allow update: if isAuth() && uid() == userId;
+      allow delete: if isAuth() && uid() == userId;
+    }
+
+    // ── conversations ─────────────────────────────────────────────────────────
+    // Only participants can read and write a conversation and its messages.
+    // Any authenticated user can create a conversation (starts a new thread).
+    // Admins can delete conversations (Messages page delete feature).
+    match /conversations/{convId} {
+      allow read:   if isAuth() && uid() in resource.data.participants;
+      allow create: if isAuth();
+      allow update: if isAuth() && uid() in resource.data.participants;
+      allow delete: if isAdmin() || (isAuth() && uid() in resource.data.participants);
+
+      match /messages/{msgId} {
+        allow read:   if isAuth() && uid() in
+          get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow create: if isAuth() && uid() in
+          get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ── auditLog ──────────────────────────────────────────────────────────────
+    // Reads:
+    //   - super_admin: all entries (CRMC oversight of the platform)
+    //   - agency_admin: only entries scoped to their own agency. This lets
+    //     them satisfy COA-style accountability for their fund usage
+    //     without exposing other agencies' operations.
+    // Writes: any authenticated user can append (the actor record is the
+    // gate — only legitimate UI paths call logAudit()). Entries are
+    // immutable — no updates or deletes ever.
+    match /auditLog/{logId} {
+      allow read:           if isSuperAdmin() ||
+                               (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId());
+      allow create:         if isAuth();
+      allow update, delete: if false;
+    }
+
+    // ── certificates ──────────────────────────────────────────────────────────
+    // Patient reads their own certificate.
+    // Agency reads certificates they uploaded.
+    // Admins read all.
+    // Only agencies and admins can upload.
+    //
+    // resource == null branch: certificates use the applicationId as their
+    // docId, so most apps subscribe to a doc that doesn't exist yet (no
+    // signed scan uploaded). Allowing reads of non-existent docs lets
+    // onSnapshot fire with snap.exists() === false rather than rejecting
+    // with permission-denied. No data leak — they can only probe by appId.
+    match /certificates/{certId} {
+      allow read: if isAuth() && (
+        resource == null ||
+        resource.data.patientId == uid() ||
+        (isAgency() && resource.data.agencyId == userAgencyId()) ||
+        isAdmin()
+      );
+      allow create, update: if isAgency() || isAdmin();
+      allow delete:         if isAdmin();
+    }
+
+    // ── docReviewPresence ─────────────────────────────────────────────────────
+    // Ephemeral presence tracking for concurrent document review awareness.
+    match /docReviewPresence/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── documentContents ──────────────────────────────────────────────────────
+    // Stores file content separately from metadata for query performance.
+    // Document ID matches the corresponding documents/{docId}.
+    match /documentContents/{docId} {
+      allow read:   if isAuth() && (
+        resource.data.patientId == uid() || isAdmin() || isAgency()
+      );
+      allow create: if isPatient();
+      allow update: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+      allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+    }
+
+    // ── reports ───────────────────────────────────────────────────────────────
+    // Reports include both platform-level issue tickets (read/managed by
+    // CRMC admins) and intra-agency Budget Requests (read/managed by the
+    // requesting agency's agency_admin). The category field distinguishes
+    // them; CRMC admins filter Budget Requests out client-side.
+    match /reports/{reportId} {
+      allow read:   if isAdmin() ||
+                       (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
+      allow create: if isAuth();
+      allow update: if isAdmin() ||
+                       (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
+      allow delete: if isAdmin();
+    }
+
+    // ── announcements ─────────────────────────────────────────────────────────
+    // All authenticated users can read (needed to show banners in Layout).
+    // Only super_admin can create, update, or delete announcements.
+    match /announcements/{annId} {
+      allow read:   if isAuth();
+      allow write:  if isSuperAdmin();
+    }
+  }
+}

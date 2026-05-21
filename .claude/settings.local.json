@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start http://localhost:5173)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\MY PC\\\\Downloads\\\\mapa-web\\\\src\\\\pages\\\\admin\" -File)",
+      "Bash(Select-Object Name)"
+    ]
+  }
+}

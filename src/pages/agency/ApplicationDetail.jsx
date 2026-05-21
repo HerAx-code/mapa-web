@@ -1,0 +1,1426 @@
+import Layout from '../../components/Layout'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
+import {
+  collection, query, where, onSnapshot,
+  doc, updateDoc, getDoc, getDocs, serverTimestamp,
+  writeBatch, increment, runTransaction, Timestamp,
+} from 'firebase/firestore'
+import { db } from '../../firebase'
+import { useAuth } from '../../contexts/AuthContext'
+import { notify } from '../../utils/notifications'
+import { logAudit } from '../../utils/auditLog'
+import { getOrCreateConversation } from '../../utils/messages'
+import {
+  MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
+  MdVideoCall, MdDescription, MdAssignment, MdAttachMoney,
+  MdEventBusy, MdEventRepeat, MdNote, MdAdd, MdWarning,
+  MdPrint, MdUpload, MdInfo, MdReceipt, MdHistory,
+  MdHourglassEmpty, MdPlayArrow,
+} from 'react-icons/md'
+import toast from 'react-hot-toast'
+import { isIntakeComplete, requiredFieldsStatus } from '../../utils/intakeSheet'
+import OutcomeModal from '../../components/OutcomeModal'
+import SignedGLUploadModal from '../../components/SignedGLUploadModal'
+import GLDocumentPanel from '../../components/GLDocumentPanel'
+import DocViewerModal from '../../components/DocViewerModal'
+import { InterviewModal, RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+const STATUS_BADGE = {
+  pending:        'badge-blue',
+  reviewing:      'badge-amber',
+  awaiting_info:  'badge-orange',
+  interview:      'badge-purple',
+  approved:       'badge-green',
+  rejected:       'badge-red',
+  certificate:    'badge-green',
+}
+const STATUS_LABEL = {
+  pending:        'Pending',
+  reviewing:      'Reviewing',
+  awaiting_info:  'Waiting on Patient',
+  interview:      'Interview',
+  approved:       'Approved',
+  rejected:       'Rejected',
+  certificate:    'GL Issued',
+}
+
+const GL_VALIDITY_DAYS = 30
+const tsToDate  = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
+const daysSince = (ts) => {
+  const d = tsToDate(ts)
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null
+}
+const isGLExpired = (app) => {
+  if (app?.glStatus !== 'issued') return false
+  const d = daysSince(app.approvedAt)
+  return d != null && d > GL_VALIDITY_DAYS
+}
+const formatDate = (ts) => {
+  if (!ts) return '—'
+  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+}
+const fmtInterviewDate = (iso) => {
+  if (!iso) return '—'
+  return new Date(iso + 'T00:00:00').toLocaleDateString([], {
+    month: 'long', day: 'numeric', year: 'numeric',
+  })
+}
+
+const getUpdatedStages = (stages, newStatus, extra = {}) => {
+  const doneKeys = {
+    pending:        ['submitted'],
+    reviewing:      ['submitted', 'docs'],
+    awaiting_info:  ['submitted', 'docs'],
+    interview:      ['submitted', 'docs', 'reviewing'],
+    approved:       ['submitted', 'docs', 'reviewing', 'interview'],
+    certificate:    ['submitted', 'docs', 'reviewing', 'interview', 'approved'],
+    rejected:       ['submitted'],
+  }[newStatus] ?? ['submitted']
+  const activeKey = {
+    pending:        'docs',
+    reviewing:      'reviewing',
+    awaiting_info:  'reviewing',
+    interview:      'interview',
+    approved:       'approved',
+    certificate:    'certificate',
+    rejected:       null,
+  }[newStatus] ?? null
+  return stages.map(s => ({
+    ...s,
+    done:   doneKeys.includes(s.key),
+    active: s.key === activeKey,
+    date:   doneKeys.includes(s.key) && !s.date
+      ? new Date().toLocaleDateString()
+      : (s.date ?? null),
+    note:   s.key === 'interview' && extra.interviewDate
+      ? `Interview scheduled for ${extra.interviewDate} at ${extra.interviewTime}.`
+      : s.note,
+  }))
+}
+
+// Section definitions (ordered)
+const SECTION_DEFS = [
+  { id: 'overview',  label: 'Overview',          icon: MdInfo,        always: true },
+  { id: 'intake',    label: 'Intake Sheet',      icon: MdAssignment,  forStatus: ['reviewing','awaiting_info','interview','approved','certificate'] },
+  { id: 'documents', label: 'Documents',         icon: MdDescription, always: true },
+  { id: 'gl',        label: 'Guarantee Letter',  icon: MdReceipt,     forStatus: ['approved','certificate'] },
+  { id: 'timeline',  label: 'Timeline & Notes',  icon: MdHistory,     always: true },
+]
+
+// ── Compact stepper (slimmer than the standalone card) ───────────────────
+
+function CompactStepper({ app }) {
+  if (app.status === 'rejected') return null
+
+  const intakeReady   = isIntakeComplete(app.intakeSheet)
+  const interviewDone = app.outcome === 'completed' || ['approved','certificate'].includes(app.status)
+  const glRedeemed    = app.glStatus === 'redeemed'
+
+  // awaiting_info is a paused-Reviewing state; treat it as still-in-Review
+  // for the stepper so we don't visually regress the application.
+  const inReviewOrLater = ['reviewing', 'awaiting_info', 'interview', 'approved', 'certificate'].includes(app.status)
+
+  const steps = [
+    { key: 'submitted', label: 'Submit',    done: true,                              active: false },
+    { key: 'reviewing', label: 'Review',    done: inReviewOrLater,                   active: app.status === 'reviewing' || app.status === 'awaiting_info' },
+    { key: 'intake',    label: 'Intake',    done: intakeReady,                       active: (app.status === 'reviewing' || app.status === 'awaiting_info') && !intakeReady },
+    { key: 'interview', label: 'Interview', done: interviewDone,                     active: app.status === 'interview' },
+    { key: 'approved',  label: 'Approve',   done: ['approved','certificate'].includes(app.status), active: app.status === 'interview' && interviewDone },
+    { key: 'gl',        label: 'GL Done',   done: glRedeemed,                        active: app.status === 'certificate' && !glRedeemed },
+  ]
+
+  return (
+    <div className="flex items-center gap-0 overflow-x-auto pb-1">
+      {steps.map((s, i) => (
+        <div key={s.key} className="flex items-center flex-shrink-0">
+          <div className="flex flex-col items-center min-w-14">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              s.done ? 'bg-brand-500 text-white'
+              : s.active ? 'border-2 border-amber-400 bg-amber-50 text-amber-500'
+              : 'bg-gray-100 text-gray-300'
+            }`}>
+              {s.done ? '✓' : i + 1}
+            </div>
+            <p className={`text-xs mt-1 font-medium whitespace-nowrap ${
+              s.done ? 'text-gray-700'
+              : s.active ? 'text-amber-700'
+              : 'text-gray-400'
+            }`}>{s.label}</p>
+          </div>
+          {i < steps.length - 1 && (
+            <div className={`h-0.5 w-8 sm:w-12 mt-3 ${
+              s.done && steps[i+1].done ? 'bg-brand-300'
+              : s.done ? 'bg-amber-200'
+              : 'bg-gray-100'
+            }`} />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Compute the next-action CTA buttons for the hero ─────────────────────
+
+function getPrimaryActions(ctx) {
+  const { app, intakeReady, expired, handlers, navigate, signedScan } = ctx
+  const goIntake = () => navigate(`/agency/applications/${app.id}/intake`)
+
+  if (app.status === 'pending') {
+    return {
+      hint: 'Start the review to move this case forward.',
+      tone: 'brand',
+      actions: [
+        { label: 'Start Review',      icon: MdCheckCircle, variant: 'primary',  onClick: handlers.handleStartReview },
+        { label: 'Reject',            icon: MdCancel,      variant: 'danger',   onClick: () => handlers.setShowReject(true) },
+      ],
+    }
+  }
+
+  if (app.status === 'reviewing' && !intakeReady) {
+    return {
+      hint: 'Complete the Intake Sheet to unlock approval.',
+      tone: 'amber',
+      actions: [
+        { label: 'Open Intake Sheet',  icon: MdAssignment,      variant: 'primary',   onClick: goIntake },
+        { label: 'Schedule Interview', icon: MdVideoCall,       variant: 'secondary', onClick: () => handlers.setShowInterview(true) },
+        { label: 'Request More Info',  icon: MdHourglassEmpty,  variant: 'secondary', onClick: () => handlers.setShowRequestInfo(true) },
+        { label: 'Reject',             icon: MdCancel,          variant: 'danger',    onClick: () => handlers.setShowReject(true) },
+      ],
+    }
+  }
+
+  if (app.status === 'reviewing' && intakeReady) {
+    return {
+      hint: 'Intake complete — approve, schedule an interview, request more info, or reject.',
+      tone: 'brand',
+      actions: [
+        { label: 'Approve & Issue GL', icon: MdCheckCircle,     variant: 'primary-green', onClick: () => handlers.setShowApprove(true) },
+        { label: 'Schedule Interview', icon: MdVideoCall,       variant: 'secondary',     onClick: () => handlers.setShowInterview(true) },
+        { label: 'Request More Info',  icon: MdHourglassEmpty,  variant: 'secondary',     onClick: () => handlers.setShowRequestInfo(true) },
+        { label: 'Reject',             icon: MdCancel,          variant: 'danger',        onClick: () => handlers.setShowReject(true) },
+      ],
+    }
+  }
+
+  if (app.status === 'awaiting_info') {
+    return {
+      hint: `Waiting on the patient. Requested: "${app.awaitingInfoMessage ?? '—'}"`,
+      tone: 'amber',
+      actions: [
+        { label: 'Resume Review', icon: MdPlayArrow,    variant: 'primary',   onClick: handlers.handleResumeFromAwaiting },
+        { label: 'Update Request', icon: MdHourglassEmpty, variant: 'secondary', onClick: () => handlers.setShowRequestInfo(true) },
+        { label: 'Reject',        icon: MdCancel,       variant: 'danger',    onClick: () => handlers.setShowReject(true) },
+      ],
+    }
+  }
+
+  if (app.status === 'interview' && !app.outcome) {
+    return {
+      hint: 'After the meeting, record the outcome.',
+      tone: 'purple',
+      actions: [
+        { label: 'Mark Completed', icon: MdCheckCircle, variant: 'primary-green', onClick: () => handlers.setOutcomeRequest({ app, outcome: 'completed' }) },
+        { label: 'No-Show',        icon: MdEventBusy,   variant: 'danger',        onClick: () => handlers.setOutcomeRequest({ app, outcome: 'no_show' }) },
+        { label: 'Reschedule',     icon: MdEventRepeat, variant: 'secondary',     onClick: () => handlers.setOutcomeRequest({ app, outcome: 'rescheduled' }) },
+      ],
+    }
+  }
+
+  if (app.status === 'interview' && app.outcome === 'completed' && intakeReady) {
+    return {
+      hint: 'Interview completed — issue the Guarantee Letter or reject.',
+      tone: 'brand',
+      actions: [
+        { label: 'Approve & Issue GL', icon: MdCheckCircle, variant: 'primary-green', onClick: () => handlers.setShowApprove(true) },
+        { label: 'Reject',             icon: MdCancel,      variant: 'danger',        onClick: () => handlers.setShowReject(true) },
+      ],
+    }
+  }
+
+  if (app.status === 'interview' && (app.outcome === 'no_show' || app.outcome === 'rescheduled')) {
+    return {
+      hint: app.outcome === 'no_show' ? 'No-show recorded — reschedule or reject.' : 'Interview rescheduled — wait for the new date.',
+      tone: 'amber',
+      actions: [
+        { label: 'Reschedule',     icon: MdEventRepeat, variant: 'primary',  onClick: () => handlers.setOutcomeRequest({ app, outcome: 'rescheduled' }) },
+        { label: 'Reject',         icon: MdCancel,      variant: 'danger',   onClick: () => handlers.setShowReject(true) },
+      ],
+    }
+  }
+
+  if (app.status === 'approved') {
+    return {
+      hint: 'Print the Guarantee Letter to issue it.',
+      tone: 'brand',
+      actions: [
+        { label: 'Print Guarantee Letter', icon: MdPrint,  variant: 'primary',   onClick: handlers.handlePrintGL },
+        { label: 'Reverse Approval',       icon: MdCancel, variant: 'secondary', onClick: handlers.handleReverseApproval },
+      ],
+    }
+  }
+
+  if (app.status === 'certificate' && app.glStatus === 'issued' && expired) {
+    return {
+      hint: `GL passed its ${GL_VALIDITY_DAYS}-day validity window — release the committed budget.`,
+      tone: 'red',
+      actions: [
+        { label: 'Mark GL Expired',  icon: MdWarning, variant: 'primary-orange', onClick: handlers.handleExpireGL },
+        { label: 'Reverse Approval', icon: MdCancel,  variant: 'secondary',      onClick: handlers.handleReverseApproval },
+      ],
+    }
+  }
+
+  if (app.status === 'certificate' && app.glStatus === 'issued' && !signedScan) {
+    return {
+      hint: 'Wet-sign the printed copy, then upload the scan so the patient can download it.',
+      tone: 'amber',
+      actions: [
+        { label: 'Upload Signed Scan', icon: MdUpload, variant: 'primary',   onClick: () => handlers.setShowUpload(true) },
+        { label: 'Re-print',           icon: MdPrint,  variant: 'secondary', onClick: handlers.handlePrintGL },
+      ],
+    }
+  }
+
+  if (app.status === 'certificate' && app.glStatus === 'issued' && signedScan) {
+    return {
+      hint: 'When the provider bills back, mark the GL as redeemed.',
+      tone: 'brand',
+      actions: [
+        { label: 'Mark GL Redeemed', icon: MdCheckCircle, variant: 'primary-green', onClick: handlers.handleRedeemGL },
+        { label: 'Reverse Approval', icon: MdCancel,      variant: 'secondary',     onClick: handlers.handleReverseApproval },
+      ],
+    }
+  }
+
+  if (app.glStatus === 'redeemed') {
+    return { hint: '✓ Case complete — GL redeemed.', tone: 'green', actions: [] }
+  }
+  if (app.glStatus === 'expired') {
+    return {
+      hint: '⚠ GL expired — committed budget released.',
+      tone: 'gray',
+      actions: [
+        { label: 'Reverse Approval', icon: MdCancel, variant: 'secondary', onClick: handlers.handleReverseApproval },
+      ],
+    }
+  }
+  if (app.status === 'rejected') {
+    return { hint: 'Application rejected. No further action required.', tone: 'red', actions: [] }
+  }
+
+  return { hint: null, tone: 'gray', actions: [] }
+}
+
+const VARIANT_CLS = {
+  'primary':         'bg-brand-500 text-white hover:bg-brand-600',
+  'primary-green':   'bg-green-600  text-white hover:bg-green-700',
+  'primary-orange':  'bg-orange-500 text-white hover:bg-orange-600',
+  'secondary':       'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
+  'danger':          'bg-white text-red-600  border border-red-200  hover:bg-red-50',
+}
+
+const TONE_CLS = {
+  brand:  'bg-brand-50  border-brand-100  text-brand-700',
+  amber:  'bg-amber-50  border-amber-100  text-amber-700',
+  purple: 'bg-purple-50 border-purple-100 text-purple-700',
+  red:    'bg-red-50    border-red-200    text-red-700',
+  gray:   'bg-gray-50   border-gray-100   text-gray-600',
+  green:  'bg-green-50  border-green-100  text-green-700',
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────
+
+export default function ApplicationDetail() {
+  const { id }         = useParams()
+  const navigate       = useNavigate()
+  const { user }       = useAuth()
+  const [searchParams] = useSearchParams()
+  const queueFilter    = searchParams.get('queue') ?? 'all'
+
+  const [app, setApp]                       = useState(null)
+  const [appLoading, setAppLoading]         = useState(true)
+  const [agency, setAgency]                 = useState(null)
+  const [queueIds, setQueueIds]             = useState([])
+  const [patientDocs, setPatientDocs]       = useState([])
+  const [patientProfile, setPatientProfile] = useState(null)
+  const [signedScan, setSignedScan]         = useState(null)
+
+  const [section, setSection]               = useState('overview')
+  const [showInterview, setShowInterview]     = useState(false)
+  const [showReschedule, setShowReschedule]   = useState(false)
+  const [showReject, setShowReject]           = useState(false)
+  const [showApprove, setShowApprove]         = useState(false)
+  const [showUpload, setShowUpload]           = useState(false)
+  const [showRequestInfo, setShowRequestInfo] = useState(false)
+  const [outcomeRequest, setOutcomeRequest] = useState(null)
+  const [viewingDoc, setViewingDoc]         = useState(null)
+  const [updating, setUpdating]             = useState(false)
+  const [newNote, setNewNote]               = useState('')
+  const [savingNote, setSavingNote]         = useState(false)
+
+  // Subscriptions
+  useEffect(() => {
+    if (!id) return
+    const unsub = onSnapshot(doc(db, 'applications', id), snap => {
+      if (!snap.exists()) {
+        toast.error('Application not found.')
+        navigate('/agency/inbox')
+        return
+      }
+      setApp({ id: snap.id, ...snap.data() })
+      setAppLoading(false)
+    }, () => { setAppLoading(false); toast.error('Failed to load application.') })
+    return unsub
+  }, [id, navigate])
+
+  useEffect(() => {
+    if (!user?.agencyId) return
+    const unsub = onSnapshot(doc(db, 'agencies', user.agencyId),
+      snap => snap.exists() && setAgency({ id: snap.id, ...snap.data() }),
+      (err) => console.error('[ApplicationDetail] agency snapshot error:', err),
+    )
+    return unsub
+  }, [user?.agencyId])
+
+  useEffect(() => {
+    if (!user?.agencyId) return
+    const base = [where('agencyId', '==', user.agencyId)]
+    const statuses = {
+      all:           null,
+      pending:       ['pending'],
+      reviewing:     ['reviewing'],
+      awaiting_info: ['awaiting_info'],
+      interview:     ['interview'],
+      approved:      ['approved', 'certificate'],
+      rejected:      ['rejected'],
+    }[queueFilter]
+    const constraints = statuses ? [...base, where('status', 'in', statuses)] : base
+    const unsub = onSnapshot(query(collection(db, 'applications'), ...constraints), snap => {
+      const items = snap.docs
+        .map(d => ({ id: d.id, submittedAt: d.data().submittedAt }))
+        .sort((a, b) => (b.submittedAt?.seconds ?? 0) - (a.submittedAt?.seconds ?? 0))
+      setQueueIds(items.map(i => i.id))
+    }, (err) => console.error('[ApplicationDetail] queue snapshot error:', err))
+    return unsub
+  }, [user?.agencyId, queueFilter])
+
+  useEffect(() => {
+    if (!app?.patientId) return
+    if (app.attachedDocuments?.length > 0) {
+      Promise.all(
+        app.attachedDocuments.map(attached =>
+          getDoc(doc(db, 'documents', attached.documentId))
+            .then(snap => snap.exists()
+              ? { id: snap.id, ...snap.data(), updatedAfterSubmission: attached.updatedAfterSubmission ?? false }
+              : { id: attached.documentId, name: attached.name, status: attached.status, date: attached.date, _missing: true }
+            )
+        )
+      ).then(docs => setPatientDocs(docs))
+    } else {
+      getDocs(query(collection(db, 'documents'), where('patientId', '==', app.patientId)))
+        .then(snap => setPatientDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+    }
+    getDoc(doc(db, 'users', app.patientId))
+      .then(snap => { if (snap.exists()) setPatientProfile(snap.data()) })
+  }, [app?.patientId, app?.attachedDocuments])
+
+  useEffect(() => {
+    if (!app?.id) return
+    const unsub = onSnapshot(doc(db, 'certificates', app.id), snap => {
+      setSignedScan(snap.exists() ? snap.data() : null)
+    }, (err) => console.error('[ApplicationDetail] certificate snapshot error:', err))
+    return unsub
+  }, [app?.id])
+
+  const queueIndex = useMemo(() => queueIds.indexOf(id), [queueIds, id])
+  const prevId = queueIndex > 0 ? queueIds[queueIndex - 1] : null
+  const nextId = queueIndex >= 0 && queueIndex < queueIds.length - 1 ? queueIds[queueIndex + 1] : null
+  const goTo   = (targetId) => navigate(`/agency/applications/${targetId}?queue=${queueFilter}`)
+
+  // ── Status update handlers ───────────────────────────────────────────
+
+  const updateStatus = async (newStatus, extra = {}) => {
+    if (!app) return false
+    setUpdating(true)
+    try {
+      await updateDoc(doc(db, 'applications', app.id), {
+        status:    newStatus,
+        stages:    getUpdatedStages(app.stages ?? [], newStatus, extra),
+        updatedAt: serverTimestamp(),
+        ...extra,
+      })
+      return true
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to update application.')
+      return false
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleStartReview = async () => {
+    const ok = await updateStatus('reviewing')
+    if (!ok) return
+    await notify(app.patientId, {
+      type:  'app_advanced',
+      title: 'Application under review',
+      body:  `${user.name} from ${app.agencyName} has started reviewing your application.`,
+    })
+    toast.success('Application moved to Reviewing.')
+  }
+
+  const handleRequestInfo = async (message) => {
+    const ok = await updateStatus('awaiting_info', {
+      awaitingInfoMessage:     message,
+      awaitingInfoRequestedAt: serverTimestamp(),
+      awaitingInfoRequestedBy: user.name,
+    })
+    if (!ok) return
+    await notify(app.patientId, {
+      type:  'awaiting_info_requested',
+      title: 'Information requested by your agency',
+      body:  `${app.agencyName} is asking you to: ${message}`,
+    })
+    setShowRequestInfo(false)
+    toast.success('Patient notified. Application paused from the urgent queue.')
+  }
+
+  // Manual resume — coordinator decides the patient has responded enough to
+  // move on, or the request was sent in error. Auto-revert (on patient
+  // document upload) does the same thing.
+  const handleResumeFromAwaiting = async () => {
+    const ok = await updateStatus('reviewing', {
+      awaitingInfoMessage:     null,
+      awaitingInfoRequestedAt: null,
+      awaitingInfoRequestedBy: null,
+      awaitingInfoResumedAt:   serverTimestamp(),
+    })
+    if (!ok) return
+    toast.success('Application resumed. Back in the active queue.')
+  }
+
+  const handleScheduleInterview = async (form) => {
+    const extra = {
+      interviewDate: form.date,
+      interviewTime: form.time,
+      meetLink:      form.link,
+      conductedBy:   form.conductedBy,
+    }
+    const ok = await updateStatus('interview', extra)
+    if (!ok) return
+    await notify(app.patientId, {
+      type:  'interview_sched',
+      title: 'Interview scheduled',
+      body:  `Your interview with ${app.agencyName} is scheduled for ${form.date} at ${form.time}. Check your Interviews page for the link.`,
+    })
+    setShowInterview(false)
+    toast.success('Interview scheduled. Patient has been notified.')
+  }
+
+  const handleRescheduleInterview = async (form) => {
+    const ok = await updateStatus('interview', {
+      interviewDate: form.date,
+      interviewTime: form.time,
+      meetLink:      form.link,
+      conductedBy:   form.conductedBy,
+    })
+    if (!ok) return
+    await notify(app.patientId, {
+      type:  'interview_sched',
+      title: 'Interview rescheduled',
+      body:  `Your interview with ${app.agencyName} has been rescheduled to ${form.date} at ${form.time}.`,
+    })
+    setShowReschedule(false)
+    toast.success('Interview rescheduled. Patient has been notified.')
+  }
+
+  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy }) => {
+    setUpdating(true)
+    try {
+      // ── Pre-transaction cooldown gate.
+      // Transactions can only read by doc-ref, not run collection queries,
+      // so we check cooldown here. A second approval landing between this
+      // check and the transaction is theoretically possible but extremely
+      // narrow; the ApproveModal already shows a hard block when it loads.
+      //
+      // Two signals can block: (1) a currently-approved app within the
+      // 30-day window, or (2) a previously-approved app that was reversed
+      // and carries an explicit cooldownUntilAt timestamp. We query by
+      // patientId only and inspect both signals in code — per-patient app
+      // counts are small.
+      const COOLDOWN_DAYS = 30
+      const now = Date.now()
+      const recentSnap = await getDocs(query(
+        collection(db, 'applications'),
+        where('patientId', '==', app.patientId),
+      ))
+      const blocking = recentSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(a => a.id !== app.id)
+        .filter(a => {
+          // Signal 1: live approval within window
+          if (a.approvedAt && ['approved', 'certificate'].includes(a.status)) {
+            const d = a.approvedAt.toDate ? a.approvedAt.toDate() : new Date(a.approvedAt)
+            const days = Math.floor((now - d.getTime()) / 86400000)
+            if (days <= COOLDOWN_DAYS) return true
+          }
+          // Signal 2: reversed approval whose cooldown hasn't elapsed yet
+          if (a.cooldownUntilAt) {
+            const until = a.cooldownUntilAt.toDate ? a.cooldownUntilAt.toDate() : new Date(a.cooldownUntilAt)
+            if (until.getTime() > now) return true
+          }
+          return false
+        })
+      if (blocking.length > 0) {
+        const b = blocking[0]
+        const reversed = !!b.cooldownUntilAt && !b.approvedAt
+        toast.error(
+          reversed
+            ? `This patient has an active cooldown from a reversed approval at ${b.agencyName}. ` +
+              `The ${COOLDOWN_DAYS}-day window has not elapsed yet. Contact an administrator if a second approval is genuinely needed.`
+            : `This patient was already approved by ${b.agencyName} less than ${COOLDOWN_DAYS} days ago ` +
+              `(₱${Number(b.approvedAmount ?? 0).toLocaleString()}). Approval blocked. ` +
+              `Contact an administrator if a second approval is genuinely needed.`,
+          { duration: 8000 }
+        )
+        return
+      }
+
+      // ── Transactional approve + budget commit.
+      // Closes the read-then-write race where two parallel approvals could
+      // both pass the client-side budget check and both increment committed,
+      // pushing the agency over allocated. The transaction re-reads the
+      // live agency doc; if remaining budget no longer covers the amount,
+      // we abort with an explicit message so the coordinator can retry.
+      const agencyRef = doc(db, 'agencies', user.agencyId)
+      const appRef    = doc(db, 'applications', app.id)
+
+      await runTransaction(db, async (tx) => {
+        const agencySnap = await tx.get(agencyRef)
+        const data       = agencySnap.exists() ? agencySnap.data() : {}
+        const allocated  = data.budget?.allocated ?? 0
+        const committed  = data.budget?.committed ?? 0
+        const remaining  = Math.max(0, allocated - committed)
+
+        // Only enforce the budget gate when the agency actually has a
+        // budget allocated. Agencies with allocated=0 are unfunded; we
+        // record the approval as data but don't track against budget.
+        if (allocated > 0 && approvedAmount > remaining) {
+          throw new Error(
+            `BUDGET_INSUFFICIENT:Only ₱${remaining.toLocaleString()} remaining ` +
+            `(another approval may have just landed). Lower the amount or contact an administrator.`
+          )
+        }
+
+        tx.update(appRef, {
+          status:              'approved',
+          stages:              getUpdatedStages(app.stages ?? [], 'approved', {}),
+          approvedAmount,
+          purposeOfAssistance,
+          payableTo,
+          approvedBy,
+          approvedAt:          serverTimestamp(),
+          glStatus:            'issued',
+          glRedeemedAt:        null,
+          updatedAt:           serverTimestamp(),
+        })
+        if (allocated > 0) {
+          tx.update(agencyRef, {
+            'budget.committed': increment(approvedAmount),
+          })
+        }
+      })
+
+      await notify(app.patientId, {
+        type:  'interview_approved',
+        title: 'Application approved! 🎉',
+        body:  `Your application to ${app.agencyName} is approved for ₱${approvedAmount.toLocaleString()} (${purposeOfAssistance.join(', ')}). A Guarantee Letter will be issued shortly.`,
+      })
+      setShowApprove(false)
+      toast.success('Application approved. Guarantee Letter pending issuance.')
+    } catch (err) {
+      console.error('[ApplicationDetail] approve error:', err)
+      // Surface the explicit budget message; Firestore wraps thrown errors
+      // from inside runTransaction in err.message.
+      if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
+        toast.error(err.message.replace('BUDGET_INSUFFICIENT:', ''), { duration: 8000 })
+      } else {
+        toast.error('Failed to approve application.')
+      }
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleReject = async (reason) => {
+    const ok = await updateStatus('rejected', { rejectionReason: reason })
+    if (!ok) return
+    const submittedDate = app.submittedAt?.toDate?.()
+    const isToday = submittedDate &&
+      submittedDate.toDateString() === new Date().toDateString()
+    if (isToday) {
+      try {
+        const agencySnap = await getDoc(doc(db, 'agencies', user.agencyId))
+        const current = agencySnap.data()?.slots?.remaining ?? 0
+        const total   = agencySnap.data()?.slots?.total    ?? 0
+        await updateDoc(doc(db, 'agencies', user.agencyId), {
+          'slots.remaining': Math.min(current + 1, total),
+        })
+      } catch {}
+    }
+    await notify(app.patientId, {
+      type:  'doc_rejected',
+      title: 'Application rejected',
+      body:  `Your application to ${app.agencyName} was not approved. Reason: ${reason}.`,
+    })
+    setShowReject(false)
+    toast.error('Application rejected. Patient has been notified.')
+  }
+
+  // ── GL handlers ──────────────────────────────────────────────────────
+
+  const handlePrintGL = () => {
+    // Open the GL Viewer page in a new tab. The viewer is now self-sufficient:
+    // it has Print + Save as PDF + Mark as Issued, so we don't need to show
+    // a confirmation modal back here.
+    const url = `/agency/applications/${app.id}/gl?action=print`
+    const win = window.open(url, '_blank')
+    if (!win) {
+      toast.error('Please allow pop-ups to print the Guarantee Letter.')
+      return
+    }
+  }
+
+  const handleRedeemGL = async () => {
+    if (!window.confirm(
+      `Mark Guarantee Letter as REDEEMED?\n\n` +
+      `This records that ${app.payableTo} has billed back for ₱${Number(app.approvedAmount).toLocaleString()}. ` +
+      `The agency's committed budget will move to disbursed.`
+    )) return
+    setUpdating(true)
+    try {
+      const amount = Number(app.approvedAmount) || 0
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'applications', app.id), {
+        glStatus:     'redeemed',
+        glRedeemedAt: serverTimestamp(),
+        updatedAt:    serverTimestamp(),
+      })
+      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
+        batch.update(doc(db, 'agencies', user.agencyId), {
+          'budget.committed': increment(-amount),
+          'budget.disbursed': increment(amount),
+        })
+      }
+      await batch.commit()
+      logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} redeemed by ${app.payableTo}` })
+      toast.success('GL marked as redeemed.')
+    } catch (err) { console.error(err); toast.error('Failed to mark GL redeemed.') }
+    finally { setUpdating(false) }
+  }
+
+  // Reverses a mistaken Mark Redeemed: moves the amount back from disbursed to
+  // committed and flips glStatus back to 'issued'. Use only to correct errors
+  // (e.g. the provider hadn't actually billed back yet). Audit-logged.
+  const handleUnmarkRedeemed = async () => {
+    if (!window.confirm(
+      `Reverse the redemption?\n\n` +
+      `This moves ₱${Number(app.approvedAmount).toLocaleString()} back from disbursed to committed ` +
+      `and sets the Guarantee Letter back to "Issued". Use only to correct a mistaken Mark Redeemed.`
+    )) return
+    setUpdating(true)
+    try {
+      const amount = Number(app.approvedAmount) || 0
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'applications', app.id), {
+        glStatus:     'issued',
+        glRedeemedAt: null,
+        updatedAt:    serverTimestamp(),
+      })
+      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
+        batch.update(doc(db, 'agencies', user.agencyId), {
+          'budget.committed': increment(amount),
+          'budget.disbursed': increment(-amount),
+        })
+      }
+      await batch.commit()
+      logAudit(user, { action: 'gl_unmark_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} returned to committed (redemption reversed)` })
+      toast.success('Redemption reversed. Amount returned to committed.')
+    } catch (err) { console.error(err); toast.error('Failed to reverse redemption.') }
+    finally { setUpdating(false) }
+  }
+
+  const handleExpireGL = async () => {
+    if (!window.confirm(
+      `Mark Guarantee Letter as EXPIRED?\n\n` +
+      `The 30-day validity window has passed. The committed budget of ₱${Number(app.approvedAmount).toLocaleString()} will be released back to the agency.`
+    )) return
+    setUpdating(true)
+    try {
+      const amount = Number(app.approvedAmount) || 0
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'applications', app.id), {
+        glStatus:    'expired',
+        glExpiredAt: serverTimestamp(),
+        updatedAt:   serverTimestamp(),
+      })
+      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
+        batch.update(doc(db, 'agencies', user.agencyId), {
+          'budget.committed': increment(-amount),
+        })
+      }
+      await batch.commit()
+      logAudit(user, { action: 'gl_expired', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released back to budget` })
+      toast.success('GL marked as expired. Budget released.')
+    } catch (err) { console.error(err); toast.error('Failed to mark GL expired.') }
+    finally { setUpdating(false) }
+  }
+
+  const handleReverseApproval = async () => {
+    if (!window.confirm(
+      `Reverse this approval?\n\n` +
+      `The application will return to 'Reviewing' status, the committed budget of ₱${Number(app.approvedAmount).toLocaleString()} will be released, and the patient will be notified.\n\n` +
+      `Note: the 30-day cooldown clock keeps running from the original approval date. The patient cannot be re-approved at any agency until that cooldown elapses.\n\n` +
+      `This should only be used to correct mistakes — not to deny assistance after the fact.`
+    )) return
+    setUpdating(true)
+    try {
+      const amount = Number(app.approvedAmount) || 0
+
+      // Preserve cooldown: the patient was approved once, so the 30-day clock
+      // keeps running from the original approvedAt. We stash an explicit
+      // cooldownUntilAt so future approval checks still see the lock even
+      // after approvedAt is cleared. Without this, reverse-then-reapprove
+      // (here or at another agency) would silently bypass the cooldown.
+      const COOLDOWN_DAYS = 30
+      const original = app.approvedAt?.toDate ? app.approvedAt.toDate() : (app.approvedAt ? new Date(app.approvedAt) : null)
+      const cooldownUntil = original
+        ? Timestamp.fromDate(new Date(original.getTime() + COOLDOWN_DAYS * 86400000))
+        : null
+
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'applications', app.id), {
+        status:              'reviewing',
+        stages:              getUpdatedStages(app.stages ?? [], 'reviewing', {}),
+        // Preserve approvedAmount and the other approval-context fields as
+        // historical record. The status='reviewing' + approvedAt=null pair
+        // is the authoritative "not currently approved" signal; every
+        // consumer of approvedAmount also checks status. Keeping these
+        // values populated lets the Funds history show real numbers and
+        // lets the cooldown banner reference the original amount.
+        approvedAt:          null,
+        glStatus:            null,
+        glRedeemedAt:        null,
+        cooldownUntilAt:     cooldownUntil,
+        reversedAt:          serverTimestamp(),
+        reversedBy:          user.name,
+        reversalReason:      `Reversed by ${user.name} on ${new Date().toLocaleDateString()}`,
+        updatedAt:           serverTimestamp(),
+      })
+      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
+        batch.update(doc(db, 'agencies', user.agencyId), {
+          'budget.committed': increment(-amount),
+        })
+      }
+      await batch.commit()
+      await notify(app.patientId, {
+        type:  'app_advanced',
+        title: 'Approval reversed',
+        body:  `Your approved application to ${app.agencyName} has been returned to review. The agency may contact you with details.`,
+      })
+      logAudit(user, { action: 'approval_reversed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released. Cooldown preserved until ${cooldownUntil?.toDate?.()?.toLocaleDateString?.() ?? 'n/a'}.` })
+      toast.success('Approval reversed. Budget released. Cooldown preserved.')
+    } catch (err) { console.error(err); toast.error('Failed to reverse approval.') }
+    finally { setUpdating(false) }
+  }
+
+  const handleMessagePatient = async () => {
+    try {
+      const convId = await getOrCreateConversation(user.uid, app.patientId, {
+        names:   { [user.uid]: user.name, [app.patientId]: app.patientName },
+        roles:   { [user.uid]: 'agency', [app.patientId]: 'patient' },
+        subject: `Re: Application ${app.appId || app.id.slice(0, 8)}`,
+      })
+      navigate(`/agency/messages?conv=${convId}`)
+    } catch {
+      toast.error('Could not open conversation. Please try again.')
+    }
+  }
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return
+    setSavingNote(true)
+    try {
+      const note = {
+        text:      newNote.trim(),
+        author:    user.name,
+        authorUid: user.uid,
+        createdAt: new Date().toISOString(),
+      }
+      const existingNotes = Array.isArray(app.caseNotes) ? app.caseNotes : []
+      await updateDoc(doc(db, 'applications', app.id), {
+        caseNotes: [...existingNotes, note],
+        updatedAt: serverTimestamp(),
+      })
+      setNewNote('')
+      toast.success('Case note added.')
+    } catch { toast.error('Failed to save note.') }
+    finally { setSavingNote(false) }
+  }
+
+  // ── Loading state ────────────────────────────────────────────────────
+
+  if (appLoading || !app) return (
+    <Layout breadcrumb="Application">
+      <div className="p-4 sm:p-6 max-w-5xl space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="card p-5 animate-pulse">
+            <div className="h-4 bg-gray-100 rounded w-48 mb-3" />
+            <div className="h-3 bg-gray-100 rounded w-64" />
+          </div>
+        ))}
+      </div>
+    </Layout>
+  )
+
+  // ── Derived values ───────────────────────────────────────────────────
+
+  const intakeReady   = isIntakeComplete(app.intakeSheet)
+  const expired       = isGLExpired(app)
+  const isApproved    = ['approved', 'certificate'].includes(app.status)
+  const intakeStatus  = requiredFieldsStatus({ ...(app.intakeSheet ?? {}), completedBy: app.intakeSheet?.completedBy ?? user.name }, user.name)
+  const intakeDone    = intakeStatus.filter(r => r.done).length
+  const intakeTotal   = intakeStatus.length
+
+  const days = app.submittedAt ? Math.floor((Date.now() - app.submittedAt.toDate().getTime()) / 86400000) : null
+  const dayColor = days >= 7 ? 'text-red-500' : days >= 3 ? 'text-amber-600' : 'text-gray-500'
+
+  // Visible sections
+  const visibleSections = SECTION_DEFS.filter(s =>
+    s.always || (s.forStatus && s.forStatus.includes(app.status))
+  )
+
+  // Section meta (counts, status chips)
+  const sectionMeta = {
+    overview:  null,
+    intake:    intakeReady ? '✓' : `${intakeDone}/${intakeTotal}`,
+    documents: patientDocs.length || null,
+    gl:        app.glStatus ?? null,
+    timeline:  (app.caseNotes ?? []).length || null,
+  }
+
+  // Primary actions for the hero
+  const primary = getPrimaryActions({
+    app,
+    intakeReady,
+    expired,
+    signedScan,
+    navigate,
+    handlers: {
+      handleStartReview,
+      handlePrintGL,
+      handleRedeemGL,
+      handleExpireGL,
+      handleReverseApproval,
+      handleResumeFromAwaiting,
+      setShowApprove,
+      setShowInterview,
+      setShowReject,
+      setShowUpload,
+      setShowRequestInfo,
+      setOutcomeRequest,
+    },
+  })
+
+  // Make sure the selected section is still valid (e.g., status changed)
+  if (!visibleSections.find(s => s.id === section)) {
+    setTimeout(() => setSection('overview'), 0)
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────
+
+  return (
+    <Layout breadcrumb={`Application · ${app.patientName}`}>
+      <div className="p-4 sm:p-6 max-w-5xl">
+
+        {/* ── Thin nav strip ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <Link to={`/agency/inbox${queueFilter !== 'all' ? `?status=${queueFilter}` : ''}`}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium">
+            <MdArrowBack size={16} /> Back to Inbox
+          </Link>
+          <div className="flex items-center gap-2">
+            {queueIds.length > 0 && (
+              <>
+                <button disabled={!prevId} onClick={() => prevId && goTo(prevId)}
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Previous in queue">
+                  <MdArrowBack size={16} />
+                </button>
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {queueIndex >= 0 ? `${queueIndex + 1} of ${queueIds.length}` : '—'}
+                </span>
+                <button disabled={!nextId} onClick={() => nextId && goTo(nextId)}
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Next in queue">
+                  <MdArrowForward size={16} />
+                </button>
+              </>
+            )}
+            <button onClick={handleMessagePatient}
+              className="btn-secondary text-sm flex items-center gap-1.5 ml-1">
+              <MdMessage size={14} /> Message Patient
+            </button>
+          </div>
+        </div>
+
+        {/* ── Hero ── */}
+        <div className="card p-5 mb-5">
+          {/* Identity */}
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 text-base font-bold flex items-center justify-center flex-shrink-0">
+              {app.patientName?.[0]?.toUpperCase() ?? '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-lg font-bold text-gray-900">{app.patientName}</h1>
+                <span className={`badge text-xs ${STATUS_BADGE[app.status]}`}>{STATUS_LABEL[app.status]}</span>
+                {isApproved && app.glStatus && (
+                  <span className={`badge text-xs ${
+                    app.glStatus === 'redeemed' ? 'badge-green'
+                    : app.glStatus === 'expired' ? 'bg-orange-100 text-orange-700'
+                    : expired ? 'bg-orange-100 text-orange-700'
+                    : 'badge-blue'
+                  }`}>
+                    GL {expired && app.glStatus === 'issued' ? 'expired' : app.glStatus}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                <span className="font-mono">{app.appId}</span>
+                <span className="mx-1 text-gray-300">·</span>
+                {app.agencyName}
+                <span className="mx-1 text-gray-300">·</span>
+                Submitted {formatDate(app.submittedAt)}
+                {app.approvedAt && (
+                  <>
+                    <span className="mx-1 text-gray-300">·</span>
+                    Approved {formatDate(app.approvedAt)}
+                  </>
+                )}
+                {days !== null && !['approved','certificate','rejected'].includes(app.status) && (
+                  <>
+                    <span className="mx-1 text-gray-300">·</span>
+                    <span className={`font-medium ${dayColor}`}>{days === 0 ? 'Today' : `${days}d waiting`}</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Compact stepper */}
+          <CompactStepper app={app} />
+
+          {/* Next-action banner */}
+          {primary.hint && (
+            <div className={`mt-4 rounded-xl border px-4 py-3 ${TONE_CLS[primary.tone]}`}>
+              <p className="text-sm font-medium mb-2">
+                {primary.actions.length > 0 ? <span className="font-semibold">Next: </span> : null}
+                {primary.hint}
+              </p>
+              {primary.actions.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {primary.actions.map((a, i) => (
+                    <button key={i} onClick={a.onClick} disabled={updating}
+                      className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${VARIANT_CLS[a.variant]}`}>
+                      <a.icon size={14} /> {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Two-column ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+
+          {/* Section nav (1/4) */}
+          <aside className="lg:col-span-1">
+            <div className="lg:sticky lg:top-4 card p-2">
+              {visibleSections.map(s => {
+                const active = section === s.id
+                const meta = sectionMeta[s.id]
+                return (
+                  <button key={s.id} onClick={() => setSection(s.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                      active
+                        ? 'bg-brand-50 text-brand-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}>
+                    <s.icon size={15} className={active ? 'text-brand-500' : 'text-gray-400'} />
+                    <span className="flex-1 truncate">{s.label}</span>
+                    {meta != null && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                        meta === '✓'
+                          ? 'bg-green-100 text-green-600'
+                          : active ? 'bg-white text-brand-700 border border-brand-200' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {meta}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </aside>
+
+          {/* Section content (3/4) */}
+          <div className="lg:col-span-3 space-y-5">
+
+            {/* OVERVIEW */}
+            {section === 'overview' && (
+              <>
+                <div className="card p-5">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Patient</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { label: 'Name',        value: app.patientName },
+                      { label: 'Contact',     value: app.patientContact || '—' },
+                      { label: 'Address',     value: patientProfile?.address || '—' },
+                      { label: 'Access Code', value: patientProfile?.hospitalId || '—' },
+                    ].map((r, i) => (
+                      <div key={i} className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-400 mb-0.5">{r.label}</p>
+                        <p className="text-sm font-medium text-gray-800 break-words">{r.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {app.interviewDate && (() => {
+                  const recorded = !!app.outcome
+                  const outcomeColor = { completed: 'badge-green', no_show: 'badge-red', rescheduled: 'badge-amber' }[app.outcome]
+                  const outcomeLabel = { completed: 'Completed', no_show: 'No-Show', rescheduled: 'Rescheduled' }[app.outcome]
+                  return (
+                    <div className="card p-5">
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <MdVideoCall size={13} /> Interview
+                          {recorded && <span className={`badge text-xs ${outcomeColor} normal-case`}>{outcomeLabel}</span>}
+                        </p>
+                        {app.status === 'interview' && !recorded && (
+                          <button className="text-xs text-brand-500 hover:text-brand-600 font-medium"
+                            onClick={() => setShowReschedule(true)}>
+                            Reschedule
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-1.5 text-sm text-gray-700">
+                        <p><span className="text-gray-400">When:</span> {fmtInterviewDate(app.interviewDate)} at {app.interviewTime}</p>
+                        {app.conductedBy && <p><span className="text-gray-400">Conducted by:</span> {app.conductedBy}</p>}
+                        {app.meetLink && (
+                          <p>
+                            <span className="text-gray-400">Meet:</span>{' '}
+                            <a href={app.meetLink} target="_blank" rel="noopener noreferrer"
+                              className="text-brand-500 hover:underline break-all">{app.meetLink}</a>
+                          </p>
+                        )}
+                        {app.outcomeNotes && (
+                          <p className="mt-2 italic bg-gray-50 rounded px-3 py-2 text-xs text-gray-600">"{app.outcomeNotes}"</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {app.status === 'rejected' && app.rejectionReason && (
+                  <div className="card p-5 border-l-4 border-red-300">
+                    <p className="text-xs font-semibold text-red-700 uppercase tracking-widest mb-2">Rejection Reason</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{app.rejectionReason}</p>
+                  </div>
+                )}
+
+                {isApproved && app.approvedAmount != null && (
+                  <div className="card p-5">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <MdAttachMoney size={13} /> Approved Assistance
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 mb-2">₱{Number(app.approvedAmount).toLocaleString()}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                      {app.purposeOfAssistance?.length > 0 && (
+                        <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-400">For</p><p className="text-gray-700">{app.purposeOfAssistance.join(', ')}</p></div>
+                      )}
+                      {app.payableTo && (
+                        <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-400">Payable to</p><p className="text-gray-700">{app.payableTo}</p></div>
+                      )}
+                      {app.approvedBy && (
+                        <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-xs text-gray-400">Approved by</p><p className="text-gray-700">{app.approvedBy} · {formatDate(app.approvedAt)}</p></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* INTAKE */}
+            {section === 'intake' && (
+              <div className="card p-5">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Unified Intake Sheet</p>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    intakeReady ? 'bg-green-50' : app.intakeSheet ? 'bg-amber-50' : 'bg-gray-100'
+                  }`}>
+                    <MdAssignment size={18} className={
+                      intakeReady ? 'text-green-600' : app.intakeSheet ? 'text-amber-600' : 'text-gray-400'
+                    } />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-800 mb-0.5">
+                      {intakeReady ? `Completed by ${app.intakeSheet.completedBy}` : `${intakeDone} of ${intakeTotal} required fields filled`}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {intakeReady
+                        ? 'All required fields filled. Approval unlocked.'
+                        : app.intakeSheet ? 'In progress — open the sheet to continue.' : 'Not started — required before approval.'}
+                    </p>
+                  </div>
+                </div>
+
+                {intakeReady && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Means-Test Category</p><p className="font-medium text-gray-800 capitalize">{app.intakeSheet.meansTestCategory?.replace('_', ' ')}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Household Size</p><p className="font-medium text-gray-800">{app.intakeSheet.householdSize ?? '—'}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Monthly Income</p><p className="font-medium text-gray-800">₱{Number(app.intakeSheet.monthlyIncome ?? 0).toLocaleString()}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Estimated Cost</p><p className="font-medium text-gray-800">₱{Number(app.intakeSheet.estimatedTotalCost ?? 0).toLocaleString()}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Diagnosis</p><p className="font-medium text-gray-800">{app.intakeSheet.diagnosis || '—'}</p></div>
+                    {app.intakeSheet.recommendation && (
+                      <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Recommendation</p><p className="text-gray-800 italic">"{app.intakeSheet.recommendation}"</p></div>
+                    )}
+                  </div>
+                )}
+
+                <button className="btn-primary text-sm flex items-center gap-1.5"
+                  onClick={() => navigate(`/agency/applications/${app.id}/intake`)}>
+                  <MdAssignment size={14} />
+                  {isApproved ? 'View Sheet' : intakeReady ? 'Edit Sheet' : app.intakeSheet ? 'Continue' : 'Open Sheet'}
+                </button>
+              </div>
+            )}
+
+            {/* DOCUMENTS */}
+            {section === 'documents' && (
+              <div className="card p-5">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                  Submitted Documents ({patientDocs.length})
+                </p>
+                {patientDocs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MdDescription size={32} className="text-gray-200 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">No documents submitted with this application.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {patientDocs.map(d => (
+                      <button key={d.id}
+                        disabled={d._missing}
+                        onClick={() => !d._missing && setViewingDoc(d)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                          d._missing
+                            ? 'bg-gray-50 opacity-60 cursor-not-allowed'
+                            : d.updatedAfterSubmission
+                              ? 'bg-amber-50 border border-amber-100 hover:bg-amber-100'
+                              : 'bg-gray-50 hover:bg-gray-100'
+                        }`}>
+                        <span className="text-lg">📄</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <p className="text-xs text-gray-400">{d.date}</p>
+                            {d.updatedAfterSubmission && (
+                              <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">
+                                Updated after submission
+                              </span>
+                            )}
+                            {d._missing && (
+                              <span className="text-xs text-red-400">File no longer available</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`badge text-xs ${d.status === 'verified' ? 'badge-green' : d.status === 'rejected' ? 'badge-red' : 'badge-amber'}`}>
+                          {d.status}
+                        </span>
+                        {!d._missing && (
+                          <span className="text-xs text-brand-500 font-medium flex-shrink-0">View →</span>
+                        )}
+                      </button>
+                    ))}
+                    <p className="text-xs text-gray-400 mt-2 italic">Click any document to view the file submitted by the patient.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* GL DOCUMENT */}
+            {section === 'gl' && isApproved && (
+              <>
+                <GLDocumentPanel
+                  app={app}
+                  canReplace={user?.role === 'agency' || user?.role === 'agency_admin'}
+                  onReplace={() => setShowUpload(true)}
+                />
+                {/* Section-specific actions */}
+                <div className="card p-4 flex gap-2 flex-wrap">
+                  {app.status === 'certificate' && app.glStatus === 'issued' && !expired && (
+                    <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['primary-green']}`}
+                      disabled={updating} onClick={handleRedeemGL}>
+                      <MdCheckCircle size={14} /> Mark GL Redeemed
+                    </button>
+                  )}
+                  {app.status === 'certificate' && app.glStatus === 'issued' && expired && (
+                    <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['primary-orange']}`}
+                      disabled={updating} onClick={handleExpireGL}>
+                      <MdWarning size={14} /> Mark GL Expired
+                    </button>
+                  )}
+                  {(app.glStatus === 'issued' || app.glStatus === 'expired') && (
+                    <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['secondary']}`}
+                      disabled={updating} onClick={handleReverseApproval}>
+                      <MdCancel size={14} /> Reverse Approval
+                    </button>
+                  )}
+                  {app.status === 'approved' && (
+                    <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['primary']}`}
+                      disabled={updating} onClick={handlePrintGL}>
+                      <MdPrint size={14} /> Print Guarantee Letter
+                    </button>
+                  )}
+                  {app.status === 'certificate' && (
+                    <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['secondary']}`}
+                      disabled={updating} onClick={handlePrintGL}>
+                      <MdPrint size={14} /> Re-print
+                    </button>
+                  )}
+                  {app.glStatus === 'redeemed' && (
+                    <>
+                      <p className="text-sm text-green-700 italic flex-1">✓ GL redeemed on {formatDate(app.glRedeemedAt)}. Case complete.</p>
+                      <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['secondary']}`}
+                        disabled={updating}
+                        title="Reverse the redemption — for correcting mistakes only"
+                        onClick={handleUnmarkRedeemed}>
+                        <MdCancel size={14} /> Reverse Redemption
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* TIMELINE & NOTES */}
+            {section === 'timeline' && (
+              <>
+                <div className="card p-5">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Application Timeline</p>
+                  <div className="space-y-2">
+                    {(app.stages ?? []).map((s, i) => (
+                      <div key={s.key} className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5
+                          ${s.done ? 'bg-brand-500 border-brand-500 text-white'
+                          : s.active ? 'border-amber-400 bg-amber-50 text-amber-500'
+                          : 'border-gray-200 bg-white text-gray-300'}`}>
+                          {s.done ? '✓' : i + 1}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-medium ${s.done ? 'text-gray-800' : s.active ? 'text-amber-700' : 'text-gray-400'}`}>
+                            {s.label} {s.active && <span className="badge badge-amber text-xs ml-1">Current</span>}
+                          </p>
+                          {s.date && <p className="text-xs text-gray-400">{s.date}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="card p-5">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <MdNote size={13} /> Case Notes ({(app.caseNotes ?? []).length})
+                  </p>
+                  {(app.caseNotes ?? []).length === 0 ? (
+                    <p className="text-sm text-gray-400 italic mb-3">No case notes yet. Add the first one below.</p>
+                  ) : (
+                    <div className="space-y-2 mb-3">
+                      {[...(app.caseNotes ?? [])].reverse().map((n, i) => (
+                        <div key={i} className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-baseline justify-between gap-2 mb-1">
+                            <p className="text-xs font-medium text-gray-700">{n.author}</p>
+                            <p className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{n.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!['rejected'].includes(app.status) && (
+                    <div className="flex items-start gap-2 pt-2 border-t border-gray-100">
+                      <textarea className="input flex-1 text-sm resize-none" rows={2}
+                        placeholder="Add a case note (e.g. called patient on 5/19, no answer)…"
+                        maxLength={500}
+                        value={newNote} onChange={e => setNewNote(e.target.value)} />
+                      <button className="btn-primary text-sm flex items-center gap-1 flex-shrink-0"
+                        disabled={savingNote || !newNote.trim()}
+                        onClick={handleAddNote}>
+                        <MdAdd size={14} /> Add
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Sub-modals ── */}
+        {showInterview && (
+          <InterviewModal app={app} agency={agency}
+            onConfirm={handleScheduleInterview}
+            onClose={() => setShowInterview(false)} />
+        )}
+        {showReschedule && (
+          <InterviewModal app={app} agency={agency}
+            onConfirm={handleRescheduleInterview}
+            onClose={() => setShowReschedule(false)} />
+        )}
+        {showReject && (
+          <RejectModal app={app} onConfirm={handleReject} onClose={() => setShowReject(false)} />
+        )}
+        {showApprove && (
+          <ApproveModal app={app} agency={agency} currentUser={user}
+            onConfirm={handleApprove}
+            onClose={() => setShowApprove(false)} />
+        )}
+        {showUpload && (
+          <SignedGLUploadModal app={app} existing={signedScan} onClose={() => setShowUpload(false)} />
+        )}
+        {showRequestInfo && (
+          <RequestInfoModal app={app}
+            onConfirm={handleRequestInfo}
+            onClose={() => setShowRequestInfo(false)} />
+        )}
+        {outcomeRequest && (
+          <OutcomeModal app={outcomeRequest.app} outcome={outcomeRequest.outcome}
+            currentUser={user} onClose={() => setOutcomeRequest(null)} />
+        )}
+        {viewingDoc && (
+          <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
+        )}
+
+      </div>
+    </Layout>
+  )
+}
