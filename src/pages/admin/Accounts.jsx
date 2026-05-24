@@ -16,8 +16,7 @@ import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const ROLE_BADGE = { super_admin: 'badge-purple', staff_admin: 'badge-blue', agency_admin: 'badge-amber', agency: 'badge-green' }
-const ROLE_LABEL = { super_admin: 'Super Admin', staff_admin: 'Staff Admin', agency_admin: 'Agency Admin', agency: 'Agency Coordinator' }
+import { ROLE_BADGE, ROLE_LABEL_SHORT as ROLE_LABEL } from '../../utils/constants'
 
 const getSecondaryAuth = () => {
   const existing = getApps().find(a => a.name === 'secondary')

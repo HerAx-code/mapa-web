@@ -290,7 +290,7 @@ export default function AdminDashboard() {
           </h1>
           <p className="page-sub">
             {isSuperAdmin
-              ? 'Global overview of MAPA portal metrics, alerts, and processing health.'
+              ? 'Global overview of MAPA metrics, alerts, and processing health.'
               : 'Daily operations — review documents, manage applications, and respond to patient needs.'}
           </p>
         </div>

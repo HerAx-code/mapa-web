@@ -1,11 +1,15 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { doc, onSnapshot, updateDoc, serverTimestamp, collection, query, where } from 'firebase/firestore'
+import {
+  doc, onSnapshot, updateDoc, serverTimestamp, collection, query, where,
+  orderBy, limit, getDocs,
+} from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { MdAttachMoney, MdRefresh, MdSave, MdEdit, MdWarning, MdLockOutline } from 'react-icons/md'
+import { MdAttachMoney, MdRefresh, MdSave, MdEdit, MdWarning, MdLockOutline, MdHistory } from 'react-icons/md'
+import { PERIOD_NOUN, PERIOD_ADJECTIVE } from '../../utils/constants'
 import toast from 'react-hot-toast'
 
 export default function AgencyAllocation() {
@@ -13,12 +17,17 @@ export default function AgencyAllocation() {
   const navigate   = useNavigate()
   const [agency, setAgency]       = useState(null)
   const [loading, setLoading]     = useState(true)
-  const [editing, setEditing]     = useState(false)
-  const [newAlloc, setNewAlloc]   = useState(0)
-  const [newPeriod, setNewPeriod] = useState('monthly')
-  const [saving, setSaving]       = useState(false)
-  const [resetting, setResetting] = useState(false)
+  const [editing, setEditing]           = useState(false)
+  const [newAlloc, setNewAlloc]         = useState(0)
+  const [newPeriod, setNewPeriod]       = useState('monthly')
+  const [newFundSource, setNewFundSource]       = useState('')
+  const [newFundSourceNotes, setNewFundSourceNotes] = useState('')
+  const [saving, setSaving]             = useState(false)
+  const [resetting, setResetting]       = useState(false)
   const [openRequests, setOpenRequests] = useState([])
+  const [history, setHistory]           = useState([])
+  const [historyLoading, setHistoryLoading] = useState(true)
+  const [historyKey, setHistoryKey]     = useState(0)  // bump to refetch after save/reset
 
   const isAgencyAdmin = user?.role === 'agency_admin'
 
@@ -32,6 +41,8 @@ export default function AgencyAllocation() {
           setAgency(data)
           setNewAlloc(data.budget?.allocated ?? 0)
           setNewPeriod(data.budget?.period ?? 'monthly')
+          setNewFundSource(data.budget?.fundSource ?? '')
+          setNewFundSourceNotes(data.budget?.fundSourceNotes ?? '')
         }
         setLoading(false)
       },
@@ -42,6 +53,32 @@ export default function AgencyAllocation() {
     )
     return unsub
   }, [user?.agencyId])
+
+  // Allocation history — last 10 budget changes for this agency.
+  // Uses the auditLog(actorAgencyId, createdAt DESC) composite index.
+  // Re-fetches when historyKey is bumped (after a save or period reset).
+  useEffect(() => {
+    if (!user?.agencyId || !isAgencyAdmin) return
+    setHistoryLoading(true)
+    getDocs(query(
+      collection(db, 'auditLog'),
+      where('actorAgencyId', '==', user.agencyId),
+      orderBy('createdAt', 'desc'),
+      limit(30),
+    ))
+      .then(snap => {
+        const items = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(e => e.action === 'budget_allocated' || e.action === 'budget_period_reset')
+          .slice(0, 10)
+        setHistory(items)
+      })
+      .catch(err => {
+        console.error('[Allocation] history load error:', err)
+        setHistory([])
+      })
+      .finally(() => setHistoryLoading(false))
+  }, [user?.agencyId, isAgencyAdmin, historyKey])
 
   // Open top-up requests from this agency
   useEffect(() => {
@@ -115,8 +152,14 @@ export default function AgencyAllocation() {
       toast.error('Allocation must be 0 or a positive number.')
       return
     }
+    if (next > 0 && !newFundSource.trim()) {
+      toast.error('Please name the fund source (e.g., PCSO Resolution #2026-15) for accountability.')
+      return
+    }
     setSaving(true)
     try {
+      const fundSource      = newFundSource.trim()
+      const fundSourceNotes = newFundSourceNotes.trim()
       await updateDoc(doc(db, 'agencies', agency.id), {
         budget: {
           period:                newPeriod,
@@ -124,6 +167,9 @@ export default function AgencyAllocation() {
           committed:             committed,
           disbursed:             disbursed,
           periodStart:           budget.periodStart ?? serverTimestamp(),
+          // Fund source recorded for COA-style audit defense.
+          fundSource:            fundSource || null,
+          fundSourceNotes:       fundSourceNotes || null,
           // Fresh allocation reopens the low-balance notification window
           lowBalanceNotifiedAt:  null,
         },
@@ -133,10 +179,14 @@ export default function AgencyAllocation() {
         targetType: 'agency',
         targetId:   agency.id,
         targetName: agency.name,
-        details:    `Allocation set to ₱${next.toLocaleString()} (${newPeriod}) by agency admin`,
+        details:    `Allocation set to ₱${next.toLocaleString()} (${newPeriod})` +
+                    (fundSource ? ` · source: ${fundSource}` : '') +
+                    ' by agency admin',
       })
       setEditing(false)
       toast.success('Allocation updated.')
+      // Give the new audit entry a moment to land before re-fetching history.
+      setTimeout(() => setHistoryKey(k => k + 1), 600)
     } catch (err) {
       console.error('[Allocation] save error:', err)
       toast.error('Failed to update allocation.')
@@ -160,11 +210,12 @@ export default function AgencyAllocation() {
       )
       return
     }
+    const periodNoun = PERIOD_NOUN[budget.period] ?? 'period'
     if (!window.confirm(
-      `Start a new ${budget.period} period?\n\n` +
-      `This resets disbursed (₱${disbursed.toLocaleString()}) back to ₱0 and starts a fresh period clock. ` +
+      `Start a new ${periodNoun}?\n\n` +
+      `This resets disbursed (₱${disbursed.toLocaleString()}) back to ₱0 and starts a fresh ${periodNoun} clock. ` +
       `The allocation (₱${allocated.toLocaleString()}) stays the same.\n\n` +
-      `Use this at the start of each budget period.`
+      `Use this at the start of each budget ${periodNoun}.`
     )) return
     setResetting(true)
     try {
@@ -182,6 +233,7 @@ export default function AgencyAllocation() {
         details:    `New ${budget.period} period started by agency admin`,
       })
       toast.success('New budget period started.')
+      setTimeout(() => setHistoryKey(k => k + 1), 600)
     } catch (err) {
       console.error('[Allocation] reset error:', err)
       toast.error('Failed to reset budget period.')
@@ -217,7 +269,7 @@ export default function AgencyAllocation() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-amber-800">Budget period appears stale</p>
               <p className="text-xs text-amber-700 mt-0.5">
-                This {budget.period} period started <strong>{periodDays} days ago</strong>. Reset the period to start a fresh cycle.
+                This {PERIOD_NOUN[budget.period] ?? 'period'} started <strong>{periodDays} days ago</strong>. Reset to start a fresh {PERIOD_NOUN[budget.period] ?? 'period'}.
               </p>
             </div>
             <button
@@ -232,7 +284,7 @@ export default function AgencyAllocation() {
         <div className="card p-5 mb-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-              Current Budget · {budget.period}
+              {PERIOD_ADJECTIVE[budget.period] ?? 'Current'} Budget
             </p>
             {periodStart && (
               <p className="text-xs text-gray-400">
@@ -270,7 +322,7 @@ export default function AgencyAllocation() {
             <div>
               <p className="text-sm font-semibold text-gray-800">Allocation</p>
               <p className="text-xs text-gray-400">
-                The total budget for this {budget.period} period. Approved Guarantee Letters draw from this.
+                The total budget for this {PERIOD_NOUN[budget.period] ?? 'period'}. Approved Guarantee Letters draw from this.
               </p>
             </div>
             {!editing && (
@@ -282,10 +334,27 @@ export default function AgencyAllocation() {
             )}
           </div>
           {!editing ? (
-            <div className="flex items-center gap-3">
-              <MdAttachMoney size={20} className="text-gray-400" />
-              <p className="text-2xl font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
-              <span className="text-xs text-gray-400">per {budget.period}</span>
+            <div>
+              <div className="flex items-center gap-3">
+                <MdAttachMoney size={20} className="text-gray-400" />
+                <p className="text-2xl font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
+                <span className="text-xs text-gray-400">per {PERIOD_NOUN[budget.period] ?? 'period'}</span>
+              </div>
+              {budget.fundSource ? (
+                <div className="mt-3 pt-3 border-t border-gray-50">
+                  <p className="text-xs text-gray-400 mb-0.5">Fund source</p>
+                  <p className="text-sm font-medium text-gray-700">{budget.fundSource}</p>
+                  {budget.fundSourceNotes && (
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{budget.fundSourceNotes}</p>
+                  )}
+                </div>
+              ) : allocated > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-50">
+                  <p className="text-xs text-amber-600">
+                    ⚠ No fund source recorded. Edit allocation to add one (required for COA accountability).
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -303,9 +372,34 @@ export default function AgencyAllocation() {
                   <option value="yearly">Yearly</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Fund Source {Number(newAlloc) > 0 && <span className="text-red-400">*</span>}
+                </label>
+                <input className="input"
+                  placeholder="e.g. PCSO Resolution #2026-15, DOH SAA Q1-2026"
+                  value={newFundSource}
+                  onChange={e => setNewFundSource(e.target.value)} />
+                <p className="text-xs text-gray-400 mt-0.5">
+                  The authorizing document or program that funded this allocation. Required when allocation &gt; 0.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
+                <textarea className="input resize-none" rows={2}
+                  placeholder="Sub-program, restrictions, contact person, board resolution date, etc."
+                  value={newFundSourceNotes}
+                  onChange={e => setNewFundSourceNotes(e.target.value)} />
+              </div>
               <div className="flex gap-2 justify-end pt-1">
                 <button
-                  onClick={() => { setEditing(false); setNewAlloc(allocated); setNewPeriod(budget.period ?? 'monthly') }}
+                  onClick={() => {
+                    setEditing(false)
+                    setNewAlloc(allocated)
+                    setNewPeriod(budget.period ?? 'monthly')
+                    setNewFundSource(budget.fundSource ?? '')
+                    setNewFundSourceNotes(budget.fundSourceNotes ?? '')
+                  }}
                   className="btn-secondary text-sm"
                   disabled={saving}>
                   Cancel
@@ -369,6 +463,55 @@ export default function AgencyAllocation() {
             </div>
           </div>
         )}
+
+        {/* Allocation history — last 10 budget changes for this agency.
+            Sources from auditLog filtered to this agency's actorAgencyId.
+            For the full agency-wide audit slice, see /agency/audit. */}
+        <div className="card p-5 mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MdHistory size={16} className="text-gray-400" />
+              <p className="text-sm font-semibold text-gray-800">Allocation History</p>
+            </div>
+            <button
+              onClick={() => navigate('/agency/audit')}
+              className="text-xs text-brand-500 hover:text-brand-600 font-medium">
+              Full audit log →
+            </button>
+          </div>
+          {historyLoading ? (
+            <p className="text-xs text-gray-400 py-3 text-center">Loading…</p>
+          ) : history.length === 0 ? (
+            <p className="text-xs text-gray-400 py-3 text-center">
+              No allocation changes recorded yet. Set the allocation above to start the trail.
+            </p>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {history.map(e => {
+                const isReset = e.action === 'budget_period_reset'
+                const when = e.createdAt?.toDate
+                  ? e.createdAt.toDate()
+                  : (e.createdAt ? new Date(e.createdAt) : null)
+                return (
+                  <div key={e.id} className="py-2.5 flex items-start gap-3">
+                    <span className={`badge text-xs flex-shrink-0 ${
+                      isReset ? 'badge-gray' : 'badge-blue'
+                    }`}>
+                      {isReset ? 'Period reset' : 'Allocation set'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700 leading-snug">{e.details ?? '—'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        by <strong>{e.actorName ?? 'System'}</strong>
+                        {when && <> · {when.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         <p className="text-xs text-gray-400 mt-2 leading-relaxed">
           <strong>Accountability —</strong> Changes here are recorded in your agency's audit log. As Agency Administrator, you are accountable to your funding source (PCSO / DOH / DSWD / etc.) for how the allocation is set and spent. CRMC operates the platform but does not control your agency's budget.

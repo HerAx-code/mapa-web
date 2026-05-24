@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { MdVideoCall, MdCalendarToday, MdOpenInNew, MdArrowBack, MdWarning } from 'react-icons/md'
+import { MdVideoCall, MdCalendarToday, MdOpenInNew, MdWarning } from 'react-icons/md'
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
 const fmtDate = (iso) => {
@@ -21,13 +22,21 @@ const isPastDate = (iso) => {
 }
 
 export default function Interviews() {
+  const { t }                       = useTranslation()
   const { user }                    = useAuth()
   const navigate                    = useNavigate()
   const [interviews,           setInterviews]           = useState([])
   const [loading,              setLoading]              = useState(true)
   const [hasActiveApp,         setHasActiveApp]         = useState(false)
   const [hasCompletedInterview, setHasCompletedInterview] = useState(false)
-  const [showPrep,             setShowPrep]             = useState(false)
+  // Per-card prep panel state — keyed by application id so multiple
+  // interviews can expand/collapse independently.
+  const [expandedPrep,         setExpandedPrep]         = useState(new Set())
+  const togglePrep = (id) => setExpandedPrep(p => {
+    const next = new Set(p)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
 
   useEffect(() => {
     if (!user?.uid) return
@@ -57,7 +66,7 @@ export default function Interviews() {
         setLoading(false)
       },
       () => {
-        toast.error('Could not load interview details. Please refresh.')
+        toast.error(t('patient.interviews.loadError'))
         setLoading(false)
       }
     )
@@ -65,17 +74,17 @@ export default function Interviews() {
   }, [user?.uid])
 
   return (
-    <Layout breadcrumb="My Interview">
+    <Layout breadcrumb={t('patient.interviews.title')}>
       <div className="p-4 sm:p-6">
 
-        <div className="max-w-lg mx-auto mb-5">
-          <h1 className="page-title">My Interview</h1>
-          <p className="page-sub">Join your scheduled video interview with the agency.</p>
+        <div className="max-w-2xl mx-auto mb-5">
+          <h1 className="page-title">{t('patient.interviews.title')}</h1>
+          <p className="page-sub">{t('patient.interviews.subtitle')}</p>
         </div>
 
         {/* Skeleton loading */}
         {loading && (
-          <div className="card p-5 max-w-lg mx-auto animate-pulse">
+          <div className="card p-5 max-w-2xl mx-auto animate-pulse">
             <div className="flex gap-3 mb-4 pb-4 border-b border-gray-50">
               <div className="w-10 h-10 bg-gray-100 rounded-xl" />
               <div className="flex-1 space-y-2">
@@ -90,7 +99,7 @@ export default function Interviews() {
 
         {/* Interview cards */}
         {!loading && interviews.length > 0 && (
-          <div className="space-y-4 max-w-lg mx-auto">
+          <div className="space-y-4 max-w-2xl mx-auto">
             {interviews.map(app => {
               const isPast  = isPastDate(app.interviewDate)
               const todayStr = new Date().toISOString().split('T')[0]
@@ -108,10 +117,10 @@ export default function Interviews() {
                   </div>
                   <div className="ml-auto flex items-center gap-1.5">
                     {isToday && (
-                      <span className="badge badge-amber text-xs font-bold">Today!</span>
+                      <span className="badge badge-amber text-xs font-bold">{t('patient.interviews.todayBadge')}</span>
                     )}
                     <span className={`badge ${isPast ? 'badge-red' : 'badge-purple'}`}>
-                      {isPast ? 'Date Passed' : 'Scheduled'}
+                      {isPast ? t('patient.interviews.datePassedBadge') : t('patient.interviews.scheduledBadge')}
                     </span>
                   </div>
                 </div>
@@ -122,13 +131,13 @@ export default function Interviews() {
                     <div className="flex items-start gap-2 flex-1">
                       <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-amber-700">
-                        This interview date has passed. Message the agency for an update on your status.
+                        {t('patient.interviews.pastWarning')}
                       </p>
                     </div>
                     <button
                       className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
                       onClick={() => navigate('/patient/messages')}>
-                      Message Agency →
+                      {t('patient.interviews.messageAgency')} →
                     </button>
                   </div>
                 )}
@@ -139,26 +148,28 @@ export default function Interviews() {
                   <strong className={isPast ? 'text-red-500' : isToday ? 'text-brand-600' : ''}>
                     {fmtDate(app.interviewDate)}
                   </strong>
-                  {app.interviewTime && <span>at <strong>{app.interviewTime}</strong></span>}
+                  {app.interviewTime && <span>{t('patient.interviews.atTime', { time: app.interviewTime })}</span>}
                 </div>
 
                 {!isPast && (
                   <>
                     <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                      Please join the video call on time. Make sure your camera and microphone are working before the interview.
+                      {t('patient.interviews.joinIntro')}
                     </p>
                     <button
                       className="mt-2 text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
-                      onClick={() => setShowPrep(p => !p)}>
-                      {showPrep ? 'Hide details ↑' : 'What to expect in the interview ↓'}
+                      onClick={() => togglePrep(app.id)}>
+                      {expandedPrep.has(app.id)
+                        ? `${t('patient.interviews.hideDetails')} ↑`
+                        : `${t('patient.interviews.whatToExpect')} ↓`}
                     </button>
-                    {showPrep && (
+                    {expandedPrep.has(app.id) && (
                       <div className="mt-3 bg-gray-50 rounded-xl p-4 space-y-2 text-sm text-gray-600 border border-gray-100">
-                        <p>📄 Have your verified documents ready to show if asked.</p>
-                        <p>💬 Expect questions about your medical situation and financial need.</p>
-                        <p>⏱ The interview typically takes 15–20 minutes.</p>
-                        <p>📋 A decision will be communicated to you after the review.</p>
-                        <p>📶 Make sure you have a stable internet connection.</p>
+                        <p>{t('patient.interviews.prep.documents')}</p>
+                        <p>{t('patient.interviews.prep.questions')}</p>
+                        <p>{t('patient.interviews.prep.duration')}</p>
+                        <p>{t('patient.interviews.prep.decision')}</p>
+                        <p>{t('patient.interviews.prep.internet')}</p>
                       </div>
                     )}
                   </>
@@ -171,18 +182,18 @@ export default function Interviews() {
                     rel="noopener noreferrer"
                     className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm mt-4">
                     <MdVideoCall size={18} />
-                    Join Video Interview
+                    {t('patient.interviews.joinBtn')}
                     <MdOpenInNew size={14} />
                   </a>
                 ) : (
                   <div className="w-full py-3 rounded-xl bg-gray-100 text-center text-sm text-gray-400 mt-4">
-                    Meeting link not yet provided
+                    {t('patient.interviews.noLink')}
                   </div>
                 ))}
 
                 {!isPast && (
                   <p className="text-xs text-gray-400 text-center mt-3">
-                    Video call via Google Meet · No account needed · Opens in a new tab
+                    {t('patient.interviews.meetHint')}
                   </p>
                 )}
               </div>
@@ -198,35 +209,35 @@ export default function Interviews() {
             </div>
             {hasCompletedInterview ? (
               <>
-                <h2 className="text-base font-semibold text-gray-700 mb-1">Interview Complete</h2>
+                <h2 className="text-base font-semibold text-gray-700 mb-1">{t('patient.interviews.empty.completedTitle')}</h2>
                 <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                  Your interview has been completed. Check My Application to see the outcome of your application.
+                  {t('patient.interviews.empty.completedDesc')}
                 </p>
                 <button className="btn-primary text-sm flex items-center gap-1.5 mx-auto"
                   onClick={() => navigate('/patient/status')}>
-                  View My Application →
+                  {t('patient.interviews.empty.completedBtn')} →
                 </button>
               </>
             ) : hasActiveApp ? (
               <>
-                <h2 className="text-base font-semibold text-gray-700 mb-1">No Interview Scheduled Yet</h2>
+                <h2 className="text-base font-semibold text-gray-700 mb-1">{t('patient.interviews.empty.notYetTitle')}</h2>
                 <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                  Once the agency reviews your application and approves it, they will schedule a video interview and you will be notified.
+                  {t('patient.interviews.empty.notYetDesc')}
                 </p>
-                <button className="btn-secondary text-sm flex items-center gap-1.5 mx-auto"
+                <button className="btn-secondary text-sm mx-auto"
                   onClick={() => navigate('/patient/status')}>
-                  <MdArrowBack size={15} /> View My Application
+                  {t('patient.interviews.empty.notYetBtn')} →
                 </button>
               </>
             ) : (
               <>
-                <h2 className="text-base font-semibold text-gray-700 mb-1">No Application Yet</h2>
+                <h2 className="text-base font-semibold text-gray-700 mb-1">{t('patient.interviews.empty.noAppTitle')}</h2>
                 <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-                  You need to apply for a medical assistance program first. Interviews are scheduled after your application is reviewed and approved.
+                  {t('patient.interviews.empty.noAppDesc')}
                 </p>
                 <button className="btn-primary text-sm mx-auto"
                   onClick={() => navigate('/patient/screening')}>
-                  Find a Program →
+                  {t('patient.interviews.empty.noAppBtn')} →
                 </button>
               </>
             )}

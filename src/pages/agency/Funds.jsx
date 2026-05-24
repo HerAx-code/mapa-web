@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { PERIOD_ADJECTIVE } from '../../utils/constants'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   MdSearch, MdCheckCircle, MdCancel, MdHourglassEmpty,
@@ -240,7 +241,7 @@ export default function AgencyFunds() {
           <div className="card p-5 mb-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                Budget · {budget.period}
+                {PERIOD_ADJECTIVE[budget.period] ?? 'Current'} Budget
               </p>
               <p className="text-xs text-gray-400">
                 Period started {formatDate(budget.periodStart)}
@@ -270,6 +271,15 @@ export default function AgencyFunds() {
             <p className="text-xs text-gray-400">
               {utilization}% utilized · committed = sum of issued-but-not-redeemed GLs · disbursed = redeemed GLs · remaining = what new approvals can draw from
             </p>
+            {budget.fundSource && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-0.5">Fund source</p>
+                <p className="text-sm font-medium text-gray-700">{budget.fundSource}</p>
+                {budget.fundSourceNotes && (
+                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{budget.fundSourceNotes}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 

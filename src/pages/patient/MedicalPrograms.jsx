@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { MdSearch, MdLocationOn, MdSchedule, MdCheckCircle, MdClose, MdWarning, MdHourglassEmpty, MdCancel } from 'react-icons/md'
+import { MdSearch, MdLocationOn, MdSchedule, MdCheckCircle, MdClose, MdWarning, MdHourglassEmpty, MdCancel, MdHourglassTop, MdLocalHospital } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, getDocs, getDoc,
@@ -10,11 +10,13 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { SLOT_STATUS } from '../../utils/constants'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
 // ── Apply Modal ───────────────────────────────────────────────────────────
 
 function ApplyModal({ agency, onClose }) {
+  const { t }                           = useTranslation()
   const { user }                        = useAuth()
   const navigate                        = useNavigate()
   const [allDocs,        setAllDocs]        = useState([])
@@ -72,9 +74,9 @@ function ApplyModal({ agency, onClose }) {
   const missingCount = reqStatus.filter(r => r.missing).length
 
   const handleSubmit = async () => {
-    if (alreadyApplied)  { toast.error('You already have an active application to this agency.'); return }
-    if (activeElsewhere) { toast.error(`Complete your application at ${activeElsewhere.agencyName} first.`); return }
-    if (isFull)         { toast.error('No slots available for today.'); return }
+    if (alreadyApplied)  { toast.error(t('patient.apply.errAlreadyApplied')); return }
+    if (activeElsewhere) { toast.error(t('patient.apply.errActiveElsewhere', { agency: activeElsewhere.agencyName })); return }
+    if (isFull)         { toast.error(t('patient.apply.errNoSlots')); return }
 
     setSubmitting(true)
     try {
@@ -82,7 +84,7 @@ function ApplyModal({ agency, onClose }) {
       const agencySnap = await getDoc(doc(db, 'agencies', agency.id))
       const currentRemaining = agencySnap.data()?.slots?.remaining ?? 0
       if (currentRemaining <= 0) {
-        toast.error('Spots just ran out. Please try another agency or come back tomorrow.')
+        toast.error(t('patient.apply.errSpotsRanOut'))
         setSubmitting(false)
         return
       }
@@ -162,7 +164,7 @@ function ApplyModal({ agency, onClose }) {
       ]).catch(() => {})
 
     } catch {
-      toast.error('Failed to submit application. Please try again.')
+      toast.error(t('patient.apply.errFailed'))
       setSubmitting(false)
     }
   }
@@ -180,30 +182,32 @@ function ApplyModal({ agency, onClose }) {
 
           {/* Heading */}
           <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Application Submitted!</h2>
-            <p className="text-sm text-gray-500">Your application to <strong>{agency.name}</strong> has been received.</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">{t('patient.apply.successTitle')}</h2>
+            <p className="text-sm text-gray-500">{t('patient.apply.successDesc', { agency: agency.name })}</p>
           </div>
 
           {/* Application ID */}
           <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4">
-            <p className="text-xs text-gray-400 mb-1">Your Application ID</p>
+            <p className="text-xs text-gray-400 mb-1">{t('patient.apply.successIdLabel')}</p>
             <p className="text-xl font-bold text-gray-900 tracking-wide">{submittedAppId}</p>
-            <p className="text-xs text-gray-400 mt-1">Keep this ID for your records.</p>
+            <p className="text-xs text-gray-400 mt-1">{t('patient.apply.successIdNote')}</p>
           </div>
 
           {/* Next steps */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-3 text-left space-y-1.5">
-            <p className="text-sm font-semibold text-blue-700">What happens next?</p>
-            <p className="text-sm text-blue-600">1. Your documents will be reviewed by the administrator.</p>
-            <p className="text-sm text-blue-600">2. {agency.name} will review your application{agency.processingTime ? ` within ${agency.processingTime}` : ''}.</p>
-            <p className="text-sm text-blue-600">3. You will be notified of updates through this portal.</p>
+            <p className="text-sm font-semibold text-blue-700">{t('patient.apply.nextStepsTitle')}</p>
+            <p className="text-sm text-blue-600">1. {t('patient.apply.nextStep1')}</p>
+            <p className="text-sm text-blue-600">2. {agency.processingTime
+              ? t('patient.apply.nextStep2WithTime', { agency: agency.name, time: agency.processingTime })
+              : t('patient.apply.nextStep2', { agency: agency.name })}</p>
+            <p className="text-sm text-blue-600">3. {t('patient.apply.nextStep3')}</p>
           </div>
 
           {/* CTA */}
           <button
             className="btn-primary w-full py-3 text-sm"
             onClick={() => { onClose(); navigate('/patient/status') }}>
-            View My Application →
+            {t('patient.programs.viewMyApp')} →
           </button>
         </div>
       </div>
@@ -217,7 +221,7 @@ function ApplyModal({ agency, onClose }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Apply to {agency.name}</h2>
+          <h2 className="text-base font-semibold text-gray-900">{t('patient.apply.title', { agency: agency.name })}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
@@ -233,50 +237,43 @@ function ApplyModal({ agency, onClose }) {
                 <MdLocationOn size={11} />{agency.location}
               </p>
               <p className="text-xs text-gray-400 flex items-center gap-1">
-                <MdSchedule size={11} /> Processing: {agency.processingTime}
+                <MdSchedule size={11} /> {t('patient.apply.processing', { time: agency.processingTime })}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-xs text-gray-400">Spots today</p>
+              <p className="text-xs text-gray-400">{t('patient.apply.spotsTodayLabel')}</p>
               <p className={`text-lg font-bold ${isFull ? 'text-red-500' : 'text-green-600'}`}>
                 {slots.remaining}/{slots.total}
               </p>
             </div>
           </div>
 
-          {/* Already applied to this agency */}
-          {alreadyApplied && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
-              <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700">
-                You already have an active application to this agency. You cannot apply again until the current one is resolved.
-              </p>
-            </div>
-          )}
-
-          {/* Active application at a different agency */}
-          {!alreadyApplied && activeElsewhere && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
-              <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-red-700">
-                You already have an active application at <strong>{activeElsewhere.agencyName}</strong>.
-                Only one application is allowed at a time. Wait for it to be resolved before applying here.
-              </p>
-            </div>
-          )}
-
-          {/* No slots warning */}
-          {isFull && !alreadyApplied && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
-              <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-red-700">No spots available today. Spots reset daily at midnight.</p>
-            </div>
-          )}
+          {/* Single highest-priority blocker — duplicate > elsewhere > full.
+              Showing two stacked red banners read as two unrelated problems
+              when really fixing one moot-ifies the other. */}
+          {(() => {
+            const blocker = alreadyApplied ? 'duplicate'
+                          : activeElsewhere ? 'elsewhere'
+                          : isFull ? 'full'
+                          : null
+            if (!blocker) return null
+            const cfg = {
+              duplicate: { bg: 'bg-amber-50', border: 'border-amber-200', iconCls: 'text-amber-500', textCls: 'text-amber-700', msg: t('patient.apply.alreadyApplied') },
+              elsewhere: { bg: 'bg-red-50',   border: 'border-red-200',   iconCls: 'text-red-500',   textCls: 'text-red-700',   msg: t('patient.apply.activeElsewhere', { agency: activeElsewhere?.agencyName }) },
+              full:      { bg: 'bg-red-50',   border: 'border-red-200',   iconCls: 'text-red-500',   textCls: 'text-red-700',   msg: t('patient.apply.noSpotsWarning') },
+            }[blocker]
+            return (
+              <div className={`${cfg.bg} border ${cfg.border} rounded-xl p-3 flex items-start gap-2`}>
+                <MdWarning size={16} className={`${cfg.iconCls} flex-shrink-0 mt-0.5`} />
+                <p className={`text-xs ${cfg.textCls}`}>{cfg.msg}</p>
+              </div>
+            )
+          })()}
 
           {/* Requirements checklist */}
           {reqs.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Requirements Checklist</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('patient.apply.requirementsTitle')}</p>
               {checksLoading ? (
                 <div className="space-y-2">
                   {reqs.map((_, i) => (
@@ -302,9 +299,9 @@ function ApplyModal({ agency, onClose }) {
                           : r.pending ? 'text-amber-700'
                           : 'text-gray-400'}`}>
                           {r.name}
-                          {r.verified && <span className="ml-1 text-green-600">(verified)</span>}
-                          {r.pending  && <span className="ml-1 text-amber-500">(pending review)</span>}
-                          {r.missing  && <span className="ml-1 text-gray-300">(not yet uploaded)</span>}
+                          {r.verified && <span className="ml-1 text-green-600">{t('patient.apply.reqVerified')}</span>}
+                          {r.pending  && <span className="ml-1 text-amber-500">{t('patient.apply.reqPending')}</span>}
+                          {r.missing  && <span className="ml-1 text-gray-300">{t('patient.apply.reqMissing')}</span>}
                         </span>
                       </div>
                     ))}
@@ -312,12 +309,14 @@ function ApplyModal({ agency, onClose }) {
                   {missingCount > 0 && (
                     <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-start justify-between gap-2">
                       <p className="text-sm text-blue-700">
-                        You have {missingCount} missing document{missingCount !== 1 ? 's' : ''}. You can still apply but your application may be delayed.
+                        {missingCount === 1
+                          ? t('patient.apply.missingOne')
+                          : t('patient.apply.missingMany', { count: missingCount })}
                       </p>
                       <button
                         className="flex-shrink-0 text-xs text-blue-600 font-semibold hover:text-blue-800 underline"
                         onClick={() => { onClose(); navigate('/patient/documents') }}>
-                        Upload →
+                        {t('patient.apply.upload')} →
                       </button>
                     </div>
                   )}
@@ -336,7 +335,7 @@ function ApplyModal({ agency, onClose }) {
                 onChange={e => setDeclared(e.target.checked)}
               />
               <span className="text-sm text-gray-600 leading-snug">
-                I confirm that my information and documents are genuine.
+                {t('patient.apply.declaration')}
               </span>
             </label>
           )}
@@ -344,12 +343,12 @@ function ApplyModal({ agency, onClose }) {
 
         {/* Footer */}
         <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary text-sm" onClick={onClose}>{t('patient.apply.cancel')}</button>
           <button
             className="btn-primary text-sm"
             onClick={handleSubmit}
             disabled={submitting || checksLoading || isFull || alreadyApplied || !!activeElsewhere || !declared}>
-            {checksLoading ? 'Checking...' : submitting ? 'Submitting...' : 'Submit Application →'}
+            {checksLoading ? t('patient.apply.checking') : submitting ? t('patient.apply.submitting') : `${t('patient.apply.submit')} →`}
           </button>
         </div>
       </div>
@@ -360,6 +359,7 @@ function ApplyModal({ agency, onClose }) {
 // ── Main page ─────────────────────────────────────────────────────────────
 
 export default function MedicalPrograms() {
+  const { t }                             = useTranslation()
   const navigate                          = useNavigate()
   const location                          = useLocation()
   const { user }                          = useAuth()
@@ -367,7 +367,9 @@ export default function MedicalPrograms() {
   const [selectedType, setSelectedType]   = useState('')
   const [agencies, setAgencies]           = useState([])
   const [loading, setLoading]             = useState(true)
-  const [applyingTo,       setApplyingTo]       = useState(null)
+  // applyingToId — modal reads the live agency record from `agencies`, not a
+  // captured snapshot, so slot counts stay current while the modal is open.
+  const [applyingToId,     setApplyingToId]     = useState(null)
   const [hasCertificate,   setHasCertificate]   = useState(false)
   const [appliedAgencyIds, setAppliedAgencyIds] = useState(new Set())
 
@@ -388,15 +390,17 @@ export default function MedicalPrograms() {
   useEffect(() => {
     const targetId = location.state?.openAgencyId
     if (!targetId || agencies.length === 0) return
-    const target = agencies.find(a => a.id === targetId)
-    if (target) setApplyingTo(target)
+    if (agencies.some(a => a.id === targetId)) setApplyingToId(targetId)
   }, [agencies, location.state?.openAgencyId])
 
-  // Check certificate status + load applied agency IDs in parallel
+  // Live subscription to the patient's applications — so the "Apply Now"
+  // button on each card reflects newly-submitted applications without a
+  // page refresh (e.g., after closing the apply modal).
   useEffect(() => {
     if (!user?.uid) return
-    getDocs(query(collection(db, 'applications'), where('patientId', '==', user.uid)))
-      .then(snap => {
+    const unsub = onSnapshot(
+      query(collection(db, 'applications'), where('patientId', '==', user.uid)),
+      snap => {
         const docs = snap.docs.map(d => d.data())
         setHasCertificate(docs.some(d => d.status === 'certificate'))
         setAppliedAgencyIds(new Set(
@@ -404,7 +408,9 @@ export default function MedicalPrograms() {
             .filter(d => !['rejected', 'certificate'].includes(d.status))
             .map(d => d.agencyId)
         ))
-      })
+      }
+    )
+    return unsub
   }, [user?.uid])
 
   const allTypes = [...new Set(agencies.flatMap(a => a.assistanceTypes ?? []))].sort()
@@ -416,24 +422,24 @@ export default function MedicalPrograms() {
     return (
       a.name?.toLowerCase().includes(q) ||
       a.description?.toLowerCase().includes(q) ||
-      (a.assistanceTypes ?? []).some(t => t.toLowerCase().includes(q))
+      (a.assistanceTypes ?? []).some(typeName => typeName.toLowerCase().includes(q))
     )
   })
 
   return (
-    <Layout breadcrumb="Find Programs">
+    <Layout breadcrumb={t('patient.programs.breadcrumb')}>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto">
 
           <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
             <div>
-              <h1 className="page-title">Find Programs</h1>
-              <p className="page-sub">Explore and apply for assistance programs available at CRMC. Spots reset daily at midnight.</p>
+              <h1 className="page-title">{t('patient.programs.title')}</h1>
+              <p className="page-sub">{t('patient.programs.subtitle')}</p>
             </div>
             {location.state?.openAgencyId && (
               <button
                 className="btn-secondary text-sm flex items-center gap-1.5 flex-shrink-0"
                 onClick={() => navigate('/patient/screening')}>
-                ← Back to My Matches
+                ← {t('patient.programs.backToMatches')}
               </button>
             )}
           </div>
@@ -441,10 +447,10 @@ export default function MedicalPrograms() {
           {/* Holding period banner — only for patients with a certificate */}
           {hasCertificate && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2 mb-5">
-              <span className="text-amber-500 text-base mt-0.5">⏳</span>
+              <MdHourglassTop size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-amber-700">Holding Period Active on Some Programs</p>
-                <p className="text-xs text-amber-600">You received a Guarantee Letter from one or more programs. You can still apply to other programs freely.</p>
+                <p className="text-sm font-medium text-amber-700">{t('patient.programs.holdingTitle')}</p>
+                <p className="text-xs text-amber-600">{t('patient.programs.holdingDesc')}</p>
               </div>
             </div>
           )}
@@ -452,9 +458,9 @@ export default function MedicalPrograms() {
           {/* All slots full banner */}
           {!loading && agencies.length > 0 && agencies.every(a => (a.slots?.remaining ?? 0) === 0) && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-center">
-              <p className="text-sm font-semibold text-amber-700">All spots for today are filled</p>
+              <p className="text-sm font-semibold text-amber-700">{t('patient.programs.allFullTitle')}</p>
               <p className="text-xs text-amber-600 mt-1">
-                Daily spots reset at midnight. Please check back tomorrow morning.
+                {t('patient.programs.allFullDesc')}
               </p>
             </div>
           )}
@@ -462,7 +468,7 @@ export default function MedicalPrograms() {
           {/* Search */}
           <div className="relative mb-3">
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9" placeholder="Search by name or type, e.g. dialysis..."
+            <input className="input pl-9" placeholder={t('patient.programs.searchPlaceholder')}
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
@@ -476,17 +482,17 @@ export default function MedicalPrograms() {
                     ? 'bg-brand-500 text-white border-brand-500'
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}>
-                All
+                {t('patient.programs.filterAll')}
               </button>
-              {allTypes.map(t => (
-                <button key={t}
-                  onClick={() => setSelectedType(prev => prev === t ? '' : t)}
+              {allTypes.map(typeName => (
+                <button key={typeName}
+                  onClick={() => setSelectedType(prev => prev === typeName ? '' : typeName)}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                    selectedType === t
+                    selectedType === typeName
                       ? 'bg-brand-500 text-white border-brand-500'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}>
-                  {t}
+                  {typeName}
                 </button>
               ))}
             </div>
@@ -517,7 +523,7 @@ export default function MedicalPrograms() {
           {/* Agency cards */}
           {!loading && filtered.length > 0 && (
             <p className="text-sm text-gray-400 mb-3">
-              Choose a program based on what it covers and how many spots are available today. Tap <strong>Apply Now</strong> to submit your application.
+              {t('patient.programs.chooseHint')}
             </p>
           )}
           {!loading && (
@@ -552,7 +558,7 @@ export default function MedicalPrograms() {
                     <div className="w-full h-2 bg-gray-100 rounded-full mb-1">
                       <div className={`h-2 rounded-full ${status.bar}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="text-xs text-gray-400 mb-3">{slots.remaining} of {slots.total} spots available today</p>
+                    <p className="text-xs text-gray-400 mb-3">{t('patient.programs.spotsAvailableToday', { remaining: slots.remaining, total: slots.total })}</p>
 
                     {/* Description */}
                     <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-3">{agency.description}</p>
@@ -560,11 +566,11 @@ export default function MedicalPrograms() {
                     {/* Assistance types */}
                     {types.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-3">
-                        {types.slice(0, 4).map((t, i) => (
-                          <span key={i} className="badge badge-blue text-xs">{t}</span>
+                        {types.slice(0, 4).map((typeName, i) => (
+                          <span key={i} className="badge badge-blue text-xs">{typeName}</span>
                         ))}
                         {types.length > 4 && (
-                          <span className="badge badge-blue text-xs">+{types.length - 4} more</span>
+                          <span className="badge badge-blue text-xs">{t('patient.programs.moreTypes', { count: types.length - 4 })}</span>
                         )}
                       </div>
                     )}
@@ -577,22 +583,22 @@ export default function MedicalPrograms() {
                       </div>
                       {hasApplied ? (
                         <span className="flex items-center gap-1 text-xs text-green-600 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg font-medium">
-                          ✓ Applied
+                          <MdCheckCircle size={12} /> {t('patient.programs.applied')}
                         </span>
                       ) : isBlocked ? (
                         <button
                           className="flex items-center gap-1 text-xs text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg font-medium hover:bg-brand-100 transition-colors"
                           onClick={() => navigate('/patient/status')}>
-                          View My Application →
+                          {t('patient.programs.viewMyApp')} →
                         </button>
                       ) : isFull ? (
                         <button className="btn-secondary text-xs opacity-60 cursor-not-allowed" disabled>
-                          No spots today
+                          {t('patient.programs.noSpotsToday')}
                         </button>
                       ) : (
                         <button className="btn-primary text-sm"
-                          onClick={() => setApplyingTo(agency)}>
-                          Apply Now →
+                          onClick={() => setApplyingToId(agency.id)}>
+                          {t('patient.programs.applyNow')} →
                         </button>
                       )}
                     </div>
@@ -602,20 +608,22 @@ export default function MedicalPrograms() {
 
               {filtered.length === 0 && (
                 <div className="col-span-2 card p-10 text-center">
-                  <p className="text-3xl mb-3">🏥</p>
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <MdLocalHospital size={28} className="text-gray-400" />
+                  </div>
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    {search || selectedType ? 'No programs match your filter.' : 'No programs available right now.'}
+                    {search || selectedType ? t('patient.programs.noneMatchTitle') : t('patient.programs.noneAvailableTitle')}
                   </p>
                   <p className="text-xs text-gray-400">
                     {search || selectedType
-                      ? 'Try clearing the search or selecting a different type.'
-                      : 'All agencies are currently disabled. Please check back later.'}
+                      ? t('patient.programs.noneMatchDesc')
+                      : t('patient.programs.noneAvailableDesc')}
                   </p>
                   {selectedType && (
                     <button
                       className="mt-3 text-sm text-brand-500 font-medium hover:underline"
                       onClick={() => setSelectedType('')}>
-                      Clear filter
+                      {t('patient.programs.clearFilter')}
                     </button>
                   )}
                 </div>
@@ -625,13 +633,18 @@ export default function MedicalPrograms() {
 
       </div>
 
-      {/* Apply modal */}
-      {applyingTo && (
-        <ApplyModal
-          agency={applyingTo}
-          onClose={() => setApplyingTo(null)}
-        />
-      )}
+      {/* Apply modal — pass the live agency from the agencies snapshot so
+          slot counts inside the modal stay current. */}
+      {applyingToId && (() => {
+        const liveAgency = agencies.find(a => a.id === applyingToId)
+        if (!liveAgency) return null
+        return (
+          <ApplyModal
+            agency={liveAgency}
+            onClose={() => setApplyingToId(null)}
+          />
+        )
+      })()}
     </Layout>
   )
 }

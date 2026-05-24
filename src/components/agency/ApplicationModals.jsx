@@ -213,6 +213,7 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
       purposeOfAssistance: Array.from(purposes),
       payableTo:           payableTo.trim(),
       approvedBy:          currentUser.name,
+      approvedByUid:       currentUser.uid,
     }).finally(() => setSaving(false))
   }
 

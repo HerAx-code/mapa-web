@@ -20,23 +20,23 @@ const DASHBOARD = {
 }
 
 // Fix 4 — human-readable Firebase error messages
-const friendlyError = (code) => {
+const friendlyError = (code, t) => {
   switch (code) {
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'Incorrect password. Please try again.'
+      return t('auth.errors.wrongPassword')
     case 'auth/user-not-found':
-      return 'No account found with this email address.'
+      return t('auth.errors.userNotFound')
     case 'auth/invalid-email':
-      return 'Please enter a valid email address.'
+      return t('auth.errors.invalidEmail')
     case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please wait a few minutes and try again.'
+      return t('auth.errors.tooManyRequests')
     case 'auth/user-disabled':
-      return 'This account has been deactivated. Contact your administrator.'
+      return t('auth.errors.userDisabled')
     case 'auth/network-request-failed':
-      return 'Network error. Please check your connection and try again.'
+      return t('auth.errors.networkFailed')
     default:
-      return 'Login failed. Please check your credentials and try again.'
+      return t('auth.errors.loginFailed')
   }
 }
 
@@ -86,19 +86,19 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.email || !form.password) {
-      toast.error('Please enter your email and password.')
+      toast.error(t('auth.errors.enterCredentials'))
       return
     }
     setLoading(true)
     try {
       const loggedIn = await login(form.email, form.password)
       setLoginError(false)
-      toast.success(`Welcome back, ${loggedIn.name}!`)
+      toast.success(t('auth.toast.welcomeBack', { name: loggedIn.name }))
       navigate(DASHBOARD[loggedIn.role] ?? '/patient/dashboard')
     } catch (err) {
       const code = err.code ?? ''
       setLoginError(true)   // Fix 3 — highlight fields on error
-      toast.error(friendlyError(code))
+      toast.error(friendlyError(code, t))
     } finally {
       setLoading(false)
     }
@@ -108,22 +108,22 @@ export default function Login() {
   const handleForgotPassword = async () => {
     const email = resetEmail.trim() || form.email.trim()
     if (!email) {
-      toast.error('Please enter your email address first.')
+      toast.error(t('auth.errors.enterEmail'))
       return
     }
     setResetting(true)
     try {
       await sendPasswordResetEmail(auth, email)
-      toast.success('Password reset email sent. Check your inbox.')
+      toast.success(t('auth.toast.resetSent'))
       setShowReset(false)
     } catch (err) {
       const code = err.code ?? ''
       if (code === 'auth/user-not-found')
-        toast.error('No account found with this email address.')
+        toast.error(t('auth.errors.userNotFound'))
       else if (code === 'auth/invalid-email')
-        toast.error('Please enter a valid email address.')
+        toast.error(t('auth.errors.invalidEmail'))
       else
-        toast.error('Failed to send reset email. Please try again.')
+        toast.error(t('auth.errors.resetFailed'))
     } finally {
       setResetting(false)
     }
@@ -159,7 +159,7 @@ export default function Login() {
               <Icon size={16} className={`${cfg.iconColor} flex-shrink-0 mt-0.5`} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
-                  {isLive ? 'Ongoing: ' : 'Upcoming: '}{activeAnnouncement.title}
+                  {isLive ? t('auth.banner.ongoing') : t('auth.banner.upcoming')}{activeAnnouncement.title}
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
                   {activeAnnouncement.message}
@@ -173,11 +173,11 @@ export default function Login() {
         <div className="card p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.email')}</label>
               <input
                 type="email"
                 className={`input ${loginError ? 'border-red-400 bg-red-50' : ''}`}
-                placeholder="juan@gmail.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={form.email}
                 onChange={e => { setForm({ ...form, email: e.target.value }); setLoginError(false) }}
                 autoComplete="email"
@@ -185,7 +185,7 @@ export default function Login() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-gray-700">Password</label>
+                <label className="text-sm font-medium text-gray-700">{t('auth.password')}</label>
                 {/* Fix 2 — Forgot Password link */}
                 <button
                   type="button"
@@ -194,14 +194,14 @@ export default function Login() {
                     setResetEmail(form.email)
                     setShowReset(true)
                   }}>
-                  Forgot password?
+                  {t('auth.forgotPassword')}
                 </button>
               </div>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
                   className={`input pr-10 ${loginError ? 'border-red-400 bg-red-50' : ''}`}
-                  placeholder="••••••••"
+                  placeholder={t('auth.passwordPlaceholder')}
                   value={form.password}
                   onChange={e => { setForm({ ...form, password: e.target.value }); setLoginError(false) }}
                   autoComplete="current-password"
@@ -219,14 +219,14 @@ export default function Login() {
               type="submit"
               className="btn-primary w-full py-2.5"
               disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in →'}
+              {loading ? t('auth.signingIn') : `${t('auth.signIn')} →`}
             </button>
           </form>
 
           <div className="mt-4 text-center">
-            <span className="text-sm text-gray-500">Don't have an account? </span>
+            <span className="text-sm text-gray-500">{t('auth.noAccount')} </span>
             <Link to="/register" className="text-sm text-brand-500 hover:text-brand-600 font-medium">
-              Register here
+              {t('auth.registerHere')}
             </Link>
           </div>
         </div>
@@ -235,7 +235,7 @@ export default function Login() {
         {import.meta.env.VITE_ENABLE_SEED === 'true' && (
           <div className="mt-4 card p-4 border border-amber-200 bg-amber-50">
             <p className="text-xs font-medium text-amber-700 mb-3 uppercase tracking-wide">
-              ⚠️ Dev only — Demo accounts
+              ⚠️ {t('auth.devOnly')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
@@ -267,7 +267,7 @@ export default function Login() {
         )}
 
         <p className="text-center text-xs text-gray-400 mt-4">
-          <Link to="/" className="hover:text-gray-600">← Back to Home</Link>
+          <Link to="/" className="hover:text-gray-600">{t('auth.backHome')}</Link>
         </p>
       </div>
 
@@ -277,9 +277,9 @@ export default function Login() {
           onClick={e => e.target === e.currentTarget && setShowReset(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Reset your password</h2>
+              <h2 className="text-base font-semibold text-gray-900">{t('auth.reset.title')}</h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Enter your email and we'll send you a reset link.
+                {t('auth.reset.desc')}
               </p>
             </div>
             <div className="px-5 py-4 space-y-3">
@@ -288,7 +288,7 @@ export default function Login() {
                 <input
                   type="email"
                   className="input pl-9"
-                  placeholder="your@email.com"
+                  placeholder={t('auth.reset.placeholder')}
                   value={resetEmail}
                   onChange={e => setResetEmail(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleForgotPassword()}
@@ -298,13 +298,13 @@ export default function Login() {
             </div>
             <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
               <button className="btn-secondary text-sm" onClick={() => setShowReset(false)}>
-                Cancel
+                {t('auth.reset.cancel')}
               </button>
               <button
                 className="btn-primary text-sm"
                 onClick={handleForgotPassword}
                 disabled={resetting}>
-                {resetting ? 'Sending...' : 'Send Reset Link'}
+                {resetting ? t('auth.reset.sending') : t('auth.reset.send')}
               </button>
             </div>
           </div>

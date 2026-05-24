@@ -22,6 +22,7 @@ import {
   MdVisibility, MdVisibilityOff, MdLocationOn, MdPhone,
   MdAttachMoney,
 } from 'react-icons/md'
+import { PERIOD_ADJECTIVE } from '../../utils/constants'
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -592,7 +593,7 @@ export default function AgencyDetail() {
                 <div className="flex items-center gap-2">
                   <MdAttachMoney size={16} className="text-gray-400" />
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                    Budget · {budget.period}
+                    {PERIOD_ADJECTIVE[budget.period] ?? 'Current'} Budget
                   </p>
                   <span className="badge badge-gray text-xs">Read-only</span>
                 </div>
@@ -626,6 +627,15 @@ export default function AgencyDetail() {
               <p className="text-xs text-gray-400">
                 {utilization}% utilized · the agency administrator manages this allocation from <code>/agency/allocation</code>
               </p>
+              {budget.fundSource && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-0.5">Fund source</p>
+                  <p className="text-sm font-medium text-gray-700">{budget.fundSource}</p>
+                  {budget.fundSourceNotes && (
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{budget.fundSourceNotes}</p>
+                  )}
+                </div>
+              )}
             </div>
           )
         })()}

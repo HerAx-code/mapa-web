@@ -540,7 +540,7 @@ export default function ApplicationDetail() {
     toast.success('Interview rescheduled. Patient has been notified.')
   }
 
-  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy }) => {
+  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid }) => {
     setUpdating(true)
     try {
       // ── Pre-transaction cooldown gate.
@@ -625,6 +625,9 @@ export default function ApplicationDetail() {
           purposeOfAssistance,
           payableTo,
           approvedBy,
+          // Link the actor by UID so future filtering / click-through can
+          // resolve them reliably even if their display name changes.
+          approvedByUid:       approvedByUid ?? null,
           approvedAt:          serverTimestamp(),
           glStatus:            'issued',
           glRedeemedAt:        null,
@@ -820,6 +823,7 @@ export default function ApplicationDetail() {
         cooldownUntilAt:     cooldownUntil,
         reversedAt:          serverTimestamp(),
         reversedBy:          user.name,
+        reversedByUid:       user.uid,
         reversalReason:      `Reversed by ${user.name} on ${new Date().toLocaleDateString()}`,
         updatedAt:           serverTimestamp(),
       })

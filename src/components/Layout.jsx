@@ -19,32 +19,35 @@ import { db } from '../firebase'
 import { getOrCreateConversation, sendMessage } from '../utils/messages'
 import { notify } from '../utils/notifications'
 import { useAuth } from '../contexts/AuthContext'
-import { ROLES } from '../utils/constants'
+import { ROLES, ROLE_LABEL_SHORT } from '../utils/constants'
+import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
-const timeAgo = (ts) => {
+const makeTimeAgo = (t) => (ts) => {
   if (!ts) return ''
   const d   = ts.toDate ? ts.toDate() : new Date(ts)
   const min = Math.floor((Date.now() - d.getTime()) / 60000)
-  if (min < 1)   return 'just now'
-  if (min < 60)  return `${min}m ago`
+  if (min < 1)   return t('notif.timeAgo.justNow')
+  if (min < 60)  return t('notif.timeAgo.min', { count: min })
   const hrs = Math.floor(min / 60)
-  if (hrs < 24)  return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+  if (hrs < 24)  return t('notif.timeAgo.hr', { count: hrs })
+  return t('notif.timeAgo.day', { count: Math.floor(hrs / 24) })
 }
 
 // ── Nav configs ────────────────────────────────────────────────────────────
 
-const PATIENT_NAV = [
-  { to: '/patient/dashboard',  icon: MdDashboard,     label: 'Dashboard'     },
-  { to: '/patient/screening',  icon: MdSearch,        label: 'Find Programs' },
-  { to: '/patient/status',     icon: MdTimeline,      label: 'My Application'},
-  { to: '/patient/documents',  icon: MdFolder,        label: 'My Documents'  },
-  { to: '/patient/interviews', icon: MdVideoCall,     label: 'Interviews'    },
-  { to: '/patient/messages',   icon: MdMessage,       label: 'Messages'      },
-  { to: '/patient/guide',      icon: MdMenuBook,      label: 'User Guide'    },
+// Patient nav is bilingual — labels resolved via t() at render time.
+const PATIENT_NAV_BASE = [
+  { to: '/patient/dashboard',  icon: MdDashboard,     labelKey: 'patient.nav.dashboard'      },
+  { to: '/patient/screening',  icon: MdSearch,        labelKey: 'patient.nav.findPrograms'   },
+  { to: '/patient/status',     icon: MdTimeline,      labelKey: 'patient.nav.myApplication'  },
+  { to: '/patient/documents',  icon: MdFolder,        labelKey: 'patient.nav.myDocuments'    },
+  { to: '/patient/interviews', icon: MdVideoCall,     labelKey: 'patient.nav.interviews'     },
+  { to: '/patient/messages',   icon: MdMessage,       labelKey: 'patient.nav.messages'       },
+  { to: '/patient/guide',      icon: MdMenuBook,      labelKey: 'patient.nav.userGuide'      },
 ]
 
 const AGENCY_NAV = [
@@ -139,6 +142,8 @@ const NOTIF_CATEGORY = {
 
 function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, userRole }) {
   const navigate                        = useNavigate()
+  const { t }                           = useTranslation()
+  const timeAgo                         = makeTimeAgo(t)
   const [modalIdx, setModalIdx]         = useState(null)
 
   const openModal = (idx) => setModalIdx(idx)
@@ -155,7 +160,7 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-800">
-          Notifications{unreadCount > 0 && <span className="ml-1.5 text-xs font-normal text-brand-500">({unreadCount} unread)</span>}
+          {t('shell.notifs.heading')}{unreadCount > 0 && <span className="ml-1.5 text-xs font-normal text-brand-500">{t('shell.notifs.unreadSuffix', { count: unreadCount })}</span>}
         </h3>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={16} /></button>
       </div>
@@ -165,7 +170,7 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
         {notifications.length === 0 && (
           <div className="py-12 flex flex-col items-center gap-2">
             <MdNotificationsNone size={36} className="text-gray-200" />
-            <p className="text-xs text-gray-400">You're all caught up!</p>
+            <p className="text-xs text-gray-400">{t('shell.notifs.empty')}</p>
           </div>
         )}
         {notifications.map((n, idx) => {
@@ -216,12 +221,12 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
           onClick={() => { navigate('/notifications'); onClose() }}
           className="text-xs text-brand-500 hover:text-brand-600 font-medium"
         >
-          See all
+          {t('shell.notifs.seeAll')}
         </button>
         <div className="flex items-center gap-3">
           {unreadCount > 0 && (
             <button onClick={onMarkAllRead} className="text-xs text-gray-500 hover:text-gray-700 font-medium">
-              ✓ Mark all read
+              ✓ {t('shell.notifs.markAllRead')}
             </button>
           )}
         </div>
@@ -245,6 +250,7 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
 // ── Compose modal ─────────────────────────────────────────────────────────
 
 function ComposeModal({ user, onClose }) {
+  const { t }                 = useTranslation()
   const [to, setTo]           = useState(null)
   const [subject, setSubject] = useState('')
   const [body, setBody]       = useState('')
@@ -279,7 +285,7 @@ function ComposeModal({ user, onClose }) {
 
   const handleSend = async () => {
     if (!to || !subject.trim() || !body.trim()) {
-      toast.error('Please fill in all fields.')
+      toast.error(t('shell.compose.fillAllFields'))
       return
     }
     setSending(true)
@@ -292,13 +298,13 @@ function ComposeModal({ user, onClose }) {
       await sendMessage(convId, { from: user.uid, fromName: user.name, text: body.trim(), toUid: to.uid })
       await notify(to.uid, {
         type:           'new_message',
-        title:          `New message from ${user.name}`,
+        title:          t('shell.compose.newMessageNotifTitle', { name: user.name }),
         body:           subject.trim(),
         conversationId: convId,
       })
-      toast.success('Message sent.')
+      toast.success(t('shell.compose.sent'))
       onClose()
-    } catch { toast.error('Failed to send.') }
+    } catch { toast.error(t('shell.compose.sendFailed')) }
     finally { setSending(false) }
   }
 
@@ -311,14 +317,14 @@ function ComposeModal({ user, onClose }) {
         {confirmClose && (
           <div className="absolute inset-0 bg-white/90 z-10 flex items-center justify-center rounded-2xl p-6">
             <div className="text-center space-y-3">
-              <p className="text-sm font-semibold text-gray-800">Discard this message?</p>
-              <p className="text-xs text-gray-500">You have unsaved content. If you close now, your message will be lost.</p>
+              <p className="text-sm font-semibold text-gray-800">{t('shell.compose.discardTitle')}</p>
+              <p className="text-xs text-gray-500">{t('shell.compose.discardDesc')}</p>
               <div className="flex gap-2 justify-center pt-1">
                 <button className="btn-secondary text-sm" onClick={() => setConfirmClose(false)}>
-                  Keep writing
+                  {t('shell.compose.keepWriting')}
                 </button>
                 <button className="btn-danger text-sm" onClick={onClose}>
-                  Discard
+                  {t('shell.compose.discard')}
                 </button>
               </div>
             </div>
@@ -327,14 +333,14 @@ function ComposeModal({ user, onClose }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">New Message</h2>
+          <h2 className="text-base font-semibold text-gray-900">{t('shell.compose.title')}</h2>
           <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 pt-4 pb-2 space-y-0 divide-y divide-gray-100">
           {/* To */}
           <div className="flex items-start gap-3 pb-3 relative">
-            <span className="text-sm text-gray-400 w-16 flex-shrink-0 pt-1.5">To:</span>
+            <span className="text-sm text-gray-400 w-16 flex-shrink-0 pt-1.5">{t('shell.compose.to')}</span>
             {to ? (
               <div className="flex items-center gap-2 flex-wrap flex-1">
                 <span className="flex items-center gap-1.5 bg-brand-50 text-brand-700 text-xs font-medium px-2.5 py-1.5 rounded-lg">
@@ -347,8 +353,8 @@ function ComposeModal({ user, onClose }) {
                 <input
                   className="input text-sm w-full"
                   placeholder={user?.role === 'patient'
-                    ? 'Search for an admin or your agency...'
-                    : 'Search by name or email...'}
+                    ? t('shell.compose.searchPatient')
+                    : t('shell.compose.searchOther')}
                   value={search} autoFocus
                   onChange={e => { setSearch(e.target.value); setShowDrop(true) }}
                   onFocus={() => setShowDrop(true)} />
@@ -371,7 +377,7 @@ function ComposeModal({ user, onClose }) {
                         </button>
                       )
                     })}
-                    {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-4">No users found</p>}
+                    {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-4">{t('shell.compose.noUsers')}</p>}
                   </div>
                 )}
               </div>
@@ -382,16 +388,16 @@ function ComposeModal({ user, onClose }) {
           {user?.role === 'patient' && !to && (
             <div className="py-2 px-1">
               <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                Contact an admin or your assigned agency for help with your application.
+                {t('shell.compose.patientGuidance')}
               </p>
             </div>
           )}
 
           {/* Subject */}
           <div className="flex items-center gap-3 py-3">
-            <span className="text-sm text-gray-400 w-16 flex-shrink-0">Subject:</span>
+            <span className="text-sm text-gray-400 w-16 flex-shrink-0">{t('shell.compose.subject')}</span>
             <input className="flex-1 text-sm text-gray-800 outline-none placeholder-gray-300"
-              placeholder="Enter subject..."
+              placeholder={t('shell.compose.subjectPlaceholder')}
               value={subject} onChange={e => setSubject(e.target.value)} />
           </div>
 
@@ -399,12 +405,12 @@ function ComposeModal({ user, onClose }) {
           <div className="py-3">
             <textarea
               className="w-full text-sm text-gray-800 outline-none resize-none placeholder-gray-300 min-h-[140px]"
-              placeholder="Type your message here..."
+              placeholder={t('shell.compose.bodyPlaceholder')}
               maxLength={1000}
               value={body} onChange={e => setBody(e.target.value)} />
             {body.length > 800 && (
               <p className={`text-xs text-right mt-1 ${body.length >= 980 ? 'text-red-500' : 'text-gray-400'}`}>
-                {1000 - body.length} characters remaining
+                {t('shell.compose.charsRemaining', { count: 1000 - body.length })}
               </p>
             )}
           </div>
@@ -417,7 +423,7 @@ function ComposeModal({ user, onClose }) {
           </p>
           <button className="btn-primary flex items-center gap-1.5 text-sm"
             onClick={handleSend} disabled={sending || !to || !subject.trim() || !body.trim()}>
-            <MdSend size={15} /> {sending ? 'Sending...' : 'Send'}
+            <MdSend size={15} /> {sending ? t('shell.compose.sending') : t('shell.compose.send')}
           </button>
         </div>
       </div>
@@ -429,6 +435,8 @@ function ComposeModal({ user, onClose }) {
 
 function MsgPanel({ conversations, user, onCompose, onClose }) {
   const navigate = useNavigate()
+  const { t }    = useTranslation()
+  const timeAgo  = makeTimeAgo(t)
 
   const goToConversation = (convId) => {
     const path = (user?.role === 'agency' || user?.role === 'agency_admin') ? '/agency/messages'
@@ -451,7 +459,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-gray-800">Messages</h3>
+        <h3 className="text-sm font-semibold text-gray-800">{t('shell.messages.heading')}</h3>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={16} /></button>
       </div>
 
@@ -460,11 +468,10 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
         {conversations.length === 0 && (
           <div className="py-10 flex flex-col items-center gap-2 px-4 text-center">
             <MdMessage size={32} className="text-gray-200" />
-            <p className="text-xs text-gray-400">No messages yet</p>
+            <p className="text-xs text-gray-400">{t('shell.messages.empty')}</p>
             {user?.role === 'patient' && (
-              <p className="text-xs text-gray-400">
-                Tap <strong>New Message</strong> below to contact hospital staff or your agency.
-              </p>
+              <p className="text-xs text-gray-400"
+                 dangerouslySetInnerHTML={{ __html: t('shell.messages.patientHint') }} />
             )}
           </div>
         )}
@@ -487,7 +494,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
                 {c.subject && (
                   <p className={`text-xs truncate ${isUnread ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{c.subject}</p>
                 )}
-                <p className="text-xs text-gray-400 truncate">{c.lastMessage || 'No messages yet'}</p>
+                <p className="text-xs text-gray-400 truncate">{c.lastMessage || t('shell.messages.noMessages')}</p>
               </div>
               {isUnread
                 ? <span className="w-2 h-2 bg-brand-500 rounded-full flex-shrink-0 mt-1.5 block" />
@@ -503,7 +510,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
       {/* Footer */}
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 flex-shrink-0 bg-gray-50">
         <button className="text-xs text-brand-500 hover:text-brand-600 font-medium" onClick={goToAll}>
-          See all →
+          {t('shell.messages.seeAll')} →
         </button>
         <button
           className="flex items-center gap-1 text-xs bg-brand-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-brand-600 transition-colors"
@@ -516,7 +523,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
               onClose()
             }
           }}>
-          + New Message
+          + {t('shell.messages.newMessage')}
         </button>
       </div>
     </div>
@@ -526,8 +533,10 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
 // ── Sidebar content ───────────────────────────────────────────────────────
 
 function NavItems({ items, onClose, badgeOverrides = {} }) {
+  const { t } = useTranslation()
   return items.map(item => {
     const badge = item.to in badgeOverrides ? badgeOverrides[item.to] : item.badge
+    const label = item.labelKey ? t(item.labelKey) : item.label
     return (
       <NavLink
         key={item.to}
@@ -536,7 +545,7 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
       >
         <item.icon size={18} className="flex-shrink-0" />
-        <span className="flex-1 truncate">{item.label}</span>
+        <span className="flex-1 truncate">{label}</span>
         {badge > 0 && (
           <span className="text-xs font-bold bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
             {badge > 9 ? '9+' : badge}
@@ -548,6 +557,7 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
 }
 
 function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agencyInboxCount = 0, unreadMessages = 0 }) {
+  const { t } = useTranslation()
   const msgBadge = unreadMessages > 0 ? unreadMessages : 0
   const msgOverride = {
     '/patient/messages': msgBadge,
@@ -560,9 +570,7 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
       {/* Brand */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <MdShield size={15} className="text-white" />
-          </div>
+          <Logo size={28} />
           <div>
             <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
             <p className="text-xs text-gray-400 leading-tight">CRMC</p>
@@ -578,8 +586,8 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {role === ROLES.PATIENT && (
           <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">Menu</p>
-            <NavItems items={PATIENT_NAV} onClose={onClose} badgeOverrides={msgOverride} />
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">{t('shell.menu')}</p>
+            <NavItems items={PATIENT_NAV_BASE} onClose={onClose} badgeOverrides={msgOverride} />
           </>
         )}
         {(role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN) && (
@@ -594,7 +602,7 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
         )}
         {(role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN) && (
           <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">System Admin</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">{t('shell.systemAdmin')}</p>
             <NavItems
               items={ADMIN_NAV.management.filter(item =>
                 role === ROLES.SUPER_ADMIN || (!item.superOnly && item.to !== '/admin/accounts')
@@ -602,7 +610,7 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
               onClose={onClose}
               badgeOverrides={msgOverride}
             />
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2 mt-4">Operations</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2 mt-4">{t('shell.operations')}</p>
             <NavItems
               items={ADMIN_NAV.operations.filter(item =>
                 role === ROLES.SUPER_ADMIN || item.to !== '/admin/auditlog'
@@ -621,12 +629,12 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
 
 const APPS = {
   [ROLES.PATIENT]: [
-    { label: 'Dashboard',      icon: MdDashboard,     to: '/patient/dashboard'  },
-    { label: 'Find Programs',  icon: MdSearch,        to: '/patient/screening'  },
-    { label: 'Programs',       icon: MdLocalHospital, to: '/patient/programs'   },
-    { label: 'Track Status',   icon: MdTimeline,      to: '/patient/status'     },
-    { label: 'My Documents',   icon: MdFolder,        to: '/patient/documents'  },
-    { label: 'Interviews',     icon: MdVideoCall,     to: '/patient/interviews' },
+    { labelKey: 'patient.nav.dashboard',        icon: MdDashboard,     to: '/patient/dashboard'  },
+    { labelKey: 'patient.nav.findPrograms',     icon: MdSearch,        to: '/patient/screening'  },
+    { labelKey: 'patient.nav.medicalPrograms',  icon: MdLocalHospital, to: '/patient/programs'   },
+    { labelKey: 'patient.nav.trackStatus',      icon: MdTimeline,      to: '/patient/status'     },
+    { labelKey: 'patient.nav.myDocuments',      icon: MdFolder,        to: '/patient/documents'  },
+    { labelKey: 'patient.nav.interviews',       icon: MdVideoCall,     to: '/patient/interviews' },
   ],
   [ROLES.AGENCY]: [
     { label: 'Dashboard',     icon: MdDashboard,      to: '/agency/dashboard'    },
@@ -647,10 +655,10 @@ const APPS = {
     { label: 'GL Letters',    icon: MdCardMembership, to: '/agency/generator'    },
     { label: 'Funds',         icon: MdAttachMoney,    to: '/agency/funds'        },
     { label: 'Allocation',    icon: MdAttachMoney,    to: '/agency/allocation'   },
+    { label: 'Team',          icon: MdGroup,          to: '/agency/team'         },
     { label: 'Slot Mgmt',     icon: MdBarChart,       to: '/agency/slots'        },
     { label: 'App Logs',      icon: MdListAlt,        to: '/agency/logs'         },
-    // Audit Log entry pending — page to be added; rules already allow
-    // agency_admin to read auditLog entries where actorAgencyId matches.
+    { label: 'Audit Log',     icon: MdHistory,        to: '/agency/audit'        },
     { label: 'Messages',      icon: MdMessage,        to: '/agency/messages'     },
     { label: 'Profile',       icon: MdDescription,    to: '/agency/program'      },
     { label: 'Guide',         icon: MdMenuBook,       to: '/agency/guide'        },
@@ -676,11 +684,12 @@ APPS[ROLES.STAFF_ADMIN] = APPS[ROLES.SUPER_ADMIN].filter(a =>
 )
 
 function AppsPanel({ role, onNavigate, onClose }) {
+  const { t } = useTranslation()
   const apps = APPS[role] || []
   return (
     <div className="absolute right-0 top-12 w-72 bg-white rounded-xl border border-gray-100 shadow-xl z-50 p-3">
       <div className="flex items-center justify-between mb-2 px-1">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Quick Navigation</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('shell.apps.heading')}</p>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={15} /></button>
       </div>
       <div className="grid grid-cols-3 gap-1">
@@ -693,7 +702,7 @@ function AppsPanel({ role, onNavigate, onClose }) {
             <div className="w-10 h-10 bg-brand-50 group-hover:bg-brand-100 rounded-xl flex items-center justify-center transition-colors">
               <app.icon size={20} className="text-brand-500" />
             </div>
-            <span className="text-xs text-gray-600 font-medium text-center leading-tight">{app.label}</span>
+            <span className="text-xs text-gray-600 font-medium text-center leading-tight">{app.labelKey ? t(app.labelKey) : app.label}</span>
           </button>
         ))}
       </div>
@@ -705,6 +714,7 @@ function AppsPanel({ role, onNavigate, onClose }) {
 
 function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClose, onSetModal }) {
   const navigate = useNavigate()
+  const { t }    = useTranslation()
 
   const GUIDE_PATH = {
     patient: '/patient/guide',
@@ -712,7 +722,7 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
   }
 
   const handleMenuClick = (item) => {
-    if (item.label === 'Help & Support') {
+    if (item.modal === 'help') {
       const guidePath = GUIDE_PATH[user?.role]
       if (guidePath) { navigate(guidePath); onClose() }
       else { onSetModal('help'); onClose() }
@@ -723,11 +733,11 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
   }
 
   const MENU_ITEMS = [
-    { icon: MdPerson,   label: 'Account Settings',  modal: 'account',  chevron: true  },
-    { icon: MdLock,     label: 'Change Password',    modal: 'password', chevron: true  },
-    { icon: MdShield,   label: 'Privacy Notice',      modal: 'settings', chevron: true  },
-    { icon: MdHelp,     label: 'Help & Support',     modal: 'help',     chevron: true  },
-    { icon: MdFlag,     label: 'Report a Problem',   modal: 'report',   chevron: false },
+    { icon: MdPerson,   label: t('shell.profile.accountSettings'), modal: 'account',  chevron: true  },
+    { icon: MdLock,     label: t('shell.profile.changePassword'),  modal: 'password', chevron: true  },
+    { icon: MdShield,   label: t('shell.profile.privacyNotice'),   modal: 'settings', chevron: true  },
+    { icon: MdHelp,     label: t('shell.profile.helpSupport'),     modal: 'help',     chevron: true  },
+    { icon: MdFlag,     label: t('shell.profile.reportProblem'),   modal: 'report',   chevron: false },
   ]
 
   return (
@@ -781,13 +791,13 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
           <div className="w-8 h-8 bg-red-50 group-hover:bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 transition-colors">
             <MdLogout size={17} className="text-red-500 transition-colors" />
           </div>
-          <span className="text-sm text-red-500 font-medium">Log out</span>
+          <span className="text-sm text-red-500 font-medium">{t('shell.profile.logout')}</span>
         </button>
       </div>
 
       {/* Footer */}
       <div className="px-4 pb-3 pt-1">
-        <p className="text-xs text-gray-400 text-center">Privacy · Terms · MAPA Portal · CRMC</p>
+        <p className="text-xs text-gray-400 text-center">{t('shell.profile.footer')}</p>
       </div>
     </div>
   )
@@ -797,6 +807,7 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
 
 export default function Layout({ children, breadcrumb }) {
   const { user, logout } = useAuth()
+  const { t }            = useTranslation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen]   = useState(false)
   const [showApps, setShowApps]         = useState(false)
@@ -971,7 +982,7 @@ export default function Layout({ children, breadcrumb }) {
   const handleLogout = () => {
     logout()
     navigate('/login')
-    toast.success('Logged out.')
+    toast.success(t('shell.toast.loggedOut'))
   }
 
   const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
@@ -987,16 +998,7 @@ export default function Layout({ children, breadcrumb }) {
     }
   }
 
-  const getRoleLabel = () => {
-    switch (user?.role) {
-      case ROLES.PATIENT:      return 'Patient'
-      case ROLES.AGENCY:       return 'Agency Coordinator'
-      case ROLES.AGENCY_ADMIN: return 'Agency Admin'
-      case ROLES.SUPER_ADMIN:  return 'Super Admin'
-      case ROLES.STAFF_ADMIN:  return 'Staff Admin'
-      default:                 return ''
-    }
-  }
+  const getRoleLabel = () => ROLE_LABEL_SHORT[user?.role] ?? ''
 
   const agencyName = liveAgencyName ?? 'Agency'
 
@@ -1054,7 +1056,7 @@ export default function Layout({ children, breadcrumb }) {
             </button>
             {/* Breadcrumb */}
             <div className="text-xs sm:text-sm text-gray-500 truncate">
-              <span className="hidden sm:inline">MAPA Portal / </span>
+              <span className="hidden sm:inline">MAPA / </span>
               <span className="text-gray-800 font-medium">{breadcrumb}</span>
             </div>
           </div>
@@ -1142,7 +1144,7 @@ export default function Layout({ children, breadcrumb }) {
                 <button
                   className={`w-11 h-11 rounded-full overflow-hidden border-2 cursor-pointer flex-shrink-0 flex items-center justify-center text-xs font-semibold ${user.photoURL ? 'border-gray-200' : getAvatarColor()}`}
                   onClick={() => { setShowProfile(p => !p); setShowApps(false); setShowNotifs(false); setShowMessages(false) }}
-                  title="Profile"
+                  title={t('shell.profile.tooltip')}
                 >
                   {user.photoURL
                     ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
@@ -1179,7 +1181,7 @@ export default function Layout({ children, breadcrumb }) {
           const hrs  = diff > 0 ? Math.floor(diff / 3600000) : 0
           const mins = diff > 0 ? Math.floor((diff % 3600000) / 60000) : 0
           const countdown = diff > 0
-            ? hrs > 0 ? `Ends in ${hrs}h ${mins}m` : `Ends in ${mins}m`
+            ? hrs > 0 ? t('shell.banner.endsInHm', { hrs, mins }) : t('shell.banner.endsInM', { mins })
             : null
           return (
             <div key={b.id}

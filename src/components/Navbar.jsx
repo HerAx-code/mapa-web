@@ -5,7 +5,7 @@ import {
   MdMarkEmailRead, MdClose
 } from 'react-icons/md'
 import { useAuth } from '../contexts/AuthContext'
-import { ROLES, PATIENT_NOTIFICATIONS } from '../utils/constants'
+import { ROLES, ROLE_LABEL_SHORT, PATIENT_NOTIFICATIONS } from '../utils/constants'
 import NotificationPanel from './NotificationPanel'
 import MessagesPanel from './MessagesPanel'
 
@@ -39,23 +39,13 @@ export default function Navbar({ breadcrumb }) {
     }
   }
 
-  const getRoleLabel = () => {
-    if (!user) return ''
-    switch (user.role) {
-      case ROLES.PATIENT:      return 'Patient'
-      case ROLES.AGENCY:       return 'Agency Coordinator'
-      case ROLES.AGENCY_ADMIN: return 'Agency Admin'
-      case ROLES.SUPER_ADMIN:  return 'Super Admin'
-      case ROLES.STAFF_ADMIN:  return 'Staff Admin'
-      default:                 return ''
-    }
-  }
+  const getRoleLabel = () => ROLE_LABEL_SHORT[user?.role] ?? ''
 
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-5 flex-shrink-0 z-30">
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500 flex items-center gap-1.5">
-        <span>MAPA Portal</span>
+        <span>MAPA</span>
         {breadcrumb && (
           <>
             <span className="text-gray-300">/</span>

@@ -1,7 +1,27 @@
 // Brand
+//
+// "MAPA Portal" is redundant — the P in MAPA already stands for Portal.
+// Use BRAND_NAME ("MAPA") on its own, or pair with CRMC for context.
 export const BRAND_NAME = 'MAPA'
 export const BRAND_SUBTITLE = 'CRMC'
 export const BRAND_FULL = 'Medical Assistance Portal Access'
+
+// Budget period helpers — budget.period is an adjective ('monthly') which
+// reads awkwardly when embedded in phrases like "Budget this monthly".
+// Use PERIOD_NOUN[period] for "this {month/quarter/year}" / "per {month}"
+// phrasings; keep budget.period for adjective slots ("Monthly budget").
+export const PERIOD_NOUN = {
+  monthly:   'month',
+  quarterly: 'quarter',
+  yearly:    'year',
+}
+
+// Adjective form, title-cased for headers ("Monthly Budget").
+export const PERIOD_ADJECTIVE = {
+  monthly:   'Monthly',
+  quarterly: 'Quarterly',
+  yearly:    'Yearly',
+}
 
 // Roles
 //
@@ -29,21 +49,61 @@ export const ROLES = {
 export const isAgencyRole = (role) => role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN
 export const isCrmcAdminRole = (role) => role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN
 
-// Application statuses
-export const APP_STATUS = {
-  PENDING:     { label: 'Pending',              badge: 'badge-amber'  },
-  REVIEWING:   { label: 'Under Review',         badge: 'badge-blue'   },
-  INTERVIEW:   { label: 'Interview Scheduled',  badge: 'badge-purple' },
-  APPROVED:    { label: 'Approved',             badge: 'badge-green'  },
-  REJECTED:    { label: 'Rejected',             badge: 'badge-red'    },
-  CERTIFICATE: { label: 'Certificate Issued',   badge: 'badge-green'  },
+// Canonical display labels for roles. Import from here instead of redefining
+// per-file so wording stays consistent across the UI.
+export const ROLE_LABEL = {
+  super_admin:  'Super Administrator',
+  staff_admin:  'Staff Administrator',
+  agency_admin: 'Agency Administrator',
+  agency:       'Agency Coordinator',
+  patient:      'Patient',
 }
 
-// Document statuses
-export const DOC_STATUS = {
-  PENDING:  { label: 'Pending Review', badge: 'badge-amber' },
-  VERIFIED: { label: 'Verified',       badge: 'badge-green' },
-  REJECTED: { label: 'Rejected',       badge: 'badge-red'   },
+// Short labels for tight UI spaces (chips, table cells, badges).
+export const ROLE_LABEL_SHORT = {
+  super_admin:  'Super Admin',
+  staff_admin:  'Staff Admin',
+  agency_admin: 'Agency Admin',
+  agency:       'Agency Coordinator',
+  patient:      'Patient',
+}
+
+// Badge color classes per role for consistent UI tinting.
+export const ROLE_BADGE = {
+  super_admin:  'badge-purple',
+  staff_admin:  'badge-blue',
+  agency_admin: 'badge-amber',
+  agency:       'badge-green',
+  patient:      'badge-gray',
+}
+
+// ── Status configs ─────────────────────────────────────────────────────────
+// Keyed by the LOWERCASE status string actually written to Firestore.
+// These are the single source of truth — use <StatusBadge /> instead of
+// redefining label/badge maps per file. The previous PascalCase
+// APP_STATUS / DOC_STATUS exports were keyed wrong (uppercase) and got
+// shadowed by per-file definitions everywhere.
+
+export const APP_STATUS_CONFIG = {
+  pending:       { label: 'Pending',            badge: 'badge-blue'   },
+  reviewing:     { label: 'Reviewing',          badge: 'badge-amber'  },
+  awaiting_info: { label: 'Waiting on Patient', badge: 'badge-orange' },
+  interview:     { label: 'Interview',          badge: 'badge-purple' },
+  approved:      { label: 'Approved',           badge: 'badge-green'  },
+  rejected:      { label: 'Rejected',           badge: 'badge-red'    },
+  certificate:   { label: 'GL Issued',          badge: 'badge-green'  },
+}
+
+export const DOC_STATUS_CONFIG = {
+  pending:  { label: 'Pending Review', badge: 'badge-amber' },
+  verified: { label: 'Verified',       badge: 'badge-green' },
+  rejected: { label: 'Rejected',       badge: 'badge-red'   },
+}
+
+export const REPORT_STATUS_CONFIG = {
+  open:        { label: 'Open',        badge: 'badge-amber' },
+  in_progress: { label: 'In Progress', badge: 'badge-blue'  },
+  resolved:    { label: 'Resolved',    badge: 'badge-green' },
 }
 
 // Slot status thresholds

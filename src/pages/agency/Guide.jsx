@@ -228,16 +228,16 @@ const SECTIONS = [
     icon: '💰',
     title: 'Budget, cooldown, and fiscal control',
     content:
-      `Your agency has a budget allocation set by the system admin. The Approve modal validates each ` +
-      `approved amount against it, so over-approval is impossible. The Dashboard and Slot Management pages ` +
-      `show your remaining budget in real time.`,
+      `Your agency has a budget allocation set by your Agency Administrator. The Approve modal validates each ` +
+      `approved amount against it, so over-approval is impossible. The Dashboard and Funds pages show your ` +
+      `remaining budget in real time. CRMC operates the platform but does not control your agency's budget.`,
     items: [
-      { label: 'Allocated',    desc: 'Total budget for the period (monthly or quarterly). Set by the admin.' },
+      { label: 'Allocated',    desc: 'Total budget for the period (monthly, quarterly, or yearly). Set by your Agency Administrator on /agency/allocation.' },
       { label: 'Committed',    desc: 'Sum of all approved-but-not-redeemed GL amounts. Decreases when a GL is redeemed, expired, or reversed.' },
       { label: 'Disbursed',    desc: 'Sum of all redeemed GL amounts. Final spend.' },
       { label: 'Remaining',    desc: 'Allocated − Committed. This is what your next approval can draw from.' },
-      { label: 'Period reset', desc: 'Admin manually starts a new period via Agency Detail → Reset period. Committed/disbursed reset to 0; allocation remains.' },
-      { label: 'Cooldown',     desc: 'Soft 30-day check: if the patient was approved (by any agency) in the past 30 days, the Approve modal warns you. It does not block — you decide.' },
+      { label: 'Period reset', desc: 'Your Agency Administrator starts a new period via /agency/allocation → Reset Period. Committed and disbursed reset to ₱0; allocation remains.' },
+      { label: 'Cooldown',     desc: 'Hard 30-day check: if the patient was already approved (by any agency) in the past 30 days, the Approve button is disabled. Reversed approvals also keep the cooldown clock running.' },
     ],
   },
   {

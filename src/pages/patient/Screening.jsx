@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
-import { MdArrowForward, MdInfo, MdSchedule } from 'react-icons/md'
+import { MdArrowForward, MdInfo, MdSchedule, MdLocalHospital, MdBlock, MdCheckCircle, MdStar, MdCheck } from 'react-icons/md'
 import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { SLOT_STATUS } from '../../utils/constants'
+import { useTranslation } from 'react-i18next'
 
 export default function Screening() {
+  const { t }       = useTranslation()
   const navigate    = useNavigate()
   const { user }    = useAuth()
   const [step, setStep]                       = useState('questions')
@@ -60,7 +62,7 @@ export default function Screening() {
 
   // Deduplicate by name in case Firestore has duplicate entries
   const uniqueTypes = assistanceTypes.filter(
-    (t, i, arr) => arr.findIndex(x => x.name === t.name) === i
+    (type, i, arr) => arr.findIndex(x => x.name === type.name) === i
   )
 
   const toggleType = (name) => {
@@ -90,14 +92,14 @@ export default function Screening() {
   // ── Questions ─────────────────────────────────────────────────────────
 
   if (step === 'questions') return (
-    <Layout breadcrumb="Find Programs">
+    <Layout breadcrumb={t('patient.screening.breadcrumb')}>
       <div className="p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
           <div className="card p-6">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-gray-900">What do you need help with?</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{t('patient.screening.questionsTitle')}</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Select everything that applies to your situation. You can choose more than one.
+                {t('patient.screening.questionsSub')}
               </p>
             </div>
 
@@ -109,7 +111,7 @@ export default function Screening() {
               </div>
             ) : assistanceTypes.length === 0 ? (
               <div className="py-8 text-center text-sm text-gray-400">
-                No assistance types configured yet. Contact your administrator.
+                {t('patient.screening.noTypesYet')}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
@@ -128,7 +130,7 @@ export default function Screening() {
                       <div className="flex items-start gap-2">
                         <div className={`flex-shrink-0 w-5 h-5 rounded border-2 mt-0.5 flex items-center justify-center
                           ${isSelected ? 'border-brand-500 bg-brand-500' : 'border-gray-300'}`}>
-                          {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+                          {isSelected && <MdCheck size={12} className="text-white" />}
                         </div>
                         <div>
                           <p className={`text-sm font-medium ${isSelected ? 'text-brand-700' : 'text-gray-700'}`}>
@@ -146,7 +148,7 @@ export default function Screening() {
             )}
 
             <p className="text-xs text-gray-400 flex items-center gap-1 mb-4">
-              <MdInfo size={14} /> Your answers are for guidance only and are never stored.
+              <MdInfo size={14} /> {t('patient.screening.privacy')}
             </p>
 
             <button
@@ -154,12 +156,12 @@ export default function Screening() {
               disabled={selected.length === 0 || loading}
               onClick={() => setStep('results')}
             >
-              See My Matches <MdArrowForward size={18} />
+              {t('patient.screening.seeMatches')} <MdArrowForward size={18} />
             </button>
 
             {selected.length === 0 && !loading && (
               <p className="text-xs text-gray-400 text-center mt-3">
-                Select at least one option to continue.
+                {t('patient.screening.selectAtLeast')}
               </p>
             )}
           </div>
@@ -171,35 +173,37 @@ export default function Screening() {
   // ── Results ───────────────────────────────────────────────────────────
 
   const matchLabel = (score) => {
-    if (score === 100) return { label: 'Perfect Match', cls: 'bg-green-100 text-green-700 border border-green-200' }
-    if (score >= 70)   return { label: 'Great Match',   cls: 'bg-green-100 text-green-700 border border-green-200' }
-    if (score >= 40)   return { label: 'Partial Match', cls: 'bg-amber-100 text-amber-700 border border-amber-200' }
-    return                    { label: 'Low Match',     cls: 'bg-red-100   text-red-600   border border-red-200'   }
+    if (score === 100) return { label: t('patient.screening.match.perfect'), cls: 'bg-green-100 text-green-700 border border-green-200' }
+    if (score >= 70)   return { label: t('patient.screening.match.great'),   cls: 'bg-green-100 text-green-700 border border-green-200' }
+    if (score >= 40)   return { label: t('patient.screening.match.partial'), cls: 'bg-amber-100 text-amber-700 border border-amber-200' }
+    return                    { label: t('patient.screening.match.low'),     cls: 'bg-red-100   text-red-600   border border-red-200'   }
   }
 
   const results = getResults().filter(a => a.matchScore > 0)
   return (
-    <Layout breadcrumb="Find Programs">
+    <Layout breadcrumb={t('patient.screening.breadcrumb')}>
       <div className="p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="page-title">Your Program Matches</h1>
+              <h1 className="page-title">{t('patient.screening.resultsTitle')}</h1>
               <p className="page-sub">
                 {results.length === 0
-                  ? 'No programs match your selections.'
-                  : `${results.length} program${results.length !== 1 ? 's' : ''} match your needs.`}
+                  ? t('patient.screening.resultsNone')
+                  : results.length === 1
+                    ? t('patient.screening.resultsCountOne')
+                    : t('patient.screening.resultsCountMany', { count: results.length })}
               </p>
             </div>
             <button className="btn-secondary text-sm flex-shrink-0" onClick={() => setStep('questions')}>
-              ← Change My Answers
+              ← {t('patient.screening.changeAnswers')}
             </button>
           </div>
 
           {/* Selected types summary */}
           {selected.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap mb-5 p-3 bg-gray-50 rounded-xl border border-gray-100">
-              <span className="text-xs text-gray-500 font-medium flex-shrink-0">You selected:</span>
+              <span className="text-xs text-gray-500 font-medium flex-shrink-0">{t('patient.screening.selectedLabel')}</span>
               {selected.map(s => (
                 <span key={s} className="text-xs bg-white border border-gray-200 text-gray-700 px-2.5 py-1 rounded-lg font-medium">
                   {s}
@@ -210,17 +214,19 @@ export default function Screening() {
 
           {results.length === 0 && (
             <div className="card p-8 text-center">
-              <p className="text-3xl mb-3">🏥</p>
-              <p className="text-sm font-medium text-gray-600 mb-1">No matching programs found.</p>
+              <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MdLocalHospital size={28} className="text-gray-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-600 mb-1">{t('patient.screening.noMatchTitle')}</p>
               <p className="text-sm text-gray-400 mb-5">
-                None of the available programs cover what you selected. Try adjusting your answers or browse all programs.
+                {t('patient.screening.noMatchDesc')}
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center">
                 <button className="btn-primary text-sm" onClick={() => setStep('questions')}>
-                  ← Change My Answers
+                  ← {t('patient.screening.changeAnswers')}
                 </button>
                 <button className="btn-secondary text-sm" onClick={() => navigate('/patient/programs')}>
-                  Browse All Programs →
+                  {t('patient.screening.browseAll')} →
                 </button>
               </div>
             </div>
@@ -230,12 +236,12 @@ export default function Screening() {
           {activeAgencyIds.size > 0 && results.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start justify-between gap-3 mb-4">
               <p className="text-sm text-amber-700">
-                You have an active application in progress. Only one application is allowed at a time — resolve it before applying to a new program.
+                {t('patient.screening.activeAppWarning')}
               </p>
               <button
                 className="text-sm font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap flex-shrink-0 underline"
                 onClick={() => navigate('/patient/status')}>
-                View My Application →
+                {t('patient.screening.viewMyApp')} →
               </button>
             </div>
           )}
@@ -259,8 +265,8 @@ export default function Screening() {
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
                           <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
                           {i === 0 && agency.matchScore >= 70 && (
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-200 flex-shrink-0">
-                              ⭐ Top Pick
+                            <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-200 flex-shrink-0">
+                              <MdStar size={12} /> {t('patient.screening.topPick')}
                             </span>
                           )}
                         </div>
@@ -277,11 +283,11 @@ export default function Screening() {
                       {/* Assistance type tags */}
                       {(agency.assistanceTypes ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
-                          {(agency.assistanceTypes ?? []).slice(0, 4).map((t, j) => (
-                            <span key={j} className="badge badge-blue text-xs">{t}</span>
+                          {(agency.assistanceTypes ?? []).slice(0, 4).map((typeName, j) => (
+                            <span key={j} className="badge badge-blue text-xs">{typeName}</span>
                           ))}
                           {(agency.assistanceTypes ?? []).length > 4 && (
-                            <span className="badge badge-blue text-xs">+{(agency.assistanceTypes ?? []).length - 4} more</span>
+                            <span className="badge badge-blue text-xs">{t('patient.screening.moreTypes', { count: (agency.assistanceTypes ?? []).length - 4 })}</span>
                           )}
                         </div>
                       )}
@@ -293,8 +299,10 @@ export default function Screening() {
 
                       {/* Slot text + processing time */}
                       <div className="flex items-center justify-between mb-3">
-                        <span className={`text-xs ${isFull ? 'text-red-500' : 'text-green-600'}`}>
-                          {isFull ? '⛔ No slots today' : `✅ ${slots.remaining} of ${slots.total} slots available`}
+                        <span className={`flex items-center gap-1 text-xs ${isFull ? 'text-red-500' : 'text-green-600'}`}>
+                          {isFull
+                            ? <><MdBlock size={13} /> {t('patient.screening.noSlotsToday')}</>
+                            : <><MdCheckCircle size={13} /> {t('patient.screening.slotsAvailable', { remaining: slots.remaining, total: slots.total })}</>}
                         </span>
                         {agency.processingTime && (
                           <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -307,17 +315,17 @@ export default function Screening() {
                       <div className="flex justify-end">
                         {activeAgencyIds.has(agency.id) ? (
                           <span className="flex items-center gap-1 text-xs text-green-600 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg font-medium">
-                            ✓ Applied
+                            <MdCheckCircle size={12} /> {t('patient.screening.applied')}
                           </span>
                         ) : completedAgencyIds.has(agency.id) ? (
                           <span className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 bg-gray-50 px-2.5 py-1 rounded-lg font-medium">
-                            GL Issued
+                            {t('patient.screening.glIssued')}
                           </span>
                         ) : activeAgencyIds.size > 0 ? (
                           <button
                             className="flex items-center gap-1 text-xs text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg font-medium hover:bg-brand-100 transition-colors"
                             onClick={() => navigate('/patient/status')}>
-                            View My Application →
+                            {t('patient.screening.viewMyApp')} →
                           </button>
                         ) : (
                           <button
@@ -325,7 +333,7 @@ export default function Screening() {
                             disabled={isFull}
                             onClick={() => navigate('/patient/programs', { state: { openAgencyId: agency.id } })}
                           >
-                            Apply Now →
+                            {t('patient.screening.applyNow')} →
                           </button>
                         )}
                       </div>
@@ -338,11 +346,11 @@ export default function Screening() {
           </div>
           {results.length > 0 && (
             <div className="text-center pt-2">
-              <p className="text-sm text-gray-400 mb-1">Looking for something else?</p>
+              <p className="text-sm text-gray-400 mb-1">{t('patient.screening.lookingForElse')}</p>
               <button
                 className="text-sm text-brand-500 hover:text-brand-600 font-medium"
                 onClick={() => navigate('/patient/programs')}>
-                Browse all programs →
+                {t('patient.screening.browseAllSimple')} →
               </button>
             </div>
           )}

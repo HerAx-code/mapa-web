@@ -34,6 +34,8 @@ import UploadCertificates     from './pages/agency/UploadCertificates'
 import AgencyLogs            from './pages/agency/Logs'
 import AgencyFunds           from './pages/agency/Funds'
 import AgencyAllocation      from './pages/agency/Allocation'
+import AgencyAuditLog        from './pages/agency/AuditLog'
+import AgencyTeam            from './pages/agency/Team'
 import AgencyGuide           from './pages/agency/Guide'
 
 // Admin pages
@@ -105,6 +107,8 @@ export default function App() {
         <Route path="/agency/logs"            element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyLogs /></PrivateRoute>} />
         <Route path="/agency/funds"           element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyFunds /></PrivateRoute>} />
         <Route path="/agency/allocation"      element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAllocation /></PrivateRoute>} />
+        <Route path="/agency/audit"           element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAuditLog /></PrivateRoute>} />
+        <Route path="/agency/team"            element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyTeam /></PrivateRoute>} />
         <Route path="/agency/guide"           element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyGuide /></PrivateRoute>} />
 
         {/* Admin */}

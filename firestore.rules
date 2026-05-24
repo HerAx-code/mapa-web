@@ -53,17 +53,27 @@ service cloud.firestore {
     match /users/{userId} {
       allow read:   if isAuth() && (uid() == userId || isAdmin() || isAgency());
       allow create: if isAuth();
-      // Self-edit allowed only for profile fields. role / agencyId / active /
-      // rank are managed by admins and the promote-to-agency-admin flow.
-      // Without this constraint, any user could self-promote to super_admin
-      // by writing to their own user doc.
+      // Update permissions:
+      //   - self: only profile fields. role / agencyId / active / rank are
+      //     managed elsewhere — without this, any user could self-promote
+      //     to super_admin by writing to their own user doc.
+      //   - isAdmin (CRMC super/staff): can edit anything.
+      //   - isAgencyAdmin: can edit members of their own agency, but only
+      //     within the agency_admin/agency role pair and cannot move them
+      //     to a different agency. This lets agency administrators manage
+      //     their own coordinators without giving them platform-wide write.
       allow update: if isAuth() && (
         (uid() == userId &&
           request.resource.data.role == resource.data.role &&
           request.resource.data.agencyId == resource.data.agencyId &&
           request.resource.data.active == resource.data.active &&
           request.resource.data.rank == resource.data.rank) ||
-        isAdmin()
+        isAdmin() ||
+        (isAgencyAdmin() &&
+          resource.data.agencyId == userAgencyId() &&
+          resource.data.role in ['agency', 'agency_admin'] &&
+          request.resource.data.agencyId == resource.data.agencyId &&
+          request.resource.data.role in ['agency', 'agency_admin'])
       );
       allow delete: if isSuperAdmin();
     }
@@ -146,13 +156,23 @@ service cloud.firestore {
     // Unauthenticated single-document GET is needed for hospital ID verification
     // during patient registration (user is not yet logged in at that point).
     // Listing all IDs requires authentication.
-    // Patients can update (to link their UID when registering).
+    // Updates:
+    //   - admin: anything (manual reset, status changes)
+    //   - patient: only when claiming a still-available code as themselves —
+    //     status must flip 'available' → 'used' and patId must equal their
+    //     own uid. Without this constraint, the previous rule `isAuth()`
+    //     let any logged-in user mark someone else's code as used, or
+    //     revert another patient's claim back to available.
     // Only super_admin can create or delete IDs.
     match /hospitalIds/{hospitalId} {
       allow get:    if true;
       allow list:   if isAuth();
       allow create: if isSuperAdmin();
-      allow update: if isAdmin() || isAuth();
+      allow update: if isAdmin() ||
+                       (isPatient() &&
+                        resource.data.status == 'available' &&
+                        request.resource.data.status == 'used' &&
+                        request.resource.data.patId == uid());
       allow delete: if isSuperAdmin();
     }
 

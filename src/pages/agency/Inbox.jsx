@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   collection, query, where, onSnapshot,
@@ -28,25 +29,9 @@ const isGLExpired = (app) => {
   return d != null && d > GL_VALIDITY_DAYS
 }
 
-const STATUS_BADGE = {
-  pending:        'badge-blue',
-  reviewing:      'badge-amber',
-  awaiting_info:  'badge-orange',
-  interview:      'badge-purple',
-  approved:       'badge-green',
-  rejected:       'badge-red',
-  certificate:    'badge-green',
-}
-
-const STATUS_LABEL = {
-  pending:        'Pending',
-  reviewing:      'Reviewing',
-  awaiting_info:  'Waiting on Patient',
-  interview:      'Interview',
-  approved:       'Approved',
-  rejected:       'Rejected',
-  certificate:    'GL Issued',
-}
+// Status badge/label was inlined here. Now uses the shared <StatusBadge />
+// component sourced from APP_STATUS_CONFIG in constants.js — keeps wording
+// and colors consistent with every other page that shows app status.
 
 const formatDate = (ts) => {
   if (!ts) return '—'
@@ -284,10 +269,8 @@ export default function Inbox() {
                       </div>
                     </td>
                     <td>
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`badge text-xs ${STATUS_BADGE[app.status] ?? 'badge-gray'}`}>
-                          {STATUS_LABEL[app.status] ?? app.status}
-                        </span>
+                      <div className="flex flex-col gap-0.5 items-start">
+                        <StatusBadge status={app.status} kind="app" />
                         {app.glStatus && ['approved','certificate'].includes(app.status) && (
                           <span className={`text-xs ${
                             app.glStatus === 'redeemed' ? 'text-green-600'

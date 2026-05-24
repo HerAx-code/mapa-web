@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next'
 import {
   MdUpload, MdCheckCircle, MdPending,
   MdArrowForward, MdExpandMore, MdExpandLess,
+  MdHourglassEmpty, MdAssignment, MdSchedule, MdVideoCall,
+  MdReceipt, MdCancel, MdLocalHospital, MdCalendarMonth, MdAccessTime,
+  MdOpenInNew, MdCheck,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../contexts/AuthContext'
@@ -43,12 +46,14 @@ function parseInterviewMoment(iso, timeStr) {
 
 // ── Plain-language status config ──────────────────────────────────────────
 
-const STATUS_CONFIG = {
+// Icon + color choices per application status. Translatable strings
+// (label/desc/btn) live in the i18n locale files under
+// patient.dashboard.statusCard.<status> — read via t() at render time so
+// the dashboard supports Filipino + English without code changes.
+const STATUS_VISUAL = {
   pending: {
-    emoji:    '⏳',
-    label:    'Application Under Review',
-    desc:     'The agency has received your application and will review it soon. You do not need to do anything right now.',
-    btn:      'View Application Status',
+    icon:     MdHourglassEmpty,
+    iconBg:   'bg-blue-100 text-blue-600',
     path:     '/patient/status',
     border:   'border-blue-300',
     bg:       'bg-blue-50',
@@ -57,10 +62,8 @@ const STATUS_CONFIG = {
     btnClass: 'bg-blue-500 hover:bg-blue-600 text-white',
   },
   reviewing: {
-    emoji:    '📋',
-    label:    'Documents Being Checked',
-    desc:     'The agency is checking your uploaded documents. Make sure all your required documents are uploaded.',
-    btn:      'Check My Documents',
+    icon:     MdAssignment,
+    iconBg:   'bg-amber-100 text-amber-600',
     path:     '/patient/documents',
     border:   'border-amber-300',
     bg:       'bg-amber-50',
@@ -69,10 +72,8 @@ const STATUS_CONFIG = {
     btnClass: 'bg-amber-500 hover:bg-amber-600 text-white',
   },
   awaiting_info: {
-    emoji:    '⏰',
-    label:    'Action Needed From You',
-    desc:     'The agency has asked you for more information. Open your documents and upload what they requested.',
-    btn:      'Open My Documents',
+    icon:     MdSchedule,
+    iconBg:   'bg-orange-100 text-orange-600',
     path:     '/patient/documents',
     border:   'border-orange-300',
     bg:       'bg-orange-50',
@@ -81,10 +82,8 @@ const STATUS_CONFIG = {
     btnClass: 'bg-orange-500 hover:bg-orange-600 text-white',
   },
   interview: {
-    emoji:    '📅',
-    label:    'Interview Scheduled',
-    desc:     'You have a video interview scheduled with the agency. Tap the button below to see the date and details.',
-    btn:      'View My Interview',
+    icon:     MdVideoCall,
+    iconBg:   'bg-purple-100 text-purple-600',
     path:     '/patient/interviews',
     border:   'border-purple-300',
     bg:       'bg-purple-50',
@@ -93,10 +92,8 @@ const STATUS_CONFIG = {
     btnClass: 'bg-purple-500 hover:bg-purple-600 text-white',
   },
   approved: {
-    emoji:    '✅',
-    label:    'Application Approved',
-    desc:     'Congratulations! Your application has been approved for a specific amount. Your Guarantee Letter is being prepared.',
-    btn:      'View Application',
+    icon:     MdCheckCircle,
+    iconBg:   'bg-green-100 text-green-600',
     path:     '/patient/status',
     border:   'border-green-300',
     bg:       'bg-green-50',
@@ -105,10 +102,8 @@ const STATUS_CONFIG = {
     btnClass: 'bg-green-500 hover:bg-green-600 text-white',
   },
   certificate: {
-    emoji:    '🏅',
-    label:    'Guarantee Letter Ready',
-    desc:     'Your Guarantee Letter has been issued. View it on the My Application page once the signed copy is uploaded.',
-    btn:      'View My Guarantee Letter',
+    icon:     MdReceipt,
+    iconBg:   'bg-green-100 text-green-600',
     path:     '/patient/status',
     border:   'border-green-300',
     bg:       'bg-green-50',
@@ -137,7 +132,10 @@ export default function PatientDashboard() {
   const [docStats,   setDocStats]   = useState({ verified: 0, pending: 0 })
   const [loading,    setLoading]    = useState(true)
   const [docLoading, setDocLoading] = useState(true)
-  const [stepsOpen,  setStepsOpen]  = useState(false)
+  // Default the steps guide OPEN for new patients (no application yet) —
+  // they need the orientation most. Returning patients with an active
+  // application can collapse it themselves.
+  const [stepsOpen,  setStepsOpen]  = useState(null)
 
   // Most recent non-rejected application (real-time)
   useEffect(() => {
@@ -225,46 +223,55 @@ export default function PatientDashboard() {
 
   const hasApp       = appCount > 0
   const activeStatus = activeApp?.status ?? null
+  // Resolve null (initial) to true for new patients, false for returning ones.
+  const stepsOpenEffective = stepsOpen ?? (!loading && !hasApp)
 
   // ── Step guide ────────────────────────────────────────────────────────
+  // Title/desc strings come from patient.dashboard.steps.* in the locale
+  // files; the action/path/done predicates stay here as code.
   const STEPS = [
     {
-      num: 1, title: 'Upload Required Documents',
-      desc:   'Upload and submit required documents for pre-verification.',
-      action: 'Manage →', path: '/patient/documents',
-      done: docStats.verified > 0,
+      num: 1, title: t('patient.dashboard.steps.s1Title'),
+      desc:   t('patient.dashboard.steps.s1Desc'),
+      path:   '/patient/documents',
+      done:   docStats.verified > 0,
     },
     {
-      num: 2, title: 'Find and Apply to a Program',
-      desc:   'Answer a few questions to find a matching program, then submit your application.',
-      action: 'Find Programs →', path: '/patient/screening',
-      done: hasApp,
+      num: 2, title: t('patient.dashboard.steps.s2Title'),
+      desc:   t('patient.dashboard.steps.s2Desc'),
+      path:   '/patient/screening',
+      done:   hasApp,
     },
     {
-      num: 3, title: 'Wait for Agency Review',
-      desc:   'The agency will review your application and documents.',
-      action: 'Track →', path: '/patient/status',
-      done: ['interview','approved','certificate'].includes(activeStatus),
+      num: 3, title: t('patient.dashboard.steps.s3Title'),
+      desc:   t('patient.dashboard.steps.s3Desc'),
+      path:   '/patient/status',
+      done:   ['interview','approved','certificate'].includes(activeStatus),
     },
     {
-      num: 4, title: 'Attend Your Interview',
-      desc:   'You will be scheduled for a video interview with the agency.',
-      action: 'View →', path: '/patient/interviews',
-      done: ['approved','certificate'].includes(activeStatus),
+      num: 4, title: t('patient.dashboard.steps.s4Title'),
+      desc:   t('patient.dashboard.steps.s4Desc'),
+      path:   '/patient/interviews',
+      done:   ['approved','certificate'].includes(activeStatus),
     },
     {
-      num: 5, title: 'Receive your Guarantee Letter',
-      desc:   'Get your official Guarantee Letter — present it at the named provider for the guaranteed assistance.',
-      action: null, path: null,
-      done: activeStatus === 'certificate',
+      num: 5, title: t('patient.dashboard.steps.s5Title'),
+      desc:   t('patient.dashboard.steps.s5Desc'),
+      path:   null,
+      done:   activeStatus === 'certificate',
     },
   ]
 
   const doneCount      = STEPS.filter(s => s.done).length
   const currentStepNum = STEPS.find(s => !s.done)?.num ?? null
 
-  // Only show doc section once they have docs or an active application
-  const showDocSection = !docLoading && (hasApp || docStats.verified > 0 || docStats.pending > 0)
+  // Only show doc section once they have docs or an active application.
+  // Hide once their GL has been issued — by then the doc-workflow phase
+  // is complete and the card is just visual noise.
+  const showDocSection = !docLoading
+    && (hasApp || docStats.verified > 0 || docStats.pending > 0)
+    && activeStatus !== 'certificate'
+    && activeStatus !== 'approved'
 
   return (
     <Layout breadcrumb={t('patient.dashboard.title')}>
@@ -284,144 +291,210 @@ export default function PatientDashboard() {
             <div className="h-4 bg-gray-100 rounded w-3/4 mb-5" />
             <div className="h-12 bg-gray-100 rounded-xl" />
           </div>
-        ) : activeApp && STATUS_CONFIG[activeApp.status] ? (() => {
-          const cfg = STATUS_CONFIG[activeApp.status]
-          const isAwaiting = activeApp.status === 'awaiting_info'
+        ) : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
+          const vis = STATUS_VISUAL[activeApp.status]
+          const txt = `patient.dashboard.statusCard.${activeApp.status}`
+          const isAwaiting  = activeApp.status === 'awaiting_info'
+          const isInterview = activeApp.status === 'interview'
+          const Icon = vis.icon
+          // Pre-format interview details for inline display.
+          // i18n.language picks 'en' or 'fil' (resolved through i18next at runtime).
+          const interviewDateStr = activeApp.interviewDate
+            ? new Date(`${activeApp.interviewDate}T00:00:00`).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+            : null
           return (
-            <div className={`card p-5 border-2 ${cfg.border} ${cfg.bg}`}>
+            <div className={`card p-5 border-2 ${vis.border} ${vis.bg}`}>
               <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl">{cfg.emoji}</span>
-                <h2 className={`text-lg font-bold ${cfg.text}`}>{cfg.label}</h2>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${vis.iconBg}`}>
+                  <Icon size={22} />
+                </div>
+                <h2 className={`text-lg font-bold ${vis.text}`}>{t(`${txt}.label`)}</h2>
               </div>
-              <p className={`text-sm leading-relaxed mb-4 ${cfg.subtext}`}>{cfg.desc}</p>
+              <p className={`text-sm leading-relaxed mb-4 ${vis.subtext}`}>{t(`${txt}.desc`)}</p>
+
+              {/* awaiting_info: surface the agency's message */}
               {isAwaiting && activeApp.awaitingInfoMessage && (
                 <div className="bg-white border border-orange-200 rounded-xl p-3 mb-4">
-                  <p className="text-xs font-semibold text-orange-700 mb-1">Message from {activeApp.agencyName}:</p>
+                  <p className="text-xs font-semibold text-orange-700 mb-1">
+                    {t('patient.dashboard.statusCard.awaiting_info.messageFrom', { agency: activeApp.agencyName })}
+                  </p>
                   <p className="text-sm text-gray-700 leading-relaxed">{activeApp.awaitingInfoMessage}</p>
                 </div>
               )}
+
+              {/* interview: show date/time/Meet link inline — most time-sensitive
+                  event in the journey; patient shouldn't need an extra click. */}
+              {isInterview && (interviewDateStr || activeApp.interviewTime || activeApp.meetLink) && (
+                <div className="bg-white border border-purple-200 rounded-xl p-3 mb-4 space-y-2">
+                  {interviewDateStr && (
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <MdCalendarMonth size={16} className="text-purple-500 flex-shrink-0" />
+                      <span className="font-medium">{interviewDateStr}</span>
+                    </div>
+                  )}
+                  {activeApp.interviewTime && (
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <MdAccessTime size={16} className="text-purple-500 flex-shrink-0" />
+                      <span className="font-medium">{activeApp.interviewTime}</span>
+                    </div>
+                  )}
+                  {activeApp.meetLink && (
+                    <a href={activeApp.meetLink} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium pt-1 border-t border-purple-100">
+                      <MdVideoCall size={16} className="flex-shrink-0" />
+                      <span className="truncate">{t('patient.dashboard.statusCard.interview.joinMeet')}</span>
+                      <MdOpenInNew size={13} className="flex-shrink-0 opacity-60" />
+                    </a>
+                  )}
+                </div>
+              )}
+
               <button
-                className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${cfg.btnClass}`}
-                onClick={() => navigate(cfg.path)}>
-                {cfg.btn} →
+                className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${vis.btnClass}`}
+                onClick={() => navigate(vis.path)}>
+                {t(`${txt}.btn`)} →
               </button>
               <p className="text-xs text-center mt-2 text-gray-400">
-                {activeApp.appId} · {activeApp.agencyName} · Submitted {formatDate(activeApp.submittedAt)}
+                {activeApp.appId} · {activeApp.agencyName} · {t('patient.dashboard.metadata.submittedOn', { date: formatDate(activeApp.submittedAt) })}
               </p>
             </div>
           )
         })() : appCount > 0 ? (
           <div className="card p-5 border-2 border-red-200 bg-red-50">
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl">❌</span>
-              <h2 className="text-lg font-bold text-red-800">Application Not Approved</h2>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 text-red-600">
+                <MdCancel size={22} />
+              </div>
+              <h2 className="text-lg font-bold text-red-800">{t('patient.dashboard.rejectedCard.title')}</h2>
             </div>
             <p className="text-sm text-red-700 leading-relaxed mb-4">
-              Your previous {appCount === 1 ? 'application was' : `${appCount} applications were`} not approved.
-              You may apply again to a different program.
+              {appCount === 1
+                ? t('patient.dashboard.rejectedCard.descOne')
+                : t('patient.dashboard.rejectedCard.descMany', { count: appCount })}
             </p>
             <button
               className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
               onClick={() => navigate('/patient/programs')}>
-              Browse Programs →
+              {t('patient.dashboard.rejectedCard.btn')} →
             </button>
           </div>
         ) : (
           <div className="card p-5 border-2 border-brand-200 bg-brand-50">
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl">👋</span>
-              <h2 className="text-lg font-bold text-brand-800">Welcome to MAPA!</h2>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-100 text-brand-600">
+                <MdLocalHospital size={22} />
+              </div>
+              <h2 className="text-lg font-bold text-brand-800">{t('patient.dashboard.welcomeCard.title')}</h2>
             </div>
-            <p className="text-sm text-brand-700 leading-relaxed mb-4">
-              To get started, answer a few questions to find the right medical assistance program for you.
+            <p className="text-sm text-brand-700 leading-relaxed mb-3">
+              {t('patient.dashboard.welcomeCard.intro')}
             </p>
+
+            {/* What you can get — concrete value preview so a first-time
+                patient knows what kinds of help exist before committing. */}
+            <div className="bg-white border border-brand-100 rounded-xl p-3 mb-4">
+              <p className="text-xs font-semibold text-brand-700 mb-2 uppercase tracking-wide">{t('patient.dashboard.welcomeCard.whatYouCanApplyFor')}</p>
+              <ul className="text-xs text-gray-700 space-y-1">
+                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.hospitalBills')}</li>
+                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.medicines')}</li>
+                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.labTests')}</li>
+                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.chemotherapy')}</li>
+              </ul>
+              <p className="text-xs text-gray-400 mt-2">{t('patient.dashboard.welcomeCard.fromAgencies')}</p>
+            </div>
+
             <button
               className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
               onClick={() => navigate('/patient/screening')}>
-              Find a Program →
+              {t('patient.dashboard.welcomeCard.findProgram')} →
             </button>
             <button
               className="w-full mt-2 text-xs text-brand-600 hover:text-brand-800 transition-colors text-center py-1"
               onClick={() => navigate('/patient/guide')}>
-              New to MAPA? Read the User Guide →
+              {t('patient.dashboard.welcomeCard.newToMapa')} →
             </button>
           </div>
         )}
 
-        {/* Document status — prescriptive single message */}
-        {showDocSection && (
-          docStats.pending > 0 ? (
+        {/* Document status — always a clickable card, shows both verified
+            and pending counts so the patient sees their full picture. */}
+        {showDocSection && (() => {
+          const { verified, pending } = docStats
+          const hasAny = verified > 0 || pending > 0
+          // Pick the dominant tone: pending wins (active concern), then
+          // verified (good news), then empty (call to action).
+          const tone = pending > 0
+            ? { iconBg: 'bg-amber-50',  icon: MdPending,     iconColor: 'text-amber-500' }
+            : verified > 0
+              ? { iconBg: 'bg-green-50', icon: MdCheckCircle, iconColor: 'text-green-500' }
+              : { iconBg: 'bg-gray-100', icon: MdUpload,      iconColor: 'text-gray-400'  }
+          const Icon = tone.icon
+
+          const headline = !hasAny
+            ? t('patient.dashboard.docs.noneYet')
+            : pending > 0 && verified > 0
+              ? t('patient.dashboard.docs.bothCounts', { verified, pending })
+              : pending > 0
+                ? t(pending === 1 ? 'patient.dashboard.docs.pendingOne' : 'patient.dashboard.docs.pendingMany', { count: pending })
+                : t(verified === 1 ? 'patient.dashboard.docs.verifiedOne' : 'patient.dashboard.docs.verifiedMany', { count: verified })
+          const subline = !hasAny
+            ? t('patient.dashboard.docs.tapToUpload')
+            : pending > 0
+              ? t('patient.dashboard.docs.tapToManage')
+              : t('patient.dashboard.docs.allUpToDate')
+
+          return (
             <button
               className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
               onClick={() => navigate('/patient/documents')}>
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <MdPending size={20} className="text-amber-500" />
+              <div className={`w-10 h-10 rounded-xl ${tone.iconBg} flex items-center justify-center flex-shrink-0`}>
+                <Icon size={20} className={tone.iconColor} />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-800">
-                  {docStats.pending} document{docStats.pending !== 1 ? 's' : ''} waiting for review
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">Tap to manage your documents</p>
-              </div>
-              <MdArrowForward size={16} className="text-gray-300 flex-shrink-0" />
-            </button>
-          ) : docStats.verified > 0 ? (
-            <div className="card p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-                <MdCheckCircle size={20} className="text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {docStats.verified} verified document{docStats.verified !== 1 ? 's' : ''}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">All documents are up to date</p>
-              </div>
-            </div>
-          ) : (
-            <button
-              className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
-              onClick={() => navigate('/patient/documents')}>
-              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <MdUpload size={20} className="text-gray-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-800">No documents uploaded yet</p>
-                <p className="text-xs text-gray-400 mt-0.5">Tap to upload required documents</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{headline}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{subline}</p>
               </div>
               <MdArrowForward size={16} className="text-gray-300 flex-shrink-0" />
             </button>
           )
-        )}
+        })()}
 
         {/* Step guide — collapsible */}
         <div className="card overflow-hidden">
           <button
             className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
-            onClick={() => setStepsOpen(s => !s)}>
+            onClick={() => setStepsOpen(!stepsOpenEffective)}>
             <div>
-              <p className="text-sm font-semibold text-gray-800">Application Steps</p>
-              <p className="text-xs text-gray-400 mt-0.5">{doneCount} of {STEPS.length} steps completed</p>
+              <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.steps.title')}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('patient.dashboard.steps.completedOf', { done: doneCount, total: STEPS.length })}</p>
             </div>
-            {stepsOpen
+            {stepsOpenEffective
               ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0" />
               : <MdExpandMore size={20} className="text-gray-400 flex-shrink-0" />
             }
           </button>
 
-          {stepsOpen && (
+          {stepsOpenEffective && (
             <div className="divide-y divide-gray-50 border-t border-gray-100">
               {STEPS.map((step) => {
-                const isActive = step.num === currentStepNum
+                const isActive  = step.num === currentStepNum
+                const clickable = !!step.path
+                // Whole-row click target instead of a tiny "Manage →" text link.
+                // Per CLAUDE.md mobile-first guideline: touch targets ≥44px.
+                const RowTag    = clickable ? 'button' : 'div'
                 return (
-                  <div key={step.num}
-                    className={`flex items-start gap-3 py-3 px-4 ${isActive ? 'bg-brand-50' : ''}`}>
-                    <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium
+                  <RowTag key={step.num}
+                    onClick={clickable ? () => navigate(step.path) : undefined}
+                    className={`w-full flex items-start gap-3 py-4 px-4 text-left transition-colors ${
+                      isActive ? 'bg-brand-50' : ''
+                    } ${clickable ? 'hover:bg-gray-50 cursor-pointer' : ''}`}>
+                    <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium mt-0.5
                       ${step.done
                         ? 'bg-brand-500 text-white'
                         : isActive
                           ? 'border-2 border-brand-500 text-brand-500 bg-white'
                           : 'border-2 border-gray-200 text-gray-400'}`}>
-                      {step.done ? '✓' : step.num}
+                      {step.done ? <MdCheck size={14} /> : step.num}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${
@@ -429,21 +502,20 @@ export default function PatientDashboard() {
                         : isActive ? 'text-brand-700'
                         : 'text-gray-400'}`}>
                         {step.title}
-                        {step.done   && <span className="ml-1.5 badge badge-green text-xs">Done</span>}
-                        {isActive    && <span className="ml-1.5 badge badge-blue text-xs">Current</span>}
+                        {step.done   && <span className="ml-1.5 badge badge-green text-xs">{t('patient.dashboard.steps.done')}</span>}
+                        {isActive    && <span className="ml-1.5 badge badge-blue text-xs">{t('patient.dashboard.steps.current')}</span>}
                       </p>
-                      <p className={`text-xs mt-0.5 ${isActive ? 'text-brand-600' : 'text-gray-400'}`}>
+                      <p className={`text-xs mt-0.5 leading-relaxed ${isActive ? 'text-brand-600' : 'text-gray-400'}`}>
                         {step.desc}
                       </p>
                     </div>
-                    {step.action && step.path && (
-                      <button
-                        className={`flex-shrink-0 text-xs font-medium ${isActive ? 'text-brand-500' : 'text-brand-400'}`}
-                        onClick={() => navigate(step.path)}>
-                        {step.action}
-                      </button>
+                    {clickable && (
+                      <MdArrowForward
+                        size={16}
+                        className={`flex-shrink-0 mt-1 ${isActive ? 'text-brand-500' : 'text-gray-300'}`}
+                      />
                     )}
-                  </div>
+                  </RowTag>
                 )
               })}
             </div>

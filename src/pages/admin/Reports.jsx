@@ -31,18 +31,14 @@ const CATEGORY_BADGE = {
   'Other':                             'badge-gray',
 }
 
-const ROLE_LABEL = {
-  super_admin: 'Super Admin',
-  staff_admin: 'Staff Admin',
-  agency:      'Agency',
-  patient:     'Patient',
-}
+import { ROLE_LABEL_SHORT as ROLE_LABEL } from '../../utils/constants'
 
 const ROLE_AVATAR = {
-  super_admin: 'bg-purple-100 text-purple-700',
-  staff_admin: 'bg-blue-100 text-blue-700',
-  agency:      'bg-teal-100 text-teal-700',
-  patient:     'bg-gray-100 text-gray-600',
+  super_admin:  'bg-purple-100 text-purple-700',
+  staff_admin:  'bg-blue-100 text-blue-700',
+  agency_admin: 'bg-amber-100 text-amber-700',
+  agency:       'bg-teal-100 text-teal-700',
+  patient:      'bg-gray-100 text-gray-600',
 }
 
 const formatDate = (ts) => {

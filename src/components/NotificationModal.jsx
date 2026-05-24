@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { MdClose, MdChevronLeft, MdChevronRight, MdDelete, MdArrowForward } from 'react-icons/md'
@@ -42,30 +43,52 @@ export const getNotifRoute = (type, role) => {
   const isAgency  = role === 'agency' || role === 'agency_admin'
   const isPatient = role === 'patient'
   const map = {
-    doc_verified:        isPatient ? '/patient/documents'  : '/admin/docreview',
-    doc_rejected:        isPatient ? '/patient/documents'  : '/admin/docreview',
-    app_submitted:       isAgency  ? '/agency/inbox'       : '/admin/logs',
-    app_advanced:        '/patient/status',
-    interview_approved:  '/patient/status',
-    certificate_ready:   '/patient/status',
-    interview_sched:     isPatient ? '/patient/interviews' : isAgency ? '/agency/interviews' : null,
-    new_account:         isAdmin   ? '/admin/accounts'     : null,
-    account_deactivated: isAdmin   ? '/admin/accounts'     : null,
-    account_activated:   isAdmin   ? '/admin/accounts'     : null,
-    account_deleted:     isAdmin   ? '/admin/accounts'     : null,
-    agency_created:      isAdmin   ? '/admin/agencies'     : null,
-    agency_updated:      isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_enabled:      isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_disabled:     isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_deleted:      isAdmin   ? '/admin/agencies'     : null,
-    doctype_added:       isAdmin   ? '/admin/doctypes'     : null,
-    doctype_updated:     isAdmin   ? '/admin/doctypes'     : null,
-    doctype_deleted:     isAdmin   ? '/admin/doctypes'     : null,
-    assistance_added:    isAdmin   ? '/admin/assistance'   : null,
-    assistance_updated:  isAdmin   ? '/admin/assistance'   : null,
-    assistance_deleted:  isAdmin   ? '/admin/assistance'   : null,
-    new_message:         isPatient ? '/patient/messages' : isAgency ? '/agency/messages' : '/admin/messages',
-    report_submitted:    isAdmin   ? '/admin/reports'      : null,
+    // ── Application lifecycle ──
+    doc_verified:            isPatient ? '/patient/documents'  : '/admin/docreview',
+    doc_rejected:            isPatient ? '/patient/documents'  : '/admin/docreview',
+    doc_uploaded:            isAgency  ? '/agency/inbox'       : '/admin/docreview',
+    app_submitted:           isAgency  ? '/agency/inbox'       : '/admin/logs',
+    app_advanced:            isPatient ? '/patient/status'     : isAgency ? '/agency/inbox' : '/admin/logs',
+    app_withdrawn:           isAgency  ? '/agency/inbox'       : '/admin/logs',
+    interview_approved:      '/patient/status',
+    certificate_ready:       '/patient/status',
+    interview_sched:         isPatient ? '/patient/interviews' : isAgency ? '/agency/interviews' : null,
+
+    // ── awaiting_info flow ──
+    awaiting_info_requested: '/patient/documents',
+    awaiting_info_responded: isAgency  ? '/agency/inbox'       : null,
+
+    // ── Budget (agency-side only — CRMC has zero fund authority) ──
+    budget_low:              isAgency  ? '/agency/funds'       : null,
+    budget_request:          '/agency/allocation',
+    new_message:             isPatient ? '/patient/messages' : isAgency ? '/agency/messages' : '/admin/messages',
+
+    // ── Account / role ──
+    new_account:             isAdmin   ? '/admin/accounts'     : null,
+    account_deactivated:     isAdmin   ? '/admin/accounts'     : null,
+    account_activated:       isAdmin   ? '/admin/accounts'     : null,
+    account_deleted:         isAdmin   ? '/admin/accounts'     : null,
+    role_changed:            null, // self-targeted info; no canonical page
+    role_promoted:           '/agency/allocation', // promoted user lands on their new admin surface
+    role_demoted:            isAgency  ? '/agency/dashboard'   : null,
+    password_reset_sent:     null, // user already has the email, in-app navigation isn't needed
+
+    // ── Agency / catalog (admin actions) ──
+    new_agency:              isAdmin   ? '/admin/agencies'     : null,
+    agency_updated:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
+    agency_enabled:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
+    agency_disabled:         isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
+    agency_deleted:          isAdmin   ? '/admin/agencies'     : null,
+    doctype_added:           isAdmin   ? '/admin/doctypes'     : null,
+    doctype_updated:         isAdmin   ? '/admin/doctypes'     : null,
+    doctype_deleted:         isAdmin   ? '/admin/doctypes'     : null,
+    assistance_added:        isAdmin   ? '/admin/assistance'   : null,
+    assistance_updated:      isAdmin   ? '/admin/assistance'   : null,
+    assistance_deleted:      isAdmin   ? '/admin/assistance'   : null,
+
+    // ── Misc ──
+    report_submitted:        isAdmin   ? '/admin/reports'      : null,
+    system_announcement:     null, // banner-style; no dedicated detail page
   }
   return map[type] ?? null
 }
@@ -83,6 +106,7 @@ const fmtFull = (ts) => {
 
 export default function NotificationModal({ notifications, currentIndex, uid, userRole, onClose, onNavigate }) {
   const navigate = useNavigate()
+  const { t }    = useTranslation()
   const notif    = notifications[currentIndex]
 
   // Mark as read when opened
@@ -121,7 +145,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Notification</h2>
+          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{t('notif.header')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <MdClose size={20} />
           </button>
@@ -134,11 +158,11 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
               {meta.emoji}
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-800">MAPA System</p>
+              <p className="text-sm font-semibold text-gray-800">{t('notif.sender')}</p>
               <p className="text-xs text-gray-400">@ {fmtFull(notif.createdAt)}</p>
             </div>
             {!notif.read && (
-              <span className="ml-auto badge badge-blue text-xs">New</span>
+              <span className="ml-auto badge badge-blue text-xs">{t('notif.newBadge')}</span>
             )}
           </div>
         </div>
@@ -152,7 +176,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
             <button
               onClick={handleGoTo}
               className="mt-4 w-full btn-primary flex items-center justify-center gap-2 text-sm py-2.5">
-              Go to relevant page <MdArrowForward size={16} />
+              {t('notif.goToPage')} <MdArrowForward size={16} />
             </button>
           )}
         </div>
@@ -168,7 +192,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
               <MdChevronLeft size={20} />
             </button>
             <span className="text-xs text-gray-400 w-16 text-center">
-              {currentIndex + 1} of {notifications.length}
+              {t('notif.ofCount', { current: currentIndex + 1, total: notifications.length })}
             </span>
             <button
               disabled={!hasNext}
@@ -182,7 +206,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
           <button
             onClick={handleDelete}
             className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200 bg-white px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
-            <MdDelete size={14} /> Delete
+            <MdDelete size={14} /> {t('notif.delete')}
           </button>
         </div>
       </div>

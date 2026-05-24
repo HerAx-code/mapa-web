@@ -10,6 +10,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES } from '../utils/constants'
+import Logo from './ui/Logo'
 
 export default function AdminSidebar() {
   const { user } = useAuth()
@@ -65,9 +66,7 @@ export default function AdminSidebar() {
     <aside className="w-56 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
       {/* Brand */}
       <div className="h-14 flex items-center gap-2.5 px-4 border-b border-gray-100">
-        <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
-          <MdShield size={16} className="text-white" />
-        </div>
+        <Logo size={28} />
         <div>
           <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
           <p className="text-xs text-gray-400 leading-tight">CRMC</p>

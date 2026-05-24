@@ -29,6 +29,8 @@ const resizeToBase64 = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 import { useAuth } from '../contexts/AuthContext'
+import { ROLE_LABEL } from '../utils/constants'
+import { useTranslation, Trans } from 'react-i18next'
 import {
   MdClose, MdVisibility, MdVisibilityOff, MdCameraAlt,
   MdPerson, MdLock, MdPhone, MdHome, MdEmail,
@@ -57,6 +59,7 @@ function ModalCard({ title, onClose, children, footer }) {
 
 function AccountSettingsModal({ onClose }) {
   const { user, updateUser } = useAuth()
+  const { t }                = useTranslation()
   const fileRef = useRef(null)
 
   const [form, setForm] = useState({
@@ -88,14 +91,6 @@ function AccountSettingsModal({ onClose }) {
   // banner is irrelevant for admin/agency.
   const isIncomplete = isPatient && !form.address.trim()
 
-  const ROLE_LABEL = {
-    super_admin:  'Super Administrator',
-    staff_admin:  'Staff Administrator',
-    agency_admin: 'Agency Administrator',
-    agency:       'Agency Coordinator',
-    patient:      'Patient',
-  }
-
   // For agency coordinators, fetch the linked agency name to display in Account Info
   useEffect(() => {
     if (!isAgency || !user?.agencyId) return
@@ -109,8 +104,8 @@ function AccountSettingsModal({ onClose }) {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) { toast.error('Please select an image file.'); return }
-    if (file.size > 10 * 1024 * 1024)   { toast.error('Photo must be under 10MB.'); return }
+    if (!file.type.startsWith('image/')) { toast.error(t('profile.account.errImage')); return }
+    if (file.size > 10 * 1024 * 1024)   { toast.error(t('profile.account.errPhotoSize')); return }
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
     setRemovePhoto(false)
@@ -124,7 +119,7 @@ function AccountSettingsModal({ onClose }) {
   }
 
   const handleSave = async () => {
-    if (!isPatient && !form.name.trim()) { toast.error('Name cannot be empty.'); return }
+    if (!isPatient && !form.name.trim()) { toast.error(t('profile.account.errEmptyName')); return }
     setSaving(true)
     try {
       let photoURL = user?.photoURL ?? null
@@ -143,10 +138,10 @@ function AccountSettingsModal({ onClose }) {
 
       await updateDoc(doc(db, 'users', user.uid), updates)
       updateUser({ ...updates, name: isPatient ? user.name : form.name.trim() })
-      toast.success('Profile updated.')
+      toast.success(t('profile.account.success'))
       onClose()
     } catch (err) {
-      toast.error('Failed to update profile.')
+      toast.error(t('profile.account.failed'))
       console.error(err)
     } finally {
       setSaving(false)
@@ -157,13 +152,13 @@ function AccountSettingsModal({ onClose }) {
 
   return (
     <ModalCard
-      title="Account Settings"
+      title={t('profile.account.title')}
       onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary text-sm" onClick={onClose}>{t('profile.account.cancel')}</button>
           <button className="btn-primary text-sm" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? t('profile.account.saving') : t('profile.account.save')}
           </button>
         </>
       }
@@ -173,7 +168,7 @@ function AccountSettingsModal({ onClose }) {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-start gap-2">
           <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-700">
-            Your address is missing. A complete address appears on your Guarantee Letter — fill it in to avoid delays at the provider.
+            {t('profile.account.incompleteAddress')}
           </p>
         </div>
       )}
@@ -206,77 +201,77 @@ function AccountSettingsModal({ onClose }) {
               onClick={() => fileRef.current?.click()}
               className="text-xs text-brand-500 font-medium border border-brand-200 px-3 py-1.5 rounded-lg hover:bg-brand-50 transition-colors flex items-center gap-1"
             >
-              <MdCameraAlt size={13} /> Change Photo
+              <MdCameraAlt size={13} /> {t('profile.account.changePhoto')}
             </button>
             {photoPreview && (
               <button
                 onClick={handleRemovePhoto}
                 className="text-xs text-red-500 font-medium border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
               >
-                <MdDelete size={13} /> Remove
+                <MdDelete size={13} /> {t('profile.account.removePhoto')}
               </button>
             )}
           </div>
         )}
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         {!isPatient && (
-          <p className="text-xs text-gray-400 mt-1.5">JPG, PNG or GIF · Auto-resized to 200×200</p>
+          <p className="text-xs text-gray-400 mt-1.5">{t('profile.account.photoHint')}</p>
         )}
       </div>
 
       <div className="border-t border-gray-100 mb-4" />
 
       {/* ── Personal Info ── */}
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Personal Info</p>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{t('profile.account.personalInfo')}</p>
       <div className="space-y-3 mb-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdPerson size={13} className="text-gray-400" /> Full Name
+            <MdPerson size={13} className="text-gray-400" /> {t('profile.account.fullName')}
           </label>
           {isPatient ? (
             <div className="space-y-1">
               <div className="input bg-gray-50 text-gray-600 cursor-not-allowed flex items-center justify-between">
                 <span>{user?.name}</span>
-                <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Locked</span>
+                <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">{t('profile.account.lockedTag')}</span>
               </div>
-              <p className="text-xs text-gray-400">To correct your name, visit CRMC Medical Social Services.</p>
+              <p className="text-xs text-gray-400">{t('profile.account.nameLockedHint')}</p>
             </div>
           ) : (
-            <input className="input" value={form.name} onChange={set('name')} placeholder="Your full name" />
+            <input className="input" value={form.name} onChange={set('name')} placeholder={t('profile.account.fullNamePlaceholder')} />
           )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdPhone size={13} className="text-gray-400" /> Contact Number
+            <MdPhone size={13} className="text-gray-400" /> {t('profile.account.contactNumber')}
           </label>
-          <input className="input" value={form.contact} onChange={set('contact')} placeholder="09XXXXXXXXX" />
+          <input className="input" value={form.contact} onChange={set('contact')} placeholder={t('profile.account.contactPlaceholder')} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
             <MdHome size={13} className="text-gray-400" />
-            {isPatient ? 'Home Address' : 'Office Address'}
-            {!isPatient && <span className="text-xs text-gray-400 font-normal ml-1">(optional)</span>}
+            {isPatient ? t('profile.account.homeAddress') : t('profile.account.officeAddress')}
+            {!isPatient && <span className="text-xs text-gray-400 font-normal ml-1">{t('profile.account.addressOptional')}</span>}
           </label>
           <input className="input" value={form.address} onChange={set('address')}
-            placeholder={isPatient ? 'Barangay, City, Province' : 'Office or work address (optional)'} />
+            placeholder={isPatient ? t('profile.account.addressPatientPlaceholder') : t('profile.account.addressStaffPlaceholder')} />
           {isPatient && (
-            <p className="text-xs text-gray-400 mt-0.5">Appears on your Guarantee Letter.</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t('profile.account.addressGLHint')}</p>
           )}
         </div>
       </div>
 
       {/* ── Account Info ── */}
       <div className="border-t border-gray-100 mb-4" />
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Account Info</p>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{t('profile.account.accountInfo')}</p>
       <div className="space-y-3">
         {/* Role — shown for all non-patient roles, plus a quiet "Patient" badge for patients */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdPerson size={13} className="text-gray-400" /> Role
+            <MdPerson size={13} className="text-gray-400" /> {t('profile.account.role')}
           </label>
           <div className="input bg-gray-50 text-gray-600 flex items-center justify-between cursor-not-allowed">
             <span>{ROLE_LABEL[user?.role] || user?.role?.replace('_', ' ')}</span>
-            <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Locked</span>
+            <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">{t('profile.account.lockedTag')}</span>
           </div>
         </div>
 
@@ -284,11 +279,11 @@ function AccountSettingsModal({ onClose }) {
         {isAgency && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <MdCheckCircle size={13} className="text-gray-400" /> Agency
+              <MdCheckCircle size={13} className="text-gray-400" /> {t('profile.account.agency')}
             </label>
             <div className="input bg-gray-50 text-gray-600 flex items-center justify-between cursor-not-allowed">
-              <span>{agencyName || (user?.agencyId ? 'Loading…' : 'Not linked')}</span>
-              <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">Locked</span>
+              <span>{agencyName || (user?.agencyId ? t('profile.account.agencyLoading') : t('profile.account.agencyNotLinked'))}</span>
+              <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">{t('profile.account.lockedTag')}</span>
             </div>
           </div>
         )}
@@ -297,25 +292,25 @@ function AccountSettingsModal({ onClose }) {
         {user?.hospitalId && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <MdCheckCircle size={13} className="text-gray-400" /> Access Code
+              <MdCheckCircle size={13} className="text-gray-400" /> {t('profile.account.accessCode')}
             </label>
             <div className="input bg-gray-50 text-gray-600 flex items-center justify-between cursor-not-allowed font-mono">
               <span>{user.hospitalId}</span>
-              <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-sans">Locked</span>
+              <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-sans">{t('profile.account.lockedTag')}</span>
             </div>
           </div>
         )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdEmail size={13} className="text-gray-400" /> Email Address
+            <MdEmail size={13} className="text-gray-400" /> {t('profile.account.emailAddress')}
           </label>
           <div className="input bg-gray-50 text-gray-500 flex items-center justify-between cursor-not-allowed gap-2">
             <span className="truncate min-w-0 flex-1">{user?.email}</span>
-            <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full flex-shrink-0">Locked</span>
+            <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full flex-shrink-0">{t('profile.account.lockedTag')}</span>
           </div>
           {!isPatient && (
-            <p className="text-xs text-gray-400 mt-0.5">To change your email, contact the system administrator.</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t('profile.account.emailLockedHint')}</p>
           )}
         </div>
       </div>
@@ -327,6 +322,7 @@ function AccountSettingsModal({ onClose }) {
 
 function ChangePasswordModal({ onClose }) {
   const { user } = useAuth()
+  const { t }    = useTranslation()
   const [form, setForm]     = useState({ current: '', newPw: '', confirm: '' })
   const [show, setShow]     = useState({ current: false, newPw: false, confirm: false })
   const [saving, setSaving] = useState(false)
@@ -336,31 +332,31 @@ function ChangePasswordModal({ onClose }) {
 
   const strength = (pw) => {
     if (!pw) return null
-    if (pw.length < 8) return { label: 'Too short', color: 'bg-red-400', w: 'w-1/3' }
+    if (pw.length < 8) return { key: 'tooShort', label: t('profile.password.strength.tooShort'), color: 'bg-red-400', w: 'w-1/3' }
     if (!/[A-Z]/.test(pw) || !/[0-9]/.test(pw))
-      return { label: 'Weak', color: 'bg-amber-400', w: 'w-2/3' }
-    return { label: 'Strong', color: 'bg-green-500', w: 'w-full' }
+      return { key: 'weak', label: t('profile.password.strength.weak'), color: 'bg-amber-400', w: 'w-2/3' }
+    return { key: 'strong', label: t('profile.password.strength.strong'), color: 'bg-green-500', w: 'w-full' }
   }
   const s = strength(form.newPw)
 
   const handleSave = async () => {
-    if (!form.current)               { toast.error('Enter your current password.'); return }
-    if (form.newPw.length < 8)       { toast.error('New password must be at least 8 characters.'); return }
-    if (!/[A-Z]/.test(form.newPw))   { toast.error('Password must include an uppercase letter.'); return }
-    if (!/[0-9]/.test(form.newPw))   { toast.error('Password must include a number.'); return }
-    if (form.newPw === form.current) { toast.error('New password must be different from your current password.'); return }
-    if (form.newPw !== form.confirm) { toast.error('Passwords do not match.'); return }
+    if (!form.current)               { toast.error(t('profile.password.errCurrent')); return }
+    if (form.newPw.length < 8)       { toast.error(t('profile.password.errMin')); return }
+    if (!/[A-Z]/.test(form.newPw))   { toast.error(t('profile.password.errUpper')); return }
+    if (!/[0-9]/.test(form.newPw))   { toast.error(t('profile.password.errNumber')); return }
+    if (form.newPw === form.current) { toast.error(t('profile.password.errSame')); return }
+    if (form.newPw !== form.confirm) { toast.error(t('profile.password.errMismatch')); return }
     setSaving(true)
     try {
       const credential = EmailAuthProvider.credential(user.email, form.current)
       await reauthenticateWithCredential(auth.currentUser, credential)
       await updatePassword(auth.currentUser, form.newPw)
-      toast.success('Password changed successfully.')
+      toast.success(t('profile.password.success'))
       onClose()
     } catch (err) {
       if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')
-        toast.error('Current password is incorrect.')
-      else toast.error(err.message || 'Failed to change password.')
+        toast.error(t('profile.password.errWrong'))
+      else toast.error(err.message || t('profile.password.errFailed'))
     } finally {
       setSaving(false)
     }
@@ -390,12 +386,12 @@ function ChangePasswordModal({ onClose }) {
   )
 
   return (
-    <ModalCard title="Change Password" onClose={onClose}
+    <ModalCard title={t('profile.password.title')} onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary text-sm" onClick={onClose}>{t('profile.password.cancel')}</button>
           <button className="btn-primary text-sm" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Change Password'}
+            {saving ? t('profile.password.saving') : t('profile.password.save')}
           </button>
         </>
       }
@@ -403,13 +399,13 @@ function ChangePasswordModal({ onClose }) {
       <div className="space-y-4">
         <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-700">
           <MdLock size={14} className="inline mr-1" />
-          You'll need to enter your current password to make changes.
+          {t('profile.password.reauthNotice')}
         </div>
-        {renderField('Current Password', 'current')}
+        {renderField(t('profile.password.current'), 'current')}
         <div>
-          {renderField('New Password', 'newPw')}
+          {renderField(t('profile.password.new'), 'newPw')}
           <p className="text-xs text-gray-400 mt-1">
-            At least 8 characters, with one uppercase letter and one number.
+            {t('profile.password.rules')}
           </p>
           {s && (
             <div className="mt-1.5">
@@ -417,14 +413,14 @@ function ChangePasswordModal({ onClose }) {
                 <div className={`h-full rounded-full transition-all ${s.color} ${s.w}`} />
               </div>
               <p className={`text-xs mt-0.5 font-medium ${
-                s.label === 'Too short' ? 'text-red-500'
-                : s.label === 'Weak'    ? 'text-amber-500'
+                s.key === 'tooShort' ? 'text-red-500'
+                : s.key === 'weak'   ? 'text-amber-500'
                 : 'text-green-600'
               }`}>{s.label}</p>
             </div>
           )}
         </div>
-        {renderField('Confirm New Password', 'confirm')}
+        {renderField(t('profile.password.confirm'), 'confirm')}
       </div>
     </ModalCard>
   )
@@ -432,65 +428,33 @@ function ChangePasswordModal({ onClose }) {
 
 // ── Privacy Notice ────────────────────────────────────────────────────────
 
-const PRIVACY_SECTIONS = [
-  {
-    title: 'Data We Collect',
-    items: [
-      'Full name, email address, and contact number',
-      'CRMC Patient Access Code and patient ID number',
-      'Documents uploaded for verification (stored securely)',
-      'Application submissions and their complete status history',
-      'Messages exchanged with administrators and agency staff',
-      'System activity logs for audit and compliance purposes',
-    ],
-  },
-  {
-    title: 'How Your Data is Used',
-    items: [
-      'To process and track your medical assistance applications',
-      'To verify your eligibility for assistance programs',
-      'To communicate with you about application updates and interview schedules',
-      'To generate official Guarantee Letters for approved assistance',
-      'To comply with government record-keeping regulations',
-    ],
-  },
-  {
-    title: 'Who Has Access',
-    items: [
-      'You — access to your own data only',
-      'Agency Coordinators — applications submitted to their assigned agency',
-      'Staff Administrators — documents and applications for review purposes',
-      'System Administrators — full access for system management and audit',
-    ],
-  },
-  {
-    title: 'Data Retention',
-    items: [
-      'Your data is retained for the duration of your enrollment with CRMC.',
-      'Records are kept as required by applicable government regulations.',
-      'For data concerns or deletion requests, contact CRMC Medical Social Services.',
-    ],
-  },
-]
-
 function SettingsModal({ onClose }) {
+  const { t } = useTranslation()
+  const sections = [
+    { title: t('profile.privacy.dataTitle'), items: [t('profile.privacy.data1'), t('profile.privacy.data2'), t('profile.privacy.data3'), t('profile.privacy.data4'), t('profile.privacy.data5'), t('profile.privacy.data6')] },
+    { title: t('profile.privacy.useTitle'),  items: [t('profile.privacy.use1'),  t('profile.privacy.use2'),  t('profile.privacy.use3'),  t('profile.privacy.use4'),  t('profile.privacy.use5')] },
+    { title: t('profile.privacy.accessTitle'), items: [t('profile.privacy.access1'), t('profile.privacy.access2'), t('profile.privacy.access3'), t('profile.privacy.access4')] },
+    { title: t('profile.privacy.retentionTitle'), items: [t('profile.privacy.retention1'), t('profile.privacy.retention2'), t('profile.privacy.retention3')] },
+  ]
+  const rights = [
+    t('profile.privacy.right1'), t('profile.privacy.right2'), t('profile.privacy.right3'),
+    t('profile.privacy.right4'), t('profile.privacy.right5'), t('profile.privacy.right6'),
+  ]
   return (
-    <ModalCard title="Privacy Notice" onClose={onClose}
-      footer={<button className="btn-secondary text-sm" onClick={onClose}>Close</button>}>
+    <ModalCard title={t('profile.privacy.title')} onClose={onClose}
+      footer={<button className="btn-secondary text-sm" onClick={onClose}>{t('profile.privacy.close')}</button>}>
       <div className="space-y-5">
 
         {/* Intro */}
         <div>
           <p className="text-sm text-gray-500 mb-1">
-            This notice explains what information MAPA collects, how it is used, and who
-            can access it. MAPA is operated by Cotabato Regional Medical Center (CRMC)
-            in compliance with <strong className="text-gray-700">Republic Act 10173</strong> — the Data Privacy Act of 2012.
+            <Trans i18nKey="profile.privacy.intro" components={{ b: <strong className="text-gray-700" /> }} />
           </p>
-          <p className="text-xs text-gray-400">Last updated: May 2026</p>
+          <p className="text-xs text-gray-400">{t('profile.privacy.updated')}</p>
         </div>
 
         {/* Sections */}
-        {PRIVACY_SECTIONS.map((section, i) => (
+        {sections.map((section, i) => (
           <div key={i}>
             <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
               {section.title}
@@ -509,17 +473,10 @@ function SettingsModal({ onClose }) {
         {/* Patient rights — RA 10173 Section 16 */}
         <div>
           <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
-            Your Rights Under RA 10173
+            {t('profile.privacy.rightsTitle')}
           </p>
           <ul className="space-y-1.5">
-            {[
-              'Right to be informed — know what data is collected and why.',
-              'Right to access — request a copy of your personal data held by CRMC.',
-              'Right to correction — have inaccurate or incomplete data corrected.',
-              'Right to object — object to the processing of your data.',
-              'Right to erasure — request deletion of your data subject to legal retention requirements.',
-              'Right to file a complaint — lodge a complaint with the National Privacy Commission (privacy.gov.ph).',
-            ].map((right, i) => (
+            {rights.map((right, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                 <span className="text-brand-400 flex-shrink-0 mt-0.5">•</span>
                 {right}
@@ -531,9 +488,7 @@ function SettingsModal({ onClose }) {
         {/* Contact */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
           <p className="text-sm text-blue-700">
-            For questions about your data or to exercise your rights, contact{' '}
-            <strong>CRMC Medical Social Services</strong> or email{' '}
-            <strong>mss@crmc.gov.ph</strong>.
+            <Trans i18nKey="profile.privacy.contact" components={{ b: <strong /> }} />
           </p>
         </div>
 
@@ -544,15 +499,8 @@ function SettingsModal({ onClose }) {
 
 // ── Help & Support ────────────────────────────────────────────────────────
 
-const PATIENT_FAQS = [
-  { q: 'How do I apply for medical assistance?',      a: 'From your dashboard, choose an agency and click "Apply". Fill in the intake sheet, upload the requested documents, and submit. You\'ll be notified when an agency picks up your application for review.' },
-  { q: 'Where do I get a Patient Access Code?',       a: 'Patient Access Codes are issued in person by CRMC Medical Social Services. Bring a valid ID. The code follows the format CRMC-YYYY-NNNNN.' },
-  { q: 'What is a Guarantee Letter?',                 a: 'A Guarantee Letter (GL) is the official document you receive when your application is approved. Present it at the provider to claim the approved assistance. GLs are valid for 30 days from issue.' },
-  { q: 'How will I know if my application is approved?', a: 'You\'ll receive an in-app notification and email at each step — review, interview scheduling, and the final decision. Check the Dashboard and Notifications pages regularly.' },
-  { q: 'How do I join my online interview?',          a: 'Once an interview is scheduled, a Google Meet link appears on your Dashboard. Click the link a few minutes before your slot — no install needed if you\'re on a recent browser.' },
-  { q: 'Can I apply to more than one agency at the same time?', a: 'You may have one active application per assistance type. After an approval, there is a 30-day cooldown before you can apply again for the same type.' },
-  { q: 'How do I withdraw an application?',           a: 'Open the application from your Dashboard and click "Withdraw". You can only withdraw while it is still pending — once a coordinator picks it up, contact them via Messages.' },
-]
+// PATIENT_FAQS are sourced from i18n (profile.help.patientFaqs).
+// Staff/admin FAQs remain English-only — internal staff per CLAUDE.md.
 
 const AGENCY_FAQS = [
   { q: 'How do I review a new application?',          a: 'Open the Inbox — pending applications appear at the top. Click one to open the intake sheet, review documents, and either request changes, schedule an interview, or move it to approval.' },
@@ -575,30 +523,33 @@ const ADMIN_FAQS = [
 ]
 
 function HelpModal({ onClose, onOpenReport }) {
-  const { user } = useAuth()
+  const { user }        = useAuth()
+  const { t, i18n }     = useTranslation()
   const [open, setOpen] = useState(null)
 
   const role = user?.role
-  const FAQS = role === 'patient' ? PATIENT_FAQS
+  // Patient FAQs come from i18n (returnObjects → array). Staff FAQs stay English.
+  const patientFaqs = i18n.t('profile.help.patientFaqs', { returnObjects: true }) || []
+  const FAQS = role === 'patient' ? patientFaqs
              : (role === 'agency' || role === 'agency_admin') ? AGENCY_FAQS
              : ADMIN_FAQS
-  const portalLabel = role === 'patient' ? 'patient portal'
-                    : (role === 'agency' || role === 'agency_admin') ? 'agency portal'
-                    : 'admin portal'
+  const portalLabel = role === 'patient' ? t('profile.help.portalPatient')
+                    : (role === 'agency' || role === 'agency_admin') ? t('profile.help.portalAgency')
+                    : t('profile.help.portalAdmin')
 
   const handleEmailSupport = () => {
     window.location.href = [
       'mailto:support@crmc.gov.ph',
-      '?subject=MAPA Portal Support Request',
+      '?subject=MAPA Support Request',
       '&body=Please describe your issue below:%0A%0A',
     ].join('')
   }
 
   return (
-    <ModalCard title="Help & Support" onClose={onClose}
-      footer={<button className="btn-secondary text-sm" onClick={onClose}>Close</button>}>
+    <ModalCard title={t('profile.help.title')} onClose={onClose}
+      footer={<button className="btn-secondary text-sm" onClick={onClose}>{t('profile.help.close')}</button>}>
 
-      <p className="text-xs text-gray-500 mb-4">Frequently asked questions about the MAPA {portalLabel}.</p>
+      <p className="text-xs text-gray-500 mb-4">{t('profile.help.intro', { portal: portalLabel })}</p>
 
       {/* FAQ list */}
       <div className="space-y-2 mb-5">
@@ -619,7 +570,7 @@ function HelpModal({ onClose, onOpenReport }) {
 
       {/* Contact support section */}
       <div className="border-t border-gray-100 pt-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Still need help?</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">{t('profile.help.stillNeedHelp')}</p>
 
         {/* Email support */}
         <button
@@ -630,10 +581,10 @@ function HelpModal({ onClose, onOpenReport }) {
             📧
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800">Email Support</p>
+            <p className="text-sm font-medium text-gray-800">{t('profile.help.emailSupport')}</p>
             <p className="text-xs text-gray-400">support@crmc.gov.ph</p>
           </div>
-          <span className="text-xs text-blue-500 font-medium flex-shrink-0">Open →</span>
+          <span className="text-xs text-blue-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
         </button>
 
         {/* Report in-app */}
@@ -645,10 +596,10 @@ function HelpModal({ onClose, onOpenReport }) {
             🚩
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800">Submit a Ticket</p>
-            <p className="text-xs text-gray-400">Report directly inside the portal</p>
+            <p className="text-sm font-medium text-gray-800">{t('profile.help.submitTicket')}</p>
+            <p className="text-xs text-gray-400">{t('profile.help.submitTicketDesc')}</p>
           </div>
-          <span className="text-xs text-amber-500 font-medium flex-shrink-0">Open →</span>
+          <span className="text-xs text-amber-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
         </button>
       </div>
     </ModalCard>
@@ -657,28 +608,22 @@ function HelpModal({ onClose, onOpenReport }) {
 
 // ── Report a Problem ──────────────────────────────────────────────────────
 
-const PATIENT_CATEGORIES = [
-  'Something isn\'t working',
-  'My application has a problem',
-  'My documents have a problem',
-  'Something looks wrong',
-  'I can\'t find what I\'m looking for',
-  'Other',
-]
-
+// PATIENT_CATEGORIES sourced from i18n. Staff categories stay English.
 const ADMIN_CATEGORIES = ['Bug / Error', 'UI Issue', 'Data Problem', 'Performance', 'Feature Request', 'Other']
 
 function ReportModal({ onClose }) {
-  const { user } = useAuth()
-  const isPatient = user?.role === 'patient'
-  const CATEGORIES = isPatient ? PATIENT_CATEGORIES : ADMIN_CATEGORIES
+  const { user }              = useAuth()
+  const { t, i18n }           = useTranslation()
+  const isPatient             = user?.role === 'patient'
+  const patientCategories     = i18n.t('profile.report.patientCategories', { returnObjects: true }) || []
+  const CATEGORIES            = isPatient ? patientCategories : ADMIN_CATEGORIES
   const [form, setForm]       = useState({ category: '', description: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent]       = useState(false)
 
   const handleSend = async () => {
-    if (!form.category)          { toast.error('Please select a category.'); return }
-    if (!form.description.trim()){ toast.error('Please describe the problem.'); return }
+    if (!form.category)          { toast.error(t('profile.report.errCategory')); return }
+    if (!form.description.trim()){ toast.error(t('profile.report.errDescription')); return }
     setSending(true)
     try {
       await addDoc(collection(db, 'reports'), {
@@ -702,53 +647,53 @@ function ReportModal({ onClose }) {
         })))).catch(() => {})
 
     } catch {
-      toast.error('Failed to submit report.')
+      toast.error(t('profile.report.errFailed'))
     } finally {
       setSending(false)
     }
   }
 
   if (sent) return (
-    <ModalCard title="Report a Problem" onClose={onClose}
-      footer={<button className="btn-primary text-sm" onClick={onClose}>Done</button>}>
+    <ModalCard title={t('profile.report.title')} onClose={onClose}
+      footer={<button className="btn-primary text-sm" onClick={onClose}>{t('profile.report.done')}</button>}>
       <div className="py-6 text-center">
         <MdCheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-        <p className="text-base font-semibold text-gray-800 mb-1">Report Submitted</p>
-        <p className="text-sm text-gray-500">Thank you! Your report has been recorded and will be reviewed shortly.</p>
+        <p className="text-base font-semibold text-gray-800 mb-1">{t('profile.report.successTitle')}</p>
+        <p className="text-sm text-gray-500">{t('profile.report.successDesc')}</p>
       </div>
     </ModalCard>
   )
 
   return (
-    <ModalCard title="Report a Problem" onClose={onClose}
+    <ModalCard title={t('profile.report.title')} onClose={onClose}
       footer={
         <>
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
+          <button className="btn-secondary text-sm" onClick={onClose}>{t('profile.report.cancel')}</button>
           <button className="btn-primary text-sm" onClick={handleSend} disabled={sending}>
-            {sending ? 'Submitting...' : 'Submit Report'}
+            {sending ? t('profile.report.submitting') : t('profile.report.submit')}
           </button>
         </>
       }
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-400">*</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.report.categoryLabel')} <span className="text-red-400">*</span></label>
           <select className="input" value={form.category}
             onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))}>
-            <option value="">Select a category...</option>
+            <option value="">{t('profile.report.categoryPlaceholder')}</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-400">*</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.report.descriptionLabel')} <span className="text-red-400">*</span></label>
           <textarea className="input resize-none" rows={4}
             placeholder={isPatient
-              ? 'What happened? What were you trying to do when the problem occurred?'
-              : 'Describe the problem in detail...'}
+              ? t('profile.report.descriptionPatient')
+              : t('profile.report.descriptionStaff')}
             value={form.description}
             onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} />
         </div>
-        <p className="text-xs text-gray-400">Submitted as: {user?.name} ({user?.email})</p>
+        <p className="text-xs text-gray-400">{t('profile.report.submittedAs', { name: user?.name, email: user?.email })}</p>
       </div>
     </ModalCard>
   )

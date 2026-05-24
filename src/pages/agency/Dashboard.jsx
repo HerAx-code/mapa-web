@@ -7,6 +7,7 @@ import {
   MdListAlt, MdMessage, MdDescription, MdMenuBook,
 } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
+import { PERIOD_NOUN, PERIOD_ADJECTIVE } from '../../utils/constants'
 import {
   collection, query, where, onSnapshot, doc, getDoc, getDocs,
   updateDoc, writeBatch, increment, serverTimestamp, addDoc,
@@ -316,11 +317,11 @@ export default function AgencyDashboard() {
               {isStale && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-700">
                   <MdWarning size={13} className="inline mr-1" />
-                  This budget period started <strong>{periodDays} days ago</strong>. Ask your administrator if it's time to start a new period.
+                  This {PERIOD_NOUN[budget.period] ?? 'period'} started <strong>{periodDays} days ago</strong>. Ask your administrator if it's time to start a new {PERIOD_NOUN[budget.period] ?? 'period'}.
                 </div>
               )}
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Budget this {budget.period}</span>
+                <span className="text-sm font-medium text-gray-700">{PERIOD_ADJECTIVE[budget.period] ?? 'Period'} Budget</span>
                 <span className={`text-xs font-medium ${warn ? 'text-amber-600' : 'text-gray-400'}`}>
                   ₱{remaining.toLocaleString()} remaining
                 </span>
@@ -332,6 +333,11 @@ export default function AgencyDashboard() {
                 ₱{committed.toLocaleString()} committed · ₱{disbursed.toLocaleString()} disbursed · ₱{allocated.toLocaleString()} allocated
                 {warn && <span className="ml-2 text-amber-600 font-medium">⚠ Approaching limit</span>}
               </p>
+              {budget.fundSource && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Source: <span className="font-medium text-gray-600">{budget.fundSource}</span>
+                </p>
+              )}
               {warn && (
                 <div className="mt-3 flex justify-end">
                   <button

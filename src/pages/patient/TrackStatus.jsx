@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { MdTimeline, MdHistory, MdDownload } from 'react-icons/md'
+import {
+  MdTimeline, MdHistory, MdDownload, MdMailOutline,
+  MdCalendarMonth, MdAssignment, MdCelebration, MdCheckCircle,
+  MdInbox, MdCheck,
+} from 'react-icons/md'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -21,14 +25,8 @@ const STATUS_BADGE = {
   certificate: 'badge-green',
 }
 
-const STATUS_LABEL = {
-  pending:     'Pending Review',
-  reviewing:   'Under Review',
-  interview:   'Interview Scheduled',
-  approved:    'Approved',
-  rejected:    'Rejected',
-  certificate: 'Guarantee Letter Issued',
-}
+// Status labels live in i18n at patient.status.* — read via
+// t(`patient.status.${app.status}`) at render time so they translate.
 
 const FALLBACK_COLOR = 'bg-gray-400'
 
@@ -38,15 +36,17 @@ const formatDate = (ts) => {
   return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-// Build stages from application status
-const buildStages = (app) => {
+// Build stages from application status. Takes `t` so the stage labels/notes
+// come from the locale files (patient.track.stages.*) rather than being
+// hardcoded English.
+const buildStages = (app, t) => {
   const STAGE_DEFS = [
-    { key: 'submitted',   label: 'Application Submitted', note: 'Your application was successfully submitted.' },
-    { key: 'docs',        label: 'Document Verification', note: 'Upload your required documents. The administrator will verify them before your application proceeds.' },
-    { key: 'reviewing',   label: 'Under Agency Review',   note: 'The agency is reviewing your application.' },
-    { key: 'interview',   label: 'Interview Scheduled',   note: 'You have been scheduled for a video interview.' },
-    { key: 'approved',    label: 'Application Approved',  note: 'Your application has been approved.' },
-    { key: 'certificate', label: 'Guarantee Letter Issued', note: 'Your Guarantee Letter has been issued.' },
+    { key: 'submitted',   label: t('patient.track.stages.submittedLabel'),   note: t('patient.track.stages.submittedNote') },
+    { key: 'docs',        label: t('patient.track.stages.docsLabel'),        note: t('patient.track.stages.docsNote') },
+    { key: 'reviewing',   label: t('patient.track.stages.reviewingLabel'),   note: t('patient.track.stages.reviewingNote') },
+    { key: 'interview',   label: t('patient.track.stages.interviewLabel'),   note: t('patient.track.stages.interviewNote') },
+    { key: 'approved',    label: t('patient.track.stages.approvedLabel'),    note: t('patient.track.stages.approvedNote') },
+    { key: 'certificate', label: t('patient.track.stages.certificateLabel'), note: t('patient.track.stages.certificateNote') },
   ]
 
   const doneMap = {
@@ -145,10 +145,10 @@ export default function TrackStatus() {
       }))).catch(() => {})
 
       setConfirmWithdrawId(null)
-      toast.success('Application withdrawn. You may now apply to another program.')
+      toast.success(t('patient.track.withdrawSuccess'))
     } catch (err) {
       console.error('Withdraw error:', err)
-      toast.error('Failed to withdraw. Please try again.')
+      toast.error(t('patient.track.withdrawFailed'))
     } finally {
       setWithdrawing(null)
     }
@@ -212,14 +212,14 @@ export default function TrackStatus() {
     setDownloading(app.id)
     try {
       const snap = await getDoc(doc(db, 'certificates', app.id))
-      if (!snap.exists()) { toast.error('Certificate not yet available. Please check back later.'); return }
+      if (!snap.exists()) { toast.error(t('patient.track.certNotReady')); return }
       const { base64, fileName } = snap.data()
       const a = document.createElement('a')
       a.href     = base64
       a.download = fileName ?? `guarantee-letter-${app.appId}.jpg`
       a.click()
     } catch {
-      toast.error('Failed to download Guarantee Letter.')
+      toast.error(t('patient.track.downloadFailed'))
     } finally {
       setDownloading(null)
     }
@@ -252,6 +252,11 @@ export default function TrackStatus() {
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'past' ? 'bg-brand-500 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
             onClick={() => setTab('past')}>
             <MdHistory size={16} /> {t('patient.track.tabPast')}
+            {pastApps.length > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === 'past' ? 'bg-white/20' : 'bg-brand-100 text-brand-600'}`}>
+                {pastApps.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -289,27 +294,29 @@ export default function TrackStatus() {
           <>
             {activeApps.length === 0 ? (
               <div className="card p-10 text-center">
-                <p className="text-3xl mb-3">📋</p>
-                <p className="text-sm font-medium text-gray-600 mb-1">No applications in progress</p>
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <MdInbox size={28} className="text-gray-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">{t('patient.track.noActive')}</p>
                 <p className="text-xs text-gray-400 mb-4">
                   {pastApps.length > 0
-                    ? 'Your previous applications are in the History tab.'
-                    : 'You have not applied to any program yet.'}
+                    ? t('patient.track.hasPastApps')
+                    : t('patient.track.neverApplied')}
                 </p>
                 {pastApps.length > 0 ? (
                   <button className="btn-secondary text-sm" onClick={() => setTab('past')}>
-                    View History →
+                    {t('patient.track.viewHistory')} →
                   </button>
                 ) : (
                   <button className="btn-primary text-sm" onClick={() => navigate('/patient/screening')}>
-                    Find a Program →
+                    {t('patient.track.findProgram')} →
                   </button>
                 )}
               </div>
             ) : (
               <div className="space-y-5">
                 {activeApps.map(app => {
-                  const stages = buildStages(app)
+                  const stages = buildStages(app, t)
                   const color    = agencyColor(app)
                   const initials = agencyInitials(app)
 
@@ -329,71 +336,74 @@ export default function TrackStatus() {
                         <div>
                           <h2 className="text-sm font-semibold text-gray-800">{app.agencyName}</h2>
                           <p className="text-sm text-gray-500">
-                            {app.appId} · Submitted {formatDate(app.submittedAt)}
+                            {app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}
                           </p>
                         </div>
                         <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'} ml-auto`}>
-                          {STATUS_LABEL[app.status] ?? app.status}
+                          {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                         </span>
                       </div>
 
                       {/* What to do next — shown FIRST before timeline */}
                       {app.status === 'pending' && (
                         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                          <p className="text-sm text-blue-700 font-medium">
-                            📬 Your application has been received. The agency will review it soon — no action needed right now.
+                          <p className="text-sm text-blue-700 font-medium flex items-start gap-2">
+                            <MdMailOutline size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.pending')}</span>
                           </p>
                         </div>
                       )}
                       {app.status === 'interview' && (
                         <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                          <p className="text-sm text-purple-700 font-medium">
-                            📅 You have an interview scheduled. Tap to see the details.
+                          <p className="text-sm text-purple-700 font-medium flex items-start gap-2 flex-1">
+                            <MdCalendarMonth size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.interview')}</span>
                           </p>
                           <button
                             className="flex-shrink-0 text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
                             onClick={() => navigate('/patient/interviews')}>
-                            View Interview →
+                            {t('patient.track.banner.interviewBtn')} →
                           </button>
                         </div>
                       )}
                       {app.status === 'reviewing' && (
                         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                          <p className="text-sm text-amber-700 font-medium">
-                            📋 Make sure all required documents are uploaded.
+                          <p className="text-sm text-amber-700 font-medium flex items-start gap-2 flex-1">
+                            <MdAssignment size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.reviewing')}</span>
                           </p>
                           <button
                             className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
                             onClick={() => navigate('/patient/documents')}>
-                            Check Docs →
+                            {t('patient.track.banner.reviewingBtn')} →
                           </button>
                         </div>
                       )}
                       {(app.status === 'approved' || app.status === 'certificate') && app.approvedAmount != null && (
                         <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-3">
-                          <p className="text-sm text-green-700 font-medium mb-2">
+                          <p className="text-sm text-green-700 font-medium mb-2 flex items-start gap-2">
                             {app.status === 'certificate' && app.certificateUploaded
-                              ? '🎉 Your Guarantee Letter is ready to download.'
+                              ? <><MdCelebration size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certReady')}</span></>
                               : app.status === 'certificate'
-                                ? '📋 Your Guarantee Letter has been issued. The agency is preparing the signed copy — you can download it once they upload it below.'
-                                : '✅ Your application is approved. Your Guarantee Letter is being prepared.'}
+                                ? <><MdAssignment size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certPreparing')}</span></>
+                                : <><MdCheckCircle size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.approvedPreparing')}</span></>}
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div className="bg-white/60 rounded-lg px-3 py-2">
-                              <p className="text-xs text-green-600 uppercase tracking-wide">Approved Amount</p>
+                              <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.amountLabel')}</p>
                               <p className="text-base font-bold text-green-700">₱{Number(app.approvedAmount).toLocaleString()}</p>
                             </div>
                             {app.purposeOfAssistance?.length > 0 && (
                               <div className="bg-white/60 rounded-lg px-3 py-2">
-                                <p className="text-xs text-green-600 uppercase tracking-wide">For</p>
+                                <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.forLabel')}</p>
                                 <p className="text-sm font-medium text-green-700">{app.purposeOfAssistance.join(', ')}</p>
                               </div>
                             )}
                             {app.payableTo && (
                               <div className="bg-white/60 rounded-lg px-3 py-2 sm:col-span-2">
-                                <p className="text-xs text-green-600 uppercase tracking-wide">Payable To</p>
+                                <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.payableLabel')}</p>
                                 <p className="text-sm font-medium text-green-700">{app.payableTo}</p>
-                                <p className="text-xs text-green-500 mt-1">Present your Guarantee Letter at this provider.</p>
+                                <p className="text-xs text-green-500 mt-1">{t('patient.track.approval.payableHint')}</p>
                               </div>
                             )}
                           </div>
@@ -401,8 +411,9 @@ export default function TrackStatus() {
                       )}
                       {app.status === 'approved' && app.approvedAmount == null && (
                         <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-3">
-                          <p className="text-sm text-green-700 font-medium">
-                            ✅ Your application is approved. Your Guarantee Letter will be prepared soon.
+                          <p className="text-sm text-green-700 font-medium flex items-start gap-2">
+                            <MdCheckCircle size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.approvedNoAmount')}</span>
                           </p>
                         </div>
                       )}
@@ -423,9 +434,9 @@ export default function TrackStatus() {
                                 ${stage.done
                                   ? 'bg-brand-500 border-brand-500 text-white'
                                   : stage.active
-                                  ? 'border-amber-400 bg-amber-50 text-amber-500'
+                                  ? 'border-brand-500 bg-brand-50 text-brand-600'
                                   : 'border-gray-200 bg-white text-gray-300'}`}>
-                                {stage.done ? '✓' : i + 1}
+                                {stage.done ? <MdCheck size={14} /> : i + 1}
                               </div>
                               {i < visibleStages.length - 1 && (
                                 <div className={`w-0.5 flex-1 my-1 ${stage.done ? 'bg-brand-300' : 'bg-gray-100'}`}
@@ -434,9 +445,9 @@ export default function TrackStatus() {
                             </div>
                             <div className={`flex-1 pb-5 ${i === visibleStages.length - 1 ? 'pb-0' : ''}`}>
                               <div className="flex items-start justify-between">
-                                <p className={`text-sm font-medium ${stage.done ? 'text-gray-800' : stage.active ? 'text-amber-700' : 'text-gray-400'}`}>
+                                <p className={`text-sm font-medium ${stage.done ? 'text-gray-800' : stage.active ? 'text-brand-700' : 'text-gray-400'}`}>
                                   {stage.label}
-                                  {stage.active && <span className="ml-2 badge badge-amber text-xs">Current</span>}
+                                  {stage.active && <span className="ml-2 badge badge-blue text-xs">{t('patient.track.timeline.current')}</span>}
                                 </p>
                                 {stage.date && <span className="text-xs text-gray-400">{stage.date}</span>}
                               </div>
@@ -454,8 +465,8 @@ export default function TrackStatus() {
                           className="mt-3 text-sm text-brand-500 hover:text-brand-600 font-medium border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition-colors"
                           onClick={() => toggleStages(app.id)}>
                           {isExpanded
-                            ? 'Hide future steps ↑'
-                            : `See all steps (${hiddenCount} upcoming) ↓`}
+                            ? `${t('patient.track.timeline.hideFuture')} ↑`
+                            : `${t('patient.track.timeline.seeAll', { count: hiddenCount })} ↓`}
                         </button>
                       )}
 
@@ -463,27 +474,29 @@ export default function TrackStatus() {
                       {app.status === 'pending' && (
                         <div className="mt-4 pt-3 border-t border-gray-50">
                           {confirmWithdrawId === app.id ? (
-                            <div className="flex items-center gap-3">
-                              <p className="text-xs text-gray-500 flex-1">
-                                Withdraw this application? This cannot be undone.
+                            <div className="space-y-2.5">
+                              <p className="text-sm text-gray-600">
+                                {t('patient.track.withdrawConfirm')}
                               </p>
-                              <button
-                                className="text-xs text-gray-500 hover:text-gray-700 font-medium"
-                                onClick={() => setConfirmWithdrawId(null)}>
-                                Cancel
-                              </button>
-                              <button
-                                className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-60"
-                                onClick={() => handleWithdraw(app)}
-                                disabled={withdrawing === app.id}>
-                                {withdrawing === app.id ? 'Withdrawing...' : 'Yes, Withdraw'}
-                              </button>
+                              <div className="flex gap-2">
+                                <button
+                                  className="flex-1 min-h-[44px] text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-colors"
+                                  onClick={() => setConfirmWithdrawId(null)}>
+                                  {t('patient.track.cancel')}
+                                </button>
+                                <button
+                                  className="flex-1 min-h-[44px] text-sm bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-60"
+                                  onClick={() => handleWithdraw(app)}
+                                  disabled={withdrawing === app.id}>
+                                  {withdrawing === app.id ? t('patient.track.withdrawing') : t('patient.track.withdrawYes')}
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <button
-                              className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                              className="min-h-[44px] py-2 text-sm text-gray-400 hover:text-red-500 transition-colors"
                               onClick={() => setConfirmWithdrawId(app.id)}>
-                              Withdraw Application
+                              {t('patient.track.withdraw')}
                             </button>
                           )}
                         </div>
@@ -501,10 +514,10 @@ export default function TrackStatus() {
           <div className="space-y-3">
             {pastApps.length === 0 ? (
               <div className="card p-8 text-center">
-                <p className="text-sm text-gray-400">No past applications found.</p>
-                <p className="text-xs text-gray-400 mt-1">Completed or rejected applications will appear here.</p>
+                <p className="text-sm text-gray-400">{t('patient.track.noPast')}</p>
+                <p className="text-xs text-gray-400 mt-1">{t('patient.track.noPastSub')}</p>
                 <button className="btn-primary mt-3 text-sm" onClick={() => navigate('/patient/screening')}>
-                  Find a Program →
+                  {t('patient.track.findProgram')} →
                 </button>
               </div>
             ) : (
@@ -516,10 +529,10 @@ export default function TrackStatus() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800">{app.agencyName}</p>
-                      <p className="text-sm text-gray-500">{app.appId} · {formatDate(app.submittedAt)}</p>
+                      <p className="text-sm text-gray-500">{app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}</p>
                     </div>
                     <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'}`}>
-                      {STATUS_LABEL[app.status] ?? app.status}
+                      {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                     </span>
                     {app.certificateUploaded && (
                       <button
@@ -527,13 +540,13 @@ export default function TrackStatus() {
                         onClick={() => handleDownloadCertificate(app)}
                         disabled={downloading === app.id}>
                         <MdDownload size={14} />
-                        {downloading === app.id ? 'Downloading...' : 'Download Guarantee Letter'}
+                        {downloading === app.id ? t('patient.track.downloading') : t('patient.track.downloadGL')}
                       </button>
                     )}
                   </div>
                   {app.status === 'rejected' && app.rejectionReason && (
                     <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-700">
-                      <strong>Reason for rejection:</strong> {app.rejectionReason}
+                      <strong>{t('patient.track.reasonForRejection')}</strong> {app.rejectionReason}
                     </div>
                   )}
                 </div>
