@@ -19,6 +19,13 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-gray-300 rounded-full;
   }
+  /* Visible focus ring for keyboard users — preserves WCAG 2.4.7. Uses
+     :focus-visible so it stays out of the way during mouse interactions. */
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible {
+    @apply outline-none ring-2 ring-brand-400 ring-offset-2 ring-offset-white rounded-lg;
+  }
 }
 
 @layer components {

@@ -243,7 +243,7 @@ export default function TrackStatus() {
             onClick={() => setTab('active')}>
             <MdTimeline size={16} /> {t('patient.track.tabInProgress')}
             {activeApps.length > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === 'active' ? 'bg-white/20' : 'bg-brand-100 text-brand-600'}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === 'active' ? 'bg-white text-brand-600' : 'bg-brand-100 text-brand-600'}`}>
                 {activeApps.length}
               </span>
             )}
@@ -260,7 +260,9 @@ export default function TrackStatus() {
           </button>
         </div>
 
-        {/* Skeleton loading */}
+        {/* Skeleton loading — sized to match the collapsed default view
+            (header + status banner + 2 done/active timeline rows) so the
+            layout doesn't shrink jarringly once data loads. */}
         {loading && (
           <div className="space-y-4">
             {Array.from({ length: 2 }).map((_, i) => (
@@ -273,8 +275,9 @@ export default function TrackStatus() {
                   </div>
                   <div className="h-5 bg-gray-100 rounded-full w-24" />
                 </div>
+                <div className="h-10 bg-gray-100 rounded-xl mb-4" />
                 <div className="space-y-4">
-                  {Array.from({ length: 4 }).map((_, j) => (
+                  {Array.from({ length: 2 }).map((_, j) => (
                     <div key={j} className="flex gap-3">
                       <div className="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0" />
                       <div className="flex-1 space-y-1.5 pt-1">
@@ -388,11 +391,16 @@ export default function TrackStatus() {
                                 ? <><MdAssignment size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certPreparing')}</span></>
                                 : <><MdCheckCircle size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.approvedPreparing')}</span></>}
                           </p>
+                          {/* Amount dominates — full-width hero on top, supporting
+                              metadata as smaller cards below. The approved peso
+                              figure is the headline of the patient's journey. */}
+                          <div className="bg-white/70 rounded-lg px-4 py-3 mb-2">
+                            <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.amountLabel')}</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-green-700 leading-tight">
+                              ₱{Number(app.approvedAmount).toLocaleString()}
+                            </p>
+                          </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div className="bg-white/60 rounded-lg px-3 py-2">
-                              <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.amountLabel')}</p>
-                              <p className="text-base font-bold text-green-700">₱{Number(app.approvedAmount).toLocaleString()}</p>
-                            </div>
                             {app.purposeOfAssistance?.length > 0 && (
                               <div className="bg-white/60 rounded-lg px-3 py-2">
                                 <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.forLabel')}</p>
@@ -400,7 +408,7 @@ export default function TrackStatus() {
                               </div>
                             )}
                             {app.payableTo && (
-                              <div className="bg-white/60 rounded-lg px-3 py-2 sm:col-span-2">
+                              <div className={`bg-white/60 rounded-lg px-3 py-2 ${app.purposeOfAssistance?.length > 0 ? '' : 'sm:col-span-2'}`}>
                                 <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.payableLabel')}</p>
                                 <p className="text-sm font-medium text-green-700">{app.payableTo}</p>
                                 <p className="text-xs text-green-500 mt-1">{t('patient.track.approval.payableHint')}</p>
@@ -536,17 +544,20 @@ export default function TrackStatus() {
                     </span>
                     {app.certificateUploaded && (
                       <button
-                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors font-medium disabled:opacity-60"
+                        className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-colors disabled:opacity-60 shadow-sm"
                         onClick={() => handleDownloadCertificate(app)}
                         disabled={downloading === app.id}>
-                        <MdDownload size={14} />
+                        <MdDownload size={15} />
                         {downloading === app.id ? t('patient.track.downloading') : t('patient.track.downloadGL')}
                       </button>
                     )}
                   </div>
                   {app.status === 'rejected' && app.rejectionReason && (
-                    <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-700">
-                      <strong>{t('patient.track.reasonForRejection')}</strong> {app.rejectionReason}
+                    <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">
+                        {t('patient.track.reasonForRejection')}
+                      </p>
+                      <p className="text-sm text-red-700 leading-relaxed">{app.rejectionReason}</p>
                     </div>
                   )}
                 </div>

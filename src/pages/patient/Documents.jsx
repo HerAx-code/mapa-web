@@ -9,6 +9,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { useTranslation } from 'react-i18next'
+import DocViewerModal from '../../components/DocViewerModal'
 import toast from 'react-hot-toast'
 
 // ── Status visuals ───────────────────────────────────────────────────────
@@ -444,6 +445,9 @@ export default function Documents() {
   const [loadingDocs, setLoadingDocs]     = useState(true)
   const [showUploadModal,  setShowUploadModal]  = useState(false)
   const [confirmDeleteId,  setConfirmDeleteId]  = useState(null)
+  // Currently-previewing document — null when no viewer is open.
+  // Reuses the same DocViewerModal the agency side uses.
+  const [viewingDoc,       setViewingDoc]       = useState(null)
 
   // Load patient's documents
   useEffect(() => {
@@ -516,7 +520,19 @@ export default function Documents() {
           </div>
         </div>
 
-        {/* Summary */}
+        {/* Summary — stats come first on mobile (state-at-a-glance);
+            verified-tags detail card stacks beneath. On lg+ the layout
+            collapses to a single row with the tag list dominant. */}
+        <div className="lg:hidden grid grid-cols-2 gap-3 mb-3">
+          <div className="card p-3 text-center">
+            <p className="text-2xl font-semibold text-green-600">{verified.length}</p>
+            <p className="text-sm text-gray-500 mt-0.5">{t('patient.documents.summary.verifiedStat')}</p>
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-2xl font-semibold text-amber-500">{pending.length}</p>
+            <p className="text-sm text-gray-500 mt-0.5">{t('patient.documents.summary.pendingStat')}</p>
+          </div>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
           <div className="card p-4 lg:col-span-2">
             <div className="flex items-center gap-2 mb-2">
@@ -532,7 +548,7 @@ export default function Documents() {
               {verified.length === 0 && <span className="text-xs text-gray-400">{t('patient.documents.summary.noVerifiedYet')}</span>}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="hidden lg:grid grid-cols-2 gap-3">
             <div className="card p-3 text-center">
               <p className="text-2xl font-semibold text-green-600">{verified.length}</p>
               <p className="text-sm text-gray-500 mt-0.5">{t('patient.documents.summary.verifiedStat')}</p>
@@ -546,22 +562,27 @@ export default function Documents() {
 
         {/* Document list */}
         <div className="card overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm text-gray-700 mr-2">
+          {/* Header + filter chips — stacked vertically on mobile to avoid
+              awkward wrapping. The chips horizontally scroll on small screens
+              if they overflow. */}
+          <div className="px-4 py-3 border-b border-gray-50 flex flex-col sm:flex-row sm:items-center gap-2">
+            <span className="font-medium text-sm text-gray-700">
               {activeTab === 'all'
                 ? t('patient.documents.tabs.allHeading', { count: docs.length })
                 : t(`patient.documents.tabs.${activeTab}Heading`, { count: displayed.length })}
             </span>
-            {['all', 'verified', 'pending', 'rejected'].map(key => (
-              <button key={key} onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                  activeTab === key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {t(`patient.documents.tabs.${key}`)}
-              </button>
-            ))}
+            <div className="flex gap-1.5 sm:ml-auto overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+              {['all', 'verified', 'pending', 'rejected'].map(key => (
+                <button key={key} onClick={() => setActiveTab(key)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    activeTab === key
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                  }`}>
+                  {t(`patient.documents.tabs.${key}`)}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="divide-y divide-gray-50">
@@ -579,29 +600,30 @@ export default function Documents() {
                 ))}
               </>
             )}
-            {!loadingDocs && displayed.map(document => {
-              const vis  = STATUS_VISUAL[document.status] ?? STATUS_VISUAL.pending
+            {!loadingDocs && displayed.map(item => {
+              const vis  = STATUS_VISUAL[item.status] ?? STATUS_VISUAL.pending
               const Icon = vis.icon
               return (
-                <div key={document.id} className="hover:bg-gray-50">
+                <div key={item.id} className="hover:bg-gray-50 cursor-pointer"
+                     onClick={() => setViewingDoc(item)}>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <MdDescription size={16} className="text-gray-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{document.name}</p>
+                    <p className="text-sm font-medium text-gray-800">{item.name}</p>
                     <p className="text-sm text-gray-400">
-                      {document.fileName && `${document.fileName} · `}
-                      {document.size} · {document.date}
+                      {item.fileName && `${item.fileName} · `}
+                      {item.size} · {item.date}
                     </p>
                   </div>
                   <span className={`badge ${vis.badge} flex items-center gap-1 flex-shrink-0`}>
                     <Icon size={11} className={vis.iconColor} />
-                    {t(`patient.documents.docStatus.${document.status}`, { defaultValue: document.status })}
+                    {t(`patient.documents.docStatus.${item.status}`, { defaultValue: item.status })}
                   </span>
-                  {confirmDeleteId === document.id ? (
-                    <div className="flex flex-col gap-2 flex-shrink-0 items-end">
-                      {document.status === 'verified' && (
+                  {confirmDeleteId === item.id ? (
+                    <div className="flex flex-col gap-2 flex-shrink-0 items-end" onClick={e => e.stopPropagation()}>
+                      {item.status === 'verified' && (
                         <p className="text-xs text-red-500 text-right max-w-[180px]">
                           {t('patient.documents.delete.warningVerified')}
                         </p>
@@ -610,12 +632,12 @@ export default function Documents() {
                         <span className="text-sm text-gray-600">{t('patient.documents.delete.prompt')}</span>
                         <button
                           className="min-h-[44px] min-w-[44px] text-sm px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
-                          onClick={() => handleDelete(document.id)}>
+                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }}>
                           {t('patient.documents.delete.yes')}
                         </button>
                         <button
                           className="min-h-[44px] min-w-[44px] text-sm px-3 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors font-medium"
-                          onClick={() => setConfirmDeleteId(null)}>
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}>
                           {t('patient.documents.delete.no')}
                         </button>
                       </div>
@@ -623,16 +645,16 @@ export default function Documents() {
                   ) : (
                     <button
                       className="flex-shrink-0 w-11 h-11 flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors -mr-2"
-                      onClick={() => setConfirmDeleteId(document.id)}>
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(item.id) }}>
                       <MdDelete size={18} />
                     </button>
                   )}
                 </div>
-                {document.status === 'rejected' && document.rejectionReason && (
+                {item.status === 'rejected' && item.rejectionReason && (
                   <div className="px-4 pb-3 flex items-start gap-1.5">
                     <MdCancel size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-red-600">
-                      <strong>{t('patient.documents.rejection.label')}</strong> {document.rejectionReason} {t('patient.documents.rejection.suffix')}
+                      <strong>{t('patient.documents.rejection.label')}</strong> {item.rejectionReason} {t('patient.documents.rejection.suffix')}
                     </p>
                   </div>
                 )}
@@ -659,6 +681,14 @@ export default function Documents() {
             existingDocs={docs}
             user={user}
             onClose={() => setShowUploadModal(false)}
+          />
+        )}
+
+        {/* Document viewer — opened when a patient taps a document row */}
+        {viewingDoc && (
+          <DocViewerModal
+            docMeta={viewingDoc}
+            onClose={() => setViewingDoc(null)}
           />
         )}
       </div>

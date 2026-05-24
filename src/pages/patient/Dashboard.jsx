@@ -125,7 +125,10 @@ export default function PatientDashboard() {
   const navigate  = useNavigate()
   const { user }  = useAuth()
   const { t }     = useTranslation()
-  const firstName = user?.name?.split(' ')[0] || 'Patient'
+  // Strip trailing punctuation in case the name is stored last-first
+  // (e.g. "De La Cruz, Juan" → splitting on space gives "De,"; we strip
+  // the comma so the greeting reads naturally).
+  const firstName = (user?.name?.split(' ')[0] || '').replace(/[,;]+$/, '') || 'Patient'
 
   const [activeApp,  setActiveApp]  = useState(null)
   const [appCount,   setAppCount]   = useState(0)
@@ -279,8 +282,7 @@ export default function PatientDashboard() {
 
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('patient.dashboard.subtitle', { name: firstName })}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{t('common.appFull')} · CRMC</p>
+          <h1 className="page-title">{t('patient.dashboard.subtitle', { name: firstName })}</h1>
         </div>
 
         {/* Main status card */}
@@ -464,13 +466,18 @@ export default function PatientDashboard() {
           <button
             className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
             onClick={() => setStepsOpen(!stepsOpenEffective)}>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.steps.title')}</p>
               <p className="text-xs text-gray-400 mt-0.5">{t('patient.dashboard.steps.completedOf', { done: doneCount, total: STEPS.length })}</p>
+              {/* Visual progress bar — gives an at-a-glance read of journey
+                  progress without needing to expand the accordion. */}
+              <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-xs">
+                <div className="h-full bg-brand-500 transition-all" style={{ width: `${(doneCount / STEPS.length) * 100}%` }} />
+              </div>
             </div>
             {stepsOpenEffective
-              ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0" />
-              : <MdExpandMore size={20} className="text-gray-400 flex-shrink-0" />
+              ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0 ml-3" />
+              : <MdExpandMore size={20} className="text-gray-400 flex-shrink-0 ml-3" />
             }
           </button>
 

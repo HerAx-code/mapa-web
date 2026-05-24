@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { MdVideoCall, MdCalendarToday, MdOpenInNew, MdWarning } from 'react-icons/md'
+import {
+  MdVideoCall, MdCalendarToday, MdOpenInNew, MdWarning,
+  MdDescription, MdChat, MdTimer, MdAssignment, MdWifi,
+  MdEvent,
+} from 'react-icons/md'
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -19,6 +23,50 @@ const isPastDate = (iso) => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return new Date(iso + 'T00:00:00') < today
+}
+
+// Whole-day delta from today (PH local). Returns null for invalid input,
+// 0 for today, positive ints for future. Used to drive the countdown chip.
+const daysUntil = (iso) => {
+  if (!iso) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(iso + 'T00:00:00')
+  if (Number.isNaN(target.getTime())) return null
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000)
+}
+
+// Build a Google Calendar quick-add URL. Time is best-effort: we parse a
+// few common time formats; if parsing fails the event becomes all-day on
+// the interview date (still useful as a reminder).
+const buildGcalUrl = (app) => {
+  const pad = (n) => String(n).padStart(2, '0')
+  const fmt = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`
+  let dates
+  // Try to parse "2:00 PM" / "14:00" / "2:00 pm"
+  const t = String(app.interviewTime ?? '').trim()
+  const m12 = t.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i)
+  const m24 = t.match(/^(\d{1,2}):(\d{2})$/)
+  if (m12 || m24) {
+    const hh = m12 ? (parseInt(m12[1], 10) % 12) + (/pm/i.test(m12[3]) ? 12 : 0) : parseInt(m24[1], 10)
+    const mm = parseInt((m12 ?? m24)[2], 10)
+    // App is intended for PH (UTC+8). Build the date in local PH time then
+    // emit as UTC for Google Calendar.
+    const start = new Date(`${app.interviewDate}T${pad(hh)}:${pad(mm)}:00+08:00`)
+    const end   = new Date(start.getTime() + 60 * 60 * 1000) // 1h default
+    dates = `${fmt(start)}/${fmt(end)}`
+  } else {
+    // All-day fallback
+    const d = app.interviewDate.replace(/-/g, '')
+    dates = `${d}/${d}`
+  }
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text:   `Interview with ${app.agencyName ?? 'agency'}`,
+    dates,
+    details: app.meetLink ? `Google Meet: ${app.meetLink}` : '',
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
 export default function Interviews() {
@@ -115,7 +163,18 @@ export default function Interviews() {
                     <h2 className="text-sm font-semibold text-gray-800">{app.agencyName}</h2>
                     <p className="text-xs text-gray-400">{app.appId}</p>
                   </div>
-                  <div className="ml-auto flex items-center gap-1.5">
+                  <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
+                    {/* Countdown chip — only for upcoming interviews within
+                        a week. "Today!" supersedes the day count. */}
+                    {!isPast && !isToday && (() => {
+                      const d = daysUntil(app.interviewDate)
+                      if (d == null || d <= 0 || d > 7) return null
+                      return (
+                        <span className="badge badge-blue text-xs">
+                          {d === 1 ? t('patient.interviews.tomorrow') : t('patient.interviews.inDays', { count: d })}
+                        </span>
+                      )
+                    })()}
                     {isToday && (
                       <span className="badge badge-amber text-xs font-bold">{t('patient.interviews.todayBadge')}</span>
                     )}
@@ -125,31 +184,41 @@ export default function Interviews() {
                   </div>
                 </div>
 
-                {/* Past interview warning */}
+                {/* Past interview warning — sends the patient to Messages
+                    with the agency name so they can locate the right thread. */}
                 {isPast && (
-                  <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2 flex-1">
+                  <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <div className="flex items-start gap-2 mb-2">
                       <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-amber-700">
                         {t('patient.interviews.pastWarning')}
                       </p>
                     </div>
                     <button
-                      className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
-                      onClick={() => navigate('/patient/messages')}>
-                      {t('patient.interviews.messageAgency')} →
+                      className="w-full sm:w-auto text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg font-medium transition-colors min-h-[36px]"
+                      onClick={() => navigate('/patient/messages', { state: { highlightAgency: app.agencyName } })}>
+                      {t('patient.interviews.messageAgencyByName', { agency: app.agencyName })} →
                     </button>
                   </div>
                 )}
 
                 {/* Date & time */}
-                <div className="flex items-center gap-2 mb-1 text-sm text-gray-700">
+                <div className="flex items-center gap-2 mb-1 text-sm text-gray-700 flex-wrap">
                   <MdCalendarToday size={16} className={isPast ? 'text-red-400' : isToday ? 'text-brand-500' : 'text-brand-500'} />
                   <strong className={isPast ? 'text-red-500' : isToday ? 'text-brand-600' : ''}>
                     {fmtDate(app.interviewDate)}
                   </strong>
                   {app.interviewTime && <span>{t('patient.interviews.atTime', { time: app.interviewTime })}</span>}
                 </div>
+                {/* Add-to-Calendar link — opens a pre-filled Google Calendar
+                    event in a new tab. Patient won't forget the interview
+                    even if they're offline when the in-app reminder fires. */}
+                {!isPast && (
+                  <a href={buildGcalUrl(app)} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 font-medium mt-1">
+                    <MdEvent size={13} /> {t('patient.interviews.addToCalendar')}
+                  </a>
+                )}
 
                 {!isPast && (
                   <>
@@ -165,11 +234,18 @@ export default function Interviews() {
                     </button>
                     {expandedPrep.has(app.id) && (
                       <div className="mt-3 bg-gray-50 rounded-xl p-4 space-y-2 text-sm text-gray-600 border border-gray-100">
-                        <p>{t('patient.interviews.prep.documents')}</p>
-                        <p>{t('patient.interviews.prep.questions')}</p>
-                        <p>{t('patient.interviews.prep.duration')}</p>
-                        <p>{t('patient.interviews.prep.decision')}</p>
-                        <p>{t('patient.interviews.prep.internet')}</p>
+                        {[
+                          { Icon: MdDescription, key: 'documents' },
+                          { Icon: MdChat,        key: 'questions' },
+                          { Icon: MdTimer,       key: 'duration'  },
+                          { Icon: MdAssignment,  key: 'decision'  },
+                          { Icon: MdWifi,        key: 'internet'  },
+                        ].map(({ Icon, key }) => (
+                          <p key={key} className="flex items-start gap-2">
+                            <Icon size={14} className="text-brand-400 flex-shrink-0 mt-0.5" />
+                            <span>{t(`patient.interviews.prep.${key}`)}</span>
+                          </p>
+                        ))}
                       </div>
                     )}
                   </>

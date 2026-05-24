@@ -227,25 +227,30 @@ function ApplyModal({ agency, onClose }) {
 
         <div className="px-5 py-4 space-y-4 overflow-y-auto max-h-[60vh]">
           {/* Agency info */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <div className={`w-12 h-12 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center flex-shrink-0`}>
-              {agency.initials}
+          <div className="p-3 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center flex-shrink-0`}>
+                {agency.initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{agency.name}</p>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <MdLocationOn size={11} />{agency.location}
+                </p>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <MdSchedule size={11} /> {t('patient.apply.processing', { time: agency.processingTime })}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-xs text-gray-400">{t('patient.apply.spotsTodayLabel')}</p>
+                <p className={`text-lg font-bold ${isFull ? 'text-red-500' : 'text-green-600'}`}>
+                  {slots.remaining}/{slots.total}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800">{agency.name}</p>
-              <p className="text-xs text-gray-400 flex items-center gap-1">
-                <MdLocationOn size={11} />{agency.location}
-              </p>
-              <p className="text-xs text-gray-400 flex items-center gap-1">
-                <MdSchedule size={11} /> {t('patient.apply.processing', { time: agency.processingTime })}
-              </p>
-            </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-xs text-gray-400">{t('patient.apply.spotsTodayLabel')}</p>
-              <p className={`text-lg font-bold ${isFull ? 'text-red-500' : 'text-green-600'}`}>
-                {slots.remaining}/{slots.total}
-              </p>
-            </div>
+            {agency.description && (
+              <p className="text-xs text-gray-500 mt-2.5 leading-relaxed line-clamp-3">{agency.description}</p>
+            )}
           </div>
 
           {/* Single highest-priority blocker — duplicate > elsewhere > full.
@@ -468,33 +473,45 @@ export default function MedicalPrograms() {
           {/* Search */}
           <div className="relative mb-3">
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9" placeholder={t('patient.programs.searchPlaceholder')}
+            <input className="input pl-9 pr-10" placeholder={t('patient.programs.searchPlaceholder')}
               value={search} onChange={e => setSearch(e.target.value)} />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                <MdClose size={14} />
+              </button>
+            )}
           </div>
 
-          {/* Type filter chips */}
+          {/* Type filter chips — right-edge fade hints at scrollable overflow
+              when chips exceed viewport width. */}
           {allTypes.length > 0 && (
-            <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 scrollbar-hide">
-              <button
-                onClick={() => setSelectedType('')}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                  selectedType === ''
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {t('patient.programs.filterAll')}
-              </button>
-              {allTypes.map(typeName => (
-                <button key={typeName}
-                  onClick={() => setSelectedType(prev => prev === typeName ? '' : typeName)}
+            <div className="relative mb-5">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 pr-8 scrollbar-hide">
+                <button
+                  onClick={() => setSelectedType('')}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                    selectedType === typeName
+                    selectedType === ''
                       ? 'bg-brand-500 text-white border-brand-500'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}>
-                  {typeName}
+                  {t('patient.programs.filterAll')}
                 </button>
-              ))}
+                {allTypes.map(typeName => (
+                  <button key={typeName}
+                    onClick={() => setSelectedType(prev => prev === typeName ? '' : typeName)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                      selectedType === typeName
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}>
+                    {typeName}
+                  </button>
+                ))}
+              </div>
+              <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-gray-50 to-transparent" />
             </div>
           )}
 
