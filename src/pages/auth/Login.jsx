@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageToggle from '../../components/LanguageToggle'
-import { MdShield, MdVisibility, MdVisibilityOff, MdEmail } from 'react-icons/md'
+import Logo from '../../components/ui/Logo'
+import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { sendPasswordResetEmail } from 'firebase/auth'
@@ -10,6 +11,10 @@ import { auth, db } from '../../firebase'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { TYPE_CONFIG } from '../admin/Announcements'
 import toast from 'react-hot-toast'
+
+// Client-side email format gate — saves a round-trip to Firebase Auth
+// for obvious typos in the reset modal.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 const DASHBOARD = {
   [ROLES.PATIENT]:      '/patient/dashboard',
@@ -93,7 +98,10 @@ export default function Login() {
     try {
       const loggedIn = await login(form.email, form.password)
       setLoginError(false)
-      toast.success(t('auth.toast.welcomeBack', { name: loggedIn.name }))
+      // Greet with first name only so the toast fits on a phone screen
+      // (full name like "Juan Dela Cruz Jr." overflows mobile toasts).
+      const firstName = (loggedIn.name?.split(' ')[0] || '').replace(/[,;]+$/, '') || loggedIn.name
+      toast.success(t('auth.toast.welcomeBack', { name: firstName }))
       navigate(DASHBOARD[loggedIn.role] ?? '/patient/dashboard')
     } catch (err) {
       const code = err.code ?? ''
@@ -106,9 +114,16 @@ export default function Login() {
 
   // Fix 2 — Forgot Password handler
   const handleForgotPassword = async () => {
-    const email = resetEmail.trim() || form.email.trim()
+    const email = (resetEmail.trim() || form.email.trim()).toLowerCase()
     if (!email) {
       toast.error(t('auth.errors.enterEmail'))
+      return
+    }
+    // Client-side format check — Firebase will reject malformed addresses
+    // anyway, but catching them here saves a network round-trip on slow
+    // CRMC connections.
+    if (!EMAIL_RE.test(email)) {
+      toast.error(t('auth.errors.invalidEmail'))
       return
     }
     setResetting(true)
@@ -131,20 +146,22 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm">
+      {/* Match Register's responsive width so the card doesn't jump in size
+          when patients toggle between Login and Register. */}
+      <div className="w-full max-w-md sm:max-w-lg">
 
         {/* Language toggle */}
         <div className="flex justify-end mb-2">
           <LanguageToggle />
         </div>
 
-        {/* Logo */}
+        {/* Logo — uses the shared CRMC brand mark to match Landing. */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <MdShield size={28} className="text-white" />
+          <div className="flex justify-center mb-4">
+            <Logo size={56} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{t('auth.welcome')}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t('auth.subtitle')}</p>
+          <p className="text-sm text-gray-500 mt-1">{t('auth.signinSubtitle')}</p>
         </div>
 
         {/* Maintenance / announcement banner */}
@@ -176,6 +193,11 @@ export default function Login() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.email')}</label>
               <input
                 type="email"
+                required
+                autoFocus
+                autoCapitalize="none"
+                spellCheck={false}
+                inputMode="email"
                 className={`input ${loginError ? 'border-red-400 bg-red-50' : ''}`}
                 placeholder={t('auth.emailPlaceholder')}
                 value={form.email}
@@ -200,15 +222,18 @@ export default function Login() {
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
+                  required
                   className={`input pr-10 ${loginError ? 'border-red-400 bg-red-50' : ''}`}
                   placeholder={t('auth.passwordPlaceholder')}
                   value={form.password}
                   onChange={e => { setForm({ ...form, password: e.target.value }); setLoginError(false) }}
                   autoComplete="current-password"
                 />
+                {/* 36×36 tap target — was bare icon (~18px) and missed often
+                    on mobile. */}
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                   onClick={() => setShowPw(!showPw)}>
                   {showPw ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
                 </button>
@@ -234,8 +259,8 @@ export default function Login() {
         {/* Fix 1 — Demo accounts only in development */}
         {import.meta.env.VITE_ENABLE_SEED === 'true' && (
           <div className="mt-4 card p-4 border border-amber-200 bg-amber-50">
-            <p className="text-xs font-medium text-amber-700 mb-3 uppercase tracking-wide">
-              ⚠️ {t('auth.devOnly')}
+            <p className="text-xs font-medium text-amber-700 mb-3 uppercase tracking-wide flex items-center gap-1.5">
+              <MdWarning size={13} /> {t('auth.devOnly')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
@@ -276,17 +301,29 @@ export default function Login() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
           onClick={e => e.target === e.currentTarget && setShowReset(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">{t('auth.reset.title')}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {t('auth.reset.desc')}
-              </p>
+            <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-gray-900">{t('auth.reset.title')}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {t('auth.reset.desc')}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReset(false)}
+                aria-label={t('auth.reset.cancel')}
+                className="flex-shrink-0 w-8 h-8 -mt-1 -mr-1 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                <MdClose size={20} />
+              </button>
             </div>
             <div className="px-5 py-4 space-y-3">
               <div className="relative">
                 <MdEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  inputMode="email"
                   className="input pl-9"
                   placeholder={t('auth.reset.placeholder')}
                   value={resetEmail}

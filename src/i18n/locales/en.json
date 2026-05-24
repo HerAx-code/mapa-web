@@ -19,6 +19,7 @@
   "auth": {
     "welcome": "Welcome to MAPA",
     "subtitle": "Medical Assistance Portal Access · CRMC",
+    "signinSubtitle": "Sign in to your account",
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
     "password": "Password",
@@ -57,7 +58,7 @@
     },
     "toast": {
       "welcomeBack": "Welcome back, {{name}}!",
-      "resetSent": "Password reset email sent. Check your inbox."
+      "resetSent": "If an account exists with this email, a reset link is on its way. Check your inbox in a few minutes (and your spam folder)."
     },
     "devOnly": "Dev only — Demo accounts"
   },
