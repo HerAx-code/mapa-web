@@ -2,18 +2,22 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   MdShield, MdVerified, MdVisibility, MdVisibilityOff,
-  MdCheckCircle, MdArrowForward, MdArrowBack,
+  MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
 } from 'react-icons/md'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
+import ProfileModals from '../../components/ProfileModals'
 import toast from 'react-hot-toast'
 
-const CURRENT_YEAR    = new Date().getFullYear()
-const HOSPITAL_PREFIX = `CRMC-${CURRENT_YEAR}-`
-const ACCESS_CODE_RE  = /^CRMC-\d{4}-\d{5}$/
+const CURRENT_YEAR        = new Date().getFullYear()
+const HOSPITAL_PREFIX     = `CRMC-${CURRENT_YEAR}-`
+const ACCESS_CODE_RE      = /^CRMC-\d{4}-\d{5}$/
+// Match any CRMC-YYYY- prefix the patient types — codes issued in a prior
+// calendar year must remain enterable.
+const ACCESS_CODE_PREFIX_RE = /^CRMC-(\d{4})-/
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
 const SUFFIXES        = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
@@ -56,33 +60,44 @@ function FieldError({ msg }) {
 // ── Step indicator ────────────────────────────────────────────────────────
 // Step labels come from i18n at render time.
 
-function StepIndicator({ current, steps }) {
+function StepIndicator({ current, steps, onJump }) {
   return (
     <div className="flex items-center justify-center mb-6">
-      {steps.map((s, i) => (
-        <div key={s.num} className="flex items-center">
-          {/* Circle */}
-          <div className="flex flex-col items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-              s.num < current  ? 'bg-brand-500 text-white'
-              : s.num === current ? 'bg-brand-500 text-white ring-4 ring-brand-100'
-              : 'bg-gray-100 text-gray-400'
-            }`}>
-              {s.num < current ? <MdCheckCircle size={16} /> : s.num}
-            </div>
-            <span className={`hidden sm:block text-xs mt-1 font-medium whitespace-nowrap ${
-              s.num === current ? 'text-brand-600' : 'text-gray-400'
-            }`}>{s.label}</span>
+      {steps.map((s, i) => {
+        // Past steps are clickable for in-place edits; current and future
+        // steps are not (future steps would skip validation).
+        const canJump = s.num < current
+        const CircleWrap = canJump ? 'button' : 'div'
+        return (
+          <div key={s.num} className="flex items-center">
+            {/* Circle */}
+            <CircleWrap
+              type={canJump ? 'button' : undefined}
+              onClick={canJump ? () => onJump?.(s.num) : undefined}
+              className={`flex flex-col items-center ${canJump ? 'cursor-pointer group' : ''}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                s.num < current  ? 'bg-brand-500 text-white group-hover:bg-brand-600'
+                : s.num === current ? 'bg-brand-500 text-white ring-4 ring-brand-100'
+                : 'bg-gray-100 text-gray-400'
+              }`}>
+                {s.num < current ? <MdCheckCircle size={16} /> : s.num}
+              </div>
+              <span className={`hidden sm:block text-xs mt-1 font-medium whitespace-nowrap ${
+                s.num === current ? 'text-brand-600'
+                : canJump        ? 'text-gray-500 group-hover:text-brand-600'
+                : 'text-gray-400'
+              }`}>{s.label}</span>
+            </CircleWrap>
+            {/* Connector — mb-4 compensates for label height on sm+ so the line
+                aligns with circle centers. On mobile (label hidden) no offset. */}
+            {i < steps.length - 1 && (
+              <div className={`h-0.5 w-12 sm:w-16 mx-1 mb-0 sm:mb-4 transition-all ${
+                s.num < current ? 'bg-brand-500' : 'bg-gray-200'
+              }`} />
+            )}
           </div>
-          {/* Connector — mb-4 compensates for label height on sm+ so the line
-              aligns with circle centers. On mobile (label hidden) no offset. */}
-          {i < steps.length - 1 && (
-            <div className={`h-0.5 w-12 sm:w-16 mx-1 mb-0 sm:mb-4 transition-all ${
-              s.num < current ? 'bg-brand-500' : 'bg-gray-200'
-            }`} />
-          )}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -122,6 +137,9 @@ export default function Register() {
   const [showConfirmPw, setShowConfirmPw]   = useState(false)
   const [agreedToTerms, setAgreedToTerms]   = useState(false)
   const [errors, setErrors]                 = useState({})
+  // Open ProfileModals' Privacy Notice (SettingsModal) from the terms
+  // checkbox so the patient can actually read what they're agreeing to.
+  const [showPrivacy, setShowPrivacy]       = useState(false)
 
   const [form, setForm] = useState({
     firstName: '', middleName: '', lastName: '', suffix: '',
@@ -160,12 +178,29 @@ export default function Register() {
     if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }))
   }
 
+  // Email availability pre-check — fires on blur of the email field so the
+  // patient finds out about "already in use" before spending 2+ minutes on
+  // Steps 2-3 only to be kicked back. Silent failure on network errors.
+  const checkEmailAvailable = async () => {
+    const email = form.email.trim().toLowerCase()
+    if (!EMAIL_RE.test(email)) return
+    try {
+      const methods = await fetchSignInMethodsForEmail(auth, email)
+      if (methods.length > 0) {
+        setErrors(prev => ({ ...prev, email: t('register.errors.emailInUse') }))
+      }
+    } catch { /* network blip — defer to submit-time check */ }
+  }
+
   const handleHospitalIdChange = (e) => {
-    let val = e.target.value.toUpperCase()
-    if (!val.startsWith(HOSPITAL_PREFIX)) val = HOSPITAL_PREFIX
-    // Keep prefix + only digits after, max 5 digits
-    const suffix = val.slice(HOSPITAL_PREFIX.length).replace(/\D/g, '').slice(0, 5)
-    setForm(prev => ({ ...prev, hospitalId: HOSPITAL_PREFIX + suffix }))
+    const val = e.target.value.toUpperCase()
+    // Honor whatever year the patient typed — codes from prior years are
+    // still valid. Fall back to the current-year prefix only if the input
+    // doesn't yet contain a parseable CRMC-YYYY- prefix.
+    const prefixMatch = val.match(ACCESS_CODE_PREFIX_RE)
+    const prefix      = prefixMatch ? `CRMC-${prefixMatch[1]}-` : HOSPITAL_PREFIX
+    const suffix      = val.slice(prefix.length).replace(/\D/g, '').slice(0, 5)
+    setForm(prev => ({ ...prev, hospitalId: prefix + suffix }))
     setHospitalVerified(false)
     if (errors.hospitalId) setErrors(prev => ({ ...prev, hospitalId: '' }))
   }
@@ -224,7 +259,19 @@ export default function Register() {
 
   const handleNext = () => {
     const errs = step === 1 ? validateStep1() : validateStep2()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      // Scroll the first errored field into view + focus it. Without this,
+      // patients on long forms (Step 1's 11 fields) tap Next from the
+      // bottom and see nothing happen because the errors render off-screen.
+      const firstField = Object.keys(errs)[0]
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-field="${firstField}"]`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el?.focus({ preventScroll: true })
+      })
+      return
+    }
     setErrors({})
     setStep(s => s + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -270,7 +317,11 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password)
+      // Normalize email to lowercase for consistent storage. Firebase Auth
+      // is case-insensitive on the auth side, but downstream display and
+      // search queries are case-sensitive against the user doc.
+      const normalizedEmail = form.email.trim().toLowerCase()
+      const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, form.password)
       const uid  = cred.user.uid
       const name = [form.firstName, form.middleName, form.lastName, form.suffix]
         .map(s => s.trim()).filter(Boolean).join(' ')
@@ -279,7 +330,7 @@ export default function Register() {
       const patientId = `PAT-${Date.now().toString().slice(-6)}`
 
       const userData = {
-        name, email: form.email.trim(), role: 'patient',
+        name, email: normalizedEmail, role: 'patient',
         contact: form.contactNumber, address,
         barangay: form.barangay.trim(),
         city:     form.city.trim(),
@@ -328,7 +379,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md sm:max-w-lg">
         <div className="flex items-center gap-2 mb-6">
           <Link to="/" className="text-sm text-gray-400 hover:text-gray-600">← {t('register.backHome')}</Link>
         </div>
@@ -345,8 +396,20 @@ export default function Register() {
             </div>
           </div>
 
-          {/* Step indicator */}
-          <StepIndicator current={step} steps={STEPS} />
+          {/* Step indicator — past steps are clickable so the patient can
+              edit a typo without manually clicking Back N times. */}
+          <StepIndicator current={step} steps={STEPS} onJump={(n) => { setErrors({}); setStep(n) }} />
+
+          {/* All step content + nav buttons live inside one <form> so the
+              keyboard's Go / Done key triggers the appropriate action.
+              On Step 3, an unverified code routes Enter to Verify first
+              so the patient doesn't have to switch hands to a tiny button. */}
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            if (step < 3) handleNext()
+            else if (!hospitalVerified) handleVerify()
+            else handleSubmit()
+          }}>
 
           {/* ── Step 1 — Personal Info ── */}
           {step === 1 && (
@@ -359,15 +422,15 @@ export default function Register() {
               {/* Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step1.firstName')} <span className="text-red-400">*</span></label>
-                  <input className={inputCls('firstName')} placeholder="Juan"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.firstName')} <span className="text-red-400">*</span></label>
+                  <input data-field="firstName" className={inputCls('firstName')} placeholder="Juan"
                     value={form.firstName} onChange={setName('firstName')}
                     autoComplete="given-name" autoCapitalize="words" maxLength={50} />
                   <FieldError msg={errors.firstName} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step1.lastName')} <span className="text-red-400">*</span></label>
-                  <input className={inputCls('lastName')} placeholder="Dela Cruz"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.lastName')} <span className="text-red-400">*</span></label>
+                  <input data-field="lastName" className={inputCls('lastName')} placeholder="Dela Cruz"
                     value={form.lastName} onChange={setName('lastName')}
                     autoComplete="family-name" autoCapitalize="words" maxLength={50} />
                   <FieldError msg={errors.lastName} />
@@ -375,24 +438,24 @@ export default function Register() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step1.middleName')} <span className="text-gray-400 font-normal">{t('register.step1.optional')}</span></label>
-                  <input className={inputCls('middleName')} placeholder="Santos"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.middleName')} <span className="text-gray-400 font-normal">{t('register.step1.optional')}</span></label>
+                  <input data-field="middleName" className={inputCls('middleName')} placeholder="Santos"
                     value={form.middleName} onChange={setName('middleName')}
                     autoComplete="additional-name" autoCapitalize="words" maxLength={50} />
                   <FieldError msg={errors.middleName} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step1.suffix')}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.suffix')}</label>
                   <select className="input" value={form.suffix} onChange={set('suffix')}>
-                    {SUFFIXES.map(s => <option key={s} value={s}>{s || t('register.step1.suffixNone')}</option>)}
+                    {SUFFIXES.map(s => <option key={s} value={s}>{s || `— ${t('register.step1.suffixNone')} —`}</option>)}
                   </select>
                 </div>
               </div>
 
               {/* Contact */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step1.contactNumber')} <span className="text-red-400">*</span></label>
-                <input className={inputCls('contactNumber')} placeholder="09171234567"
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.contactNumber')} <span className="text-red-400">*</span></label>
+                <input data-field="contactNumber" className={inputCls('contactNumber')} placeholder="09171234567"
                   inputMode="numeric" autoComplete="tel" maxLength={11}
                   value={form.contactNumber} onChange={setPhone} />
                 <FieldError msg={errors.contactNumber} />
@@ -403,24 +466,24 @@ export default function Register() {
 
               {/* Address */}
               <div>
-                <p className="text-xs font-medium text-gray-700 mb-1">{t('register.step1.addressLabel')} <span className="text-red-400">*</span></p>
+                <p className="text-sm font-medium text-gray-700 mb-1">{t('register.step1.addressLabel')} <span className="text-red-400">*</span></p>
                 <p className="text-xs text-gray-400 mb-2">{t('register.step1.addressHint')}</p>
                 <div className="space-y-2">
                   <div>
-                    <input className={inputCls('barangay')} placeholder={t('register.step1.barangay')}
+                    <input data-field="barangay" className={inputCls('barangay')} placeholder={t('register.step1.barangay')}
                       value={form.barangay} onChange={set('barangay')}
                       autoComplete="address-line1" autoCapitalize="words" maxLength={80} />
                     <FieldError msg={errors.barangay} />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <input className={inputCls('city')} placeholder={t('register.step1.city')}
+                      <input data-field="city" className={inputCls('city')} placeholder={t('register.step1.city')}
                         value={form.city} onChange={set('city')}
                         autoComplete="address-level2" autoCapitalize="words" maxLength={60} />
                       <FieldError msg={errors.city} />
                     </div>
                     <div>
-                      <input className={inputCls('province')} placeholder={t('register.step1.province')}
+                      <input data-field="province" className={inputCls('province')} placeholder={t('register.step1.province')}
                         value={form.province} onChange={set('province')}
                         autoComplete="address-level1" autoCapitalize="words" maxLength={60} />
                       <FieldError msg={errors.province} />
@@ -440,21 +503,22 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step2.email')} <span className="text-red-400">*</span></label>
-                <input type="email" className={inputCls('email')} placeholder="juan@gmail.com"
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.email')} <span className="text-red-400">*</span></label>
+                <input type="email" data-field="email" className={inputCls('email')} placeholder="juan@gmail.com"
                   inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false}
-                  value={form.email} onChange={set('email')} />
+                  value={form.email} onChange={set('email')} onBlur={checkEmailAvailable} />
                 <FieldError msg={errors.email} />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step2.password')} <span className="text-red-400">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.password')} <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} className={`${inputCls('password')} pr-9`}
+                  <input type={showPw ? 'text' : 'password'} data-field="password" className={`${inputCls('password')} pr-10`}
                     placeholder={t('register.step2.passwordPlaceholder')}
                     autoComplete="new-password"
                     value={form.password} onChange={set('password')} />
-                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  <button type="button"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowPw(p => !p)}>
                     {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -473,13 +537,25 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step2.confirmPassword')} <span className="text-red-400">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.confirmPassword')} <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <input type={showConfirmPw ? 'text' : 'password'} className={`${inputCls('confirmPassword')} pr-9`}
+                  <input type={showConfirmPw ? 'text' : 'password'} data-field="confirmPassword" className={`${inputCls('confirmPassword')} pr-16`}
                     placeholder={t('register.step2.confirmPlaceholder')}
                     autoComplete="new-password"
                     value={form.confirmPassword} onChange={set('confirmPassword')} />
-                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  {/* Live match indicator — only shown once the patient has
+                      typed in BOTH password fields. Green check on match,
+                      red x when they diverge. Saves the "click Next to find
+                      out" round-trip. */}
+                  {form.password && form.confirmPassword && (
+                    <span className="absolute right-10 top-1/2 -translate-y-1/2">
+                      {form.password === form.confirmPassword
+                        ? <MdCheckCircle size={16} className="text-green-500" />
+                        : <MdCancel size={16} className="text-red-400" />}
+                    </span>
+                  )}
+                  <button type="button"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowConfirmPw(p => !p)}>
                     {showConfirmPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -498,9 +574,14 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
-                <div className="flex gap-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
+                {/* Stack vertically on mobile so the input has room to show
+                    "CRMC-YYYY-NNNNN" without truncation. Verify uses the
+                    secondary button style — it's a sub-action, not the page
+                    goal (Create Account is). */}
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
+                    data-field="hospitalId"
                     className={`${inputCls('hospitalId')} flex-1 font-mono ${hospitalVerified ? 'border-green-400 bg-green-50' : ''}`}
                     placeholder={`CRMC-${CURRENT_YEAR}-00001`}
                     value={form.hospitalId}
@@ -523,10 +604,11 @@ export default function Register() {
                       </button>
                     </div>
                   ) : (
-                    <button type="button" className="btn-primary px-4 flex-shrink-0 flex items-center justify-center min-w-[80px]"
+                    <button type="button"
+                      className="btn-secondary px-4 sm:flex-shrink-0 flex items-center justify-center min-h-[40px] sm:min-w-[80px]"
                       onClick={handleVerify} disabled={verifying}>
                       {verifying
-                        ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                         : t('register.step3.verifyBtn')}
                     </button>
                   )}
@@ -543,14 +625,50 @@ export default function Register() {
                 </p>
               </div>
 
-              {/* Terms */}
+              {/* Review summary — collapsed by default. Lets the patient
+                  catch typos in email / phone / name before submitting. */}
+              <details className="border border-gray-100 rounded-xl overflow-hidden group">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between list-none">
+                  <span>{t('register.step3.reviewToggle')}</span>
+                  <MdArrowForward size={16} className="text-gray-400 transition-transform group-open:rotate-90" />
+                </summary>
+                <dl className="px-4 pb-3 pt-1 space-y-2 border-t border-gray-50">
+                  <div>
+                    <dt className="text-xs text-gray-400">{t('register.step1.firstName')}</dt>
+                    <dd className="text-sm text-gray-800">
+                      {[form.firstName, form.middleName, form.lastName, form.suffix].filter(Boolean).join(' ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-400">{t('register.step2.email')}</dt>
+                    <dd className="text-sm text-gray-800 break-all">{form.email || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-400">{t('register.step1.contactNumber')}</dt>
+                    <dd className="text-sm text-gray-800">{form.contactNumber || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-400">{t('register.step1.addressLabel')}</dt>
+                    <dd className="text-sm text-gray-800">
+                      {[form.barangay, form.city, form.province].filter(Boolean).join(', ') || '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </details>
+
+              {/* Terms — Privacy Notice opens an in-page modal so the
+                  patient can actually read what they're agreeing to. */}
               <div className={`border rounded-xl p-3 transition-colors ${errors.terms ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-gray-50'}`}>
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input type="checkbox" className="w-4 h-4 accent-brand-500 flex-shrink-0 mt-0.5"
                     checked={agreedToTerms}
                     onChange={e => { setAgreedToTerms(e.target.checked); if (errors.terms) setErrors(p => ({ ...p, terms: '' })) }} />
                   <span className="text-xs text-gray-600 leading-relaxed">
-                    {t('register.step3.termsAgree')}
+                    <Trans i18nKey="register.step3.termsAgree" components={{
+                      link: <button type="button"
+                        className="text-brand-600 hover:text-brand-700 underline underline-offset-2 font-medium"
+                        onClick={(e) => { e.preventDefault(); setShowPrivacy(true) }} />
+                    }} />
                   </span>
                 </label>
                 <FieldError msg={errors.terms} />
@@ -558,8 +676,8 @@ export default function Register() {
             </div>
           )}
 
-          {/* ── Navigation buttons ── Primary always flex-1 so the page's
-              main action keeps the same visual weight across all 3 steps. */}
+          {/* ── Navigation buttons ── Primary uses type="submit" so the
+              form's onSubmit fires it, enabling Enter / Go on mobile. */}
           <div className="flex gap-3 mt-6">
             {step > 1 && (
               <button type="button" className="btn-secondary flex items-center justify-center gap-1.5"
@@ -568,17 +686,18 @@ export default function Register() {
               </button>
             )}
             {step < 3 ? (
-              <button type="button" className="btn-primary flex-1 flex items-center justify-center gap-1.5"
-                onClick={handleNext}>
+              <button type="submit" className="btn-primary flex-1 flex items-center justify-center gap-1.5">
                 {t('register.next')} <MdArrowForward size={16} />
               </button>
             ) : (
-              <button type="button" className="btn-primary flex-1 flex items-center justify-center gap-1.5"
-                onClick={handleSubmit} disabled={loading}>
+              <button type="submit" className="btn-primary flex-1 flex items-center justify-center gap-1.5"
+                disabled={loading}>
                 {loading ? t('register.creating') : `${t('register.create')} →`}
               </button>
             )}
           </div>
+
+          </form>
 
           <p className="text-center text-xs text-gray-500 mt-4">
             {t('register.haveAccount')}{' '}
@@ -586,6 +705,14 @@ export default function Register() {
           </p>
         </div>
       </div>
+
+      {/* Privacy Notice modal — reuses ProfileModals' SettingsModal which
+          renders the full RA 10173 privacy notice. */}
+      <ProfileModals
+        activeModal={showPrivacy ? 'settings' : null}
+        onClose={() => setShowPrivacy(false)}
+        onSetModal={() => {}}
+      />
     </div>
   )
 }

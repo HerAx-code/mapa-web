@@ -917,8 +917,9 @@
       "verifyBtn":     "I-verify",
       "verified":      "Na-verify",
       "edit":          "I-edit",
+      "reviewToggle":  "Suriin ang inyong detalye bago isumite",
       "noCodeHint":    "Walang access code? Bisitahin ang CRMC Medical Social Services upang masuri at makakuha ng isa.",
-      "termsAgree":    "Sumasang-ayon ako sa Privacy Notice at Terms of Use. Pinapayagan ko ang CRMC na kolektahin ang aking personal na impormasyon para sa layuning medikal."
+      "termsAgree":    "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang CRMC na kolektahin ang aking personal na impormasyon para sa layuning medikal."
     },
     "back":      "Bumalik",
     "next":      "Sunod",

@@ -917,8 +917,9 @@
       "verifyBtn":     "Verify",
       "verified":      "Verified",
       "edit":          "Edit",
+      "reviewToggle":  "Review your details before submitting",
       "noCodeHint":    "Don't have an access code? Visit CRMC Medical Social Services to be assessed and receive one.",
-      "termsAgree":    "I agree to the Privacy Notice and Terms of Use. I consent to CRMC collecting my personal information for medical assistance purposes."
+      "termsAgree":    "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to CRMC collecting my personal information for medical assistance purposes."
     },
     "back":      "Back",
     "next":      "Next",
