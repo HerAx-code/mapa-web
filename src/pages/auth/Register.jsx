@@ -659,6 +659,21 @@ export default function Register() {
                 {!errors.hospitalId && !hospitalVerified && (
                   <p className="text-xs text-gray-400 mt-1">{t('register.step3.accessCodeHint')}</p>
                 )}
+                {/* If the code shows as already used, give the patient an
+                    actionable recovery path — they may be a real holder
+                    whose code was claimed by someone else. Without this
+                    fallback, the patient is stuck with no way forward. */}
+                {errors.hospitalId === t('register.errors.codeUsed') && (
+                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs text-amber-700 mb-2">
+                      {t('register.step3.codeUsedRecovery')}
+                    </p>
+                    <a href={`mailto:mss@crmc.gov.ph?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                      className="text-xs text-amber-700 font-semibold underline underline-offset-2">
+                      {t('register.step3.codeUsedRecoveryAction')} →
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">

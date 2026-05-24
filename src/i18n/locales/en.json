@@ -519,6 +519,7 @@
         "certificateLabel": "Guarantee Letter Issued",
         "certificateNote":  "Your Guarantee Letter has been issued."
       },
+      "waitingDays": "Waiting {{count}}d",
       "banner": {
         "pending":            "Your application has been received. The agency will review it soon — no action needed right now.",
         "interview":          "You have an interview scheduled. Tap to see the details.",
@@ -535,6 +536,12 @@
         "forLabel":     "For",
         "payableLabel": "Payable To",
         "payableHint":  "Present your Guarantee Letter at this provider."
+      },
+      "expiry": {
+        "expiredOn":    "This Guarantee Letter expired on {{date}}.",
+        "expiredDesc":  "It is no longer accepted at the provider. Contact your agency through Messages to request re-issuance.",
+        "expiresIn":    "Expires in {{count}} days.",
+        "expiresDesc":  "Present this Guarantee Letter at the named provider before it expires."
       },
       "timeline": {
         "current":    "Current",
@@ -585,7 +592,8 @@
         "yes": "Yes",
         "no": "No",
         "success": "Document removed.",
-        "failed": "Failed to remove document. Please try again."
+        "failed": "Failed to remove document. Please try again.",
+        "inUseError": "This document is attached to application {{appId}} and cannot be removed while the application is in progress. Withdraw the application first if you need to delete it."
       },
       "rejection": {
         "label": "Reason:",
@@ -920,6 +928,8 @@
       "edit":          "Edit",
       "reviewToggle":  "Review your details before submitting",
       "noCodeHint":    "Don't have an access code? Visit CRMC Medical Social Services to be assessed and receive one.",
+      "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to CRMC Medical Social Services so they can investigate and issue a new one.",
+      "codeUsedRecoveryAction": "Email CRMC Medical Social Services",
       "termsAgree":    "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to CRMC collecting my personal information for medical assistance purposes."
     },
     "back":      "Back",

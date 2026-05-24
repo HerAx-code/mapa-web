@@ -36,6 +36,20 @@ const formatDate = (ts) => {
   return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
+// GL validity matches the agency-side constant (agency/Dashboard.jsx).
+// Surfacing it on the patient view sets the same expectation both sides
+// of the system enforce, so patients aren't surprised by a "GL expired"
+// response at the provider counter.
+const GL_VALIDITY_DAYS = 30
+const glExpiryInfo = (app) => {
+  if (app?.status !== 'certificate') return null
+  const issued = app.approvedAt?.toDate?.() ?? null
+  if (!issued) return null
+  const expiresAt = new Date(issued.getTime() + GL_VALIDITY_DAYS * 86_400_000)
+  const daysLeft  = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000)
+  return { expiresAt, daysLeft, expired: daysLeft < 0 }
+}
+
 // Build stages from application status. Takes `t` so the stage labels/notes
 // come from the locale files (patient.track.stages.*) rather than being
 // hardcoded English.
@@ -348,14 +362,28 @@ export default function TrackStatus() {
                       </div>
 
                       {/* What to do next — shown FIRST before timeline */}
-                      {app.status === 'pending' && (
-                        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                          <p className="text-sm text-blue-700 font-medium flex items-start gap-2">
-                            <MdMailOutline size={16} className="flex-shrink-0 mt-0.5" />
-                            <span>{t('patient.track.banner.pending')}</span>
-                          </p>
-                        </div>
-                      )}
+                      {app.status === 'pending' && (() => {
+                        // #5a — Show "Waiting X days" once the app has been
+                        // sitting > 2 days. Sets expectations; mirrors the
+                        // SLA admins are working toward without making
+                        // promises the system can't enforce.
+                        const submittedMs = app.submittedAt?.toDate?.()?.getTime() ?? Date.now()
+                        const days = Math.floor((Date.now() - submittedMs) / 86_400_000)
+                        const showWaiting = days >= 3
+                        return (
+                          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                            <p className="text-sm text-blue-700 font-medium flex items-start gap-2">
+                              <MdMailOutline size={16} className="flex-shrink-0 mt-0.5" />
+                              <span className="flex-1">{t('patient.track.banner.pending')}</span>
+                              {showWaiting && (
+                                <span className="flex-shrink-0 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
+                                  {t('patient.track.waitingDays', { count: days })}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        )
+                      })()}
                       {app.status === 'interview' && (
                         <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3 flex items-center justify-between gap-3">
                           <p className="text-sm text-purple-700 font-medium flex items-start gap-2 flex-1">
@@ -382,15 +410,35 @@ export default function TrackStatus() {
                           </button>
                         </div>
                       )}
-                      {(app.status === 'approved' || app.status === 'certificate') && app.approvedAmount != null && (
-                        <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-3">
-                          <p className="text-sm text-green-700 font-medium mb-2 flex items-start gap-2">
+                      {(app.status === 'approved' || app.status === 'certificate') && app.approvedAmount != null && (() => {
+                        // #6 — Patient-side GL expiry visibility. The agency
+                        // already enforces a 30-day window; without surfacing
+                        // it here, the patient finds out at the provider
+                        // counter that their GL is expired. Show:
+                        // - red "Expired on X" when past validity
+                        // - amber "Expires in N days" when ≤ 7 days remain
+                        const expiry = glExpiryInfo(app)
+                        return (
+                        <div className={`mb-4 rounded-xl p-3 border ${expiry?.expired ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                          <p className={`text-sm font-medium mb-2 flex items-start gap-2 ${expiry?.expired ? 'text-red-700' : 'text-green-700'}`}>
                             {app.status === 'certificate' && app.certificateUploaded
                               ? <><MdCelebration size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certReady')}</span></>
                               : app.status === 'certificate'
                                 ? <><MdAssignment size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certPreparing')}</span></>
                                 : <><MdCheckCircle size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.approvedPreparing')}</span></>}
                           </p>
+                          {expiry?.expired && (
+                            <div className="mb-2 -mt-1 text-xs text-red-700 bg-white/60 border border-red-200 rounded-lg px-2.5 py-1.5">
+                              <strong>{t('patient.track.expiry.expiredOn', { date: formatDate(expiry.expiresAt) })}</strong>
+                              <p className="mt-0.5 text-red-600 leading-relaxed">{t('patient.track.expiry.expiredDesc')}</p>
+                            </div>
+                          )}
+                          {!expiry?.expired && expiry?.daysLeft != null && expiry.daysLeft <= 7 && (
+                            <div className="mb-2 -mt-1 text-xs text-amber-700 bg-white/60 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                              <strong>{t('patient.track.expiry.expiresIn', { count: expiry.daysLeft })}</strong>
+                              <p className="mt-0.5 text-amber-600 leading-relaxed">{t('patient.track.expiry.expiresDesc')}</p>
+                            </div>
+                          )}
                           {/* Amount dominates — full-width hero on top, supporting
                               metadata as smaller cards below. The approved peso
                               figure is the headline of the patient's journey. */}
@@ -416,7 +464,8 @@ export default function TrackStatus() {
                             )}
                           </div>
                         </div>
-                      )}
+                        )
+                      })()}
                       {app.status === 'approved' && app.approvedAmount == null && (
                         <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-3">
                           <p className="text-sm text-green-700 font-medium flex items-start gap-2">

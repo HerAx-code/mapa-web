@@ -519,6 +519,7 @@
         "certificateLabel": "Naibigay na ang Guarantee Letter",
         "certificateNote":  "Naibigay na ang inyong Guarantee Letter."
       },
+      "waitingDays": "Naghihintay {{count}}d",
       "banner": {
         "pending":            "Natanggap na ang inyong aplikasyon. Susuriin ito ng ahensya sa lalong madaling panahon — walang kailangang gawin sa ngayon.",
         "interview":          "May naka-iskedyul kayong panayam. I-tap para tingnan ang mga detalye.",
@@ -535,6 +536,12 @@
         "forLabel":     "Para sa",
         "payableLabel": "Babayaran kay",
         "payableHint":  "Iharap ang inyong Guarantee Letter sa provider na ito."
+      },
+      "expiry": {
+        "expiredOn":    "Nag-expire na ang Guarantee Letter na ito noong {{date}}.",
+        "expiredDesc":  "Hindi na ito tinatanggap sa provider. Makipag-ugnayan sa ahensya sa Messages upang humingi ng bagong issuance.",
+        "expiresIn":    "Mag-e-expire sa {{count}} araw.",
+        "expiresDesc":  "Iharap ang Guarantee Letter na ito sa nakasaad na provider bago mag-expire."
       },
       "timeline": {
         "current":    "Kasalukuyan",
@@ -585,7 +592,8 @@
         "yes": "Oo",
         "no": "Hindi",
         "success": "Natanggal ang dokumento.",
-        "failed": "Nabigong tanggalin ang dokumento. Pakisubukan muli."
+        "failed": "Nabigong tanggalin ang dokumento. Pakisubukan muli.",
+        "inUseError": "Ang dokumentong ito ay nakakabit sa aplikasyon {{appId}} at hindi pwedeng tanggalin habang nasa proseso. I-withdraw muna ang aplikasyon kung kailangan itong burahin."
       },
       "rejection": {
         "label": "Dahilan:",
@@ -920,6 +928,8 @@
       "edit":          "I-edit",
       "reviewToggle":  "Suriin ang inyong detalye bago isumite",
       "noCodeHint":    "Walang access code? Bisitahin ang CRMC Medical Social Services upang masuri at makakuha ng isa.",
+      "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa CRMC Medical Social Services para masuri at mabigyan ng bago.",
+      "codeUsedRecoveryAction": "I-email ang CRMC Medical Social Services",
       "termsAgree":    "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang CRMC na kolektahin ang aking personal na impormasyon para sa layuning medikal."
     },
     "back":      "Bumalik",

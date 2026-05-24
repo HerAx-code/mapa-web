@@ -478,6 +478,26 @@ export default function Documents() {
 
   const handleDelete = async (id) => {
     try {
+      // #8 — Block deletion if the document is currently attached to a
+      // non-terminal application. Without this, the patient can delete a
+      // doc that the agency is mid-review of, leaving the DocViewerModal
+      // fetch with a missing reference and stalling review.
+      const appsSnap = await getDocs(query(
+        collection(db, 'applications'),
+        where('patientId', '==', user.uid),
+      ))
+      const blockingApp = appsSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .find(a =>
+          !['rejected', 'certificate'].includes(a.status) &&
+          (a.attachedDocuments ?? []).some(d => d.documentId === id)
+        )
+      if (blockingApp) {
+        toast.error(t('patient.documents.delete.inUseError', { appId: blockingApp.appId }))
+        setConfirmDeleteId(null)
+        return
+      }
+
       // Delete both metadata and content to fully remove the document
       await Promise.all([
         deleteDoc(doc(db, 'documents', id)),

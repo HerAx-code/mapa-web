@@ -505,7 +505,20 @@ export default function ApplicationDetail() {
     toast.success('Application resumed. Back in the active queue.')
   }
 
+  // #13 — Reject pasted meet links that aren't a recognized video-conference
+  // URL. Without validation, a coordinator pasting `meet.google.com/abc`
+  // (no scheme) creates a broken link the patient interprets as a relative
+  // route, breaking the most time-sensitive action in the journey.
+  const isValidMeetLink = (link) => {
+    if (!link) return true   // optional — empty is OK at create time
+    return /^https:\/\/(meet\.google\.com|.*\.zoom\.us|teams\.microsoft\.com|teams\.live\.com)\//i.test(link.trim())
+  }
+
   const handleScheduleInterview = async (form) => {
+    if (!isValidMeetLink(form.link)) {
+      toast.error('Meet link must be a valid https:// URL (Google Meet, Zoom, or Teams).')
+      return
+    }
     const extra = {
       interviewDate: form.date,
       interviewTime: form.time,
@@ -524,6 +537,10 @@ export default function ApplicationDetail() {
   }
 
   const handleRescheduleInterview = async (form) => {
+    if (!isValidMeetLink(form.link)) {
+      toast.error('Meet link must be a valid https:// URL (Google Meet, Zoom, or Teams).')
+      return
+    }
     const ok = await updateStatus('interview', {
       interviewDate: form.date,
       interviewTime: form.time,
