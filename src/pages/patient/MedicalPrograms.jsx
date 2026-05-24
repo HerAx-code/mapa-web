@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { MdSearch, MdLocationOn, MdSchedule, MdCheckCircle, MdClose, MdWarning, MdHourglassEmpty, MdCancel, MdHourglassTop, MdLocalHospital } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import {
-  collection, query, where, onSnapshot, getDocs, getDoc,
-  addDoc, updateDoc, doc, serverTimestamp,
+  collection, query, where, onSnapshot, getDocs,
+  doc, serverTimestamp, runTransaction,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -74,21 +74,17 @@ function ApplyModal({ agency, onClose }) {
   const missingCount = reqStatus.filter(r => r.missing).length
 
   const handleSubmit = async () => {
+    // #11 — Idempotency guard: prevent double-submit on slow phones where
+    // React's disabled-prop re-render lags behind a double-tap. Without
+    // this, two app docs + two slot decrements can fire.
+    if (submitting) return
+
     if (alreadyApplied)  { toast.error(t('patient.apply.errAlreadyApplied')); return }
     if (activeElsewhere) { toast.error(t('patient.apply.errActiveElsewhere', { agency: activeElsewhere.agencyName })); return }
     if (isFull)         { toast.error(t('patient.apply.errNoSlots')); return }
 
     setSubmitting(true)
     try {
-      // Re-check slots in real time
-      const agencySnap = await getDoc(doc(db, 'agencies', agency.id))
-      const currentRemaining = agencySnap.data()?.slots?.remaining ?? 0
-      if (currentRemaining <= 0) {
-        toast.error(t('patient.apply.errSpotsRanOut'))
-        setSubmitting(false)
-        return
-      }
-
       // Snapshot patient's current documents at submission time
       const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
       const attachedDocuments = docsSnap.docs.map(d => ({
@@ -103,35 +99,54 @@ function ApplyModal({ agency, onClose }) {
       const random = Math.random().toString(36).slice(2, 5).toUpperCase()
       const appId  = `APP-${year}-${String(Date.now()).slice(-6)}${random}`
 
-      // Create application document
-      await addDoc(collection(db, 'applications'), {
-        appId,
-        patientId:      user.uid,
-        patientName:    user.name ?? '',
-        patientContact: user.contact ?? '',
-        patientAddress: user.address ?? '',
-        agencyId:       agency.id,
-        agencyName:     agency.name,
-        agencyColor:    agency.color    ?? 'bg-gray-500',
-        agencyInitials: agency.initials ?? agency.name?.slice(0, 2).toUpperCase(),
-        status:             'pending',
-        submittedAt:        serverTimestamp(),
-        updatedAt:          serverTimestamp(),
-        attachedDocuments,
-        stages: [
-          { key: 'submitted',   label: 'Application Submitted', done: true,  active: false, date: new Date().toLocaleDateString(), note: 'Your application was successfully submitted.'           },
-          { key: 'docs',        label: 'Document Verification', done: false, active: true,  date: null, note: 'Upload your required documents. The administrator will verify them before your application proceeds.' },
-          { key: 'reviewing',   label: 'Under Agency Review',   done: false, active: false, date: null, note: 'The agency is reviewing your application.'                  },
-          { key: 'interview',   label: 'Interview Scheduled',   done: false, active: false, date: null, note: 'You will be scheduled for a video interview.'               },
-          { key: 'approved',    label: 'Application Approved',  done: false, active: false, date: null, note: 'Your application has been approved.'                        },
-          { key: 'certificate', label: 'Guarantee Letter Issued', done: false, active: false, date: null, note: 'Your Guarantee Letter will be issued.' },
-        ],
-      })
+      // #3 — Transactional slot decrement + app create. Without the
+      // transaction, two patients passing the in-modal `remaining > 0`
+      // check could both decrement, oversold by one. runTransaction
+      // re-reads inside the boundary and aborts cleanly if the slot
+      // disappeared between modal open and Submit.
+      try {
+        await runTransaction(db, async (tx) => {
+          const agencyRef  = doc(db, 'agencies', agency.id)
+          const agencySnap = await tx.get(agencyRef)
+          const remaining  = agencySnap.data()?.slots?.remaining ?? 0
+          if (remaining <= 0) throw new Error('NO_SLOTS')
 
-      // Deduct slot
-      await updateDoc(doc(db, 'agencies', agency.id), {
-        'slots.remaining': currentRemaining - 1,
-      })
+          // addDoc inside a transaction: pre-allocate the ref so the
+          // generated ID is known to both the set + downstream code.
+          const appRef = doc(collection(db, 'applications'))
+          tx.set(appRef, {
+            appId,
+            patientId:      user.uid,
+            patientName:    user.name ?? '',
+            patientContact: user.contact ?? '',
+            patientAddress: user.address ?? '',
+            agencyId:       agency.id,
+            agencyName:     agency.name,
+            agencyColor:    agency.color    ?? 'bg-gray-500',
+            agencyInitials: agency.initials ?? agency.name?.slice(0, 2).toUpperCase(),
+            status:             'pending',
+            submittedAt:        serverTimestamp(),
+            updatedAt:          serverTimestamp(),
+            attachedDocuments,
+            stages: [
+              { key: 'submitted',   label: 'Application Submitted', done: true,  active: false, date: new Date().toLocaleDateString(), note: 'Your application was successfully submitted.'           },
+              { key: 'docs',        label: 'Document Verification', done: false, active: true,  date: null, note: 'Upload your required documents. The administrator will verify them before your application proceeds.' },
+              { key: 'reviewing',   label: 'Under Agency Review',   done: false, active: false, date: null, note: 'The agency is reviewing your application.'                  },
+              { key: 'interview',   label: 'Interview Scheduled',   done: false, active: false, date: null, note: 'You will be scheduled for a video interview.'               },
+              { key: 'approved',    label: 'Application Approved',  done: false, active: false, date: null, note: 'Your application has been approved.'                        },
+              { key: 'certificate', label: 'Guarantee Letter Issued', done: false, active: false, date: null, note: 'Your Guarantee Letter will be issued.' },
+            ],
+          })
+          tx.update(agencyRef, { 'slots.remaining': remaining - 1 })
+        })
+      } catch (txErr) {
+        if (String(txErr.message) === 'NO_SLOTS') {
+          toast.error(t('patient.apply.errSpotsRanOut'))
+          setSubmitting(false)
+          return
+        }
+        throw txErr
+      }
 
       // Show success screen inside modal — patient reads at their own pace
       setSubmittedAppId(appId)

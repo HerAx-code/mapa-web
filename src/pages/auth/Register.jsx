@@ -4,8 +4,8 @@ import {
   MdShield, MdVerified, MdVisibility, MdVisibilityOff,
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
 } from 'react-icons/md'
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { auth, db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation, Trans } from 'react-i18next'
@@ -312,16 +312,22 @@ export default function Register() {
   // ── Submit ──────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
+    // #11 — Idempotency guard: prevent double-submit on slow phones where
+    // React's disabled-prop re-render lags behind a double-tap.
+    if (loading) return
+
     const errs = validateStep3()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
     setLoading(true)
+    let createdAuthUser = null   // tracked for rollback on Firestore failure
     try {
       // Normalize email to lowercase for consistent storage. Firebase Auth
       // is case-insensitive on the auth side, but downstream display and
       // search queries are case-sensitive against the user doc.
       const normalizedEmail = form.email.trim().toLowerCase()
       const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, form.password)
+      createdAuthUser = cred.user
       const uid  = cred.user.uid
       const name = [form.firstName, form.middleName, form.lastName, form.suffix]
         .map(s => s.trim()).filter(Boolean).join(' ')
@@ -342,13 +348,43 @@ export default function Register() {
         createdAt: serverTimestamp(),
       }
 
-      await setDoc(doc(db, 'users', uid), userData)
-
-      await updateDoc(doc(db, 'hospitalIds', form.hospitalId), {
-        status: 'used', usedBy: name, patId: uid,
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString(),
-      })
+      // #2 — Transactional hospital ID claim: re-read status INSIDE the
+      // transaction and abort if another patient won the race between
+      // the patient's Verify click and Submit. Prevents a second patient's
+      // claim from silently overwriting the first patient's record.
+      try {
+        await runTransaction(db, async (tx) => {
+          const hidRef  = doc(db, 'hospitalIds', form.hospitalId)
+          const hidSnap = await tx.get(hidRef)
+          if (!hidSnap.exists()) throw new Error('CODE_NOT_FOUND')
+          if (hidSnap.data().status !== 'available') throw new Error('CODE_USED')
+          tx.set(doc(db, 'users', uid), userData)
+          tx.update(hidRef, {
+            status: 'used', usedBy: name, patId: uid,
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString(),
+          })
+        })
+      } catch (txErr) {
+        // #1 — Roll back the orphan Auth account so the patient can retry
+        // (e.g. with a different access code) without their email being
+        // permanently "already in use" with no profile attached.
+        try { await deleteUser(createdAuthUser) } catch {}
+        createdAuthUser = null
+        if (String(txErr.message) === 'CODE_USED') {
+          setErrors({ hospitalId: t('register.errors.codeUsed') })
+          setHospitalVerified(false)
+          setStep(3)
+          return
+        }
+        if (String(txErr.message) === 'CODE_NOT_FOUND') {
+          setErrors({ hospitalId: t('register.errors.codeNotFound') })
+          setHospitalVerified(false)
+          setStep(3)
+          return
+        }
+        throw txErr
+      }
 
       // Immediately sync role into AuthContext so PrivateRoute sees 'patient'
       // before onAuthStateChanged re-reads the doc (timing fix)
@@ -361,6 +397,12 @@ export default function Register() {
       toast.success(t('register.toast.welcome', { name: form.firstName }))
       navigate('/patient/dashboard')
     } catch (err) {
+      // #1 — If Auth account was created before this throw and not already
+      // rolled back inside the transaction handler above, drop it so the
+      // patient can retry registration cleanly.
+      if (createdAuthUser) {
+        try { await deleteUser(createdAuthUser) } catch {}
+      }
       if (err.code === 'auth/email-already-in-use') {
         setErrors({ email: t('register.errors.emailInUse') })
         setStep(2)
