@@ -1,4 +1,16 @@
 {
+  "pwa": {
+    "installPrompt": {
+      "title":   "I-install ang MAPA para sa mas mabilis na access",
+      "desc":    "Madaling makapunta sa inyong mga aplikasyon mula sa home screen, kahit mabagal ang koneksyon.",
+      "install": "I-install",
+      "notNow":  "Hindi muna",
+      "iosHint": "Pindutin ang Share button sa ibaba, pagkatapos piliin ang 'Add to Home Screen' upang i-install ang MAPA."
+    },
+    "offlineBanner": {
+      "message": "Wala kayong koneksyon sa internet. Ang pagsumite ng mga form ay gagana muli kapag bumalik na ang koneksyon."
+    }
+  },
   "common": {
     "appName": "MAPA",
     "appFull": "Medical Assistance Portal Access",

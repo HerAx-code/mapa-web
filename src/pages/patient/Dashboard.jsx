@@ -9,6 +9,7 @@ import {
   MdOpenInNew, MdCheck,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
+import InstallPrompt from '../../components/InstallPrompt'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   collection, query, where, orderBy, onSnapshot, getDocs,
@@ -528,6 +529,13 @@ export default function PatientDashboard() {
             </div>
           )}
         </div>
+
+        {/* PWA install prompt — bottom of dashboard. The component
+            handles its own visibility (only fires when the browser
+            says the app is installable, and dismisses to sessionStorage
+            so it doesn't nag mid-session). Logged-in patients only;
+            unauthenticated visitors never see this. */}
+        <InstallPrompt />
 
       </div>
     </Layout>

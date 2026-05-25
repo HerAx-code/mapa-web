@@ -23,6 +23,7 @@ import { ROLES, ROLE_LABEL_SHORT } from '../utils/constants'
 import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
+import OfflineBanner from './OfflineBanner'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
@@ -1160,6 +1161,11 @@ export default function Layout({ children, breadcrumb }) {
             )}
           </div>
         </header>
+
+        {/* PWA offline detection — visible across all roles + all pages.
+            Patients on flaky mobile connections need to know writes will
+            fail BEFORE they tap submit. */}
+        <OfflineBanner />
 
         {/* ── Announcement banners ─────────────────────────────────── */}
         {banners.map(b => {

@@ -3,9 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/mapa-logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>MAPA — Medical Assistance Portal Access | CRMC</title>
+
+    <!-- PWA: theme color drives the Android status bar tint when the app is
+         installed and opened in standalone mode. -->
+    <meta name="theme-color" content="#3b82f6" />
+
+    <!-- iOS-specific PWA capability flags. iOS doesn't read manifest fully;
+         these meta tags are how it gets told the app is installable. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MAPA" />
+
+    <!-- Description shown in Play Store / Add-to-Home-Screen previews. -->
+    <meta name="description" content="Apply for medical financial assistance at Cotabato Regional Medical Center. Patient portal for documents, applications, and Guarantee Letters." />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />

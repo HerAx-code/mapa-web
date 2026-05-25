@@ -1,4 +1,16 @@
 {
+  "pwa": {
+    "installPrompt": {
+      "title":   "Install MAPA for faster access",
+      "desc":    "Get to your applications from your home screen, even on a slow connection.",
+      "install": "Install",
+      "notNow":  "Not now",
+      "iosHint": "Tap the Share button below, then choose 'Add to Home Screen' to install MAPA."
+    },
+    "offlineBanner": {
+      "message": "You're offline. Submitting forms will work again when you're back online."
+    }
+  },
   "common": {
     "appName": "MAPA",
     "appFull": "Medical Assistance Portal Access",
