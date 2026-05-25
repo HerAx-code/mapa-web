@@ -39,6 +39,13 @@ export default defineConfig({
         // layer is the single source of truth for data — caching at
         // the SW level too would conflict.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Activate new SW immediately on deploy instead of waiting for
+        // every MAPA tab to close. Without this, patients see the old
+        // cached version after a refresh and assume the new feature
+        // didn't ship. clientsClaim takes control of any open tabs so
+        // they pick up the new SW without a tab-close dance.
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\//,
