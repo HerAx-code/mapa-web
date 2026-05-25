@@ -171,6 +171,7 @@
   },
   "shell": {
     "menu": "Menu",
+    "more": "Higit pa",
     "systemAdmin": "System Admin",
     "operations": "Operations",
     "notifs": {

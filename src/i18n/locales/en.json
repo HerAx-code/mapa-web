@@ -171,6 +171,7 @@
   },
   "shell": {
     "menu": "Menu",
+    "more": "More",
     "systemAdmin": "System Admin",
     "operations": "Operations",
     "notifs": {

@@ -24,6 +24,7 @@ import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
 import OfflineBanner from './OfflineBanner'
+import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
@@ -1205,9 +1206,24 @@ export default function Layout({ children, breadcrumb }) {
         })}
 
         {/* ── Page content ─────────────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto flex flex-col">
+        {/* pb-20 on patient mobile leaves room for the BottomTabBar
+            (56px bar + safe-area). Other roles + lg+ get no extra padding. */}
+        <main className={`flex-1 overflow-y-auto flex flex-col ${
+          user?.role === ROLES.PATIENT ? 'pb-20 lg:pb-0' : ''
+        }`}>
           {children}
         </main>
+
+        {/* Mobile-only bottom tab bar — patient role only. Agency / admin
+            keep the sidebar+hamburger pattern because their surfaces are
+            web-only per CLAUDE.md. The More tab opens the existing
+            sidebar drawer so we don't maintain a second nav surface. */}
+        {user?.role === ROLES.PATIENT && (
+          <BottomTabBar
+            unreadMessages={totalUnreadMessages}
+            onMoreClick={() => setSidebarOpen(true)}
+          />
+        )}
       </div>
     </div>
   )
