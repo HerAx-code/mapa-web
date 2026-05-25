@@ -574,7 +574,7 @@ export default function MedicalPrograms() {
             </p>
           )}
           {!loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
               {filtered.map(agency => {
                 const slots  = agency.slots ?? { total: 0, remaining: 0 }
                 const status = SLOT_STATUS(slots.remaining, slots.total)
@@ -609,16 +609,17 @@ export default function MedicalPrograms() {
                 )
 
                 return (
-                  <div key={agency.id} className={`card hover:shadow-md transition-shadow ${isFull ? 'opacity-70' : ''}`}>
+                  <div key={agency.id} className={`card hover:shadow-md transition-shadow min-w-0 overflow-hidden ${isFull ? 'opacity-70' : ''}`}>
 
                     {/* ── Mobile compact layout (< sm) ──
-                        Horizontal layout with Apply button at top-right
-                        for immediate access. 1-line description + inline
-                        badges instead of vertical stack. Result: ~120px
-                        card height vs ~280px on the desktop variant, so
-                        a patient sees 4+ programs per screen instead of 2. */}
-                    <div className="sm:hidden p-4 flex flex-col gap-2">
-                      <div className="flex items-start gap-3">
+                        Apply button gets its own full-width row at the
+                        bottom so the icon-name row never has to compete
+                        with the button for horizontal space. All inner
+                        children are explicitly w-full + min-w-0 so a long
+                        sentence or wide badge cluster can't force the
+                        card past the viewport. */}
+                    <div className="sm:hidden p-4 w-full min-w-0">
+                      <div className="flex items-start gap-3 mb-2 w-full min-w-0">
                         <div className={`flex-shrink-0 w-10 h-10 ${agency.color} rounded-xl text-white font-bold text-xs flex items-center justify-center`}>
                           {agency.initials}
                         </div>
@@ -628,16 +629,21 @@ export default function MedicalPrograms() {
                             <span className={status.bar.replace('bg-', 'text-')}>●</span> {slots.remaining}/{slots.total} spots · {agency.processingTime}
                           </p>
                         </div>
-                        {actionButton}
                       </div>
                       {agency.description && (
-                        <p className="text-xs text-gray-500 line-clamp-2 break-words leading-snug">{agency.description}</p>
+                        <p className="text-xs text-gray-500 line-clamp-2 break-words leading-snug mb-2 w-full min-w-0">{agency.description}</p>
                       )}
                       {types.length > 0 && (
-                        <p className="text-xs text-brand-600 truncate">
+                        <p className="text-xs text-brand-600 truncate mb-3 w-full min-w-0">
                           {types.slice(0, 3).join(' · ')}{types.length > 3 ? ` · +${types.length - 3}` : ''}
                         </p>
                       )}
+                      {/* Apply button on its own row, full width — eliminates
+                          any chance of flex sizing competition with the
+                          name/spots column. */}
+                      <div className="w-full min-w-0 flex justify-end">
+                        {actionButton}
+                      </div>
                     </div>
 
                     {/* ── Desktop / tablet detailed layout (sm+) ──
