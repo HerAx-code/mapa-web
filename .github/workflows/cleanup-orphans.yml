@@ -1,0 +1,62 @@
+name: Cleanup Firestore orphans
+
+# Runs the orphan-document cleanup script on a schedule + on demand.
+# Audits documentContents/{id} that have no matching documents/{id}
+# (usually leftovers from failed delete races — each is ~900KB of
+# permanent Firestore garbage).
+#
+# Setup required (one-time, done by the project owner):
+#   1. Generate a Firebase service account key at:
+#      Firebase Console → Project Settings → Service accounts → Generate new private key
+#   2. Paste the entire JSON content into a GitHub repo secret named
+#      FIREBASE_SERVICE_ACCOUNT (Settings → Secrets and variables → Actions → New)
+#   3. The first scheduled run is DRY-RUN (audit only — no deletes).
+#      To enable deletes, dispatch manually with `delete=true` or change the
+#      `--delete` flag on the schedule step.
+
+on:
+  schedule:
+    # Every Sunday at 03:00 UTC (11:00 AM Manila). Audit-only.
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      delete:
+        description: 'Actually delete orphans (false = dry-run only)'
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install firebase-admin
+        run: npm install firebase-admin --no-save
+
+      - name: Write service account credentials
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA_JSON" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT secret is not set. See workflow header for setup."
+            exit 1
+          fi
+          echo "$SA_JSON" > /tmp/sa.json
+
+      - name: Run cleanup (dry-run on schedule, optional delete on dispatch)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.delete }}" = "true" ]; then
+            node scripts/cleanup-orphans.js --delete
+          else
+            node scripts/cleanup-orphans.js
+          fi

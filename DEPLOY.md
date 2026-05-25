@@ -91,3 +91,129 @@ firebase deploy --only hosting
 ```
 
 Both work for thesis/pilot scale. Vercel wins on deploy previews per branch; Firebase Hosting wins on tool consolidation.
+
+---
+
+## Pre-Pilot Operational Runbook
+
+Items that aren't shipped by `git push` — you (or whoever runs CRMC IT)
+have to do these manually before the first patient onboards.
+
+### A. Deploy Firestore rules + indexes
+
+Frontend deploys via Vercel push, but Firestore rules and composite
+indexes live on Firebase and need a separate push:
+
+```bash
+npm i -g firebase-tools     # one-time install
+firebase login              # one-time browser auth
+firebase use mapa-crmc      # link to the project
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Re-run **only** the `firebase deploy --only firestore:rules,firestore:indexes`
+command any time you edit `firestore.rules` or `firestore.indexes.json`.
+
+**Rules pending deploy as of this writing:** the `notificationErrors`
+collection rule (commit 252f47a) and the `hospitalIds` agency-cooldown
+update rule (commit fdc9b74). Without deploying these, the notify
+error log will silently fail and the hospital-ID cooldown writes will
+hit PERMISSION_DENIED at agency approval time.
+
+### B. Email deliverability test
+
+Firebase Auth sends from `noreply@mapa-crmc.firebaseapp.com` by default.
+Some Filipino email providers / corporate filters block this sender.
+**Before the first real patient registers**, send yourself a real reset:
+
+1. Open https://mapa-web-six.vercel.app/login
+2. Click **Forgot password?**
+3. Enter your own email (one you can check)
+4. Watch for the email — confirm it lands in **Inbox**, not Spam, not
+   silently rejected
+5. If it lands in Spam:
+   - Firebase Console → Authentication → Templates → Customize the
+     sender domain to one your DNS controls (e.g. `auth.mapa-crmc.com`)
+   - Add SPF + DKIM records per Firebase's guide
+   - Retest
+
+If you skip this, patients who can't log in will email support saying
+"the reset link never arrived" and you'll have no way to confirm
+whether it was sent.
+
+### C. Enable Firestore Point-in-Time Recovery (PITR) backups
+
+Default Firestore retention is the present moment only — there is no
+undo for accidental writes / deletes. PITR keeps a 7-day rewind window.
+
+1. Firebase Console → Firestore Database → **Backups** tab
+2. Enable **Point-in-time recovery** for the default database
+3. Cost: ~$0.18/GB/month plus restore-time compute. For pilot data
+   volumes this is a few cents/month — buy the insurance.
+
+You'll also want a periodic export:
+
+```bash
+# One-time: create a GCS bucket for backups
+gsutil mb -p mapa-crmc -l asia-southeast1 gs://mapa-crmc-firestore-backups/
+
+# Manual export (run weekly via Cloud Scheduler when you're ready):
+gcloud firestore export \
+  gs://mapa-crmc-firestore-backups/$(date +%Y-%m-%d) \
+  --project mapa-crmc
+```
+
+### D. Schedule the orphan-document cleanup
+
+The cleanup script at `scripts/cleanup-orphans.js` finds
+`documentContents/{id}` entries with no matching `documents/{id}`
+(orphans from failed delete races; each is ~900KB of permanent waste).
+
+**Already wired** as a GitHub Actions workflow at
+`.github/workflows/cleanup-orphans.yml`. To activate:
+
+1. Firebase Console → Project Settings → **Service accounts** →
+   Generate new private key. Download the JSON file.
+2. GitHub → repo → Settings → **Secrets and variables → Actions** →
+   New repository secret:
+   - Name: `FIREBASE_SERVICE_ACCOUNT`
+   - Value: paste the entire contents of the downloaded JSON
+3. The workflow runs every Sunday 11:00 AM Manila in **dry-run mode**
+   by default — it audits and reports orphans without deleting.
+4. Once you've reviewed a few runs and trust the logic, dispatch the
+   workflow manually with `delete=true` to actually clean up:
+   GitHub → Actions → "Cleanup Firestore orphans" → Run workflow →
+   set `delete` to `true`.
+
+**Delete the JSON file from your local machine** after pasting into
+the GitHub secret. Never commit it.
+
+### E. Add Vercel deploy URL to Firebase Auth authorized domains
+
+Already in step 3 of the initial setup, but worth re-confirming any
+time you add a custom domain or a new preview URL where login should
+work:
+
+- Firebase Console → Authentication → Settings → Authorized domains
+- Verify `mapa-web-six.vercel.app` is listed
+- Add your custom domain if you've pointed one
+- `auth/unauthorized-domain` errors at login are always caused by a
+  missing entry here
+
+### F. Final pre-pilot smoke test
+
+After A–E above are done, run an end-to-end test as a real patient:
+
+1. Use a fresh access code from CRMC Medical Social Services
+2. Register a real (test) patient account
+3. Upload one document
+4. Apply to a test agency
+5. Switch to agency role → approve the application
+6. Print + mark issued + upload signed scan
+7. Switch back to patient → confirm GL is downloadable
+8. Reverse the approval as agency → confirm cooldown is enforced on
+   re-attempt
+9. Test password reset on the patient account from /login
+
+If any step misbehaves, that's a real bug. If they all work, you're
+pilot-ready.
