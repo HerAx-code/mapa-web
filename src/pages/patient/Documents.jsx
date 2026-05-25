@@ -522,7 +522,12 @@ export default function Documents() {
 
   return (
     <Layout breadcrumb={t('patient.documents.title')}>
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+      {/* Same hardening pattern as Find Programs: hard viewport cap +
+          overflow-x-clip so a single overflowing descendant (e.g. a
+          long camera-generated filename like
+          '17797344853334501121859571609921') can't push the whole
+          page wider than the viewport. */}
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-2xl overflow-x-clip">
 
         <div className="flex items-start justify-between mb-5">
           <div>
@@ -636,11 +641,18 @@ export default function Documents() {
                     <MdDescription size={16} className="text-gray-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{item.name}</p>
-                    <p className="text-sm text-gray-400">
-                      {item.fileName && `${item.fileName} · `}
-                      {item.size} · {item.date}
-                    </p>
+                    <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                    {/* Filename on its own line with truncate — camera apps
+                        on Android often generate long timestamp-based names
+                        with no spaces (e.g. '17797344853334501121859571609992'),
+                        which without truncate would push the row wider than
+                        the viewport. Size + date stay on a separate line so
+                        the at-a-glance metadata is never hidden by a long
+                        filename. */}
+                    {item.fileName && (
+                      <p className="text-xs text-gray-400 truncate">{item.fileName}</p>
+                    )}
+                    <p className="text-xs text-gray-400">{item.size} · {item.date}</p>
                   </div>
                   <span className={`badge ${vis.badge} flex items-center gap-1 flex-shrink-0`}>
                     <Icon size={11} className={vis.iconColor} />
