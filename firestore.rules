@@ -251,6 +251,23 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── mail ──────────────────────────────────────────────────────────────────
+    // Write-only queue read by the Firebase 'Trigger Email from Firestore'
+    // extension. The extension runs with Admin SDK credentials and
+    // bypasses these rules entirely, so it can still read the docs to
+    // dispatch via SMTP. Client-side reads are blocked because mail
+    // docs carry recipient email addresses + body text (PII-adjacent).
+    //
+    // notify() in src/utils/notifications.js writes to this collection
+    // alongside the in-app notifications/{uid}/items write. If the
+    // extension isn't installed yet, docs pile up harmlessly; once the
+    // extension is configured in the Firebase Console it will start
+    // dispatching backlogged docs immediately.
+    match /mail/{mailId} {
+      allow create:               if isAuth();
+      allow read, update, delete: if isAdmin();
+    }
+
     // ── notificationErrors ─────────────────────────────────────────────────────
     // Operational log written by the notify() utility when a delivery
     // fails. Without it, delivery failures are invisible until patients
