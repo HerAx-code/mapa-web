@@ -1248,13 +1248,11 @@ export default function Layout({ children, breadcrumb }) {
 
         {/* Mobile-only bottom tab bar — patient role only. Agency / admin
             keep the sidebar+hamburger pattern because their surfaces are
-            web-only per CLAUDE.md. The More tab opens the existing
-            sidebar drawer so we don't maintain a second nav surface. */}
+            web-only per CLAUDE.md. The More tab navigates to
+            /patient/more (a dedicated page); the sidebar drawer is no
+            longer triggered for patients. */}
         {user?.role === ROLES.PATIENT && (
-          <BottomTabBar
-            unreadMessages={totalUnreadMessages}
-            onMoreClick={() => setSidebarOpen(true)}
-          />
+          <BottomTabBar unreadMessages={totalUnreadMessages} />
         )}
       </div>
     </div>

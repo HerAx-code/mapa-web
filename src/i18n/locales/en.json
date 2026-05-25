@@ -484,6 +484,14 @@
       "docs":      "Docs",
       "messages":  "Messages"
     },
+    "more": {
+      "title":      "More",
+      "subtitle":   "Account, settings, and other options.",
+      "navigation": "Navigation",
+      "account":    "Account",
+      "settings":   "Settings",
+      "language":   "Language"
+    },
     "dashboard": {
       "title": "My Dashboard",
       "subtitle": "Welcome back, {{name}}.",

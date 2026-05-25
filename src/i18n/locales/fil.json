@@ -484,6 +484,14 @@
       "docs":      "Dokumento",
       "messages":  "Mensahe"
     },
+    "more": {
+      "title":      "Iba pa",
+      "subtitle":   "Account, settings, at iba pang opsyon.",
+      "navigation": "Nabigasyon",
+      "account":    "Account",
+      "settings":   "Settings",
+      "language":   "Wika"
+    },
     "dashboard": {
       "title": "Aking Dashboard",
       "subtitle": "Maligayang pagbabalik, {{name}}.",

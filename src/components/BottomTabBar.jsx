@@ -12,16 +12,12 @@ import {
  * surfaces are web-only per CLAUDE.md.
  *
  * The 5 tabs are: Dashboard, My Application, Documents, Messages, More.
- * "More" opens the existing sidebar drawer so we don't have to duplicate
- * a second nav surface — patients tapping More see the full nav including
- * Find Programs, Interviews, Guide.
- *
- * Why these 5: Dashboard is home. My Application is the highest-frequency
- * destination for active patients. Documents is high-frequency during the
- * doc-verification phase. Messages is the primary support channel.
- * Everything else is lower frequency and moves into the More drawer.
+ * "More" now NAVIGATES to /patient/more (a dedicated page) instead of
+ * opening a left-side drawer. The drawer pattern was disproportionate
+ * for the 3-item overflow group, and a real page lets hardware back
+ * behave naturally and gives room for account/settings actions.
  */
-export default function BottomTabBar({ unreadMessages = 0, onMoreClick }) {
+export default function BottomTabBar({ unreadMessages = 0 }) {
   const { t } = useTranslation()
 
   // Short single-word labels — the full labels ("My Application",
@@ -73,18 +69,22 @@ export default function BottomTabBar({ unreadMessages = 0, onMoreClick }) {
           </NavLink>
         )
       })}
-      {/* More tab — opens the existing sidebar drawer so patients can reach
-          Find Programs, Interviews, Guide, and the profile dropdown
-          without us having to maintain a second nav surface. */}
-      <button
-        type="button"
-        onClick={onMoreClick}
-        className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-h-[56px] text-gray-500 hover:text-brand-500 transition-colors"
-        aria-label={t('shell.more')}
+      {/* More tab — navigates to /patient/more (a dedicated page)
+          rather than opening a slide-in drawer. The page hosts the
+          secondary nav (Find Programs, Interviews, Guide) plus the
+          account/settings actions that used to live in the avatar
+          dropdown. */}
+      <NavLink
+        to="/patient/more"
+        className={({ isActive }) =>
+          `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-h-[56px] transition-colors ${
+            isActive ? 'text-brand-500' : 'text-gray-500 hover:text-brand-500'
+          }`
+        }
       >
         <MdMenu size={22} />
         <span className="text-[10px] font-medium leading-tight">{t('shell.more')}</span>
-      </button>
+      </NavLink>
     </nav>
   )
 }

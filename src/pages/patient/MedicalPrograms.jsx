@@ -585,71 +585,109 @@ export default function MedicalPrograms() {
         const isBlocked     = !hasApplied && appliedAgencyIds.size > 0
                 const types      = agency.assistanceTypes ?? []
 
+                // Shared action button — same logic, rendered slightly
+                // differently in mobile vs desktop slots below.
+                const actionButton = hasApplied ? (
+                  <span className="flex items-center gap-1 text-xs text-green-600 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg font-medium flex-shrink-0">
+                    <MdCheckCircle size={12} /> {t('patient.programs.applied')}
+                  </span>
+                ) : isBlocked ? (
+                  <button
+                    className="flex items-center gap-1 text-xs text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg font-medium hover:bg-brand-100 transition-colors flex-shrink-0"
+                    onClick={() => navigate('/patient/status')}>
+                    {t('patient.programs.viewMyApp')} →
+                  </button>
+                ) : isFull ? (
+                  <button className="btn-secondary text-xs opacity-60 cursor-not-allowed flex-shrink-0" disabled>
+                    {t('patient.programs.noSpotsToday')}
+                  </button>
+                ) : (
+                  <button className="btn-primary text-xs sm:text-sm flex-shrink-0"
+                    onClick={() => setApplyingToId(agency.id)}>
+                    {t('patient.programs.applyNow')} →
+                  </button>
+                )
+
                 return (
-                  <div key={agency.id} className={`card p-5 hover:shadow-md transition-shadow flex flex-col ${isFull ? 'opacity-70' : ''}`}>
-                    {/* Header */}
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className={`flex-shrink-0 w-11 h-11 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center`}>
-                        {agency.initials}
+                  <div key={agency.id} className={`card hover:shadow-md transition-shadow ${isFull ? 'opacity-70' : ''}`}>
+
+                    {/* ── Mobile compact layout (< sm) ──
+                        Horizontal layout with Apply button at top-right
+                        for immediate access. 1-line description + inline
+                        badges instead of vertical stack. Result: ~120px
+                        card height vs ~280px on the desktop variant, so
+                        a patient sees 4+ programs per screen instead of 2. */}
+                    <div className="sm:hidden p-4 flex flex-col gap-2">
+                      <div className="flex items-start gap-3">
+                        <div className={`flex-shrink-0 w-10 h-10 ${agency.color} rounded-xl text-white font-bold text-xs flex items-center justify-center`}>
+                          {agency.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-800 truncate">{agency.name}</h3>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">
+                            <span className={status.bar.replace('bg-', 'text-')}>●</span> {slots.remaining}/{slots.total} spots · {agency.processingTime}
+                          </p>
+                        </div>
+                        {actionButton}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <MdLocationOn size={12} className="text-gray-400 flex-shrink-0" />
-                          <p className="text-xs text-gray-400 truncate">{agency.location}</p>
+                      {agency.description && (
+                        <p className="text-xs text-gray-500 line-clamp-2 break-words leading-snug">{agency.description}</p>
+                      )}
+                      {types.length > 0 && (
+                        <p className="text-xs text-brand-600 truncate">
+                          {types.slice(0, 3).join(' · ')}{types.length > 3 ? ` · +${types.length - 3}` : ''}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* ── Desktop / tablet detailed layout (sm+) ──
+                        Original vertical card design — keeps the slot
+                        progress bar, full 3-line description, badge
+                        cloud, and bottom action footer. */}
+                    <div className="hidden sm:flex sm:flex-col p-5">
+                      {/* Header */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`flex-shrink-0 w-11 h-11 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center`}>
+                          {agency.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <MdLocationOn size={12} className="text-gray-400 flex-shrink-0" />
+                            <p className="text-xs text-gray-400 truncate">{agency.location}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Slot bar */}
-                    <div className="w-full h-2 bg-gray-100 rounded-full mb-1">
-                      <div className={`h-2 rounded-full ${status.bar}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="text-xs text-gray-400 mb-3">{t('patient.programs.spotsAvailableToday', { remaining: slots.remaining, total: slots.total })}</p>
-
-                    {/* Description — break-words guards against a single
-                        long unbreakable token (URL, hash) widening the
-                        card past the viewport on narrow phones. */}
-                    <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-3 break-words">{agency.description}</p>
-
-                    {/* Assistance types */}
-                    {types.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {types.slice(0, 4).map((typeName, i) => (
-                          <span key={i} className="badge badge-blue text-xs">{typeName}</span>
-                        ))}
-                        {types.length > 4 && (
-                          <span className="badge badge-blue text-xs">{t('patient.programs.moreTypes', { count: types.length - 4 })}</span>
-                        )}
+                      {/* Slot bar */}
+                      <div className="w-full h-2 bg-gray-100 rounded-full mb-1">
+                        <div className={`h-2 rounded-full ${status.bar}`} style={{ width: `${pct}%` }} />
                       </div>
-                    )}
+                      <p className="text-xs text-gray-400 mb-3">{t('patient.programs.spotsAvailableToday', { remaining: slots.remaining, total: slots.total })}</p>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-auto">
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
-                        <MdSchedule size={13} />
-                        {agency.processingTime}
-                      </div>
-                      {hasApplied ? (
-                        <span className="flex items-center gap-1 text-xs text-green-600 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg font-medium">
-                          <MdCheckCircle size={12} /> {t('patient.programs.applied')}
-                        </span>
-                      ) : isBlocked ? (
-                        <button
-                          className="flex items-center gap-1 text-xs text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg font-medium hover:bg-brand-100 transition-colors"
-                          onClick={() => navigate('/patient/status')}>
-                          {t('patient.programs.viewMyApp')} →
-                        </button>
-                      ) : isFull ? (
-                        <button className="btn-secondary text-xs opacity-60 cursor-not-allowed" disabled>
-                          {t('patient.programs.noSpotsToday')}
-                        </button>
-                      ) : (
-                        <button className="btn-primary text-sm"
-                          onClick={() => setApplyingToId(agency.id)}>
-                          {t('patient.programs.applyNow')} →
-                        </button>
+                      {/* Description */}
+                      <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-3 break-words">{agency.description}</p>
+
+                      {/* Assistance types */}
+                      {types.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {types.slice(0, 4).map((typeName, i) => (
+                            <span key={i} className="badge badge-blue text-xs">{typeName}</span>
+                          ))}
+                          {types.length > 4 && (
+                            <span className="badge badge-blue text-xs">{t('patient.programs.moreTypes', { count: types.length - 4 })}</span>
+                          )}
+                        </div>
                       )}
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-50 mt-auto">
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <MdSchedule size={13} />
+                          {agency.processingTime}
+                        </div>
+                        {actionButton}
+                      </div>
                     </div>
                   </div>
                 )
