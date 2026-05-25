@@ -547,7 +547,9 @@
         "chemotherapy": "Chemotherapy at mga espesyal na paggamot",
         "fromAgencies": "Mula sa PCSO, DOH, DSWD, Malasakit Center, at iba pa.",
         "findProgram": "Maghanap ng Programa",
-        "newToMapa": "Bago sa MAPA? Basahin ang Gabay sa Paggamit"
+        "getStarted": "Magsimula — Mag-upload ng Dokumento",
+        "newToMapa": "Bago sa MAPA? Basahin ang Gabay sa Paggamit",
+        "compactSub": "Pindutin upang buksan ang Gabay sa Paggamit"
       },
       "docs": {
         "noneYet": "Wala pang na-upload na dokumento",

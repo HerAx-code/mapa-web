@@ -547,7 +547,9 @@
         "chemotherapy": "Chemotherapy & specialty treatments",
         "fromAgencies": "From PCSO, DOH, DSWD, Malasakit Center, and more.",
         "findProgram": "Find a Program",
-        "newToMapa": "New to MAPA? Read the User Guide"
+        "getStarted": "Get Started — Upload Documents",
+        "newToMapa": "New to MAPA? Read the User Guide",
+        "compactSub": "Tap to open the User Guide"
       },
       "docs": {
         "noneYet": "No documents uploaded yet",

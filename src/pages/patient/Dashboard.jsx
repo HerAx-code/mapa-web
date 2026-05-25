@@ -6,7 +6,7 @@ import {
   MdArrowForward, MdExpandMore, MdExpandLess,
   MdHourglassEmpty, MdAssignment, MdSchedule, MdVideoCall,
   MdReceipt, MdCancel, MdLocalHospital, MdCalendarMonth, MdAccessTime,
-  MdOpenInNew, MdCheck,
+  MdOpenInNew, MdCheck, MdClose, MdMenuBook,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import InstallPrompt from '../../components/InstallPrompt'
@@ -140,6 +140,20 @@ export default function PatientDashboard() {
   // they need the orientation most. Returning patients with an active
   // application can collapse it themselves.
   const [stepsOpen,  setStepsOpen]  = useState(null)
+  // Welcome hero is great onboarding for first-time visitors but turns
+  // into noise on every subsequent visit. Per-device localStorage flag
+  // (keyed by uid so multiple accounts on the same phone get fresh
+  // welcomes). Reuploads/cache clears resurface it — acceptable for a
+  // hero that's just educational.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
+  useEffect(() => {
+    if (!user?.uid) return
+    setWelcomeDismissed(localStorage.getItem(`mapa_welcome_dismissed_${user.uid}`) === '1')
+  }, [user?.uid])
+  const dismissWelcome = () => {
+    if (user?.uid) localStorage.setItem(`mapa_welcome_dismissed_${user.uid}`, '1')
+    setWelcomeDismissed(true)
+  }
 
   // Most recent non-rejected application (real-time)
   useEffect(() => {
@@ -397,9 +411,34 @@ export default function PatientDashboard() {
               {t('patient.dashboard.rejectedCard.btn')} →
             </button>
           </div>
+        ) : (welcomeDismissed || docStats.verified > 0 || docStats.pending > 0) ? (
+          // Compact form: once the patient has any progress (uploaded a
+          // doc) or explicitly dismissed the hero, swap to a single-row
+          // link card. The Application Steps section below is now the
+          // primary action surface, and the full hero is overkill.
+          <button
+            className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors border border-brand-100"
+            onClick={() => navigate('/patient/guide')}>
+            <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+              <MdMenuBook size={20} className="text-brand-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.welcomeCard.newToMapa')}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('patient.dashboard.welcomeCard.compactSub')}</p>
+            </div>
+            <MdArrowForward size={16} className="text-gray-300 flex-shrink-0" />
+          </button>
         ) : (
-          <div className="card p-5 border-2 border-brand-200 bg-brand-50">
-            <div className="flex items-center gap-3 mb-3">
+          <div className="card p-5 border-2 border-brand-200 bg-brand-50 relative">
+            {/* Dismiss button — once tapped, the hero collapses to the
+                compact link form on next render and stays that way. */}
+            <button
+              onClick={dismissWelcome}
+              aria-label={t('common.close')}
+              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-brand-400 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
+              <MdClose size={16} />
+            </button>
+            <div className="flex items-center gap-3 mb-3 pr-8">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-100 text-brand-600">
                 <MdLocalHospital size={22} />
               </div>
@@ -424,8 +463,8 @@ export default function PatientDashboard() {
 
             <button
               className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-              onClick={() => navigate('/patient/screening')}>
-              {t('patient.dashboard.welcomeCard.findProgram')} →
+              onClick={() => navigate('/patient/documents')}>
+              {t('patient.dashboard.welcomeCard.getStarted')} →
             </button>
             <button
               className="w-full mt-2 text-xs text-brand-600 hover:text-brand-800 transition-colors text-center py-1"
