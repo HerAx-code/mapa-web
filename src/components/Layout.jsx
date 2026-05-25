@@ -42,14 +42,21 @@ const makeTimeAgo = (t) => (ts) => {
 // ── Nav configs ────────────────────────────────────────────────────────────
 
 // Patient nav is bilingual — labels resolved via t() at render time.
-const PATIENT_NAV_BASE = [
-  { to: '/patient/dashboard',  icon: MdDashboard,     labelKey: 'patient.nav.dashboard'      },
-  { to: '/patient/screening',  icon: MdSearch,        labelKey: 'patient.nav.findPrograms'   },
-  { to: '/patient/status',     icon: MdTimeline,      labelKey: 'patient.nav.myApplication'  },
-  { to: '/patient/documents',  icon: MdFolder,        labelKey: 'patient.nav.myDocuments'    },
-  { to: '/patient/interviews', icon: MdVideoCall,     labelKey: 'patient.nav.interviews'     },
-  { to: '/patient/messages',   icon: MdMessage,       labelKey: 'patient.nav.messages'       },
-  { to: '/patient/guide',      icon: MdMenuBook,      labelKey: 'patient.nav.userGuide'      },
+// Split into two groups because patients on mobile already reach the
+// PRIMARY group through the BottomTabBar. Rendering them again in the
+// "More" drawer just duplicates entry points and confuses the IA.
+//   - PRIMARY: also in BottomTabBar; render in the sidebar only on lg+
+//   - OVERFLOW: never in BottomTabBar; render in the drawer on every size
+const PATIENT_NAV_PRIMARY = [
+  { to: '/patient/dashboard',  icon: MdDashboard,  labelKey: 'patient.nav.dashboard'     },
+  { to: '/patient/status',     icon: MdTimeline,   labelKey: 'patient.nav.myApplication' },
+  { to: '/patient/documents',  icon: MdFolder,     labelKey: 'patient.nav.myDocuments'   },
+  { to: '/patient/messages',   icon: MdMessage,    labelKey: 'patient.nav.messages'      },
+]
+const PATIENT_NAV_OVERFLOW = [
+  { to: '/patient/screening',  icon: MdSearch,     labelKey: 'patient.nav.findPrograms'  },
+  { to: '/patient/interviews', icon: MdVideoCall,  labelKey: 'patient.nav.interviews'    },
+  { to: '/patient/guide',      icon: MdMenuBook,   labelKey: 'patient.nav.userGuide'     },
 ]
 
 const AGENCY_NAV = [
@@ -587,8 +594,20 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {role === ROLES.PATIENT && (
           <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">{t('shell.menu')}</p>
-            <NavItems items={PATIENT_NAV_BASE} onClose={onClose} badgeOverrides={msgOverride} />
+            {/* Bottom-tab duplicates: visible only on lg+ where there
+                is no BottomTabBar. On mobile these would just
+                duplicate tabs the patient already sees. */}
+            <div className="hidden lg:block">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">{t('shell.menu')}</p>
+              <NavItems items={PATIENT_NAV_PRIMARY} onClose={onClose} badgeOverrides={msgOverride} />
+              <div className="h-2" />
+            </div>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2 lg:mt-2">
+              {/* Title flips between Menu (desktop) and More (mobile) */}
+              <span className="lg:hidden">{t('shell.more')}</span>
+              <span className="hidden lg:inline">{t('shell.menu')}</span>
+            </p>
+            <NavItems items={PATIENT_NAV_OVERFLOW} onClose={onClose} />
           </>
         )}
         {(role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN) && (

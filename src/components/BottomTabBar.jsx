@@ -24,14 +24,18 @@ import {
 export default function BottomTabBar({ unreadMessages = 0, onMoreClick }) {
   const { t } = useTranslation()
 
+  // Short single-word labels — the full labels ("My Application",
+  // "My Documents") wrap to two lines on 360px-wide phones and make
+  // the tab bar feel cramped. iOS native apps follow the same one-word
+  // convention ("Mail", "Photos", "Settings").
   const tabs = [
-    { to: '/patient/dashboard', Icon: MdDashboard, labelKey: 'patient.nav.dashboard'     },
-    { to: '/patient/status',    Icon: MdTimeline,  labelKey: 'patient.nav.myApplication' },
-    { to: '/patient/documents', Icon: MdFolder,    labelKey: 'patient.nav.myDocuments'   },
+    { to: '/patient/dashboard', Icon: MdDashboard, labelKey: 'patient.tab.dashboard' },
+    { to: '/patient/status',    Icon: MdTimeline,  labelKey: 'patient.tab.apply'     },
+    { to: '/patient/documents', Icon: MdFolder,    labelKey: 'patient.tab.docs'      },
     {
       to:        '/patient/messages',
       Icon:      MdMessage,
-      labelKey:  'patient.nav.messages',
+      labelKey:  'patient.tab.messages',
       badge:     unreadMessages,
     },
   ]

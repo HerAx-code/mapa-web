@@ -128,8 +128,15 @@ export default function PatientDashboard() {
   const { t }     = useTranslation()
   // Strip trailing punctuation in case the name is stored last-first
   // (e.g. "De La Cruz, Juan" → splitting on space gives "De,"; we strip
-  // the comma so the greeting reads naturally).
-  const firstName = (user?.name?.split(' ')[0] || '').replace(/[,;]+$/, '') || 'Patient'
+  // the comma so the greeting reads naturally). Also title-case it so
+  // patients who registered with all-lowercase names (common on mobile)
+  // don't see "Welcome back, sod" — the display layer normalizes for
+  // presentation while storage keeps the original casing for records.
+  const firstName = (() => {
+    const raw = (user?.name?.split(' ')[0] || '').replace(/[,;]+$/, '')
+    if (!raw) return 'Patient'
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
+  })()
 
   const [activeApp,  setActiveApp]  = useState(null)
   const [appCount,   setAppCount]   = useState(0)

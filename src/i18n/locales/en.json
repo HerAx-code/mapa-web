@@ -478,6 +478,12 @@
       "userGuide": "User Guide",
       "trackStatus": "Track Status"
     },
+    "tab": {
+      "dashboard": "Home",
+      "apply":     "Apply",
+      "docs":      "Docs",
+      "messages":  "Messages"
+    },
     "dashboard": {
       "title": "My Dashboard",
       "subtitle": "Welcome back, {{name}}.",

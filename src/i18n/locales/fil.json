@@ -478,6 +478,12 @@
       "userGuide": "Gabay sa Paggamit",
       "trackStatus": "I-track ang Status"
     },
+    "tab": {
+      "dashboard": "Home",
+      "apply":     "Apply",
+      "docs":      "Dokumento",
+      "messages":  "Mensahe"
+    },
     "dashboard": {
       "title": "Aking Dashboard",
       "subtitle": "Maligayang pagbabalik, {{name}}.",
