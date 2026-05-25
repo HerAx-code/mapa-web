@@ -285,11 +285,45 @@ export default function Register() {
 
   // ── Hospital ID verify ──────────────────────────────────────────────────
 
+  // #17 — Per-session rate limit on Verify. Without throttle, a script
+  // could iterate CRMC-YYYY-00001..99999 to enumerate which codes are
+  // claimed (and by side effect, leak the names of registered patients).
+  // This is a SOFT layer: a determined attacker can clear sessionStorage
+  // or open many tabs. A proper fix would be a Cloud Function with per-IP
+  // throttle + reCAPTCHA v3; deferred until pilot abuse signals show up.
+  const VERIFY_BUCKET_KEY = 'mapa_verify_attempts'
+  const VERIFY_WINDOW_MS  = 60 * 60 * 1000   // 1 hour rolling window
+  const VERIFY_MAX        = 10                // attempts/window
+  const recordVerifyAttempt = () => {
+    try {
+      const now = Date.now()
+      const raw = sessionStorage.getItem(VERIFY_BUCKET_KEY)
+      const all = raw ? JSON.parse(raw) : []
+      const recent = all.filter(t => now - t < VERIFY_WINDOW_MS)
+      recent.push(now)
+      sessionStorage.setItem(VERIFY_BUCKET_KEY, JSON.stringify(recent))
+      return recent.length
+    } catch { return 0 }
+  }
+  const countRecentVerifyAttempts = () => {
+    try {
+      const raw = sessionStorage.getItem(VERIFY_BUCKET_KEY)
+      if (!raw) return 0
+      const now = Date.now()
+      return JSON.parse(raw).filter(t => now - t < VERIFY_WINDOW_MS).length
+    } catch { return 0 }
+  }
+
   const handleVerify = async () => {
     if (!ACCESS_CODE_RE.test(form.hospitalId)) {
       setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeFormat', { year: CURRENT_YEAR }) }))
       return
     }
+    if (countRecentVerifyAttempts() >= VERIFY_MAX) {
+      setErrors(prev => ({ ...prev, hospitalId: t('register.errors.verifyRateLimit') }))
+      return
+    }
+    recordVerifyAttempt()
     setVerifying(true)
     try {
       const snap = await getDoc(doc(db, 'hospitalIds', form.hospitalId))

@@ -529,7 +529,8 @@
         "certReady":          "Your Guarantee Letter is ready to download.",
         "certPreparing":      "Your Guarantee Letter has been issued. The agency is preparing the signed copy — you can download it once they upload it below.",
         "approvedPreparing":  "Your application is approved. Your Guarantee Letter is being prepared.",
-        "approvedNoAmount":   "Your application is approved. Your Guarantee Letter will be prepared soon."
+        "approvedNoAmount":   "Your application is approved. Your Guarantee Letter will be prepared soon.",
+        "agencyPaused":       "{{agency}} is temporarily unavailable. Your application is paused and will resume when the agency is back online."
       },
       "approval": {
         "amountLabel":  "Approved Amount",
@@ -957,6 +958,7 @@
       "codeNotFound":      "Access code not found. Please check and try again.",
       "codeUsed":          "This access code has already been used.",
       "verifyFailed":      "Verification failed. Please try again.",
+      "verifyRateLimit":   "Too many verification attempts from this device. Please wait an hour before trying again, or contact CRMC Medical Social Services for help.",
       "emailInUse":        "This email is already registered.",
       "passwordTooWeak":   "Password is too weak. Please choose a stronger one.",
       "generic":           "Registration failed."

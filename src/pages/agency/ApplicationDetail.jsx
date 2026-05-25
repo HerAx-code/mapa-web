@@ -609,6 +609,46 @@ export default function ApplicationDetail() {
         return
       }
 
+      // #9 — Second cooldown gate: read the patient's hospitalIds doc.
+      // This catches the abuse case where a patient deleted their account
+      // and re-registered with a new email to bypass per-UID cooldown
+      // tracking. The cooldownUntilAt on hospitalIds persists across
+      // account churn because it's keyed by CRMC-issued ID, not by uid.
+      // (Fall back to user doc if the app pre-dates the patientHospitalId
+      // snapshot field added in MedicalPrograms.handleSubmit.)
+      let patientHospitalId = app.patientHospitalId ?? null
+      if (!patientHospitalId) {
+        const userSnap = await getDoc(doc(db, 'users', app.patientId)).catch(() => null)
+        patientHospitalId = userSnap?.data?.()?.hospitalId ?? null
+      }
+      if (patientHospitalId) {
+        const hidSnap = await getDoc(doc(db, 'hospitalIds', patientHospitalId)).catch(() => null)
+        const hid = hidSnap?.exists?.() ? hidSnap.data() : null
+        if (hid?.cooldownUntilAt) {
+          const until = hid.cooldownUntilAt.toDate ? hid.cooldownUntilAt.toDate() : new Date(hid.cooldownUntilAt)
+          if (until.getTime() > now) {
+            toast.error(
+              `This patient (Hospital ID ${patientHospitalId}) has an active cooldown until ${until.toLocaleDateString()}. ` +
+              `Approval blocked. Contact an administrator if a second approval is genuinely needed.`,
+              { duration: 8000 }
+            )
+            return
+          }
+        }
+        if (hid?.lastApprovedAt) {
+          const lastAp = hid.lastApprovedAt.toDate ? hid.lastApprovedAt.toDate() : new Date(hid.lastApprovedAt)
+          const days = Math.floor((now - lastAp.getTime()) / 86400000)
+          if (days <= COOLDOWN_DAYS) {
+            toast.error(
+              `This patient (Hospital ID ${patientHospitalId}) was approved less than ${COOLDOWN_DAYS} days ago ` +
+              `(possibly under a different account). Approval blocked.`,
+              { duration: 8000 }
+            )
+            return
+          }
+        }
+      }
+
       // ── Transactional approve + budget commit.
       // Closes the read-then-write race where two parallel approvals could
       // both pass the client-side budget check and both increment committed,
@@ -653,6 +693,18 @@ export default function ApplicationDetail() {
         if (allocated > 0) {
           tx.update(agencyRef, {
             'budget.committed': increment(approvedAmount),
+          })
+        }
+
+        // #9 — Stamp the patient's CRMC Hospital ID with the approval
+        // timestamp so cooldown follows the human, not the account. If
+        // the patient deletes their account and re-registers, the new
+        // account inherits this cooldown automatically. Best-effort:
+        // skipped if the hospital ID wasn't resolved earlier.
+        if (patientHospitalId) {
+          tx.update(doc(db, 'hospitalIds', patientHospitalId), {
+            lastApprovedAt: serverTimestamp(),
+            cooldownUntilAt: null,  // clear any prior reversed-cooldown
           })
         }
       })
@@ -847,6 +899,18 @@ export default function ApplicationDetail() {
       if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
         batch.update(doc(db, 'agencies', user.agencyId), {
           'budget.committed': increment(-amount),
+        })
+      }
+      // #9 — Mirror cooldown to the patient's CRMC Hospital ID so the
+      // 30-day lock survives an account delete + re-register cycle.
+      let reversalHospitalId = app.patientHospitalId ?? null
+      if (!reversalHospitalId) {
+        const userSnap = await getDoc(doc(db, 'users', app.patientId)).catch(() => null)
+        reversalHospitalId = userSnap?.data?.()?.hospitalId ?? null
+      }
+      if (reversalHospitalId && cooldownUntil) {
+        batch.update(doc(db, 'hospitalIds', reversalHospitalId), {
+          cooldownUntilAt: cooldownUntil,
         })
       }
       await batch.commit()

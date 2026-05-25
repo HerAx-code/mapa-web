@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, doc, query, where, onSnapshot,
-  updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs,
+  updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs, writeBatch,
 } from 'firebase/firestore'
 import {
   getAuth, createUserWithEmailAndPassword,
@@ -197,14 +197,21 @@ export default function AgencyDetail() {
   const [agency,        setAgency]        = useState(null)
   const [coordinators,  setCoordinators]  = useState([])
   const [appStats,      setAppStats]      = useState(null)
+  // Live list of non-terminal apps for this agency — used by the disable
+  // cascade dialog to show "N pending applications" + iterate them on
+  // auto-reject. Kept separate from appStats so we have the full docs.
+  const [pendingApps,   setPendingApps]   = useState([])
   const [loading,       setLoading]       = useState(true)
 
   // Modal states
-  const [showEdit,      setShowEdit]      = useState(false)
-  const [showAddCoord,  setShowAddCoord]  = useState(false)
-  const [editCoord,     setEditCoord]     = useState(null)
-  const [confirmCoord,  setConfirmCoord]  = useState(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showEdit,        setShowEdit]        = useState(false)
+  const [showAddCoord,    setShowAddCoord]    = useState(false)
+  const [editCoord,       setEditCoord]       = useState(null)
+  const [confirmCoord,    setConfirmCoord]    = useState(null)
+  const [confirmDelete,   setConfirmDelete]   = useState(false)
+  const [showDisableDialog, setShowDisableDialog] = useState(false)
+  const [disableChoice,     setDisableChoice]     = useState('reject')
+  const [disabling,         setDisabling]         = useState(false)
 
   // Slot editing
   const [editSlots, setEditSlots] = useState(false)
@@ -238,14 +245,19 @@ export default function AgencyDetail() {
       query(collection(db, 'applications'), where('agencyId', '==', id)),
       snap => {
         const s = { total: 0, pending: 0, approved: 0, rejected: 0 }
+        const pendings = []
         snap.docs.forEach(d => {
-          const status = d.data().status
+          const data = { id: d.id, ...d.data() }
           s.total++
-          if (status === 'approved' || status === 'certificate') s.approved++
-          else if (status === 'rejected') s.rejected++
-          else s.pending++
+          if (data.status === 'approved' || data.status === 'certificate') s.approved++
+          else if (data.status === 'rejected') s.rejected++
+          else {
+            s.pending++
+            pendings.push(data)
+          }
         })
         setAppStats(s)
+        setPendingApps(pendings)
       },
       () => {}
     )
@@ -263,23 +275,89 @@ export default function AgencyDetail() {
     } catch { toast.error('Failed to save agency.') }
   }
 
-  const handleToggleEnabled = async () => {
+  // Re-enabling is a single-step action (no choice needed). Disabling
+  // opens a dialog because there may be in-flight applications that need
+  // explicit handling — see handleDisableWithCascade.
+  const handleReEnable = async () => {
     try {
-      const nowEnabled = !agency.enabled
-      await updateDoc(doc(db, 'agencies', id), { enabled: nowEnabled })
+      await updateDoc(doc(db, 'agencies', id), { enabled: true })
       try {
         const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', '==', 'agency')))
         await Promise.all(snap.docs.map(d => notify(d.id, {
-          type:  nowEnabled ? 'agency_enabled' : 'agency_disabled',
-          title: nowEnabled ? 'Agency Enabled' : 'Agency Disabled',
-          body:  nowEnabled
-            ? `${agency.name} has been re-enabled.`
-            : `${agency.name} has been disabled.`,
+          type:  'agency_enabled',
+          title: 'Agency Enabled',
+          body:  `${agency.name} has been re-enabled.`,
         }).catch(() => {})))
       } catch {}
-      logAudit(user, { action: nowEnabled ? 'agency_enabled' : 'agency_disabled', targetType: 'agency', targetId: id, targetName: agency.name, details: `Agency ${nowEnabled ? 're-enabled' : 'disabled'}` })
-      toast.success(`${agency.name} ${nowEnabled ? 'enabled' : 'disabled'}.`)
+      logAudit(user, { action: 'agency_enabled', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency re-enabled' })
+      toast.success(`${agency.name} enabled.`)
     } catch { toast.error('Failed to update agency status.') }
+  }
+
+  // #7 — Disable cascade: when an agency is disabled mid-flow, the admin
+  // chooses what happens to in-flight applications.
+  //   - 'hold':   apps stay in their current status; patients see a
+  //               "paused" banner on TrackStatus until the agency is
+  //               re-enabled. Use for short outages (coordinator on leave).
+  //   - 'reject': apps moved to rejected with a clear reason and 0-day
+  //               cooldown so patients can apply elsewhere immediately.
+  //               Use for indefinite / budget-exhausted closures.
+  const handleDisableWithCascade = async ({ choice }) => {
+    setDisabling(true)
+    try {
+      // Always set the agency disabled first so no new applications can
+      // be submitted while we're cascading the existing ones.
+      await updateDoc(doc(db, 'agencies', id), { enabled: false })
+
+      if (choice === 'reject' && pendingApps.length > 0) {
+        // Batch update — Firestore supports up to 500 ops per batch.
+        for (let i = 0; i < pendingApps.length; i += 400) {
+          const batch = writeBatch(db)
+          pendingApps.slice(i, i + 400).forEach(app => {
+            batch.update(doc(db, 'applications', app.id), {
+              status:          'rejected',
+              rejectionReason: 'Agency temporarily unavailable. You may apply to another program.',
+              rejectionType:   'agency_disabled',  // distinguishes from a patient-fault rejection
+              cooldownUntilAt: null,                // no 30-day penalty for the patient
+              updatedAt:       serverTimestamp(),
+            })
+          })
+          await batch.commit()
+        }
+        // Notify the affected patients
+        await Promise.all(pendingApps.map(app => notify(app.patientId, {
+          type:  'app_advanced',
+          title: 'Application closed — agency unavailable',
+          body:  `Your application to ${agency.name} was closed because the agency is temporarily unavailable. You may apply to another program right away.`,
+        }).catch(() => {})))
+      }
+
+      // Notify the agency coordinators either way
+      try {
+        const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency', 'agency_admin'])))
+        await Promise.all(snap.docs.map(d => notify(d.id, {
+          type:  'agency_disabled',
+          title: 'Agency Disabled',
+          body:  choice === 'reject'
+            ? `${agency.name} disabled. ${pendingApps.length} pending application(s) were auto-rejected.`
+            : `${agency.name} disabled. ${pendingApps.length} application(s) on hold pending re-enable.`,
+        }).catch(() => {})))
+      } catch {}
+
+      logAudit(user, {
+        action:     'agency_disabled',
+        targetType: 'agency',
+        targetId:   id,
+        targetName: agency.name,
+        details:    `Agency disabled (${choice}: ${pendingApps.length} app(s) ${choice === 'reject' ? 'auto-rejected' : 'on hold'})`,
+      })
+      toast.success(`${agency.name} disabled.`)
+      setShowDisableDialog(false)
+    } catch {
+      toast.error('Failed to disable agency.')
+    } finally {
+      setDisabling(false)
+    }
   }
 
   const handleSaveSlots = async () => {
@@ -428,7 +506,7 @@ export default function AgencyDetail() {
                     onClick={() => setShowEdit(true)}><MdEdit size={16} /></button>
                   <button
                     className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${agency.enabled ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
-                    onClick={handleToggleEnabled}>
+                    onClick={() => agency.enabled ? setShowDisableDialog(true) : handleReEnable()}>
                     {agency.enabled ? 'Disable' : 'Enable'}
                   </button>
                   <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
@@ -746,6 +824,62 @@ export default function AgencyDetail() {
       )}
       {editCoord && (
         <EditCoordinatorModal coordinator={editCoord} onClose={() => setEditCoord(null)} />
+      )}
+
+      {/* #7 — Disable cascade dialog: admin chooses how in-flight apps
+          are handled when the agency is disabled mid-flow. */}
+      {showDisableDialog && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+          onClick={e => e.target === e.currentTarget && !disabling && setShowDisableDialog(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Disable {agency.name}?</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                {pendingApps.length === 0
+                  ? 'No applications are currently in flight. Disabling will simply hide this agency from new applicants.'
+                  : `${pendingApps.length} application${pendingApps.length === 1 ? '' : 's'} are currently in flight. Choose what happens to them.`}
+              </p>
+            </div>
+
+            {pendingApps.length > 0 && (
+              <div className="px-5 py-4 space-y-3">
+                <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${disableChoice === 'reject' ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="disable-choice" value="reject" className="mt-0.5 accent-brand-500"
+                    checked={disableChoice === 'reject'} onChange={() => setDisableChoice('reject')} />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800">Auto-reject — recommended</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                      Mark all {pendingApps.length} app{pendingApps.length === 1 ? '' : 's'} as rejected with reason
+                      "Agency temporarily unavailable" and <strong>no 30-day cooldown</strong>. Patients can apply
+                      to other programs immediately.
+                    </p>
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${disableChoice === 'hold' ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="disable-choice" value="hold" className="mt-0.5 accent-brand-500"
+                    checked={disableChoice === 'hold'} onChange={() => setDisableChoice('hold')} />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800">Hold for re-enable</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                      Apps stay in place. Patients see an "Application paused" banner. Coordinators will see
+                      the queue again once you re-enable. Use for short outages (coordinator on leave).
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
+
+            <div className="px-5 pb-4 pt-2 flex gap-2 justify-end border-t border-gray-50">
+              <button className="btn-secondary text-sm" onClick={() => setShowDisableDialog(false)} disabled={disabling}>
+                Cancel
+              </button>
+              <button className="btn-danger text-sm" onClick={() => handleDisableWithCascade({ choice: disableChoice })} disabled={disabling}>
+                {disabling ? 'Disabling…' : 'Confirm Disable'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   )

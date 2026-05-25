@@ -529,7 +529,8 @@
         "certReady":          "Handa nang i-download ang inyong Guarantee Letter.",
         "certPreparing":      "Naibigay na ang inyong Guarantee Letter. Inihahanda ng ahensya ang nilagdaang kopya — i-download ito kapag na-upload na nila sa ibaba.",
         "approvedPreparing":  "Aprubado na ang inyong aplikasyon. Inihahanda na ang inyong Guarantee Letter.",
-        "approvedNoAmount":   "Aprubado na ang inyong aplikasyon. Ihahanda ang inyong Guarantee Letter sa lalong madaling panahon."
+        "approvedNoAmount":   "Aprubado na ang inyong aplikasyon. Ihahanda ang inyong Guarantee Letter sa lalong madaling panahon.",
+        "agencyPaused":       "Pansamantalang hindi available ang {{agency}}. Naka-pause ang inyong aplikasyon at ipagpapatuloy kapag bumalik na ang ahensya."
       },
       "approval": {
         "amountLabel":  "Aprubadong Halaga",
@@ -957,6 +958,7 @@
       "codeNotFound":      "Hindi nakita ang access code. Pakisuri at subukan muli.",
       "codeUsed":          "Nagamit na ang access code na ito.",
       "verifyFailed":      "Nabigo ang pag-verify. Pakisubukan muli.",
+      "verifyRateLimit":   "Sobrang dami ng pag-verify mula sa device na ito. Maghintay ng isang oras bago muling subukan, o makipag-ugnayan sa CRMC Medical Social Services para sa tulong.",
       "emailInUse":        "Nakarehistro na ang email na ito.",
       "passwordTooWeak":   "Mahina pa ang password. Pumili ng mas matibay.",
       "generic":           "Nabigo ang pagpaparehistro."

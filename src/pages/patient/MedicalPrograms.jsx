@@ -120,6 +120,11 @@ function ApplyModal({ agency, onClose }) {
             patientName:    user.name ?? '',
             patientContact: user.contact ?? '',
             patientAddress: user.address ?? '',
+            // #9 — Snapshot the patient's CRMC Hospital ID at submission
+            // time so agency cooldown checks can look up a stable, per-
+            // human identifier (not just the per-account UID). Prevents
+            // cooldown bypass via account deletion + re-registration.
+            patientHospitalId: user.hospitalId ?? null,
             agencyId:       agency.id,
             agencyName:     agency.name,
             agencyColor:    agency.color    ?? 'bg-gray-500',

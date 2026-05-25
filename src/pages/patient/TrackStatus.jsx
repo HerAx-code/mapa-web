@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   MdTimeline, MdHistory, MdDownload, MdMailOutline,
   MdCalendarMonth, MdAssignment, MdCelebration, MdCheckCircle,
-  MdInbox, MdCheck,
+  MdInbox, MdCheck, MdWarning,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
@@ -360,6 +360,19 @@ export default function TrackStatus() {
                           {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                         </span>
                       </div>
+
+                      {/* #7 — Agency disabled while this app is in flight.
+                          Admin chose "hold" instead of "auto-reject", so
+                          surface that to the patient — silence here would
+                          leave them confused why their app sits forever. */}
+                      {agencyMap[app.agencyId]?.enabled === false && (
+                        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                          <p className="text-sm text-amber-700 font-medium flex items-start gap-2">
+                            <MdWarning size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.agencyPaused', { agency: app.agencyName })}</span>
+                          </p>
+                        </div>
+                      )}
 
                       {/* What to do next — shown FIRST before timeline */}
                       {app.status === 'pending' && (() => {

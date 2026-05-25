@@ -172,7 +172,15 @@ service cloud.firestore {
                        (isPatient() &&
                         resource.data.status == 'available' &&
                         request.resource.data.status == 'used' &&
-                        request.resource.data.patId == uid());
+                        request.resource.data.patId == uid()) ||
+                       // #9 — Agencies (and agency admins) may stamp the
+                       // cooldown fields when approving or reversing an
+                       // approval, but cannot touch status / usedBy / patId.
+                       // Tracking cooldown here (keyed by the human's CRMC
+                       // ID, not by the per-account UID) makes the 30-day
+                       // lock survive account-deletion + re-registration.
+                       (isAgency() &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt']));
       allow delete: if isSuperAdmin();
     }
 
