@@ -134,7 +134,23 @@ service cloud.firestore {
     match /agencies/{agencyId} {
       allow read:   if true;
       allow create: if isSuperAdmin();
-      allow update: if isAdmin() || (isAgency() && userAgencyId() == agencyId);
+      allow update: if isAdmin() ||
+                       (isAgency() && userAgencyId() == agencyId) ||
+                       // Patient submitting an application: the apply
+                       // transaction in MedicalPrograms.handleSubmit()
+                       // atomically creates the application doc AND
+                       // decrements slots.remaining by 1. The
+                       // applications/create rule gates the first side;
+                       // this branch gates the second. Constraints:
+                       //   - Only the 'slots' field may change
+                       //   - slots.remaining must drop by exactly 1
+                       //   - slots.total must NOT change
+                       // Patients can't decrement by more than 1 or
+                       // touch anything else (name, enabled, budget).
+                       (isPatient() &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots']) &&
+                        request.resource.data.slots.remaining == resource.data.slots.remaining - 1 &&
+                        request.resource.data.slots.total == resource.data.slots.total);
       allow delete: if isSuperAdmin();
     }
 

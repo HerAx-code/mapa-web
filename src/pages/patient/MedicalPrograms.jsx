@@ -183,7 +183,15 @@ function ApplyModal({ agency, onClose }) {
         })))),
       ]).catch(() => {})
 
-    } catch {
+    } catch (err) {
+      // Log the underlying Firebase error so future failures can be
+      // diagnosed instead of silently swallowed. Common causes:
+      //   - permission-denied: a firestore.rules constraint blocks the
+      //     create or the agency slot decrement
+      //   - failed-precondition / aborted: another patient won the
+      //     transactional race for the last remaining slot
+      //   - unavailable: transient Firestore outage
+      console.error('[apply] submit failed:', err?.code, err?.message, err)
       toast.error(t('patient.apply.errFailed'))
       setSubmitting(false)
     }
