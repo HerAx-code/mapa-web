@@ -481,6 +481,17 @@
     "dashboard": {
       "title": "My Dashboard",
       "subtitle": "Welcome back, {{name}}.",
+      "greeting": {
+        "uploadDocs":    "Get started by uploading your documents.",
+        "findProgram":   "Your documents are ready — browse programs to apply.",
+        "pending":       "Your application is under review — no action needed right now.",
+        "reviewing":     "The agency is checking your documents.",
+        "awaiting_info": "Action needed: the agency asked you for more information.",
+        "interview":     "Interview scheduled — join the Google Meet at the scheduled time.",
+        "approved":      "Approved! Your Guarantee Letter is being prepared.",
+        "certificate":   "Your Guarantee Letter is ready.",
+        "rejected":      "Try applying to another program."
+      },
       "noApplication": "You don't have an active application yet.",
       "browseSomeAgencies": "Find Programs to start an application",
       "metadata": {

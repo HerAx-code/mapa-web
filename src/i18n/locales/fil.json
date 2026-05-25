@@ -481,6 +481,17 @@
     "dashboard": {
       "title": "Aking Dashboard",
       "subtitle": "Maligayang pagbabalik, {{name}}.",
+      "greeting": {
+        "uploadDocs":    "Magsimula sa pag-upload ng inyong mga dokumento.",
+        "findProgram":   "Handa na ang inyong mga dokumento — tingnan ang mga programa upang mag-apply.",
+        "pending":       "Sinusuri ang inyong aplikasyon — walang kailangang gawin ngayon.",
+        "reviewing":     "Sinisiyasat ng ahensya ang inyong mga dokumento.",
+        "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang ahensya.",
+        "interview":     "Naka-iskedyul ang interview — sumali sa Google Meet sa takdang oras.",
+        "approved":      "Naaprubahan! Inihahanda na ang inyong Guarantee Letter.",
+        "certificate":   "Handa na ang inyong Guarantee Letter.",
+        "rejected":      "Subukan mag-apply sa ibang programa."
+      },
       "noApplication": "Wala ka pang aktibong aplikasyon.",
       "browseSomeAgencies": "Maghanap ng Programa upang magsimula",
       "metadata": {

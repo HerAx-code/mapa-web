@@ -269,6 +269,19 @@ export default function PatientDashboard() {
   const doneCount      = STEPS.filter(s => s.done).length
   const currentStepNum = STEPS.find(s => !s.done)?.num ?? null
 
+  // One-line "what's next" cue shown directly under the greeting.
+  // Mirrors the detailed status card below but compresses it to a single
+  // sentence so the patient knows the score before scrolling.
+  const greetingStatus = (() => {
+    if (loading) return null
+    if (activeStatus && ['pending','reviewing','awaiting_info','interview','approved','certificate'].includes(activeStatus)) {
+      return t(`patient.dashboard.greeting.${activeStatus}`)
+    }
+    if (appCount > 0)             return t('patient.dashboard.greeting.rejected')
+    if (docStats.verified === 0)  return t('patient.dashboard.greeting.uploadDocs')
+    return t('patient.dashboard.greeting.findProgram')
+  })()
+
   // Only show doc section once they have docs or an active application.
   // Hide once their GL has been issued — by then the doc-workflow phase
   // is complete and the card is just visual noise.
@@ -284,6 +297,9 @@ export default function PatientDashboard() {
         {/* Header */}
         <div>
           <h1 className="page-title">{t('patient.dashboard.subtitle', { name: firstName })}</h1>
+          {greetingStatus && (
+            <p className="text-sm text-gray-500 mt-1 leading-snug">{greetingStatus}</p>
+          )}
         </div>
 
         {/* Main status card */}

@@ -1040,18 +1040,26 @@ export default function Layout({ children, breadcrumb }) {
         {/* ── Top navigation bar ───────────────────────────────────── */}
         <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3 sm:px-5 flex-shrink-0 z-30">
 
-          {/* Left — hamburger + breadcrumb */}
+          {/* Left — hamburger + breadcrumb.
+              Patients get the BottomTabBar's More tab as the menu opener
+              and the active tab label as the page title, so on mobile we
+              hide the hamburger + breadcrumb entirely to free space.
+              Non-patient roles keep the existing pattern. */}
           <div className="flex items-center gap-2 min-w-0">
-            {/* Hamburger — mobile only */}
+            {/* Hamburger — mobile only for non-patient roles */}
             <button
-              className="nav-icon-btn flex-shrink-0 lg:hidden"
+              className={`nav-icon-btn flex-shrink-0 ${
+                user?.role === ROLES.PATIENT ? 'hidden' : 'lg:hidden'
+              }`}
               onClick={() => setSidebarOpen(true)}
               aria-label="Open menu"
             >
               <MdMenu size={22} />
             </button>
             {/* Breadcrumb */}
-            <div className="text-xs sm:text-sm text-gray-500 truncate">
+            <div className={`text-xs sm:text-sm text-gray-500 truncate ${
+              user?.role === ROLES.PATIENT ? 'hidden lg:block' : ''
+            }`}>
               <span className="hidden sm:inline">MAPA / </span>
               <span className="text-gray-800 font-medium">{breadcrumb}</span>
             </div>
@@ -1080,8 +1088,12 @@ export default function Layout({ children, breadcrumb }) {
               )}
             </div>
 
-            {/* 2. Messages */}
-            <div className="relative">
+            {/* 2. Messages — patients on mobile already have a Messages
+                tab in BottomTabBar; hiding the topbar icon there removes
+                the duplicate entry point. Non-patient and lg+ unchanged. */}
+            <div className={`relative ${
+              user?.role === ROLES.PATIENT ? 'hidden lg:block' : ''
+            }`}>
               <button
                 className="nav-icon-btn"
                 aria-label="Messages"
