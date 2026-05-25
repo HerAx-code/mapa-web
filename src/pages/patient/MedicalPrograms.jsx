@@ -453,22 +453,20 @@ export default function MedicalPrograms() {
 
   return (
     <Layout breadcrumb={t('patient.programs.breadcrumb')}>
-      {/* px-3 on mobile saves 16 px of horizontal real estate versus
-          p-4; the cards inside use their own padding so the page wrapper
-          can be tight. overflow-x-hidden is a defensive backstop — any
-          single overflowing child (long URL, wide image) won't cause
-          the entire page to scroll sideways. */}
-      <div className="px-3 py-4 sm:p-6 max-w-5xl mx-auto overflow-x-hidden">
+      {/* Hard viewport cap: max-w-[100vw] forces the wrapper to never
+          exceed visible width regardless of what any descendant tries
+          to do. overflow-x-clip is the stricter sibling of -hidden —
+          it forbids horizontal scroll AND prevents the wrapper from
+          being sized by intrinsic-width children. px-3 on mobile saves
+          16 px versus p-4 so cards inside get more usable room. */}
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-5xl overflow-x-clip">
 
-          <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
+          <div className="flex items-start justify-between mb-5 flex-wrap gap-3 w-full min-w-0">
             {/* min-w-0 lets the title/subtitle block shrink past its
-                intrinsic content width inside the flex row. Without it
-                the page-sub paragraph sometimes refused to wrap on
-                narrow phones because the parent flex item had
-                min-width: auto. */}
+                intrinsic content width inside the flex row. */}
             <div className="min-w-0 flex-1">
               <h1 className="page-title">{t('patient.programs.title')}</h1>
-              <p className="page-sub">{t('patient.programs.subtitle')}</p>
+              <p className="page-sub break-words">{t('patient.programs.subtitle')}</p>
             </div>
             {location.state?.openAgencyId && (
               <button
@@ -569,7 +567,7 @@ export default function MedicalPrograms() {
 
           {/* Agency cards */}
           {!loading && filtered.length > 0 && (
-            <p className="text-sm text-gray-400 mb-3">
+            <p className="text-sm text-gray-400 mb-3 w-full max-w-full min-w-0 break-words">
               {t('patient.programs.chooseHint')}
             </p>
           )}
