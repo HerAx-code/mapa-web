@@ -313,7 +313,10 @@ export default function PatientDashboard() {
 
   return (
     <Layout breadcrumb={t('patient.dashboard.title')}>
-      <div className="px-3 py-4 sm:p-6 space-y-4">
+      {/* Hard viewport cap so no descendant (long agency name, awaiting-
+          info message with a URL, etc.) can push the page wider than the
+          phone screen. overflow-x-clip is the strict version of -hidden. */}
+      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] overflow-x-clip space-y-4">
 
         {/* Compact greeting — banking-app pattern: the GREETING is a
             small line at the top, the STATUS card below is the hero.

@@ -157,7 +157,7 @@ export default function Notifications() {
 
   return (
     <Layout breadcrumb={t('notifsPage.title')}>
-      <div className="px-3 py-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
 
         {/* Header — title block on its own row on mobile, action buttons
             on a second row. On sm+ the buttons return to the right side
@@ -312,10 +312,12 @@ export default function Notifications() {
                       <Icon size={16} className={meta.color} />
                     </div>
 
-                    {/* Content */}
+                    {/* Content — break-words on title + body so long
+                        URLs or unbreakable tokens in notification copy
+                        can't push the row wider than the parent. */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                        <p className={`text-sm break-words ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                           {n.title}
                         </p>
                         {catKey && (
@@ -324,7 +326,7 @@ export default function Notifications() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 line-clamp-2">{n.body}</p>
+                      <p className="text-sm text-gray-500 line-clamp-2 break-words">{n.body}</p>
                     </div>
 
                     {/* Date + read indicator */}

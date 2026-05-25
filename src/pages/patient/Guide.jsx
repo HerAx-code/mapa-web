@@ -195,7 +195,7 @@ export default function UserGuide() {
 
   return (
     <Layout breadcrumb={t('patient.guide.title')}>
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-2xl overflow-x-clip">
 
         {/* Header */}
         <div className="mb-6">

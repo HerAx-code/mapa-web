@@ -123,7 +123,9 @@ export default function Interviews() {
 
   return (
     <Layout breadcrumb={t('patient.interviews.title')}>
-      <div className="p-4 sm:p-6">
+      {/* Hard viewport cap so long agency names or app IDs can't push
+          the page wider than the phone screen. */}
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] overflow-x-clip">
 
         <div className="max-w-2xl mx-auto mb-5">
           <h1 className="page-title">{t('patient.interviews.title')}</h1>

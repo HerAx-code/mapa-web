@@ -239,12 +239,13 @@ export default function TrackStatus() {
 
   return (
     <Layout breadcrumb={t('patient.track.title')}>
-      {/* px-3 on mobile matches the other patient pages (Find Programs,
-          More) so navigation between them doesn't feel like the gutter
-          is shifting. */}
-      <div className="px-3 py-4 sm:p-6">
+      {/* Hard viewport cap (max-w-[100vw]) + overflow-x-clip so long
+          agency names, awaiting-info messages, or app IDs can't push
+          the page wider than the phone screen. Restores max-w-2xl
+          for centering on tablet+. */}
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-2xl overflow-x-clip">
 
-        <div className="max-w-2xl mx-auto">
+        <div className="w-full min-w-0">
 
         <div className="mb-5">
           <h1 className="page-title">{t('patient.track.title')}</h1>
@@ -348,18 +349,20 @@ export default function TrackStatus() {
 
                   return (
                     <div key={app.id} className="card p-5">
-                      {/* App header */}
+                      {/* App header — min-w-0 on the middle text block
+                          + truncate so a long agency name doesn't push
+                          the badge off-screen. */}
                       <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
-                        <div className={`w-10 h-10 ${color} rounded-xl text-white text-xs font-bold flex items-center justify-center`}>
+                        <div className={`w-10 h-10 ${color} rounded-xl text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
                           {initials}
                         </div>
-                        <div>
-                          <h2 className="text-sm font-semibold text-gray-800">{app.agencyName}</h2>
-                          <p className="text-sm text-gray-500">
+                        <div className="min-w-0 flex-1">
+                          <h2 className="text-sm font-semibold text-gray-800 truncate">{app.agencyName}</h2>
+                          <p className="text-sm text-gray-500 truncate">
                             {app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}
                           </p>
                         </div>
-                        <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'} ml-auto`}>
+                        <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'} ml-auto flex-shrink-0`}>
                           {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                         </span>
                       </div>
@@ -601,8 +604,8 @@ export default function TrackStatus() {
                       {agencyInitials(app)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800">{app.agencyName}</p>
-                      <p className="text-sm text-gray-500">{app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate">{app.agencyName}</p>
+                      <p className="text-sm text-gray-500 truncate">{app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}</p>
                     </div>
                     <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'}`}>
                       {t(`patient.status.${app.status}`, { defaultValue: app.status })}
@@ -631,7 +634,7 @@ export default function TrackStatus() {
           </div>
         )}
 
-        </div> {/* end max-w-2xl mx-auto */}
+        </div> {/* end inner content wrapper */}
       </div>
     </Layout>
   )

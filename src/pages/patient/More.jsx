@@ -93,7 +93,7 @@ export default function PatientMore() {
         onSetModal={setActiveModal}
       />
 
-      <div className="px-3 py-4 sm:p-6 max-w-2xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-2xl overflow-x-clip">
 
         {/* Header */}
         <div className="mb-5">
@@ -111,7 +111,7 @@ export default function PatientMore() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-base font-semibold text-gray-900 truncate">{user.name}</p>
-              <p className="text-xs text-gray-400">{user.email}</p>
+              <p className="text-xs text-gray-400 truncate">{user.email}</p>
             </div>
             <MdChevronRight size={20} className="text-gray-300 flex-shrink-0" />
           </button>

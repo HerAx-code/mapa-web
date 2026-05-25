@@ -93,8 +93,8 @@ export default function Screening() {
 
   if (step === 'questions') return (
     <Layout breadcrumb={t('patient.screening.breadcrumb')}>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-2xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-2xl overflow-x-clip">
+        <div className="w-full min-w-0">
           <div className="card p-6">
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-gray-900">{t('patient.screening.questionsTitle')}</h2>
@@ -182,8 +182,8 @@ export default function Screening() {
   const results = getResults().filter(a => a.matchScore > 0)
   return (
     <Layout breadcrumb={t('patient.screening.breadcrumb')}>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-2xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-2xl overflow-x-clip">
+        <div className="w-full min-w-0">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="page-title">{t('patient.screening.resultsTitle')}</h1>
