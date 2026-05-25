@@ -648,18 +648,23 @@ export default function Documents() {
                           {t('patient.documents.delete.warningVerified')}
                         </p>
                       )}
-                      <div className="flex items-center gap-2">
+                      {/* Mobile: stack 'Remove?' above the Yes/No buttons so
+                          all three elements fit comfortably on a 360 px screen
+                          without competing with the doc info on the same row. */}
+                      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
                         <span className="text-sm text-gray-600">{t('patient.documents.delete.prompt')}</span>
-                        <button
-                          className="min-h-[44px] min-w-[44px] text-sm px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }}>
-                          {t('patient.documents.delete.yes')}
-                        </button>
-                        <button
-                          className="min-h-[44px] min-w-[44px] text-sm px-3 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors font-medium"
-                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}>
-                          {t('patient.documents.delete.no')}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="min-h-[44px] min-w-[44px] text-sm px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
+                            onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }}>
+                            {t('patient.documents.delete.yes')}
+                          </button>
+                          <button
+                            className="min-h-[44px] min-w-[44px] text-sm px-3 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors font-medium"
+                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}>
+                            {t('patient.documents.delete.no')}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (

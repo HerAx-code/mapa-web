@@ -239,7 +239,10 @@ export default function TrackStatus() {
 
   return (
     <Layout breadcrumb={t('patient.track.title')}>
-      <div className="p-4 sm:p-6">
+      {/* px-3 on mobile matches the other patient pages (Find Programs,
+          More) so navigation between them doesn't feel like the gutter
+          is shifting. */}
+      <div className="px-3 py-4 sm:p-6">
 
         <div className="max-w-2xl mx-auto">
 
@@ -248,8 +251,10 @@ export default function TrackStatus() {
           <p className="page-sub">{t('patient.track.subtitle')}</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-5">
+        {/* Tabs — flex-wrap allows the second tab to drop to its own
+            row if the active/past labels are long (Filipino is longer
+            than English). */}
+        <div className="flex gap-2 mb-5 flex-wrap">
           <button
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'active' ? 'bg-brand-500 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
             onClick={() => setTab('active')}>

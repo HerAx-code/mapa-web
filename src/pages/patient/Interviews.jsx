@@ -154,16 +154,21 @@ export default function Interviews() {
               const isToday  = app.interviewDate === todayStr
               return (
               <div key={app.id} className={`card p-5 ${isToday ? 'border-2 border-brand-400' : ''}`}>
-                {/* Agency header */}
-                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
-                  <div className={`w-10 h-10 ${app.agencyColor ?? 'bg-gray-400'} rounded-xl text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
-                    {app.agencyInitials ?? app.agencyName?.slice(0, 2).toUpperCase()}
+                {/* Agency header — on mobile the icon + name occupy row 1
+                    and the badges drop to row 2 so we don't try to fit
+                    four pills next to a long agency name. On sm+ both
+                    sections live on the same row as before. */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-4 border-b border-gray-50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 ${app.agencyColor ?? 'bg-gray-400'} rounded-xl text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
+                      {app.agencyInitials ?? app.agencyName?.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold text-gray-800 truncate">{app.agencyName}</h2>
+                      <p className="text-xs text-gray-400 truncate">{app.appId}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-sm font-semibold text-gray-800">{app.agencyName}</h2>
-                    <p className="text-xs text-gray-400">{app.appId}</p>
-                  </div>
-                  <div className="ml-auto flex items-center gap-1.5 flex-wrap justify-end">
+                  <div className="flex items-center gap-1.5 flex-wrap sm:ml-auto sm:justify-end">
                     {/* Countdown chip — only for upcoming interviews within
                         a week. "Today!" supersedes the day count. */}
                     {!isPast && !isToday && (() => {
