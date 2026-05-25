@@ -26,10 +26,22 @@ export function AuthProvider({ children }) {
         if (snap.exists()) {
           setUser({ uid: fbUser.uid, email: fbUser.email, ...snap.data() })
         } else {
-          // Orphan — Auth account without a user doc. Clean up and force
-          // re-auth so the patient sees a clear "account not found" error
-          // instead of a dashboard with no role / broken routing.
-          await handleOrphanAuth(fbUser)
+          // User doc not present (yet). Two legitimate possibilities:
+          //   (a) Registration is IN FLIGHT — the Register flow creates
+          //       the Auth account first, then writes the users/{uid}
+          //       doc inside a transaction. onAuthStateChanged fires
+          //       BEFORE that transaction runs, so the read here will
+          //       always miss on first registration. Register.jsx
+          //       follows up with updateUser({...}) once the transaction
+          //       commits, which populates the user state correctly.
+          //   (b) A true orphan from a failed registration — handled in
+          //       the login() path below (which CAN safely run cleanup
+          //       because it knows the user just attempted to log in,
+          //       not register).
+          // Auto-cleaning here would race legitimate registrations:
+          // the delete would void request.auth mid-transaction and
+          // every subsequent tx step would fail with permission-denied.
+          // Just set null and let updateUser() or login() resolve it.
           setUser(null)
         }
       } else {
