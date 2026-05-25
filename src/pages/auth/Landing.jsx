@@ -26,6 +26,21 @@ export default function Landing() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [agencies, setAgencies]       = useState([])
 
+  // Installed-PWA users have no reason to see the marketing landing
+  // page. The 'Download App' CTA is meaningless (they already have
+  // the app), and the hero / partner showcase / footer wastes their
+  // data plan on content meant for discovery. Detect standalone mode
+  // and bounce them to login (or their dashboard if already signed
+  // in). The page still renders normally in a regular browser tab.
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    if (!isStandalone) return
+    if (user) navigate(DASHBOARD[user.role] ?? '/patient/dashboard', { replace: true })
+    else      navigate('/login', { replace: true })
+  }, [user, navigate])
+
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, 'agencies'), where('enabled', '==', true)),
