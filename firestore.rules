@@ -158,18 +158,23 @@ service cloud.firestore {
     // Listing all IDs requires authentication.
     // Updates:
     //   - admin: anything (manual reset, status changes)
-    //   - patient: only when claiming a still-available code as themselves —
-    //     status must flip 'available' → 'used' and patId must equal their
-    //     own uid. Without this constraint, the previous rule `isAuth()`
-    //     let any logged-in user mark someone else's code as used, or
-    //     revert another patient's claim back to available.
+    //   - patient (registration claim): isAuth() rather than isPatient()
+    //     because the patient's user doc is created in the SAME transaction
+    //     as this hospitalIds update during registration. Firestore rules
+    //     cannot see pending writes from the same transaction, so an
+    //     isPatient() check (which does get(users/uid).role) would return
+    //     false against the not-yet-committed user doc and fail the whole
+    //     transaction with permission-denied. The field-level constraints
+    //     (status must currently be 'available', must flip to 'used',
+    //     patId must equal the requesting uid) carry the security here
+    //     without needing the role lookup.
     // Only super_admin can create or delete IDs.
     match /hospitalIds/{hospitalId} {
       allow get:    if true;
       allow list:   if isAuth();
       allow create: if isSuperAdmin();
       allow update: if isAdmin() ||
-                       (isPatient() &&
+                       (isAuth() &&
                         resource.data.status == 'available' &&
                         request.resource.data.status == 'used' &&
                         request.resource.data.patId == uid()) ||
