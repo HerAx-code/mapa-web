@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import NotificationModal, { getNotifRoute } from './NotificationModal'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   MdMenu, MdClose, MdApps, MdMessage, MdNotifications,
   MdLogout, MdShield, MdDashboard, MdSearch, MdLocalHospital,
@@ -818,6 +818,7 @@ export default function Layout({ children, breadcrumb }) {
   const { user, logout } = useAuth()
   const { t }            = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const [sidebarOpen, setSidebarOpen]   = useState(false)
   const [showApps, setShowApps]         = useState(false)
   const [showNotifs, setShowNotifs]     = useState(false)
@@ -1232,7 +1233,13 @@ export default function Layout({ children, breadcrumb }) {
         <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 ${
           user?.role === ROLES.PATIENT ? 'pb-20 lg:pb-0' : ''
         }`}>
-          {children}
+          {/* Key on pathname so each navigation re-mounts this wrapper
+              and re-triggers the fade-in animation. Subtle motion
+              conveys 'this is a new screen' instead of the instant
+              teleport that makes the app feel webby. */}
+          <div key={location.pathname} className="animate-fade-in flex-1 flex flex-col motion-reduce:animate-none">
+            {children}
+          </div>
         </main>
 
         {/* Mobile-only bottom tab bar — patient role only. Agency / admin

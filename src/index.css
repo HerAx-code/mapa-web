@@ -115,8 +115,22 @@
   .data-table tr:hover td { @apply bg-gray-50; }
 }
 
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Responsive utilities ── */
 @layer utilities {
+  /* Subtle fade-in on mount — applied to the routed page wrapper
+     in Layout so each navigation feels like a screen change rather
+     than an instant teleport. Respects prefers-reduced-motion via
+     motion-reduce: variants on the consumer side. */
+  .animate-fade-in {
+    animation: fadeIn 180ms ease-out;
+  }
+
   .page-container {
     @apply p-4 sm:p-6;
   }

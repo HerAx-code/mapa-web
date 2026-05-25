@@ -313,13 +313,18 @@ export default function PatientDashboard() {
 
   return (
     <Layout breadcrumb={t('patient.dashboard.title')}>
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="px-3 py-4 sm:p-6 space-y-4">
 
-        {/* Header */}
+        {/* Compact greeting — banking-app pattern: the GREETING is a
+            small line at the top, the STATUS card below is the hero.
+            On desktop (sm+) the greeting returns to page-title weight
+            so the dashboard reads like a landing page. */}
         <div>
-          <h1 className="page-title">{t('patient.dashboard.subtitle', { name: firstName })}</h1>
+          <h1 className="text-base sm:text-xl font-semibold text-gray-700 sm:text-gray-900">
+            {t('patient.dashboard.subtitle', { name: firstName })}
+          </h1>
           {greetingStatus && (
-            <p className="text-sm text-gray-500 mt-1 leading-snug">{greetingStatus}</p>
+            <p className="hidden sm:block text-sm text-gray-500 mt-1 leading-snug">{greetingStatus}</p>
           )}
         </div>
 
