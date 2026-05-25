@@ -11,6 +11,39 @@
       "message": "You're offline. Submitting forms will work again when you're back online."
     }
   },
+  "installPage": {
+    "backHome": "Back to home",
+    "hero": {
+      "title": "Install MAPA on your phone",
+      "desc":  "Apply for medical assistance from your home screen — no need to remember the website URL."
+    },
+    "cta": {
+      "install": "Install MAPA app",
+      "androidHint": "Chrome will ask you to confirm. Tap Install in the dialog.",
+      "androidManual": "Your browser hasn't offered the install option yet. You can install MAPA manually:",
+      "androidStep1": "Open this page in Google Chrome (if you're not already).",
+      "androidStep2": "Tap the three-dot menu (top right of Chrome).",
+      "androidStep3": "Tap 'Install app' or 'Add to Home screen'.",
+      "iosIntro": "On iPhone, install MAPA through Safari's Share menu:",
+      "iosStep1": "Tap the Share button (square with an up arrow) at the bottom of the screen.",
+      "iosStep2": "Scroll down and tap 'Add to Home Screen'.",
+      "iosStep3": "Tap 'Add' in the top-right corner.",
+      "desktopTitle": "You're on a desktop computer",
+      "desktopDesc":  "MAPA's mobile app is designed for phones. Open this page on your Android phone or iPhone to install it."
+    },
+    "alreadyInstalled": {
+      "title": "MAPA is already installed",
+      "desc":  "You're using the installed app right now. There's nothing more to do here — return to the home screen to find MAPA's icon."
+    },
+    "benefits": {
+      "title":     "Why install",
+      "homescreen": "A MAPA icon on your home screen — no need to remember a website address.",
+      "faster":     "Opens instantly, even on slow 4G.",
+      "offline":    "Works without internet for things you've already opened.",
+      "notifs":     "Get notified when your application status changes (coming soon)."
+    },
+    "footer": "Free · Made by Cotabato Regional Medical Center · No app store needed"
+  },
   "common": {
     "appName": "MAPA",
     "appFull": "Medical Assistance Portal Access",

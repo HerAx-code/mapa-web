@@ -11,6 +11,40 @@
       "message": "Wala kayong koneksyon sa internet. Ang pagsumite ng mga form ay gagana muli kapag bumalik na ang koneksyon."
     }
   },
+  "installPage": {
+    "backHome": "Bumalik sa home",
+    "hero": {
+      "title": "I-install ang MAPA sa inyong telepono",
+      "desc":  "Mag-apply para sa tulong medikal mula sa inyong home screen — hindi na kailangan tandaan ang URL ng website."
+    },
+    "cta": {
+      "install": "I-install ang MAPA app",
+      "androidHint": "Magtatanong ang Chrome para sa kumpirmasyon. Pindutin ang Install sa dialog.",
+      "androidManual": "Hindi pa naipakita ng inyong browser ang install option. Pwede ninyong i-install ang MAPA nang manu-mano:",
+      "androidStep1": "Buksan ang page na ito sa Google Chrome (kung hindi pa).",
+      "androidStep2": "Pindutin ang three-dot menu (sa kanang itaas ng Chrome).",
+      "androidStep3": "Pindutin ang 'Install app' o 'Add to Home screen'.",
+      "iosIntro": "Sa iPhone, i-install ang MAPA sa pamamagitan ng Share menu ng Safari:",
+      "iosStep1": "Pindutin ang Share button (parisukat na may pataas na arrow) sa ibaba ng screen.",
+      "iosStep2": "Mag-scroll pababa at pindutin ang 'Add to Home Screen'.",
+      "iosStep3": "Pindutin ang 'Add' sa kanang itaas."
+,
+      "desktopTitle": "Kayo ay nasa desktop computer",
+      "desktopDesc":  "Ang MAPA mobile app ay para sa mga telepono. Buksan ang page na ito sa inyong Android phone o iPhone upang i-install."
+    },
+    "alreadyInstalled": {
+      "title": "Naka-install na ang MAPA",
+      "desc":  "Ginagamit niyo na ngayon ang naka-install na app. Walang na kailangang gawin dito — bumalik sa home screen para makita ang MAPA icon."
+    },
+    "benefits": {
+      "title":     "Bakit i-install",
+      "homescreen": "May MAPA icon sa inyong home screen — hindi na kailangang tandaan ang address ng website.",
+      "faster":     "Mabilis bumukas, kahit mabagal ang 4G.",
+      "offline":    "Gumagana kahit walang internet para sa mga bagay na binuksan na.",
+      "notifs":     "Tumanggap ng abiso kapag may pagbabago sa status ng aplikasyon (paparating)."
+    },
+    "footer": "Libre · Ginawa ng Cotabato Regional Medical Center · Walang app store na kailangan"
+  },
   "common": {
     "appName": "MAPA",
     "appFull": "Medical Assistance Portal Access",

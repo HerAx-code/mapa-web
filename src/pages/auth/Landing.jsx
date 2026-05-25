@@ -8,7 +8,6 @@ import { db } from '../../firebase'
 import { MdShield, MdArrowForward, MdDownload, MdClose } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import LanguageToggle from '../../components/LanguageToggle'
-import toast from 'react-hot-toast'
 
 const DASHBOARD = {
   [ROLES.PATIENT]:      '/patient/dashboard',
@@ -54,10 +53,7 @@ export default function Landing() {
           <LanguageToggle className="self-end sm:self-auto" />
           <button
             className="btn-secondary flex items-center justify-center gap-1.5 text-sm"
-            onClick={() => toast(t('landing.header.mobileToast'), {
-              duration: 4000,
-              icon: '🚀',
-            })}>
+            onClick={() => navigate('/install')}>
             <MdDownload size={16} />
             {t('landing.header.downloadApp')}
           </button>

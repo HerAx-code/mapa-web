@@ -4,9 +4,10 @@ import PrivateRoute from './components/PrivateRoute'
 import { ROLES } from './utils/constants'
 
 // Auth pages
-import Landing  from './pages/auth/Landing'
-import Login    from './pages/auth/Login'
-import Register from './pages/auth/Register'
+import Landing    from './pages/auth/Landing'
+import Login      from './pages/auth/Login'
+import Register   from './pages/auth/Register'
+import InstallApp from './pages/auth/InstallApp'
 import Seed          from './pages/Seed'
 import Notifications  from './pages/Notifications'
 
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="/"         element={<Landing />} />
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/install"  element={<InstallApp />} />
         {import.meta.env.VITE_ENABLE_SEED === 'true' && (
           <Route path="/seed" element={<Seed />} />
         )}
