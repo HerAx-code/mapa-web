@@ -10,6 +10,7 @@ import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, up
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
+import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -36,11 +37,8 @@ const formatDate = (ts) => {
   return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-// GL validity matches the agency-side constant (agency/Dashboard.jsx).
-// Surfacing it on the patient view sets the same expectation both sides
-// of the system enforce, so patients aren't surprised by a "GL expired"
-// response at the provider counter.
-const GL_VALIDITY_DAYS = 30
+// GL_VALIDITY_DAYS imported from utils/constants so the patient view
+// shares the single source of truth that the agency-side enforces.
 const glExpiryInfo = (app) => {
   if (app?.status !== 'certificate') return null
   const issued = app.approvedAt?.toDate?.() ?? null

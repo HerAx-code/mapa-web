@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
+import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
   MdVideoCall, MdDescription, MdAssignment, MdAttachMoney,
@@ -47,7 +48,7 @@ const STATUS_LABEL = {
   certificate:    'GL Issued',
 }
 
-const GL_VALIDITY_DAYS = 30
+// GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
 const tsToDate  = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const daysSince = (ts) => {
   const d = tsToDate(ts)

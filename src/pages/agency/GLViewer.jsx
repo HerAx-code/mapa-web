@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -19,7 +19,6 @@ export default function GLViewer() {
   const { id }       = useParams()
   const navigate     = useNavigate()
   const { user }     = useAuth()
-  const [searchParams] = useSearchParams()
 
   const [app, setApp]                 = useState(null)
   const [patient, setPatient]         = useState({})
@@ -118,7 +117,7 @@ export default function GLViewer() {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
         // Let the browser handle it naturally — don't preventDefault.
-        toast('Opening print dialog…', { icon: '🖨️', duration: 1500 })
+        toast('Opening print dialog…', { duration: 1500 })
       }
     }
     window.addEventListener('keydown', onKey)

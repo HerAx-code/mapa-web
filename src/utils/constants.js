@@ -172,3 +172,10 @@ export const AGENCIES = [
 // PATIENT_NOTIFICATIONS was prototype mock data referenced only by the
 // since-removed Navbar/NotificationPanel components. Real notifications
 // come from Firestore via the Layout's onSnapshot subscription.
+
+// Guarantee Letter validity window — counted from approvedAt. After this
+// many days a GL whose glStatus is still 'issued' is considered expired
+// at the provider and the committed budget should be released.
+// Surfaced on both patient (TrackStatus expiry banner) and agency
+// (Inbox / ApplicationDetail / Dashboard expiry handlers).
+export const GL_VALIDITY_DAYS = 30

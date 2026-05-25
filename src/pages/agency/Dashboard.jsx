@@ -7,7 +7,7 @@ import {
   MdListAlt, MdMessage, MdDescription, MdMenuBook,
 } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
-import { PERIOD_NOUN, PERIOD_ADJECTIVE } from '../../utils/constants'
+import { PERIOD_NOUN, PERIOD_ADJECTIVE, GL_VALIDITY_DAYS } from '../../utils/constants'
 import {
   collection, query, where, onSnapshot, doc, getDoc, getDocs,
   updateDoc, writeBatch, increment, serverTimestamp, addDoc,
@@ -23,7 +23,7 @@ const LOW_BALANCE_FRAC = 0.10
 // Stale-period detection: monthly periods older than this trigger a banner.
 const STALE_PERIOD_DAYS = 31
 
-const GL_VALIDITY_DAYS = 30
+// GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
 
 const STATUS_BADGE = {
   pending:   'badge-blue',

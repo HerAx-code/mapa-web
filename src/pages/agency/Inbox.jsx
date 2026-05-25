@@ -9,15 +9,14 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { getOrCreateConversation } from '../../utils/messages'
 import { isIntakeComplete } from '../../utils/intakeSheet'
+import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import {
   MdSearch, MdDescription, MdMessage, MdAssignment, MdInbox,
-  MdOpenInNew,
+  MdOpenInNew, MdClose,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-const GL_VALIDITY_DAYS = 30
 const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const daysSince = (ts) => {
   const d = tsToDate(ts)
@@ -170,8 +169,16 @@ export default function Inbox() {
         {/* Search */}
         <div className="relative mb-4">
           <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by patient name, contact, or application ID..."
+          <input className="input pl-9 pr-10" placeholder="Search by patient name, contact, or application ID..."
             value={search} onChange={e => setSearch(e.target.value)} />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              <MdClose size={14} />
+            </button>
+          )}
         </div>
 
         {/* Table */}
@@ -217,7 +224,7 @@ export default function Inbox() {
                   : null
                 return (
                   <tr key={app.id}
-                    className={`cursor-pointer hover:bg-gray-50 ${isDuplicate ? 'bg-red-50' : ''}`}
+                    className={`cursor-pointer ${isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}
                     onClick={() => goToApp(app)}>
                     <td>
                       <div className="flex items-center gap-2">
