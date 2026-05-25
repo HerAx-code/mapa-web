@@ -120,16 +120,29 @@ export default function IntakeSheet() {
     saveTimerRef.current = setTimeout(performSave, AUTOSAVE_MS)
   }
 
-  // Flush pending save on unmount or navigation
+  // Cancel any pending autosave when the application id changes or the
+  // page unmounts. Critical: do NOT flush the timer on id-change —
+  // the queued performSave closes over the previous `app` ref via closure,
+  // so flushing would write the prior intake's draft data into the new
+  // intake document (silent cross-application data corruption when a
+  // coordinator clicks between two patients faster than the 1.5s debounce).
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
-        if (dirtyRef.current) performSave()
+        saveTimerRef.current = null
       }
+      dirtyRef.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [id])
+
+  // Also rehydrate when navigating to a different application id so the
+  // local sheet draft doesn't bleed across documents.
+  useEffect(() => {
+    setHydrated(false)
+    setSheet(blankSheet())
+    setSaveState({ status: 'idle', lastSavedAt: null })
+  }, [id])
 
   // Warn user about unsaved changes on tab close
   useEffect(() => {

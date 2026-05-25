@@ -152,6 +152,20 @@ export default function AgencyAllocation() {
       toast.error('Allocation must be 0 or a positive number.')
       return
     }
+    // Block lowering allocation below the already-committed amount.
+    // Otherwise the agency would silently owe more in GLs than its
+    // declared budget — the UI clamps `remaining` at 0 so the violation
+    // would be invisible until COA reconciliation. Coordinators can
+    // still reverse approvals to release committed funds first.
+    if (next > 0 && next < committed) {
+      toast.error(
+        `New allocation (₱${next.toLocaleString()}) is below the currently committed ` +
+        `₱${committed.toLocaleString()}. Wait for outstanding Guarantee Letters to be ` +
+        `redeemed or expired, or reverse approvals to release committed funds first.`,
+        { duration: 8000 }
+      )
+      return
+    }
     if (next > 0 && !newFundSource.trim()) {
       toast.error('Please name the fund source (e.g., PCSO Resolution #2026-15) for accountability.')
       return
@@ -242,14 +256,17 @@ export default function AgencyAllocation() {
     }
   }
 
-  // Stale-period detection
+  // Stale-period detection — fires for any period, not just monthly.
+  // The thresholds are one period + a small grace (admin probably forgot
+  // to reset on the first day of the new month/quarter/year).
+  const PERIOD_STALE_AFTER = { monthly: 31, quarterly: 95, yearly: 366 }
   const periodStart = budget.periodStart?.toDate
     ? budget.periodStart.toDate()
     : (budget.periodStart ? new Date(budget.periodStart) : null)
   const periodDays = periodStart
     ? Math.floor((Date.now() - periodStart.getTime()) / 86400000)
     : null
-  const isStale = budget.period === 'monthly' && periodDays != null && periodDays > 31
+  const isStale = periodDays != null && periodDays > (PERIOD_STALE_AFTER[budget.period] ?? 31)
 
   return (
     <Layout breadcrumb="Budget Allocation">

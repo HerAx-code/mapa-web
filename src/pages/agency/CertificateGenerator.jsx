@@ -431,7 +431,7 @@ export default function CertificateGenerator() {
                         <span className="mx-1.5 text-gray-200">·</span>
                         ₱{Number(app.approvedAmount ?? 0).toLocaleString()}
                         <span className="mx-1.5 text-gray-200">·</span>
-                        Approved: {approvedStage?.date ?? formatDate(app.updatedAt)}
+                        Approved: {approvedStage?.date ?? formatDate(app.approvedAt) ?? '—'}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {!isIssued && <span className="badge badge-blue text-xs">Step 1: Print pending</span>}
