@@ -157,17 +157,19 @@ export default function Notifications() {
 
   return (
     <Layout breadcrumb={t('notifsPage.title')}>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="px-3 py-4 sm:p-6 max-w-3xl mx-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+        {/* Header — title block on its own row on mobile, action buttons
+            on a second row. On sm+ the buttons return to the right side
+            of the title (justify-between layout). */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
               <MdNotifications size={20} className="text-brand-500" />
             </div>
-            <div>
-              <h1 className="page-title">{t('notifsPage.title')}</h1>
-              <p className="page-sub">{t('notifsPage.subtitle')}</p>
+            <div className="min-w-0">
+              <h1 className="page-title truncate">{t('notifsPage.title')}</h1>
+              <p className="page-sub truncate">{t('notifsPage.subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
