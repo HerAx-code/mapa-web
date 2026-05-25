@@ -109,6 +109,14 @@ export default function Register() {
   const navigate              = useNavigate()
   const { updateUser }        = useAuth()
 
+  // Hide the 'Back to Home' link when running in the installed PWA —
+  // Landing.jsx redirects '/' away in standalone mode, so the link
+  // would just round-trip the user back here.
+  const [isStandalone] = useState(() =>
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
+  )
+
   // Step labels — built here so they re-render on language change.
   const STEPS = [
     { num: 1, label: t('register.stepPersonal') },
@@ -456,9 +464,11 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md sm:max-w-lg">
-        <div className="flex items-center gap-2 mb-6">
-          <Link to="/" className="text-sm text-gray-400 hover:text-gray-600">← {t('register.backHome')}</Link>
-        </div>
+        {!isStandalone && (
+          <div className="flex items-center gap-2 mb-6">
+            <Link to="/" className="text-sm text-gray-400 hover:text-gray-600">← {t('register.backHome')}</Link>
+          </div>
+        )}
 
         <div className="card p-6">
           {/* Header */}

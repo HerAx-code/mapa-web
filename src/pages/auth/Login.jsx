@@ -50,6 +50,15 @@ export default function Login() {
   const { t }           = useTranslation()
   const { login, user } = useAuth()
 
+  // When MAPA is running as an installed PWA, the marketing landing
+  // page is redirected away (see Landing.jsx). A 'Back to Home' link
+  // from this Login page would just bounce the user back here. Detect
+  // standalone display mode once on mount so we can hide that link.
+  const [isStandalone] = useState(() =>
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
+  )
+
   const [form, setForm]                       = useState({ email: '', password: '' })
   const [showPw, setShowPw]                   = useState(false)
   const [loading, setLoading]                 = useState(false)
@@ -297,9 +306,11 @@ export default function Login() {
           </div>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-4">
-          <Link to="/" className="hover:text-gray-600">{t('auth.backHome')}</Link>
-        </p>
+        {!isStandalone && (
+          <p className="text-center text-xs text-gray-400 mt-4">
+            <Link to="/" className="hover:text-gray-600">{t('auth.backHome')}</Link>
+          </p>
+        )}
       </div>
 
       {/* Fix 2 — Forgot Password modal */}

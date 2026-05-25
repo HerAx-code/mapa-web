@@ -102,14 +102,18 @@ export default function InstallApp() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
 
-      {/* Topbar */}
+      {/* Topbar — hide 'Back to home' when the app is already
+          installed; the Landing page redirects away in standalone
+          mode so the link would just round-trip the user. */}
       <header className="border-b border-gray-100 px-6 py-3 flex items-center justify-between">
         <Logo size={32} withWordmark />
         <div className="flex items-center gap-2">
           <LanguageToggle />
-          <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium flex items-center gap-1">
-            <MdArrowBack size={14} /> {t('installPage.backHome')}
-          </Link>
+          {!installed && (
+            <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium flex items-center gap-1">
+              <MdArrowBack size={14} /> {t('installPage.backHome')}
+            </Link>
+          )}
         </div>
       </header>
 
