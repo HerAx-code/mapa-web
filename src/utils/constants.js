@@ -169,12 +169,6 @@ export const AGENCIES = [
   },
 ]
 
-// Mock notifications for patient
-export const PATIENT_NOTIFICATIONS = [
-  { id: 1, type: 'certificate_ready',  title: 'Certificate ready',        body: 'Your medical assistance certificate from Malasakit Center is ready.', time: '2 hours ago',  read: false },
-  { id: 2, type: 'interview_approved', title: 'Interview approved',        body: 'Your interview for Malasakit Center was approved. Certificate will be prepared shortly.', time: '6 hours ago', read: false },
-  { id: 3, type: 'doc_verified',       title: 'Document verified',         body: 'Your Barangay Certificate of Indigency has been verified.', time: '1 day ago', read: false },
-  { id: 4, type: 'interview_sched',   title: 'Interview scheduled',       body: 'Your online interview is scheduled for May 13, 2026 at 2:00 PM.', time: '2 days ago', read: false },
-  { id: 5, type: 'app_advanced',      title: 'Application advanced',      body: 'Your application for Malasakit Center has been moved to interview stage.', time: '2 days ago', read: false },
-  { id: 6, type: 'app_submitted',     title: 'Application submitted',     body: 'You successfully applied to the Malasakit Center program.', time: '6 days ago', read: true },
-]
+// PATIENT_NOTIFICATIONS was prototype mock data referenced only by the
+// since-removed Navbar/NotificationPanel components. Real notifications
+// come from Firestore via the Layout's onSnapshot subscription.

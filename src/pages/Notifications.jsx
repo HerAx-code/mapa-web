@@ -3,55 +3,61 @@ import Layout from '../components/Layout'
 import { collection, query, orderBy, onSnapshot, doc, writeBatch, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
-import { MdDone, MdDelete, MdCheckCircle, MdNotificationsNone, MdClearAll } from 'react-icons/md'
+import { useTranslation } from 'react-i18next'
+import {
+  MdDone, MdDelete, MdCheckCircle, MdNotificationsNone, MdClearAll,
+  MdNotifications, MdStar, MdFolder, MdCancel, MdCalendarToday,
+  MdInfo, MdCheckCircleOutline, MdAssignment, MdFavorite, MdEdit,
+  MdDescription, MdSupervisedUserCircle, MdLock, MdLockOpen,
+  MdSettings, MdKey, MdChat, MdFlag, MdBusiness,
+} from 'react-icons/md'
 import NotificationModal from '../components/NotificationModal'
 
 // ── Category filter config ────────────────────────────────────────────────
+// Labels are resolved at render time via t() so the page is bilingual.
 
-const CATEGORIES = [
-  { key: 'all',          label: 'All'          },
-  { key: 'messages',     label: 'Messages',     types: ['new_message'] },
-  { key: 'documents',    label: 'Documents',    types: ['doc_verified','doc_rejected','doctype_added','doctype_updated','doctype_deleted'] },
-  { key: 'applications', label: 'Applications', types: ['app_submitted','app_advanced','interview_sched','interview_approved','certificate_ready'] },
-  { key: 'accounts',     label: 'Accounts',     types: ['new_account','account_deactivated','account_activated','account_deleted','role_changed','password_reset_sent'] },
-  { key: 'agencies',     label: 'Agencies',     types: ['new_agency','agency_created','agency_updated','agency_enabled','agency_disabled','agency_deleted'] },
-  { key: 'system',       label: 'System',       types: ['assistance_added','assistance_updated','assistance_deleted','report_submitted'] },
+const CATEGORY_DEFS = [
+  { key: 'all'                                                                                                                              },
+  { key: 'messages',     types: ['new_message']                                                                                            },
+  { key: 'documents',    types: ['doc_verified','doc_rejected','doctype_added','doctype_updated','doctype_deleted']                       },
+  { key: 'applications', types: ['app_submitted','app_advanced','interview_sched','interview_approved','certificate_ready']               },
+  { key: 'accounts',     types: ['new_account','account_deactivated','account_activated','account_deleted','role_changed','password_reset_sent'] },
+  { key: 'agencies',     types: ['new_agency','agency_created','agency_updated','agency_enabled','agency_disabled','agency_deleted']      },
+  { key: 'system',       types: ['assistance_added','assistance_updated','assistance_deleted','report_submitted','system_announcement']   },
 ]
 
-const getCategoryLabel = (type) => {
-  const cat = CATEGORIES.find(c => c.types?.includes(type))
-  return cat?.label ?? null
-}
+const getCategoryKey = (type) => CATEGORY_DEFS.find(c => c.types?.includes(type))?.key ?? null
 
-// ── Notification type config ──────────────────────────────────────────────
+// ── Notification type visuals — Material icons, civic tone (CLAUDE.md). ──
 
-const NOTIF_ICONS = {
-  certificate_ready:   { emoji: '🏆', bg: 'bg-green-50'  },
-  interview_approved:  { emoji: '✅', bg: 'bg-blue-50'   },
-  doc_verified:        { emoji: '📁', bg: 'bg-brand-50'  },
-  doc_rejected:        { emoji: '❌', bg: 'bg-red-50'    },
-  interview_sched:     { emoji: '📅', bg: 'bg-purple-50' },
-  app_advanced:        { emoji: 'ℹ️', bg: 'bg-amber-50'  },
-  app_submitted:       { emoji: '📋', bg: 'bg-gray-50'   },
-  agency_disabled:     { emoji: '🔕', bg: 'bg-red-50'    },
-  agency_enabled:      { emoji: '✅', bg: 'bg-green-50'  },
-  agency_updated:      { emoji: '⚙️', bg: 'bg-blue-50'   },
-  agency_deleted:      { emoji: '🗑️', bg: 'bg-red-50'    },
-  new_agency:          { emoji: '🏥', bg: 'bg-teal-50'   },
-  assistance_added:    { emoji: '❤️', bg: 'bg-pink-50'   },
-  assistance_updated:  { emoji: '✏️', bg: 'bg-amber-50'  },
-  assistance_deleted:  { emoji: '🗑️', bg: 'bg-red-50'    },
-  doctype_added:       { emoji: '📄', bg: 'bg-blue-50'   },
-  doctype_updated:     { emoji: '✏️', bg: 'bg-amber-50'  },
-  doctype_deleted:     { emoji: '🗑️', bg: 'bg-red-50'    },
-  new_account:         { emoji: '👤', bg: 'bg-purple-50' },
-  account_deactivated: { emoji: '🔒', bg: 'bg-orange-50' },
-  account_activated:   { emoji: '🔓', bg: 'bg-green-50'  },
-  account_deleted:     { emoji: '🗑️', bg: 'bg-red-50'    },
-  role_changed:        { emoji: '⚙️', bg: 'bg-blue-50'   },
-  password_reset_sent: { emoji: '🔑', bg: 'bg-amber-50'  },
-  new_message:         { emoji: '💬', bg: 'bg-cyan-50'   },
-  report_submitted:    { emoji: '🚩', bg: 'bg-orange-50' },
+const NOTIF_VISUAL = {
+  certificate_ready:   { Icon: MdStar,                  color: 'text-green-500',  bg: 'bg-green-50'  },
+  interview_approved:  { Icon: MdCheckCircleOutline,    color: 'text-blue-500',   bg: 'bg-blue-50'   },
+  doc_verified:        { Icon: MdFolder,                color: 'text-brand-500',  bg: 'bg-brand-50'  },
+  doc_rejected:        { Icon: MdCancel,                color: 'text-red-500',    bg: 'bg-red-50'    },
+  interview_sched:     { Icon: MdCalendarToday,         color: 'text-purple-500', bg: 'bg-purple-50' },
+  app_advanced:        { Icon: MdInfo,                  color: 'text-amber-500',  bg: 'bg-amber-50'  },
+  app_submitted:       { Icon: MdAssignment,            color: 'text-gray-500',   bg: 'bg-gray-50'   },
+  agency_disabled:     { Icon: MdCancel,                color: 'text-red-500',    bg: 'bg-red-50'    },
+  agency_enabled:      { Icon: MdCheckCircleOutline,    color: 'text-green-500',  bg: 'bg-green-50'  },
+  agency_updated:      { Icon: MdSettings,              color: 'text-blue-500',   bg: 'bg-blue-50'   },
+  agency_deleted:      { Icon: MdDelete,                color: 'text-red-500',    bg: 'bg-red-50'    },
+  new_agency:          { Icon: MdBusiness,              color: 'text-teal-500',   bg: 'bg-teal-50'   },
+  assistance_added:    { Icon: MdFavorite,              color: 'text-pink-500',   bg: 'bg-pink-50'   },
+  assistance_updated:  { Icon: MdEdit,                  color: 'text-amber-500',  bg: 'bg-amber-50'  },
+  assistance_deleted:  { Icon: MdDelete,                color: 'text-red-500',    bg: 'bg-red-50'    },
+  doctype_added:       { Icon: MdDescription,           color: 'text-blue-500',   bg: 'bg-blue-50'   },
+  doctype_updated:     { Icon: MdEdit,                  color: 'text-amber-500',  bg: 'bg-amber-50'  },
+  doctype_deleted:     { Icon: MdDelete,                color: 'text-red-500',    bg: 'bg-red-50'    },
+  new_account:         { Icon: MdSupervisedUserCircle,  color: 'text-purple-500', bg: 'bg-purple-50' },
+  account_deactivated: { Icon: MdLock,                  color: 'text-orange-500', bg: 'bg-orange-50' },
+  account_activated:   { Icon: MdLockOpen,              color: 'text-green-500',  bg: 'bg-green-50'  },
+  account_deleted:     { Icon: MdDelete,                color: 'text-red-500',    bg: 'bg-red-50'    },
+  role_changed:        { Icon: MdSettings,              color: 'text-blue-500',   bg: 'bg-blue-50'   },
+  password_reset_sent: { Icon: MdKey,                   color: 'text-amber-500',  bg: 'bg-amber-50'  },
+  new_message:         { Icon: MdChat,                  color: 'text-cyan-600',   bg: 'bg-cyan-50'   },
+  report_submitted:    { Icon: MdFlag,                  color: 'text-orange-500', bg: 'bg-orange-50' },
+  system_announcement: { Icon: MdInfo,                  color: 'text-amber-500',  bg: 'bg-amber-50'  },
 }
 
 
@@ -68,6 +74,7 @@ const fmtDate = (ts) => {
 
 export default function Notifications() {
   const { user }                          = useAuth()
+  const { t }                             = useTranslation()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading]             = useState(true)
   const [selected, setSelected]           = useState(new Set())
@@ -75,6 +82,9 @@ export default function Notifications() {
   const [category, setCategory]           = useState('all')
   const [confirmClear, setConfirmClear]   = useState(false)
   const isPatient = user?.role === 'patient'
+
+  // Category labels rebuilt per render so they respond to language toggle.
+  const categoryLabel = (key) => t(`notifsPage.category.${key}`)
 
   useEffect(() => {
     if (!user?.uid) return
@@ -137,7 +147,7 @@ export default function Notifications() {
   const filtered = category === 'all'
     ? notifications
     : notifications.filter(n => {
-        const cat = CATEGORIES.find(c => c.key === category)
+        const cat = CATEGORY_DEFS.find(c => c.key === category)
         return cat?.types?.includes(n.type)
       })
 
@@ -146,32 +156,34 @@ export default function Notifications() {
   const unreadCount = notifications.filter(n => !n.read).length
 
   return (
-    <Layout breadcrumb="Notifications">
+    <Layout breadcrumb={t('notifsPage.title')}>
       <div className="p-4 sm:p-6 max-w-3xl mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center text-xl">🔔</div>
+            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
+              <MdNotifications size={20} className="text-brand-500" />
+            </div>
             <div>
-              <h1 className="page-title">Notifications</h1>
-              <p className="page-sub">All your alerts and updates. Tap any row to view details.</p>
+              <h1 className="page-title">{t('notifsPage.title')}</h1>
+              <p className="page-sub">{t('notifsPage.subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {unreadCount > 0 && (
-              <span className="badge badge-blue">{unreadCount} unread</span>
+              <span className="badge badge-blue">{t('notifsPage.unreadBadge', { count: unreadCount })}</span>
             )}
             {unreadCount > 0 && (
               <button onClick={markAllRead}
-                className="btn-secondary text-xs flex items-center gap-1">
-                ✓ Mark all read
+                className="btn-secondary text-xs flex items-center gap-1.5">
+                <MdDone size={14} /> {t('notifsPage.markAllRead')}
               </button>
             )}
             {notifications.length > 0 && (
               <button onClick={() => setConfirmClear(true)}
                 className="btn-secondary text-xs flex items-center gap-1 text-red-500 border-red-200 hover:bg-red-50">
-                <MdClearAll size={14} /> Clear all
+                <MdClearAll size={14} /> {t('notifsPage.clearAll')}
               </button>
             )}
           </div>
@@ -181,16 +193,16 @@ export default function Notifications() {
         {confirmClear && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 flex items-center justify-between gap-3">
             <p className="text-sm text-red-700">
-              This will permanently delete all <strong>{notifications.length}</strong> notification{notifications.length !== 1 ? 's' : ''}. This cannot be undone.
+              {t('notifsPage.clearConfirm', { count: notifications.length })}
             </p>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={() => setConfirmClear(false)}
                 className="text-xs text-gray-600 font-medium hover:text-gray-800">
-                Cancel
+                {t('notifsPage.cancel')}
               </button>
               <button onClick={() => { clearAll(); setConfirmClear(false) }}
                 className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors">
-                Yes, clear all
+                {t('notifsPage.clearYes')}
               </button>
             </div>
           </div>
@@ -198,7 +210,7 @@ export default function Notifications() {
 
         {/* Category filter tabs — patients only see relevant categories */}
         <div className="flex gap-1.5 mb-4 flex-wrap">
-          {CATEGORIES.filter(c =>
+          {CATEGORY_DEFS.filter(c =>
             !isPatient || ['all','messages','documents','applications'].includes(c.key)
           ).map(cat => {
             const count = cat.key === 'all'
@@ -213,10 +225,10 @@ export default function Notifications() {
                     ? 'bg-brand-500 text-white border-brand-500'
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}>
-                {cat.label}
+                {categoryLabel(cat.key)}
                 {count > 0 && (
                   <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    category === cat.key ? 'bg-white/20' : 'bg-gray-100'
+                    category === cat.key ? 'bg-white text-brand-600' : 'bg-gray-100'
                   }`}>
                     {count}
                   </span>
@@ -236,17 +248,17 @@ export default function Notifications() {
               <>
                 <button onClick={markSelectedRead}
                   className="flex items-center gap-1.5 text-xs text-gray-600 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                  <MdDone size={14} /> Mark as read
+                  <MdDone size={14} /> {t('notifsPage.markAsRead')}
                 </button>
                 <button onClick={deleteSelected}
                   className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200 bg-white px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                  <MdDelete size={14} /> Delete
+                  <MdDelete size={14} /> {t('notifsPage.delete')}
                 </button>
-                <span className="text-xs text-gray-400">{selected.size} selected</span>
+                <span className="text-xs text-gray-400">{t('notifsPage.selectedCount', { count: selected.size })}</span>
               </>
             ) : (
               <span className="text-xs text-gray-500 font-medium">
-                {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                {t('notifsPage.countLabel', { count: notifications.length })}
               </span>
             )}
           </div>
@@ -269,9 +281,10 @@ export default function Notifications() {
 
             {/* Notifications */}
             {!loading && filtered.map((n, idx) => {
-              const meta        = NOTIF_ICONS[n.type] ?? NOTIF_ICONS.app_submitted
+              const meta        = NOTIF_VISUAL[n.type] ?? NOTIF_VISUAL.app_submitted
+              const Icon        = meta.Icon
               const isSelected  = selected.has(n.id)
-              const catLabel    = getCategoryLabel(n.type)
+              const catKey      = getCategoryKey(n.type)
 
               return (
                 <div key={n.id}
@@ -293,8 +306,8 @@ export default function Notifications() {
                     </div>
 
                     {/* Icon */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full ${meta.bg} flex items-center justify-center text-sm`}>
-                      {meta.emoji}
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full ${meta.bg} flex items-center justify-center`}>
+                      <Icon size={16} className={meta.color} />
                     </div>
 
                     {/* Content */}
@@ -303,9 +316,9 @@ export default function Notifications() {
                         <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
                           {n.title}
                         </p>
-                        {catLabel && (
+                        {catKey && (
                           <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-medium">
-                            {catLabel}
+                            {categoryLabel(catKey)}
                           </span>
                         )}
                       </div>
@@ -335,7 +348,9 @@ export default function Notifications() {
               <div className="text-center py-12">
                 <MdNotificationsNone size={36} className="text-gray-200 mx-auto mb-2" />
                 <p className="text-sm text-gray-400">
-                  {category === 'all' ? 'No notifications yet.' : `No ${CATEGORIES.find(c => c.key === category)?.label.toLowerCase()} notifications.`}
+                  {category === 'all'
+                    ? t('notifsPage.emptyAll')
+                    : t('notifsPage.emptyCategory', { category: categoryLabel(category).toLowerCase() })}
                 </p>
               </div>
             )}

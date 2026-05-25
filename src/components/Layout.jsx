@@ -1002,12 +1002,6 @@ export default function Layout({ children, breadcrumb }) {
 
   const agencyName = liveAgencyName ?? 'Agency'
 
-  const handleAvatarClick = () => {
-    if (user?.role === ROLES.PATIENT) navigate('/patient/profile')
-    else if (user?.role === ROLES.AGENCY || user?.role === ROLES.AGENCY_ADMIN) navigate('/agency/program')
-    else navigate('/admin/profile')
-  }
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <ProfileModals activeModal={activeModal} onClose={() => setActiveModal(null)} onSetModal={setActiveModal} />

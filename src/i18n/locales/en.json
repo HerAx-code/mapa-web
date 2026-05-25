@@ -366,6 +366,31 @@
       ]
     }
   },
+  "notifsPage": {
+    "title": "Notifications",
+    "subtitle": "All your alerts and updates. Tap any row to view details.",
+    "unreadBadge": "{{count}} unread",
+    "markAllRead": "Mark all read",
+    "clearAll": "Clear all",
+    "clearConfirm": "This will permanently delete all {{count}} notifications. This cannot be undone.",
+    "cancel": "Cancel",
+    "clearYes": "Yes, clear all",
+    "markAsRead": "Mark as read",
+    "delete": "Delete",
+    "selectedCount": "{{count}} selected",
+    "countLabel": "{{count}} notifications",
+    "emptyAll": "No notifications yet.",
+    "emptyCategory": "No {{category}} notifications.",
+    "category": {
+      "all": "All",
+      "messages": "Messages",
+      "documents": "Documents",
+      "applications": "Applications",
+      "accounts": "Accounts",
+      "agencies": "Agencies",
+      "system": "System"
+    }
+  },
   "notif": {
     "header": "Notification",
     "sender": "MAPA System",

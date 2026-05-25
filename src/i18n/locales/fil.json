@@ -366,6 +366,31 @@
       ]
     }
   },
+  "notifsPage": {
+    "title": "Mga Abiso",
+    "subtitle": "Lahat ng inyong abiso at update. Pindutin ang anumang row para sa detalye.",
+    "unreadBadge": "{{count}} hindi pa nababasa",
+    "markAllRead": "Markahan lahat na nabasa na",
+    "clearAll": "Burahin lahat",
+    "clearConfirm": "Burahin lahat ng {{count}} na abiso. Hindi maibabalik.",
+    "cancel": "Kanselahin",
+    "clearYes": "Oo, burahin lahat",
+    "markAsRead": "Markahan bilang nabasa",
+    "delete": "Burahin",
+    "selectedCount": "{{count}} ang napili",
+    "countLabel": "{{count}} na abiso",
+    "emptyAll": "Wala pang abiso.",
+    "emptyCategory": "Walang {{category}} na abiso.",
+    "category": {
+      "all": "Lahat",
+      "messages": "Mga Mensahe",
+      "documents": "Mga Dokumento",
+      "applications": "Mga Aplikasyon",
+      "accounts": "Mga Account",
+      "agencies": "Mga Ahensya",
+      "system": "Sistema"
+    }
+  },
   "notif": {
     "header": "Abiso",
     "sender": "MAPA System",
