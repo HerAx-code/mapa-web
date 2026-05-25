@@ -1236,8 +1236,11 @@ export default function Layout({ children, breadcrumb }) {
 
         {/* ── Page content ─────────────────────────────────────────── */}
         {/* pb-20 on patient mobile leaves room for the BottomTabBar
-            (56px bar + safe-area). Other roles + lg+ get no extra padding. */}
-        <main className={`flex-1 overflow-y-auto flex flex-col ${
+            (56px bar + safe-area). Other roles + lg+ get no extra padding.
+            overflow-x-hidden is a global guard: if any page on any role
+            ever ships an element wider than the viewport, the entire
+            shell won't suddenly start scrolling sideways. */}
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col ${
           user?.role === ROLES.PATIENT ? 'pb-20 lg:pb-0' : ''
         }`}>
           {children}

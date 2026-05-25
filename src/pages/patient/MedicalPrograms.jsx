@@ -453,10 +453,20 @@ export default function MedicalPrograms() {
 
   return (
     <Layout breadcrumb={t('patient.programs.breadcrumb')}>
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      {/* px-3 on mobile saves 16 px of horizontal real estate versus
+          p-4; the cards inside use their own padding so the page wrapper
+          can be tight. overflow-x-hidden is a defensive backstop — any
+          single overflowing child (long URL, wide image) won't cause
+          the entire page to scroll sideways. */}
+      <div className="px-3 py-4 sm:p-6 max-w-5xl mx-auto overflow-x-hidden">
 
           <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
-            <div>
+            {/* min-w-0 lets the title/subtitle block shrink past its
+                intrinsic content width inside the flex row. Without it
+                the page-sub paragraph sometimes refused to wrap on
+                narrow phones because the parent flex item had
+                min-width: auto. */}
+            <div className="min-w-0 flex-1">
               <h1 className="page-title">{t('patient.programs.title')}</h1>
               <p className="page-sub">{t('patient.programs.subtitle')}</p>
             </div>
@@ -597,8 +607,10 @@ export default function MedicalPrograms() {
                     </div>
                     <p className="text-xs text-gray-400 mb-3">{t('patient.programs.spotsAvailableToday', { remaining: slots.remaining, total: slots.total })}</p>
 
-                    {/* Description */}
-                    <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-3">{agency.description}</p>
+                    {/* Description — break-words guards against a single
+                        long unbreakable token (URL, hash) widening the
+                        card past the viewport on narrow phones. */}
+                    <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-3 break-words">{agency.description}</p>
 
                     {/* Assistance types */}
                     {types.length > 0 && (
