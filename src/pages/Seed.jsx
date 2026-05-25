@@ -41,6 +41,25 @@ const SEED_USERS = [
     email: 'staff@crmc.gov.ph', password: 'staff123',
     profile: { name: 'Staff Admin', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
+  // Agency Admins — one per agency. Has access to /agency/allocation,
+  // /agency/audit, and /agency/team in addition to all coordinator pages.
+  {
+    email: 'admin@malasakit.gov.ph',       password: 'agency123',
+    profile: { name: 'Dr. Roberto Velasco',     role: 'agency_admin', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: true },
+  },
+  {
+    email: 'admin@ambag.gov.ph',           password: 'agency123',
+    profile: { name: 'Bai Sittie Mamondiong',   role: 'agency_admin', agencyId: 'ambag',     rank: null, contact: null, cooldown: 0, deletion: false, active: true },
+  },
+  {
+    email: 'admin@pcso.gov.ph',            password: 'agency123',
+    profile: { name: 'Dr. Carmen Reyes',         role: 'agency_admin', agencyId: 'pcso',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
+  },
+  {
+    email: 'admin@dswd.gov.ph',            password: 'agency123',
+    profile: { name: 'Datu Hakim Sangcopan',     role: 'agency_admin', agencyId: 'dswd',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
+  },
+  // Agency Coordinators — one per agency. Frontline application reviewers.
   {
     email: 'coordinator@malasakit.gov.ph', password: 'agency123',
     profile: { name: 'Maria Santos',    role: 'agency', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: true },

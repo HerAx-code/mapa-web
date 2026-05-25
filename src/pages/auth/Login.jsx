@@ -264,13 +264,17 @@ export default function Login() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
-                { label: 'Patient',              email: 'patient@gmail.com',         password: 'patient123', note: null             },
-                { label: 'Super Admin',          email: 'admin@crmc.gov.ph',         password: 'admin123',   note: null             },
-                { label: 'Staff Admin',          email: 'staff@crmc.gov.ph',         password: 'staff123',   note: null             },
-                { label: 'Agency · Malasakit',   email: 'coordinator@malasakit.gov.ph', password: 'agency123', note: 'Active' },
-                { label: 'Agency · AMBaG',       email: 'coordinator@ambag.gov.ph',     password: 'agency123', note: 'Active' },
-                { label: 'Agency · PCSO',        email: 'coordinator@pcso.gov.ph',      password: 'agency123', note: 'Active' },
-                { label: 'Agency · DSWD',        email: 'coordinator@dswd.gov.ph',      password: 'agency123', note: 'Active' },
+                { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
+                { label: 'Super Admin',            email: 'admin@crmc.gov.ph',            password: 'admin123',   note: null     },
+                { label: 'Staff Admin',            email: 'staff@crmc.gov.ph',            password: 'staff123',   note: null     },
+                { label: 'Malasakit · Admin',      email: 'admin@malasakit.gov.ph',       password: 'agency123',  note: 'Admin'  },
+                { label: 'Malasakit · Coordinator',email: 'coordinator@malasakit.gov.ph', password: 'agency123',  note: 'Active' },
+                { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           password: 'agency123',  note: 'Admin'  },
+                { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     password: 'agency123',  note: 'Active' },
+                { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            password: 'agency123',  note: 'Admin'  },
+                { label: 'PCSO · Coordinator',     email: 'coordinator@pcso.gov.ph',      password: 'agency123',  note: 'Active' },
+                { label: 'DSWD · Admin',           email: 'admin@dswd.gov.ph',            password: 'agency123',  note: 'Admin'  },
+                { label: 'DSWD · Coordinator',     email: 'coordinator@dswd.gov.ph',      password: 'agency123',  note: 'Active' },
               ].map(acc => (
                 <button
                   key={acc.label}
@@ -280,7 +284,9 @@ export default function Login() {
                     <p className="font-medium truncate">{acc.label}</p>
                     {acc.note && (
                       <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
-                        acc.note === 'Deactivated' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-600'
+                        acc.note === 'Deactivated' ? 'bg-red-100 text-red-500'
+                        : acc.note === 'Admin'       ? 'bg-purple-100 text-purple-600'
+                        : 'bg-green-100 text-green-600'
                       }`}>{acc.note}</span>
                     )}
                   </div>
