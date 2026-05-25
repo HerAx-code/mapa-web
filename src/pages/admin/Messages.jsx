@@ -943,19 +943,25 @@ export default function Messages() {
             </div>
           </div>
           <div className="card overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <span className="text-xs text-gray-500 font-medium">
-                {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
-                {search && filtered.length !== conversations.length && (
-                  <span className="text-gray-400 font-normal"> of {conversations.length}</span>
-                )}
-              </span>
-              <div className="relative ml-auto">
-                <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                <input className="input pl-8 py-1.5 text-sm w-52" placeholder="Search messages..."
-                  value={search} onChange={e => setSearch(e.target.value)} />
+            {/* Search + counter row — hidden when the user has zero
+                conversations. Showing "0 conversations" + a search
+                box with nothing to find is just clutter; the empty
+                state below already explains what to do next. */}
+            {conversations.length > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <span className="text-xs text-gray-500 font-medium">
+                  {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
+                  {search && filtered.length !== conversations.length && (
+                    <span className="text-gray-400 font-normal"> of {conversations.length}</span>
+                  )}
+                </span>
+                <div className="relative ml-auto">
+                  <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                  <input className="input pl-8 py-1.5 text-sm w-52" placeholder="Search messages..."
+                    value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
               </div>
-            </div>
+            )}
             <div className="divide-y divide-gray-50">{convList}</div>
           </div>
           {composeModal}

@@ -163,7 +163,7 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
   }
 
   return (
-    <div className="absolute right-0 top-12 w-80 bg-white rounded-xl border border-gray-100 shadow-xl z-50 overflow-hidden flex flex-col max-h-[calc(100vh-90px)]">
+    <div className="absolute right-0 top-12 w-80 max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-gray-100 shadow-xl z-50 overflow-hidden flex flex-col max-h-[calc(100vh-90px)]">
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
@@ -463,7 +463,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
   }
 
   return (
-    <div className="absolute right-0 top-12 w-80 bg-white rounded-xl border border-gray-100 shadow-xl z-50 overflow-hidden flex flex-col max-h-[calc(100vh-90px)]">
+    <div className="absolute right-0 top-12 w-80 max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-gray-100 shadow-xl z-50 overflow-hidden flex flex-col max-h-[calc(100vh-90px)]">
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
@@ -706,7 +706,7 @@ function AppsPanel({ role, onNavigate, onClose }) {
   const { t } = useTranslation()
   const apps = APPS[role] || []
   return (
-    <div className="absolute right-0 top-12 w-72 bg-white rounded-xl border border-gray-100 shadow-xl z-50 p-3">
+    <div className="absolute right-0 top-12 w-72 max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-gray-100 shadow-xl z-50 p-3">
       <div className="flex items-center justify-between mb-2 px-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('shell.apps.heading')}</p>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={15} /></button>
@@ -760,7 +760,7 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
   ]
 
   return (
-    <div className="absolute right-0 top-12 w-72 bg-white rounded-xl border border-gray-100 shadow-xl z-50 overflow-hidden">
+    <div className="absolute right-0 top-12 w-72 max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-gray-100 shadow-xl z-50 overflow-hidden">
       {/* Profile card */}
       <div className="p-3">
         <button
