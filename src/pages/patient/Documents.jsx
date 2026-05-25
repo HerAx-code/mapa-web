@@ -251,16 +251,16 @@ function UploadModal({ docTypes, existingDocs, user, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-3 sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">{t('patient.documents.upload.modalTitle')}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>
 
-        <div className="px-5 py-4 space-y-4 overflow-y-auto max-h-[70vh]">
+        <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
           {/* Document type selector */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -417,7 +417,7 @@ function UploadModal({ docTypes, existingDocs, user, onClose }) {
           </label>
         </div>
 
-        <div className="px-5 pb-5 space-y-2 border-t border-gray-50 pt-4">
+        <div className="px-5 py-3 space-y-2 border-t border-gray-50 flex-shrink-0">
           <button
             className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm"
             onClick={handleUpload}

@@ -191,8 +191,8 @@ function ApplyModal({ agency, onClose }) {
 
   // ── Success screen ───────────────────────────────────────────────────────
   if (submitted) return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-8 text-center space-y-4">
 
           {/* Icon */}
@@ -235,17 +235,17 @@ function ApplyModal({ agency, onClose }) {
   )
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-3 sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">{t('patient.apply.title', { agency: agency.name })}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+          <h2 className="text-base font-semibold text-gray-900 truncate pr-2">{t('patient.apply.title', { agency: agency.name })}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>
 
-        <div className="px-5 py-4 space-y-4 overflow-y-auto max-h-[60vh]">
+        <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
           {/* Agency info */}
           <div className="p-3 bg-gray-50 rounded-xl">
             <div className="flex items-center gap-3">
@@ -367,7 +367,7 @@ function ApplyModal({ agency, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
+        <div className="px-5 py-3 flex gap-2 justify-end border-t border-gray-50 flex-shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>{t('patient.apply.cancel')}</button>
           <button
             className="btn-primary text-sm"

@@ -252,92 +252,137 @@ export default function Screening() {
               const isFull = slots.remaining === 0
               const pct    = slots.total > 0 ? Math.round((slots.remaining / slots.total) * 100) : 0
               const status = SLOT_STATUS(slots.remaining, slots.total)
-              return (
-                <div key={agency.id} className={`card p-4 ${i === 0 ? 'border-2 border-brand-400' : ''}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`flex-shrink-0 w-10 h-10 ${agency.color} rounded-xl text-white text-xs font-bold flex items-center justify-center`}>
-                      {agency.initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
+              const types  = agency.assistanceTypes ?? []
+              const isTopPick = i === 0 && agency.matchScore >= 70
+              const matchInfo = matchLabel(agency.matchScore)
 
-                      {/* Name + Top Pick + Match badge */}
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2 flex-wrap min-w-0">
-                          <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
-                          {i === 0 && agency.matchScore >= 70 && (
-                            <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-200 flex-shrink-0">
-                              <MdStar size={12} /> {t('patient.screening.topPick')}
+              // Single action button used by both mobile and desktop slots
+              // below so the state-machine logic stays in one place.
+              const actionButton = activeAgencyIds.has(agency.id) ? (
+                <span className="flex items-center gap-1 text-xs text-green-600 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg font-medium flex-shrink-0">
+                  <MdCheckCircle size={12} /> {t('patient.screening.applied')}
+                </span>
+              ) : completedAgencyIds.has(agency.id) ? (
+                <span className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 bg-gray-50 px-2.5 py-1 rounded-lg font-medium flex-shrink-0">
+                  {t('patient.screening.glIssued')}
+                </span>
+              ) : activeAgencyIds.size > 0 ? (
+                <button
+                  className="flex items-center gap-1 text-xs text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg font-medium hover:bg-brand-100 transition-colors flex-shrink-0"
+                  onClick={() => navigate('/patient/status')}>
+                  {t('patient.screening.viewMyApp')} →
+                </button>
+              ) : (
+                <button
+                  className="btn-primary text-xs sm:text-sm flex-shrink-0"
+                  disabled={isFull}
+                  onClick={() => navigate('/patient/programs', { state: { openAgencyId: agency.id } })}
+                >
+                  {t('patient.screening.applyNow')} →
+                </button>
+              )
+
+              return (
+                <div key={agency.id} className={`card min-w-0 overflow-hidden ${i === 0 ? 'border-2 border-brand-400' : ''}`}>
+
+                  {/* ── Mobile compact layout (< sm) ── matches the
+                      Find Programs density: horizontal header, 1-line
+                      slot+time row, 2-line description, inline badges,
+                      Apply on its own bottom row. */}
+                  <div className="sm:hidden p-4 w-full min-w-0">
+                    <div className="flex items-start gap-3 mb-2 w-full min-w-0">
+                      <div className={`flex-shrink-0 w-10 h-10 ${agency.color} rounded-xl text-white text-xs font-bold flex items-center justify-center`}>
+                        {agency.initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                          <h3 className="text-sm font-semibold text-gray-800 truncate">{agency.name}</h3>
+                          {isTopPick && (
+                            <span className="flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-200 flex-shrink-0">
+                              <MdStar size={10} />
                             </span>
                           )}
                         </div>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${matchLabel(agency.matchScore).cls}`}>
-                          {matchLabel(agency.matchScore).label} <span className="opacity-70">· {agency.matchScore}%</span>
-                        </span>
+                        <p className="text-xs text-gray-400 truncate">
+                          <span className={`font-medium ${matchInfo.cls.includes('green') ? 'text-green-600' : matchInfo.cls.includes('amber') ? 'text-amber-600' : 'text-gray-500'}`}>{agency.matchScore}% match</span>
+                          {' · '}
+                          <span className={isFull ? 'text-red-500' : 'text-green-600'}>{slots.remaining}/{slots.total} spots</span>
+                          {agency.processingTime && <> · {agency.processingTime}</>}
+                        </p>
                       </div>
+                    </div>
+                    {agency.description && (
+                      <p className="text-xs text-gray-500 line-clamp-2 break-words leading-snug mb-2 w-full min-w-0">{agency.description}</p>
+                    )}
+                    {types.length > 0 && (
+                      <p className="text-xs text-brand-600 truncate mb-3 w-full min-w-0">
+                        {types.slice(0, 3).join(' · ')}{types.length > 3 ? ` · +${types.length - 3}` : ''}
+                      </p>
+                    )}
+                    <div className="w-full min-w-0 flex justify-end">
+                      {actionButton}
+                    </div>
+                  </div>
 
-                      {/* Description */}
-                      {agency.description && (
-                        <p className="text-sm text-gray-500 leading-relaxed mb-2 line-clamp-2">{agency.description}</p>
-                      )}
+                  {/* ── Desktop / tablet detailed layout (sm+) ── unchanged */}
+                  <div className="hidden sm:block p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex-shrink-0 w-10 h-10 ${agency.color} rounded-xl text-white text-xs font-bold flex items-center justify-center`}>
+                        {agency.initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
 
-                      {/* Assistance type tags */}
-                      {(agency.assistanceTypes ?? []).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {(agency.assistanceTypes ?? []).slice(0, 4).map((typeName, j) => (
-                            <span key={j} className="badge badge-blue text-xs">{typeName}</span>
-                          ))}
-                          {(agency.assistanceTypes ?? []).length > 4 && (
-                            <span className="badge badge-blue text-xs">{t('patient.screening.moreTypes', { count: (agency.assistanceTypes ?? []).length - 4 })}</span>
+                        {/* Name + Top Pick + Match badge */}
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
+                            {isTopPick && (
+                              <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-200 flex-shrink-0">
+                                <MdStar size={12} /> {t('patient.screening.topPick')}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${matchInfo.cls}`}>
+                            {matchInfo.label} <span className="opacity-70">· {agency.matchScore}%</span>
+                          </span>
+                        </div>
+
+                        {agency.description && (
+                          <p className="text-sm text-gray-500 leading-relaxed mb-2 line-clamp-2">{agency.description}</p>
+                        )}
+
+                        {types.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {types.slice(0, 4).map((typeName, j) => (
+                              <span key={j} className="badge badge-blue text-xs">{typeName}</span>
+                            ))}
+                            {types.length > 4 && (
+                              <span className="badge badge-blue text-xs">{t('patient.screening.moreTypes', { count: types.length - 4 })}</span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="w-full h-2 bg-gray-100 rounded-full mb-1">
+                          <div className={`h-2 rounded-full ${status.bar}`} style={{ width: `${pct}%` }} />
+                        </div>
+
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`flex items-center gap-1 text-xs ${isFull ? 'text-red-500' : 'text-green-600'}`}>
+                            {isFull
+                              ? <><MdBlock size={13} /> {t('patient.screening.noSlotsToday')}</>
+                              : <><MdCheckCircle size={13} /> {t('patient.screening.slotsAvailable', { remaining: slots.remaining, total: slots.total })}</>}
+                          </span>
+                          {agency.processingTime && (
+                            <span className="flex items-center gap-1 text-xs text-gray-400">
+                              <MdSchedule size={13} /> {agency.processingTime}
+                            </span>
                           )}
                         </div>
-                      )}
 
-                      {/* Slot bar */}
-                      <div className="w-full h-2 bg-gray-100 rounded-full mb-1">
-                        <div className={`h-2 rounded-full ${status.bar}`} style={{ width: `${pct}%` }} />
+                        <div className="flex justify-end">
+                          {actionButton}
+                        </div>
                       </div>
-
-                      {/* Slot text + processing time */}
-                      <div className="flex items-center justify-between mb-3">
-                        <span className={`flex items-center gap-1 text-xs ${isFull ? 'text-red-500' : 'text-green-600'}`}>
-                          {isFull
-                            ? <><MdBlock size={13} /> {t('patient.screening.noSlotsToday')}</>
-                            : <><MdCheckCircle size={13} /> {t('patient.screening.slotsAvailable', { remaining: slots.remaining, total: slots.total })}</>}
-                        </span>
-                        {agency.processingTime && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400">
-                            <MdSchedule size={13} /> {agency.processingTime}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Action */}
-                      <div className="flex justify-end">
-                        {activeAgencyIds.has(agency.id) ? (
-                          <span className="flex items-center gap-1 text-xs text-green-600 border border-green-200 bg-green-50 px-2.5 py-1 rounded-lg font-medium">
-                            <MdCheckCircle size={12} /> {t('patient.screening.applied')}
-                          </span>
-                        ) : completedAgencyIds.has(agency.id) ? (
-                          <span className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 bg-gray-50 px-2.5 py-1 rounded-lg font-medium">
-                            {t('patient.screening.glIssued')}
-                          </span>
-                        ) : activeAgencyIds.size > 0 ? (
-                          <button
-                            className="flex items-center gap-1 text-xs text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg font-medium hover:bg-brand-100 transition-colors"
-                            onClick={() => navigate('/patient/status')}>
-                            {t('patient.screening.viewMyApp')} →
-                          </button>
-                        ) : (
-                          <button
-                            className="btn-primary text-sm"
-                            disabled={isFull}
-                            onClick={() => navigate('/patient/programs', { state: { openAgencyId: agency.id } })}
-                          >
-                            {t('patient.screening.applyNow')} →
-                          </button>
-                        )}
-                      </div>
-
                     </div>
                   </div>
                 </div>

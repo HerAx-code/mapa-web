@@ -704,7 +704,7 @@ function ReportModal({ onClose }) {
 export default function ProfileModals({ activeModal, onClose, onSetModal }) {
   if (!activeModal) return null
   return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-3 sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
       {activeModal === 'account'  && <AccountSettingsModal onClose={onClose} />}
       {activeModal === 'password' && <ChangePasswordModal  onClose={onClose} />}
