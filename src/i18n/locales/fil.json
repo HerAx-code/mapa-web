@@ -19,7 +19,12 @@
     },
     "cta": {
       "install": "I-install ang MAPA app",
+      "installButton": "I-install ang MAPA",
       "androidHint": "Magtatanong ang Chrome para sa kumpirmasyon. Pindutin ang Install sa dialog.",
+      "androidHintReady": "Pindutin ang Install — magtatanong ang Chrome para sa kumpirmasyon.",
+      "androidHintNotReady": "Pindutin ang Install upang makita ang mga hakbang para sa inyong telepono.",
+      "iosHint": "Pindutin ang Install upang makita ang mga hakbang para sa iPhone.",
+      "desktopHint": "Ang MAPA ay ginawa para sa mga telepono — buksan ang page na ito sa inyong telepono upang i-install.",
       "androidManual": "Hindi pa naipakita ng inyong browser ang install option. Pwede ninyong i-install ang MAPA nang manu-mano:",
       "androidStep1": "Buksan ang page na ito sa Google Chrome (kung hindi pa).",
       "androidStep2": "Pindutin ang three-dot menu (sa kanang itaas ng Chrome).",
@@ -27,10 +32,19 @@
       "iosIntro": "Sa iPhone, i-install ang MAPA sa pamamagitan ng Share menu ng Safari:",
       "iosStep1": "Pindutin ang Share button (parisukat na may pataas na arrow) sa ibaba ng screen.",
       "iosStep2": "Mag-scroll pababa at pindutin ang 'Add to Home Screen'.",
-      "iosStep3": "Pindutin ang 'Add' sa kanang itaas."
-,
+      "iosStep3": "Pindutin ang 'Add' sa kanang itaas.",
       "desktopTitle": "Kayo ay nasa desktop computer",
       "desktopDesc":  "Ang MAPA mobile app ay para sa mga telepono. Buksan ang page na ito sa inyong Android phone o iPhone upang i-install."
+    },
+    "fallback": {
+      "ios":     "Sa iPhone, ang pag-install ay ginagawa sa Share menu ng Safari. Sundan ang mga hakbang sa ibaba.",
+      "desktop": "Ang MAPA ay ginawa para sa mga telepono. Buksan ang page na ito sa inyong Android phone o iPhone upang i-install.",
+      "android": "Hindi pa naipakita ng Chrome ang install option. Sundan ang mga manu-manong hakbang sa ibaba upang i-install ang MAPA."
+    },
+    "manual": {
+      "iosTitle":     "Paano i-install sa iPhone",
+      "desktopTitle": "Pag-install sa desktop",
+      "androidTitle": "Paano i-install nang manu-mano"
     },
     "alreadyInstalled": {
       "title": "Naka-install na ang MAPA",

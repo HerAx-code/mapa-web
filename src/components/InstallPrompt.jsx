@@ -25,7 +25,12 @@ const SESSION_DISMISS_KEY = 'mapa_install_prompt_dismissed'
  */
 export default function InstallPrompt() {
   const { t } = useTranslation()
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  // Read the early-captured event from the inline script in index.html
+  // so we don't miss the case where Chrome fires beforeinstallprompt
+  // before React mounts.
+  const [deferredPrompt, setDeferredPrompt] = useState(
+    () => (typeof window !== 'undefined' ? window.__mapaDeferredInstallPrompt ?? null : null)
+  )
   const [showIos,        setShowIos]         = useState(false)
   const [dismissed,      setDismissed]       = useState(
     typeof window !== 'undefined' && sessionStorage.getItem(SESSION_DISMISS_KEY) === '1'
@@ -38,12 +43,11 @@ export default function InstallPrompt() {
       window.navigator.standalone === true
     if (isStandalone) return
 
-    // Android / desktop Chromium path
-    const onBeforeInstall = (e) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
+    // The inline script in index.html captures beforeinstallprompt and
+    // stashes it on window.__mapaDeferredInstallPrompt. It then dispatches
+    // a custom event so any already-mounted React component can pick it up.
+    const onAvailable = () => setDeferredPrompt(window.__mapaDeferredInstallPrompt)
+    window.addEventListener('mapa-install-available', onAvailable)
 
     // iOS Safari path — detect once on mount.
     const ua = window.navigator.userAgent
@@ -57,11 +61,11 @@ export default function InstallPrompt() {
       setDeferredPrompt(null)
       setShowIos(false)
     }
-    window.addEventListener('appinstalled', onInstalled)
+    window.addEventListener('mapa-install-completed', onInstalled)
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-      window.removeEventListener('appinstalled', onInstalled)
+      window.removeEventListener('mapa-install-available', onAvailable)
+      window.removeEventListener('mapa-install-completed', onInstalled)
     }
   }, [])
 
@@ -72,6 +76,7 @@ export default function InstallPrompt() {
     // Whether they accepted or dismissed the native prompt, the
     // captured event is one-shot — discard it.
     setDeferredPrompt(null)
+    window.__mapaDeferredInstallPrompt = null
     if (outcome === 'dismissed') handleDismiss()
   }
 

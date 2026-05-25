@@ -23,6 +23,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- PWA install-prompt capture. Chrome fires beforeinstallprompt
+         based on engagement heuristics; it can fire before React mounts.
+         If we wait for useEffect to attach the listener, fast visits miss
+         the event and the patient sees no Install button until they
+         visit a second time. Stash the event on window so any React
+         component can read it whenever it mounts. -->
+    <script>
+      window.__mapaDeferredInstallPrompt = null
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault()
+        window.__mapaDeferredInstallPrompt = e
+        // Notify any already-mounted React components.
+        window.dispatchEvent(new CustomEvent('mapa-install-available'))
+      })
+      window.addEventListener('appinstalled', function () {
+        window.__mapaDeferredInstallPrompt = null
+        window.dispatchEvent(new CustomEvent('mapa-install-completed'))
+      })
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -19,7 +19,12 @@
     },
     "cta": {
       "install": "Install MAPA app",
+      "installButton": "Install MAPA",
       "androidHint": "Chrome will ask you to confirm. Tap Install in the dialog.",
+      "androidHintReady": "Tap Install — Chrome will ask you to confirm.",
+      "androidHintNotReady": "Tap Install to see the steps for your phone.",
+      "iosHint": "Tap Install to see the steps for iPhone.",
+      "desktopHint": "MAPA is designed for phones — open this page on your phone to install.",
       "androidManual": "Your browser hasn't offered the install option yet. You can install MAPA manually:",
       "androidStep1": "Open this page in Google Chrome (if you're not already).",
       "androidStep2": "Tap the three-dot menu (top right of Chrome).",
@@ -30,6 +35,16 @@
       "iosStep3": "Tap 'Add' in the top-right corner.",
       "desktopTitle": "You're on a desktop computer",
       "desktopDesc":  "MAPA's mobile app is designed for phones. Open this page on your Android phone or iPhone to install it."
+    },
+    "fallback": {
+      "ios":     "On iPhone, installing is done through Safari's Share menu. Follow the steps below.",
+      "desktop": "MAPA is designed for phones. Open this page on your Android phone or iPhone to install.",
+      "android": "Chrome hasn't offered the install option yet. Follow the manual steps below to install MAPA."
+    },
+    "manual": {
+      "iosTitle":     "How to install on iPhone",
+      "desktopTitle": "Installing on desktop",
+      "androidTitle": "How to install manually"
     },
     "alreadyInstalled": {
       "title": "MAPA is already installed",
