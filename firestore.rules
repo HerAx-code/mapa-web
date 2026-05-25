@@ -222,6 +222,21 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── notificationErrors ─────────────────────────────────────────────────────
+    // Operational log written by the notify() utility when a delivery
+    // fails. Without it, delivery failures are invisible until patients
+    // complain.
+    //
+    // Reads: super_admin + staff_admin only — entries can include
+    //   recipient UIDs and notification bodies, which are PII-adjacent.
+    // Writes: any authenticated user can append (notify() runs from
+    //   patient, agency, and admin contexts). Immutable.
+    match /notificationErrors/{errorId} {
+      allow read:           if isAdmin();
+      allow create:         if isAuth();
+      allow update, delete: if false;
+    }
+
     // ── certificates ──────────────────────────────────────────────────────────
     // Patient reads their own certificate.
     // Agency reads certificates they uploaded.
