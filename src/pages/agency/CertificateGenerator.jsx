@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { MdCardMembership, MdPrint, MdSearch, MdCheckCircle, MdUpload } from 'react-icons/md'
+import { MdCardMembership, MdPrint, MdSearch, MdCheckCircle, MdUpload, MdClose } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { notify } from '../../utils/notifications'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
@@ -363,15 +363,25 @@ export default function CertificateGenerator() {
         {/* Search */}
         <div className="relative mb-4">
           <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by patient name or application ID..."
+          <input className="input pl-9 pr-10" placeholder="Search by patient name or application ID..."
             value={search} onChange={e => setSearch(e.target.value)} />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              <MdClose size={14} />
+            </button>
+          )}
         </div>
 
-        {/* Info banner */}
+        {/* Info banner — three explicit steps so a coordinator who's just
+            printed knows there's still an offline + an upload + a confirm
+            action between them and "done". */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-5 flex items-start gap-2">
           <MdCardMembership size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-blue-700 leading-relaxed">
-            <strong>Two-step workflow:</strong> ① <strong>Print Guarantee Letter</strong> → wet-sign on paper → ② <strong>Upload Signed Scan</strong> so the patient can download the signed copy. The application advances to <em>GL Issued</em> after print confirmation.
+            <strong>Workflow:</strong> ① <strong>Print Guarantee Letter</strong> → ② wet-sign on paper → ③ open the GL viewer and click <em>Mark as Issued</em> to advance the application → ④ <strong>Upload the signed scan</strong> so the patient can download it.
           </p>
         </div>
 
@@ -407,20 +417,28 @@ export default function CertificateGenerator() {
               const approvedStage = (app.stages ?? []).find(s => s.key === 'approved')
               const isIssued      = app.status === 'certificate'
               const hasSigned     = !!uploaded[app.id]
-              const borderColor   = hasSigned ? 'border-green-400'
-                : isIssued ? 'border-amber-300'
-                : 'border-blue-300'
+
+              // Single source of truth for the row's state visual. The
+              // border + icon-bg + badge all derive from the same `state`
+              // so they can never disagree (the prior layout had border,
+              // icon, and badge each picking colors independently).
+              const state = hasSigned ? 'complete'
+                          : isIssued  ? 'awaiting-upload'
+                          :             'awaiting-issuance'
+              const STATE_VISUAL = {
+                'awaiting-issuance': { border: 'border-blue-300',  iconBg: 'bg-blue-50',  iconColor: 'text-blue-500',  badge: 'badge-blue',  label: 'Awaiting issuance' },
+                'awaiting-upload':   { border: 'border-amber-300', iconBg: 'bg-amber-50', iconColor: 'text-amber-500', badge: 'badge-amber', label: 'Awaiting signed scan' },
+                'complete':          { border: 'border-green-400', iconBg: 'bg-green-50', iconColor: 'text-green-500', badge: 'badge-green', label: 'Complete' },
+              }[state]
               return (
-                <div key={app.id} className={`card p-4 border-l-4 ${borderColor}`}>
+                <div key={app.id} className={`card p-4 border-l-4 ${STATE_VISUAL.border}`}>
                   <div className="flex items-center gap-4 flex-wrap">
 
                     {/* Icon */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      hasSigned ? 'bg-green-50' : isIssued ? 'bg-amber-50' : 'bg-blue-50'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${STATE_VISUAL.iconBg}`}>
                       {hasSigned
-                        ? <MdCheckCircle size={20} className="text-green-500" />
-                        : <MdCardMembership size={20} className={isIssued ? 'text-amber-500' : 'text-blue-500'} />}
+                        ? <MdCheckCircle size={20} className={STATE_VISUAL.iconColor} />
+                        : <MdCardMembership size={20} className={STATE_VISUAL.iconColor} />}
                     </div>
 
                     {/* Info */}
@@ -434,9 +452,7 @@ export default function CertificateGenerator() {
                         Approved: {approvedStage?.date ?? formatDate(app.approvedAt) ?? '—'}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        {!isIssued && <span className="badge badge-blue text-xs">Step 1: Print pending</span>}
-                        {isIssued && !hasSigned && <span className="badge badge-amber text-xs">Step 2: Upload signed scan</span>}
-                        {hasSigned && <span className="badge badge-green text-xs">Complete</span>}
+                        <span className={`badge ${STATE_VISUAL.badge} text-xs`}>{STATE_VISUAL.label}</span>
                       </div>
                     </div>
 

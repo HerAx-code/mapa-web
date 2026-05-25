@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   MdArrowBack, MdSave, MdPrint, MdCheckCircle, MdRadioButtonUnchecked,
   MdInfo, MdAdd, MdDelete, MdLock, MdAutorenew,
+  MdGroups, MdWork, MdReceipt, MdMedicalServices, MdAssignment,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import {
@@ -18,11 +19,11 @@ import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
 const AUTOSAVE_MS = 1500
 
 const SECTIONS = [
-  { id: 'family',   label: 'Family Composition', icon: '👪' },
-  { id: 'income',   label: 'Income & Employment', icon: '💼' },
-  { id: 'expenses', label: 'Monthly Expenses',    icon: '🧾' },
-  { id: 'medical',  label: 'Medical Information', icon: '🩺' },
-  { id: 'assess',   label: 'Assessment',          icon: '📝' },
+  { id: 'family',   label: 'Family Composition',  Icon: MdGroups            },
+  { id: 'income',   label: 'Income & Employment', Icon: MdWork              },
+  { id: 'expenses', label: 'Monthly Expenses',    Icon: MdReceipt           },
+  { id: 'medical',  label: 'Medical Information', Icon: MdMedicalServices   },
+  { id: 'assess',   label: 'Assessment',          Icon: MdAssignment        },
 ]
 
 const fmtRelative = (date) => {
@@ -52,9 +53,14 @@ export default function IntakeSheet() {
   const saveTimerRef   = useRef(null)
   const sectionRefs    = useRef({})
 
-  // Subscribe to application
+  // Subscribe to application — use a ref for the "have we hydrated" flag
+  // so the snapshot subscription doesn't tear down + recreate the moment
+  // hydration completes (which was the prior behavior with `hydrated`
+  // in the deps array).
+  const hydratedRef = useRef(false)
   useEffect(() => {
     if (!id) return
+    hydratedRef.current = false
     const unsub = onSnapshot(doc(db, 'applications', id), snap => {
       if (!snap.exists()) {
         toast.error('Application not found.')
@@ -66,14 +72,15 @@ export default function IntakeSheet() {
 
       // Hydrate the local sheet once from the remote intake. Later remote
       // changes don't overwrite local edits in progress.
-      if (!hydrated) {
+      if (!hydratedRef.current) {
         setSheet({ ...blankSheet(), ...(data.intakeSheet ?? {}) })
         setHydrated(true)
+        hydratedRef.current = true
       }
       setLoading(false)
     }, () => { setLoading(false); toast.error('Failed to load application.') })
     return unsub
-  }, [id, navigate, hydrated])
+  }, [id, navigate])
 
   // Permission: only the owning agency can edit
   const canEdit = app && (user?.agencyId === app.agencyId) && !['rejected'].includes(app.status)
@@ -370,6 +377,7 @@ export default function IntakeSheet() {
                   {SECTIONS.map(s => {
                     const active = activeSection === s.id
                     const done = sectionDone[s.id]
+                    const Icon = s.Icon
                     return (
                       <button key={s.id} onClick={() => handleScrollTo(s.id)}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
@@ -377,7 +385,7 @@ export default function IntakeSheet() {
                             ? 'bg-brand-50 text-brand-700 font-medium'
                             : 'text-gray-600 hover:bg-gray-50'
                         }`}>
-                        <span className="text-base">{s.icon}</span>
+                        <Icon size={16} className={`flex-shrink-0 ${active ? 'text-brand-500' : 'text-gray-400'}`} />
                         <span className="flex-1 truncate">{s.label}</span>
                         {done && <MdCheckCircle size={13} className="text-green-400 flex-shrink-0" />}
                       </button>

@@ -27,7 +27,6 @@ export default function AgencyAllocation() {
   const [openRequests, setOpenRequests] = useState([])
   const [history, setHistory]           = useState([])
   const [historyLoading, setHistoryLoading] = useState(true)
-  const [historyKey, setHistoryKey]     = useState(0)  // bump to refetch after save/reset
 
   const isAgencyAdmin = user?.role === 'agency_admin'
 
@@ -56,7 +55,9 @@ export default function AgencyAllocation() {
 
   // Allocation history — last 10 budget changes for this agency.
   // Uses the auditLog(actorAgencyId, createdAt DESC) composite index.
-  // Re-fetches when historyKey is bumped (after a save or period reset).
+  // After save/reset, the local list is optimistically updated (see
+  // handleSaveAllocation / handleResetPeriod) so the UI reflects the
+  // change without a refetch race.
   useEffect(() => {
     if (!user?.agencyId || !isAgencyAdmin) return
     setHistoryLoading(true)
@@ -78,7 +79,7 @@ export default function AgencyAllocation() {
         setHistory([])
       })
       .finally(() => setHistoryLoading(false))
-  }, [user?.agencyId, isAgencyAdmin, historyKey])
+  }, [user?.agencyId, isAgencyAdmin])
 
   // Open top-up requests from this agency
   useEffect(() => {
@@ -170,6 +171,19 @@ export default function AgencyAllocation() {
       toast.error('Please name the fund source (e.g., PCSO Resolution #2026-15) for accountability.')
       return
     }
+    // If the admin is switching periods (monthly ↔ quarterly ↔ yearly),
+    // ask whether to reset periodStart. Otherwise the new monthly rule
+    // applies to a 14-month-old periodStart and immediately fires
+    // "stale period". Default to resetting — it's the right call when
+    // changing periods unless the admin specifically wants to inherit.
+    const periodChanged = newPeriod !== (budget.period ?? 'monthly')
+    const shouldResetPeriodStart = periodChanged && window.confirm(
+      `You're changing the budget period from ${budget.period ?? 'monthly'} to ${newPeriod}. ` +
+      `Start a fresh period clock now?\n\n` +
+      `OK   — start the new ${newPeriod} clock today (recommended)\n` +
+      `Cancel — keep the existing period start date`
+    )
+
     setSaving(true)
     try {
       const fundSource      = newFundSource.trim()
@@ -180,7 +194,8 @@ export default function AgencyAllocation() {
           allocated:             next,
           committed:             committed,
           disbursed:             disbursed,
-          periodStart:           budget.periodStart ?? serverTimestamp(),
+          // Reset periodStart on confirmed period change; otherwise inherit.
+          periodStart:           shouldResetPeriodStart ? serverTimestamp() : (budget.periodStart ?? serverTimestamp()),
           // Fund source recorded for COA-style audit defense.
           fundSource:            fundSource || null,
           fundSourceNotes:       fundSourceNotes || null,
@@ -188,19 +203,28 @@ export default function AgencyAllocation() {
           lowBalanceNotifiedAt:  null,
         },
       })
+      const auditDetails = `Allocation set to ₱${next.toLocaleString()} (${newPeriod})` +
+                           (fundSource ? ` · source: ${fundSource}` : '') +
+                           ' by agency admin'
       logAudit(user, {
         action:     'budget_allocated',
         targetType: 'agency',
         targetId:   agency.id,
         targetName: agency.name,
-        details:    `Allocation set to ₱${next.toLocaleString()} (${newPeriod})` +
-                    (fundSource ? ` · source: ${fundSource}` : '') +
-                    ' by agency admin',
+        details:    auditDetails,
       })
       setEditing(false)
       toast.success('Allocation updated.')
-      // Give the new audit entry a moment to land before re-fetching history.
-      setTimeout(() => setHistoryKey(k => k + 1), 600)
+      // Optimistically prepend the entry so the UI updates immediately;
+      // the next history refetch (manual reload / nav) will reconcile.
+      // Removes the prior setTimeout race against audit-log write durability.
+      setHistory(prev => [{
+        id:        `optimistic-${Date.now()}`,
+        action:    'budget_allocated',
+        details:   auditDetails,
+        actorName: user?.name,
+        createdAt: { toDate: () => new Date() },
+      }, ...prev].slice(0, 10))
     } catch (err) {
       console.error('[Allocation] save error:', err)
       toast.error('Failed to update allocation.')
@@ -239,15 +263,22 @@ export default function AgencyAllocation() {
         'budget.periodStart':          serverTimestamp(),
         'budget.lowBalanceNotifiedAt': null,
       })
+      const resetDetails = `New ${budget.period} period started by agency admin`
       logAudit(user, {
         action:     'budget_period_reset',
         targetType: 'agency',
         targetId:   agency.id,
         targetName: agency.name,
-        details:    `New ${budget.period} period started by agency admin`,
+        details:    resetDetails,
       })
       toast.success('New budget period started.')
-      setTimeout(() => setHistoryKey(k => k + 1), 600)
+      setHistory(prev => [{
+        id:        `optimistic-${Date.now()}`,
+        action:    'budget_period_reset',
+        details:   resetDetails,
+        actorName: user?.name,
+        createdAt: { toDate: () => new Date() },
+      }, ...prev].slice(0, 10))
     } catch (err) {
       console.error('[Allocation] reset error:', err)
       toast.error('Failed to reset budget period.')
@@ -377,9 +408,16 @@ export default function AgencyAllocation() {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Amount (₱)</label>
-                <input type="number" min={0} className="input"
+                {/* Clamp at the input layer so a pasted negative or NaN
+                    can never reach state (the save handler validates too,
+                    but defense in depth — the UI never shows a -₱5 value). */}
+                <input type="number" min={0} step={1} className="input"
                   placeholder="e.g. 500000"
-                  value={newAlloc} onChange={e => setNewAlloc(Number(e.target.value))} />
+                  value={newAlloc}
+                  onChange={e => {
+                    const n = Number(e.target.value)
+                    setNewAlloc(Number.isFinite(n) ? Math.max(0, n) : 0)
+                  }} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Period</label>
