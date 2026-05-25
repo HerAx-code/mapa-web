@@ -20,7 +20,7 @@ import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
   MdAdd, MdClose, MdWarning, MdRefresh, MdMessage,
   MdVisibility, MdVisibilityOff, MdLocationOn, MdPhone,
-  MdAttachMoney,
+  MdAttachMoney, MdArrowUpward, MdArrowDownward,
 } from 'react-icons/md'
 import { PERIOD_ADJECTIVE } from '../../utils/constants'
 import toast from 'react-hot-toast'
@@ -39,15 +39,28 @@ const fmtDate = (ts) => {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-// ── Add Coordinator Modal ─────────────────────────────────────────────────
+// ── Add Team Member Modal ─────────────────────────────────────────────────
+// Creates either a Coordinator (role: 'agency') or an Agency Administrator
+// (role: 'agency_admin') for this agency. Replaces the standalone
+// /admin/coordinators page — agency team management now lives in
+// the agency detail view.
 
-function AddCoordinatorModal({ agencyId, agencyName, onClose }) {
+function AddCoordinatorModal({ agencyId, agencyName, hasAdmin, onClose }) {
   const { user: currentUser }     = useAuth()
-  const [form, setForm]           = useState({ name: '', email: '', password: '' })
+  // Default to 'agency_admin' if the agency has none yet (a new agency
+  // needs an admin before it has anyone to promote). Once at least one
+  // admin exists, default to 'agency' because that's the more common add.
+  const [form, setForm]           = useState({
+    name: '', email: '', password: '',
+    role: hasAdmin ? 'agency' : 'agency_admin',
+  })
   const [sendReset, setSendReset] = useState(true)
   const [showPw, setShowPw]       = useState(false)
   const [saving, setSaving]       = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
+
+  const isAdminRole = form.role === 'agency_admin'
+  const roleLabel   = isAdminRole ? 'Agency Administrator' : 'Coordinator'
 
   const handleCreate = async () => {
     if (!form.name.trim())        { toast.error('Name is required.'); return }
@@ -61,16 +74,16 @@ function AddCoordinatorModal({ agencyId, agencyName, onClose }) {
       await fbSignOut(secondaryAuth)
       await setDoc(doc(db, 'users', uid), {
         name: form.name.trim(), email: form.email.trim(),
-        role: 'agency', agencyId,
+        role: form.role, agencyId,
         contact: null, rank: null, active: true,
         cooldown: 0, deletion: false, createdAt: serverTimestamp(),
       })
       if (sendReset) await sendPasswordResetEmail(auth, form.email.trim())
       logAudit(currentUser, {
         action: 'account_created', targetType: 'account', targetId: uid,
-        targetName: form.name.trim(), details: `Agency coordinator for ${agencyName}`,
+        targetName: form.name.trim(), details: `${roleLabel} for ${agencyName}`,
       })
-      toast.success(`Coordinator account created.${sendReset ? ' Password reset email sent.' : ''}`)
+      toast.success(`${roleLabel} account created.${sendReset ? ' Password reset email sent.' : ''}`)
       onClose()
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') toast.error('This email is already registered.')
@@ -84,19 +97,46 @@ function AddCoordinatorModal({ agencyId, agencyName, onClose }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Add Coordinator</h2>
+            <h2 className="text-base font-semibold text-gray-900">Add Team Member</h2>
             <p className="text-xs text-gray-400 mt-0.5">{agencyName}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Role <span className="text-red-400">*</span></label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className={`flex items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors ${form.role === 'agency' ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="radio" name="role" value="agency" className="mt-0.5 accent-brand-500"
+                  checked={form.role === 'agency'} onChange={set('role')} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800">Coordinator</p>
+                  <p className="text-xs text-gray-500 leading-snug">Reviews applications and conducts interviews.</p>
+                </div>
+              </label>
+              <label className={`flex items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors ${form.role === 'agency_admin' ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="radio" name="role" value="agency_admin" className="mt-0.5 accent-purple-500"
+                  checked={form.role === 'agency_admin'} onChange={set('role')} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800">Admin</p>
+                  <p className="text-xs text-gray-500 leading-snug">Coordinator + budget, audit log, and team management.</p>
+                </div>
+              </label>
+            </div>
+            {!hasAdmin && form.role === 'agency' && (
+              <p className="text-xs text-amber-600 mt-2 flex items-start gap-1.5">
+                <MdWarning size={12} className="flex-shrink-0 mt-0.5" />
+                This agency has no Admin yet. Consider adding an Admin first so they can promote coordinators later.
+              </p>
+            )}
+          </div>
+          <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Full Name <span className="text-red-400">*</span></label>
             <input className="input" placeholder="Juan Dela Cruz" value={form.name} onChange={set('name')} autoFocus />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Email Address <span className="text-red-400">*</span></label>
-            <input type="email" className="input" placeholder="coordinator@agency.gov.ph" value={form.email} onChange={set('email')} />
+            <input type="email" className="input" placeholder={isAdminRole ? 'admin@agency.gov.ph' : 'coordinator@agency.gov.ph'} value={form.email} onChange={set('email')} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-red-400">*</span></label>
@@ -112,7 +152,7 @@ function AddCoordinatorModal({ agencyId, agencyName, onClose }) {
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
             <input type="checkbox" className="w-4 h-4 accent-brand-500"
               checked={sendReset} onChange={e => setSendReset(e.target.checked)} />
-            Send password reset email to coordinator
+            Send password reset email so they can set their own password
           </label>
         </div>
         <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
@@ -232,8 +272,12 @@ export default function AgencyDetail() {
   }, [id])
 
   useEffect(() => {
+    // Query both agency_admin and agency so this view shows the full
+    // team for the agency. Replaces the standalone /admin/coordinators
+    // page — agency staff are no longer surfaced flat across all
+    // agencies, they live under their agency.
     const unsub = onSnapshot(
-      query(collection(db, 'users'), where('agencyId', '==', id), where('role', '==', 'agency')),
+      query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency_admin', 'agency'])),
       snap => setCoordinators(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
       () => {}
     )
@@ -282,7 +326,7 @@ export default function AgencyDetail() {
     try {
       await updateDoc(doc(db, 'agencies', id), { enabled: true })
       try {
-        const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', '==', 'agency')))
+        const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency', 'agency_admin'])))
         await Promise.all(snap.docs.map(d => notify(d.id, {
           type:  'agency_enabled',
           title: 'Agency Enabled',
@@ -392,12 +436,16 @@ export default function AgencyDetail() {
 
   const handleMessage = async () => {
     try {
-      const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', '==', 'agency')))
+      // Prefer messaging the agency admin if one exists; fall back to
+      // any coordinator. Either lands in the same agency portal Inbox.
+      const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency_admin', 'agency'])))
       if (snap.empty) { toast.error('No user account linked to this agency.'); return }
-      const agencyUser = { uid: snap.docs[0].id, ...snap.docs[0].data() }
+      const admin = snap.docs.find(d => d.data().role === 'agency_admin')
+      const target = admin ?? snap.docs[0]
+      const agencyUser = { uid: target.id, ...target.data() }
       await getOrCreateConversation(user.uid, agencyUser.uid, {
         names:   { [user.uid]: user.name, [agencyUser.uid]: agencyUser.name },
-        roles:   { [user.uid]: user.role, [agencyUser.uid]: 'agency' },
+        roles:   { [user.uid]: user.role, [agencyUser.uid]: agencyUser.role },
         subject: `Admin Message — ${agency.name}`,
       })
       navigate('/admin/messages')
@@ -432,10 +480,56 @@ export default function AgencyDetail() {
   const handleDeleteCoord = async (coord) => {
     try {
       await deleteDoc(doc(db, 'users', coord.uid))
-      logAudit(user, { action: 'account_deleted', targetType: 'account', targetId: coord.uid, targetName: coord.name, details: 'Agency coordinator account deleted' })
+      logAudit(user, { action: 'account_deleted', targetType: 'account', targetId: coord.uid, targetName: coord.name, details: `${coord.role === 'agency_admin' ? 'Agency Administrator' : 'Coordinator'} account deleted` })
       setConfirmCoord(null)
       toast.success(`${coord.name}'s account deleted.`)
     } catch { toast.error('Failed to delete account.') }
+  }
+
+  // Mirrors /agency/team's own toggle (Team.jsx) so a Super Admin and
+  // an Agency Admin manipulate the role the same way. The
+  // "last admin" guard is essential: an agency with zero admins has no
+  // one to manage budget or promote others, leaving Super Admin
+  // intervention as the only escape hatch.
+  const handleTogglePromotion = async (coord) => {
+    const promoting = coord.role !== 'agency_admin'
+    const next      = promoting ? 'agency_admin' : 'agency'
+
+    if (!promoting) {
+      const otherAdmins = coordinators.filter(c => c.role === 'agency_admin' && c.uid !== coord.uid)
+      if (otherAdmins.length === 0) {
+        toast.error(`${coord.name} is the only Agency Administrator. Promote another coordinator first.`, { duration: 8000 })
+        return
+      }
+    }
+
+    if (!window.confirm(
+      promoting
+        ? `Promote ${coord.name} to Agency Administrator?\n\nThey will gain budget allocation, audit log, and team management access.`
+        : `Demote ${coord.name} back to Coordinator?\n\nThey will lose access to allocation, audit log, and team management.`
+    )) return
+
+    try {
+      await updateDoc(doc(db, 'users', coord.uid), { role: next })
+      await notify(coord.uid, {
+        type:  promoting ? 'role_promoted' : 'role_demoted',
+        title: promoting ? 'Promoted to Agency Administrator' : 'Returned to Coordinator role',
+        body:  promoting
+          ? 'You can now set your agency\'s budget, review top-up requests, and manage your team.'
+          : 'Your Agency Administrator permissions have been removed.',
+      })
+      logAudit(user, {
+        action:     promoting ? 'role_promoted_to_agency_admin' : 'role_demoted_to_agency',
+        targetType: 'account',
+        targetId:   coord.uid,
+        targetName: coord.name,
+        details:    `${coord.name} → ${next} (by super admin)`,
+      })
+      toast.success(`${coord.name} ${promoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
+    } catch (err) {
+      console.error('[AgencyDetail] role toggle error:', err)
+      toast.error('Failed to update role.')
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -719,21 +813,26 @@ export default function AgencyDetail() {
         })()}
 
 
-        {/* ── Coordinator Accounts ── */}
+        {/* ── Team Accounts ── */}
+        {(() => {
+          const adminCount = coordinators.filter(c => c.role === 'agency_admin').length
+          const coordCount = coordinators.filter(c => c.role === 'agency').length
+          const hasAdmin   = adminCount > 0
+          return (
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <div>
-              <p className="text-sm font-semibold text-gray-800">Coordinator Accounts</p>
+              <p className="text-sm font-semibold text-gray-800">Team Accounts</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 {coordinators.length === 0
                   ? 'No one can log in to process applications for this agency.'
-                  : `${coordinators.length} account${coordinators.length !== 1 ? 's' : ''} linked to this agency.`}
+                  : `${adminCount} admin${adminCount !== 1 ? 's' : ''} · ${coordCount} coordinator${coordCount !== 1 ? 's' : ''}`}
               </p>
             </div>
             {isSuperAdmin && (
               <button className="btn-secondary text-xs flex items-center gap-1.5"
                 onClick={() => setShowAddCoord(true)}>
-                <MdAdd size={14} /> Add Coordinator
+                <MdAdd size={14} /> Add Member
               </button>
             )}
           </div>
@@ -741,34 +840,45 @@ export default function AgencyDetail() {
           {coordinators.length === 0 ? (
             <div className="px-5 py-6 flex flex-col items-center text-center">
               <MdWarning size={28} className="text-amber-300 mb-2" />
-              <p className="text-sm font-medium text-gray-600 mb-1">No coordinator assigned</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">No one assigned</p>
               <p className="text-xs text-gray-400 mb-4">
-                Add a coordinator account so someone can log in and process patient applications.
+                Add an Agency Administrator first so they can manage budgets, then add coordinators to process applications.
               </p>
               {isSuperAdmin && (
                 <button className="btn-primary text-sm flex items-center gap-1.5"
                   onClick={() => setShowAddCoord(true)}>
-                  <MdAdd size={15} /> Add Coordinator
+                  <MdAdd size={15} /> Add Member
                 </button>
               )}
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {coordinators.map(coord => {
+              {[...coordinators]
+                // Admins first, then coordinators; within each, alphabetical
+                .sort((a, b) => {
+                  if (a.role !== b.role) return a.role === 'agency_admin' ? -1 : 1
+                  return (a.name ?? '').localeCompare(b.name ?? '')
+                })
+                .map(coord => {
                 const isActive   = coord.active !== false
                 const isDeleting = confirmCoord?.uid === coord.uid
+                const isAdmin    = coord.role === 'agency_admin'
+                const onlyAdmin  = isAdmin && adminCount === 1
                 return (
                   <Fragment key={coord.uid}>
                     <div className={`flex items-center gap-3 px-5 py-4 ${!isActive ? 'opacity-50' : ''}`}>
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${isAdmin ? 'bg-purple-100 text-purple-700' : isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {coord.name?.[0]?.toUpperCase() ?? '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-gray-800">{coord.name}</p>
-                          <span className={`badge text-xs ${isActive ? 'badge-green' : 'badge-red'}`}>
-                            {isActive ? 'Active' : 'Deactivated'}
+                          <span className={`badge text-xs ${isAdmin ? 'badge-purple' : 'badge-blue'}`}>
+                            {isAdmin ? 'Admin' : 'Coordinator'}
                           </span>
+                          {!isActive && (
+                            <span className="badge badge-red text-xs">Deactivated</span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400">{coord.email}</p>
                         {coord.contact && <p className="text-xs text-gray-400">📞 {coord.contact}</p>}
@@ -776,6 +886,21 @@ export default function AgencyDetail() {
                       </div>
                       {isSuperAdmin && (
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            title={isAdmin
+                              ? (onlyAdmin ? 'Cannot demote the only admin' : 'Demote to Coordinator')
+                              : 'Promote to Admin'}
+                            disabled={isAdmin && onlyAdmin}
+                            onClick={() => handleTogglePromotion(coord)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isAdmin && onlyAdmin
+                                ? 'text-gray-200 cursor-not-allowed'
+                                : isAdmin
+                                  ? 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
+                                  : 'text-gray-400 hover:text-purple-500 hover:bg-purple-50'
+                            }`}>
+                            {isAdmin ? <MdArrowDownward size={15} /> : <MdArrowUpward size={15} />}
+                          </button>
                           <button title="Edit" onClick={() => setEditCoord(coord)}
                             className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                             <MdEdit size={15} />
@@ -813,6 +938,8 @@ export default function AgencyDetail() {
             </div>
           )}
         </div>
+        )
+        })()}
 
       </div>
 
@@ -820,7 +947,12 @@ export default function AgencyDetail() {
         <AgencyModal agency={agency} onClose={() => setShowEdit(false)} onSave={handleSaveAgency} />
       )}
       {showAddCoord && (
-        <AddCoordinatorModal agencyId={id} agencyName={agency.name} onClose={() => setShowAddCoord(false)} />
+        <AddCoordinatorModal
+          agencyId={id}
+          agencyName={agency.name}
+          hasAdmin={coordinators.some(c => c.role === 'agency_admin')}
+          onClose={() => setShowAddCoord(false)}
+        />
       )}
       {editCoord && (
         <EditCoordinatorModal coordinator={editCoord} onClose={() => setEditCoord(null)} />

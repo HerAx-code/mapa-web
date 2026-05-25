@@ -8,7 +8,7 @@ import { db } from '../../firebase'
 import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck, MdBadge,
   MdListAlt, MdGroup, MdMessage, MdDescription, MdFavorite,
-  MdHistory, MdFlag, MdDownload, MdCampaign, MdPeopleAlt,
+  MdHistory, MdFlag, MdDownload, MdCampaign,
   MdWarning, MdSpeed, MdCheckCircle, MdTimer,
 } from 'react-icons/md'
 
@@ -214,7 +214,6 @@ export default function AdminDashboard() {
 
   const MANAGE_ACTIONS = [
     { label: 'Agencies',     icon: MdBusiness,             color: 'bg-green-50  text-green-600',  path: '/admin/agencies',     forAll: true },
-    isSuperAdmin && { label: 'Coordinators', icon: MdPeopleAlt, color: 'bg-teal-50 text-teal-600', path: '/admin/coordinators' },
     isSuperAdmin && { label: 'Accounts', icon: MdSupervisedUserCircle, color: 'bg-purple-50 text-purple-600', path: '/admin/accounts' },
     { label: 'Doc Types',    icon: MdDescription,          color: 'bg-blue-50   text-blue-600',   path: '/admin/doctypes',     forAll: true },
     { label: 'Assistance',   icon: MdFavorite,             color: 'bg-pink-50   text-pink-600',   path: '/admin/assistance',   forAll: true },

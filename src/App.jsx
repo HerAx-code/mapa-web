@@ -53,7 +53,6 @@ import DocReviewDetail   from './pages/admin/DocReviewDetail'
 import AdminMessages     from './pages/admin/Messages'
 import Reports          from './pages/admin/Reports'
 import ExportPage          from './pages/admin/Export'
-import AgencyCoordinators  from './pages/admin/AgencyCoordinators'
 import AddAgency           from './pages/admin/AddAgency'
 import AgencyDetail        from './pages/admin/AgencyDetail'
 import AuditLog         from './pages/admin/AuditLog'
@@ -120,7 +119,9 @@ export default function App() {
         <Route path="/admin/agencies"      element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Agencies /></PrivateRoute>} />
         <Route path="/admin/agencies/new"  element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><AddAgency /></PrivateRoute>} />
         <Route path="/admin/agencies/:id"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AgencyDetail /></PrivateRoute>} />
-        <Route path="/admin/coordinators" element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><AgencyCoordinators /></PrivateRoute>} />
+        {/* /admin/coordinators removed — agency team management now lives
+            under /admin/agencies/:id. Redirect handles any stale bookmarks. */}
+        <Route path="/admin/coordinators" element={<Navigate to="/admin/agencies" replace />} />
         <Route path="/admin/accounts"   element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><Accounts /></PrivateRoute>} />
         <Route path="/admin/doctypes"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><DocTypes /></PrivateRoute>} />
         <Route path="/admin/assistance" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AssistanceTypes /></PrivateRoute>} />

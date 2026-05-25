@@ -40,16 +40,18 @@ const formatDate = (ts) => {
 
 // ── Add / Edit Modal ──────────────────────────────────────────────────────
 
-function AccountModal({ account, agencies, onClose }) {
+function AccountModal({ account, onClose }) {
   const { user: currentUser } = useAuth()
   const isEdit = !!account
 
+  // This page manages only system administrator roles. Agency staff
+  // (agency_admin + agency) are managed under their agency at
+  // /admin/agencies/:id, so role options here are limited to two.
   const [form, setForm] = useState({
     name:      account?.name     ?? '',
     contact:   account?.contact  ?? '',
     email:     account?.email    ?? '',
     role:      account?.role     ?? 'staff_admin',
-    agencyId:  account?.agencyId ?? '',
     password:  '',
     sendReset: true,
   })
@@ -62,16 +64,13 @@ function AccountModal({ account, agencies, onClose }) {
     if (!form.name.trim())                        { toast.error('Name is required.'); return }
     if (!isEdit && !form.email.trim())            { toast.error('Email is required.'); return }
     if (!isEdit && form.password.length < 6)      { toast.error('Password must be at least 6 characters.'); return }
-    if (form.role === 'agency' && !form.agencyId) { toast.error('Please select an agency.'); return }
 
     setSaving(true)
     try {
       if (isEdit) {
-        // Update Firestore profile
         const updates = {
           name:    form.name.trim(),
           contact: form.contact.trim(),
-          agencyId: form.role === 'agency' ? form.agencyId : null,
         }
         const roleChanged = form.role !== account.role
         if (roleChanged) updates.role = form.role
@@ -99,7 +98,7 @@ function AccountModal({ account, agencies, onClose }) {
           name:      form.name.trim(),
           email:     form.email.trim(),
           role:      form.role,
-          agencyId:  form.role === 'agency' ? form.agencyId : null,
+          agencyId:  null,
           contact:   form.contact.trim(),
           rank:      form.role === 'super_admin' ? 'high' : 'low',
           active:    true,
@@ -163,17 +162,8 @@ function AccountModal({ account, agencies, onClose }) {
               <option value="super_admin">Super Admin</option>
               <option value="staff_admin">Staff Admin</option>
             </select>
+            <p className="text-xs text-gray-400 mt-1">Agency staff are managed under each agency.</p>
           </div>
-
-          {form.role === 'agency' && (
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Assign Agency <span className="text-red-400">*</span></label>
-              <select className="input" value={form.agencyId} onChange={set('agencyId')}>
-                <option value="">Select an agency...</option>
-                {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-          )}
 
           {!isEdit && (
             <>
@@ -220,7 +210,6 @@ function AccountModal({ account, agencies, onClose }) {
 export default function Accounts() {
   const { user: currentUser }           = useAuth()
   const [accounts, setAccounts]         = useState([])
-  const [agencies, setAgencies]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]               = useState('')
   const [roleFilter, setRoleFilter]       = useState('all')
@@ -229,17 +218,15 @@ export default function Accounts() {
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin', 'agency_admin', 'agency']))
+    // Limited to system administrator roles. Agency staff are managed
+    // under their agency at /admin/agencies/:id — keeping them off this
+    // page prevents accidental deactivation of agency users from a
+    // surface intended for CRMC staff only.
+    const q = query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin']))
     const unsub = onSnapshot(q, snap => {
       setAccounts(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
       setLoading(false)
     })
-    return unsub
-  }, [])
-
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'agencies'), snap =>
-      setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
     return unsub
   }, [])
 
@@ -306,8 +293,6 @@ export default function Accounts() {
     toast.success('Account deleted.')
   }
 
-  const AGENCY_NAME = Object.fromEntries(agencies.map(a => [a.id, a.name]))
-
   return (
     <Layout breadcrumb="Admin Accounts">
       <div className="p-4 sm:p-6">
@@ -316,7 +301,7 @@ export default function Accounts() {
         <div className="flex items-start justify-between mb-5">
           <div>
             <h1 className="page-title">Admin Accounts</h1>
-            <p className="page-sub">Manage all administrator, staff, and agency user accounts.</p>
+            <p className="page-sub">Manage CRMC system administrator accounts. Agency staff are managed under each agency.</p>
           </div>
           <button className="btn-primary flex items-center gap-1.5" onClick={() => setModal('add')}>
             <MdAdd size={16} /> Add Account
@@ -324,12 +309,11 @@ export default function Accounts() {
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-3 gap-4 mb-5">
           {[
             { label: 'Total',       value: accounts.length,                                     color: 'text-gray-800'   },
             { label: 'Super Admin', value: accounts.filter(a => a.role === 'super_admin').length, color: 'text-purple-600' },
             { label: 'Staff Admin', value: accounts.filter(a => a.role === 'staff_admin').length, color: 'text-blue-600'   },
-            { label: 'Agency',      value: accounts.filter(a => a.role === 'agency' || a.role === 'agency_admin').length, color: 'text-green-600'  },
           ].map((m, i) => (
             <div key={i} className="card p-4">
               <p className="text-xs text-gray-400 mb-1">{m.label}</p>
@@ -349,7 +333,7 @@ export default function Accounts() {
         <div className="flex gap-3 mb-5 flex-wrap items-center">
           {/* Role filter */}
           <div className="flex gap-1">
-            {[['all','All'], ['super_admin','Super Admin'], ['staff_admin','Staff Admin'], ['agency','Agency']].map(([key, label]) => (
+            {[['all','All'], ['super_admin','Super Admin'], ['staff_admin','Staff Admin']].map(([key, label]) => (
               <button key={key} onClick={() => setRoleFilter(key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${roleFilter === key ? 'bg-brand-500 text-white border-brand-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
                 {label}
@@ -376,7 +360,6 @@ export default function Accounts() {
               <tr>
                 <th>Account</th>
                 <th>Role</th>
-                <th>Agency</th>
                 <th>Status</th>
                 <th>Created</th>
                 <th>Actions</th>
@@ -395,7 +378,6 @@ export default function Accounts() {
                     </div>
                   </td>
                   <td><div className="h-5 bg-gray-100 rounded-full w-20" /></td>
-                  <td><div className="h-3 bg-gray-100 rounded w-24" /></td>
                   <td><div className="h-5 bg-gray-100 rounded-full w-16" /></td>
                   <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
                   <td><div className="h-6 bg-gray-100 rounded w-20" /></td>
@@ -413,8 +395,7 @@ export default function Accounts() {
                         <div className="flex items-center gap-2.5">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                             a.role === 'super_admin' ? 'bg-purple-50 text-purple-600'
-                            : a.role === 'staff_admin' ? 'bg-blue-50 text-blue-600'
-                            : 'bg-green-50 text-green-600'
+                            : 'bg-blue-50 text-blue-600'
                           }`}>
                             {a.name?.[0]?.toUpperCase() ?? '?'}
                           </div>
@@ -428,7 +409,6 @@ export default function Accounts() {
                         </div>
                       </td>
                       <td><span className={`badge text-xs ${ROLE_BADGE[a.role] || 'badge-gray'}`}>{ROLE_LABEL[a.role] || a.role}</span></td>
-                      <td className="text-xs text-gray-500">{a.agencyId ? (AGENCY_NAME[a.agencyId] ?? a.agencyId) : '—'}</td>
                       <td>
                         <span className={`badge text-xs ${isActive ? 'badge-green' : 'badge-red'}`}>
                           {isActive ? 'Active' : 'Deactivated'}
@@ -472,7 +452,7 @@ export default function Accounts() {
                     {/* Delete confirmation row */}
                     {isDeleting && (
                       <tr key={a.uid + '_del'} className="bg-red-50">
-                        <td colSpan={6} className="px-4 py-3">
+                        <td colSpan={5} className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <MdWarning size={16} className="text-red-500 flex-shrink-0" />
                             <p className="text-sm text-red-700 flex-1">
@@ -507,7 +487,6 @@ export default function Accounts() {
         {modal && (
           <AccountModal
             account={modal === 'add' ? null : modal}
-            agencies={agencies}
             onClose={() => setModal(null)}
           />
         )}

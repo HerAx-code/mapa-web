@@ -70,7 +70,6 @@ const ADMIN_NAV = {
   management: [
     { to: '/admin/dashboard',       icon: MdDashboard,            label: 'Dashboard'        },
     { to: '/admin/agencies',        icon: MdBusiness,             label: 'Agencies'              },
-    { to: '/admin/coordinators',    icon: MdGroup,                label: 'Coordinators', superOnly: true },
     { to: '/admin/accounts',        icon: MdSupervisedUserCircle,  label: 'Admin Accounts'       },
     { to: '/admin/announcements',   icon: MdCampaign,             label: 'Announcements', superOnly: true },
     { to: '/admin/doctypes',        icon: MdDescription,          label: 'Document Types'   },
@@ -668,7 +667,6 @@ const APPS = {
   [ROLES.SUPER_ADMIN]: [
     { label: 'Dashboard',      icon: MdDashboard,            to: '/admin/dashboard'   },
     { label: 'Agencies',       icon: MdBusiness,              to: '/admin/agencies'      },
-    { label: 'Coordinators',   icon: MdGroup,                 to: '/admin/coordinators'  },
     { label: 'Accounts',       icon: MdSupervisedUserCircle,  to: '/admin/accounts'      },
     { label: 'Doc Types',      icon: MdDescription,          to: '/admin/doctypes'    },
     { label: 'Assistance',     icon: MdFavorite,             to: '/admin/assistance'  },
@@ -682,7 +680,7 @@ const APPS = {
   ],
 }
 APPS[ROLES.STAFF_ADMIN] = APPS[ROLES.SUPER_ADMIN].filter(a =>
-  a.to !== '/admin/accounts' && a.to !== '/admin/auditlog' && a.to !== '/admin/coordinators'
+  a.to !== '/admin/accounts' && a.to !== '/admin/auditlog'
 )
 
 function AppsPanel({ role, onNavigate, onClose }) {
