@@ -145,12 +145,17 @@ export default function DocViewerModal({ docMeta, onClose }) {
     <>
       {lightboxOpen && isImage && content && <ImageLightbox src={content} onClose={() => setLightboxOpen(false)} />}
 
-      <div className="fixed inset-0 bg-black/40 z-[400] flex items-center justify-center p-4"
+      <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
         onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+
+          {/* Drag handle — mobile only */}
+          <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+            <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+          </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0 gap-3">
+          <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-3">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <MdInsertDriveFile size={18} className="text-gray-400 flex-shrink-0" />
               <h2 className="text-base font-semibold text-gray-900 truncate">{docMeta?.name ?? 'Document'}</h2>

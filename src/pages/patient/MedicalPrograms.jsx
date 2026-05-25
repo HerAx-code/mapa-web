@@ -191,9 +191,13 @@ function ApplyModal({ agency, onClose }) {
 
   // ── Success screen ───────────────────────────────────────────────────────
   if (submitted) return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-8 text-center space-y-4">
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-end sm:items-center justify-center sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+        {/* Drag handle — mobile only */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+        </div>
+        <div className="px-6 py-6 sm:py-8 text-center space-y-4">
 
           {/* Icon */}
           <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
@@ -235,12 +239,17 @@ function ApplyModal({ agency, onClose }) {
   )
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-3 sm:p-4"
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+
+        {/* Drag handle — mobile only */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+        </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900 truncate pr-2">{t('patient.apply.title', { agency: agency.name })}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>

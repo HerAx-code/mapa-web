@@ -314,9 +314,14 @@ function ComposeModal({ user, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[300] flex items-end sm:items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/40 z-[300] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && handleClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden relative">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden relative">
+
+        {/* Drag handle — mobile only */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+        </div>
 
         {/* Unsaved changes confirmation overlay */}
         {confirmClose && (

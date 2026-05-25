@@ -87,7 +87,11 @@
 
   /* Page header */
   .page-title  { @apply text-xl font-semibold text-gray-900; }
-  .page-sub    { @apply text-sm text-gray-500 mt-0.5; }
+  /* Subtitles are useful on desktop for SEO and context, but on a
+     phone they push actionable content below the fold. Hide on
+     mobile (default), show on sm+ where vertical real estate is
+     less precious. */
+  .page-sub    { @apply hidden sm:block text-sm text-gray-500 mt-0.5; }
 
   /* Table */
   .data-table { @apply w-full text-sm; }

@@ -42,8 +42,17 @@ import toast from 'react-hot-toast'
 
 function ModalCard({ title, onClose, children, footer }) {
   return (
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+    // Bottom-anchored on mobile, centered on sm+. Mobile users get
+    // a native-feeling sheet that slides up from the bottom edge
+    // within thumb reach; desktop / tablet users keep the classic
+    // centered modal.
+    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col">
+      {/* Drag handle — mobile only. Visual cue that this is a
+          dismissible sheet, not a fixed page overlay. */}
+      <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+        <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+      </div>
+      <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
           <MdClose size={20} />
@@ -704,7 +713,7 @@ function ReportModal({ onClose }) {
 export default function ProfileModals({ activeModal, onClose, onSetModal }) {
   if (!activeModal) return null
   return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-3 sm:p-4"
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
       {activeModal === 'account'  && <AccountSettingsModal onClose={onClose} />}
       {activeModal === 'password' && <ChangePasswordModal  onClose={onClose} />}
