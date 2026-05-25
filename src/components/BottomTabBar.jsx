@@ -52,20 +52,20 @@ export default function BottomTabBar({ unreadMessages = 0 }) {
             key={tab.to}
             to={tab.to}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-h-[56px] relative transition-colors ${
+              `flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[60px] relative transition-colors active:bg-gray-50 ${
                 isActive ? 'text-brand-500' : 'text-gray-500 hover:text-brand-500'
               }`
             }
           >
             <div className="relative">
-              <Icon size={22} />
+              <Icon size={24} />
               {tab.badge > 0 && (
-                <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {tab.badge > 9 ? '9+' : tab.badge}
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-medium leading-tight">{t(tab.labelKey)}</span>
+            <span className="text-[11px] font-medium leading-tight">{t(tab.labelKey)}</span>
           </NavLink>
         )
       })}
@@ -77,13 +77,13 @@ export default function BottomTabBar({ unreadMessages = 0 }) {
       <NavLink
         to="/patient/more"
         className={({ isActive }) =>
-          `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-h-[56px] transition-colors ${
+          `flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[60px] transition-colors active:bg-gray-50 ${
             isActive ? 'text-brand-500' : 'text-gray-500 hover:text-brand-500'
           }`
         }
       >
-        <MdMenu size={22} />
-        <span className="text-[10px] font-medium leading-tight">{t('shell.more')}</span>
+        <MdMenu size={24} />
+        <span className="text-[11px] font-medium leading-tight">{t('shell.more')}</span>
       </NavLink>
     </nav>
   )
