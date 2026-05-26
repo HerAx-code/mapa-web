@@ -1012,6 +1012,48 @@ export default function Layout({ children, breadcrumb }) {
 
   const agencyName = liveAgencyName ?? 'Agency'
 
+  // Non-patient + installed PWA = wrong surface. Agency and admin
+  // staff are web-only per CLAUDE.md — their UIs are dense desktop
+  // layouts (multi-pane Inbox, Doc Review, AppLogs, etc.) that don't
+  // ergonomically fit a phone. Show them a friendly bounce screen
+  // instead of letting the desktop UI render squashed onto mobile.
+  // The check fires only when display-mode is standalone (i.e. the
+  // installed PWA), so opening the same URL in a regular phone
+  // browser tab still works for staff who need ad-hoc mobile access.
+  const isStandalone = typeof window !== 'undefined' &&
+    (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
+  const isStaffInPWA = isStandalone && user && user.role && user.role !== ROLES.PATIENT
+
+  if (isStaffInPWA) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-5">
+          <Logo size={36} />
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Installed app is for patients</h1>
+        <p className="text-sm text-gray-600 leading-relaxed max-w-md mb-1">
+          You're signed in as <strong>{ROLE_LABEL_SHORT[user.role] ?? user.role}</strong>. The MAPA
+          installed app is designed for patients on their phones.
+        </p>
+        <p className="text-sm text-gray-600 leading-relaxed max-w-md mb-5">
+          Agency and admin work happens on the web portal in a laptop browser, where the inbox,
+          document review, and reports have enough screen space to read properly.
+        </p>
+        <p className="text-xs text-gray-400 mb-6 font-mono break-all max-w-md">
+          {typeof window !== 'undefined' ? window.location.origin : ''}
+        </p>
+        <button
+          onClick={handleLogout}
+          className="btn-primary inline-flex items-center gap-2">
+          <MdLogout size={16} /> Log out
+        </button>
+        <p className="text-xs text-gray-400 mt-4 max-w-sm leading-relaxed">
+          After logging out, open the URL above on your laptop browser to sign back in.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <ProfileModals activeModal={activeModal} onClose={() => setActiveModal(null)} onSetModal={setActiveModal} />

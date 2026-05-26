@@ -33,7 +33,7 @@ const SECTIONS = [
     title: 'Application lifecycle',
     items: [
       { label: 'Pending',     desc: 'Patient submitted. Slot was auto-deducted. Awaiting your first review.' },
-      { label: 'Reviewing',   desc: 'You clicked Start Review. Open the Intake Sheet to begin case assessment.' },
+      { label: 'Reviewing',   desc: 'You clicked Start Review. Schedule the interview, conduct it, then open the Assessment to record what you learned.' },
       { label: 'Interview',   desc: 'You scheduled a Google Meet interview. Date, time, link, and conducting social worker are recorded.' },
       { label: 'Approved',    desc: 'You issued the approval with amount, purpose, and payable-to. GL status: Issued. Committed budget incremented.' },
       { label: 'Certificate', desc: 'GL has been printed and confirmed. The patient is notified. Upload the wet-signed scan so the patient can download it.' },
@@ -48,7 +48,7 @@ const SECTIONS = [
     items: [
       { label: 'Patient Access Code',   desc: 'CRMC-YYYY-NNNNN code issued by Medical Social Services. Patients must enter it to register.' },
       { label: 'Application',           desc: 'A request from a patient for assistance from a specific agency. Has a status: pending → reviewing → interview → approved → certificate (or rejected).' },
-      { label: 'Intake Sheet',          desc: 'A long form the social worker fills in during reviewing/interview. Required before approval.' },
+      { label: 'Case Assessment',      desc: 'A long form the social worker fills in during or after the patient interview, recording family/income/medical details and a recommendation. Required before approval. (Printed copy retains the official "Unified Intake Sheet" header for COA audit purposes.)' },
       { label: 'Means-Test Category',   desc: 'Manual classification of the patient: Indigent / Marginalized / Low Income / Above Threshold.' },
       { label: 'Guarantee Letter (GL)', desc: 'The official document issued to an approved patient. States the guaranteed amount, the purpose, and the provider that will be billed.' },
       { label: 'GL Status',             desc: 'Issued (just approved), Redeemed (provider billed back), or Expired (30-day window passed).' },
@@ -67,7 +67,7 @@ const SECTIONS = [
     steps: [
       'Open Application Inbox from the sidebar. The badge shows pending + reviewing applications.',
       'Each row shows: patient name, app ID, days waiting, document count, intake status, status badge.',
-      'Click a row to open the four-tab detail modal: Overview, Intake Sheet, Documents, Timeline & Notes.',
+      'Click a row to open the four-tab detail modal: Overview, Assessment, Documents, Timeline & Notes.',
       'The Message icon on the right opens a chat with the patient. The blue button reads "Review" or "View" based on status.',
       'Summary cards at the top filter the list by status — click "Pending" to focus your queue.',
     ],
@@ -82,27 +82,30 @@ const SECTIONS = [
       'Click a Pending row → the application detail modal opens on the Overview tab.',
       'Verify patient info, attached documents (Documents tab), and any past notes.',
       'Click Start Review in the action footer. Status becomes Reviewing and the patient is notified.',
-      'The Intake Sheet tab unlocks. Open it to begin the case assessment.',
+      'The Assessment tab unlocks. Schedule the interview first, then open the Assessment to record what you learn during/after the interview.',
     ],
   },
   {
     id: 'intake',
     group: 'Daily Processing',
     icon: '📋',
-    title: 'Filling the Unified Intake Sheet',
+    title: 'Completing the Case Assessment',
     content:
-      `The Intake Sheet is the digital equivalent of CRMC's paper Client's Information Sheet + Social Case Study. ` +
-      `It must be completed before approval — the Approve button stays disabled until 6 required fields are filled: ` +
-      `Household Size, Monthly Income, Diagnosis, Recommendation, Means-Test Category, and Author (auto-filled).`,
+      `The Case Assessment is the digital equivalent of CRMC's paper Client's Information Sheet + Social Case Study. ` +
+      `Fill it during or after the patient interview — the data here comes from what the patient tells you, not from ` +
+      `the application documents alone. It must be completed before approval — the Approve button stays disabled until ` +
+      `6 required fields are filled: Household Size, Monthly Income, Diagnosis, Recommendation, Means-Test Category, ` +
+      `and Author (auto-filled). The printed copy retains the official "Unified Intake Sheet" header for COA audit purposes.`,
     steps: [
-      'Open the application → Intake Sheet tab → click Open Sheet.',
+      'Schedule and conduct the patient interview first.',
+      'Open the application → Assessment tab → click Open Assessment.',
       'Fill family composition (one row per member), income and employment, monthly expenses.',
       'Fill medical details: diagnosis (required), attending physician, hospital case number (IHOMIS reference), estimated cost.',
       'Write the social case study narrative (free text) and your recommendation (required).',
       'Pick the means-test category (required): Indigent / Marginalized / Low Income / Above Threshold.',
-      'Save. The intake chip on the Inbox row turns green when complete.',
+      'Save. The assessment chip on the Inbox row turns green when complete.',
     ],
-    note: 'You can save partial progress at any time. Empty optional fields are fine — mirror what you would write on paper.',
+    note: 'You can save partial progress at any time and return after a follow-up call. Empty optional fields are fine — mirror what you would write on paper.',
   },
   {
     id: 'interview',
@@ -147,7 +150,7 @@ const SECTIONS = [
       `and the provider (Payable To). The application moves to Approved, the agency's committed budget increases ` +
       `by the approved amount, and the patient is notified.`,
     steps: [
-      'In the application modal, click Approve & Issue GL (only available after the Intake Sheet is complete).',
+      'In the application modal, click Approve & Issue GL (only available after the Case Assessment is complete).',
       'Review the budget remaining banner — your approval cannot exceed this amount.',
       'If a cooldown warning appears (a recent approval for the same patient), decide whether to proceed.',
       'Enter the approved amount in pesos. Validation blocks amounts exceeding the remaining budget.',
@@ -258,7 +261,7 @@ const SECTIONS = [
     icon: '📝',
     title: 'Adding case notes',
     content:
-      `Case notes are an append-only log on the application — distinct from the Intake Sheet narrative. ` +
+      `Case notes are an append-only log on the application — distinct from the Case Assessment narrative. ` +
       `Use them for ongoing observations: "Called patient on 5/19, voicemail" or "Provider confirmed receipt of GL".`,
     steps: [
       'Open the application → Timeline & Notes tab.',
@@ -288,7 +291,7 @@ const SECTIONS = [
     icon: '❓',
     title: 'Common problems',
     items: [
-      { label: 'The Approve button is disabled',     desc: 'The Intake Sheet is incomplete. Open it and fill the 6 required fields.' },
+      { label: 'The Approve button is disabled',     desc: 'The Case Assessment is incomplete. Open it and fill the 6 required fields.' },
       { label: 'My approval was blocked',            desc: 'You tried to approve more than the agency\'s remaining budget. Lower the amount or ask the admin to increase the allocation.' },
       { label: 'I see "GL Expired (action needed)"', desc: 'A GL passed its 30-day validity window. Open the app and click Mark GL Expired to release the committed budget.' },
       { label: 'A patient says they didn\'t get the notification', desc: 'Check Messages and send a direct message. The patient may not have logged in to the portal yet.' },
@@ -321,7 +324,7 @@ const QUICK_LINKS = [
 ]
 
 const WORKFLOW = [
-  'Receive', 'Review', 'Intake Sheet', 'Interview',
+  'Receive', 'Review', 'Interview', 'Assessment',
   'Outcome', 'Approve + GL', 'Print → Upload', 'Redeem',
 ]
 
