@@ -9,11 +9,11 @@ import { db } from '../firebase'
 // Callers may still wrap with `.catch(() => {})` for clarity; that's a
 // safe no-op now because this function always resolves.
 //
-// As of the email integration: notify() also writes a doc to the `mail`
-// collection so the Firebase 'Trigger Email from Firestore' extension can
-// pick it up and dispatch via SMTP. If the extension isn't installed the
-// mail docs simply pile up harmlessly. If the user has no email in their
-// profile, the mail-side write is skipped (in-app notification still fires).
+// Email integration: every notify() call also POSTs to the
+// /api/send-email Vercel serverless route, which uses a Gmail App
+// Password via SMTP. If the user has no email on file, or the POST
+// fails, only the in-app notification fires. Email is a secondary
+// channel and never affects the primary in-app flow.
 export const notify = async (uid, { type, title, body, ...extra } = {}) => {
   // 1. In-app notification — primary surface, must succeed for the user
   //    to see anything when they open the app.
@@ -42,20 +42,17 @@ export const notify = async (uid, { type, title, body, ...extra } = {}) => {
     }
   }
 
-  // 2. Email queue — secondary surface, picked up asynchronously by the
-  //    Trigger Email from Firestore extension. Wrapped separately so a
-  //    missing email or extension misconfig never affects the in-app
-  //    notification flow.
+  // 2. Email — secondary surface, dispatched server-side by the
+  //    /api/send-email Vercel route. Skipped if the user has no
+  //    email on file. Wrapped in its own try so a network blip or
+  //    a misconfigured SMTP env var never affects the in-app
+  //    notification, which already succeeded above.
   try {
     if (!uid) return result
     const userSnap = await getDoc(doc(db, 'users', uid))
     const email = userSnap.exists() ? userSnap.data()?.email : null
     if (!email) return result
 
-    // Plain-text rendering. The extension will read message.text +
-    // message.html and dispatch via the configured SMTP server. We send
-    // both formats so clients that strip HTML (Apple Mail digest mode,
-    // some Outlook configs) still get readable content.
     const plain = `${body ?? ''}\n\n— MAPA · Cotabato Regional Medical Center`
     const html = [
       '<div style="font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111827;">',
@@ -66,28 +63,28 @@ export const notify = async (uid, { type, title, body, ...extra } = {}) => {
       '</div>',
     ].join('')
 
-    await addDoc(collection(db, 'mail'), {
-      to: email,
-      message: { subject: title ?? 'MAPA notification', text: plain, html },
-      // Trace fields so admins can audit which notification dispatched
-      // which email. Extension ignores extra fields.
-      meta: {
-        recipientUid: uid,
-        type:         type ?? null,
-        queuedAt:     serverTimestamp(),
-      },
-    })
+    // Fire-and-forget POST. We don't await it so a slow SMTP server
+    // doesn't drag down the in-app notification UX. The serverless
+    // route logs its own errors; we only log network-level failures.
+    fetch('/api/send-email', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        to:      email,
+        subject: title || 'MAPA notification',
+        text:    plain,
+        html,
+      }),
+    }).catch(err => console.warn('[notify] email POST failed:', err?.message))
   } catch (mailErr) {
-    // Email is best-effort. Log to console for diagnostics but never
-    // surface to the caller — in-app notification already succeeded.
-    console.warn('[notify] mail queue failed:', mailErr?.code, mailErr?.message)
+    console.warn('[notify] email setup failed:', mailErr?.code, mailErr?.message)
   }
 
   return result
 }
 
-// Minimal HTML escape for email body. The Trigger Email extension does
-// not sanitize input; without this, agency-supplied free text in
+// Minimal HTML escape for email body. The serverless route does not
+// sanitize input; without this, agency-supplied free text in
 // awaitingInfoMessage or rejection reasons could break out of the
 // surrounding markup.
 function escapeHtml(s) {
