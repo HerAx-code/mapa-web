@@ -226,9 +226,10 @@ export default function TrackStatus() {
       const snap = await getDoc(doc(db, 'certificates', app.id))
       if (!snap.exists()) { toast.error(t('patient.track.certNotReady')); return }
       const { base64, fileName } = snap.data()
+      const isPdf = typeof base64 === 'string' && base64.startsWith('data:application/pdf')
       const a = document.createElement('a')
       a.href     = base64
-      a.download = fileName ?? `guarantee-letter-${app.appId}.jpg`
+      a.download = fileName ?? `guarantee-letter-${app.appId}.${isPdf ? 'pdf' : 'jpg'}`
       a.click()
     } catch {
       toast.error(t('patient.track.downloadFailed'))

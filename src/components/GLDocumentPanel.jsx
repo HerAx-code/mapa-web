@@ -5,8 +5,13 @@ import { db } from '../firebase'
 import { useAuth } from '../contexts/AuthContext'
 import {
   MdCardMembership, MdDownload, MdRefresh,
-  MdZoomIn, MdClose, MdLock, MdOpenInNew,
+  MdZoomIn, MdClose, MdLock, MdOpenInNew, MdPictureAsPdf,
 } from 'react-icons/md'
+
+// Signed scans are stored as base64 data URLs. Detect PDF vs image
+// from the prefix so we can render the right preview surface — PDFs
+// don't render in <img>, they need an iframe / new tab.
+const isPdfDataUrl = (s) => typeof s === 'string' && s.startsWith('data:application/pdf')
 
 const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const formatDate = (ts) => {
@@ -72,18 +77,27 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
     if (!signedScan?.base64) return
     const a = document.createElement('a')
     a.href = signedScan.base64
-    a.download = signedScan.fileName ?? `guarantee-letter-${app.appId}.jpg`
+    a.download = signedScan.fileName ?? `guarantee-letter-${app.appId}.${isSignedPdf ? 'pdf' : 'jpg'}`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
   }
 
+  // Open the PDF in a new browser tab for full-size viewing. Mirrors
+  // what the Lightbox does for images, since PDFs render natively in
+  // every modern browser tab.
+  const handleOpenPdf = () => {
+    if (!signedScan?.base64) return
+    window.open(signedScan.base64, '_blank', 'noopener,noreferrer')
+  }
+
 
   // State derivations
-  const hasSigned = !!signedScan
-  const status    = app.glStatus
-  const isRedeemed = status === 'redeemed'
-  const isExpired  = status === 'expired'
+  const hasSigned    = !!signedScan
+  const isSignedPdf  = hasSigned && isPdfDataUrl(signedScan.base64)
+  const status       = app.glStatus
+  const isRedeemed   = status === 'redeemed'
+  const isExpired    = status === 'expired'
 
   const stateTag = isRedeemed ? { label: 'Redeemed', cls: 'badge-green' }
     : isExpired ? { label: 'Expired', cls: 'bg-orange-100 text-orange-700' }
@@ -96,10 +110,18 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
   if (compact) {
     return (
       <>
-        {lightboxOpen && signedScan && <Lightbox src={signedScan.base64} onClose={() => setLightboxOpen(false)} />}
+        {/* Lightbox only renders for image scans. PDFs open in a new tab
+            via handleOpenPdf since <img> can't display them. */}
+        {lightboxOpen && signedScan && !isSignedPdf && <Lightbox src={signedScan.base64} onClose={() => setLightboxOpen(false)} />}
         <div className="bg-white rounded-xl border border-gray-200 p-3 flex items-start gap-3">
-          {/* Thumbnail or placeholder */}
-          {hasSigned ? (
+          {/* Thumbnail / PDF chip / placeholder */}
+          {hasSigned && isSignedPdf ? (
+            <button onClick={handleOpenPdf}
+              className="relative w-20 h-24 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-brand-300 transition-all flex-shrink-0 bg-red-50 flex flex-col items-center justify-center gap-1">
+              <MdPictureAsPdf size={26} className="text-red-500" />
+              <span className="text-[10px] font-semibold text-red-600 tracking-wide">PDF</span>
+            </button>
+          ) : hasSigned ? (
             <button onClick={() => setLightboxOpen(true)}
               className="relative w-20 h-24 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-brand-300 transition-all flex-shrink-0 bg-gray-50">
               <img src={signedScan.base64} alt="Signed GL thumbnail"
@@ -122,7 +144,9 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
             </div>
             <p className="text-xs text-gray-500 mb-2">
               {hasSigned
-                ? <>Click the thumbnail to view, or download a copy.</>
+                ? (isSignedPdf
+                    ? <>Tap the PDF chip to open it, or download a copy.</>
+                    : <>Click the thumbnail to view, or download a copy.</>)
                 : <>The signed copy will appear here once your agency uploads it.</>}
             </p>
             {hasSigned && (
@@ -141,7 +165,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
 
   return (
     <>
-      {lightboxOpen && signedScan && <Lightbox src={signedScan.base64} onClose={() => setLightboxOpen(false)} />}
+      {lightboxOpen && signedScan && !isSignedPdf && <Lightbox src={signedScan.base64} onClose={() => setLightboxOpen(false)} />}
 
       <div className="card p-4">
         <div className="flex items-start justify-between mb-3 gap-2 flex-wrap">
@@ -159,9 +183,19 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-          {/* Thumbnail / placeholder */}
+          {/* Thumbnail / PDF card / placeholder */}
           <div className="sm:col-span-1">
-            {loaded && hasSigned ? (
+            {loaded && hasSigned && isSignedPdf ? (
+              <button onClick={handleOpenPdf}
+                className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-brand-300 transition-all bg-red-50 flex flex-col items-center justify-center gap-2 p-4 text-center group">
+                <MdPictureAsPdf size={42} className="text-red-500" />
+                <p className="text-xs font-semibold text-red-600 tracking-wide">PDF Document</p>
+                <p className="text-[10px] text-red-500/80 truncate max-w-full">{signedScan.fileName ?? 'signed-gl.pdf'}</p>
+                <span className="text-[10px] text-red-700 opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                  <MdOpenInNew size={10} /> Open in new tab
+                </span>
+              </button>
+            ) : loaded && hasSigned ? (
               <button onClick={() => setLightboxOpen(true)}
                 className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-brand-300 transition-all bg-gray-50 group">
                 <img src={signedScan.base64} alt="Signed Guarantee Letter"
