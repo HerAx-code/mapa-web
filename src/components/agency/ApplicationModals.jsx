@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
+import { MdClose, MdCheckCircle, MdHourglassEmpty, MdVideoCall, MdOpenInNew } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
 const REQUEST_INFO_TEMPLATES = [
@@ -57,8 +57,28 @@ export function InterviewModal({ app, agency, onConfirm, onClose }) {
             <input className="input" placeholder="e.g. 2:00 PM" value={form.time} onChange={set('time')} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Google Meet Link <span className="text-red-400">*</span></label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-700">Google Meet Link <span className="text-red-400">*</span></label>
+              {/* meet.new is Google's official shortcut: opening it
+                  instantly provisions a new Meet using the coordinator's
+                  signed-in Google account and lands on the meeting URL,
+                  which they can then copy from the address bar and
+                  paste back here. Saves 30 sec / interview vs hunting
+                  for meet.google.com manually. */}
+              <a
+                href="https://meet.new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1 group">
+                <MdVideoCall size={14} className="text-brand-500 group-hover:text-brand-600" />
+                Generate Meet
+                <MdOpenInNew size={11} className="opacity-60" />
+              </a>
+            </div>
             <input className="input" placeholder="https://meet.google.com/..." value={form.link} onChange={set('link')} />
+            <p className="text-xs text-gray-400 mt-1 leading-snug">
+              Tap <strong>Generate Meet</strong> to create a new meeting in Google. Copy the URL from the new tab and paste it here.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Conducting Social Worker <span className="text-red-400">*</span></label>
