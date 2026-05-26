@@ -106,7 +106,7 @@ const getUpdatedStages = (stages, newStatus, extra = {}) => {
 // Section definitions (ordered)
 const SECTION_DEFS = [
   { id: 'overview',  label: 'Overview',          icon: MdInfo,        always: true },
-  { id: 'intake',    label: 'Intake Sheet',      icon: MdAssignment,  forStatus: ['reviewing','awaiting_info','interview','approved','certificate'] },
+  { id: 'intake',    label: 'Assessment',        icon: MdAssignment,  forStatus: ['reviewing','awaiting_info','interview','approved','certificate'] },
   { id: 'documents', label: 'Documents',         icon: MdDescription, always: true },
   { id: 'gl',        label: 'Guarantee Letter',  icon: MdReceipt,     forStatus: ['approved','certificate'] },
   { id: 'timeline',  label: 'Timeline & Notes',  icon: MdHistory,     always: true },
@@ -184,10 +184,10 @@ function getPrimaryActions(ctx) {
 
   if (app.status === 'reviewing' && !intakeReady) {
     return {
-      hint: 'Complete the Intake Sheet to unlock approval.',
+      hint: 'Conduct the patient interview and complete the case assessment to unlock approval.',
       tone: 'amber',
       actions: [
-        { label: 'Open Intake Sheet',  icon: MdAssignment,      variant: 'primary',   onClick: goIntake },
+        { label: 'Open Assessment',    icon: MdAssignment,      variant: 'primary',   onClick: goIntake },
         { label: 'Schedule Interview', icon: MdVideoCall,       variant: 'secondary', onClick: () => handlers.setShowInterview(true) },
         { label: 'Request More Info',  icon: MdHourglassEmpty,  variant: 'secondary', onClick: () => handlers.setShowRequestInfo(true) },
         { label: 'Reject',             icon: MdCancel,          variant: 'danger',    onClick: () => handlers.setShowReject(true) },
@@ -1258,7 +1258,7 @@ export default function ApplicationDetail() {
             {/* INTAKE */}
             {section === 'intake' && (
               <div className="card p-5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Unified Intake Sheet</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Case Assessment</p>
                 <div className="flex items-start gap-3 mb-4">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     intakeReady ? 'bg-green-50' : app.intakeSheet ? 'bg-amber-50' : 'bg-gray-100'
@@ -1295,7 +1295,7 @@ export default function ApplicationDetail() {
                 <button className="btn-primary text-sm flex items-center gap-1.5"
                   onClick={() => navigate(`/agency/applications/${app.id}/intake`)}>
                   <MdAssignment size={14} />
-                  {isApproved ? 'View Sheet' : intakeReady ? 'Edit Sheet' : app.intakeSheet ? 'Continue' : 'Open Sheet'}
+                  {isApproved ? 'View Assessment' : intakeReady ? 'Edit Assessment' : app.intakeSheet ? 'Continue Assessment' : 'Open Assessment'}
                 </button>
               </div>
             )}

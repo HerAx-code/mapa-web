@@ -115,7 +115,7 @@ export default function IntakeSheet() {
     } catch (err) {
       console.error(err)
       setSaveState(prev => ({ ...prev, status: 'error' }))
-      toast.error('Failed to save Intake Sheet.')
+      toast.error('Failed to save assessment.')
     }
   }
 
@@ -205,7 +205,7 @@ export default function IntakeSheet() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     dirtyRef.current = true
     await performSave()
-    toast.success('Intake Sheet saved.')
+    toast.success('Assessment saved.')
   }
 
   const handleScrollTo = (sectionId) => {
@@ -263,7 +263,7 @@ export default function IntakeSheet() {
   }
 
   if (loading || !app) return (
-    <Layout breadcrumb="Intake Sheet">
+    <Layout breadcrumb="Case Assessment">
       <div className="p-4 sm:p-6 max-w-5xl space-y-4">
         {[1, 2, 3].map(i => (
           <div key={i} className="card p-5 animate-pulse">
@@ -276,7 +276,7 @@ export default function IntakeSheet() {
   )
 
   return (
-    <Layout breadcrumb={`Intake Sheet · ${app.patientName}`}>
+    <Layout breadcrumb={`Case Assessment · ${app.patientName}`}>
       <div className="p-4 sm:p-6 max-w-5xl">
 
         {/* Sticky header */}
@@ -288,7 +288,7 @@ export default function IntakeSheet() {
                 <MdArrowBack size={14} /> Back to application
               </Link>
               <span className="text-gray-300">/</span>
-              <p className="text-sm font-semibold text-gray-800 truncate">Intake Sheet</p>
+              <p className="text-sm font-semibold text-gray-800 truncate">Case Assessment</p>
               <span className="text-xs text-gray-400 truncate">— {app.patientName}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -320,14 +320,36 @@ export default function IntakeSheet() {
           </div>
         </div>
 
+        {/* When-to-fill banner. Coordinators previously got confused
+            seeing this form before the interview was conducted and tried
+            to pre-fill it from documents alone. The assessment is meant
+            to record what the social worker LEARNS from the patient
+            interview — not a pre-interview prep doc. This banner
+            disambiguates and stays visible until the application is
+            approved (at which point editing is locked anyway). */}
+        {canEdit && (
+          <div className="mb-5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-start gap-2 print:hidden">
+            <MdInfo size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-blue-800 leading-relaxed">
+              <p className="font-medium mb-0.5">Fill this during or after the patient interview.</p>
+              <p className="text-blue-700">
+                The assessment records what you learn from talking to <strong>{app.patientName}</strong> —
+                family situation, income, expenses, medical history, and your recommendation. It is not
+                meant to be pre-filled from documents alone. You can save partial answers and return
+                anytime.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Read-only banner */}
         {!canEdit && (
           <div className="mb-5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 flex items-start gap-2 print:hidden">
             <MdLock size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 leading-relaxed">
               {app.status === 'rejected'
-                ? 'This application was rejected — the Intake Sheet is now read-only.'
-                : `You are viewing this Intake Sheet in read-only mode. Only coordinators of ${app.agencyName} can edit it.`}
+                ? 'This application was rejected — the assessment is now read-only.'
+                : `You are viewing this case assessment in read-only mode. Only coordinators of ${app.agencyName} can edit it.`}
             </p>
           </div>
         )}
