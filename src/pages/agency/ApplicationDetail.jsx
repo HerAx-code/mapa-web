@@ -561,22 +561,30 @@ export default function ApplicationDetail() {
   const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid }) => {
     setUpdating(true)
     try {
-      // ── Pre-transaction cooldown gate.
+      // ── Pre-transaction cooldown gate (same-agency only).
       // Transactions can only read by doc-ref, not run collection queries,
       // so we check cooldown here. A second approval landing between this
       // check and the transaction is theoretically possible but extremely
       // narrow; the ApproveModal already shows a hard block when it loads.
       //
-      // Two signals can block: (1) a currently-approved app within the
-      // 30-day window, or (2) a previously-approved app that was reversed
-      // and carries an explicit cooldownUntilAt timestamp. We query by
-      // patientId only and inspect both signals in code — per-patient app
-      // counts are small.
+      // SCOPE: this query intentionally filters by agencyId so it only
+      // returns applications from the SAME agency as the approver. A
+      // patient-only query (no agencyId clause) returns every app the
+      // patient has ever filed — including cross-agency ones — which
+      // Firestore's rule engine then denies wholesale with
+      // permission-denied because the read rule on /applications
+      // requires resource.data.agencyId == userAgencyId() and the query
+      // can't statically guarantee that for unconstrained patientId
+      // queries. Cross-agency cooldown is already caught by the
+      // hospitalIds check below (every approval stamps lastApprovedAt
+      // on the patient's CRMC Hospital ID, so any agency's recent
+      // approval is visible there).
       const COOLDOWN_DAYS = 30
       const now = Date.now()
       const recentSnap = await getDocs(query(
         collection(db, 'applications'),
         where('patientId', '==', app.patientId),
+        where('agencyId',  '==', user.agencyId),
       ))
       const blocking = recentSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
