@@ -433,23 +433,29 @@ export default function IntakeSheet() {
                     headers are screen-reader hidden (their inputs get
                     explicit aria-label) so AT users hear the field
                     purpose without the header echoing it. */}
+                {/* Headers match the grid spans below. Age was previously
+                    col-span-1 (~50 px on a typical 600 px form area) which
+                    squashed the number input's spinner arrows over the
+                    digits. col-span-2 = ~95 px, enough room for the
+                    spinner + 2 digits with room to spare. */}
                 <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-500 uppercase tracking-wide mb-1" aria-hidden="true">
-                  <span className="col-span-4">Name</span>
+                  <span className="col-span-3">Name</span>
                   <span className="col-span-2">Relationship</span>
-                  <span className="col-span-1">Age</span>
+                  <span className="col-span-2">Age</span>
                   <span className="col-span-2">Occupation</span>
                   <span className="col-span-2">Monthly ₱</span>
+                  <span className="col-span-1" />
                 </div>
 
                 {sheet.familyMembers.map((m, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-start">
-                    <input className="input col-span-12 sm:col-span-4 text-sm"
+                    <input className="input col-span-12 sm:col-span-3 text-sm"
                       placeholder="Juan Dela Cruz" aria-label={`Family member ${i + 1} name`}
                       value={m.name} onChange={e => setMember(i, 'name', e.target.value)} disabled={!canEdit} />
                     <input className="input col-span-6 sm:col-span-2 text-sm"
                       placeholder="e.g. Spouse" aria-label={`Family member ${i + 1} relationship`}
                       value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-3 sm:col-span-1 text-sm" type="number"
+                    <input className="input col-span-3 sm:col-span-2 text-sm" type="number"
                       placeholder="—" aria-label={`Family member ${i + 1} age`}
                       value={m.age} onChange={e => setMember(i, 'age', e.target.value)} disabled={!canEdit} />
                     <input className="input col-span-3 sm:col-span-2 text-sm"
