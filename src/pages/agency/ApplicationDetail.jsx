@@ -718,13 +718,25 @@ export default function ApplicationDetail() {
       setShowApprove(false)
       toast.success('Application approved. Guarantee Letter pending issuance.')
     } catch (err) {
-      console.error('[ApplicationDetail] approve error:', err)
+      console.error('[ApplicationDetail] approve error:', err?.code, err?.message, err)
       // Surface the explicit budget message; Firestore wraps thrown errors
       // from inside runTransaction in err.message.
       if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
         toast.error(err.message.replace('BUDGET_INSUFFICIENT:', ''), { duration: 8000 })
+      } else if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
+        // Most common cause: agency user is trying to approve an application
+        // that belongs to a different agency (agencyId mismatch). Could also
+        // be a hospitalIds rule mismatch on the cooldown stamp.
+        toast.error(
+          `Permission denied. ${app.agencyId !== user?.agencyId
+            ? `This application belongs to a different agency (${app.agencyName}). You're signed in as ${user?.name}.`
+            : 'Your account may not have approve permission. Contact your agency admin.'}`,
+          { duration: 10000 }
+        )
+      } else if (err?.code === 'failed-precondition' || err?.code === 'aborted') {
+        toast.error('Another approval just landed for this patient. Refresh and check the application status.', { duration: 8000 })
       } else {
-        toast.error('Failed to approve application.')
+        toast.error(`Failed to approve application. ${err?.code ? `(${err.code})` : ''}`)
       }
     } finally {
       setUpdating(false)

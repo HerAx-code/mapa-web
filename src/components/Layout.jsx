@@ -1166,12 +1166,23 @@ export default function Layout({ children, breadcrumb }) {
               )}
             </div>
 
-            {/* 3. Notifications Bell */}
+            {/* 3. Notifications Bell — on patient mobile (< lg), tap
+                navigates to /notifications instead of opening a
+                floating dropdown that obscures the page. Desktop and
+                non-patient roles keep the dropdown behavior since they
+                have screen space for the panel without obstruction. */}
             <div className="relative">
               <button
                 className="nav-icon-btn"
                 aria-label="Notifications"
-                onClick={() => { setShowNotifs(p => !p); setShowApps(false); setShowMessages(false) }}
+                onClick={() => {
+                  // Mobile patient → navigate to full Notifications page
+                  if (user?.role === ROLES.PATIENT && typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+                    navigate('/notifications')
+                    return
+                  }
+                  setShowNotifs(p => !p); setShowApps(false); setShowMessages(false)
+                }}
               >
                 <MdNotifications size={20} />
                 {unreadCount > 0 && (
