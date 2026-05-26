@@ -427,28 +427,48 @@ export default function IntakeSheet() {
               </div>
 
               <div className="space-y-2 mb-3">
+                {/* Column headers — visible on sm+ where the row is
+                    horizontal. Match the grid spans of each input row
+                    exactly so the labels sit above their fields. The
+                    headers are screen-reader hidden (their inputs get
+                    explicit aria-label) so AT users hear the field
+                    purpose without the header echoing it. */}
+                <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-500 uppercase tracking-wide mb-1" aria-hidden="true">
+                  <span className="col-span-4">Name</span>
+                  <span className="col-span-2">Relationship</span>
+                  <span className="col-span-1">Age</span>
+                  <span className="col-span-2">Occupation</span>
+                  <span className="col-span-2">Monthly ₱</span>
+                </div>
+
                 {sheet.familyMembers.map((m, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-start">
-                    <input className="input col-span-12 sm:col-span-4 text-sm" placeholder="Name"
+                    <input className="input col-span-12 sm:col-span-4 text-sm"
+                      placeholder="Juan Dela Cruz" aria-label={`Family member ${i + 1} name`}
                       value={m.name} onChange={e => setMember(i, 'name', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-6 sm:col-span-3 text-sm" placeholder="Relationship"
+                    <input className="input col-span-6 sm:col-span-2 text-sm"
+                      placeholder="e.g. Spouse" aria-label={`Family member ${i + 1} relationship`}
                       value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-3 sm:col-span-1 text-sm" placeholder="Age" type="number"
+                    <input className="input col-span-3 sm:col-span-1 text-sm" type="number"
+                      placeholder="—" aria-label={`Family member ${i + 1} age`}
                       value={m.age} onChange={e => setMember(i, 'age', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-3 sm:col-span-2 text-sm" placeholder="Occupation"
+                    <input className="input col-span-3 sm:col-span-2 text-sm"
+                      placeholder="e.g. Driver" aria-label={`Family member ${i + 1} occupation`}
                       value={m.occupation} onChange={e => setMember(i, 'occupation', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-10 sm:col-span-2 text-sm" placeholder="₱ contribution" type="number"
+                    <input className="input col-span-10 sm:col-span-2 text-sm" type="number"
+                      placeholder="0" aria-label={`Family member ${i + 1} monthly contribution`}
                       value={m.monthlyContribution} onChange={e => setMember(i, 'monthlyContribution', e.target.value)} disabled={!canEdit} />
                     <button
-                      className="col-span-2 sm:col-span-0 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30"
+                      className="col-span-2 sm:col-span-1 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30 flex items-center justify-center"
                       onClick={() => removeMember(i)}
+                      aria-label={`Remove family member ${i + 1}`}
                       disabled={!canEdit || sheet.familyMembers.length === 1}>
-                      <MdDelete size={14} />
+                      <MdDelete size={16} />
                     </button>
                   </div>
                 ))}
                 {canEdit && (
-                  <button className="text-xs text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1 mt-2"
+                  <button className="btn-secondary text-xs flex items-center gap-1.5 mt-3"
                     onClick={addMember}>
                     <MdAdd size={14} /> Add family member
                   </button>
@@ -459,6 +479,10 @@ export default function IntakeSheet() {
                 <Field label="Household Size" required>
                   <input type="number" className="input" min={1}
                     value={sheet.householdSize} onChange={set('householdSize')} disabled={!canEdit} />
+                  <p className="text-xs text-gray-400 mt-1 leading-snug">
+                    {sheet.familyMembers.length} family member{sheet.familyMembers.length !== 1 ? 's' : ''} listed above.
+                    Total household size includes the patient and any dependents not listed individually.
+                  </p>
                 </Field>
               </div>
             </section>
