@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, getDocs,
-  doc, setDoc, updateDoc, serverTimestamp, orderBy,
+  doc, setDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -34,10 +34,9 @@ export default function RequestAssistance() {
   const [types,         setTypes]         = useState([])
   const [activeRequest, setActiveRequest] = useState(null)
   const [slices,        setSlices]        = useState([])
-  const [docTypes,      setDocTypes]      = useState([])
   const [myDocs,        setMyDocs]        = useState([])
   const [agencyMap,     setAgencyMap]     = useState({})
-  const [pendingFiles,  setPendingFiles]  = useState({})
+  const [billingFile,   setBillingFile]   = useState(null)
   const [replacing,     setReplacing]     = useState(null)
   const [proceeding,    setProceeding]    = useState(false)
   const [loading,       setLoading]       = useState(true)
@@ -50,15 +49,14 @@ export default function RequestAssistance() {
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
-  const attachFile = (typeName) => (e) => {
+  const attachBilling = (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
     const err = validateDocFile(file)
     if (err) { toast.error(err); return }
-    setPendingFiles(p => ({ ...p, [typeName]: file }))
+    setBillingFile(file)
   }
-  const removeFile = (typeName) => setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
 
   // Proceed gate: the patient accepts the coverage plan, advancing every
   // endorsed slice into its agency's review queue and notifying the agencies.
@@ -122,18 +120,11 @@ export default function RequestAssistance() {
     }
   }
 
-  // Assistance types (with their required documents) + document types
+  // Assistance types (names only — the request needs just a billing statement,
+  // not per-type documents).
   useEffect(() => {
     getDocs(query(collection(db, 'assistanceTypes')))
-      .then(snap => setTypes(
-        snap.docs
-          .map(d => ({ name: d.data().name, requiredDocs: d.data().requiredDocs ?? [] }))
-          .filter(t => t.name)
-          .sort((a, b) => a.name.localeCompare(b.name))
-      ))
-      .catch(() => {})
-    getDocs(query(collection(db, 'documentTypes'), orderBy('order', 'asc')))
-      .then(snap => setDocTypes(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .then(snap => setTypes(snap.docs.map(d => d.data().name).filter(Boolean).sort()))
       .catch(() => {})
   }, [])
 
@@ -191,8 +182,10 @@ export default function RequestAssistance() {
 
   const existingTypeNames = new Set(myDocs.map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase()))
 
-  // Documents the selected assistance type requires the patient to upload.
-  const requiredDocsForType = types.find(t => t.name === form.assistanceType)?.requiredDocs ?? []
+  // The only document needed to submit a request is the billing statement
+  // (Statement of Account). Agency-specific requirements are handled later,
+  // during per-agency compliance after endorsement.
+  const hasBilling = myDocs.some(d => (d.documentTypeName ?? d.name ?? '').toLowerCase().includes('billing'))
 
   const amountNeeded = Number(form.amountNeeded) || 0
 
@@ -201,18 +194,14 @@ export default function RequestAssistance() {
     if (activeRequest)            { toast.error(t('patient.request.errActive')); return }
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
-    const missingDocs = requiredDocsForType.filter(name =>
-      !existingTypeNames.has(name.toLowerCase()) && !pendingFiles[name])
-    if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
+    if (!billingFile && !hasBilling) { toast.error(t('patient.request.errBilling')); return }
     if (!declared)                { toast.error(t('patient.request.errDeclare')); return }
 
     setSubmitting(true)
     try {
-      // Upload any documents attached in this form first, so the snapshot
-      // below picks them up.
-      for (const [typeName, file] of Object.entries(pendingFiles)) {
-        const tobj = docTypes.find(dt => dt.name === typeName)
-        await uploadPatientDocument({ file, typeName, typeId: tobj?.id ?? null, user })
+      // Upload the billing statement (if newly attached) before snapshotting.
+      if (billingFile) {
+        await uploadPatientDocument({ file: billingFile, typeName: 'Billing Statement', user })
       }
 
       const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
@@ -462,7 +451,7 @@ export default function RequestAssistance() {
             <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
             <select className={`input ${!form.assistanceType ? 'text-gray-400' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
               <option value="">{t('patient.request.typePlaceholder')}</option>
-              {types.map(tp => <option key={tp.name} value={tp.name}>{tp.name}</option>)}
+              {types.map(tp => <option key={tp} value={tp}>{tp}</option>)}
             </select>
           </div>
 
@@ -483,43 +472,33 @@ export default function RequestAssistance() {
               value={form.description} onChange={set('description')} maxLength={300} />
           </div>
 
-          {/* Required documents — driven by the selected assistance type */}
+          {/* Billing statement — the only document needed to submit. CRMC
+              verifies the amount needed against it. Agency-specific documents
+              are collected later, after endorsement. */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.documentsTitle')}</p>
-            <p className="text-xs text-gray-400 mb-2">{t('patient.request.documentsHint')}</p>
-            {!form.assistanceType ? (
-              <p className="text-xs text-gray-400 italic">{t('patient.request.documentsSelectType')}</p>
-            ) : requiredDocsForType.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNoneForType')}</p>
-            ) : (
-              <div className="space-y-2">
-                {requiredDocsForType.map(name => {
-                  const satisfied = existingTypeNames.has(name.toLowerCase())
-                  const pending   = pendingFiles[name]
-                  return (
-                    <div key={name} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
-                      <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-700 truncate">{name} <span className="text-red-400">*</span></p>
-                        {pending && <p className="text-xs text-green-600 truncate">{pending.name}</p>}
-                      </div>
-                      {satisfied && !pending ? (
-                        <span className="badge badge-green text-xs flex-shrink-0">{t('patient.request.docUploaded')}</span>
-                      ) : pending ? (
-                        <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeFile(name)}>
-                          <MdClose size={16} />
-                        </button>
-                      ) : (
-                        <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
-                          <MdUploadFile size={14} /> {t('patient.request.docAttach')}
-                          <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachFile(name)} />
-                        </label>
-                      )}
-                    </div>
-                  )
-                })}
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.billingTitle')}</p>
+            <p className="text-xs text-gray-400 mb-2">{t('patient.request.billingHint')}</p>
+            <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
+              <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-700 truncate">{t('patient.request.billingLabel')} <span className="text-red-400">*</span></p>
+                {billingFile
+                  ? <p className="text-xs text-green-600 truncate">{billingFile.name}</p>
+                  : hasBilling && <p className="text-xs text-green-600 truncate">{t('patient.request.billingOnFile')}</p>}
               </div>
-            )}
+              {billingFile ? (
+                <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => setBillingFile(null)}>
+                  <MdClose size={16} />
+                </button>
+              ) : hasBilling ? (
+                <span className="badge badge-green text-xs flex-shrink-0">{t('patient.request.docUploaded')}</span>
+              ) : (
+                <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
+                  <MdUploadFile size={14} /> {t('patient.request.docAttach')}
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachBilling} />
+                </label>
+              )}
+            </div>
           </div>
 
           {/* Declaration */}
