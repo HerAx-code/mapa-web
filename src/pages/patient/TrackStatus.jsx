@@ -22,6 +22,7 @@ const STATUS_BADGE = {
   rejected:    'badge-red',
   reviewing:   'badge-amber',
   pending:     'badge-blue',
+  endorsed:    'badge-purple',
   interview:   'badge-purple',
   certificate: 'badge-green',
 }
@@ -63,6 +64,7 @@ const buildStages = (app, t) => {
 
   const doneMap = {
     pending:     ['submitted'],
+    endorsed:    ['submitted', 'docs'],
     reviewing:   ['submitted', 'docs'],
     interview:   ['submitted', 'docs', 'reviewing'],
     approved:    ['submitted', 'docs', 'reviewing', 'interview'],
@@ -72,6 +74,7 @@ const buildStages = (app, t) => {
 
   const activeMap = {
     pending:     'docs',
+    endorsed:    'reviewing',
     reviewing:   'reviewing',
     interview:   'interview',
     approved:    'approved',

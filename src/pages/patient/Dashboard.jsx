@@ -62,6 +62,19 @@ const STATUS_VISUAL = {
     subtext:  'text-blue-600',
     btnClass: 'bg-blue-500 hover:bg-blue-600 text-white',
   },
+  // Co-funding: an endorsed slice means CRMC matched agencies and the patient
+  // must review the coverage plan + Proceed. Points to the request, not the
+  // per-slice tracker.
+  endorsed: {
+    icon:     MdReceipt,
+    iconBg:   'bg-purple-100 text-purple-600',
+    path:     '/patient/request',
+    border:   'border-purple-300',
+    bg:       'bg-purple-50',
+    text:     'text-purple-800',
+    subtext:  'text-purple-600',
+    btnClass: 'bg-purple-500 hover:bg-purple-600 text-white',
+  },
   reviewing: {
     icon:     MdAssignment,
     iconBg:   'bg-amber-100 text-amber-600',

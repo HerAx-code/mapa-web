@@ -391,13 +391,13 @@
       "submitTicketDesc": "Mag-ulat direkta sa loob ng portal",
       "close": "Isara",
       "patientFaqs": [
-        { "q": "Paano mag-apply para sa tulong medikal?",                "a": "Mula sa inyong dashboard, pumili ng ahensya at pindutin ang \"Mag-apply\". Punan ang intake sheet, i-upload ang hinihinging mga dokumento, at isumite. Aabisuhan kayo kapag kinuha ng ahensya ang inyong aplikasyon para sa pagrepaso." },
+        { "q": "Paano humiling ng tulong medikal?",                     "a": "Buksan ang Humiling ng Tulong, piliin ang uri ng tulong na kailangan (hal. Bayarin sa Ospital), ilagay ang halaga, at i-upload ang dokumentong kinakailangan para sa uring iyon. Susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong. Susuriin ninyo ang plano ng tulong, pindutin ang Magpatuloy, at kumpletuhin ang mga kinakailangan ng bawat ahensya." },
         { "q": "Saan ako kukuha ng Patient Access Code?",                "a": "Ang Patient Access Codes ay ibinibigay nang personal ng CRMC Medical Social Services. Magdala ng valid na ID. Ang code ay sumusunod sa format na CRMC-YYYY-NNNNN." },
-        { "q": "Ano ang Guarantee Letter?",                              "a": "Ang Guarantee Letter (GL) ay opisyal na dokumentong inyong matatanggap kapag naaprubahan ang inyong aplikasyon. Ipakita ito sa provider upang ma-claim ang naaprubahang tulong. Ang GL ay may 30 araw na bisa mula sa pag-isyu." },
-        { "q": "Paano ko malalaman kung naaprubahan ang aking aplikasyon?", "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — pagrepaso, pag-iskedyul ng interview, at huling desisyon. Suriin nang regular ang Dashboard at Notifications." },
-        { "q": "Paano sumali sa online interview?",                      "a": "Kapag naka-iskedyul na ang interview, lalabas ang Google Meet link sa inyong Dashboard. Pindutin ang link ilang minuto bago ang inyong slot — walang i-install kung gumagamit ng kasalukuyang browser." },
-        { "q": "Pwede ba akong mag-apply sa higit sa isang ahensya nang sabay?", "a": "Maaaring magkaroon ng isang aktibong aplikasyon kada uri ng tulong. Pagkatapos ng aproba, may 30-araw na cooldown bago maaaring mag-apply muli sa parehong uri." },
-        { "q": "Paano mag-withdraw ng aplikasyon?",                      "a": "Buksan ang aplikasyon sa inyong Dashboard at pindutin ang \"Withdraw\". Maaari lamang mag-withdraw habang pending — kapag kinuha na ng coordinator, makipag-ugnayan sa kanila sa Messages." }
+        { "q": "Ano ang Guarantee Letter?",                              "a": "Ang Guarantee Letter (GL) ay opisyal na dokumentong inisyu ng ahensya kapag inaprubahan nito ang bahagi ng inyong bayarin. Ipakita ito sa provider upang ma-claim ang tulong. May 30 araw na bisa mula sa pag-isyu. Maaaring makatanggap ng higit sa isang GL kapag maraming ahensya ang tumulong." },
+        { "q": "Paano ko malalaman ang status ng aking kahilingan?",     "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — kapag in-endorso ng CRMC, kapag sinuri ng mga ahensya, at sa bawat aproba. Ipinapakita sa pahinang Humiling ng Tulong ang plano ng tulong at kung magkano na ang natipon tungo sa zero balance." },
+        { "q": "Paano sumali sa online interview?",                      "a": "Kung mag-iskedyul ang ahensya ng interview, lalabas ang Google Meet link sa inyong Interviews at Dashboard. Pindutin ito ilang minuto bago ang inyong slot — walang i-install sa kasalukuyang browser." },
+        { "q": "Pinipili ko ba kung aling ahensya ang tutulong?",        "a": "Hindi — magsusumite kayo ng isang kahilingan at ire-route ito ng CRMC sa mga ahensyang makakasaklaw, minsan hinahati sa ilang ahensya upang maabot ang zero balance. Maaaring magkaroon ng isang aktibong kahilingan sa bawat pagkakataon." },
+        { "q": "Paano mag-withdraw ng aking kahilingan?",                "a": "Maaaring i-withdraw ang kahilingan habang sinusuri pa ito ng CRMC (bago ma-endorso). Pagkatapos ma-endorso sa mga ahensya, makipag-ugnayan sa CRMC o sa ahensya sa Messages." }
       ]
     },
     "report": {
@@ -583,10 +583,15 @@
           "desc": "Natanggap na ng ahensya ang inyong aplikasyon at susuriin nila ito sa lalong madaling panahon. Wala kayong kailangang gawin sa ngayon.",
           "btn": "Tingnan ang Status ng Aplikasyon"
         },
+        "endorsed": {
+          "label": "Suriin ang Plano ng Tulong",
+          "desc": "Itinugma ng CRMC ang mga ahensya sa inyong kahilingan. Suriin kung magkano ang sasaklawin ng bawat isa, pagkatapos ay magpatuloy upang isumite ito sa kanila.",
+          "btn": "Tingnan ang Plano ng Tulong"
+        },
         "reviewing": {
           "label": "Sinusuri ang mga Dokumento",
-          "desc": "Sinusuri ng ahensya ang inyong mga na-upload na dokumento. Tiyaking nakapag-upload kayo ng lahat ng kinakailangang dokumento.",
-          "btn": "Buksan ang Aking mga Dokumento"
+          "desc": "Sinusuri ng ahensya ang inyong mga dokumento. Tiyaking nakapag-upload kayo ng lahat ng kinakailangang dokumento sa inyong kahilingan.",
+          "btn": "Tingnan ang Aking Kahilingan"
         },
         "awaiting_info": {
           "label": "Kailangan ng Aksyon Mula sa Inyo",
@@ -688,7 +693,7 @@
         "submittedLabel":   "Naisumite ang Aplikasyon",
         "submittedNote":    "Matagumpay na naisumite ang inyong aplikasyon.",
         "docsLabel":        "Pag-verify ng Dokumento",
-        "docsNote":         "I-upload ang inyong mga kinakailangang dokumento. Iberipika ng administrator bago magpatuloy ang aplikasyon.",
+        "docsNote":         "I-upload ang mga kinakailangang dokumento. Sinusuri at iniberipika ng ahensya ang mga ito habang pinoproseso ang inyong kahilingan.",
         "reviewingLabel":   "Sinusuri ng Ahensya",
         "reviewingNote":    "Sinusuri ng ahensya ang inyong aplikasyon.",
         "interviewLabel":   "Naka-iskedyul ang Panayam",
@@ -731,6 +736,7 @@
     },
     "status": {
       "pending": "Naghihintay ng Pagsusuri",
+      "endorsed": "Naghihintay ng Inyong Pagtanggap",
       "reviewing": "Sinusuri",
       "interview": "Naka-iskedyul ang Panayam",
       "approved": "Aprubado",

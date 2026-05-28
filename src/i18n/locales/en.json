@@ -391,13 +391,13 @@
       "submitTicketDesc": "Report directly inside the portal",
       "close": "Close",
       "patientFaqs": [
-        { "q": "How do I apply for medical assistance?",                "a": "From your dashboard, choose an agency and click \"Apply\". Fill in the intake sheet, upload the requested documents, and submit. You'll be notified when an agency picks up your application for review." },
+        { "q": "How do I request medical assistance?",                 "a": "Open Request Assistance, choose the type of help you need (e.g. Hospital Bill), enter the amount, and upload the document required for that type. CRMC reviews it and endorses it to the agencies that can help. You then review your coverage plan, tap Proceed, and complete each agency's requirements." },
         { "q": "Where do I get a Patient Access Code?",                 "a": "Patient Access Codes are issued in person by CRMC Medical Social Services. Bring a valid ID. The code follows the format CRMC-YYYY-NNNNN." },
-        { "q": "What is a Guarantee Letter?",                           "a": "A Guarantee Letter (GL) is the official document you receive when your application is approved. Present it at the provider to claim the approved assistance. GLs are valid for 30 days from issue." },
-        { "q": "How will I know if my application is approved?",        "a": "You'll receive an in-app notification and email at each step — review, interview scheduling, and the final decision. Check the Dashboard and Notifications pages regularly." },
-        { "q": "How do I join my online interview?",                    "a": "Once an interview is scheduled, a Google Meet link appears on your Dashboard. Click the link a few minutes before your slot — no install needed if you're on a recent browser." },
-        { "q": "Can I apply to more than one agency at the same time?", "a": "You may have one active application per assistance type. After an approval, there is a 30-day cooldown before you can apply again for the same type." },
-        { "q": "How do I withdraw an application?",                     "a": "Open the application from your Dashboard and click \"Withdraw\". You can only withdraw while it is still pending — once a coordinator picks it up, contact them via Messages." }
+        { "q": "What is a Guarantee Letter?",                           "a": "A Guarantee Letter (GL) is the official document an agency issues when it approves its share of your bill. Present it at the provider to claim the assistance. GLs are valid for 30 days from issue. A request may receive more than one GL when several agencies co-fund it." },
+        { "q": "How will I know the status of my request?",            "a": "You'll receive in-app + email notifications at each step — when CRMC endorses your request, when agencies review it, and at each approval. The Request Assistance page shows your coverage plan and how much has been secured toward zero balance." },
+        { "q": "How do I join my online interview?",                    "a": "If an agency schedules an interview, a Google Meet link appears on your Interviews page and Dashboard. Click it a few minutes before your slot — no install needed on a recent browser." },
+        { "q": "Do I choose which agencies help me?",                  "a": "No — you submit one request and CRMC routes it to the agencies that can cover it, sometimes splitting it across several to reach a zero balance. You can have one active request at a time." },
+        { "q": "How do I withdraw my request?",                         "a": "You can withdraw a request while it's still being reviewed by CRMC (before it's endorsed). After it's endorsed to agencies, contact CRMC or the agency through Messages." }
       ]
     },
     "report": {
@@ -583,10 +583,15 @@
           "desc": "The agency has received your application and will review it soon. You do not need to do anything right now.",
           "btn": "Open Application Status"
         },
+        "endorsed": {
+          "label": "Review Your Coverage Plan",
+          "desc": "CRMC matched agencies to your request. Review how much each will cover, then proceed to submit it to them.",
+          "btn": "View Coverage Plan"
+        },
         "reviewing": {
           "label": "Documents Being Checked",
-          "desc": "The agency is checking your uploaded documents. Make sure all your required documents are uploaded.",
-          "btn": "Open My Documents"
+          "desc": "The agency is checking your documents. Make sure all required documents are uploaded in your request.",
+          "btn": "View My Request"
         },
         "awaiting_info": {
           "label": "Action Needed From You",
@@ -688,7 +693,7 @@
         "submittedLabel":   "Application Submitted",
         "submittedNote":    "Your application was successfully submitted.",
         "docsLabel":        "Document Verification",
-        "docsNote":         "Upload your required documents. The administrator will verify them before your application proceeds.",
+        "docsNote":         "Upload the required documents. The agency reviews and verifies them as it processes your request.",
         "reviewingLabel":   "Under Agency Review",
         "reviewingNote":    "The agency is reviewing your application.",
         "interviewLabel":   "Interview Scheduled",
@@ -731,6 +736,7 @@
     },
     "status": {
       "pending": "Pending Review",
+      "endorsed": "Awaiting Your Acceptance",
       "reviewing": "Under Review",
       "interview": "Interview Scheduled",
       "approved": "Approved",
