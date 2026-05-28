@@ -65,7 +65,6 @@ export default function AddAgency() {
   const [coord, setCoord]         = useState(() => ({ name: '', email: '', password: generateTempPassword() }))
   const [sendReset, setSendReset] = useState(true)
   const [showPw, setShowPw]       = useState(false)
-  const [setupCoord, setSetupCoord] = useState(true)
 
   const [saving, setSaving] = useState(false)
 
@@ -99,12 +98,13 @@ export default function AddAgency() {
     if (!agency.initials.trim()) { toast.error('Initials are required.'); return }
     if (Number(agency.slotsTotal) < 1) { toast.error('Daily slots must be at least 1.'); return }
 
-    // Validate agency admin if setup is enabled
-    if (setupCoord) {
-      if (!coord.name.trim())        { toast.error('Agency administrator name is required.'); return }
-      if (!coord.email.trim())       { toast.error('Agency administrator email is required.'); return }
-      if (coord.password.length < 6) { toast.error('Password must be at least 6 characters.'); return }
-    }
+    // The first Agency Administrator is mandatory: every agency needs at
+    // least one admin who can then add coordinators from the agency portal's
+    // Team page (CRMC no longer creates agency members). Without this, a new
+    // agency would be stranded with no one able to log in or onboard staff.
+    if (!coord.name.trim())        { toast.error('Agency administrator name is required.'); return }
+    if (!coord.email.trim())       { toast.error('Agency administrator email is required.'); return }
+    if (coord.password.length < 6) { toast.error('Password must be at least 6 characters.'); return }
 
     setSaving(true)
     try {
@@ -145,43 +145,36 @@ export default function AddAgency() {
         ))
       } catch {}
 
-      // 2. Create the first Agency Administrator account (the senior agency
-      // officer who controls allocation). Without this, the agency has no
-      // one to set its budget, approve top-up requests, or read its audit
-      // slice — so this is strongly encouraged at creation time.
-      if (setupCoord && coord.name.trim() && coord.email.trim() && coord.password.length >= 6) {
-        const secondaryAuth = getSecondaryAuth()
-        const cred = await createUserWithEmailAndPassword(secondaryAuth, coord.email.trim(), coord.password)
-        const uid  = cred.user.uid
-        await fbSignOut(secondaryAuth)
+      // 2. Create the first Agency Administrator (mandatory — see validation
+      // above). The senior agency officer who controls allocation and can
+      // add coordinators from the agency portal's Team page.
+      const secondaryAuth = getSecondaryAuth()
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, coord.email.trim(), coord.password)
+      const adminUid = cred.user.uid
+      await fbSignOut(secondaryAuth)
 
-        await setDoc(doc(db, 'users', uid), {
-          name:      coord.name.trim(),
-          email:     coord.email.trim(),
-          role:      'agency_admin',
-          agencyId:  ref.id,
-          contact:   null,
-          rank:      null,
-          active:    true,
-          cooldown:  0,
-          deletion:  false,
-          createdAt: serverTimestamp(),
-        })
+      await setDoc(doc(db, 'users', adminUid), {
+        name:      coord.name.trim(),
+        email:     coord.email.trim(),
+        role:      'agency_admin',
+        agencyId:  ref.id,
+        contact:   null,
+        rank:      null,
+        active:    true,
+        cooldown:  0,
+        deletion:  false,
+        createdAt: serverTimestamp(),
+      })
 
-        if (sendReset) await sendPasswordResetEmail(auth, coord.email.trim())
+      if (sendReset) await sendPasswordResetEmail(auth, coord.email.trim())
 
-        logAudit(user, {
-          action: 'account_created', targetType: 'account', targetId: uid,
-          targetName: coord.name.trim(),
-          details: `First Agency Administrator for ${agency.name.trim()}`,
-        })
-      }
+      logAudit(user, {
+        action: 'account_created', targetType: 'account', targetId: adminUid,
+        targetName: coord.name.trim(),
+        details: `First Agency Administrator for ${agency.name.trim()}`,
+      })
 
-      toast.success(
-        setupCoord && coord.name.trim()
-          ? `${agency.name.trim()} created with Agency Administrator account.`
-          : `${agency.name.trim()} created. Promote a coordinator to Agency Administrator from the Coordinators page to enable budget allocation.`
-      )
+      toast.success(`${agency.name.trim()} created with its Agency Administrator account.`)
       navigate('/admin/agencies')
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') toast.error('Coordinator email is already registered.')
@@ -206,7 +199,7 @@ export default function AddAgency() {
 
         <h1 className="page-title mb-1">Add New Agency</h1>
         <p className="page-sub mb-6">
-          Set up the agency profile and optionally create a coordinator account in one step.
+          Set up the agency profile and its first Agency Administrator account in one step.
         </p>
 
         {/* ── Section 1: Agency Details ── */}
@@ -333,79 +326,63 @@ export default function AddAgency() {
           </div>
         </div>
 
-        {/* ── Section 2: First Agency Administrator ── */}
+        {/* ── Section 2: First Agency Administrator (required) ── */}
         <div className="card p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">First Agency Administrator</p>
-              <p className="text-xs text-gray-400 mt-1">
-                The senior officer at this agency. They control budget allocation, approve top-up requests, and manage their own audit slice. Strongly recommended to set up now — without an Agency Administrator, the agency cannot allocate or receive top-up requests.
-              </p>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none flex-shrink-0 ml-4">
-              <input type="checkbox" className="w-4 h-4 accent-brand-500"
-                checked={setupCoord}
-                onChange={e => setSetupCoord(e.target.checked)} />
-              Set up now
-            </label>
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">First Agency Administrator <span className="text-red-400">*</span></p>
+            <p className="text-xs text-gray-400 mt-1">
+              Required. The senior officer at this agency — they control budget allocation, approve top-up requests, manage their own audit slice, and add coordinators from the agency portal's Team page. Every agency needs one to be usable.
+            </p>
           </div>
 
-          {setupCoord ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Full Name <span className="text-red-400">*</span></label>
-                  <input className="input" placeholder="Maria Santos"
-                    value={coord.name} onChange={setC('name')} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email Address <span className="text-red-400">*</span></label>
-                  <input type="email" className="input" placeholder="admin@agency.gov.ph"
-                    value={coord.email} onChange={setC('email')} />
-                </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Full Name <span className="text-red-400">*</span></label>
+                <input className="input" placeholder="Maria Santos"
+                  value={coord.name} onChange={setC('name')} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-400 font-normal">(auto-generated)</span></label>
-                <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} readOnly
-                    className="input pr-24 font-mono tracking-wide"
-                    value={coord.password} />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                    <button type="button" title="Show / hide"
-                      className="p-1.5 text-gray-400 hover:text-gray-600"
-                      onClick={() => setShowPw(p => !p)}>
-                      {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
-                    </button>
-                    <button type="button" title="Copy"
-                      className="p-1.5 text-gray-400 hover:text-brand-500"
-                      onClick={copyPw}>
-                      <MdContentCopy size={15} />
-                    </button>
-                    <button type="button" title="Generate a new one"
-                      className="p-1.5 text-gray-400 hover:text-brand-500"
-                      onClick={regeneratePw}>
-                      <MdRefresh size={16} />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">Auto-generated and secure. The reset email below lets them set their own — copy this only if you'll hand it over in person.</p>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Email Address <span className="text-red-400">*</span></label>
+                <input type="email" className="input" placeholder="admin@agency.gov.ph"
+                  value={coord.email} onChange={setC('email')} />
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-                <input type="checkbox" className="w-4 h-4 accent-brand-500"
-                  checked={sendReset} onChange={e => setSendReset(e.target.checked)} />
-                Send password reset email to the Agency Administrator
-              </label>
-              <p className="text-xs text-gray-400">
-                After creation, this person can add their own coordinators and set the agency's budget allocation.
-              </p>
             </div>
-          ) : (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-              <p className="text-xs text-amber-700">
-                ⚠ <strong>No Agency Administrator will be set up now.</strong> This agency will be unable to set its budget allocation or receive top-up requests until you promote a coordinator to Agency Administrator from the <strong>Coordinators</strong> page.
-              </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-400 font-normal">(auto-generated)</span></label>
+              <div className="relative">
+                <input type={showPw ? 'text' : 'password'} readOnly
+                  className="input pr-24 font-mono tracking-wide"
+                  value={coord.password} />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                  <button type="button" title="Show / hide"
+                    className="p-1.5 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowPw(p => !p)}>
+                    {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
+                  </button>
+                  <button type="button" title="Copy"
+                    className="p-1.5 text-gray-400 hover:text-brand-500"
+                    onClick={copyPw}>
+                    <MdContentCopy size={15} />
+                  </button>
+                  <button type="button" title="Generate a new one"
+                    className="p-1.5 text-gray-400 hover:text-brand-500"
+                    onClick={regeneratePw}>
+                    <MdRefresh size={16} />
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Auto-generated and secure. The reset email below lets them set their own — copy this only if you'll hand it over in person.</p>
             </div>
-          )}
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+              <input type="checkbox" className="w-4 h-4 accent-brand-500"
+                checked={sendReset} onChange={e => setSendReset(e.target.checked)} />
+              Send password reset email to the Agency Administrator
+            </label>
+            <p className="text-xs text-gray-400">
+              After creation, this person can add their own coordinators and set the agency's budget allocation.
+            </p>
+          </div>
         </div>
 
         {/* ── Actions ── */}

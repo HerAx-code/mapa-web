@@ -474,7 +474,7 @@ export default function DocReviewDetail() {
                   docData.status === 'verified' ? 'badge-green'
                   : docData.status === 'rejected' ? 'badge-red'
                   : 'badge-amber'}`}>
-                  {docData.status?.charAt(0).toUpperCase() + docData.status?.slice(1) ?? '—'}
+                  {docData.status ? docData.status.charAt(0).toUpperCase() + docData.status.slice(1) : '—'}
                 </span>
                 {docData.idType && (
                   <span className="text-xs text-gray-500 font-medium">{docData.idType}</span>

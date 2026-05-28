@@ -287,7 +287,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Metric cards ── */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
           {METRICS.map((m, i) => (
             <button key={i} onClick={() => navigate(m.path)}
               className="card p-4 text-left hover:shadow-md transition-all group relative overflow-hidden">
