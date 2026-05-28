@@ -26,11 +26,26 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
   const isEdit   = !!type
   const { user } = useAuth()
   const [form, setForm] = useState({
-    name:        type?.name        ?? '',
-    description: type?.description ?? '',
+    name:         type?.name         ?? '',
+    description:  type?.description  ?? '',
+    requiredDocs: type?.requiredDocs ?? [],
   })
+  const [docTypes, setDocTypes] = useState([])
   const [saving, setSaving] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
+  const toggleDoc = (name) => setForm(p => ({
+    ...p,
+    requiredDocs: p.requiredDocs.includes(name)
+      ? p.requiredDocs.filter(d => d !== name)
+      : [...p.requiredDocs, name],
+  }))
+
+  // Document types the patient must upload when they pick this assistance type.
+  useEffect(() => {
+    getDocs(collection(db, 'documentTypes'))
+      .then(snap => setDocTypes(snap.docs.map(d => d.data().name).filter(Boolean).sort()))
+      .catch(() => {})
+  }, [])
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required.'); return }
@@ -46,9 +61,10 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
     try {
       if (isEdit) {
         await updateDoc(doc(db, 'assistanceTypes', type.id), {
-          name:        form.name.trim(),
-          description: form.description.trim(),
-          updatedAt:   serverTimestamp(),
+          name:         form.name.trim(),
+          description:  form.description.trim(),
+          requiredDocs: form.requiredDocs,
+          updatedAt:    serverTimestamp(),
         })
         await notifyAllAdmins({
           type:  'assistance_updated',
@@ -59,10 +75,11 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
         toast.success('Assistance type updated.')
       } else {
         await addDoc(collection(db, 'assistanceTypes'), {
-          name:        form.name.trim(),
-          description: form.description.trim(),
-          order:       maxOrder + 1,
-          createdAt:   serverTimestamp(),
+          name:         form.name.trim(),
+          description:  form.description.trim(),
+          requiredDocs: form.requiredDocs,
+          order:        maxOrder + 1,
+          createdAt:    serverTimestamp(),
         })
         await notifyAllAdmins({
           type:  'assistance_added',
@@ -100,6 +117,29 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
             <textarea className="input resize-none" rows={2}
               placeholder="Brief description of this assistance type..."
               value={form.description} onChange={set('description')} />
+          </div>
+
+          {/* Required documents for this type */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Required Documents</label>
+            <p className="text-xs text-gray-400 mb-2">
+              Patients who select this type must upload these documents when requesting assistance
+              (e.g. Hospital Bill → Hospital Billing Statement).
+            </p>
+            {docTypes.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No document types defined yet. Add them under Document Types.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto">
+                {docTypes.map(name => (
+                  <label key={name}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer select-none transition-colors">
+                    <input type="checkbox" className="w-4 h-4 accent-brand-500 flex-shrink-0"
+                      checked={form.requiredDocs.includes(name)} onChange={() => toggleDoc(name)} />
+                    <span className="text-xs text-gray-700">{name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Coverage preview */}
