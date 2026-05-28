@@ -101,7 +101,10 @@ service cloud.firestore {
         // Any other status transition by a patient is denied here.
         (isPatient() && resource.data.patientId == uid() && (
           (resource.data.status == 'pending'       && request.resource.data.status == 'rejected') ||
-          (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing')
+          (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing') ||
+          // Co-funding: patient accepts the coverage plan, advancing their
+          // endorsed slice into the agency's review queue.
+          (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing')
         )) ||
         (isAgency() && resource.data.agencyId == userAgencyId()) ||
         isAdmin()

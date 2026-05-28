@@ -86,6 +86,7 @@ export const ROLE_BADGE = {
 
 export const APP_STATUS_CONFIG = {
   pending:       { label: 'Pending',            badge: 'badge-blue'   },
+  endorsed:      { label: 'Awaiting You',       badge: 'badge-purple' },
   reviewing:     { label: 'Reviewing',          badge: 'badge-amber'  },
   awaiting_info: { label: 'Waiting on Patient', badge: 'badge-orange' },
   interview:     { label: 'Interview',          badge: 'badge-purple' },

@@ -112,7 +112,10 @@ function EndorseModal({ request, slices, agencies, onClose }) {
           agencyColor:       agency.color ?? 'bg-gray-500',
           agencyInitials:    agency.initials ?? agency.name?.slice(0, 2).toUpperCase(),
           assistanceType:    r.assistanceType ?? '',
-          status:            'pending',
+          // 'endorsed' = awaiting the patient to review the coverage plan and
+          // Proceed. The agency only sees / acts on it once the patient
+          // proceeds (slice -> reviewing).
+          status:            'endorsed',
           submittedAt:       serverTimestamp(),
           updatedAt:         serverTimestamp(),
           attachedDocuments: r.attachedDocuments ?? [],
@@ -136,20 +139,13 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         details: `Endorsed ${peso(amt)} to ${agency.name}`,
       })
 
-      // Notify the agency's coordinators + the patient
-      Promise.all([
-        getDocs(query(collection(db, 'users'), where('agencyId', '==', agency.id), where('role', 'in', ['agency', 'agency_admin'])))
-          .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
-            type:  'app_submitted',
-            title: 'New endorsed request',
-            body:  `CRMC endorsed a ${request.assistanceType} request to you — asked to cover ${peso(amt)} of ${request.patientName}'s ${peso(request.amountNeeded)} need.`,
-          })))),
-        notify(request.patientId, {
-          type:  'app_advanced',
-          title: 'Your request was endorsed',
-          body:  `CRMC endorsed ${peso(amt)} of your request to ${agency.name}. They will review it shortly.`,
-        }),
-      ]).catch(() => {})
+      // Notify the patient to review the coverage plan and proceed. The
+      // agency is only notified when the patient proceeds (accepts the plan).
+      notify(request.patientId, {
+        type:  'app_advanced',
+        title: 'Your request was endorsed',
+        body:  `CRMC endorsed ${peso(amt)} of your request to ${agency.name}. Review your coverage plan and proceed to submit it.`,
+      }).catch(() => {})
 
       toast.success(`Endorsed ${peso(amt)} to ${agency.name}.`)
       onClose()

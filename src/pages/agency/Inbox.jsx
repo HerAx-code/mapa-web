@@ -115,13 +115,16 @@ export default function Inbox() {
   const duplicatePatientIds = useMemo(() => {
     const counts = {}
     applications.forEach(a => {
-      if (['rejected', 'certificate'].includes(a.status)) return
+      if (['rejected', 'certificate', 'endorsed'].includes(a.status)) return
       counts[a.patientId] = (counts[a.patientId] ?? 0) + 1
     })
     return new Set(Object.keys(counts).filter(id => counts[id] > 1))
   }, [applications])
 
   const filtered = applications.filter(a => {
+    // 'endorsed' slices are awaiting the patient to accept the coverage plan —
+    // they don't enter the agency queue until the patient proceeds (reviewing).
+    if (a.status === 'endorsed') return false
     if (statusFilter !== 'all') {
       if (statusFilter === 'approved' && !['approved','certificate'].includes(a.status)) return false
       if (statusFilter !== 'approved' && a.status !== statusFilter) return false
@@ -146,7 +149,7 @@ export default function Inbox() {
         {/* Summary cards (clickable filters) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-5">
           {[
-            { label: 'Total',     value: applications.length,                color: 'text-gray-800',   key: 'all' },
+            { label: 'Total',     value: applications.filter(a => a.status !== 'endorsed').length, color: 'text-gray-800',   key: 'all' },
             { label: 'Pending',   value: countOf('pending'),                 color: 'text-blue-600',   key: 'pending' },
             { label: 'Reviewing', value: countOf('reviewing'),               color: 'text-amber-600',  key: 'reviewing' },
             { label: 'Waiting',   value: countOf('awaiting_info'),           color: 'text-orange-600', key: 'awaiting_info' },

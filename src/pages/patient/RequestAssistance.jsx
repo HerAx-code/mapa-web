@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, getDocs,
-  doc, setDoc, serverTimestamp, orderBy,
+  doc, setDoc, updateDoc, serverTimestamp, orderBy,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -39,6 +39,7 @@ export default function RequestAssistance() {
   const [agencyMap,     setAgencyMap]     = useState({})
   const [pendingFiles,  setPendingFiles]  = useState({})
   const [replacing,     setReplacing]     = useState(null)
+  const [proceeding,    setProceeding]    = useState(false)
   const [loading,       setLoading]       = useState(true)
   const [submitting,    setSubmitting]    = useState(false)
   const [submittedId,   setSubmittedId]   = useState('')
@@ -58,6 +59,32 @@ export default function RequestAssistance() {
     setPendingFiles(p => ({ ...p, [typeName]: file }))
   }
   const removeFile = (typeName) => setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
+
+  // Proceed gate: the patient accepts the coverage plan, advancing every
+  // endorsed slice into its agency's review queue and notifying the agencies.
+  const handleProceed = async () => {
+    const toProceed = slices.filter(s => s.status === 'endorsed')
+    if (proceeding || toProceed.length === 0) return
+    setProceeding(true)
+    try {
+      await Promise.all(toProceed.map(s =>
+        updateDoc(doc(db, 'applications', s.id), { status: 'reviewing', updatedAt: serverTimestamp() })
+      ))
+      Promise.all(toProceed.map(s =>
+        getDocs(query(collection(db, 'users'), where('agencyId', '==', s.agencyId), where('role', 'in', ['agency', 'agency_admin'])))
+          .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
+            type:  'app_submitted',
+            title: 'New endorsed request',
+            body:  `${user.name} accepted the endorsement and submitted their request. Please review.`,
+          }))))
+      )).catch(() => {})
+      toast.success(t('patient.request.proceedOk'))
+    } catch {
+      toast.error(t('patient.request.proceedErr'))
+    } finally {
+      setProceeding(false)
+    }
+  }
 
   // Immediate upload of an agency-required document during compliance (active
   // request). Goes straight to the documents collection for the agency to
@@ -376,6 +403,17 @@ export default function RequestAssistance() {
                     )
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Proceed gate — accept the coverage plan and submit to agencies */}
+            {slices.some(s => s.status === 'endorsed') && (
+              <div className="mt-4 bg-brand-50 border border-brand-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-brand-800 mb-1">{t('patient.request.proceedTitle')}</p>
+                <p className="text-xs text-brand-700/80 mb-3">{t('patient.request.proceedDesc')}</p>
+                <button className="btn-primary w-full text-sm" onClick={handleProceed} disabled={proceeding}>
+                  {proceeding ? t('patient.request.proceeding') : `${t('patient.request.proceedBtn')} →`}
+                </button>
               </div>
             )}
 
