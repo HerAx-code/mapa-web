@@ -1021,7 +1021,12 @@
       "addressHint":  "Lalabas sa inyong opisyal na sertipiko.",
       "barangay":     "Barangay",
       "city":         "Lungsod / Munisipalidad",
-      "province":     "Probinsya"
+      "province":     "Probinsya",
+      "selectProvince": "Pumili ng probinsya",
+      "selectCity":     "Pumili ng lungsod / munisipalidad",
+      "otherNotListed": "Iba pa (wala sa listahan)",
+      "otherProvince":  "Ilagay ang probinsya",
+      "otherCity":      "Ilagay ang lungsod / munisipalidad"
     },
     "step2": {
       "sectionTitle": "Pag-setup ng Account",

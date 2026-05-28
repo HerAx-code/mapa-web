@@ -1021,7 +1021,12 @@
       "addressHint":  "Appears on your official certificate.",
       "barangay":     "Barangay",
       "city":         "City / Municipality",
-      "province":     "Province"
+      "province":     "Province",
+      "selectProvince": "Select province",
+      "selectCity":     "Select city / municipality",
+      "otherNotListed": "Other (not listed)",
+      "otherProvince":  "Enter province",
+      "otherCity":      "Enter city / municipality"
     },
     "step2": {
       "sectionTitle": "Account Setup",
