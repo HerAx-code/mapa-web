@@ -588,7 +588,10 @@ export default function ApplicationDetail() {
       ))
       const blocking = recentSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(a => a.id !== app.id)
+        // Co-funding: sibling slices of the SAME request are meant to be
+        // approved by several agencies, so they never block each other. Only
+        // approvals tied to a DIFFERENT (or no) request trip the cooldown.
+        .filter(a => a.id !== app.id && !(app.requestId && a.requestId === app.requestId))
         .filter(a => {
           // Signal 1: live approval within window
           if (a.approvedAt && ['approved', 'certificate'].includes(a.status)) {
@@ -630,7 +633,11 @@ export default function ApplicationDetail() {
         const userSnap = await getDoc(doc(db, 'users', app.patientId)).catch(() => null)
         patientHospitalId = userSnap?.data?.()?.hospitalId ?? null
       }
-      if (patientHospitalId) {
+      // Skip the per-patient (hospital-ID) cooldown for co-funding slices —
+      // one request is intentionally funded by several agencies in the same
+      // window. The cross-request cooldown is enforced at request submission
+      // (one active request at a time).
+      if (patientHospitalId && !app.requestId) {
         const hidSnap = await getDoc(doc(db, 'hospitalIds', patientHospitalId)).catch(() => null)
         const hid = hidSnap?.exists?.() ? hidSnap.data() : null
         if (hid?.cooldownUntilAt) {
@@ -720,7 +727,7 @@ export default function ApplicationDetail() {
         // the patient deletes their account and re-registers, the new
         // account inherits this cooldown automatically. Best-effort:
         // skipped if the hospital ID wasn't resolved earlier.
-        if (patientHospitalId) {
+        if (patientHospitalId && !app.requestId) {
           tx.update(doc(db, 'hospitalIds', patientHospitalId), {
             lastApprovedAt: serverTimestamp(),
             cooldownUntilAt: null,  // clear any prior reversed-cooldown

@@ -161,7 +161,7 @@ export function RejectModal({ app, onConfirm, onClose }) {
 // ── Approve / Issue GL Modal ─────────────────────────────────────────────
 
 export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
-  const [amount, setAmount]               = useState('')
+  const [amount, setAmount]               = useState(app?.amountRequested ? String(app.amountRequested) : '')
   const [payableTo, setPayableTo]         = useState('')
   const [purposes, setPurposes]           = useState(new Set())
   const [saving, setSaving]               = useState(false)
@@ -179,7 +179,10 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
       const now = Date.now()
       const candidates = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(a => a.id !== app.id)
+        // Co-funding: sibling slices of the SAME request are expected to be
+        // approved by multiple agencies — they must not count as a blocking
+        // prior approval. Only approvals from OTHER requests trip the cooldown.
+        .filter(a => a.id !== app.id && !(app.requestId && a.requestId === app.requestId))
         .map(a => {
           if (a.approvedAt && ['approved', 'certificate'].includes(a.status)) {
             const days = daysSince(a.approvedAt)
@@ -208,6 +211,11 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
   const remaining = Math.max(0, allocated - committed)
   const hasBudget = allocated > 0
 
+  // Co-funding slice: CRMC endorsed a capped amount this agency may approve up
+  // to. Approving less returns the remainder to the request balance.
+  const isSlice  = !!app?.requestId
+  const sliceCap = Number(app?.amountRequested) || 0
+
   const purposeOptions = agency?.assistanceTypes ?? []
 
   const togglePurpose = (p) => {
@@ -220,12 +228,14 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
 
   const amountNum = Number(amount) || 0
   const exceedsBudget = hasBudget && amountNum > remaining
+  const exceedsRequested = isSlice && sliceCap > 0 && amountNum > sliceCap
 
   const handleSubmit = () => {
     if (amountNum <= 0)      { toast.error('Enter a valid amount greater than 0.'); return }
     if (purposes.size === 0) { toast.error('Select at least one purpose of assistance.'); return }
     if (!payableTo.trim())   { toast.error('Specify the provider (Payable To).'); return }
     if (exceedsBudget)       { toast.error(`Amount exceeds remaining budget of ₱${remaining.toLocaleString()}.`); return }
+    if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} CRMC endorsed for this slice.`); return }
 
     setSaving(true)
     onConfirm({
@@ -271,6 +281,12 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
             </div>
           )}
 
+          {isSlice && (
+            <div className="bg-brand-50 border border-brand-100 rounded-xl p-3 text-xs text-brand-700">
+              <strong>Co-funded request.</strong> CRMC endorsed this slice asking you to cover up to <strong>₱{sliceCap.toLocaleString()}</strong>. Approve any amount up to that — the remainder returns to the patient's balance for another agency.
+            </div>
+          )}
+
           {hasBudget ? (
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
               <p className="text-xs text-gray-500 mb-1">Agency budget this period</p>
@@ -296,9 +312,18 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Approved Amount (₱) <span className="text-red-400">*</span>
             </label>
-            <input type="number" min={1} className={`input ${exceedsBudget ? 'border-red-400 bg-red-50' : ''}`}
+            <input type="number" min={1} max={isSlice && sliceCap > 0 ? sliceCap : undefined}
+              className={`input ${(exceedsBudget || exceedsRequested) ? 'border-red-400 bg-red-50' : ''}`}
               placeholder="e.g. 5000"
               value={amount} onChange={e => setAmount(e.target.value)} />
+            {isSlice && sliceCap > 0 && !exceedsRequested && (
+              <p className="text-xs text-gray-400 mt-1">Endorsed cap: ₱{sliceCap.toLocaleString()} — approve up to this amount.</p>
+            )}
+            {exceedsRequested && (
+              <p className="text-xs text-red-500 mt-1">
+                Exceeds the endorsed cap by ₱{(amountNum - sliceCap).toLocaleString()}.
+              </p>
+            )}
             {exceedsBudget && (
               <p className="text-xs text-red-500 mt-1">
                 Exceeds remaining budget by ₱{(amountNum - remaining).toLocaleString()}.
@@ -350,7 +375,7 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
         <div className="px-5 py-3 border-t border-gray-100 flex gap-2 justify-end flex-shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
           <button className="btn-primary text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            disabled={saving || exceedsBudget || !!priorApproval}
+            disabled={saving || exceedsBudget || exceedsRequested || !!priorApproval}
             title={priorApproval ? `Blocked: prior approval within ${COOLDOWN_DAYS} days` : ''}
             onClick={handleSubmit}>
             <MdCheckCircle size={14} className="inline -mt-0.5 mr-1" />
