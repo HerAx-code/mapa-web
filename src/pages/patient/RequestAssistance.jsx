@@ -9,7 +9,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import {
-  generateRequestId, computeAmountNeeded, computeFunding,
+  generateRequestId, computeFunding,
 } from '../../utils/requests'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
@@ -45,7 +45,7 @@ export default function RequestAssistance() {
   const [submittedId,   setSubmittedId]   = useState('')
 
   const [form, setForm] = useState({
-    assistanceType: '', totalBill: '', philhealthCovered: '', otherCovered: '', description: '',
+    assistanceType: '', amountNeeded: '', description: '',
   })
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
@@ -194,17 +194,12 @@ export default function RequestAssistance() {
   // Documents the selected assistance type requires the patient to upload.
   const requiredDocsForType = types.find(t => t.name === form.assistanceType)?.requiredDocs ?? []
 
-  const amountNeeded = computeAmountNeeded({
-    totalBill:         form.totalBill,
-    philhealthCovered: form.philhealthCovered,
-    otherCovered:      form.otherCovered,
-  })
+  const amountNeeded = Number(form.amountNeeded) || 0
 
   const handleSubmit = async () => {
     if (submitting) return
     if (activeRequest)            { toast.error(t('patient.request.errActive')); return }
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
-    if (!form.totalBill || Number(form.totalBill) <= 0) { toast.error(t('patient.request.errBill')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
     const missingDocs = requiredDocsForType.filter(name =>
       !existingTypeNames.has(name.toLowerCase()) && !pendingFiles[name])
@@ -240,9 +235,6 @@ export default function RequestAssistance() {
         patientHospitalId: user.hospitalId ?? null,
         assistanceType:    form.assistanceType,
         description:       form.description.trim(),
-        totalBill:         Number(form.totalBill) || 0,
-        philhealthCovered: Number(form.philhealthCovered) || 0,
-        otherCovered:      Number(form.otherCovered) || 0,
         amountNeeded,
         amountCommitted:   0,
         agencyIds:         [],
@@ -474,33 +466,14 @@ export default function RequestAssistance() {
             </select>
           </div>
 
-          {/* Amounts */}
+          {/* Amount needed — what the patient needs help with. CRMC verifies
+              it against the uploaded Statement of Account; agencies (not the
+              patient) decide how much each one covers. */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.amountLabel')} <span className="text-red-400">*</span></label>
             <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
-              value={form.totalBill} onChange={set('totalBill')} />
-            <p className="text-xs text-gray-400 mt-1">{t('patient.request.billHint')}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.philhealthLabel')}</label>
-              <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
-                value={form.philhealthCovered} onChange={set('philhealthCovered')} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.otherLabel')}</label>
-              <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
-                value={form.otherCovered} onChange={set('otherCovered')} />
-            </div>
-          </div>
-
-          {/* Net amount needed */}
-          <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-brand-700 font-medium">{t('patient.request.neededLabel')}</p>
-              <p className="text-xs text-brand-600/80">{t('patient.request.neededHint')}</p>
-            </div>
-            <p className="text-xl font-bold text-brand-700">{peso(amountNeeded)}</p>
+              value={form.amountNeeded} onChange={set('amountNeeded')} />
+            <p className="text-xs text-gray-400 mt-1">{t('patient.request.amountHint')}</p>
           </div>
 
           {/* Description */}

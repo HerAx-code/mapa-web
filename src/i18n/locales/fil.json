@@ -487,6 +487,8 @@
       "activeDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Maaari kayong magsumite ng bago kapag natapos na ito.",
       "typeLabel": "Uri ng tulong na kailangan",
       "typePlaceholder": "Pumili ng uri ng tulong",
+      "amountLabel": "Halagang kailangan ninyong matulungan (₱)",
+      "amountHint": "Ang balanseng kailangan ninyo ng tulong (mula sa inyong Statement of Account). Bini-verify ito ng CRMC laban sa inyong na-upload na dokumento; ang mga ahensya ang magpapasya kung magkano ang masasaklaw ng bawat isa.",
       "billLabel": "Kabuuang bayarin sa ospital (₱)",
       "billHint": "Ang buong halaga sa inyong Statement of Account.",
       "philhealthLabel": "Saklaw ng PhilHealth (₱)",

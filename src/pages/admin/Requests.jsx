@@ -296,12 +296,11 @@ function RequestDetail({ request, agencies, onClose }) {
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          {/* Amounts */}
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">Total bill</p><p className="font-semibold text-gray-800">{peso(request.totalBill)}</p></div>
-            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">PhilHealth</p><p className="font-semibold text-gray-800">{peso(request.philhealthCovered)}</p></div>
-            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400">Other aid</p><p className="font-semibold text-gray-800">{peso(request.otherCovered)}</p></div>
-            <div className="bg-brand-50 rounded-lg p-3"><p className="text-xs text-brand-700">Net needed</p><p className="font-semibold text-brand-700">{peso(request.amountNeeded)}</p></div>
+          {/* Amount needed — verify against the patient's uploaded Statement
+              of Account before endorsing. */}
+          <div className="bg-brand-50 rounded-lg p-3 flex items-center justify-between">
+            <p className="text-xs text-brand-700">Amount needed <span className="text-brand-600/70">(verify vs. billing statement)</span></p>
+            <p className="text-lg font-semibold text-brand-700">{peso(request.amountNeeded)}</p>
           </div>
 
           {/* Funding progress */}

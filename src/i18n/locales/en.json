@@ -487,6 +487,8 @@
       "activeDesc": "CRMC is processing your request. You can submit a new one once this is completed.",
       "typeLabel": "Type of assistance needed",
       "typePlaceholder": "Select assistance type",
+      "amountLabel": "Amount you need help with (₱)",
+      "amountHint": "The balance you need assistance for (from your Statement of Account). CRMC verifies it against your uploaded document; the agencies decide how much each can cover.",
       "billLabel": "Total hospital bill (₱)",
       "billHint": "The full amount on your Statement of Account.",
       "philhealthLabel": "Covered by PhilHealth (₱)",
