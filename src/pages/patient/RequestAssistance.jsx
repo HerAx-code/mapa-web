@@ -11,7 +11,7 @@ import { notify } from '../../utils/notifications'
 import {
   generateRequestId, computeAmountNeeded, computeFunding,
 } from '../../utils/requests'
-import { REQUEST_STATUS_CONFIG } from '../../utils/constants'
+import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG } from '../../utils/constants'
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
@@ -32,6 +32,7 @@ export default function RequestAssistance() {
 
   const [types,         setTypes]         = useState([])
   const [activeRequest, setActiveRequest] = useState(null)
+  const [slices,        setSlices]        = useState([])
   const [hasBilling,    setHasBilling]    = useState(false)
   const [loading,       setLoading]       = useState(true)
   const [submitting,    setSubmitting]    = useState(false)
@@ -64,6 +65,18 @@ export default function RequestAssistance() {
     )
     return unsub
   }, [user?.uid])
+
+  // Live slices (agency applications) of the active request — drives the
+  // real funding figures + the per-agency breakdown.
+  useEffect(() => {
+    if (!activeRequest?.id) { setSlices([]); return }
+    const unsub = onSnapshot(
+      query(collection(db, 'applications'), where('requestId', '==', activeRequest.id)),
+      snap => setSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {},
+    )
+    return unsub
+  }, [activeRequest?.id])
 
   useEffect(() => {
     if (!user?.uid) return
@@ -176,7 +189,7 @@ export default function RequestAssistance() {
   // ── Active request — block new submission, show its state ─────────────────
   if (!loading && activeRequest) {
     const cfg = REQUEST_STATUS_CONFIG[activeRequest.status] ?? REQUEST_STATUS_CONFIG.submitted
-    const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, [])
+    const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, slices)
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
         <div className="px-4 py-6 sm:p-6 max-w-lg mx-auto">
@@ -211,6 +224,33 @@ export default function RequestAssistance() {
                 </div>
               </div>
             </div>
+
+            {/* Per-agency funding breakdown */}
+            {slices.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.contributingAgencies')}</p>
+                <div className="space-y-2">
+                  {slices.map(s => {
+                    const scfg = APP_STATUS_CONFIG[s.status] ?? APP_STATUS_CONFIG.pending
+                    const secured = ['approved', 'certificate'].includes(s.status)
+                    return (
+                      <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100">
+                        <div className={`w-8 h-8 ${s.agencyColor ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
+                          {s.agencyInitials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
+                          <p className="text-xs text-gray-400">
+                            {secured ? `${peso(s.amountApproved || s.amountRequested)} ${t('patient.request.secured')}` : peso(s.amountRequested)}
+                          </p>
+                        </div>
+                        <span className={`badge text-xs flex-shrink-0 ${scfg.badge}`}>{scfg.label}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             <button className="btn-secondary w-full mt-4 text-sm" onClick={() => navigate('/patient/status')}>
               {t('patient.request.viewStatus')} →
