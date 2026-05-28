@@ -12,7 +12,10 @@
     <meta name="theme-color" content="#3b82f6" />
 
     <!-- iOS-specific PWA capability flags. iOS doesn't read manifest fully;
-         these meta tags are how it gets told the app is installable. -->
+         these meta tags are how it gets told the app is installable. The
+         standard mobile-web-app-capable is the modern, cross-browser flag
+         (the apple- prefix is kept for older iOS Safari). -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="MAPA" />
