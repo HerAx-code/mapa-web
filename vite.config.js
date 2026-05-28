@@ -19,7 +19,7 @@ export default defineConfig({
         name:             'MAPA — Medical Assistance Portal Access',
         short_name:       'MAPA',
         description:      'Apply for medical financial assistance at Cotabato Regional Medical Center.',
-        start_url:        '/patient/dashboard',
+        start_url:        '/patient/request',
         scope:            '/',
         display:          'standalone',
         orientation:      'portrait',

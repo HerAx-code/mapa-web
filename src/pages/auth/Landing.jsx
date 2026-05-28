@@ -10,7 +10,7 @@ import Logo from '../../components/ui/Logo'
 import LanguageToggle from '../../components/LanguageToggle'
 
 const DASHBOARD = {
-  [ROLES.PATIENT]:      '/patient/dashboard',
+  [ROLES.PATIENT]:      '/patient/request',
   [ROLES.AGENCY]:       '/agency/dashboard',
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',

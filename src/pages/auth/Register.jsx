@@ -503,7 +503,7 @@ export default function Register() {
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
 
       toast.success(t('register.toast.welcome', { name: form.firstName }))
-      navigate('/patient/dashboard')
+      navigate('/patient/request')
     } catch (err) {
       // #1 — If Auth account was created before this throw and not already
       // rolled back inside the transaction handler above, drop it so the

@@ -8,7 +8,7 @@ export default function PrivateRoute({ children, allowedRoles }) {
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Redirect to appropriate dashboard
-    if (user.role === 'patient') return <Navigate to="/patient/dashboard" replace />
+    if (user.role === 'patient') return <Navigate to="/patient/request" replace />
     if (user.role === 'agency' || user.role === 'agency_admin') return <Navigate to="/agency/dashboard" replace />
     return <Navigate to="/admin/dashboard" replace />
   }

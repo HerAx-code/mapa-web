@@ -13,7 +13,7 @@ export default function NotFound() {
       [ROLES.STAFF_ADMIN]:  '/admin/dashboard',
       [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
       [ROLES.AGENCY]:       '/agency/dashboard',
-      [ROLES.PATIENT]:      '/patient/dashboard',
+      [ROLES.PATIENT]:      '/patient/request',
     }
     navigate(dash[user.role] ?? '/')
   }

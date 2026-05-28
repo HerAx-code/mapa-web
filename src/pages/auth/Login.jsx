@@ -17,7 +17,8 @@ import toast from 'react-hot-toast'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 const DASHBOARD = {
-  [ROLES.PATIENT]:      '/patient/dashboard',
+  // Patients land on Request Assistance — the primary task — for accessibility.
+  [ROLES.PATIENT]:      '/patient/request',
   [ROLES.AGENCY]:       '/agency/dashboard',
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
