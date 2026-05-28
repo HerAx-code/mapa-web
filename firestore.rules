@@ -144,7 +144,10 @@ service cloud.firestore {
     match /documents/{docId} {
       allow read:   if isAuth() && (resource.data.patientId == uid() || isAdmin() || isAgency());
       allow create: if isPatient();
-      allow update: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+      // Agencies verify/reject documents during application review (document
+      // review moved from CRMC to the agencies). Patients may update their
+      // own; CRMC retains update for any legacy/oversight needs.
+      allow update: if isAdmin() || isAgency() || (isPatient() && resource.data.patientId == uid());
       allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
     }
 

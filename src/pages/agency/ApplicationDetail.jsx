@@ -811,6 +811,37 @@ export default function ApplicationDetail() {
     toast.error('Application rejected. Patient has been notified.')
   }
 
+  // Agency document review (moved from CRMC): verify or reject a single
+  // attached document, mirror the status onto the application snapshot, and
+  // notify the patient on rejection so they can re-upload.
+  const handleVerifyDoc = async (docItem, newStatus) => {
+    try {
+      await updateDoc(doc(db, 'documents', docItem.id), {
+        status:     newStatus,
+        reviewedBy: user.name ?? 'Agency',
+        reviewedAt: serverTimestamp(),
+      })
+      const updatedAttached = (app.attachedDocuments ?? []).map(a =>
+        a.documentId === docItem.id ? { ...a, status: newStatus } : a)
+      await updateDoc(doc(db, 'applications', app.id), {
+        attachedDocuments: updatedAttached,
+        updatedAt:         serverTimestamp(),
+      })
+      setPatientDocs(prev => prev.map(d => d.id === docItem.id ? { ...d, status: newStatus } : d))
+      if (newStatus === 'rejected') {
+        await notify(app.patientId, {
+          type:  'doc_rejected',
+          title: 'A document needs attention',
+          body:  `${app.agencyName} marked your "${docItem.name}" document as needing correction. Please re-upload it.`,
+        }).catch(() => {})
+      }
+      toast.success(newStatus === 'verified' ? 'Document verified.' : 'Document marked for re-upload.')
+    } catch (err) {
+      console.error('[ApplicationDetail] doc review error:', err)
+      toast.error('Failed to update document.')
+    }
+  }
+
   // ── GL handlers ──────────────────────────────────────────────────────
 
   const handlePrintGL = () => {
@@ -1369,7 +1400,8 @@ export default function ApplicationDetail() {
                 ) : (
                   <div className="space-y-1.5">
                     {patientDocs.map(d => (
-                      <button key={d.id}
+                      <div key={d.id}>
+                      <button
                         disabled={d._missing}
                         onClick={() => !d._missing && setViewingDoc(d)}
                         className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
@@ -1401,8 +1433,24 @@ export default function ApplicationDetail() {
                           <span className="text-xs text-brand-500 font-medium flex-shrink-0">View →</span>
                         )}
                       </button>
+                      {!d._missing && (user?.role === 'agency' || user?.role === 'agency_admin') &&
+                       ['pending', 'reviewing', 'interview', 'awaiting_info'].includes(app?.status) && (
+                        <div className="flex gap-2 mt-1 mb-1 ml-9">
+                          <button onClick={() => handleVerifyDoc(d, 'verified')}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 flex items-center gap-1 disabled:opacity-50"
+                            disabled={d.status === 'verified'}>
+                            <MdCheckCircle size={12} /> Verify
+                          </button>
+                          <button onClick={() => handleVerifyDoc(d, 'rejected')}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center gap-1 disabled:opacity-50"
+                            disabled={d.status === 'rejected'}>
+                            <MdCancel size={12} /> Reject
+                          </button>
+                        </div>
+                      )}
+                      </div>
                     ))}
-                    <p className="text-xs text-gray-400 mt-2 italic">Click any document to view the file submitted by the patient.</p>
+                    <p className="text-xs text-gray-400 mt-2 italic">Click a document to view it; use Verify / Reject to record your review.</p>
                   </div>
                 )}
               </div>
