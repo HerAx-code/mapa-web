@@ -322,11 +322,20 @@ service cloud.firestore {
 
     // ── announcements ─────────────────────────────────────────────────────────
     // All authenticated users can read (needed to show banners in Layout).
-    // Both CRMC admin roles (super_admin + staff_admin) can create, update,
-    // or delete announcements.
+    // CRMC admins (super/staff) manage ALL announcements. Agency admins may
+    // create and manage only their OWN agency-sourced announcements
+    // (source == 'agency', matching their agencyId) — these are shown to all
+    // patients via the Layout banner.
     match /announcements/{annId} {
       allow read:   if isAuth();
-      allow write:  if isAdmin();
+      allow create: if isAdmin() ||
+                       (isAgencyAdmin() &&
+                        request.resource.data.source == 'agency' &&
+                        request.resource.data.agencyId == userAgencyId());
+      allow update, delete: if isAdmin() ||
+                       (isAgencyAdmin() &&
+                        resource.data.source == 'agency' &&
+                        resource.data.agencyId == userAgencyId());
     }
   }
 }

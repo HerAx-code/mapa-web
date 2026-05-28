@@ -48,6 +48,7 @@ const AgencyFunds           = lazy(() => import('./pages/agency/Funds'))
 const AgencyAllocation      = lazy(() => import('./pages/agency/Allocation'))
 const AgencyAuditLog        = lazy(() => import('./pages/agency/AuditLog'))
 const AgencyTeam            = lazy(() => import('./pages/agency/Team'))
+const AgencyAnnouncements   = lazy(() => import('./pages/agency/Announcements'))
 const AgencyGuide           = lazy(() => import('./pages/agency/Guide'))
 
 // Admin
@@ -134,6 +135,7 @@ export default function App() {
           <Route path="/agency/allocation"      element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAllocation /></PrivateRoute>} />
           <Route path="/agency/audit"           element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAuditLog /></PrivateRoute>} />
           <Route path="/agency/team"            element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyTeam /></PrivateRoute>} />
+          <Route path="/agency/announcements"   element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAnnouncements /></PrivateRoute>} />
           <Route path="/agency/guide"           element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyGuide /></PrivateRoute>} />
 
           {/* Admin */}

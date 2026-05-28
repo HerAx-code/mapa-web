@@ -66,6 +66,7 @@ const AGENCY_NAV = [
   { to: '/agency/generator',    icon: MdCardMembership, label: 'Guarantee Letters' },
   { to: '/agency/funds',        icon: MdAttachMoney,    label: 'Funds' },
   { to: '/agency/allocation',   icon: MdAttachMoney,    label: 'Budget Allocation', adminOnly: true },
+  { to: '/agency/announcements',icon: MdCampaign,       label: 'Announcements',     adminOnly: true },
   { to: '/agency/logs',         icon: MdListAlt,        label: 'Application Logs' },
   { to: '/agency/guide',        icon: MdMenuBook,       label: 'User Guide' },
 ]
@@ -942,13 +943,19 @@ export default function Layout({ children, breadcrumb }) {
           const start = ann.startAt?.toDate?.()?.getTime() ?? 0
           const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
 
-          // Show banner if currently within the window and not dismissed
-          if (now >= start && now <= end && !dismissed.includes(ann.id)) {
+          // Agency-sourced announcements are patient-facing only — never
+          // shown to CRMC admins or to other agencies.
+          const audienceOk = ann.source !== 'agency' || user.role === ROLES.PATIENT
+
+          // Show banner if audience matches, within the window, not dismissed
+          if (audienceOk && now >= start && now <= end && !dismissed.includes(ann.id)) {
             live.push(ann)
           }
 
-          // 24h reminder: upcoming within 24h, not yet reminded — first user triggers it
-          if (now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
+          // 24h reminder: upcoming within 24h, not yet reminded — first user
+          // triggers it. Skipped for agency announcements (not maintenance
+          // windows, and they shouldn't notify non-patients).
+          if (ann.source !== 'agency' && now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
             updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
               .then(async () => {
                 const allUsers = await getDocs(collection(db, 'users'))

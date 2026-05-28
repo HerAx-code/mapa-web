@@ -54,7 +54,7 @@ export const TYPE_CONFIG = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const fmtDt = (ts) => {
+export const fmtDt = (ts) => {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleString([], {
@@ -63,7 +63,7 @@ const fmtDt = (ts) => {
   })
 }
 
-const getCountdown = (ts) => {
+export const getCountdown = (ts) => {
   if (!ts) return null
   const diff = (ts.toDate ? ts.toDate() : new Date(ts)).getTime() - Date.now()
   if (diff <= 0) return null
@@ -74,7 +74,7 @@ const getCountdown = (ts) => {
   return `${mins}m`
 }
 
-const getStatus = (ann) => {
+export const getStatus = (ann) => {
   const now   = Date.now()
   const start = ann.startAt?.toDate?.()?.getTime() ?? 0
   const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
@@ -132,7 +132,7 @@ function BannerPreview({ type, title, message, startAt, endAt }) {
 
 // ── Create / Edit Modal ───────────────────────────────────────────────────
 
-function AnnouncementForm({ announcement, onClose, onSave }) {
+export function AnnouncementForm({ announcement, onClose, onSave, audienceNote }) {
   const isEdit = !!announcement
 
   const [type,      setType]      = useState(announcement?.type    ?? 'maintenance')
@@ -252,7 +252,7 @@ function AnnouncementForm({ announcement, onClose, onSave }) {
               startAt={previewStartAt} endAt={previewEndAt}
             />
             <p className="text-xs text-gray-400 mt-1.5">
-              This is how the banner will appear to all users.
+              This is how the banner will appear to {audienceNote ?? 'all users'}.
             </p>
           </div>
         </div>
