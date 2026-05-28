@@ -808,7 +808,10 @@
     "programs": {
       "breadcrumb": "Find Programs",
       "title": "Find Programs",
-      "subtitle": "Explore and apply for assistance programs available at CRMC. Spots reset daily at midnight.",
+      "subtitle": "Browse the medical assistance programs available at CRMC.",
+      "ctaTitle": "Need medical assistance?",
+      "ctaDesc": "Submit one request — CRMC will review it and route it to the agencies that can help cover your bill.",
+      "ctaBtn": "Request Assistance",
       "backToMatches": "Back to Screening",
       "holdingTitle": "Holding Period Active on Some Programs",
       "holdingDesc": "You received a Guarantee Letter from one or more programs. You can still apply to other programs freely.",

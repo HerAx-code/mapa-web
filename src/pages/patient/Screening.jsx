@@ -275,10 +275,9 @@ export default function Screening() {
               ) : (
                 <button
                   className="btn-primary text-xs sm:text-sm flex-shrink-0"
-                  disabled={isFull}
-                  onClick={() => navigate('/patient/programs', { state: { openAgencyId: agency.id } })}
+                  onClick={() => navigate('/patient/request')}
                 >
-                  {t('patient.screening.applyNow')} →
+                  {t('patient.programs.ctaBtn')} →
                 </button>
               )
 

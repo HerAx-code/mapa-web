@@ -808,7 +808,10 @@
     "programs": {
       "breadcrumb": "Maghanap ng Programa",
       "title": "Maghanap ng Programa",
-      "subtitle": "Tingnan at mag-apply sa mga programang tulong na available sa CRMC. Nire-reset ang slot tuwing hatinggabi.",
+      "subtitle": "Tingnan ang mga programang tulong medikal na available sa CRMC.",
+      "ctaTitle": "Nangangailangan ng tulong medikal?",
+      "ctaDesc": "Magsumite ng isang kahilingan — susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong sa inyong bayarin.",
+      "ctaBtn": "Humiling ng Tulong",
       "backToMatches": "Bumalik sa Screening",
       "holdingTitle": "May Holding Period sa Ilang Programa",
       "holdingDesc": "Nakatanggap kayo ng Guarantee Letter mula sa isa o higit pang programa. Maaari pa rin kayong mag-apply sa ibang programa.",
