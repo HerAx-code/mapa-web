@@ -88,7 +88,10 @@ service cloud.firestore {
         (isAgency() && resource.data.agencyId == userAgencyId()) ||
         isAdmin()
       );
-      allow create: if isPatient();
+      // isPatient: the legacy direct apply flow (still active during the
+      // co-funding transition). isAdmin: CRMC creates application "slices"
+      // when endorsing a request to an agency.
+      allow create: if isPatient() || isAdmin();
       allow update: if isAuth() && (
         // Patient can make exactly two transitions on their own application:
         //  1. pending → rejected (self-withdrawal)
