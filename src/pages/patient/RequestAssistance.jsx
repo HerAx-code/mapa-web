@@ -77,10 +77,15 @@ export default function RequestAssistance() {
     }
   }
 
-  // Assistance types + document types (admin-managed lists)
+  // Assistance types (with their required documents) + document types
   useEffect(() => {
     getDocs(query(collection(db, 'assistanceTypes')))
-      .then(snap => setTypes(snap.docs.map(d => d.data().name).filter(Boolean).sort()))
+      .then(snap => setTypes(
+        snap.docs
+          .map(d => ({ name: d.data().name, requiredDocs: d.data().requiredDocs ?? [] }))
+          .filter(t => t.name)
+          .sort((a, b) => a.name.localeCompare(b.name))
+      ))
       .catch(() => {})
     getDocs(query(collection(db, 'documentTypes'), orderBy('order', 'asc')))
       .then(snap => setDocTypes(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
@@ -129,6 +134,9 @@ export default function RequestAssistance() {
 
   const existingTypeNames = new Set(myDocs.map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase()))
 
+  // Documents the selected assistance type requires the patient to upload.
+  const requiredDocsForType = types.find(t => t.name === form.assistanceType)?.requiredDocs ?? []
+
   const amountNeeded = computeAmountNeeded({
     totalBill:         form.totalBill,
     philhealthCovered: form.philhealthCovered,
@@ -141,6 +149,9 @@ export default function RequestAssistance() {
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (!form.totalBill || Number(form.totalBill) <= 0) { toast.error(t('patient.request.errBill')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
+    const missingDocs = requiredDocsForType.filter(name =>
+      !existingTypeNames.has(name.toLowerCase()) && !pendingFiles[name])
+    if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
     if (!declared)                { toast.error(t('patient.request.errDeclare')); return }
 
     setSubmitting(true)
@@ -352,7 +363,7 @@ export default function RequestAssistance() {
             <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
             <select className={`input ${!form.assistanceType ? 'text-gray-400' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
               <option value="">{t('patient.request.typePlaceholder')}</option>
-              {types.map(tp => <option key={tp} value={tp}>{tp}</option>)}
+              {types.map(tp => <option key={tp.name} value={tp.name}>{tp.name}</option>)}
             </select>
           </div>
 
@@ -392,40 +403,43 @@ export default function RequestAssistance() {
               value={form.description} onChange={set('description')} maxLength={300} />
           </div>
 
-          {/* Required documents — uploaded inline with the application */}
+          {/* Required documents — driven by the selected assistance type */}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.documentsTitle')}</p>
             <p className="text-xs text-gray-400 mb-2">{t('patient.request.documentsHint')}</p>
-            <div className="space-y-2">
-              {docTypes.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNone')}</p>
-              ) : docTypes.map(dt => {
-                const satisfied = existingTypeNames.has((dt.name ?? '').toLowerCase())
-                const pending   = pendingFiles[dt.name]
-                return (
-                  <div key={dt.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
-                    <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 truncate">{dt.name}{dt.required && <span className="text-red-400"> *</span>}</p>
-                      {pending && <p className="text-xs text-green-600 truncate">{pending.name}</p>}
+            {!form.assistanceType ? (
+              <p className="text-xs text-gray-400 italic">{t('patient.request.documentsSelectType')}</p>
+            ) : requiredDocsForType.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNoneForType')}</p>
+            ) : (
+              <div className="space-y-2">
+                {requiredDocsForType.map(name => {
+                  const satisfied = existingTypeNames.has(name.toLowerCase())
+                  const pending   = pendingFiles[name]
+                  return (
+                    <div key={name} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
+                      <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700 truncate">{name} <span className="text-red-400">*</span></p>
+                        {pending && <p className="text-xs text-green-600 truncate">{pending.name}</p>}
+                      </div>
+                      {satisfied && !pending ? (
+                        <span className="badge badge-green text-xs flex-shrink-0">{t('patient.request.docUploaded')}</span>
+                      ) : pending ? (
+                        <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeFile(name)}>
+                          <MdClose size={16} />
+                        </button>
+                      ) : (
+                        <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
+                          <MdUploadFile size={14} /> {t('patient.request.docAttach')}
+                          <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachFile(name)} />
+                        </label>
+                      )}
                     </div>
-                    {satisfied && !pending ? (
-                      <span className="badge badge-green text-xs flex-shrink-0">{t('patient.request.docUploaded')}</span>
-                    ) : pending ? (
-                      <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeFile(dt.name)}>
-                        <MdClose size={16} />
-                      </button>
-                    ) : (
-                      <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
-                        <MdUploadFile size={14} /> {t('patient.request.docAttach')}
-                        <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachFile(dt.name)} />
-                      </label>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <p className="text-xs text-gray-400 mt-1.5">{t('patient.request.documentsLibraryNote')}</p>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Declaration */}

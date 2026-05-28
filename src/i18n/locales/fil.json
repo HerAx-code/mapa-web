@@ -505,7 +505,9 @@
       "remaining": "natitira",
       "contributingAgencies": "Mga ahensyang tumutulong",
       "documentsTitle": "Mga kinakailangang dokumento",
-      "documentsHint": "Ilakip ang mga dokumentong kakailanganin ng mga ahensya upang ma-verify ang inyong kahilingan.",
+      "documentsHint": "Ilakip ang mga dokumentong kinakailangan para sa uri ng tulong na pinili ninyo.",
+      "documentsSelectType": "Pumili ng uri ng tulong sa itaas upang makita ang mga kinakailangang dokumento.",
+      "documentsNoneForType": "Walang partikular na dokumentong kinakailangan para sa uring ito.",
       "documentsNone": "Wala pang naka-configure na uri ng dokumento.",
       "documentsLibraryNote": "Maaari ring pamahalaan ang mga dokumento anumang oras sa Aking mga Dokumento.",
       "docUploaded": "Na-upload",
@@ -527,6 +529,7 @@
       "errType": "Mangyaring pumili ng uri ng tulong.",
       "errBill": "Ilagay ang kabuuang halaga ng bayarin.",
       "errNeeded": "Ang halagang kailangan ay dapat higit sa zero.",
+      "errDocs": "Mangyaring i-upload ang lahat ng kinakailangang dokumento para sa uri ng tulong na ito.",
       "errDeclare": "Mangyaring kumpirmahin ang deklarasyon.",
       "errFailed": "Hindi naisumite ang kahilingan. Pakisubukan muli."
     },
