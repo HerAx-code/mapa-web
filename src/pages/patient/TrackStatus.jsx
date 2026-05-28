@@ -425,7 +425,7 @@ export default function TrackStatus() {
                           </p>
                           <button
                             className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
-                            onClick={() => navigate('/patient/documents')}>
+                            onClick={() => navigate('/patient/request')}>
                             {t('patient.track.banner.reviewingBtn')} →
                           </button>
                         </div>

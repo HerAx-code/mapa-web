@@ -51,7 +51,6 @@ const PATIENT_NAV = [
   { to: '/patient/screening',  icon: MdSearch,     labelKey: 'patient.nav.findPrograms'  },
   { to: '/patient/request',    icon: MdFavorite,   labelKey: 'patient.nav.requestAssistance' },
   { to: '/patient/status',     icon: MdTimeline,   labelKey: 'patient.nav.myApplication' },
-  { to: '/patient/documents',  icon: MdFolder,     labelKey: 'patient.nav.myDocuments'   },
   { to: '/patient/interviews', icon: MdVideoCall,  labelKey: 'patient.nav.interviews'    },
   { to: '/patient/messages',   icon: MdMessage,    labelKey: 'patient.nav.messages'      },
   { to: '/patient/guide',      icon: MdMenuBook,   labelKey: 'patient.nav.userGuide'     },
@@ -644,7 +643,7 @@ const APPS = {
     { labelKey: 'patient.nav.findPrograms',     icon: MdSearch,        to: '/patient/screening'  },
     { labelKey: 'patient.nav.medicalPrograms',  icon: MdLocalHospital, to: '/patient/programs'   },
     { labelKey: 'patient.nav.trackStatus',      icon: MdTimeline,      to: '/patient/status'     },
-    { labelKey: 'patient.nav.myDocuments',      icon: MdFolder,        to: '/patient/documents'  },
+    { labelKey: 'patient.nav.requestAssistance', icon: MdFavorite,     to: '/patient/request'    },
     { labelKey: 'patient.nav.interviews',       icon: MdVideoCall,     to: '/patient/interviews' },
   ],
   [ROLES.AGENCY]: [

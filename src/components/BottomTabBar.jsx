@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  MdDashboard, MdTimeline, MdFolder, MdMessage, MdMenu,
+  MdDashboard, MdTimeline, MdFavorite, MdMessage, MdMenu,
 } from 'react-icons/md'
 
 /**
@@ -27,7 +27,7 @@ export default function BottomTabBar({ unreadMessages = 0 }) {
   const tabs = [
     { to: '/patient/dashboard', Icon: MdDashboard, labelKey: 'patient.tab.dashboard' },
     { to: '/patient/status',    Icon: MdTimeline,  labelKey: 'patient.tab.apply'     },
-    { to: '/patient/documents', Icon: MdFolder,    labelKey: 'patient.tab.docs'      },
+    { to: '/patient/request',   Icon: MdFavorite,  labelKey: 'patient.tab.request'   },
     {
       to:        '/patient/messages',
       Icon:      MdMessage,

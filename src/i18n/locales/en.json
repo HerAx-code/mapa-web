@@ -534,6 +534,7 @@
       "dashboard": "Home",
       "apply":     "Apply",
       "docs":      "Docs",
+      "request":   "Request",
       "messages":  "Messages"
     },
     "more": {

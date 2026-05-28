@@ -55,7 +55,7 @@ export const getNotifRoute = (type, role) => {
     interview_sched:         isPatient ? '/patient/interviews' : isAgency ? '/agency/interviews' : null,
 
     // ── awaiting_info flow ──
-    awaiting_info_requested: '/patient/documents',
+    awaiting_info_requested: '/patient/request',
     awaiting_info_responded: isAgency  ? '/agency/inbox'       : null,
 
     // ── Budget (agency-side only — CRMC has zero fund authority) ──

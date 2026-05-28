@@ -65,7 +65,7 @@ const STATUS_VISUAL = {
   reviewing: {
     icon:     MdAssignment,
     iconBg:   'bg-amber-100 text-amber-600',
-    path:     '/patient/documents',
+    path:     '/patient/request',
     border:   'border-amber-300',
     bg:       'bg-amber-50',
     text:     'text-amber-800',
@@ -75,7 +75,7 @@ const STATUS_VISUAL = {
   awaiting_info: {
     icon:     MdSchedule,
     iconBg:   'bg-orange-100 text-orange-600',
-    path:     '/patient/documents',
+    path:     '/patient/request',
     border:   'border-orange-300',
     bg:       'bg-orange-50',
     text:     'text-orange-800',
@@ -258,7 +258,7 @@ export default function PatientDashboard() {
     {
       num: 1, title: t('patient.dashboard.steps.s1Title'),
       desc:   t('patient.dashboard.steps.s1Desc'),
-      path:   '/patient/documents',
+      path:   '/patient/request',
       done:   docStats.verified > 0,
     },
     {
@@ -478,7 +478,7 @@ export default function PatientDashboard() {
 
             <button
               className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-              onClick={() => navigate('/patient/documents')}>
+              onClick={() => navigate('/patient/request')}>
               {t('patient.dashboard.welcomeCard.getStarted')} →
             </button>
             <button
@@ -519,7 +519,7 @@ export default function PatientDashboard() {
           return (
             <button
               className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
-              onClick={() => navigate('/patient/documents')}>
+              onClick={() => navigate('/patient/request')}>
               <div className={`w-10 h-10 rounded-xl ${tone.iconBg} flex items-center justify-center flex-shrink-0`}>
                 <Icon size={20} className={tone.iconColor} />
               </div>
