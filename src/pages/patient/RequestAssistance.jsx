@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, getDocs,
-  doc, setDoc, serverTimestamp,
+  doc, setDoc, serverTimestamp, orderBy,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -11,11 +11,12 @@ import { notify } from '../../utils/notifications'
 import {
   generateRequestId, computeAmountNeeded, computeFunding,
 } from '../../utils/requests'
+import { uploadPatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG } from '../../utils/constants'
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
-  MdReceiptLong, MdHourglassTop,
+  MdHourglassTop, MdUploadFile, MdClose,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -33,7 +34,9 @@ export default function RequestAssistance() {
   const [types,         setTypes]         = useState([])
   const [activeRequest, setActiveRequest] = useState(null)
   const [slices,        setSlices]        = useState([])
-  const [hasBilling,    setHasBilling]    = useState(false)
+  const [docTypes,      setDocTypes]      = useState([])
+  const [existingTypes, setExistingTypes] = useState(new Set())
+  const [pendingFiles,  setPendingFiles]  = useState({})
   const [loading,       setLoading]       = useState(true)
   const [submitting,    setSubmitting]    = useState(false)
   const [submittedId,   setSubmittedId]   = useState('')
@@ -44,10 +47,23 @@ export default function RequestAssistance() {
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
-  // Assistance types (admin-managed list)
+  const attachFile = (typeName) => (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const err = validateDocFile(file)
+    if (err) { toast.error(err); return }
+    setPendingFiles(p => ({ ...p, [typeName]: file }))
+  }
+  const removeFile = (typeName) => setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
+
+  // Assistance types + document types (admin-managed lists)
   useEffect(() => {
     getDocs(query(collection(db, 'assistanceTypes')))
       .then(snap => setTypes(snap.docs.map(d => d.data().name).filter(Boolean).sort()))
+      .catch(() => {})
+    getDocs(query(collection(db, 'documentTypes'), orderBy('order', 'asc')))
+      .then(snap => setDocTypes(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
       .catch(() => {})
   }, [])
 
@@ -78,13 +94,18 @@ export default function RequestAssistance() {
     return unsub
   }, [activeRequest?.id])
 
+  // Which document types the patient already has on file (so the uploader can
+  // mark them satisfied and they don't have to re-upload from the library).
   useEffect(() => {
     if (!user?.uid) return
     getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
       .then(snap => {
-        const docs = snap.docs.map(d => d.data())
-        setHasBilling(docs.some(d =>
-          `${d.name ?? ''} ${d.documentTypeName ?? ''}`.toLowerCase().includes('billing')))
+        const names = new Set()
+        snap.docs.forEach(d => {
+          const n = (d.data().documentTypeName ?? d.data().name ?? '').toLowerCase()
+          if (n) names.add(n)
+        })
+        setExistingTypes(names)
       })
       .catch(() => {})
   }, [user?.uid])
@@ -105,6 +126,13 @@ export default function RequestAssistance() {
 
     setSubmitting(true)
     try {
+      // Upload any documents attached in this form first, so the snapshot
+      // below picks them up.
+      for (const [typeName, file] of Object.entries(pendingFiles)) {
+        const tobj = docTypes.find(dt => dt.name === typeName)
+        await uploadPatientDocument({ file, typeName, typeId: tobj?.id ?? null, user })
+      }
+
       const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
       const attachedDocuments = docsSnap.docs.map(d => ({
         documentId:       d.id,
@@ -316,20 +344,40 @@ export default function RequestAssistance() {
               value={form.description} onChange={set('description')} maxLength={300} />
           </div>
 
-          {/* Billing statement reminder */}
-          <div className={`rounded-xl px-4 py-3 flex items-start gap-2 border ${hasBilling ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
-            {hasBilling
-              ? <MdReceiptLong size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
-              : <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />}
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-medium ${hasBilling ? 'text-green-700' : 'text-amber-700'}`}>{t('patient.request.billingReminderTitle')}</p>
-              <p className={`text-xs ${hasBilling ? 'text-green-600' : 'text-amber-600'}`}>{t('patient.request.billingReminderDesc')}</p>
-              {!hasBilling && (
-                <button className="text-xs font-semibold text-amber-700 underline mt-1" onClick={() => navigate('/patient/documents')}>
-                  {t('patient.request.goToDocuments')} →
-                </button>
-              )}
+          {/* Required documents — uploaded inline with the application */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.documentsTitle')}</p>
+            <p className="text-xs text-gray-400 mb-2">{t('patient.request.documentsHint')}</p>
+            <div className="space-y-2">
+              {docTypes.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNone')}</p>
+              ) : docTypes.map(dt => {
+                const satisfied = existingTypes.has((dt.name ?? '').toLowerCase())
+                const pending   = pendingFiles[dt.name]
+                return (
+                  <div key={dt.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
+                    <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700 truncate">{dt.name}{dt.required && <span className="text-red-400"> *</span>}</p>
+                      {pending && <p className="text-xs text-green-600 truncate">{pending.name}</p>}
+                    </div>
+                    {satisfied && !pending ? (
+                      <span className="badge badge-green text-xs flex-shrink-0">{t('patient.request.docUploaded')}</span>
+                    ) : pending ? (
+                      <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeFile(dt.name)}>
+                        <MdClose size={16} />
+                      </button>
+                    ) : (
+                      <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
+                        <MdUploadFile size={14} /> {t('patient.request.docAttach')}
+                        <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachFile(dt.name)} />
+                      </label>
+                    )}
+                  </div>
+                )
+              })}
             </div>
+            <p className="text-xs text-gray-400 mt-1.5">{t('patient.request.documentsLibraryNote')}</p>
           </div>
 
           {/* Declaration */}
