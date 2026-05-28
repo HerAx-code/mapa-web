@@ -1,5 +1,5 @@
 import {
-  collection, addDoc, setDoc, doc, deleteDoc, serverTimestamp,
+  collection, addDoc, setDoc, updateDoc, doc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -48,18 +48,20 @@ export function validateDocFile(file) {
   return null
 }
 
+// Reads a file to a base64 data URL, compressing images to fit the doc limit.
+const readContent = (file) => file.type.startsWith('image/')
+  ? compressImage(file)
+  : new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload  = (e) => resolve(e.target.result)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
 // Uploads one document and returns the attachedDocuments-style entry. Throws
 // on failure (metadata is rolled back if the content write fails).
 export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, user }) {
-  const content = file.type.startsWith('image/')
-    ? await compressImage(file)
-    : await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = (e) => resolve(e.target.result)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-
+  const content = await readContent(file)
   const sizeKB = (content.length * 0.75 / 1024).toFixed(2)
   const ref = await addDoc(collection(db, 'documents'), {
     patientId:           user.uid,
@@ -94,4 +96,25 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     status:           'pending',
     date:             new Date().toLocaleDateString(),
   }
+}
+
+// Replaces the content of an EXISTING document (used to re-upload a rejected
+// document). Keeps the same document id — so every application slice that
+// references it picks up the new file + reset status without any snapshot
+// rewrite. Resets status to 'pending' for re-review.
+export async function replacePatientDocument({ docId, file, user }) {
+  const content = await readContent(file)
+  const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
+  await setDoc(doc(db, 'documentContents', docId), {
+    content, documentId: docId, patientId: user.uid,
+  })
+  await updateDoc(doc(db, 'documents', docId), {
+    status:     'pending',
+    fileName:   file.name,
+    type:       file.type || 'application/octet-stream',
+    size:       `${sizeKB} KB`,
+    date:       new Date().toLocaleDateString(),
+    reviewedBy: null,
+    reviewedAt: null,
+  })
 }

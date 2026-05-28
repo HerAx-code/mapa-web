@@ -11,8 +11,8 @@ import { notify } from '../../utils/notifications'
 import {
   generateRequestId, computeAmountNeeded, computeFunding,
 } from '../../utils/requests'
-import { uploadPatientDocument, validateDocFile } from '../../utils/uploadDocument'
-import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG } from '../../utils/constants'
+import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
+import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
@@ -35,8 +35,9 @@ export default function RequestAssistance() {
   const [activeRequest, setActiveRequest] = useState(null)
   const [slices,        setSlices]        = useState([])
   const [docTypes,      setDocTypes]      = useState([])
-  const [existingTypes, setExistingTypes] = useState(new Set())
+  const [myDocs,        setMyDocs]        = useState([])
   const [pendingFiles,  setPendingFiles]  = useState({})
+  const [replacing,     setReplacing]     = useState(null)
   const [loading,       setLoading]       = useState(true)
   const [submitting,    setSubmitting]    = useState(false)
   const [submittedId,   setSubmittedId]   = useState('')
@@ -56,6 +57,25 @@ export default function RequestAssistance() {
     setPendingFiles(p => ({ ...p, [typeName]: file }))
   }
   const removeFile = (typeName) => setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
+
+  // Re-upload a rejected document in place (keeps the same id so every slice
+  // referencing it picks up the new file + reset status).
+  const reuploadDoc = (docId) => async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const err = validateDocFile(file)
+    if (err) { toast.error(err); return }
+    setReplacing(docId)
+    try {
+      await replacePatientDocument({ docId, file, user })
+      toast.success(t('patient.request.reuploadOk'))
+    } catch {
+      toast.error(t('patient.request.reuploadErr'))
+    } finally {
+      setReplacing(null)
+    }
+  }
 
   // Assistance types + document types (admin-managed lists)
   useEffect(() => {
@@ -94,21 +114,20 @@ export default function RequestAssistance() {
     return unsub
   }, [activeRequest?.id])
 
-  // Which document types the patient already has on file (so the uploader can
-  // mark them satisfied and they don't have to re-upload from the library).
+  // Live list of the patient's documents — powers the "already uploaded"
+  // markers on the form and the document status + re-upload list on the
+  // active-request view.
   useEffect(() => {
     if (!user?.uid) return
-    getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
-      .then(snap => {
-        const names = new Set()
-        snap.docs.forEach(d => {
-          const n = (d.data().documentTypeName ?? d.data().name ?? '').toLowerCase()
-          if (n) names.add(n)
-        })
-        setExistingTypes(names)
-      })
-      .catch(() => {})
+    const unsub = onSnapshot(
+      query(collection(db, 'documents'), where('patientId', '==', user.uid)),
+      snap => setMyDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {},
+    )
+    return unsub
   }, [user?.uid])
+
+  const existingTypeNames = new Set(myDocs.map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase()))
 
   const amountNeeded = computeAmountNeeded({
     totalBill:         form.totalBill,
@@ -280,6 +299,35 @@ export default function RequestAssistance() {
               </div>
             )}
 
+            {/* Documents — status + re-upload of rejected ones */}
+            {myDocs.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.yourDocuments')}</p>
+                <div className="space-y-2">
+                  {myDocs.map(d => {
+                    const dcfg = DOC_STATUS_CONFIG[d.status] ?? DOC_STATUS_CONFIG.pending
+                    return (
+                      <div key={d.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
+                        <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{d.name}</p>
+                        </div>
+                        <span className={`badge text-xs flex-shrink-0 ${dcfg.badge}`}>{dcfg.label}</span>
+                        {d.status === 'rejected' && (
+                          <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
+                            <MdUploadFile size={14} /> {replacing === d.id ? t('patient.request.reuploading') : t('patient.request.reupload')}
+                            <input type="file" accept="image/*,application/pdf" className="hidden"
+                              disabled={replacing === d.id} onChange={reuploadDoc(d.id)} />
+                          </label>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">{t('patient.request.reuploadHint')}</p>
+              </div>
+            )}
+
             <button className="btn-secondary w-full mt-4 text-sm" onClick={() => navigate('/patient/status')}>
               {t('patient.request.viewStatus')} →
             </button>
@@ -352,7 +400,7 @@ export default function RequestAssistance() {
               {docTypes.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNone')}</p>
               ) : docTypes.map(dt => {
-                const satisfied = existingTypes.has((dt.name ?? '').toLowerCase())
+                const satisfied = existingTypeNames.has((dt.name ?? '').toLowerCase())
                 const pending   = pendingFiles[dt.name]
                 return (
                   <div key={dt.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
