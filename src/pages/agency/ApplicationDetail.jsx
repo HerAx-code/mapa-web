@@ -667,8 +667,14 @@ export default function ApplicationDetail() {
       const agencyRef = doc(db, 'agencies', user.agencyId)
       const appRef    = doc(db, 'applications', app.id)
 
+      // Co-funding: if this application is a slice of a parent request, the
+      // approval also advances the request's secured total toward zero
+      // balance. Read it inside the transaction (all reads before writes).
+      const reqRef = app.requestId ? doc(db, 'requests', app.requestId) : null
+
       await runTransaction(db, async (tx) => {
         const agencySnap = await tx.get(agencyRef)
+        const reqSnap    = reqRef ? await tx.get(reqRef) : null
         const data       = agencySnap.exists() ? agencySnap.data() : {}
         const allocated  = data.budget?.allocated ?? 0
         const committed  = data.budget?.committed ?? 0
@@ -688,6 +694,10 @@ export default function ApplicationDetail() {
           status:              'approved',
           stages:              getUpdatedStages(app.stages ?? [], 'approved', {}),
           approvedAmount,
+          // Record the approved figure on the slice so the parent request's
+          // funding tally and the coordination board reflect what this agency
+          // actually committed (may be less than the endorsed amountRequested).
+          amountApproved:      approvedAmount,
           purposeOfAssistance,
           payableTo,
           approvedBy,
@@ -714,6 +724,24 @@ export default function ApplicationDetail() {
           tx.update(doc(db, 'hospitalIds', patientHospitalId), {
             lastApprovedAt: serverTimestamp(),
             cooldownUntilAt: null,  // clear any prior reversed-cooldown
+          })
+        }
+
+        // Co-funding: advance the parent request. amountCommitted grows by the
+        // approved amount; the request becomes fully_funded once the secured
+        // total reaches the net need, else partially_funded. (The rule limits
+        // agency writes here to amountCommitted/status/updatedAt.)
+        if (reqSnap?.exists()) {
+          const r            = reqSnap.data()
+          const need         = r.amountNeeded ?? 0
+          const newCommitted = (r.amountCommitted ?? 0) + approvedAmount
+          const newStatus    = (need > 0 && newCommitted >= need)
+            ? 'fully_funded'
+            : newCommitted > 0 ? 'partially_funded' : 'endorsing'
+          tx.update(reqRef, {
+            amountCommitted: newCommitted,
+            status:          newStatus,
+            updatedAt:       serverTimestamp(),
           })
         }
       })

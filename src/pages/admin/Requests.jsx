@@ -48,12 +48,11 @@ const sliceStages = () => ([
 function EndorseModal({ request, slices, agencies, onClose }) {
   const { user } = useAuth()
   const { committed, headroom } = computeFunding(request.amountNeeded, slices)
-  // headroom from slices may lag the request's own amountEndorsed tally; trust
-  // the lower of the two so we never over-endorse past the target.
-  const liveHeadroom = Math.max(0, Math.min(
-    headroom,
-    request.amountNeeded - (request.amountCommitted ?? 0) - (request.amountEndorsed ?? 0),
-  ))
+  // Outstanding (reserved-but-not-approved) is derived from the live slices,
+  // so headroom = needed − committed − outstanding. No denormalized tally on
+  // the request, which keeps the agency's approval write within the fields
+  // its Firestore rule permits.
+  const liveHeadroom = headroom
 
   const [agencyId, setAgencyId] = useState('')
   const [amount,   setAmount]   = useState(String(liveHeadroom || ''))
@@ -90,9 +89,11 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         if (remaining <= 0) throw new Error('NO_SLOTS')
 
         const r = rSnap.data()
-        const endorsedSoFar = (r.amountEndorsed ?? 0)
         const committedSoFar = (r.amountCommitted ?? 0)
-        const room = r.amountNeeded - committedSoFar - endorsedSoFar
+        // Backstop cap: never endorse past (needed − committed). The modal
+        // already applies the tighter slices-aware headroom; this transaction
+        // check guards against two concurrent endorsements over-committing.
+        const room = (r.amountNeeded ?? 0) - committedSoFar
         if (amt > room) throw new Error('OVER_BALANCE')
 
         const sliceRef = doc(collection(db, 'applications'))
@@ -122,10 +123,9 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         })
 
         tx.update(reqRef, {
-          agencyIds:      arrayUnion(agency.id),
-          amountEndorsed: endorsedSoFar + amt,
-          status:         'endorsing',
-          updatedAt:      serverTimestamp(),
+          agencyIds: arrayUnion(agency.id),
+          status:    'endorsing',
+          updatedAt: serverTimestamp(),
         })
         tx.update(agencyRef, { 'slots.remaining': remaining - 1 })
       })
