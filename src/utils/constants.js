@@ -106,6 +106,21 @@ export const REPORT_STATUS_CONFIG = {
   resolved:    { label: 'Resolved',    badge: 'badge-green' },
 }
 
+// Co-funding REQUEST (parent) status — the patient's overall journey toward
+// zero balance. Each contributing agency gets a child application "slice"
+// which keeps its own APP_STATUS_CONFIG. "partially_funded" is a legitimate
+// outcome: agencies cover up to their ceilings and full zero-balance is the
+// target, not a guarantee (see Malasakit sequential-charging model).
+export const REQUEST_STATUS_CONFIG = {
+  submitted:        { label: 'Submitted',       badge: 'badge-blue'   },
+  verifying:        { label: 'Under Review',     badge: 'badge-amber'  },
+  endorsing:        { label: 'Being Endorsed',   badge: 'badge-purple' },
+  partially_funded: { label: 'Partially Funded', badge: 'badge-amber'  },
+  fully_funded:     { label: 'Fully Funded',     badge: 'badge-green'  },
+  closed:           { label: 'Closed',           badge: 'badge-gray'   },
+  rejected:         { label: 'Rejected',         badge: 'badge-red'    },
+}
+
 // Slot status thresholds
 export const SLOT_STATUS = (remaining, total) => {
   if (remaining === 0) return { label: 'Full',    color: 'text-red-600',   bar: 'bg-red-400',   badge: 'badge-red'   }

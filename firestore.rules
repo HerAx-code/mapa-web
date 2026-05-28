@@ -106,6 +106,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ── requests ────────────────────────────────────────────────────────────
+    // Co-funding parent: the patient's medical-assistance need + amount. CRMC
+    // verifies it, then splits it into child application "slices" and endorses
+    // them toward zero balance. Patients own and read their own request and may
+    // withdraw it while still 'submitted'. CRMC admins manage all. An agency
+    // can read a request only if it holds a slice in it (its id is in
+    // agencyIds[]), and may update ONLY the funding tally fields when recording
+    // an approval against its slice — never patient data, the target amount, or
+    // the agency list. (The applications/create rule still gates slice creation
+    // to CRMC at cutover; this block is additive and does not change the
+    // existing apply flow.)
+    match /requests/{requestId} {
+      allow read: if isAuth() && (
+        resource.data.patientId == uid() ||
+        isAdmin() ||
+        (isAgency() && userAgencyId() in resource.data.agencyIds)
+      );
+      allow create: if isPatient() && request.resource.data.patientId == uid();
+      allow update: if isAdmin() ||
+        (isPatient() && resource.data.patientId == uid() &&
+          resource.data.status == 'submitted' &&
+          request.resource.data.status == 'closed') ||
+        (isAgency() && userAgencyId() in resource.data.agencyIds &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['amountCommitted', 'status', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
     // ── documents ─────────────────────────────────────────────────────────────
     // Patients own their documents.
     // Agencies can read all patient documents (needed for application review).

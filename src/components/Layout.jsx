@@ -49,6 +49,7 @@ const makeTimeAgo = (t) => (ts) => {
 const PATIENT_NAV = [
   { to: '/patient/dashboard',  icon: MdDashboard,  labelKey: 'patient.nav.dashboard'     },
   { to: '/patient/screening',  icon: MdSearch,     labelKey: 'patient.nav.findPrograms'  },
+  { to: '/patient/request',    icon: MdFavorite,   labelKey: 'patient.nav.requestAssistance' },
   { to: '/patient/status',     icon: MdTimeline,   labelKey: 'patient.nav.myApplication' },
   { to: '/patient/documents',  icon: MdFolder,     labelKey: 'patient.nav.myDocuments'   },
   { to: '/patient/interviews', icon: MdVideoCall,  labelKey: 'patient.nav.interviews'    },
