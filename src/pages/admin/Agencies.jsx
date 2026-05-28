@@ -49,7 +49,7 @@ export const COLORS = [
 
 const EMPTY_FORM = {
   name: '', initials: '', color: 'bg-brand-500',
-  description: '', location: '', phone: '',
+  description: '', location: '', phone: '', procedure: '',
   processingTime: 'Same Day', slotsTotal: 25,
 }
 
@@ -65,6 +65,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
       description:    agency.description,
       location:       agency.location,
       phone:          agency.phone,
+      procedure:      agency.procedure ?? '',
       processingTime: agency.processingTime,
       slotsTotal:     agency.slots?.total ?? 25,
     } : { ...EMPTY_FORM }
@@ -113,6 +114,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
         description:     form.description.trim(),
         location:        form.location.trim(),
         phone:           form.phone.trim(),
+        procedure:       form.procedure.trim(),
         processingTime:  form.processingTime.trim(),
         requirements:    [...selectedReqs],
         assistanceTypes: [...selectedTypes],
@@ -161,6 +163,13 @@ export function AgencyModal({ agency, onClose, onSave }) {
             <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
             <textarea className="input resize-none" rows={2} placeholder="Brief description..."
               value={form.description} onChange={set('description')} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Procedure / Instructions for Patients</label>
+            <textarea className="input resize-none" rows={2}
+              placeholder="What the patient must do once endorsed (e.g. bring valid ID + this GL to the PCSO desk, window 3)..."
+              value={form.procedure} onChange={set('procedure')} />
+            <p className="text-xs text-gray-400 mt-1">Shown to patients when they're endorsed to this agency.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Avatar Color</label>
