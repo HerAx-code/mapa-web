@@ -44,9 +44,9 @@ export const getNotifRoute = (type, role) => {
   const isPatient = role === 'patient'
   const map = {
     // ── Application lifecycle ──
-    doc_verified:            isPatient ? '/patient/documents'  : '/admin/docreview',
-    doc_rejected:            isPatient ? '/patient/documents'  : '/admin/docreview',
-    doc_uploaded:            isAgency  ? '/agency/inbox'       : '/admin/docreview',
+    doc_verified:            isPatient ? '/patient/request'    : isAgency ? '/agency/inbox' : '/admin/requests',
+    doc_rejected:            isPatient ? '/patient/request'    : isAgency ? '/agency/inbox' : '/admin/requests',
+    doc_uploaded:            isAgency  ? '/agency/inbox'       : '/admin/requests',
     app_submitted:           isAgency  ? '/agency/inbox'       : '/admin/logs',
     app_advanced:            isPatient ? '/patient/status'     : isAgency ? '/agency/inbox' : '/admin/logs',
     app_withdrawn:           isAgency  ? '/agency/inbox'       : '/admin/logs',

@@ -31,9 +31,9 @@ const daysSince = (ts) => {
 
 const ACTIVITY_CONFIG = {
   registration:  { emoji: '👤', label: 'New patient registered',   bg: 'bg-blue-50',   path: (it) => `/admin/patients?openId=${it.targetId}` },
-  doc_upload:    { emoji: '📄', label: 'Document uploaded',        bg: 'bg-gray-100',  path: (it) => `/admin/docreview/${it.targetId}` },
-  doc_verified:  { emoji: '✅', label: 'Document verified',        bg: 'bg-green-50',  path: (it) => `/admin/docreview/${it.targetId}` },
-  doc_rejected:  { emoji: '❌', label: 'Document rejected',        bg: 'bg-red-50',    path: (it) => `/admin/docreview/${it.targetId}` },
+  doc_upload:    { emoji: '📄', label: 'Document uploaded',        bg: 'bg-gray-100',  path: () => `/admin/patients` },
+  doc_verified:  { emoji: '✅', label: 'Document verified',        bg: 'bg-green-50',  path: () => `/admin/patients` },
+  doc_rejected:  { emoji: '❌', label: 'Document rejected',        bg: 'bg-red-50',    path: () => `/admin/patients` },
   app_submitted: { emoji: '📋', label: 'Application submitted',    bg: 'bg-brand-50',  path: () => `/admin/logs` },
   app_approved:  { emoji: '🎉', label: 'Application approved',     bg: 'bg-green-50',  path: () => `/admin/logs?status=approved` },
   app_rejected:  { emoji: '🚫', label: 'Application rejected',     bg: 'bg-red-50',    path: () => `/admin/logs?status=rejected` },
@@ -46,7 +46,6 @@ export default function AdminDashboard() {
   const isSuperAdmin      = user?.role === ROLES.SUPER_ADMIN
 
   const [patientCount,   setPatientCount]   = useState('—')
-  const [pendingDocs,    setPendingDocs]    = useState('—')
   const [agencyCount,    setAgencyCount]    = useState('—')
   const [recentPatients, setRecentPatients] = useState([])
   const [recentDocs,     setRecentDocs]     = useState([])
@@ -68,9 +67,8 @@ export default function AdminDashboard() {
   // Malasakit Center model. See /agency/allocation (agency_admin role).
   useEffect(() => {
     const u1 = onSnapshot(query(collection(db, 'users'),       where('role',    '==', 'patient')),    snap => setPatientCount(snap.size))
-    const u2 = onSnapshot(query(collection(db, 'documents'),   where('status',  '==', 'pending')),    snap => setPendingDocs(snap.size))
     const u3 = onSnapshot(query(collection(db, 'agencies'),    where('enabled', '==', true)),         snap => setAgencyCount(snap.size))
-    return () => { u1(); u2(); u3() }
+    return () => { u1(); u3() }
   }, [])
 
   // Recent activity feeds
@@ -184,19 +182,11 @@ export default function AdminDashboard() {
     return { avgDays, approvalRate, certBacklog }
   }, [isSuperAdmin, approvedApps, approvedCount, rejectedCount, certBacklog])
 
-  const hasPending = typeof pendingDocs === 'number' && pendingDocs > 0
-
   const METRICS = [
     {
       label: 'Total Patients',     value: patientCount,
       emoji: '👥', valueCls: 'text-gray-900',
       bg: 'bg-blue-50', path: '/admin/patients',
-    },
-    {
-      label: 'Pending Doc Review', value: pendingDocs,
-      emoji: '📄', valueCls: hasPending ? 'text-amber-600' : 'text-gray-900',
-      bg: hasPending ? 'bg-amber-50' : 'bg-gray-50', path: '/admin/docreview',
-      alert: hasPending,
     },
     {
       label: 'Active Agencies',    value: agencyCount,
@@ -214,8 +204,8 @@ export default function AdminDashboard() {
   ].filter(Boolean)
 
   const REVIEW_ACTIONS = [
+    { label: 'Requests',    icon: MdFactCheck, color: 'bg-brand-50  text-brand-600',  path: '/admin/requests',     forAll: true },
     { label: 'App Logs',    icon: MdListAlt,  color: 'bg-teal-50   text-teal-600',   path: '/admin/logs',         forAll: true },
-    { label: 'Doc Review',  icon: MdFactCheck, color: 'bg-amber-50  text-amber-600',  path: '/admin/docreview',    forAll: true },
     { label: 'Messages',    icon: MdMessage,  color: 'bg-cyan-50   text-cyan-600',   path: '/admin/messages',     forAll: true },
     { label: 'Reports',     icon: MdFlag,     color: 'bg-orange-50 text-orange-600', path: '/admin/reports',      forAll: true },
     { label: 'Export',      icon: MdDownload, color: 'bg-brand-50  text-brand-600',  path: '/admin/export',       forAll: true },
@@ -252,14 +242,6 @@ export default function AdminDashboard() {
       detail: 'Awaiting review or resolution',
       tone: 'orange',
       path: '/admin/reports',
-    },
-    hasPending && {
-      key: 'docs',
-      icon: '📄',
-      label: `${pendingDocs} document${pendingDocs === 1 ? '' : 's'} pending review`,
-      detail: 'Patients waiting for verification',
-      tone: 'blue',
-      path: '/admin/docreview',
     },
   ].filter(Boolean)
 

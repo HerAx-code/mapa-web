@@ -62,8 +62,6 @@ const Accounts         = lazy(() => import('./pages/admin/Accounts'))
 const DocTypes         = lazy(() => import('./pages/admin/DocTypes'))
 const AssistanceTypes  = lazy(() => import('./pages/admin/AssistanceTypes'))
 const AppLogs          = lazy(() => import('./pages/admin/AppLogs'))
-const DocReview        = lazy(() => import('./pages/admin/DocReview'))
-const DocReviewDetail  = lazy(() => import('./pages/admin/DocReviewDetail'))
 const AdminMessages    = lazy(() => import('./pages/admin/Messages'))
 const Reports          = lazy(() => import('./pages/admin/Reports'))
 const ExportPage       = lazy(() => import('./pages/admin/Export'))
@@ -158,8 +156,6 @@ export default function App() {
           <Route path="/admin/logs"       element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AppLogs /></PrivateRoute>} />
           <Route path="/admin/export"             element={<PrivateRoute allowedRoles={ADMIN_ROLES}><ExportPage /></PrivateRoute>} />
           <Route path="/admin/export/:type"       element={<PrivateRoute allowedRoles={ADMIN_ROLES}><ExportPreview /></PrivateRoute>} />
-          <Route path="/admin/docreview"        element={<PrivateRoute allowedRoles={ADMIN_ROLES}><DocReview /></PrivateRoute>} />
-          <Route path="/admin/docreview/:docId" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><DocReviewDetail /></PrivateRoute>} />
           <Route path="/admin/messages"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminMessages /></PrivateRoute>} />
           <Route path="/admin/reports"    element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Reports /></PrivateRoute>} />
           {/* /admin/funds removed — see import note above */}

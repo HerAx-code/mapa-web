@@ -84,7 +84,6 @@ const ADMIN_NAV = {
   operations: [
     { to: '/admin/requests',    icon: MdReceiptLong, label: 'Requests' },
     { to: '/admin/logs',        icon: MdListAlt,   label: 'App Logs' },
-    { to: '/admin/docreview',   icon: MdFactCheck, label: 'Doc Review' },
     { to: '/admin/patients',    icon: MdGroup,     label: 'Patients' },
     { to: '/admin/hospitalids', icon: MdBadge,     label: 'Access Codes' },
     // Funds removed — CRMC has zero fund authority. Each agency manages its
@@ -569,7 +568,7 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
   })
 }
 
-function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agencyInboxCount = 0, unreadMessages = 0 }) {
+function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unreadMessages = 0 }) {
   const { t } = useTranslation()
   const msgBadge = unreadMessages > 0 ? unreadMessages : 0
   const msgOverride = {
@@ -629,7 +628,6 @@ function SidebarContent({ role, agencyName, onClose, pendingDocsCount = 0, agenc
                 role === ROLES.SUPER_ADMIN || item.to !== '/admin/auditlog'
               )}
               onClose={onClose}
-              badgeOverrides={{ '/admin/docreview': pendingDocsCount }}
             />
           </>
         )}
@@ -682,8 +680,8 @@ const APPS = {
     { label: 'Accounts',       icon: MdSupervisedUserCircle,  to: '/admin/accounts'      },
     { label: 'Doc Types',      icon: MdDescription,          to: '/admin/doctypes'    },
     { label: 'Assistance',     icon: MdFavorite,             to: '/admin/assistance'  },
+    { label: 'Requests',       icon: MdReceiptLong,          to: '/admin/requests'    },
     { label: 'App Logs',       icon: MdListAlt,              to: '/admin/logs'        },
-    { label: 'Doc Review',     icon: MdFactCheck,            to: '/admin/docreview'   },
     { label: 'Patients',       icon: MdGroup,                to: '/admin/patients'    },
     { label: 'Access Codes',   icon: MdBadge,                to: '/admin/hospitalids' },
     { label: 'Messages',       icon: MdEmail,                to: '/admin/messages'    },
@@ -831,7 +829,6 @@ export default function Layout({ children, breadcrumb }) {
   const [notifications, setNotifications]   = useState([])
   const [conversations, setConversations]   = useState([])
   const [showCompose, setShowCompose]       = useState(false)
-  const [pendingDocsCount, setPendingDocsCount] = useState(0)
   const [agencyInboxCount, setAgencyInboxCount] = useState(0)
   const [liveAgencyName, setLiveAgencyName]     = useState(null)
   const [banners, setBanners]                   = useState([])
@@ -906,13 +903,6 @@ export default function Layout({ children, breadcrumb }) {
   }, [user?.uid])
 
   const totalUnreadMessages = conversations.reduce((sum, c) => sum + (c.unread?.[user?.uid] ?? 0), 0)
-
-  useEffect(() => {
-    if (user?.role !== ROLES.SUPER_ADMIN && user?.role !== ROLES.STAFF_ADMIN) return
-    const q = query(collection(db, 'documents'), where('status', '==', 'pending'))
-    const unsub = onSnapshot(q, snap => setPendingDocsCount(snap.size))
-    return unsub
-  }, [user?.uid, user?.role])
 
   // Agency-only: live Inbox pending count + live agency name
   useEffect(() => {
@@ -1087,7 +1077,6 @@ export default function Layout({ children, breadcrumb }) {
           role={user?.role}
           agencyName={agencyName}
           onClose={() => setSidebarOpen(false)}
-          pendingDocsCount={pendingDocsCount}
           agencyInboxCount={agencyInboxCount}
           unreadMessages={totalUnreadMessages}
         />
