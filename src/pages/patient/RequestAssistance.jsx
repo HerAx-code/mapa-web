@@ -185,7 +185,8 @@ export default function RequestAssistance() {
   // The only document needed to submit a request is the billing statement
   // (Statement of Account). Agency-specific requirements are handled later,
   // during per-agency compliance after endorsement.
-  const hasBilling = myDocs.some(d => (d.documentTypeName ?? d.name ?? '').toLowerCase().includes('billing'))
+  const billingDoc = myDocs.find(d => (d.documentTypeName ?? d.name ?? '').toLowerCase().includes('billing'))
+  const hasBilling = !!billingDoc
 
   const amountNeeded = Number(form.amountNeeded) || 0
 
@@ -200,8 +201,10 @@ export default function RequestAssistance() {
     setSubmitting(true)
     try {
       // Upload the billing statement (if newly attached) before snapshotting.
+      // Replace the existing one in place so we never create a duplicate.
       if (billingFile) {
-        await uploadPatientDocument({ file: billingFile, typeName: 'Billing Statement', user })
+        if (billingDoc) await replacePatientDocument({ docId: billingDoc.id, file: billingFile, user })
+        else            await uploadPatientDocument({ file: billingFile, typeName: 'Billing Statement', user })
       }
 
       const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
@@ -490,11 +493,9 @@ export default function RequestAssistance() {
                 <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => setBillingFile(null)}>
                   <MdClose size={16} />
                 </button>
-              ) : hasBilling ? (
-                <span className="badge badge-green text-xs flex-shrink-0">{t('patient.request.docUploaded')}</span>
               ) : (
                 <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
-                  <MdUploadFile size={14} /> {t('patient.request.docAttach')}
+                  <MdUploadFile size={14} /> {hasBilling ? t('patient.request.replace') : t('patient.request.docAttach')}
                   <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachBilling} />
                 </label>
               )}
