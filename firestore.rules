@@ -322,10 +322,11 @@ service cloud.firestore {
 
     // ── announcements ─────────────────────────────────────────────────────────
     // All authenticated users can read (needed to show banners in Layout).
-    // Only super_admin can create, update, or delete announcements.
+    // Both CRMC admin roles (super_admin + staff_admin) can create, update,
+    // or delete announcements.
     match /announcements/{annId} {
       allow read:   if isAuth();
-      allow write:  if isSuperAdmin();
+      allow write:  if isAdmin();
     }
   }
 }

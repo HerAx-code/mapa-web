@@ -6,7 +6,7 @@ import { ROLES } from '../../utils/constants'
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import {
-  MdBusiness, MdSupervisedUserCircle, MdFactCheck, MdBadge,
+  MdBusiness, MdSupervisedUserCircle, MdFactCheck,
   MdListAlt, MdGroup, MdMessage, MdDescription, MdFavorite,
   MdHistory, MdFlag, MdDownload, MdCampaign,
   MdWarning, MdSpeed, MdCheckCircle, MdTimer,
@@ -48,7 +48,6 @@ export default function AdminDashboard() {
   const [patientCount,   setPatientCount]   = useState('—')
   const [pendingDocs,    setPendingDocs]    = useState('—')
   const [agencyCount,    setAgencyCount]    = useState('—')
-  const [availableIds,   setAvailableIds]   = useState('—')
   const [recentPatients, setRecentPatients] = useState([])
   const [recentDocs,     setRecentDocs]     = useState([])
   const [recentApps,     setRecentApps]     = useState([])
@@ -71,8 +70,7 @@ export default function AdminDashboard() {
     const u1 = onSnapshot(query(collection(db, 'users'),       where('role',    '==', 'patient')),    snap => setPatientCount(snap.size))
     const u2 = onSnapshot(query(collection(db, 'documents'),   where('status',  '==', 'pending')),    snap => setPendingDocs(snap.size))
     const u3 = onSnapshot(query(collection(db, 'agencies'),    where('enabled', '==', true)),         snap => setAgencyCount(snap.size))
-    const u4 = onSnapshot(query(collection(db, 'hospitalIds'), where('status',  '==', 'available')),  snap => setAvailableIds(snap.size))
-    return () => { u1(); u2(); u3(); u4() }
+    return () => { u1(); u2(); u3() }
   }, [])
 
   // Recent activity feeds
@@ -205,11 +203,6 @@ export default function AdminDashboard() {
       emoji: '🏥', valueCls: 'text-green-600',
       bg: 'bg-green-50', path: '/admin/agencies',
     },
-    {
-      label: 'Available Codes',    value: availableIds,
-      emoji: '🆔', valueCls: 'text-purple-600',
-      bg: 'bg-purple-50', path: '/admin/hospitalids',
-    },
   ]
 
   const MANAGE_ACTIONS = [
@@ -217,7 +210,6 @@ export default function AdminDashboard() {
     isSuperAdmin && { label: 'Accounts', icon: MdSupervisedUserCircle, color: 'bg-purple-50 text-purple-600', path: '/admin/accounts' },
     { label: 'Doc Types',    icon: MdDescription,          color: 'bg-blue-50   text-blue-600',   path: '/admin/doctypes',     forAll: true },
     { label: 'Assistance',   icon: MdFavorite,             color: 'bg-pink-50   text-pink-600',   path: '/admin/assistance',   forAll: true },
-    { label: 'Access Codes', icon: MdBadge,                color: 'bg-indigo-50 text-indigo-600', path: '/admin/hospitalids',  forAll: true },
     { label: 'Patients',     icon: MdGroup,                color: 'bg-red-50    text-red-600',    path: '/admin/patients',     forAll: true },
   ].filter(Boolean)
 
@@ -227,7 +219,7 @@ export default function AdminDashboard() {
     { label: 'Messages',    icon: MdMessage,  color: 'bg-cyan-50   text-cyan-600',   path: '/admin/messages',     forAll: true },
     { label: 'Reports',     icon: MdFlag,     color: 'bg-orange-50 text-orange-600', path: '/admin/reports',      forAll: true },
     { label: 'Export',      icon: MdDownload, color: 'bg-brand-50  text-brand-600',  path: '/admin/export',       forAll: true },
-    isSuperAdmin && { label: 'Announcements', icon: MdCampaign, color: 'bg-yellow-50 text-yellow-700', path: '/admin/announcements' },
+    { label: 'Announcements', icon: MdCampaign, color: 'bg-yellow-50 text-yellow-700', path: '/admin/announcements', forAll: true },
     isSuperAdmin && { label: 'Audit Log',  icon: MdHistory,  color: 'bg-gray-50   text-gray-600',   path: '/admin/auditlog' },
   ].filter(Boolean)
 
@@ -295,7 +287,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Metric cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-3 gap-4 mb-5">
           {METRICS.map((m, i) => (
             <button key={i} onClick={() => navigate(m.path)}
               className="card p-4 text-left hover:shadow-md transition-all group relative overflow-hidden">

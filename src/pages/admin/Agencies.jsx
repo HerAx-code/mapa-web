@@ -1,10 +1,8 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, setDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
-import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail } from 'firebase/auth'
-import { initializeApp, getApps } from 'firebase/app'
-import { db, auth, firebaseConfig } from '../../firebase'
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -12,7 +10,7 @@ import { getOrCreateConversation } from '../../utils/messages'
 import {
   MdLocationOn, MdPhone, MdEdit, MdDelete, MdAdd,
   MdRefresh, MdClose, MdWarning, MdSearch, MdMessage, MdPerson,
-  MdVisibility, MdVisibilityOff,
+  MdArrowUpward, MdArrowDownward,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -48,112 +46,6 @@ export const COLORS = [
   { value: 'bg-indigo-600', label: 'Indigo' },
   { value: 'bg-green-600',  label: 'Green'  },
 ]
-
-// ── Create Coordinator Modal ──────────────────────────────────────────────
-
-const getSecondaryAuth = () => {
-  const existing = getApps().find(a => a.name === 'secondary')
-  const app = existing ?? initializeApp(firebaseConfig, 'secondary')
-  return getAuth(app)
-}
-
-function CreateCoordinatorModal({ agency, onClose, onCreated }) {
-  const { user: currentUser }   = useAuth()
-  const [form, setForm]         = useState({ name: '', email: '', password: '' })
-  const [sendReset, setSendReset] = useState(true)
-  const [showPw, setShowPw]     = useState(false)
-  const [saving, setSaving]     = useState(false)
-  const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
-
-  const handleCreate = async () => {
-    if (!form.name.trim())        { toast.error('Name is required.'); return }
-    if (!form.email.trim())       { toast.error('Email is required.'); return }
-    if (form.password.length < 6) { toast.error('Password must be at least 6 characters.'); return }
-    setSaving(true)
-    try {
-      const secondaryAuth = getSecondaryAuth()
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, form.email.trim(), form.password)
-      const uid  = cred.user.uid
-      await fbSignOut(secondaryAuth)
-
-      await setDoc(doc(db, 'users', uid), {
-        name:      form.name.trim(),
-        email:     form.email.trim(),
-        role:      'agency',
-        agencyId:  agency.id,
-        contact:   null,
-        rank:      null,
-        active:    true,
-        cooldown:  0,
-        deletion:  false,
-        createdAt: serverTimestamp(),
-      })
-
-      if (sendReset) await sendPasswordResetEmail(auth, form.email.trim())
-
-      logAudit(currentUser, {
-        action: 'account_created', targetType: 'account', targetId: uid,
-        targetName: form.name.trim(),
-        details: `Agency coordinator for ${agency.name}`,
-      })
-      toast.success(`Coordinator account created.${sendReset ? ' Password reset email sent.' : ''}`)
-      onCreated()
-      onClose()
-    } catch (err) {
-      if (err.code === 'auth/email-already-in-use') toast.error('This email is already registered.')
-      else toast.error(err.message || 'Failed to create account.')
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Set Up Coordinator</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{agency.name}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
-        </div>
-        <div className="px-5 py-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Full Name <span className="text-red-400">*</span></label>
-            <input className="input" placeholder="Juan Dela Cruz"
-              value={form.name} onChange={set('name')} autoFocus />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email Address <span className="text-red-400">*</span></label>
-            <input type="email" className="input" placeholder="coordinator@agency.gov.ph"
-              value={form.email} onChange={set('email')} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-red-400">*</span></label>
-            <div className="relative">
-              <input type={showPw ? 'text' : 'password'} className="input pr-10"
-                placeholder="Min. 6 characters" value={form.password} onChange={set('password')} />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowPw(p => !p)}>
-                {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
-              </button>
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-            <input type="checkbox" className="w-4 h-4 accent-brand-500"
-              checked={sendReset} onChange={e => setSendReset(e.target.checked)} />
-            Send password reset email to coordinator
-          </label>
-        </div>
-        <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
-          <button className="btn-primary text-sm" onClick={handleCreate} disabled={saving}>
-            {saving ? 'Creating...' : 'Create Coordinator Account'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const EMPTY_FORM = {
   name: '', initials: '', color: 'bg-brand-500',
@@ -376,6 +268,7 @@ export default function Agencies() {
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy]             = useState('name')
+  const [sortDir, setSortDir]           = useState('asc')
   const [expanded, setExpanded]         = useState(new Set())
 
   const toggleExpand = (id) =>
@@ -523,15 +416,18 @@ export default function Agencies() {
       return !q || a.name?.toLowerCase().includes(q) || a.location?.toLowerCase().includes(q)
     })
     .sort((a, b) => {
-      if (sortBy === 'name')   return a.name?.localeCompare(b.name)
-      if (sortBy === 'status') return (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0)
-      if (sortBy === 'slots') {
+      // Base comparator is always ascending; sortDir flips it. This keeps
+      // the asc/desc toggle consistent across every sort key.
+      let cmp = 0
+      if (sortBy === 'name')   cmp = (a.name ?? '').localeCompare(b.name ?? '')
+      else if (sortBy === 'status') cmp = (a.enabled ? 1 : 0) - (b.enabled ? 1 : 0)
+      else if (sortBy === 'slots') {
         const pctA = a.slots?.total ? ((a.slots.total - a.slots.remaining) / a.slots.total) : 0
         const pctB = b.slots?.total ? ((b.slots.total - b.slots.remaining) / b.slots.total) : 0
-        return pctB - pctA
+        cmp = pctA - pctB
       }
-      if (sortBy === 'apps') return (appStats[b.id]?.total ?? 0) - (appStats[a.id]?.total ?? 0)
-      return 0
+      else if (sortBy === 'apps') cmp = (appStats[a.id]?.total ?? 0) - (appStats[b.id]?.total ?? 0)
+      return sortDir === 'asc' ? cmp : -cmp
     })
 
   // ── Helpers ──────────────────────────────────────────────────────────
@@ -597,12 +493,22 @@ export default function Agencies() {
               </button>
             ))}
           </div>
-          <select className="input w-44" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="name">Sort: Name</option>
-            <option value="status">Sort: Status</option>
-            <option value="slots">Sort: Slot Usage</option>
-            <option value="apps">Sort: Applications</option>
-          </select>
+          <div className="flex gap-1">
+            <select className="input w-40" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="name">Sort: Name</option>
+              <option value="status">Sort: Status</option>
+              <option value="slots">Sort: Slot Usage</option>
+              <option value="apps">Sort: Applications</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+              title={sortDir === 'asc' ? 'Ascending — click for descending' : 'Descending — click for ascending'}
+              aria-label={sortDir === 'asc' ? 'Sort ascending' : 'Sort descending'}
+              className="px-2.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center flex-shrink-0">
+              {sortDir === 'asc' ? <MdArrowUpward size={16} /> : <MdArrowDownward size={16} />}
+            </button>
+          </div>
         </div>
 
         {loading && (

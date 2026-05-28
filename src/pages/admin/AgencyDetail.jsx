@@ -3,14 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, doc, query, where, onSnapshot,
-  updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs, writeBatch,
+  updateDoc, deleteDoc, serverTimestamp, getDocs, writeBatch,
 } from 'firebase/firestore'
-import {
-  getAuth, createUserWithEmailAndPassword,
-  signOut as fbSignOut, sendPasswordResetEmail,
-} from 'firebase/auth'
-import { initializeApp, getApps } from 'firebase/app'
-import { db, auth, firebaseConfig } from '../../firebase'
+import { sendPasswordResetEmail } from 'firebase/auth'
+import { db, auth } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
@@ -18,8 +14,8 @@ import { getOrCreateConversation } from '../../utils/messages'
 import { AgencyModal } from './Agencies'
 import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
-  MdAdd, MdClose, MdWarning, MdRefresh, MdMessage,
-  MdVisibility, MdVisibilityOff, MdLocationOn, MdPhone,
+  MdClose, MdWarning, MdRefresh, MdMessage,
+  MdLocationOn, MdPhone,
   MdAttachMoney, MdArrowUpward, MdArrowDownward,
 } from 'react-icons/md'
 import { PERIOD_ADJECTIVE } from '../../utils/constants'
@@ -27,143 +23,10 @@ import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const getSecondaryAuth = () => {
-  const existing = getApps().find(a => a.name === 'secondary')
-  const app = existing ?? initializeApp(firebaseConfig, 'secondary')
-  return getAuth(app)
-}
-
 const fmtDate = (ts) => {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-// ── Add Team Member Modal ─────────────────────────────────────────────────
-// Creates either a Coordinator (role: 'agency') or an Agency Administrator
-// (role: 'agency_admin') for this agency. Replaces the standalone
-// /admin/coordinators page — agency team management now lives in
-// the agency detail view.
-
-function AddCoordinatorModal({ agencyId, agencyName, hasAdmin, onClose }) {
-  const { user: currentUser }     = useAuth()
-  // Default to 'agency_admin' if the agency has none yet (a new agency
-  // needs an admin before it has anyone to promote). Once at least one
-  // admin exists, default to 'agency' because that's the more common add.
-  const [form, setForm]           = useState({
-    name: '', email: '', password: '',
-    role: hasAdmin ? 'agency' : 'agency_admin',
-  })
-  const [sendReset, setSendReset] = useState(true)
-  const [showPw, setShowPw]       = useState(false)
-  const [saving, setSaving]       = useState(false)
-  const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
-
-  const isAdminRole = form.role === 'agency_admin'
-  const roleLabel   = isAdminRole ? 'Agency Administrator' : 'Coordinator'
-
-  const handleCreate = async () => {
-    if (!form.name.trim())        { toast.error('Name is required.'); return }
-    if (!form.email.trim())       { toast.error('Email is required.'); return }
-    if (form.password.length < 6) { toast.error('Password must be at least 6 characters.'); return }
-    setSaving(true)
-    try {
-      const secondaryAuth = getSecondaryAuth()
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, form.email.trim(), form.password)
-      const uid  = cred.user.uid
-      await fbSignOut(secondaryAuth)
-      await setDoc(doc(db, 'users', uid), {
-        name: form.name.trim(), email: form.email.trim(),
-        role: form.role, agencyId,
-        contact: null, rank: null, active: true,
-        cooldown: 0, deletion: false, createdAt: serverTimestamp(),
-      })
-      if (sendReset) await sendPasswordResetEmail(auth, form.email.trim())
-      logAudit(currentUser, {
-        action: 'account_created', targetType: 'account', targetId: uid,
-        targetName: form.name.trim(), details: `${roleLabel} for ${agencyName}`,
-      })
-      toast.success(`${roleLabel} account created.${sendReset ? ' Password reset email sent.' : ''}`)
-      onClose()
-    } catch (err) {
-      if (err.code === 'auth/email-already-in-use') toast.error('This email is already registered.')
-      else toast.error(err.message || 'Failed to create account.')
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Add Team Member</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{agencyName}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
-        </div>
-        <div className="px-5 py-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Role <span className="text-red-400">*</span></label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className={`flex items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors ${form.role === 'agency' ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" name="role" value="agency" className="mt-0.5 accent-brand-500"
-                  checked={form.role === 'agency'} onChange={set('role')} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800">Coordinator</p>
-                  <p className="text-xs text-gray-500 leading-snug">Reviews applications and conducts interviews.</p>
-                </div>
-              </label>
-              <label className={`flex items-start gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors ${form.role === 'agency_admin' ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" name="role" value="agency_admin" className="mt-0.5 accent-purple-500"
-                  checked={form.role === 'agency_admin'} onChange={set('role')} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800">Admin</p>
-                  <p className="text-xs text-gray-500 leading-snug">Coordinator + budget, audit log, and team management.</p>
-                </div>
-              </label>
-            </div>
-            {!hasAdmin && form.role === 'agency' && (
-              <p className="text-xs text-amber-600 mt-2 flex items-start gap-1.5">
-                <MdWarning size={12} className="flex-shrink-0 mt-0.5" />
-                This agency has no Admin yet. Consider adding an Admin first so they can promote coordinators later.
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Full Name <span className="text-red-400">*</span></label>
-            <input className="input" placeholder="Juan Dela Cruz" value={form.name} onChange={set('name')} autoFocus />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email Address <span className="text-red-400">*</span></label>
-            <input type="email" className="input" placeholder={isAdminRole ? 'admin@agency.gov.ph' : 'coordinator@agency.gov.ph'} value={form.email} onChange={set('email')} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-red-400">*</span></label>
-            <div className="relative">
-              <input type={showPw ? 'text' : 'password'} className="input pr-10"
-                placeholder="Min. 6 characters" value={form.password} onChange={set('password')} />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowPw(p => !p)}>
-                {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
-              </button>
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-            <input type="checkbox" className="w-4 h-4 accent-brand-500"
-              checked={sendReset} onChange={e => setSendReset(e.target.checked)} />
-            Send password reset email so they can set their own password
-          </label>
-        </div>
-        <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
-          <button className="btn-primary text-sm" onClick={handleCreate} disabled={saving}>
-            {saving ? 'Creating...' : 'Create Account'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 // ── Edit Coordinator Modal ────────────────────────────────────────────────
@@ -245,7 +108,6 @@ export default function AgencyDetail() {
 
   // Modal states
   const [showEdit,        setShowEdit]        = useState(false)
-  const [showAddCoord,    setShowAddCoord]    = useState(false)
   const [editCoord,       setEditCoord]       = useState(null)
   const [confirmCoord,    setConfirmCoord]    = useState(null)
   const [confirmDelete,   setConfirmDelete]   = useState(false)
@@ -829,27 +691,16 @@ export default function AgencyDetail() {
                   : `${adminCount} admin${adminCount !== 1 ? 's' : ''} · ${coordCount} coordinator${coordCount !== 1 ? 's' : ''}`}
               </p>
             </div>
-            {isSuperAdmin && (
-              <button className="btn-secondary text-xs flex items-center gap-1.5"
-                onClick={() => setShowAddCoord(true)}>
-                <MdAdd size={14} /> Add Member
-              </button>
-            )}
+            <span className="text-xs text-gray-400 flex-shrink-0">Managed by the Agency Administrator</span>
           </div>
 
           {coordinators.length === 0 ? (
             <div className="px-5 py-6 flex flex-col items-center text-center">
               <MdWarning size={28} className="text-amber-300 mb-2" />
               <p className="text-sm font-medium text-gray-600 mb-1">No one assigned</p>
-              <p className="text-xs text-gray-400 mb-4">
-                Add an Agency Administrator first so they can manage budgets, then add coordinators to process applications.
+              <p className="text-xs text-gray-400 mb-4 max-w-xs">
+                This agency has no team accounts. The first Agency Administrator is created when the agency is set up; after that, the Agency Administrator adds coordinators from their own Team page.
               </p>
-              {isSuperAdmin && (
-                <button className="btn-primary text-sm flex items-center gap-1.5"
-                  onClick={() => setShowAddCoord(true)}>
-                  <MdAdd size={15} /> Add Member
-                </button>
-              )}
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -945,14 +796,6 @@ export default function AgencyDetail() {
 
       {showEdit && (
         <AgencyModal agency={agency} onClose={() => setShowEdit(false)} onSave={handleSaveAgency} />
-      )}
-      {showAddCoord && (
-        <AddCoordinatorModal
-          agencyId={id}
-          agencyName={agency.name}
-          hasAdmin={coordinators.some(c => c.role === 'agency_admin')}
-          onClose={() => setShowAddCoord(false)}
-        />
       )}
       {editCoord && (
         <EditCoordinatorModal coordinator={editCoord} onClose={() => setEditCoord(null)} />

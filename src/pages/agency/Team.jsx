@@ -13,9 +13,11 @@ import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
+import { generateTempPassword } from '../../utils/password'
 import {
   MdAdd, MdLock, MdLockOpen, MdKey, MdClose, MdLockOutline,
   MdStar, MdStarOutline, MdVisibility, MdVisibilityOff, MdEdit,
+  MdContentCopy, MdRefresh,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -35,12 +37,17 @@ const formatDate = (ts) => {
 
 function AddCoordModal({ agencyId, agencyName, onClose }) {
   const { user } = useAuth()
-  const [form, setForm]     = useState({ name: '', email: '', password: '', contact: '' })
+  const [form, setForm]     = useState(() => ({ name: '', email: '', password: generateTempPassword(), contact: '' }))
   const [sendReset, setSendReset] = useState(true)
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
+  const regeneratePw = () => setForm(p => ({ ...p, password: generateTempPassword() }))
+  const copyPw = async () => {
+    try { await navigator.clipboard.writeText(form.password); toast.success('Temporary password copied.') }
+    catch { toast.error('Could not copy. Show it and copy manually.') }
+  }
 
   const handleSave = async () => {
     if (!form.name.trim())        { toast.error('Name is required.'); return }
@@ -110,16 +117,29 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
             <input className="input" placeholder="09XXXXXXXXX" value={form.contact} onChange={set('contact')} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-400 font-normal">(auto-generated)</span></label>
             <div className="relative">
-              <input type={showPw ? 'text' : 'password'} className="input pr-10"
-                placeholder="Min. 6 characters" value={form.password} onChange={set('password')} />
-              <button type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowPw(p => !p)}>
-                {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
-              </button>
+              <input type={showPw ? 'text' : 'password'} readOnly
+                className="input pr-24 font-mono tracking-wide" value={form.password} />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <button type="button" title="Show / hide"
+                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPw(p => !p)}>
+                  {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
+                </button>
+                <button type="button" title="Copy"
+                  className="p-1.5 text-gray-400 hover:text-brand-500"
+                  onClick={copyPw}>
+                  <MdContentCopy size={15} />
+                </button>
+                <button type="button" title="Generate a new one"
+                  className="p-1.5 text-gray-400 hover:text-brand-500"
+                  onClick={regeneratePw}>
+                  <MdRefresh size={16} />
+                </button>
+              </div>
             </div>
+            <p className="text-xs text-gray-400 mt-1">Auto-generated. The reset email below lets them set their own.</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
             <input type="checkbox" className="w-4 h-4 accent-brand-500"

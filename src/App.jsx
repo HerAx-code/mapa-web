@@ -158,7 +158,7 @@ export default function App() {
           <Route path="/admin/reports"    element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Reports /></PrivateRoute>} />
           {/* /admin/funds removed — see import note above */}
           <Route path="/admin/auditlog"        element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><AuditLog /></PrivateRoute>} />
-          <Route path="/admin/announcements"  element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><Announcements /></PrivateRoute>} />
+          <Route path="/admin/announcements"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Announcements /></PrivateRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />

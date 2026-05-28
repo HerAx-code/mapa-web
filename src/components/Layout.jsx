@@ -75,7 +75,7 @@ const ADMIN_NAV = {
     { to: '/admin/dashboard',       icon: MdDashboard,            label: 'Dashboard'        },
     { to: '/admin/agencies',        icon: MdBusiness,             label: 'Agencies'              },
     { to: '/admin/accounts',        icon: MdSupervisedUserCircle,  label: 'Admin Accounts'       },
-    { to: '/admin/announcements',   icon: MdCampaign,             label: 'Announcements', superOnly: true },
+    { to: '/admin/announcements',   icon: MdCampaign,             label: 'Announcements'    },
     { to: '/admin/doctypes',        icon: MdDescription,          label: 'Document Types'   },
     { to: '/admin/assistance',      icon: MdFavorite,             label: 'Assistance Types' },
   ],
