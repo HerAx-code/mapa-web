@@ -36,6 +36,7 @@ export default function RequestAssistance() {
   const [slices,        setSlices]        = useState([])
   const [docTypes,      setDocTypes]      = useState([])
   const [myDocs,        setMyDocs]        = useState([])
+  const [agencyMap,     setAgencyMap]     = useState({})
   const [pendingFiles,  setPendingFiles]  = useState({})
   const [replacing,     setReplacing]     = useState(null)
   const [loading,       setLoading]       = useState(true)
@@ -57,6 +58,23 @@ export default function RequestAssistance() {
     setPendingFiles(p => ({ ...p, [typeName]: file }))
   }
   const removeFile = (typeName) => setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
+
+  // Immediate upload of an agency-required document during compliance (active
+  // request). Goes straight to the documents collection for the agency to
+  // review — the live myDocs subscription reflects it.
+  const uploadReqDoc = (typeName) => async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const err = validateDocFile(file)
+    if (err) { toast.error(err); return }
+    try {
+      await uploadPatientDocument({ file, typeName, user })
+      toast.success(t('patient.request.reuploadOk'))
+    } catch {
+      toast.error(t('patient.request.reuploadErr'))
+    }
+  }
 
   // Re-upload a rejected document in place (keeps the same id so every slice
   // referencing it picks up the new file + reset status).
@@ -131,6 +149,18 @@ export default function RequestAssistance() {
     )
     return unsub
   }, [user?.uid])
+
+  // Agency details (requirements / procedure / description) for the coverage
+  // plan. Agencies are publicly readable, so a one-shot fetch is enough.
+  useEffect(() => {
+    getDocs(collection(db, 'agencies'))
+      .then(snap => {
+        const m = {}
+        snap.docs.forEach(d => { m[d.id] = d.data() })
+        setAgencyMap(m)
+      })
+      .catch(() => {})
+  }, [])
 
   const existingTypeNames = new Set(myDocs.map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase()))
 
@@ -283,26 +313,65 @@ export default function RequestAssistance() {
               </div>
             </div>
 
-            {/* Per-agency funding breakdown */}
+            {/* Coverage plan — which agencies cover how much, their info,
+                procedure, and the requirements the patient must comply with. */}
             {slices.length > 0 && (
               <div className="mt-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.contributingAgencies')}</p>
-                <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.coveragePlan')}</p>
+                <div className="space-y-3">
                   {slices.map(s => {
-                    const scfg = APP_STATUS_CONFIG[s.status] ?? APP_STATUS_CONFIG.pending
-                    const secured = ['approved', 'certificate'].includes(s.status)
+                    const scfg     = APP_STATUS_CONFIG[s.status] ?? APP_STATUS_CONFIG.pending
+                    const secured  = ['approved', 'certificate'].includes(s.status)
+                    const amt      = secured ? (s.amountApproved || s.amountRequested) : s.amountRequested
+                    const pctBill  = activeRequest.amountNeeded > 0 ? Math.round((amt / activeRequest.amountNeeded) * 100) : 0
+                    const ag       = agencyMap[s.agencyId] ?? {}
+                    const reqs     = ag.requirements ?? []
                     return (
-                      <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100">
-                        <div className={`w-8 h-8 ${s.agencyColor ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
-                          {s.agencyInitials}
+                      <div key={s.id} className="rounded-xl border border-gray-100 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 ${s.agencyColor ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
+                            {s.agencyInitials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
+                            <p className="text-xs text-gray-400">{peso(amt)} · {pctBill}% {t('patient.request.ofYourBill')}</p>
+                          </div>
+                          <span className={`badge text-xs flex-shrink-0 ${scfg.badge}`}>{scfg.label}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
-                          <p className="text-xs text-gray-400">
-                            {secured ? `${peso(s.amountApproved || s.amountRequested)} ${t('patient.request.secured')}` : peso(s.amountRequested)}
-                          </p>
-                        </div>
-                        <span className={`badge text-xs flex-shrink-0 ${scfg.badge}`}>{scfg.label}</span>
+
+                        {ag.description && <p className="text-xs text-gray-500 mt-2 leading-snug">{ag.description}</p>}
+
+                        {ag.procedure && (
+                          <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <p className="text-xs font-medium text-blue-700">{t('patient.request.procedure')}</p>
+                            <p className="text-xs text-blue-600 whitespace-pre-line">{ag.procedure}</p>
+                          </div>
+                        )}
+
+                        {reqs.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-500 mb-1">{t('patient.request.agencyRequirements')}</p>
+                            <div className="space-y-1">
+                              {reqs.map(r => {
+                                const ok = existingTypeNames.has(r.toLowerCase())
+                                return (
+                                  <div key={r} className="flex items-center gap-2 text-xs">
+                                    {ok
+                                      ? <MdCheckCircle size={13} className="text-green-500 flex-shrink-0" />
+                                      : <MdWarning size={13} className="text-amber-400 flex-shrink-0" />}
+                                    <span className="flex-1 min-w-0 truncate text-gray-600">{r}</span>
+                                    {!ok && (
+                                      <label className="text-brand-600 hover:text-brand-700 font-medium cursor-pointer flex items-center gap-0.5 flex-shrink-0">
+                                        <MdUploadFile size={12} /> {t('patient.request.docAttach')}
+                                        <input type="file" accept="image/*,application/pdf" className="hidden" onChange={uploadReqDoc(r)} />
+                                      </label>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
