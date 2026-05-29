@@ -13,12 +13,12 @@ import { REQUEST_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { isIdType } from '../../utils/idOcr'
 import { isIntakeComplete } from '../../utils/intakeSheet'
 import { Link } from 'react-router-dom'
-import DocViewerModal from '../../components/DocViewerModal'
+import { DocPreview } from '../../components/DocViewerModal'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
-  MdVideoCall, MdEventRepeat, MdAssignment,
+  MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -405,19 +405,22 @@ function RequestDetail({ request, agencies, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[150] flex items-end sm:items-center justify-center sm:p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 z-[150] bg-gray-50 overflow-y-auto">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-20">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdArrowBack size={20} /></button>
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-gray-900 truncate">{request.patientName}</h2>
             <p className="text-xs text-gray-400">{request.requestId} · {request.assistanceType}</p>
           </div>
-          <span className={`badge text-xs ${cfg.badge}`}>{cfg.label}</span>
-          <button onClick={onClose} className="ml-2 text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
+        <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+      </div>
 
-        <div className="px-5 py-4 space-y-4">
+      {/* Two-column workspace: review on the left, document preview on the right */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-5 items-start">
+        <div className="space-y-4 min-w-0">
           {/* Amount needed — verify against the patient's uploaded Statement
               of Account before endorsing. */}
           <div className="bg-brand-50 rounded-lg p-3 flex items-center justify-between">
@@ -598,42 +601,75 @@ function RequestDetail({ request, agencies, onClose }) {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Actions */}
-        {!terminal && (
-          <div className="px-5 pb-4 pt-2 border-t border-gray-50 sticky bottom-0 bg-white">
-            {!canEndorse && (
-              <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
-                <MdWarning size={12} className="flex-shrink-0" />
-                Verify all documents, complete the intake sheet, and record the interview outcome before endorsing.
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2 justify-end">
-            <button className="btn-secondary text-sm flex items-center gap-1.5 text-red-500"
-              disabled={busy}
-              onClick={() => { const r = window.prompt('Reason for rejecting this request? (shown to patient)'); if (r !== null) setRequestStatus('rejected', { reason: r || undefined }) }}>
-              <MdBlock size={14} /> Reject
-            </button>
-            {funding.committed > 0 && (
-              <button className="btn-secondary text-sm" disabled={busy}
-                onClick={() => { if (window.confirm('Close this request? No further endorsements. The patient keeps any issued Guarantee Letters.')) setRequestStatus('closed') }}>
-                Close (partial)
-              </button>
-            )}
-            <button className="btn-primary text-sm flex items-center gap-1.5" onClick={() => setShowEndorse(true)} disabled={busy || !canEndorse}>
-              <MdSend size={14} /> Endorse
-            </button>
+          {/* Actions */}
+          {!terminal && (
+            <div className="card p-4">
+              {!canEndorse && (
+                <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
+                  <MdWarning size={12} className="flex-shrink-0" />
+                  Verify all documents, complete the intake sheet, and record the interview outcome before endorsing.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2 justify-end">
+                <button className="btn-secondary text-sm flex items-center gap-1.5 text-red-500"
+                  disabled={busy}
+                  onClick={() => { const r = window.prompt('Reason for rejecting this request? (shown to patient)'); if (r !== null) setRequestStatus('rejected', { reason: r || undefined }) }}>
+                  <MdBlock size={14} /> Reject
+                </button>
+                {funding.committed > 0 && (
+                  <button className="btn-secondary text-sm" disabled={busy}
+                    onClick={() => { if (window.confirm('Close this request? No further endorsements. The patient keeps any issued Guarantee Letters.')) setRequestStatus('closed') }}>
+                    Close (partial)
+                  </button>
+                )}
+                <button className="btn-primary text-sm flex items-center gap-1.5" onClick={() => setShowEndorse(true)} disabled={busy || !canEndorse}>
+                  <MdSend size={14} /> Endorse
+                </button>
+              </div>
             </div>
+          )}
+        </div>{/* end left column */}
+
+        {/* Right column — inline document review (side-by-side) */}
+        <div className="lg:sticky lg:top-20 self-start">
+          <div className="card overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 7rem)' }}>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+              <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-gray-800 truncate flex-1">
+                {viewingDoc ? (viewingDoc.documentTypeName || viewingDoc.name) : 'Document review'}
+              </p>
+              {viewingDoc?.status && (
+                <span className={`badge text-xs flex-shrink-0 ${(DOC_STATUS_CONFIG[viewingDoc.status] ?? DOC_STATUS_CONFIG.pending).badge}`}>
+                  {(DOC_STATUS_CONFIG[viewingDoc.status] ?? DOC_STATUS_CONFIG.pending).label}
+                </span>
+              )}
+            </div>
+            {viewingDoc ? (
+              <>
+                <DocPreview docMeta={viewingDoc} className="flex-1" />
+                {viewingDoc.status !== 'verified' && (
+                  <div className="flex gap-2 px-4 py-3 border-t border-gray-100">
+                    <button className="btn-primary text-sm flex-1 flex items-center justify-center gap-1 disabled:opacity-50" disabled={busy} onClick={() => reviewDoc(viewingDoc, 'verified')}>
+                      <MdCheckCircle size={14} /> Verify
+                    </button>
+                    <button className="btn-secondary text-sm flex-1 flex items-center justify-center gap-1 text-red-500 disabled:opacity-50" disabled={busy} onClick={() => reviewDoc(viewingDoc, 'rejected')}>
+                      <MdBlock size={14} /> Reject
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center p-8 text-center min-h-48">
+                <p className="text-sm text-gray-400">Select a document on the left to review it here.</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </div>{/* end grid */}
 
       {showEndorse && (
         <EndorseModal request={request} slices={slices} agencies={agencies} onClose={() => setShowEndorse(false)} />
-      )}
-      {viewingDoc && (
-        <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
       )}
       {showInterview && (
         <InterviewModal app={request} agency={null} onConfirm={scheduleInterview} onClose={() => setShowInterview(false)} />
