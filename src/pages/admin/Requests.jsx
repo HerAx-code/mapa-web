@@ -405,13 +405,17 @@ function RequestDetail({ request, agencies, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[150] bg-gray-50 overflow-y-auto">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-20">
+    <div>
+      {/* Sub-header — back to the list + request summary (stays inside the
+          app shell so the CRMC nav/top bar remain available). */}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdArrowBack size={20} /></button>
+          <button onClick={onClose} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-brand-600 flex-shrink-0">
+            <MdArrowBack size={16} /> Requests
+          </button>
+          <span className="text-gray-300">/</span>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-gray-900 truncate">{request.patientName}</h2>
+            <h2 className="text-sm font-semibold text-gray-900 truncate">{request.patientName}</h2>
             <p className="text-xs text-gray-400">{request.requestId} · {request.assistanceType}</p>
           </div>
         </div>
@@ -735,6 +739,14 @@ export default function Requests() {
     ['all', 'All'], ['needs', 'Needs action'], ['progress', 'In progress'], ['done', 'Completed'],
   ]
 
+  if (selectedLive) {
+    return (
+      <Layout breadcrumb="Assistance Requests">
+        <RequestDetail request={selectedLive} agencies={agencies} onClose={() => setSelected(null)} />
+      </Layout>
+    )
+  }
+
   return (
     <Layout breadcrumb="Assistance Requests">
       <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -831,10 +843,6 @@ export default function Requests() {
           </>
         )}
       </div>
-
-      {selectedLive && (
-        <RequestDetail request={selectedLive} agencies={agencies} onClose={() => setSelected(null)} />
-      )}
     </Layout>
   )
 }
