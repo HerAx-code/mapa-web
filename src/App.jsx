@@ -138,6 +138,7 @@ export default function App() {
           {/* Admin */}
           <Route path="/admin/dashboard"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin/requests"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Requests /></PrivateRoute>} />
+          <Route path="/admin/requests/:id/intake" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><IntakeSheet collectionName="requests" /></PrivateRoute>} />
           <Route path="/admin/patients"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Patients /></PrivateRoute>} />
           <Route path="/admin/hospitalids"element={<PrivateRoute allowedRoles={ADMIN_ROLES}><HospitalIDs /></PrivateRoute>} />
           <Route path="/admin/agencies"      element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Agencies /></PrivateRoute>} />

@@ -11,12 +11,14 @@ import { logAudit } from '../../utils/auditLog'
 import { computeFunding } from '../../utils/requests'
 import { REQUEST_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { isIdType } from '../../utils/idOcr'
+import { isIntakeComplete } from '../../utils/intakeSheet'
+import { Link } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
-  MdVideoCall, MdEventRepeat,
+  MdVideoCall, MdEventRepeat, MdAssignment,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -293,9 +295,11 @@ function RequestDetail({ request, agencies, onClose }) {
     ...a, ...(docById[a.documentId] ?? {}), id: a.documentId,
   }))
   const allVerified = reqDocs.length > 0 && reqDocs.every(d => d.status === 'verified')
+  const intakeComplete = isIntakeComplete(request.intakeSheet)
   // The guided stepper gate: endorsement is only allowed after every document
-  // is verified AND the assessment interview outcome has been recorded.
-  const canEndorse = allVerified && !!request.interviewOutcome
+  // is verified AND the assessment is done (interview outcome recorded + the
+  // Unified Intake Sheet completed).
+  const canEndorse = allVerified && !!request.interviewOutcome && intakeComplete
 
   // Verify / reject a document. First action also moves the request out of
   // 'submitted' into 'under_review'. Rejection notifies the patient to re-upload.
@@ -506,6 +510,20 @@ function RequestDetail({ request, agencies, onClose }) {
                 <span className="badge badge-green text-xs">Outcome recorded</span>
               )}
             </div>
+            {/* Unified Intake Sheet — the structured case assessment */}
+            <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100 mb-2">
+              <MdAssignment size={16} className="text-gray-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-700 truncate">Unified Intake Sheet</p>
+              </div>
+              <span className={`badge text-xs flex-shrink-0 ${intakeComplete ? 'badge-green' : 'badge-amber'}`}>
+                {intakeComplete ? 'Complete' : 'Incomplete'}
+              </span>
+              <Link to={`/admin/requests/${request.id}/intake`}
+                className="text-xs font-medium text-brand-600 hover:text-brand-700 flex-shrink-0">
+                Open
+              </Link>
+            </div>
             {!request.interviewDate ? (
               <div className="p-3 rounded-lg border border-gray-100">
                 {!allVerified
@@ -579,7 +597,7 @@ function RequestDetail({ request, agencies, onClose }) {
             {!canEndorse && (
               <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
                 <MdWarning size={12} className="flex-shrink-0" />
-                Verify all documents and record the interview outcome before endorsing.
+                Verify all documents, complete the intake sheet, and record the interview outcome before endorsing.
               </p>
             )}
             <div className="flex flex-wrap gap-2 justify-end">

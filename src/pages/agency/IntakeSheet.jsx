@@ -15,6 +15,7 @@ import {
   blankSheet, isIntakeComplete, requiredFieldsStatus,
 } from '../../utils/intakeSheet'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
+import { isCrmcAdminRole } from '../../utils/constants'
 
 const AUTOSAVE_MS = 1500
 
@@ -37,10 +38,15 @@ const fmtRelative = (date) => {
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-export default function IntakeSheet() {
+// Used by both the agency (per-application, legacy) and CRMC (per-request,
+// the redesign's assessment step) — `collectionName` switches which doc the
+// same Unified Intake form reads and writes.
+export default function IntakeSheet({ collectionName = 'applications' } = {}) {
   const { id }      = useParams()
   const navigate    = useNavigate()
   const { user }    = useAuth()
+  const isRequestMode = collectionName === 'requests'
+  const backList = isRequestMode ? '/admin/requests' : '/agency/inbox'
 
   const [app, setApp]           = useState(null)
   const [loading, setLoading]   = useState(true)
@@ -61,10 +67,10 @@ export default function IntakeSheet() {
   useEffect(() => {
     if (!id) return
     hydratedRef.current = false
-    const unsub = onSnapshot(doc(db, 'applications', id), snap => {
+    const unsub = onSnapshot(doc(db, collectionName, id), snap => {
       if (!snap.exists()) {
-        toast.error('Application not found.')
-        navigate('/agency/inbox')
+        toast.error(isRequestMode ? 'Request not found.' : 'Application not found.')
+        navigate(backList)
         return
       }
       const data = { id: snap.id, ...snap.data() }
@@ -82,8 +88,13 @@ export default function IntakeSheet() {
     return unsub
   }, [id, navigate])
 
-  // Permission: only the owning agency can edit
-  const canEdit = app && (user?.agencyId === app.agencyId) && !['rejected'].includes(app.status)
+  // Permission: CRMC admins edit the request's intake; the owning agency edits
+  // a (legacy) application's intake. Terminal states are read-only.
+  const canEdit = app && (
+    isRequestMode
+      ? isCrmcAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
+      : (user?.agencyId === app.agencyId) && !['rejected'].includes(app.status)
+  )
 
   // Autosave (debounced)
   const performSave = async () => {
@@ -106,7 +117,7 @@ export default function IntakeSheet() {
         lastEditedBy:  user.name,
         lastEditedAt:  serverTimestamp(),
       }
-      await updateDoc(doc(db, 'applications', app.id), {
+      await updateDoc(doc(db, collectionName, app.id), {
         intakeSheet: payload,
         updatedAt:   serverTimestamp(),
       })
@@ -283,9 +294,9 @@ export default function IntakeSheet() {
         <div className="sticky top-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gray-50/95 backdrop-blur border-b border-gray-100 z-20 mb-5 print:hidden">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
-              <Link to={`/agency/applications/${app.id}`}
+              <Link to={isRequestMode ? backList : `/agency/applications/${app.id}`}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 font-medium">
-                <MdArrowBack size={14} /> Back to application
+                <MdArrowBack size={14} /> {isRequestMode ? 'Back to requests' : 'Back to application'}
               </Link>
               <span className="text-gray-300">/</span>
               <p className="text-sm font-semibold text-gray-800 truncate">Case Assessment</p>
