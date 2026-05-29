@@ -24,6 +24,9 @@ import toast from 'react-hot-toast'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
+const initials = (name) =>
+  (name ?? '').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '—'
+
 const fmtDate = (ts) => {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts)
@@ -422,34 +425,33 @@ function RequestDetail({ request, agencies, onClose }) {
         <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
       </div>
 
-      {/* Single-column review; documents open in a large viewer */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 space-y-4">
-          {/* Amount needed — verify against the patient's uploaded Statement
-              of Account before endorsing. */}
-          <div className="bg-brand-50 rounded-lg p-3 flex items-center justify-between">
-            <p className="text-xs text-brand-700">Amount needed <span className="text-brand-600/70">(verify vs. billing statement)</span></p>
-            <p className="text-lg font-semibold text-brand-700">{peso(request.amountNeeded)}</p>
-          </div>
-
-          {/* Funding progress */}
-          <div>
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>{peso(funding.committed)} secured · {peso(funding.outstanding)} pending</span>
-              <span>{peso(funding.balance)} remaining</span>
+      {/* Single-column review, left-aligned to match the sub-header.
+          Documents open in a large viewer. */}
+      <div className="max-w-4xl px-4 sm:px-6 py-5 space-y-4">
+          {/* Summary — amount needed, funding progress, request meta */}
+          <div className="card p-4 sm:p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-gray-500">Amount needed <span className="text-gray-400">(verify vs. billing statement)</span></p>
+              <p className="text-xl font-bold text-brand-700 whitespace-nowrap">{peso(request.amountNeeded)}</p>
             </div>
-            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${funding.pct}%` }} />
+
+            <div>
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>{peso(funding.committed)} secured · {peso(funding.outstanding)} pending</span>
+                <span>{peso(funding.balance)} remaining</span>
+              </div>
+              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${funding.pct}%` }} />
+              </div>
             </div>
-          </div>
 
-          {request.description && (
-            <div className="text-sm text-gray-600"><span className="text-xs text-gray-400 block mb-0.5">Description</span>{request.description}</div>
-          )}
-
-          {/* Patient */}
-          <div className="text-xs text-gray-500 space-y-1">
-            <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-400" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
-            <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400" /> submitted {fmtDate(request.submittedAt)}</p>
+            <div className="pt-3 border-t border-gray-50 space-y-1.5 text-xs text-gray-500">
+              {request.description && (
+                <p><span className="text-gray-400">Description: </span><span className="text-gray-600">{request.description}</span></p>
+              )}
+              <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-400 flex-shrink-0" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
+              <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400 flex-shrink-0" /> submitted {fmtDate(request.submittedAt)}</p>
+            </div>
           </div>
 
           {/* Filed by a representative — verify the rep's ID + selfie (below) */}
@@ -462,9 +464,12 @@ function RequestDetail({ request, agencies, onClose }) {
           )}
 
           {/* ① Document verification */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">① Verify documents</p>
+          <div className="card p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+                Verify documents
+              </h3>
               {reqDocs.length > 0 && (
                 <span className={`badge text-xs ${allVerified ? 'badge-green' : 'badge-amber'}`}>
                   {reqDocs.filter(d => d.status === 'verified').length}/{reqDocs.length} verified
@@ -518,9 +523,12 @@ function RequestDetail({ request, agencies, onClose }) {
           </div>
 
           {/* ② Interview & assessment */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">② Interview &amp; assessment</p>
+          <div className="card p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+                Interview &amp; assessment
+              </h3>
               {request.interviewOutcome && (
                 <span className="badge badge-green text-xs">Outcome recorded</span>
               )}
@@ -583,8 +591,11 @@ function RequestDetail({ request, agencies, onClose }) {
           </div>
 
           {/* ③ Endorse — slices */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">③ Endorsed agencies</p>
+          <div className="card p-4 sm:p-5">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+              Endorsed agencies
+            </h3>
             {slices.length === 0 ? (
               <p className="text-sm text-gray-400 italic">Not yet endorsed to any agency.</p>
             ) : (
@@ -760,24 +771,39 @@ export default function Requests() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Patient</th><th>Request</th><th>Type</th>
-                    <th>Needs</th><th>Secured</th><th>Stage</th><th>Status</th><th>Submitted</th>
+                    <th>Patient</th><th>Funding</th><th>Stage</th><th>Submitted</th><th className="text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(r => {
-                    const cfg = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
-                    const st  = stageChip(r)
+                    const st          = stageChip(r)
+                    const needsAction = GROUP.needs.includes(r.status)
+                    const needed      = Number(r.amountNeeded) || 0
+                    const secured     = Number(r.amountCommitted) || 0
+                    const pct         = needed > 0 ? Math.min(100, Math.round((secured / needed) * 100)) : 0
                     return (
-                      <tr key={r.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelected(r)}>
-                        <td className="font-medium text-gray-800">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</td>
-                        <td className="text-xs text-gray-500">{r.requestId}</td>
-                        <td className="text-xs text-gray-500">{r.assistanceType}</td>
-                        <td className="text-gray-700">{peso(r.amountNeeded)}</td>
-                        <td className="text-green-600 font-medium">{peso(r.amountCommitted ?? 0)}</td>
-                        <td><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span></td>
-                        <td><span className={`badge text-xs ${cfg.badge}`}>{cfg.label}</span></td>
-                        <td className="text-xs text-gray-400">{fmtDate(r.submittedAt)}</td>
+                      <tr key={r.id} className="cursor-pointer group" onClick={() => setSelected(r)}>
+                        <td className={needsAction ? 'border-l-2 border-brand-400' : 'border-l-2 border-transparent'}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-brand-50 text-brand-600 border-2 border-brand-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {initials(r.patientName)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-800 truncate">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</p>
+                              <p className="text-xs text-gray-400 truncate">{r.requestId} · {r.assistanceType}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <p className="font-medium text-gray-800 whitespace-nowrap">{peso(needed)}</p>
+                          <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden my-1">
+                            <div className="h-full bg-green-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <p className="text-xs text-gray-400 whitespace-nowrap">{peso(secured)} secured</p>
+                        </td>
+                        <td><span className={`inline-block whitespace-nowrap text-xs font-semibold px-2.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span></td>
+                        <td className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.submittedAt)}</td>
+                        <td className="text-right"><span className="text-xs font-medium text-brand-600 group-hover:text-brand-700 whitespace-nowrap">Review →</span></td>
                       </tr>
                     )
                   })}
@@ -799,7 +825,7 @@ export default function Requests() {
                     <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span> · Secured <span className="font-semibold text-green-600">{peso(r.amountCommitted ?? 0)}</span></span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                     </div>
                   </button>
                 )

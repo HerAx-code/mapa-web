@@ -37,7 +37,7 @@ const ACTIVITY_CONFIG = {
   app_submitted: { emoji: '📋', label: 'Application submitted',    bg: 'bg-brand-50',  path: () => `/admin/logs` },
   app_approved:  { emoji: '🎉', label: 'Application approved',     bg: 'bg-green-50',  path: () => `/admin/logs?status=approved` },
   app_rejected:  { emoji: '🚫', label: 'Application rejected',     bg: 'bg-red-50',    path: () => `/admin/logs?status=rejected` },
-  cert_issued:   { emoji: '🏆', label: 'Certificate issued',       bg: 'bg-purple-50', path: () => `/admin/logs?status=certificate` },
+  cert_issued:   { emoji: '🏆', label: 'Guarantee Letter issued',  bg: 'bg-purple-50', path: () => `/admin/logs?status=certificate` },
 }
 
 export default function AdminDashboard() {
@@ -47,6 +47,8 @@ export default function AdminDashboard() {
 
   const [patientCount,   setPatientCount]   = useState('—')
   const [agencyCount,    setAgencyCount]    = useState('—')
+  const [openRequests,   setOpenRequests]   = useState('—')
+  const [pendingDocs,    setPendingDocs]    = useState('—')
   const [recentPatients, setRecentPatients] = useState([])
   const [recentDocs,     setRecentDocs]     = useState([])
   const [recentApps,     setRecentApps]     = useState([])
@@ -68,7 +70,17 @@ export default function AdminDashboard() {
   useEffect(() => {
     const u1 = onSnapshot(query(collection(db, 'users'),       where('role',    '==', 'patient')),    snap => setPatientCount(snap.size))
     const u3 = onSnapshot(query(collection(db, 'agencies'),    where('enabled', '==', true)),         snap => setAgencyCount(snap.size))
-    return () => { u1(); u3() }
+    // Open requests = anything still moving through the CRMC pipeline (not
+    // closed/rejected/fully_funded). This is the CRMC's actual day-to-day queue.
+    const u4 = onSnapshot(
+      query(collection(db, 'requests'), where('status', 'in', ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded'])),
+      snap => setOpenRequests(snap.size), () => setOpenRequests('—')
+    )
+    const u5 = onSnapshot(
+      query(collection(db, 'documents'), where('status', '==', 'pending')),
+      snap => setPendingDocs(snap.size), () => setPendingDocs('—')
+    )
+    return () => { u1(); u3(); u4(); u5() }
   }, [])
 
   // Recent activity feeds
@@ -184,14 +196,20 @@ export default function AdminDashboard() {
 
   const METRICS = [
     {
-      label: 'Total Patients',     value: patientCount,
-      emoji: '👥', valueCls: 'text-gray-900',
-      bg: 'bg-blue-50', path: '/admin/patients',
+      label: 'Total Patients',  value: patientCount,
+      emoji: '👥', valueCls: 'text-gray-900', bg: 'bg-blue-50', path: '/admin/patients',
     },
     {
-      label: 'Active Agencies',    value: agencyCount,
-      emoji: '🏥', valueCls: 'text-green-600',
-      bg: 'bg-green-50', path: '/admin/agencies',
+      label: 'Active Agencies', value: agencyCount,
+      emoji: '🏥', valueCls: 'text-green-600', bg: 'bg-green-50', path: '/admin/agencies',
+    },
+    {
+      label: 'Open Requests',   value: openRequests,
+      emoji: '📋', valueCls: 'text-brand-600', bg: 'bg-brand-50', path: '/admin/requests',
+    },
+    {
+      label: 'Pending Docs',    value: pendingDocs,
+      emoji: '📄', valueCls: 'text-amber-600', bg: 'bg-amber-50', path: '/admin/requests',
     },
   ]
 
@@ -269,18 +287,17 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Metric cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           {METRICS.map((m, i) => (
             <button key={i} onClick={() => navigate(m.path)}
-              className="card p-4 text-left hover:shadow-md transition-all group relative overflow-hidden">
-              {m.alert && (
-                <span className="absolute top-3 right-3 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-              )}
-              <div className={`w-10 h-10 ${m.bg} rounded-xl flex items-center justify-center text-xl mb-3`}>
-                {m.emoji}
+              className="card p-4 text-left hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-2">
+                <div className={`w-9 h-9 ${m.bg} rounded-xl flex items-center justify-center text-lg`}>
+                  {m.emoji}
+                </div>
+                <p className={`text-2xl font-bold ${m.valueCls}`}>{m.value}</p>
               </div>
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-3xl font-bold ${m.valueCls}`}>{m.value}</p>
+              <p className="text-xs font-medium text-gray-500">{m.label}</p>
             </button>
           ))}
         </div>
@@ -321,7 +338,7 @@ export default function AdminDashboard() {
                   <MdFactCheck size={18} className="text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Certificate Backlog</p>
+                  <p className="text-xs text-gray-400">Guarantee Letter Backlog</p>
                   <p className="text-xl font-semibold text-gray-800">{slaMetrics.certBacklog}</p>
                 </div>
               </div>

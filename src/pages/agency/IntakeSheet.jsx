@@ -5,7 +5,7 @@ import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import {
-  MdArrowBack, MdSave, MdPrint, MdCheckCircle, MdRadioButtonUnchecked,
+  MdArrowBack, MdSave, MdPrint, MdCheckCircle,
   MdInfo, MdAdd, MdDelete, MdLock, MdAutorenew,
   MdGroups, MdWork, MdReceipt, MdMedicalServices, MdAssignment,
 } from 'react-icons/md'
@@ -26,6 +26,17 @@ const SECTIONS = [
   { id: 'medical',  label: 'Medical Information', Icon: MdMedicalServices   },
   { id: 'assess',   label: 'Assessment',          Icon: MdAssignment        },
 ]
+
+// Maps each required field to the section that contains it, so the merged
+// rail can show how many required fields remain per section.
+const REQ_SECTION = {
+  householdSize:     'family',
+  monthlyIncome:     'income',
+  diagnosis:         'medical',
+  recommendation:    'assess',
+  meansTestCategory: 'assess',
+  completedBy:       'assess',
+}
 
 const fmtRelative = (date) => {
   if (!date) return ''
@@ -304,8 +315,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <MdArrowBack size={14} /> {patientFacts ? 'Back to my request' : isRequestMode ? 'Back to requests' : 'Back to application'}
               </Link>
               <span className="text-gray-300">/</span>
-              <p className="text-sm font-semibold text-gray-800 truncate">Case Assessment</p>
-              <span className="text-xs text-gray-400 truncate">— {app.patientName}</span>
+              <p className="text-sm font-semibold text-gray-800 truncate">{app.patientName}</p>
+              <span className="text-xs text-gray-400 truncate hidden sm:inline">· Unified Intake Sheet</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Save state indicator */}
@@ -364,8 +375,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
             <MdLock size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 leading-relaxed">
               {app.status === 'rejected'
-                ? 'This application was rejected — the assessment is now read-only.'
-                : `You are viewing this case assessment in read-only mode. Only coordinators of ${app.agencyName} can edit it.`}
+                ? `This ${isRequestMode ? 'request' : 'application'} was rejected — the assessment is now read-only.`
+                : isRequestMode
+                  ? 'You are viewing this case assessment in read-only mode. Only CRMC staff can edit it.'
+                  : `You are viewing this case assessment in read-only mode. Only coordinators of ${app.agencyName} can edit it.`}
             </p>
           </div>
         )}
@@ -377,12 +390,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
           <aside className="lg:col-span-1 print:hidden">
             <div className="lg:sticky lg:top-24 space-y-3">
 
-              {/* Required tracker */}
+              {/* Progress + section nav (merged) */}
               <div className="card p-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Required Fields</p>
                 <div className="flex items-baseline gap-2 mb-2">
                   <p className="text-2xl font-bold text-gray-800">{completedCount}</p>
-                  <p className="text-xs text-gray-400">of {required.length} done</p>
+                  <p className="text-xs text-gray-400">of {required.length} required</p>
                   {complete && (
                     <span className="ml-auto badge badge-green text-xs">Complete</span>
                   )}
@@ -391,31 +403,13 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <div className={`h-full rounded-full ${complete ? 'bg-green-500' : 'bg-amber-400'}`}
                     style={{ width: `${completion}%` }} />
                 </div>
-                <ul className="space-y-1">
-                  {required.map(r => (
-                    <li key={r.key} className="flex items-center gap-2 text-xs">
-                      {r.done
-                        ? <MdCheckCircle size={13} className="text-green-500 flex-shrink-0" />
-                        : <MdRadioButtonUnchecked size={13} className="text-gray-300 flex-shrink-0" />}
-                      <span className={r.done ? 'text-gray-600' : 'text-gray-500'}>{r.label}</span>
-                    </li>
-                  ))}
-                </ul>
-                {complete && (
-                  <p className="text-xs text-green-600 mt-2 leading-relaxed">
-                    ✓ Ready for approval. Return to the application to issue a Guarantee Letter.
-                  </p>
-                )}
-              </div>
-
-              {/* Section nav */}
-              <div className="card p-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2 px-1">Jump to section</p>
                 <nav className="space-y-0.5">
                   {visibleSections.map(s => {
-                    const active = activeSection === s.id
-                    const done = sectionDone[s.id]
-                    const Icon = s.Icon
+                    const active      = activeSection === s.id
+                    const Icon        = s.Icon
+                    const remaining   = required.filter(r => REQ_SECTION[r.key] === s.id && !r.done).length
+                    const hasRequired = required.some(r => REQ_SECTION[r.key] === s.id)
+                    const done        = remaining === 0 && (hasRequired || sectionDone[s.id])
                     return (
                       <button key={s.id} onClick={() => handleScrollTo(s.id)}
                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
@@ -425,11 +419,22 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                         }`}>
                         <Icon size={16} className={`flex-shrink-0 ${active ? 'text-brand-500' : 'text-gray-400'}`} />
                         <span className="flex-1 truncate">{s.label}</span>
-                        {done && <MdCheckCircle size={13} className="text-green-400 flex-shrink-0" />}
+                        {remaining > 0
+                          ? <span className="text-xs text-amber-600 flex-shrink-0">{remaining} left</span>
+                          : done
+                            ? <MdCheckCircle size={14} className="text-green-400 flex-shrink-0" />
+                            : null}
                       </button>
                     )
                   })}
                 </nav>
+                {complete && (
+                  <p className="text-xs text-green-600 mt-3 leading-relaxed">
+                    {isRequestMode
+                      ? '✓ Ready to endorse. Return to the request to endorse it to agencies.'
+                      : '✓ Ready for approval. Return to the application to issue a Guarantee Letter.'}
+                  </p>
+                )}
               </div>
 
               {/* Editor info */}
@@ -651,8 +656,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <MdInfo size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-700 leading-relaxed">
                   Changes save automatically as you type. {complete
-                    ? 'All required fields are filled — you can return to the application and click Approve & Issue GL.'
-                    : `Fill the ${required.length - completedCount} remaining required field${required.length - completedCount === 1 ? '' : 's'} to unlock approval.`}
+                    ? (isRequestMode
+                        ? 'All required fields are filled — return to the request and endorse it to agencies.'
+                        : 'All required fields are filled — you can return to the application and click Approve & Issue GL.')
+                    : `Fill the ${required.length - completedCount} remaining required field${required.length - completedCount === 1 ? '' : 's'} to unlock ${isRequestMode ? 'endorsement' : 'approval'}.`}
                 </p>
               </div>
             </div>
