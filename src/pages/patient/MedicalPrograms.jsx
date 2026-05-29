@@ -70,7 +70,7 @@ export default function MedicalPrograms() {
 
   return (
     <Layout breadcrumb={t('patient.programs.breadcrumb')}>
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-5xl overflow-x-clip">
+      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] sm:max-w-5xl overflow-x-clip">
 
         <div className="mb-5 w-full min-w-0">
           <h1 className="page-title">{t('patient.programs.title')}</h1>

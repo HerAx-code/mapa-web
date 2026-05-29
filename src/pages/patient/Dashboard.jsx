@@ -347,7 +347,7 @@ export default function PatientDashboard() {
       {/* Hard viewport cap so no descendant (long agency name, awaiting-
           info message with a URL, etc.) can push the page wider than the
           phone screen. overflow-x-clip is the strict version of -hidden. */}
-      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] overflow-x-clip space-y-4">
+      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip space-y-4">
 
         {/* Compact greeting — banking-app pattern: the GREETING is a
             small line at the top, the STATUS card below is the hero.

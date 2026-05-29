@@ -124,16 +124,16 @@ export default function Interviews() {
     <Layout breadcrumb={t('patient.interviews.title')}>
       {/* Hard viewport cap so long agency names or app IDs can't push
           the page wider than the phone screen. */}
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] overflow-x-clip">
+      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
 
-        <div className="max-w-2xl mx-auto mb-5">
+        <div className="w-full mb-5">
           <h1 className="page-title">{t('patient.interviews.title')}</h1>
           <p className="page-sub">{t('patient.interviews.subtitle')}</p>
         </div>
 
         {/* Skeleton loading */}
         {loading && (
-          <div className="card p-5 max-w-2xl mx-auto animate-pulse">
+          <div className="card p-5 w-full animate-pulse">
             <div className="flex gap-3 mb-4 pb-4 border-b border-gray-50">
               <div className="w-10 h-10 bg-gray-100 rounded-xl" />
               <div className="flex-1 space-y-2">
@@ -148,7 +148,7 @@ export default function Interviews() {
 
         {/* Interview cards */}
         {!loading && interviews.length > 0 && (
-          <div className="space-y-4 max-w-2xl mx-auto">
+          <div className="space-y-4 w-full">
             {interviews.map(app => {
               const isPast  = isPastDate(app.interviewDate)
               const todayStr = new Date().toISOString().split('T')[0]

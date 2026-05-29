@@ -608,15 +608,15 @@
       "activeRequestTitle": "Ang inyong kahilingan ng tulong",
       "activeRequestDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
       "greeting": {
-        "uploadDocs":    "Magsimula sa pag-upload ng inyong mga dokumento.",
-        "findProgram":   "Handa na ang inyong mga dokumento — tingnan ang mga programa upang mag-apply.",
-        "pending":       "Sinusuri ang inyong aplikasyon — walang kailangang gawin ngayon.",
-        "reviewing":     "Sinisiyasat ng ahensya ang inyong mga dokumento.",
-        "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang ahensya.",
+        "uploadDocs":    "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
+        "findProgram":   "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",
+        "pending":       "Sinusuri ang inyong kahilingan — walang kailangang gawin ngayon.",
+        "reviewing":     "Veverifyin ng CRMC ang inyong mga dokumento.",
+        "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang CRMC.",
         "interview":     "Naka-iskedyul ang interview — sumali sa Google Meet sa takdang oras.",
         "approved":      "Naaprubahan! Inihahanda na ang inyong Guarantee Letter.",
         "certificate":   "Handa na ang inyong Guarantee Letter.",
-        "rejected":      "Subukan mag-apply sa ibang programa."
+        "rejected":      "Hindi naaprubahan ang inyong kahilingan sa pagkakataong ito."
       },
       "noApplication": "Wala ka pang aktibong aplikasyon.",
       "browseSomeAgencies": "Maghanap ng Programa upang magsimula",
@@ -698,16 +698,16 @@
         "completedOf": "{{done}} sa {{total}} na hakbang ay tapos na",
         "done": "Tapos",
         "current": "Kasalukuyan",
-        "s1Title": "Mag-upload ng Kinakailangang mga Dokumento",
-        "s1Desc":  "Mag-upload at isumite ang mga kinakailangang dokumento para sa pre-verification.",
-        "s2Title": "Maghanap at Mag-apply sa Isang Programa",
-        "s2Desc":  "Sagutin ang ilang katanungan upang makahanap ng angkop na programa, pagkatapos ay isumite ang inyong aplikasyon.",
-        "s3Title": "Maghintay sa Pagsusuri ng Ahensya",
-        "s3Desc":  "Susuriin ng ahensya ang inyong aplikasyon at mga dokumento.",
+        "s1Title": "Isumite ang Inyong Kahilingan",
+        "s1Desc":  "Magsimula ng kahilingan, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID.",
+        "s2Title": "Susuriin at I-eendorso ng CRMC",
+        "s2Desc":  "Veverifyin ng CRMC ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito.",
+        "s3Title": "Subaybayan ang Inyong Progreso",
+        "s3Desc":  "Sundan ang status at funding coverage ng inyong kahilingan anumang oras.",
         "s4Title": "Dumalo sa Inyong Panayam",
-        "s4Desc":  "Mag-iiskedyul kayo para sa isang video interview kasama ang ahensya.",
+        "s4Desc":  "Sumali sa inyong online na assessment interview kasama ang CRMC.",
         "s5Title": "Tanggapin ang Inyong Guarantee Letter",
-        "s5Desc":  "Kunin ang inyong opisyal na Guarantee Letter — iharap ito sa pinangalanang provider para sa garantisadong tulong."
+        "s5Desc":  "Kapag napondohan na ng mga ahensya ang inyong pangangailangan, kunin ang Guarantee Letter upang iharap sa pinangalanang provider."
       }
     },
     "track": {
@@ -948,7 +948,7 @@
     },
     "interviews": {
       "title": "Aking Panayam",
-      "subtitle": "Sumali sa inyong naka-iskedyul na video interview kasama ang ahensya.",
+      "subtitle": "Sumali sa inyong naka-iskedyul na assessment interview kasama ang CRMC.",
       "loadError": "Hindi ma-load ang mga detalye ng panayam. Pakirefresh.",
       "todayBadge": "Ngayon!",
       "tomorrow": "Bukas",
@@ -978,10 +978,10 @@
         "completedDesc":  "Natapos na ang inyong panayam. Tingnan ang Aking Aplikasyon para sa resulta.",
         "completedBtn":   "Tingnan ang Aking Aplikasyon",
         "notYetTitle":    "Wala pang naka-iskedyul na Panayam",
-        "notYetDesc":     "Kapag natapos ng ahensya ang pagsusuri at na-aprubahan, mag-iiskedyul sila ng video interview at aabisuhan kayo.",
+        "notYetDesc":     "Kapag na-verify na ng CRMC ang inyong mga dokumento, mag-iiskedyul sila ng assessment interview at aabisuhan kayo.",
         "notYetBtn":      "Tingnan ang Aking Aplikasyon",
         "noAppTitle":     "Wala pang Kahilingan",
-        "noAppDesc":      "Kailangan munang magsumite ng kahilingan ng tulong. Ang mga panayam ay isinasagawa pagkatapos masuri at maaprubahan ng ahensya ang inyong kahilingan.",
+        "noAppDesc":      "Kailangan munang magsumite ng kahilingan ng tulong. Nag-iiskedyul ang CRMC ng assessment interview pagkatapos ma-verify ang inyong mga dokumento.",
         "noAppBtn":       "Humiling ng Tulong"
       }
     },

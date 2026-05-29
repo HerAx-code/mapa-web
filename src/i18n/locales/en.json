@@ -608,15 +608,15 @@
       "activeRequestTitle": "Your assistance request",
       "activeRequestDesc": "CRMC is processing your request. Track its progress and coverage under My Application.",
       "greeting": {
-        "uploadDocs":    "Get started by uploading your documents.",
-        "findProgram":   "Your documents are ready — browse programs to apply.",
-        "pending":       "Your application is under review — no action needed right now.",
-        "reviewing":     "The agency is checking your documents.",
-        "awaiting_info": "Action needed: the agency asked you for more information.",
+        "uploadDocs":    "Get started by submitting your assistance request.",
+        "findProgram":   "Your documents are ready — submit your assistance request.",
+        "pending":       "Your request is under review — no action needed right now.",
+        "reviewing":     "CRMC is verifying your documents.",
+        "awaiting_info": "Action needed: CRMC asked you for more information.",
         "interview":     "Interview scheduled — join the Google Meet at the scheduled time.",
         "approved":      "Approved! Your Guarantee Letter is being prepared.",
         "certificate":   "Your Guarantee Letter is ready.",
-        "rejected":      "Try applying to another program."
+        "rejected":      "Your request was not approved this time."
       },
       "noApplication": "You don't have an active application yet.",
       "browseSomeAgencies": "Find Programs to start an application",
@@ -698,16 +698,16 @@
         "completedOf": "{{done}} of {{total}} steps completed",
         "done": "Done",
         "current": "Current",
-        "s1Title": "Upload Required Documents",
-        "s1Desc":  "Upload and submit required documents for pre-verification.",
-        "s2Title": "Find and Apply to a Program",
-        "s2Desc":  "Answer a few questions to find a matching program, then submit your application.",
-        "s3Title": "Wait for Agency Review",
-        "s3Desc":  "The agency will review your application and documents.",
+        "s1Title": "Submit Your Request",
+        "s1Desc":  "Start a request, upload your required documents, and verify your ID.",
+        "s2Title": "CRMC Reviews & Endorses",
+        "s2Desc":  "CRMC verifies your documents and endorses your request to the agencies that can help fund it.",
+        "s3Title": "Track Your Progress",
+        "s3Desc":  "Follow your request's status and funding coverage anytime.",
         "s4Title": "Attend Your Interview",
-        "s4Desc":  "You will be scheduled for a video interview with the agency.",
+        "s4Desc":  "Join your online assessment interview with CRMC.",
         "s5Title": "Receive your Guarantee Letter",
-        "s5Desc":  "Get your official Guarantee Letter — present it at the named provider for the guaranteed assistance."
+        "s5Desc":  "Once agencies fund your care, get your Guarantee Letter to present at the named provider."
       }
     },
     "track": {
@@ -948,7 +948,7 @@
     },
     "interviews": {
       "title": "My Interview",
-      "subtitle": "Join your scheduled video interview with the agency.",
+      "subtitle": "Join your scheduled assessment interview with CRMC.",
       "loadError": "Could not load interview details. Please refresh.",
       "todayBadge": "Today!",
       "tomorrow": "Tomorrow",
@@ -978,10 +978,10 @@
         "completedDesc":  "Your interview has been completed. Check My Application to see the outcome of your application.",
         "completedBtn":   "View My Application",
         "notYetTitle":    "No Interview Scheduled Yet",
-        "notYetDesc":     "Once the agency reviews your application and approves it, they will schedule a video interview and you will be notified.",
+        "notYetDesc":     "Once CRMC verifies your documents, they will schedule your assessment interview and you will be notified.",
         "notYetBtn":      "View My Application",
         "noAppTitle":     "No Request Yet",
-        "noAppDesc":      "You need to submit an assistance request first. Interviews are scheduled after an agency reviews and approves your request.",
+        "noAppDesc":      "You need to submit an assistance request first. CRMC schedules your assessment interview after verifying your documents.",
         "noAppBtn":       "Request Assistance"
       }
     },
