@@ -66,7 +66,7 @@ const AGENCY_NAV = [
   { to: '/agency/generator',    icon: MdCardMembership, label: 'Guarantee Letters' },
   { to: '/agency/funds',        icon: MdAttachMoney,    label: 'Funds' },
   { to: '/agency/allocation',   icon: MdAttachMoney,    label: 'Budget Allocation', adminOnly: true },
-  { to: '/agency/announcements',icon: MdCampaign,       label: 'Announcements',     adminOnly: true },
+  { to: '/agency/announcements',icon: MdCampaign,       label: 'Promotions',        adminOnly: true },
   { to: '/agency/logs',         icon: MdListAlt,        label: 'Application Logs' },
   { to: '/agency/guide',        icon: MdMenuBook,       label: 'User Guide' },
 ]
@@ -934,9 +934,9 @@ export default function Layout({ children, breadcrumb }) {
           const start = ann.startAt?.toDate?.()?.getTime() ?? 0
           const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
 
-          // Agency-sourced announcements are patient-facing only — never
-          // shown to CRMC admins or to other agencies.
-          const audienceOk = ann.source !== 'agency' || user.role === ROLES.PATIENT
+          // The alert banner is for CRMC system notices only. Agency promotions
+          // are surfaced on the Find Programs catalog, not here.
+          const audienceOk = ann.source !== 'agency'
 
           // Show banner if audience matches, within the window, not dismissed
           if (audienceOk && now >= start && now <= end && !dismissed.includes(ann.id)) {

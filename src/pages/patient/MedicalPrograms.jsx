@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  MdSearch, MdLocationOn, MdSchedule, MdClose, MdLocalHospital, MdFavorite,
+  MdSearch, MdLocationOn, MdSchedule, MdClose, MdLocalHospital, MdFavorite, MdCampaign,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
@@ -19,6 +19,7 @@ export default function MedicalPrograms() {
   const [search, setSearch]             = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [agencies, setAgencies]         = useState([])
+  const [promos, setPromos]             = useState({})
   const [loading, setLoading]           = useState(true)
 
   useEffect(() => {
@@ -30,6 +31,27 @@ export default function MedicalPrograms() {
       )
       setLoading(false)
     })
+    return unsub
+  }, [])
+
+  // Live agency promotions — the latest active one per agency, within its
+  // scheduled window. Keyed by agencyId so each card can show its own.
+  useEffect(() => {
+    const q = query(collection(db, 'announcements'), where('source', '==', 'agency'))
+    const unsub = onSnapshot(q, snap => {
+      const now = Date.now()
+      const byAgency = {}
+      snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => {
+          const start = p.startAt?.toDate?.()?.getTime() ?? 0
+          const end   = p.endAt?.toDate?.()?.getTime()   ?? 0
+          return p.active && now >= start && now <= end
+        })
+        .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
+        .forEach(p => { if (p.agencyId && !byAgency[p.agencyId]) byAgency[p.agencyId] = p })
+      setPromos(byAgency)
+    }, () => {})
     return unsub
   }, [])
 
@@ -124,6 +146,7 @@ export default function MedicalPrograms() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
             {filtered.map(agency => {
               const types = agency.assistanceTypes ?? []
+              const promo = promos[agency.id]
               return (
                 <div key={agency.id} className="card hover:shadow-md transition-shadow min-w-0 overflow-hidden">
                   {/* Mobile compact */}
@@ -137,6 +160,15 @@ export default function MedicalPrograms() {
                     </div>
                     {agency.description && <p className="text-xs text-gray-500 line-clamp-2 break-words leading-snug mb-2 w-full min-w-0">{agency.description}</p>}
                     {types.length > 0 && <p className="text-xs text-brand-600 truncate w-full min-w-0">{types.slice(0, 3).join(' · ')}{types.length > 3 ? ` · +${types.length - 3}` : ''}</p>}
+                    {promo && (
+                      <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-brand-50 border border-brand-100 px-2.5 py-1.5 w-full min-w-0">
+                        <MdCampaign size={13} className="text-brand-500 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-brand-800 truncate">{promo.title}</p>
+                          <p className="text-xs text-brand-700/80 line-clamp-2 break-words leading-snug">{promo.message}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {/* Desktop / tablet */}
                   <div className="hidden sm:flex sm:flex-col p-5">
@@ -152,6 +184,15 @@ export default function MedicalPrograms() {
                       <div className="flex flex-wrap gap-1 mb-3">
                         {types.slice(0, 4).map((typeName, i) => <span key={i} className="badge badge-blue text-xs">{typeName}</span>)}
                         {types.length > 4 && <span className="badge badge-blue text-xs">{t('patient.programs.moreTypes', { count: types.length - 4 })}</span>}
+                      </div>
+                    )}
+                    {promo && (
+                      <div className="mb-3 flex items-start gap-2 rounded-lg bg-brand-50 border border-brand-100 px-3 py-2">
+                        <MdCampaign size={15} className="text-brand-500 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-brand-800">{promo.title}</p>
+                          <p className="text-xs text-brand-700/80 line-clamp-2 break-words leading-snug">{promo.message}</p>
+                        </div>
                       </div>
                     )}
                     <div className="flex items-center gap-1 text-xs text-gray-400 pt-3 border-t border-gray-50 mt-auto">

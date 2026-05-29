@@ -6,7 +6,6 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import {
   TYPE_CONFIG, AnnouncementForm, getStatus, getCountdown, fmtDt,
@@ -70,25 +69,18 @@ export default function AgencyAnnouncements() {
           agencyName:   agencyName || 'Your agency',
           audience:     'patients',
           active:       true,
-          // Agency notices skip the Layout's 24h all-user reminder path.
+          // Promotions are pull-only: they surface on the Find Programs
+          // catalog, not the alert banner, and don't push a notification to
+          // every patient. reminderSent stays true so the banner reminder
+          // path never picks them up.
           reminderSent: true,
           createdAt:    serverTimestamp(),
           createdBy:    user.name ?? 'Agency',
           createdById:  user.uid,
         })
-        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `Agency announcement to patients · ${data.type}` })
+        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `Agency promotion to patients · ${data.type}` })
 
-        // Notify all patients — fire-and-forget, never blocks the save.
-        const cfg = TYPE_CONFIG[data.type] ?? TYPE_CONFIG.info
-        getDocs(query(collection(db, 'users'), where('role', '==', 'patient'))).then(snap =>
-          Promise.all(snap.docs.map(d => notify(d.id, {
-            type:  'system_announcement',
-            title: `${cfg.emoji} ${data.title}`,
-            body:  `${agencyName ? agencyName + ': ' : ''}${data.message}`,
-          }).catch(() => {})))
-        ).catch(() => {})
-
-        toast.success('Announcement posted. All patients notified.')
+        toast.success('Promotion posted. Patients will see it on Find Programs.')
       }
       setShowForm(false); setEditing(null); load()
     } catch { toast.error('Failed to save announcement.') }
@@ -123,7 +115,7 @@ export default function AgencyAnnouncements() {
             <MdLockOutline size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-800 mb-1">Restricted to Agency Administrators</p>
-              <p className="text-xs text-amber-700">Only the Agency Administrator can post announcements to patients.</p>
+              <p className="text-xs text-amber-700">Only the Agency Administrator can post promotions to patients.</p>
             </div>
           </div>
         </div>
@@ -205,7 +197,7 @@ export default function AgencyAnnouncements() {
           <div className="border-t border-red-100 bg-red-50 px-4 py-3 flex items-center gap-3">
             <MdWarning size={16} className="text-red-500 flex-shrink-0" />
             <p className="text-sm text-red-700 flex-1">
-              Delete <strong>"{ann.title}"</strong>? Patients will no longer see this banner.
+              Delete <strong>"{ann.title}"</strong>? Patients will no longer see this on Find Programs.
             </p>
             <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50"
               onClick={() => setConfirmDelete(null)}>Cancel</button>
@@ -225,20 +217,21 @@ export default function AgencyAnnouncements() {
 
         <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
           <div>
-            <h1 className="page-title">Announcements</h1>
-            <p className="page-sub">Post notices that appear as a banner to all patients (e.g. office closures, new assistance offerings).</p>
+            <h1 className="page-title">Promote Your Programs</h1>
+            <p className="page-sub">Post promotions patients see on the Find Programs page (e.g. new assistance offerings, open slots, requirements updates).</p>
           </div>
           <button className="btn-primary flex items-center gap-1.5 text-sm"
             onClick={() => { setEditing(null); setShowForm(true) }}>
-            <MdAdd size={16} /> New Announcement
+            <MdAdd size={16} /> New Promotion
           </button>
         </div>
 
         <div className="bg-brand-50 border border-brand-100 rounded-xl p-3 mb-6 flex items-start gap-2">
           <MdCampaign size={16} className="text-brand-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-brand-700">
-            Your announcements are shown as a banner to <strong>all patients</strong> while within the scheduled window,
-            and each patient receives a one-time notification when you post. They auto-hide after the end time.
+            Your promotions appear on the patient <strong>Find Programs</strong> page under your agency while within the
+            scheduled window, then auto-hide after the end time. They're informational — patients still submit one request
+            to CRMC, which routes it to the right agencies.
           </p>
         </div>
 
@@ -259,8 +252,8 @@ export default function AgencyAnnouncements() {
         ) : announcements.length === 0 ? (
           <div className="card p-10 text-center">
             <MdCampaign size={32} className="text-gray-300 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-600 mb-1">No announcements yet</p>
-            <p className="text-xs text-gray-400">Post one to share a notice with patients.</p>
+            <p className="text-sm font-medium text-gray-600 mb-1">No promotions yet</p>
+            <p className="text-xs text-gray-400">Post one to show your programs on the patient Find Programs page.</p>
           </div>
         ) : (
           <div className="space-y-3">{announcements.map(renderCard)}</div>
@@ -270,7 +263,8 @@ export default function AgencyAnnouncements() {
       {showForm && (
         <AnnouncementForm
           announcement={editing}
-          audienceNote="all patients"
+          promo
+          audienceNote="patients on the Find Programs page"
           onClose={() => { setShowForm(false); setEditing(null) }}
           onSave={handleSave}
         />

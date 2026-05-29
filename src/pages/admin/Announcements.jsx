@@ -132,10 +132,13 @@ function BannerPreview({ type, title, message, startAt, endAt }) {
 
 // ── Create / Edit Modal ───────────────────────────────────────────────────
 
-export function AnnouncementForm({ announcement, onClose, onSave, audienceNote }) {
+export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, promo = false }) {
   const isEdit = !!announcement
+  const noun   = promo ? 'Promotion' : 'Announcement'
 
-  const [type,      setType]      = useState(announcement?.type    ?? 'maintenance')
+  // Promotions are positive notices, so they skip the maintenance/warning
+  // alert types and always render in the neutral "info" style.
+  const [type,      setType]      = useState(announcement?.type    ?? (promo ? 'info' : 'maintenance'))
   const [title,     setTitle]     = useState(announcement?.title   ?? '')
   const [message,   setMessage]   = useState(announcement?.message ?? '')
   const [saving,    setSaving]    = useState(false)
@@ -176,32 +179,35 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote }
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">
-            {isEdit ? 'Edit Announcement' : 'New Announcement'}
+            {isEdit ? `Edit ${noun}` : `New ${noun}`}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
 
-          {/* Type selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-            <div className="flex gap-2">
-              {Object.entries(TYPE_CONFIG).map(([key, cfg]) => {
-                const Icon = cfg.icon
-                const active = type === key
-                return (
-                  <button key={key} type="button"
-                    onClick={() => setType(key)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      active ? cfg.pillActive : cfg.pillInact
-                    }`}>
-                    <Icon size={15} /> {cfg.label}
-                  </button>
-                )
-              })}
+          {/* Type selector — alert types are for CRMC system notices only;
+              promotions always use the neutral info style. */}
+          {!promo && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <div className="flex gap-2">
+                {Object.entries(TYPE_CONFIG).map(([key, cfg]) => {
+                  const Icon = cfg.icon
+                  const active = type === key
+                  return (
+                    <button key={key} type="button"
+                      onClick={() => setType(key)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active ? cfg.pillActive : cfg.pillInact
+                      }`}>
+                      <Icon size={15} /> {cfg.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Title */}
           <div>
@@ -209,7 +215,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote }
               <label className="block text-sm font-medium text-gray-700">Title <span className="text-red-400">*</span></label>
               <span className="text-xs text-gray-400">{title.length}/60</span>
             </div>
-            <input className="input" placeholder="e.g. Scheduled System Maintenance"
+            <input className="input" placeholder={promo ? 'e.g. Free chemotherapy medicines available' : 'e.g. Scheduled System Maintenance'}
               value={title} onChange={e => setTitle(e.target.value.slice(0, 60))} />
           </div>
 
@@ -220,7 +226,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote }
               <span className="text-xs text-gray-400">{message.length}/300</span>
             </div>
             <textarea className="input resize-none" rows={3}
-              placeholder="Describe what users should expect during this period…"
+              placeholder={promo ? 'Describe the program or offer patients should know about…' : 'Describe what users should expect during this period…'}
               value={message} onChange={e => setMessage(e.target.value.slice(0, 300))} />
           </div>
 
@@ -260,7 +266,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote }
         <div className="px-5 pb-4 pt-3 flex gap-2 justify-end border-t border-gray-100 flex-shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
           <button className="btn-primary text-sm" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Announcement'}
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : `Create ${noun}`}
           </button>
         </div>
       </div>
