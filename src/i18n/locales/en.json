@@ -706,6 +706,21 @@
       "downloadFailed": "Failed to download Guarantee Letter.",
       "withdrawSuccess": "Application withdrawn. You may now apply to another program.",
       "withdrawFailed": "Failed to withdraw. Please try again.",
+      "reviewCoverage": "Review coverage & proceed",
+      "reqStages": {
+        "submittedLabel":    "Request Submitted",
+        "submittedNote":     "Your request and documents were submitted to CRMC.",
+        "reviewLabel":       "Under Review",
+        "reviewNote":        "CRMC is verifying your documents and your bill.",
+        "assessmentLabel":   "Assessment & Interview",
+        "assessmentNote":    "CRMC reviews your case and conducts your assessment interview.",
+        "endorsedLabel":     "Endorsed to Agencies",
+        "endorsedNote":      "CRMC referred your request to one or more agencies to help cover your bill.",
+        "fundedLabel":       "Approved & Funded",
+        "fundedNote":        "Agencies approve their share and issue your Guarantee Letters.",
+        "completedLabel":    "Completed",
+        "completedNote":     "Your bill is fully covered. Claim your Guarantee Letters at the agency office."
+      },
       "stages": {
         "submittedLabel":   "Application Submitted",
         "submittedNote":    "Your application was successfully submitted.",

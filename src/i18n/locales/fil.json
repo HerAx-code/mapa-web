@@ -706,6 +706,21 @@
       "downloadFailed": "Nabigong i-download ang Guarantee Letter.",
       "withdrawSuccess": "Na-withdraw ang aplikasyon. Maaari na kayong mag-apply sa ibang programa.",
       "withdrawFailed": "Nabigong i-withdraw. Pakisubukan muli.",
+      "reviewCoverage": "Tingnan ang coverage at magpatuloy",
+      "reqStages": {
+        "submittedLabel":    "Naisumite ang Kahilingan",
+        "submittedNote":     "Naisumite sa CRMC ang inyong kahilingan at mga dokumento.",
+        "reviewLabel":       "Sinusuri",
+        "reviewNote":        "Vine-verify ng CRMC ang inyong mga dokumento at bayarin.",
+        "assessmentLabel":   "Pagsusuri at Panayam",
+        "assessmentNote":    "Sinusuri ng CRMC ang inyong kaso at isinasagawa ang assessment interview.",
+        "endorsedLabel":     "Na-endorso sa mga Ahensya",
+        "endorsedNote":      "Ini-refer ng CRMC ang inyong kahilingan sa isa o higit pang ahensya para tulungan ang inyong bayarin.",
+        "fundedLabel":       "Naaprubahan at Napondohan",
+        "fundedNote":        "Inaaprubahan ng mga ahensya ang kani-kanilang bahagi at inilalabas ang inyong Guarantee Letters.",
+        "completedLabel":    "Tapos na",
+        "completedNote":     "Lubos nang nasaklaw ang inyong bayarin. Kunin ang inyong Guarantee Letters sa opisina ng ahensya."
+      },
       "stages": {
         "submittedLabel":   "Naisumite ang Aplikasyon",
         "submittedNote":    "Matagumpay na naisumite ang inyong aplikasyon.",

@@ -10,8 +10,31 @@ import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, up
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
-import { GL_VALIDITY_DAYS } from '../../utils/constants'
+import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG } from '../../utils/constants'
+import { computeFunding } from '../../utils/requests'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
+
+const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
+
+// Request-lifecycle stepper for the patient's single co-funding request.
+const buildRequestStages = (request, t) => {
+  const DEFS = [
+    { key: 'submitted',    label: t('patient.track.reqStages.submittedLabel'),    note: t('patient.track.reqStages.submittedNote') },
+    { key: 'under_review', label: t('patient.track.reqStages.reviewLabel'),       note: t('patient.track.reqStages.reviewNote') },
+    { key: 'assessment',   label: t('patient.track.reqStages.assessmentLabel'),   note: t('patient.track.reqStages.assessmentNote') },
+    { key: 'endorsed',     label: t('patient.track.reqStages.endorsedLabel'),     note: t('patient.track.reqStages.endorsedNote') },
+    { key: 'funded',       label: t('patient.track.reqStages.fundedLabel'),       note: t('patient.track.reqStages.fundedNote') },
+    { key: 'completed',    label: t('patient.track.reqStages.completedLabel'),    note: t('patient.track.reqStages.completedNote') },
+  ]
+  const order = ['submitted', 'under_review', 'assessment', 'endorsed', 'funded', 'completed']
+  const activeMap = {
+    submitted: 'submitted', under_review: 'under_review', assessment: 'assessment',
+    endorsed: 'endorsed', partially_funded: 'funded', fully_funded: 'completed', closed: 'completed',
+  }
+  const activeKey = activeMap[request.status] ?? 'submitted'
+  const activeIdx = order.indexOf(activeKey)
+  return DEFS.map((s, i) => ({ ...s, done: i < activeIdx, active: i === activeIdx }))
+}
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
@@ -109,6 +132,8 @@ export default function TrackStatus() {
   const navigate                        = useNavigate()
   const { t }                           = useTranslation()
   const [applications, setApplications] = useState([])
+  const [requests,     setRequests]     = useState([])
+  const [reqSlices,    setReqSlices]    = useState([])
   const [agencyMap,    setAgencyMap]    = useState({})
   const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('active')
@@ -194,6 +219,32 @@ export default function TrackStatus() {
     )
     return unsub
   }, [user])
+
+  // Co-funding requests — the patient's primary tracked item.
+  useEffect(() => {
+    if (!user) return
+    const unsub = onSnapshot(
+      query(collection(db, 'requests'), where('patientId', '==', user.uid)),
+      snap => setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {},
+    )
+    return unsub
+  }, [user])
+
+  const REQ_ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
+  const activeRequest = requests.find(r => REQ_ACTIVE(r.status)) ?? null
+  const pastRequests  = requests.filter(r => !REQ_ACTIVE(r.status))
+
+  // Slices of the active request — the per-agency coverage breakdown.
+  useEffect(() => {
+    if (!activeRequest?.id) { setReqSlices([]); return }
+    const unsub = onSnapshot(
+      query(collection(db, 'applications'), where('requestId', '==', activeRequest.id)),
+      snap => setReqSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {},
+    )
+    return unsub
+  }, [activeRequest?.id])
 
   const activeApps = applications.filter(a =>
     !['rejected', 'certificate'].includes(a.status)
@@ -314,8 +365,81 @@ export default function TrackStatus() {
           </div>
         )}
 
+        {/* ── Active co-funding request ── */}
+        {!loading && tab === 'active' && activeRequest && (() => {
+          const cfg     = REQUEST_STATUS_CONFIG[activeRequest.status] ?? REQUEST_STATUS_CONFIG.submitted
+          const stages  = buildRequestStages(activeRequest, t)
+          const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, reqSlices)
+          return (
+            <div className="card p-5 mb-5">
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
+                <div className="w-10 h-10 bg-brand-500 rounded-xl text-white flex items-center justify-center flex-shrink-0">
+                  <MdAssignment size={20} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold text-gray-800 truncate">{activeRequest.requestId}</h2>
+                  <p className="text-sm text-gray-500 truncate">{activeRequest.assistanceType} · {peso(activeRequest.amountNeeded)}</p>
+                </div>
+                <span className={`badge ${cfg.badge} ml-auto flex-shrink-0`}>{cfg.label}</span>
+              </div>
+
+              {/* Lifecycle stepper */}
+              <div className="space-y-3 mb-4">
+                {stages.map((s, i) => (
+                  <div key={s.key} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-green-500 text-white' : s.active ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                        {s.done ? <MdCheck size={15} /> : <span className="text-xs font-semibold">{i + 1}</span>}
+                      </div>
+                      {i < stages.length - 1 && <div className={`w-0.5 flex-1 min-h-4 ${s.done ? 'bg-green-300' : 'bg-gray-100'}`} />}
+                    </div>
+                    <div className="pb-1 min-w-0">
+                      <p className={`text-sm ${s.active ? 'font-semibold text-gray-900' : s.done ? 'text-gray-700' : 'text-gray-400'}`}>{s.label}</p>
+                      {(s.active || s.done) && <p className="text-xs text-gray-400 leading-snug">{s.note}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Coverage */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                  <span>{peso(committed)} {t('patient.request.secured')}</span>
+                  <span>{peso(balance)} {t('patient.request.remaining')}</span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                {reqSlices.length > 0 && (
+                  <div className="space-y-1.5 mt-3">
+                    {reqSlices.map(s => {
+                      const scfg    = APP_STATUS_CONFIG[s.status] ?? APP_STATUS_CONFIG.pending
+                      const secured = ['approved', 'certificate'].includes(s.status)
+                      const amt     = secured ? (s.amountApproved ?? s.amountRequested) : s.amountRequested
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 text-xs">
+                          <div className={`w-6 h-6 ${s.agencyColor ?? 'bg-gray-400'} rounded text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0`}>{s.agencyInitials}</div>
+                          <span className="flex-1 min-w-0 truncate text-gray-600">{s.agencyName}</span>
+                          <span className="text-gray-500">{peso(amt)}</span>
+                          <span className={`badge text-xs flex-shrink-0 ${scfg.badge}`}>{scfg.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {reqSlices.some(s => s.status === 'endorsed') && (
+                <button className="btn-primary w-full mt-4 text-sm" onClick={() => navigate('/patient/request')}>
+                  {t('patient.track.reviewCoverage')} →
+                </button>
+              )}
+            </div>
+          )
+        })()}
+
         {/* ── Active Applications ── */}
-        {!loading && tab === 'active' && (
+        {!loading && tab === 'active' && !activeRequest && (
           <>
             {activeApps.length === 0 ? (
               <div className="card p-10 text-center">
