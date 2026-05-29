@@ -41,12 +41,15 @@ const fmtRelative = (date) => {
 // Used by both the agency (per-application, legacy) and CRMC (per-request,
 // the redesign's assessment step) — `collectionName` switches which doc the
 // same Unified Intake form reads and writes.
-export default function IntakeSheet({ collectionName = 'applications' } = {}) {
+export default function IntakeSheet({ collectionName = 'applications', patientFacts = false } = {}) {
   const { id }      = useParams()
   const navigate    = useNavigate()
   const { user }    = useAuth()
   const isRequestMode = collectionName === 'requests'
-  const backList = isRequestMode ? '/admin/requests' : '/agency/inbox'
+  // patientFacts: the patient fills the socioeconomic + medical facts on their
+  // own request (the Assessment section stays CRMC-only and is hidden here).
+  const backList = patientFacts ? '/patient/request' : isRequestMode ? '/admin/requests' : '/agency/inbox'
+  const visibleSections = patientFacts ? SECTIONS.filter(s => s.id !== 'assess') : SECTIONS
 
   const [app, setApp]           = useState(null)
   const [loading, setLoading]   = useState(true)
@@ -91,9 +94,11 @@ export default function IntakeSheet({ collectionName = 'applications' } = {}) {
   // Permission: CRMC admins edit the request's intake; the owning agency edits
   // a (legacy) application's intake. Terminal states are read-only.
   const canEdit = app && (
-    isRequestMode
-      ? isCrmcAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
-      : (user?.agencyId === app.agencyId) && !['rejected'].includes(app.status)
+    patientFacts
+      ? app.patientId === user?.uid && !['closed', 'rejected', 'fully_funded'].includes(app.status)
+      : isRequestMode
+        ? isCrmcAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
+        : (user?.agencyId === app.agencyId) && !['rejected'].includes(app.status)
   )
 
   // Autosave (debounced)
@@ -296,7 +301,7 @@ export default function IntakeSheet({ collectionName = 'applications' } = {}) {
             <div className="flex items-center gap-2 min-w-0">
               <Link to={isRequestMode ? backList : `/agency/applications/${app.id}`}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 font-medium">
-                <MdArrowBack size={14} /> {isRequestMode ? 'Back to requests' : 'Back to application'}
+                <MdArrowBack size={14} /> {patientFacts ? 'Back to my request' : isRequestMode ? 'Back to requests' : 'Back to application'}
               </Link>
               <span className="text-gray-300">/</span>
               <p className="text-sm font-semibold text-gray-800 truncate">Case Assessment</p>
@@ -407,7 +412,7 @@ export default function IntakeSheet({ collectionName = 'applications' } = {}) {
               <div className="card p-3">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2 px-1">Jump to section</p>
                 <nav className="space-y-0.5">
-                  {SECTIONS.map(s => {
+                  {visibleSections.map(s => {
                     const active = activeSection === s.id
                     const done = sectionDone[s.id]
                     const Icon = s.Icon
@@ -606,7 +611,9 @@ export default function IntakeSheet({ collectionName = 'applications' } = {}) {
               </div>
             </section>
 
-            {/* Section: Assessment */}
+            {/* Section: Assessment — CRMC social worker only (hidden when the
+                patient is filling their factual portion). */}
+            {!patientFacts && (
             <section ref={el => sectionRefs.current.assess = el} id="assess" className="card p-5 scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-lg">📝</span>
@@ -636,6 +643,7 @@ export default function IntakeSheet({ collectionName = 'applications' } = {}) {
                 </Field>
               </div>
             </section>
+            )}
 
             {/* Footer hint */}
             <div className="card p-4 bg-blue-50/40 border-blue-100 print:hidden">

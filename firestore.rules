@@ -140,6 +140,12 @@ service cloud.firestore {
         (isPatient() && resource.data.patientId == uid() &&
           resource.data.status == 'submitted' &&
           request.resource.data.status == 'closed') ||
+        // Patient fills the factual portion of their own intake sheet (the
+        // CRMC assessment fields are written by admins). Only the intakeSheet
+        // field may change via this path.
+        (isPatient() && resource.data.patientId == uid() &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['intakeSheet', 'updatedAt'])) ||
         (isAgency() && userAgencyId() in resource.data.agencyIds &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['amountCommitted', 'status', 'updatedAt']));

@@ -109,6 +109,7 @@ export default function App() {
           <Route path="/patient/dashboard"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientDashboard /></PrivateRoute>} />
           <Route path="/patient/programs"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><MedicalPrograms /></PrivateRoute>} />
           <Route path="/patient/request"    element={<PrivateRoute allowedRoles={PATIENT_ROLES}><RequestAssistance /></PrivateRoute>} />
+          <Route path="/patient/request/:id/intake" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><IntakeSheet collectionName="requests" patientFacts /></PrivateRoute>} />
           <Route path="/patient/status"     element={<PrivateRoute allowedRoles={PATIENT_ROLES}><TrackStatus /></PrivateRoute>} />
           <Route path="/patient/interviews" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><Interviews /></PrivateRoute>} />
           <Route path="/patient/messages"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><AdminMessages /></PrivateRoute>} />

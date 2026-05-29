@@ -13,6 +13,7 @@ import {
 } from '../../utils/requests'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { runIdOcr, isIdType } from '../../utils/idOcr'
+import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 
 const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
@@ -20,7 +21,7 @@ import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
-  MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt,
+  MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -393,6 +394,28 @@ export default function RequestAssistance() {
                 </div>
               </div>
             </div>
+
+            {/* Household Information Sheet — the patient fills the factual
+                portion (family, income, expenses, medical); CRMC completes the
+                assessment. Required before CRMC can endorse. */}
+            {(() => {
+              const done = isPatientIntakeComplete(activeRequest.intakeSheet)
+              return (
+                <button
+                  className={`mt-4 w-full flex items-center gap-3 p-3 rounded-xl border text-left ${done ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}
+                  onClick={() => navigate(`/patient/request/${activeRequest.id}/intake`)}>
+                  <MdAssignment size={20} className={done ? 'text-green-600 flex-shrink-0' : 'text-amber-500 flex-shrink-0'} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{t('patient.request.intakeTitle')}</p>
+                    <p className="text-xs text-gray-500">{done ? t('patient.request.intakeDone') : t('patient.request.intakeTodo')}</p>
+                  </div>
+                  <span className={`badge text-xs flex-shrink-0 ${done ? 'badge-green' : 'badge-amber'}`}>
+                    {done ? t('patient.request.docUploaded') : t('patient.request.intakeIncomplete')}
+                  </span>
+                  <MdChevronRight size={18} className="text-gray-300 flex-shrink-0" />
+                </button>
+              )
+            })()}
 
             {/* Coverage plan — which agencies cover how much, their info,
                 procedure, and the requirements the patient must comply with. */}

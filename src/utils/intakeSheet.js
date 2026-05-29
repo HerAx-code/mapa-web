@@ -53,6 +53,8 @@ export const blankSheet = () => ({
   meansTestCategory: '',
 })
 
+// The full sheet is complete when BOTH the patient facts AND the CRMC
+// assessment (means-test + recommendation) are present.
 export const isIntakeComplete = (s) => {
   if (!s) return false
   return Boolean(
@@ -62,6 +64,17 @@ export const isIntakeComplete = (s) => {
     s.recommendation?.trim() &&
     s.meansTestCategory &&
     s.completedBy
+  )
+}
+
+// The patient-facts portion (household + income + medical basics) — the part
+// the patient fills as a requirement, before CRMC adds its assessment.
+export const isPatientIntakeComplete = (s) => {
+  if (!s) return false
+  return Boolean(
+    s.householdSize && Number(s.householdSize) > 0 &&
+    s.monthlyIncome !== '' && Number(s.monthlyIncome) >= 0 &&
+    s.diagnosis?.trim()
   )
 }
 
