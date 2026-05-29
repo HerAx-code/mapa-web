@@ -232,9 +232,29 @@ export default function DocViewerModal({ docMeta, onClose }) {
               </div>
             )}
 
-            {!loading && !error && content && isPdf && (
-              <iframe src={pdfBlobUrl ?? content} title={docMeta?.name ?? 'Document'}
-                className="w-full h-[70vh] bg-white rounded-lg border border-gray-200 shadow-sm" />
+            {/* PDF: only render the iframe once we have a Blob URL (a raw
+                data: URL renders blank in Chrome). While converting, show a
+                spinner; if conversion fails, show a clear open/download card
+                instead of a dead white box. */}
+            {!loading && !error && content && isPdf && pdfBlobUrl && (
+              <div className="w-full flex flex-col items-center">
+                <iframe src={pdfBlobUrl} title={docMeta?.name ?? 'Document'}
+                  className="w-full h-[70vh] bg-white rounded-lg border border-gray-200 shadow-sm" />
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Not showing?{' '}
+                  <button onClick={handleOpenInNewTab} className="text-brand-600 hover:underline font-medium">Open in a new tab</button>.
+                </p>
+              </div>
+            )}
+
+            {!loading && !error && content && isPdf && !pdfBlobUrl && (
+              <div className="text-center max-w-sm">
+                <MdInsertDriveFile size={36} className="text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 font-medium mb-1">PDF document</p>
+                <p className="text-xs text-gray-400 mb-4">
+                  This PDF can't be previewed inline here. Use <strong>Open in new tab</strong> or <strong>Download</strong> below.
+                </p>
+              </div>
             )}
 
             {!loading && !error && content && !isImage && !isPdf && (
