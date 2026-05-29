@@ -57,6 +57,15 @@ export default function RequestAssistance() {
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
+  // Representative (filed-by) path — a relative filing on the patient's behalf
+  // supplies their own ID + selfie + relationship. Their files reuse the
+  // pendingFiles map under sentinel keys.
+  const REP_ID = '__rep_id__', REP_SELFIE = '__rep_selfie__'
+  const [filedByRep,  setFiledByRep]  = useState(false)
+  const [repForm,     setRepForm]     = useState({ name: '', relationship: '' })
+  const [repAuthorized, setRepAuthorized] = useState(false)
+  const setRep = (f) => (e) => setRepForm(p => ({ ...p, [f]: e.target.value }))
+
   const attachReq = (typeName) => (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -235,6 +244,9 @@ export default function RequestAssistance() {
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
     if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
+    if (filedByRep && (!repForm.name.trim() || !repForm.relationship.trim() || !pendingFiles[REP_ID] || !pendingFiles[REP_SELFIE] || !repAuthorized)) {
+      toast.error(t('patient.request.errRep')); return
+    }
     if (!declared)                { toast.error(t('patient.request.errDeclare')); return }
 
     setSubmitting(true)
@@ -248,6 +260,20 @@ export default function RequestAssistance() {
         const ocr      = ocrResults[tp.name] ?? null
         if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, user })
         else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, user })
+      }
+
+      // Representative identity documents (when filing on the patient's behalf).
+      let filedBy = null
+      if (filedByRep) {
+        const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', user })
+        const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', user })
+        filedBy = {
+          name:          repForm.name.trim(),
+          relationship:  repForm.relationship.trim(),
+          authorized:    true,
+          repIdDocId:    repIdRef.documentId,
+          repSelfieDocId: repSelfieRef.documentId,
+        }
       }
 
       const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
@@ -275,9 +301,7 @@ export default function RequestAssistance() {
         agencyIds:         [],
         status:            'submitted',
         attachedDocuments,
-        // Reserved for the representative (filed-by) path — populated in P8
-        // when a relative files on the patient's behalf.
-        filedBy:           null,
+        filedBy,
         submittedAt:       serverTimestamp(),
         updatedAt:         serverTimestamp(),
       })
@@ -578,6 +602,71 @@ export default function RequestAssistance() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Filed by a representative */}
+          <div className="rounded-lg border border-gray-100 p-3">
+            <label className="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
+                checked={filedByRep} onChange={e => setFiledByRep(e.target.checked)} />
+              <span className="text-sm text-gray-700 leading-snug">{t('patient.request.repToggle')}
+                <span className="block text-xs text-gray-400">{t('patient.request.repToggleHint')}</span>
+              </span>
+            </label>
+
+            {filedByRep && (
+              <div className="mt-3 space-y-2.5 pl-6">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repName')} <span className="text-red-400">*</span></label>
+                  <input className="input" value={repForm.name} onChange={setRep('name')} placeholder={t('patient.request.repNamePlaceholder')} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repRelationship')} <span className="text-red-400">*</span></label>
+                  <input className="input" value={repForm.relationship} onChange={setRep('relationship')} placeholder={t('patient.request.repRelationshipPlaceholder')} />
+                </div>
+                {/* Representative ID */}
+                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
+                  <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 truncate">{t('patient.request.repId')} <span className="text-red-400">*</span></p>
+                    {pendingFiles[REP_ID] && <p className="text-xs text-green-600 truncate">{pendingFiles[REP_ID].name}</p>}
+                  </div>
+                  {pendingFiles[REP_ID] ? (
+                    <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeReq(REP_ID)}>
+                      <MdClose size={16} />
+                    </button>
+                  ) : (
+                    <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
+                      <MdUploadFile size={14} /> {t('patient.request.docAttach')}
+                      <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(REP_ID)} />
+                    </label>
+                  )}
+                </div>
+                {/* Representative selfie */}
+                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
+                  <MdCameraAlt size={16} className="text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 truncate">{t('patient.request.repSelfie')} <span className="text-red-400">*</span></p>
+                    {pendingFiles[REP_SELFIE] && <p className="text-xs text-green-600 truncate">{t('patient.request.selfieReady')}</p>}
+                  </div>
+                  {pendingFiles[REP_SELFIE] ? (
+                    <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeReq(REP_SELFIE)}>
+                      <MdClose size={16} />
+                    </button>
+                  ) : (
+                    <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1 flex-shrink-0"
+                      onClick={() => setSelfieFor(REP_SELFIE)}>
+                      <MdCameraAlt size={14} /> {t('patient.request.takeSelfie')}
+                    </button>
+                  )}
+                </div>
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
+                    checked={repAuthorized} onChange={e => setRepAuthorized(e.target.checked)} />
+                  <span className="text-xs text-gray-600 leading-snug">{t('patient.request.repAuth')}</span>
+                </label>
               </div>
             )}
           </div>

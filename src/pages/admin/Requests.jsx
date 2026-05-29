@@ -446,6 +446,15 @@ function RequestDetail({ request, agencies, onClose }) {
             <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400" /> submitted {fmtDate(request.submittedAt)}</p>
           </div>
 
+          {/* Filed by a representative — verify the rep's ID + selfie (below) */}
+          {request.filedBy && (
+            <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-800">
+              <p className="font-semibold flex items-center gap-1.5"><MdPerson size={13} /> Filed by a representative</p>
+              <p className="mt-0.5">{request.filedBy.name} · {request.filedBy.relationship}</p>
+              <p className="text-amber-700/80 mt-0.5">Verify the representative's ID and selfie in the documents below.</p>
+            </div>
+          )}
+
           {/* ① Document verification */}
           <div>
             <div className="flex items-center justify-between mb-2">
