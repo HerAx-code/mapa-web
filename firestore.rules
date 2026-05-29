@@ -86,6 +86,12 @@ service cloud.firestore {
       allow read: if isAuth() && (
         resource.data.patientId == uid()  ||
         (isAgency() && resource.data.agencyId == userAgencyId()) ||
+        // Co-funding: an agency may read every slice of a request it holds a
+        // slice in (its id is in the parent request's agencyIds[]). This powers
+        // the per-agency co-funding breakdown on the application detail view.
+        // The client only surfaces agency name, amount, and status.
+        (isAgency() && resource.data.requestId != null &&
+          userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||
         isAdmin()
       );
       // isPatient: the legacy direct apply flow (still active during the

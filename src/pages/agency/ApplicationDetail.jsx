@@ -12,6 +12,7 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS } from '../../utils/constants'
+import { computeFunding } from '../../utils/requests'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
   MdVideoCall, MdDescription, MdAssignment, MdAttachMoney,
@@ -345,6 +346,8 @@ export default function ApplicationDetail() {
 
   const [app, setApp]                       = useState(null)
   const [appLoading, setAppLoading]         = useState(true)
+  const [request, setRequest]               = useState(null)
+  const [siblings, setSiblings]             = useState([])
   const [agency, setAgency]                 = useState(null)
   const [queueIds, setQueueIds]             = useState([])
   const [patientDocs, setPatientDocs]       = useState([])
@@ -437,6 +440,32 @@ export default function ApplicationDetail() {
     }, (err) => console.error('[ApplicationDetail] certificate snapshot error:', err))
     return unsub
   }, [app?.id])
+
+  // Co-funding parent request — gives the full bill and the running committed
+  // total across every agency. (Rules let an agency read a request it holds a
+  // slice in; sibling slices of other agencies are not readable, so the panel
+  // shows the aggregate, not a per-agency breakdown.)
+  useEffect(() => {
+    if (!app?.requestId) { setRequest(null); return }
+    const unsub = onSnapshot(doc(db, 'requests', app.requestId),
+      snap => setRequest(snap.exists() ? { id: snap.id, ...snap.data() } : null),
+      (err) => console.error('[ApplicationDetail] request snapshot error:', err),
+    )
+    return unsub
+  }, [app?.requestId])
+
+  // Sibling slices of the same request — the per-agency co-funding breakdown.
+  // The rules allow a co-funding agency to read every slice of a request it
+  // holds (its id is in request.agencyIds), so this is live and accurate.
+  useEffect(() => {
+    if (!app?.requestId) { setSiblings([]); return }
+    const unsub = onSnapshot(
+      query(collection(db, 'applications'), where('requestId', '==', app.requestId)),
+      snap => setSiblings(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => console.error('[ApplicationDetail] siblings snapshot error:', err),
+    )
+    return unsub
+  }, [app?.requestId])
 
   const queueIndex = useMemo(() => queueIds.indexOf(id), [queueIds, id])
   const prevId = queueIndex > 0 ? queueIds[queueIndex - 1] : null
@@ -1259,6 +1288,68 @@ export default function ApplicationDetail() {
             {/* OVERVIEW */}
             {section === 'overview' && (
               <>
+                {app.requestId && request && siblings.length > 0 && (() => {
+                  const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
+                  const need = Number(request.amountNeeded) || 0
+                  const { committed, outstanding, headroom, pct } = computeFunding(need, siblings)
+                  const ordered = [...siblings].sort((a, b) =>
+                    (a.id === app.id ? -1 : 0) - (b.id === app.id ? -1 : 0))
+                  return (
+                    <div className="card p-5">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <MdAttachMoney size={13} /> Co-funding picture
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-400 mb-0.5">Total bill</p>
+                          <p className="text-sm font-semibold text-gray-800">{peso(need)}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-400 mb-0.5">Committed</p>
+                          <p className="text-sm font-semibold text-green-700">{peso(committed)}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-400 mb-0.5">In review</p>
+                          <p className="text-sm font-semibold text-amber-600">{peso(outstanding)}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-400 mb-0.5">Still open</p>
+                          <p className="text-sm font-semibold text-gray-800">{peso(headroom)}</p>
+                        </div>
+                      </div>
+                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2 mb-3">
+                        {siblings.length} {siblings.length === 1 ? 'agency' : 'agencies'} on this bill · {pct}% committed toward zero balance
+                      </p>
+                      <div className="space-y-2">
+                        {ordered.map(s => {
+                          const secured = ['approved', 'certificate'].includes(s.status)
+                          const amt     = secured ? (s.amountApproved ?? s.amountRequested) : s.amountRequested
+                          const isMine  = s.id === app.id
+                          return (
+                            <div key={s.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${isMine ? 'border-brand-200 bg-brand-50' : 'border-gray-100'}`}>
+                              <div className={`w-8 h-8 ${s.agencyColor ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
+                                {s.agencyInitials ?? '—'}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 truncate">
+                                  {s.agencyName ?? 'Agency'}{isMine && <span className="text-brand-500 font-normal"> · You</span>}
+                                </p>
+                                <p className="text-xs text-gray-400">{peso(amt)}</p>
+                              </div>
+                              <span className={`badge text-xs flex-shrink-0 ${STATUS_BADGE[s.status] ?? 'badge-blue'}`}>
+                                {STATUS_LABEL[s.status] ?? s.status}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <div className="card p-5">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Patient</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
