@@ -13,7 +13,7 @@ import { REQUEST_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { isIdType } from '../../utils/idOcr'
 import { isIntakeComplete } from '../../utils/intakeSheet'
 import { Link } from 'react-router-dom'
-import { DocPreview } from '../../components/DocViewerModal'
+import DocViewerModal from '../../components/DocViewerModal'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
@@ -422,9 +422,8 @@ function RequestDetail({ request, agencies, onClose }) {
         <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
       </div>
 
-      {/* Two-column workspace: review on the left, document preview on the right */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-5 items-start">
-        <div className="space-y-4 min-w-0">
+      {/* Single-column review; documents open in a large viewer */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 space-y-4">
           {/* Amount needed — verify against the patient's uploaded Statement
               of Account before endorsing. */}
           <div className="bg-brand-50 rounded-lg p-3 flex items-center justify-between">
@@ -633,45 +632,11 @@ function RequestDetail({ request, agencies, onClose }) {
               </div>
             </div>
           )}
-        </div>{/* end left column */}
+      </div>
 
-        {/* Right column — inline document review (side-by-side) */}
-        <div className="lg:sticky lg:top-20 self-start">
-          <div className="card overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 7rem)' }}>
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-              <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
-              <p className="text-sm font-medium text-gray-800 truncate flex-1">
-                {viewingDoc ? (viewingDoc.documentTypeName || viewingDoc.name) : 'Document review'}
-              </p>
-              {viewingDoc?.status && (
-                <span className={`badge text-xs flex-shrink-0 ${(DOC_STATUS_CONFIG[viewingDoc.status] ?? DOC_STATUS_CONFIG.pending).badge}`}>
-                  {(DOC_STATUS_CONFIG[viewingDoc.status] ?? DOC_STATUS_CONFIG.pending).label}
-                </span>
-              )}
-            </div>
-            {viewingDoc ? (
-              <>
-                <DocPreview docMeta={viewingDoc} className="flex-1" />
-                {viewingDoc.status !== 'verified' && (
-                  <div className="flex gap-2 px-4 py-3 border-t border-gray-100">
-                    <button className="btn-primary text-sm flex-1 flex items-center justify-center gap-1 disabled:opacity-50" disabled={busy} onClick={() => reviewDoc(viewingDoc, 'verified')}>
-                      <MdCheckCircle size={14} /> Verify
-                    </button>
-                    <button className="btn-secondary text-sm flex-1 flex items-center justify-center gap-1 text-red-500 disabled:opacity-50" disabled={busy} onClick={() => reviewDoc(viewingDoc, 'rejected')}>
-                      <MdBlock size={14} /> Reject
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center p-8 text-center min-h-48">
-                <p className="text-sm text-gray-400">Select a document on the left to review it here.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>{/* end grid */}
-
+      {viewingDoc && (
+        <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
+      )}
       {showEndorse && (
         <EndorseModal request={request} slices={slices} agencies={agencies} onClose={() => setShowEndorse(false)} />
       )}
