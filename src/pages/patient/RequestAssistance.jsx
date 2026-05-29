@@ -12,11 +12,15 @@ import {
   generateRequestId, computeFunding,
 } from '../../utils/requests'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
+import { runIdOcr, isIdType } from '../../utils/idOcr'
+import SelfieCaptureModal from '../../components/SelfieCaptureModal'
+
+const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
 import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
-  MdHourglassTop, MdUploadFile, MdClose,
+  MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -32,11 +36,15 @@ export default function RequestAssistance() {
   const navigate   = useNavigate()
 
   const [types,         setTypes]         = useState([])
+  const [reqDocTypes,   setReqDocTypes]   = useState([])
   const [activeRequest, setActiveRequest] = useState(null)
   const [slices,        setSlices]        = useState([])
   const [myDocs,        setMyDocs]        = useState([])
   const [agencyMap,     setAgencyMap]     = useState({})
-  const [billingFile,   setBillingFile]   = useState(null)
+  const [pendingFiles,  setPendingFiles]  = useState({})
+  const [ocrResults,    setOcrResults]    = useState({})
+  const [ocrRunning,    setOcrRunning]    = useState({})
+  const [selfieFor,     setSelfieFor]     = useState(null)
   const [replacing,     setReplacing]     = useState(null)
   const [proceeding,    setProceeding]    = useState(false)
   const [loading,       setLoading]       = useState(true)
@@ -49,13 +57,28 @@ export default function RequestAssistance() {
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
-  const attachBilling = (e) => {
+  const attachReq = (typeName) => (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
     const err = validateDocFile(file)
     if (err) { toast.error(err); return }
-    setBillingFile(file)
+    setPendingFiles(p => ({ ...p, [typeName]: file }))
+
+    // ID documents get an advisory on-device OCR name-check (never blocks).
+    if (isIdType(typeName)) {
+      setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
+      setOcrRunning(p => ({ ...p, [typeName]: true }))
+      runIdOcr(file, user?.name ?? '')
+        .then(res => setOcrResults(p => ({ ...p, [typeName]: res })))
+        .finally(() => setOcrRunning(p => ({ ...p, [typeName]: false })))
+    }
+  }
+
+  const removeReq = (typeName) => {
+    setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
+    setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
+    setOcrRunning(p => { const n = { ...p }; delete n[typeName]; return n })
   }
 
   // Proceed gate: the patient accepts the coverage plan, advancing every
@@ -120,11 +143,24 @@ export default function RequestAssistance() {
     }
   }
 
-  // Assistance types (names only — the request needs just a billing statement,
-  // not per-type documents).
+  // Assistance types (names only).
   useEffect(() => {
     getDocs(query(collection(db, 'assistanceTypes')))
       .then(snap => setTypes(snap.docs.map(d => d.data().name).filter(Boolean).sort()))
+      .catch(() => {})
+  }, [])
+
+  // The standard required-documents checklist — the same for every request
+  // (a `required` flag on document types, not per-assistance-type). Sorted by
+  // the admin-defined order. Reusable types carry over once verified.
+  useEffect(() => {
+    getDocs(query(collection(db, 'documentTypes'), where('required', '==', true)))
+      .then(snap => setReqDocTypes(
+        snap.docs
+          .map(d => ({ id: d.id, name: d.data().name, reusable: !!d.data().reusable, order: d.data().order ?? 0 }))
+          .filter(t => t.name)
+          .sort((a, b) => a.order - b.order)
+      ))
       .catch(() => {})
   }, [])
 
@@ -181,12 +217,15 @@ export default function RequestAssistance() {
   }, [])
 
   const existingTypeNames = new Set(myDocs.map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase()))
-
-  // The only document needed to submit a request is the billing statement
-  // (Statement of Account). Agency-specific requirements are handled later,
-  // during per-agency compliance after endorsement.
-  const billingDoc = myDocs.find(d => (d.documentTypeName ?? d.name ?? '').toLowerCase().includes('billing'))
-  const hasBilling = !!billingDoc
+  // Verified docs on file, by type name — reusable types satisfy the checklist
+  // without re-upload; non-reusable ones (Billing/SOA) must be supplied fresh.
+  const verifiedTypeNames = new Set(
+    myDocs.filter(d => d.status === 'verified').map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase())
+  )
+  const docForType = (name) => myDocs.find(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase())
+  const isSatisfied = (tp) =>
+    !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
+  const missingDocs = reqDocTypes.filter(tp => !isSatisfied(tp))
 
   const amountNeeded = Number(form.amountNeeded) || 0
 
@@ -195,16 +234,20 @@ export default function RequestAssistance() {
     if (activeRequest)            { toast.error(t('patient.request.errActive')); return }
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
-    if (!billingFile && !hasBilling) { toast.error(t('patient.request.errBilling')); return }
+    if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
     if (!declared)                { toast.error(t('patient.request.errDeclare')); return }
 
     setSubmitting(true)
     try {
-      // Upload the billing statement (if newly attached) before snapshotting.
-      // Replace the existing one in place so we never create a duplicate.
-      if (billingFile) {
-        if (billingDoc) await replacePatientDocument({ docId: billingDoc.id, file: billingFile, user })
-        else            await uploadPatientDocument({ file: billingFile, typeName: 'Billing Statement', user })
+      // Upload each attached required document before snapshotting. Replace a
+      // same-type doc in place so we never create duplicates.
+      for (const tp of reqDocTypes) {
+        const file = pendingFiles[tp.name]
+        if (!file) continue
+        const existing = docForType(tp.name)
+        const ocr      = ocrResults[tp.name] ?? null
+        if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, user })
+        else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, user })
       }
 
       const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
@@ -232,6 +275,9 @@ export default function RequestAssistance() {
         agencyIds:         [],
         status:            'submitted',
         attachedDocuments,
+        // Reserved for the representative (filed-by) path — populated in P8
+        // when a relative files on the patient's behalf.
+        filedBy:           null,
         submittedAt:       serverTimestamp(),
         updatedAt:         serverTimestamp(),
       })
@@ -475,31 +521,65 @@ export default function RequestAssistance() {
               value={form.description} onChange={set('description')} maxLength={300} />
           </div>
 
-          {/* Billing statement — the only document needed to submit. CRMC
-              verifies the amount needed against it. Agency-specific documents
-              are collected later, after endorsement. */}
+          {/* Required documents — the standard checklist (same for every
+              request). CRMC verifies them; reusable ones (e.g. Valid ID) carry
+              over once verified, while per-request ones (Billing/SOA) are
+              re-submitted each time. */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.billingTitle')}</p>
-            <p className="text-xs text-gray-400 mb-2">{t('patient.request.billingHint')}</p>
-            <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
-              <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 truncate">{t('patient.request.billingLabel')} <span className="text-red-400">*</span></p>
-                {billingFile
-                  ? <p className="text-xs text-green-600 truncate">{billingFile.name}</p>
-                  : hasBilling && <p className="text-xs text-green-600 truncate">{t('patient.request.billingOnFile')}</p>}
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.documentsTitle')}</p>
+            <p className="text-xs text-gray-400 mb-2">{t('patient.request.documentsHint')}</p>
+            {reqDocTypes.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNone')}</p>
+            ) : (
+              <div className="space-y-2">
+                {reqDocTypes.map(tp => {
+                  const pending  = pendingFiles[tp.name]
+                  const onFile   = tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase())
+                  const ocr      = ocrResults[tp.name]
+                  const ocrBusy  = ocrRunning[tp.name]
+                  return (
+                    <div key={tp.id} className="p-2.5 rounded-lg border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{tp.name} <span className="text-red-400">*</span></p>
+                          {pending
+                            ? <p className="text-xs text-green-600 truncate">{pending.name}</p>
+                            : onFile && <p className="text-xs text-green-600 truncate">{t('patient.request.billingOnFile')}</p>}
+                        </div>
+                        {pending ? (
+                          <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeReq(tp.name)}>
+                            <MdClose size={16} />
+                          </button>
+                        ) : isSelfieType(tp.name) ? (
+                          <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1 flex-shrink-0"
+                            onClick={() => setSelfieFor(tp.name)}>
+                            <MdCameraAlt size={14} /> {t('patient.request.takeSelfie')}
+                          </button>
+                        ) : (
+                          <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
+                            <MdUploadFile size={14} /> {onFile ? t('patient.request.replace') : t('patient.request.docAttach')}
+                            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(tp.name)} />
+                          </label>
+                        )}
+                      </div>
+                      {/* Advisory on-device ID name-check — never blocks submit. */}
+                      {isIdType(tp.name) && pending && (ocrBusy || ocr) && (
+                        <p className={`text-xs mt-1.5 pl-6 ${ocr?.match === true ? 'text-green-600' : ocr?.match === false ? 'text-amber-600' : 'text-gray-400'}`}>
+                          {ocrBusy
+                            ? t('patient.request.ocrChecking')
+                            : ocr?.match === true
+                              ? t('patient.request.ocrMatch')
+                              : ocr?.match === false
+                                ? t('patient.request.ocrNoMatch')
+                                : t('patient.request.ocrUnreadable')}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-              {billingFile ? (
-                <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => setBillingFile(null)}>
-                  <MdClose size={16} />
-                </button>
-              ) : (
-                <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
-                  <MdUploadFile size={14} /> {hasBilling ? t('patient.request.replace') : t('patient.request.docAttach')}
-                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachBilling} />
-                </label>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Declaration */}
@@ -518,6 +598,13 @@ export default function RequestAssistance() {
         </button>
         <p className="text-xs text-gray-400 text-center mt-2">{t('patient.request.routeNote')}</p>
       </div>
+
+      {selfieFor && (
+        <SelfieCaptureModal
+          onCapture={(file) => setPendingFiles(p => ({ ...p, [selfieFor]: file }))}
+          onClose={() => setSelfieFor(null)}
+        />
+      )}
     </Layout>
   )
 }

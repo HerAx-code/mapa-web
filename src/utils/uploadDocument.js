@@ -60,7 +60,7 @@ const readContent = (file) => file.type.startsWith('image/')
 
 // Uploads one document and returns the attachedDocuments-style entry. Throws
 // on failure (metadata is rolled back if the content write fails).
-export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, user }) {
+export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, user }) {
   const content = await readContent(file)
   const sizeKB = (content.length * 0.75 / 1024).toFixed(2)
   const ref = await addDoc(collection(db, 'documents'), {
@@ -77,6 +77,9 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     agreedToAttestation: true,
     attestedAt:          new Date().toISOString(),
     ...(idType ? { idType } : {}),
+    // Advisory on-device OCR result (ID docs only): extracted text + a fuzzy
+    // name-match flag, surfaced to the CRMC verifier. Never authoritative.
+    ...(ocr ? { ocrText: (ocr.text ?? '').slice(0, 2000), ocrMatch: ocr.match ?? null } : {}),
     createdAt:           serverTimestamp(),
   })
 
@@ -102,7 +105,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
 // document). Keeps the same document id — so every application slice that
 // references it picks up the new file + reset status without any snapshot
 // rewrite. Resets status to 'pending' for re-review.
-export async function replacePatientDocument({ docId, file, user }) {
+export async function replacePatientDocument({ docId, file, ocr = null, user }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
   await setDoc(doc(db, 'documentContents', docId), {
@@ -116,5 +119,6 @@ export async function replacePatientDocument({ docId, file, user }) {
     date:       new Date().toLocaleDateString(),
     reviewedBy: null,
     reviewedAt: null,
+    ...(ocr ? { ocrText: (ocr.text ?? '').slice(0, 2000), ocrMatch: ocr.match ?? null } : {}),
   })
 }
