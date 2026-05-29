@@ -985,14 +985,14 @@
           "s5": "Nagawa na ang inyong account. Mag-log in gamit ang inyong email at password."
         },
         "upload": {
-          "title": "Paano ako mag-uupload ng mga dokumento?",
-          "s1": "Mag-log in at pumunta sa Aking mga Dokumento sa sidebar.",
-          "s2": "I-click ang Mag-upload ng Dokumento at piliin ang uri (hal. Valid ID, Medical Certificate).",
-          "s3": "Pumili ng malinaw na larawan o scan ng dokumento mula sa inyong device.",
-          "s4": "I-click ang Upload. Isusumite ang inyong dokumento para sa pag-verify ng admin.",
-          "s5": "Kapag na-verify, lalabas ang berdeng \"Verified\" badge sa dokumento.",
-          "s6": "Awtomatikong ikinakabit ang mga na-verify na dokumento sa inyong mga aplikasyon.",
-          "note": "Tip: Mag-upload ng mga dokumento bago mag-apply. Ang ilang programa ay nangangailangan ng mga na-verify na dokumento bago maaaring magpatuloy ang aplikasyon. Kapag nag-u-upload ng Valid ID, hihilingin sa inyong piliin ang partikular na uri ng ID (hal. PhilSys National ID, Driver's License) — tumutulong ito sa reviewer na mas mabilis na ma-verify ito."
+          "title": "Anong mga dokumento ang isusumite ko?",
+          "s1": "Buksan ang Humiling ng Tulong — nakalista doon ang mga kinakailangang dokumento bilang checklist.",
+          "s2": "Ilakip ang malinaw na larawan o scan ng bawat isa (hal. Valid ID, Billing Statement, Medical Certificate, Barangay Indigency).",
+          "s3": "Para sa inyong Valid ID, may mabilis na on-device na pagsusuri ng pangalan upang matulungang kumpirmahin na sa inyo ito — hindi ito humahadlang sa inyo.",
+          "s4": "Kumuha ng live selfie kapag hiniling; ikinukumpara ito ng CRMC sa inyong ID upang kumpirmahin ang inyong pagkakakilanlan.",
+          "s5": "Isumite. Sinusuri at vine-verify ng CRMC ang inyong mga dokumento bago i-endorso ang inyong kahilingan sa mga ahensya.",
+          "s6": "Kung may dokumentong markahan ng CRMC para itama, aabisuhan kayo — i-upload itong muli mula sa inyong kahilingan.",
+          "note": "Tip: Ang Valid ID, kapag na-verify na, ay magagamit muli sa inyong susunod na mga kahilingan. Ang inyong Billing Statement (Statement of Account) ay kailangang bago sa bawat kahilingan."
         },
         "apply": {
           "title": "Paano ako humihiling ng tulong?",

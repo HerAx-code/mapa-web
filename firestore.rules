@@ -153,10 +153,11 @@ service cloud.firestore {
     match /documents/{docId} {
       allow read:   if isAuth() && (resource.data.patientId == uid() || isAdmin() || isAgency());
       allow create: if isPatient();
-      // Agencies verify/reject documents during application review (document
-      // review moved from CRMC to the agencies). Patients may update their
-      // own; CRMC retains update for any legacy/oversight needs.
-      allow update: if isAdmin() || isAgency() || (isPatient() && resource.data.patientId == uid());
+      // CRMC-gateway redesign: document verification is CRMC's job (the single
+      // intake gateway), so only admins verify/reject. Agencies keep READ for
+      // the funding decision but no longer write document status. Patients may
+      // re-upload their own (status reset handled by replacePatientDocument).
+      allow update: if isAdmin() || (isPatient() && resource.data.patientId == uid());
       allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
     }
 

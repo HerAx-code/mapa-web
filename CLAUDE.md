@@ -40,7 +40,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Patient-facing UI must be bilingual (Filipino + English). Use inline bilingual labels where possible.
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match CRMC's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
-- Manual ID verification. No PhilSys integration. Social workers verify visually.
+- ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the CRMC social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
 - Patient Access Code (CRMC-YYYY-NNNNN) is the registration gate. Issued in person by Medical Social Services.
 
 ## Out Of Scope (do NOT build)
@@ -54,17 +54,20 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Real-time IHOMIS integration (use manual case number reference instead)
 
 ## Firestore Collections
-users, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
+users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
 
-## Application Lifecycle
-pending → reviewing → interview → approved → certificate (or rejected)
-Patient can withdraw while pending.
+## Co-funding model (current)
+CRMC is the single intake gateway; agencies only fund. The patient submits ONE
+**request** (a bill + amount needed) with the full required-document checklist
+and a live selfie. CRMC verifies the documents (OCR-assisted), fills the Unified
+Intake Sheet, conducts ONE assessment interview, then **endorses** the request to
+one or more agencies as child application "slices" toward zero balance. Agencies
+do NOT re-review documents or re-interview — they only approve their slice and the
+Guarantee Letter issues at approval. See docs/redesign-plan.md.
 
-For the interview step:
-- Agency schedules a Google Meet by creating an event (Google Calendar) and pasting the meet link into the application
-- System stores the link, scheduled time, and conducting social worker
-- Patient sees the link in their dashboard and gets an email reminder
-- After the meeting, the social worker records the interview outcome in MAPA
+- **Request lifecycle:** submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). Patient can withdraw before endorsement.
+- **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or needs_info / rejected).
+- The interview lives on the **request** (CRMC-conducted, one Google Meet). The agency's job is the funding decision only.
 
 ## Coding Conventions
 - Components in /src/components, pages in /src/pages
@@ -83,6 +86,7 @@ For the interview step:
 - For UI work on patient-facing screens, consider both web and future mobile — avoid web-only patterns where possible (e.g., hover-only interactions don't work on mobile)
 
 ## Reference Documents (read when relevant)
+- docs/redesign-plan.md — the frozen CRMC-gateway redesign plan (model, lifecycle, phases)
 - docs/intake-sheet-fields.md — every field from CRMC's paper intake forms
 - docs/sprint-plan.md — current sprint goals
 - (add others as you create them)

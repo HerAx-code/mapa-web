@@ -985,14 +985,14 @@
           "s5": "Your account is created. Log in with your email and password."
         },
         "upload": {
-          "title": "How do I upload documents?",
-          "s1": "Log in and go to My Documents from the sidebar.",
-          "s2": "Click Upload Document and select the document type (e.g., Valid ID, Medical Certificate).",
-          "s3": "Choose a clear photo or scan of the document from your device.",
-          "s4": "Click Upload. Your document will be submitted for admin verification.",
-          "s5": "Once verified, a green \"Verified\" badge will appear on the document.",
-          "s6": "Verified documents are automatically attached to your applications.",
-          "note": "Tip: Upload documents before applying. Some programs require verified documents before your application can proceed. When uploading a Valid ID, you will be asked to select the specific ID type (e.g., PhilSys National ID, Driver's License) — this helps the reviewer verify it faster."
+          "title": "What documents do I submit?",
+          "s1": "Open Request Assistance — the required documents are listed there as a checklist.",
+          "s2": "Attach a clear photo or scan of each one (e.g., Valid ID, Billing Statement, Medical Certificate, Barangay Indigency).",
+          "s3": "For your Valid ID, the app does a quick on-device name check to help confirm it's yours — it never blocks you.",
+          "s4": "Take a live selfie when prompted; CRMC compares it to your ID to confirm your identity.",
+          "s5": "Submit. CRMC reviews and verifies your documents before endorsing your request to agencies.",
+          "s6": "If CRMC marks a document for correction, you'll be notified — re-upload it from your request.",
+          "note": "Tip: A Valid ID, once verified, carries over to your future requests. Your Billing Statement (Statement of Account) is needed fresh for each request."
         },
         "apply": {
           "title": "How do I request assistance?",

@@ -111,7 +111,7 @@ export default function UserGuide() {
         t('patient.guide.sections.upload.s6'),
       ],
       note: t('patient.guide.sections.upload.note'),
-      link: { label: t('patient.guide.linkGoToDocuments'), path: '/patient/request' },
+      link: { label: t('patient.nav.requestAssistance'), path: '/patient/request' },
     },
     {
       icon:  MdAssignment,
