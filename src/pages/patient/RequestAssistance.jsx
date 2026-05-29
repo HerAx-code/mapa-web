@@ -494,36 +494,43 @@ export default function RequestAssistance() {
               </div>
             )}
 
-            {/* Documents — status + re-upload of rejected ones */}
-            {myDocs.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.yourDocuments')}</p>
-                <div className="space-y-2">
-                  {myDocs.map(d => {
-                    const dcfg = DOC_STATUS_CONFIG[d.status] ?? DOC_STATUS_CONFIG.pending
-                    return (
-                      <div key={d.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
-                        <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700 truncate">{d.name}</p>
-                        </div>
-                        <span className={`badge text-xs flex-shrink-0 ${dcfg.badge}`}>{dcfg.label}</span>
-                        {d.status === 'rejected' && (
+            {/* Documents — compact summary; only docs needing re-upload expand. */}
+            {myDocs.length > 0 && (() => {
+              const rejected = myDocs.filter(d => d.status === 'rejected')
+              const verified = myDocs.filter(d => d.status === 'verified').length
+              const chip = rejected.length > 0
+                ? { cls: 'badge-red',   label: t('patient.request.docsActionNeeded') }
+                : verified === myDocs.length
+                  ? { cls: 'badge-green', label: t('patient.request.docsVerified') }
+                  : { cls: 'badge-amber', label: t('patient.request.docsUnderReview') }
+              return (
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 p-3 rounded-xl border border-gray-100">
+                    <MdDescription size={18} className="text-gray-400 flex-shrink-0" />
+                    <p className="text-sm text-gray-700 flex-1 min-w-0">{t('patient.request.docsSummary', { count: myDocs.length })}</p>
+                    <span className={`badge text-xs flex-shrink-0 ${chip.cls}`}>{chip.label}</span>
+                  </div>
+                  {rejected.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      <p className="text-xs text-red-600">{t('patient.request.docsNeedFix')}</p>
+                      {rejected.map(d => (
+                        <div key={d.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-red-100 bg-red-50/50">
+                          <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                          <p className="text-sm text-gray-700 flex-1 min-w-0 truncate">{d.name}</p>
                           <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
                             <MdUploadFile size={14} /> {replacing === d.id ? t('patient.request.reuploading') : t('patient.request.reupload')}
                             <input type="file" accept="image/*,application/pdf" className="hidden"
                               disabled={replacing === d.id} onChange={reuploadDoc(d.id)} />
                           </label>
-                        )}
-                      </div>
-                    )
-                  })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">{t('patient.request.reuploadHint')}</p>
-              </div>
-            )}
+              )
+            })()}
 
-            <button className="btn-secondary w-full mt-4 text-sm" onClick={() => navigate('/patient/status')}>
+            <button className="btn-primary w-full mt-4 text-sm" onClick={() => navigate('/patient/status')}>
               {t('patient.request.viewStatus')} →
             </button>
           </div>
