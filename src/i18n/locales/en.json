@@ -886,41 +886,6 @@
       "nextStep2WithTime": "{{agency}} will review your application within {{time}}.",
       "nextStep3": "You will be notified of updates through this portal."
     },
-    "screening": {
-      "breadcrumb": "Find Programs",
-      "questionsTitle": "What do you need help with?",
-      "questionsSub": "Select everything that applies to your situation. You can choose more than one.",
-      "noTypesYet": "No assistance types configured yet. Contact your administrator.",
-      "privacy": "Your answers are for guidance only and are never stored.",
-      "seeMatches": "See My Matches",
-      "selectAtLeast": "Select at least one option to continue.",
-      "resultsTitle": "Your Program Matches",
-      "resultsNone": "No programs match your selections.",
-      "resultsCountOne": "1 program matches your needs.",
-      "resultsCountMany": "{{count}} programs match your needs.",
-      "changeAnswers": "Change My Answers",
-      "selectedLabel": "You selected:",
-      "noMatchTitle": "No matching programs found.",
-      "noMatchDesc": "None of the available programs cover what you selected. Try adjusting your answers or browse all programs.",
-      "browseAll": "Browse All Programs",
-      "activeAppWarning": "You have an active application in progress. Only one application is allowed at a time — resolve it before applying to a new program.",
-      "viewMyApp": "View My Application",
-      "match": {
-        "perfect": "Perfect Match",
-        "great":   "Great Match",
-        "partial": "Partial Match",
-        "low":     "Low Match"
-      },
-      "topPick": "Top Pick",
-      "noSlotsToday": "No slots today",
-      "slotsAvailable": "{{remaining}} of {{total}} slots available",
-      "moreTypes": "+{{count}} more",
-      "applied": "Applied",
-      "glIssued": "GL Issued",
-      "applyNow": "Apply Now",
-      "lookingForElse": "Looking for something else?",
-      "browseAllSimple": "Browse all programs"
-    },
     "interviews": {
       "title": "My Interview",
       "subtitle": "Join your scheduled video interview with the agency.",
@@ -955,9 +920,9 @@
         "notYetTitle":    "No Interview Scheduled Yet",
         "notYetDesc":     "Once the agency reviews your application and approves it, they will schedule a video interview and you will be notified.",
         "notYetBtn":      "View My Application",
-        "noAppTitle":     "No Application Yet",
-        "noAppDesc":      "You need to apply for a medical assistance program first. Interviews are scheduled after your application is reviewed and approved.",
-        "noAppBtn":       "Find a Program"
+        "noAppTitle":     "No Request Yet",
+        "noAppDesc":      "You need to submit an assistance request first. Interviews are scheduled after an agency reviews and approves your request.",
+        "noAppBtn":       "Request Assistance"
       }
     },
     "guide": {
@@ -966,7 +931,6 @@
       "tapHint": "Tap any question below to read the answer.",
       "footer": "Need further assistance? Visit the CRMC Medical Social Services office or send a message through the portal using the envelope icon in the top bar.",
       "linkGoToDocuments":  "Go to My Documents",
-      "linkGoToScreening":  "Go to Find Programs",
       "linkGoToStatus":     "Go to My Application",
       "linkGoToInterviews": "Go to My Interviews",
       "linkGoToMessages":   "Go to Messages",
@@ -998,15 +962,15 @@
           "note": "Tip: Upload documents before applying. Some programs require verified documents before your application can proceed. When uploading a Valid ID, you will be asked to select the specific ID type (e.g., PhilSys National ID, Driver's License) — this helps the reviewer verify it faster."
         },
         "apply": {
-          "title": "How do I apply for a program?",
-          "s1": "Go to Find Programs from the sidebar.",
-          "s2": "Answer the screening questions to find programs that match your medical needs.",
-          "s3": "Review your matched programs and check how many spots are available today.",
-          "s4": "Click Apply Now on the program you want to apply for.",
-          "s5": "Review the requirements checklist — verified documents will show a green check.",
-          "s6": "Tick the declaration checkbox confirming your documents are genuine.",
-          "s7": "Click Submit Application. You will receive a notification with your application ID.",
-          "note": "Important: Only one application is allowed at a time. You must wait for your current application to be resolved before applying to another program. Spots are limited and reset daily at midnight."
+          "title": "How do I request assistance?",
+          "s1": "Go to Request Assistance from the sidebar or the bottom tab.",
+          "s2": "Choose the type of assistance you need and enter the amount you need help with, based on your billing statement.",
+          "s3": "Attach your billing statement (Statement of Account), confirm the declaration, and submit your request.",
+          "s4": "CRMC reviews your request and endorses it to one or more agencies that can help cover your bill.",
+          "s5": "Open Request Assistance to see your coverage plan, then tap Proceed to send it to those agencies.",
+          "s6": "Complete each agency's requirements and join any scheduled online interview.",
+          "s7": "Once an agency approves, you will receive a Guarantee Letter to claim your assistance.",
+          "note": "Important: You can have only one active request at a time. Track its progress anytime under My Application."
         },
         "withdraw": {
           "title": "Can I cancel or withdraw my application?",

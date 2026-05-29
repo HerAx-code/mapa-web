@@ -886,41 +886,6 @@
       "nextStep2WithTime": "Susuriin ng {{agency}} ang inyong aplikasyon sa loob ng {{time}}.",
       "nextStep3": "Aabisuhan kayo ng mga update sa pamamagitan ng portal na ito."
     },
-    "screening": {
-      "breadcrumb": "Maghanap ng Programa",
-      "questionsTitle": "Ano ang kailangan ninyong tulong?",
-      "questionsSub": "Piliin ang lahat ng tumutugma sa inyong sitwasyon. Maaaring pumili ng higit sa isa.",
-      "noTypesYet": "Wala pang naka-set up na uri ng tulong. Makipag-ugnayan sa inyong administrator.",
-      "privacy": "Para sa gabay lamang ang inyong mga sagot at hindi ito itinatago.",
-      "seeMatches": "Tingnan ang Tugma",
-      "selectAtLeast": "Pumili ng kahit isa upang magpatuloy.",
-      "resultsTitle": "Mga Tugma sa Inyong Programa",
-      "resultsNone": "Walang programa na tumutugma sa inyong mga pinili.",
-      "resultsCountOne": "1 programa ang tumutugma sa inyong pangangailangan.",
-      "resultsCountMany": "{{count}} programa ang tumutugma sa inyong pangangailangan.",
-      "changeAnswers": "Baguhin ang mga Sagot",
-      "selectedLabel": "Pinili ninyo:",
-      "noMatchTitle": "Walang nakitang tumutugmang programa.",
-      "noMatchDesc": "Walang programang sumasaklaw sa inyong mga pinili. Subukang baguhin ang mga sagot o tingnan ang lahat ng programa.",
-      "browseAll": "Tingnan Lahat ng Programa",
-      "activeAppWarning": "May aktibong aplikasyon kayong kasalukuyan. Isang aplikasyon lamang ang pinapayagan — ayusin muna ito bago mag-apply sa bagong programa.",
-      "viewMyApp": "Tingnan ang Aking Aplikasyon",
-      "match": {
-        "perfect": "Sakto sa Tugma",
-        "great":   "Magandang Tugma",
-        "partial": "Bahagyang Tugma",
-        "low":     "Mababang Tugma"
-      },
-      "topPick": "Pinakamatagumpay",
-      "noSlotsToday": "Walang slot ngayong araw",
-      "slotsAvailable": "{{remaining}} sa {{total}} slot ang available",
-      "moreTypes": "+{{count}} pa",
-      "applied": "Naipasa na",
-      "glIssued": "Naibigay na ang GL",
-      "applyNow": "Mag-apply Ngayon",
-      "lookingForElse": "May iba ka pa bang hinahanap?",
-      "browseAllSimple": "Tingnan lahat ng programa"
-    },
     "interviews": {
       "title": "Aking Panayam",
       "subtitle": "Sumali sa inyong naka-iskedyul na video interview kasama ang ahensya.",
@@ -955,9 +920,9 @@
         "notYetTitle":    "Wala pang naka-iskedyul na Panayam",
         "notYetDesc":     "Kapag natapos ng ahensya ang pagsusuri at na-aprubahan, mag-iiskedyul sila ng video interview at aabisuhan kayo.",
         "notYetBtn":      "Tingnan ang Aking Aplikasyon",
-        "noAppTitle":     "Wala pang Aplikasyon",
-        "noAppDesc":      "Kailangan munang mag-apply sa isang programa ng tulong medikal. Ang mga panayam ay isinasagawa pagkatapos masuri at maaprubahan ang inyong aplikasyon.",
-        "noAppBtn":       "Maghanap ng Programa"
+        "noAppTitle":     "Wala pang Kahilingan",
+        "noAppDesc":      "Kailangan munang magsumite ng kahilingan ng tulong. Ang mga panayam ay isinasagawa pagkatapos masuri at maaprubahan ng ahensya ang inyong kahilingan.",
+        "noAppBtn":       "Humiling ng Tulong"
       }
     },
     "guide": {
@@ -966,7 +931,6 @@
       "tapHint": "I-tap ang anumang tanong sa ibaba para basahin ang sagot.",
       "footer": "May iba pang katanungan? Pumunta sa CRMC Medical Social Services office o magpadala ng mensahe sa pamamagitan ng portal gamit ang envelope icon sa itaas.",
       "linkGoToDocuments":  "Pumunta sa Aking mga Dokumento",
-      "linkGoToScreening":  "Pumunta sa Maghanap ng Programa",
       "linkGoToStatus":     "Pumunta sa Aking Aplikasyon",
       "linkGoToInterviews": "Pumunta sa Aking mga Panayam",
       "linkGoToMessages":   "Pumunta sa mga Mensahe",
@@ -998,15 +962,15 @@
           "note": "Tip: Mag-upload ng mga dokumento bago mag-apply. Ang ilang programa ay nangangailangan ng mga na-verify na dokumento bago maaaring magpatuloy ang aplikasyon. Kapag nag-u-upload ng Valid ID, hihilingin sa inyong piliin ang partikular na uri ng ID (hal. PhilSys National ID, Driver's License) — tumutulong ito sa reviewer na mas mabilis na ma-verify ito."
         },
         "apply": {
-          "title": "Paano ako mag-a-apply sa isang programa?",
-          "s1": "Pumunta sa Maghanap ng Programa sa sidebar.",
-          "s2": "Sagutin ang mga screening question upang makahanap ng mga programang tumutugma sa inyong pangangailangang medikal.",
-          "s3": "Tingnan ang inyong mga tugmang programa at suriin kung ilang slot ang available ngayon.",
-          "s4": "I-click ang Mag-apply Ngayon sa programang nais ninyong i-apply.",
-          "s5": "Suriin ang checklist ng mga kinakailangan — ipapakita ng berdeng check ang mga na-verify na dokumento.",
-          "s6": "Lagyan ng tsek ang declaration checkbox na nagpapatunay na tunay ang inyong mga dokumento.",
-          "s7": "I-click ang Isumite ang Aplikasyon. Makakatanggap kayo ng abiso kasama ang inyong application ID.",
-          "note": "Mahalaga: Isang aplikasyon lamang ang pinapayagan sa isang pagkakataon. Kailangan ninyong hintayin na maresolba ang kasalukuyang aplikasyon bago mag-apply sa ibang programa. Limitado ang mga slot at nire-reset ito tuwing hatinggabi."
+          "title": "Paano ako humihiling ng tulong?",
+          "s1": "Pumunta sa Humiling ng Tulong sa sidebar o sa bottom tab.",
+          "s2": "Piliin ang uri ng tulong na kailangan ninyo at ilagay ang halagang kailangan ninyo, batay sa inyong billing statement.",
+          "s3": "Ilakip ang inyong billing statement (Statement of Account), kumpirmahin ang deklarasyon, at isumite ang inyong kahilingan.",
+          "s4": "Susuriin ng CRMC ang inyong kahilingan at ie-endorso ito sa isa o higit pang ahensyang makakatulong sa inyong bayarin.",
+          "s5": "Buksan ang Humiling ng Tulong upang makita ang coverage plan, pagkatapos ay i-tap ang Magpatuloy upang ipadala ito sa mga ahensyang iyon.",
+          "s6": "Kumpletuhin ang mga kinakailangan ng bawat ahensya at sumali sa anumang nakatakdang online interview.",
+          "s7": "Kapag inaprubahan ng isang ahensya, makakatanggap kayo ng Guarantee Letter upang makuha ang inyong tulong.",
+          "note": "Mahalaga: Isang aktibong kahilingan lamang ang pinapayagan sa isang pagkakataon. Subaybayan ang progreso nito anumang oras sa Aking Aplikasyon."
         },
         "withdraw": {
           "title": "Maaari ko bang kanselahin o i-withdraw ang aking aplikasyon?",
