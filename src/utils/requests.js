@@ -27,8 +27,10 @@ export function computeAmountNeeded({ totalBill = 0, philhealthCovered = 0, othe
 }
 
 // Slice statuses that count as money already secured vs. still in flight.
+// 'for_funding'/'needs_info' are the redesign's agency-decision states;
+// 'reviewing'/'interview' are kept for back-compat until their writers move.
 export const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
-export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'interview']
+export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'for_funding', 'needs_info', 'reviewing', 'interview']
 
 // Given a request's amountNeeded and its slices (child applications), compute
 // the live funding figures:
@@ -59,6 +61,6 @@ export function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0
   const need = Number(amountNeeded) || 0
   if (need > 0 && committed >= need) return 'fully_funded'
   if (committed > 0)                 return 'partially_funded'
-  if (outstanding > 0)               return 'endorsing'
+  if (outstanding > 0)               return 'endorsed'
   return 'submitted'
 }

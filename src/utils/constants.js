@@ -87,11 +87,14 @@ export const ROLE_BADGE = {
 export const APP_STATUS_CONFIG = {
   pending:       { label: 'Pending',            badge: 'badge-blue'   },
   endorsed:      { label: 'Awaiting You',       badge: 'badge-purple' },
+  for_funding:   { label: 'For Funding',        badge: 'badge-amber'  },
+  needs_info:    { label: 'Waiting on Patient', badge: 'badge-orange' },
+  approved:      { label: 'Approved',           badge: 'badge-green'  },
+  rejected:      { label: 'Rejected',           badge: 'badge-red'    },
+  // ── Back-compat (pre-redesign slice states; pruned once writers move) ──
   reviewing:     { label: 'Reviewing',          badge: 'badge-amber'  },
   awaiting_info: { label: 'Waiting on Patient', badge: 'badge-orange' },
   interview:     { label: 'Interview',          badge: 'badge-purple' },
-  approved:      { label: 'Approved',           badge: 'badge-green'  },
-  rejected:      { label: 'Rejected',           badge: 'badge-red'    },
   certificate:   { label: 'GL Issued',          badge: 'badge-green'  },
 }
 
@@ -113,13 +116,17 @@ export const REPORT_STATUS_CONFIG = {
 // outcome: agencies cover up to their ceilings and full zero-balance is the
 // target, not a guarantee (see Malasakit sequential-charging model).
 export const REQUEST_STATUS_CONFIG = {
-  submitted:        { label: 'Submitted',       badge: 'badge-blue'   },
-  verifying:        { label: 'Under Review',     badge: 'badge-amber'  },
-  endorsing:        { label: 'Being Endorsed',   badge: 'badge-purple' },
-  partially_funded: { label: 'Partially Funded', badge: 'badge-amber'  },
-  fully_funded:     { label: 'Fully Funded',     badge: 'badge-green'  },
-  closed:           { label: 'Closed',           badge: 'badge-gray'   },
-  rejected:         { label: 'Rejected',         badge: 'badge-red'    },
+  submitted:        { label: 'Submitted',        badge: 'badge-blue'   },
+  under_review:     { label: 'Under Review',      badge: 'badge-amber'  },
+  assessment:       { label: 'Assessment',        badge: 'badge-purple' },
+  endorsed:         { label: 'Endorsed',          badge: 'badge-purple' },
+  partially_funded: { label: 'Partially Funded',  badge: 'badge-amber'  },
+  fully_funded:     { label: 'Fully Funded',      badge: 'badge-green'  },
+  closed:           { label: 'Closed',            badge: 'badge-gray'   },
+  rejected:         { label: 'Rejected',          badge: 'badge-red'    },
+  // ── Back-compat (pre-redesign request states; pruned once writers move) ──
+  verifying:        { label: 'Under Review',      badge: 'badge-amber'  },
+  endorsing:        { label: 'Being Endorsed',    badge: 'badge-purple' },
 }
 
 // Slot status thresholds

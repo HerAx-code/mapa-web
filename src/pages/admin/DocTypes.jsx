@@ -29,6 +29,9 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
     name:        type?.name        ?? '',
     description: type?.description ?? '',
     required:    type?.required    ?? false,
+    // Reusable docs (Valid ID) carry across a patient's future requests once
+    // verified; per-request docs (Billing Statement) must be re-submitted.
+    reusable:    type?.reusable    ?? false,
   })
   const [saving, setSaving] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
@@ -50,6 +53,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
           name:        form.name.trim(),
           description: form.description.trim(),
           required:    form.required,
+          reusable:    form.reusable,
           updatedAt:   serverTimestamp(),
         })
         await notifyAllAdmins({
@@ -64,6 +68,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
           name:        form.name.trim(),
           description: form.description.trim(),
           required:    form.required,
+          reusable:    form.reusable,
           order:       maxOrder + 1,
           createdAt:   serverTimestamp(),
         })
@@ -108,6 +113,14 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
               checked={form.required}
               onChange={e => setForm(p => ({ ...p, required: e.target.checked }))} />
             Mark as required document
+          </label>
+          <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input type="checkbox" className="w-4 h-4 accent-brand-500 mt-0.5"
+              checked={form.reusable}
+              onChange={e => setForm(p => ({ ...p, reusable: e.target.checked }))} />
+            <span>Reusable across requests
+              <span className="block text-xs text-gray-400">Once verified, carries over to the patient's future requests (e.g. Valid ID). Leave off for per-request documents like a Billing Statement.</span>
+            </span>
           </label>
         </div>
         <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
@@ -481,9 +494,12 @@ export default function DocTypes() {
 
                       {/* Required */}
                       <td>
-                        <span className={`badge text-xs ${t.required ? 'badge-red' : 'badge-gray'}`}>
-                          {t.required ? 'Required' : 'Optional'}
-                        </span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className={`badge text-xs ${t.required ? 'badge-red' : 'badge-gray'}`}>
+                            {t.required ? 'Required' : 'Optional'}
+                          </span>
+                          {t.reusable && <span className="badge badge-blue text-xs">Reusable</span>}
+                        </div>
                       </td>
 
                       {/* Usage */}
