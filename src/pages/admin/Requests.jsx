@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import {
-  collection, query, where, onSnapshot, doc, getDocs,
+  collection, query, where, onSnapshot, doc, getDocs, updateDoc,
   serverTimestamp, runTransaction, arrayUnion,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -9,10 +9,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { computeFunding } from '../../utils/requests'
-import { REQUEST_STATUS_CONFIG } from '../../utils/constants'
+import { REQUEST_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
+import { isIdType } from '../../utils/idOcr'
+import DocViewerModal from '../../components/DocViewerModal'
+import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
-  MdPerson, MdAttachFile, MdBlock, MdCheckCircle,
+  MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
+  MdVideoCall, MdEventRepeat,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -127,7 +131,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
 
         tx.update(reqRef, {
           agencyIds: arrayUnion(agency.id),
-          status:    'endorsing',
+          status:    'endorsed',
           updatedAt: serverTimestamp(),
         })
         tx.update(agencyRef, { 'slots.remaining': remaining - 1 })
@@ -189,15 +193,29 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                 <label className="block text-xs font-medium text-gray-700 mb-1">Agency <span className="text-red-400">*</span></label>
                 <select className={`input ${!agencyId ? 'text-gray-400' : ''}`} value={agencyId} onChange={e => setAgencyId(e.target.value)}>
                   <option value="">Select an agency</option>
-                  {eligible.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}{a.matches ? ' ✓' : ''} · {a.slots?.remaining ?? 0} slots
-                    </option>
-                  ))}
+                  {eligible.map(a => {
+                    const rem = Math.max(0, (a.budget?.allocated ?? 0) - (a.budget?.committed ?? 0))
+                    const budgetTxt = (a.budget?.allocated ?? 0) > 0 ? ` · ${peso(rem)} budget` : ''
+                    return (
+                      <option key={a.id} value={a.id}>
+                        {a.name}{a.matches ? ' ✓' : ''} · {a.slots?.remaining ?? 0} slots{budgetTxt}
+                      </option>
+                    )
+                  })}
                 </select>
                 {eligible.length === 0 && (
                   <p className="text-xs text-amber-600 mt-1">No eligible agencies (need open slots and not already endorsed).</p>
                 )}
+                {agency && (() => {
+                  const alloc = agency.budget?.allocated ?? 0
+                  const rem   = Math.max(0, alloc - (agency.budget?.committed ?? 0))
+                  return (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {agency.slots?.remaining ?? 0} slots open · {alloc > 0 ? `${peso(rem)} budget remaining` : 'No budget cap set'}
+                      {alloc > 0 && amt > rem && <span className="text-amber-600"> — amount exceeds this agency's remaining budget</span>}
+                    </p>
+                  )
+                })()}
                 {agency && !agency.assistanceTypes?.includes(request.assistanceType) && (
                   <p className="text-xs text-amber-600 mt-1 flex items-start gap-1">
                     <MdWarning size={12} className="flex-shrink-0 mt-0.5" />
@@ -237,7 +255,11 @@ function EndorseModal({ request, slices, agencies, onClose }) {
 function RequestDetail({ request, agencies, onClose }) {
   const { user } = useAuth()
   const [slices, setSlices] = useState([])
+  const [patientDocs, setPatientDocs] = useState([])
+  const [viewingDoc, setViewingDoc] = useState(null)
   const [showEndorse, setShowEndorse] = useState(false)
+  const [showInterview, setShowInterview] = useState(false)
+  const [outcomeNotes, setOutcomeNotes] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -249,9 +271,105 @@ function RequestDetail({ request, agencies, onClose }) {
     return unsub
   }, [request.id])
 
+  // Live patient documents — drives the verification panel's current status.
+  useEffect(() => {
+    if (!request.patientId) return
+    const unsub = onSnapshot(
+      query(collection(db, 'documents'), where('patientId', '==', request.patientId)),
+      snap => setPatientDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => {},
+    )
+    return unsub
+  }, [request.patientId])
+
   const funding = computeFunding(request.amountNeeded, slices)
   const cfg = REQUEST_STATUS_CONFIG[request.status] ?? REQUEST_STATUS_CONFIG.submitted
   const terminal = ['fully_funded', 'closed', 'rejected'].includes(request.status)
+
+  // The documents attached to this request, with their live status/OCR merged
+  // in (falls back to the request snapshot if a live doc isn't found).
+  const docById = Object.fromEntries(patientDocs.map(d => [d.id, d]))
+  const reqDocs = (request.attachedDocuments ?? []).map(a => ({
+    ...a, ...(docById[a.documentId] ?? {}), id: a.documentId,
+  }))
+  const allVerified = reqDocs.length > 0 && reqDocs.every(d => d.status === 'verified')
+  // The guided stepper gate: endorsement is only allowed after every document
+  // is verified AND the assessment interview outcome has been recorded.
+  const canEndorse = allVerified && !!request.interviewOutcome
+
+  // Verify / reject a document. First action also moves the request out of
+  // 'submitted' into 'under_review'. Rejection notifies the patient to re-upload.
+  const reviewDoc = async (docItem, newStatus) => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'documents', docItem.id), {
+        status: newStatus, reviewedBy: user.name ?? 'CRMC', reviewedAt: serverTimestamp(),
+      })
+      const updatedAttached = (request.attachedDocuments ?? []).map(a =>
+        a.documentId === docItem.id ? { ...a, status: newStatus } : a)
+      await updateDoc(doc(db, 'requests', request.id), {
+        attachedDocuments: updatedAttached,
+        ...(request.status === 'submitted' ? { status: 'under_review' } : {}),
+        updatedAt: serverTimestamp(),
+      })
+      logAudit(user, {
+        action: newStatus === 'verified' ? 'doc_verified' : 'doc_rejected',
+        targetType: 'document', targetId: docItem.id, targetName: docItem.name,
+        details: `Request ${request.requestId}`,
+      })
+      if (newStatus === 'rejected') {
+        await notify(request.patientId, {
+          type:  'doc_rejected',
+          title: 'A document needs attention',
+          body:  `CRMC marked your "${docItem.name}" document for correction. Please re-upload it.`,
+        }).catch(() => {})
+      }
+      toast.success(newStatus === 'verified' ? 'Document verified.' : 'Document marked for re-upload.')
+    } catch (err) {
+      console.error('[Requests] doc review error:', err)
+      toast.error('Failed to update document.')
+    } finally { setBusy(false) }
+  }
+
+  // ② Assessment — schedule the single CRMC interview on the request, and
+  // record its outcome. Scheduling advances the request to 'assessment'.
+  const scheduleInterview = async (form) => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'requests', request.id), {
+        interviewDate: form.date,
+        interviewTime: form.time,
+        meetLink:      form.link,
+        conductedBy:   form.conductedBy.trim(),
+        interviewOutcome: null,
+        status:        'assessment',
+        updatedAt:     serverTimestamp(),
+      })
+      logAudit(user, { action: 'interview_scheduled', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `${form.date} ${form.time}` })
+      await notify(request.patientId, {
+        type:  'interview_sched',
+        title: 'Assessment interview scheduled',
+        body:  `CRMC scheduled your assessment interview on ${form.date} at ${form.time}. Join via the Google Meet link in your dashboard.`,
+      }).catch(() => {})
+      toast.success('Interview scheduled.')
+      setShowInterview(false)
+    } catch { toast.error('Failed to schedule interview.') }
+    finally { setBusy(false) }
+  }
+
+  const recordOutcome = async (outcome) => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'requests', request.id), {
+        interviewOutcome: outcome,
+        interviewNotes:   outcomeNotes.trim() || null,
+        updatedAt:        serverTimestamp(),
+      })
+      logAudit(user, { action: 'interview_completed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `Outcome: ${outcome}` })
+      toast.success('Interview outcome recorded.')
+    } catch { toast.error('Failed to record outcome.') }
+    finally { setBusy(false) }
+  }
 
   const setRequestStatus = async (status, { reason } = {}) => {
     setBusy(true)
@@ -318,15 +436,122 @@ function RequestDetail({ request, agencies, onClose }) {
             <div className="text-sm text-gray-600"><span className="text-xs text-gray-400 block mb-0.5">Description</span>{request.description}</div>
           )}
 
-          {/* Patient + docs */}
+          {/* Patient */}
           <div className="text-xs text-gray-500 space-y-1">
             <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-400" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
-            <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400" /> {(request.attachedDocuments?.length ?? 0)} document(s) attached · submitted {fmtDate(request.submittedAt)}</p>
+            <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400" /> submitted {fmtDate(request.submittedAt)}</p>
           </div>
 
-          {/* Slices */}
+          {/* ① Document verification */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Endorsed agencies</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">① Verify documents</p>
+              {reqDocs.length > 0 && (
+                <span className={`badge text-xs ${allVerified ? 'badge-green' : 'badge-amber'}`}>
+                  {reqDocs.filter(d => d.status === 'verified').length}/{reqDocs.length} verified
+                </span>
+              )}
+            </div>
+            {reqDocs.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No documents attached.</p>
+            ) : (
+              <div className="space-y-2">
+                {reqDocs.map(d => {
+                  const dcfg = DOC_STATUS_CONFIG[d.status] ?? DOC_STATUS_CONFIG.pending
+                  const showOcr = isIdType(d.documentTypeName ?? d.name) && (d.ocrMatch != null || d.ocrText)
+                  return (
+                    <div key={d.id} className="p-2.5 rounded-lg border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{d.documentTypeName || d.name}</p>
+                        </div>
+                        <span className={`badge text-xs flex-shrink-0 ${dcfg.badge}`}>{dcfg.label}</span>
+                        <button title="View" className="text-gray-400 hover:text-brand-600 flex-shrink-0"
+                          onClick={() => !d._missing && setViewingDoc(d)}>
+                          <MdVisibility size={16} />
+                        </button>
+                      </div>
+                      {showOcr && (
+                        <p className={`text-xs mt-1 pl-6 ${d.ocrMatch === true ? 'text-green-600' : d.ocrMatch === false ? 'text-amber-600' : 'text-gray-400'}`}>
+                          {d.ocrMatch === true ? '✓ OCR: ID name matches the account'
+                            : d.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
+                            : 'OCR: could not auto-read — verify manually'}
+                        </p>
+                      )}
+                      {d.status !== 'verified' && (
+                        <div className="flex gap-2 mt-2 pl-6">
+                          <button className="text-xs font-medium text-green-600 hover:text-green-700 flex items-center gap-1 disabled:opacity-50"
+                            disabled={busy} onClick={() => reviewDoc(d, 'verified')}>
+                            <MdCheckCircle size={14} /> Verify
+                          </button>
+                          <button className="text-xs font-medium text-red-500 hover:text-red-600 flex items-center gap-1 disabled:opacity-50"
+                            disabled={busy} onClick={() => reviewDoc(d, 'rejected')}>
+                            <MdBlock size={14} /> Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ② Interview & assessment */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">② Interview &amp; assessment</p>
+              {request.interviewOutcome && (
+                <span className="badge badge-green text-xs">Outcome recorded</span>
+              )}
+            </div>
+            {!request.interviewDate ? (
+              <div className="p-3 rounded-lg border border-gray-100">
+                {!allVerified
+                  ? <p className="text-xs text-gray-400 italic">Verify all documents first, then schedule the assessment interview.</p>
+                  : <p className="text-xs text-gray-500 mb-2">Documents verified. Schedule the assessment interview.</p>}
+                <button className="btn-primary text-sm flex items-center gap-1.5 mt-1" disabled={!allVerified || busy}
+                  onClick={() => setShowInterview(true)}>
+                  <MdVideoCall size={14} /> Schedule interview
+                </button>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg border border-gray-100 space-y-2">
+                <div className="text-xs text-gray-600 space-y-1">
+                  <p><span className="text-gray-400">When:</span> {request.interviewDate} at {request.interviewTime}</p>
+                  {request.conductedBy && <p><span className="text-gray-400">Conducted by:</span> {request.conductedBy}</p>}
+                  {request.meetLink && <p className="truncate"><span className="text-gray-400">Meet:</span> <a href={request.meetLink} target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline break-all">{request.meetLink}</a></p>}
+                </div>
+                {request.interviewOutcome ? (
+                  <p className="text-xs text-gray-600"><span className="text-gray-400">Outcome:</span> <span className="font-medium">{request.interviewOutcome}</span>{request.interviewNotes ? ` — ${request.interviewNotes}` : ''}</p>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea className="input resize-none text-sm" rows={2} placeholder="Assessment notes (optional)…"
+                      value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} maxLength={300} />
+                    <div className="flex gap-2 flex-wrap">
+                      <button className="text-xs font-medium text-green-600 hover:text-green-700 flex items-center gap-1 disabled:opacity-50"
+                        disabled={busy} onClick={() => recordOutcome('completed')}>
+                        <MdCheckCircle size={14} /> Completed
+                      </button>
+                      <button className="text-xs font-medium text-red-500 hover:text-red-600 flex items-center gap-1 disabled:opacity-50"
+                        disabled={busy} onClick={() => recordOutcome('no_show')}>
+                        <MdBlock size={14} /> No-show
+                      </button>
+                      <button className="text-xs font-medium text-amber-600 hover:text-amber-700 flex items-center gap-1 disabled:opacity-50"
+                        disabled={busy} onClick={() => setShowInterview(true)}>
+                        <MdEventRepeat size={14} /> Reschedule
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ③ Endorse — slices */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">③ Endorsed agencies</p>
             {slices.length === 0 ? (
               <p className="text-sm text-gray-400 italic">Not yet endorsed to any agency.</p>
             ) : (
@@ -350,7 +575,14 @@ function RequestDetail({ request, agencies, onClose }) {
 
         {/* Actions */}
         {!terminal && (
-          <div className="px-5 pb-4 pt-2 flex flex-wrap gap-2 justify-end border-t border-gray-50 sticky bottom-0 bg-white">
+          <div className="px-5 pb-4 pt-2 border-t border-gray-50 sticky bottom-0 bg-white">
+            {!canEndorse && (
+              <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
+                <MdWarning size={12} className="flex-shrink-0" />
+                Verify all documents and record the interview outcome before endorsing.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2 justify-end">
             <button className="btn-secondary text-sm flex items-center gap-1.5 text-red-500"
               disabled={busy}
               onClick={() => { const r = window.prompt('Reason for rejecting this request? (shown to patient)'); if (r !== null) setRequestStatus('rejected', { reason: r || undefined }) }}>
@@ -362,15 +594,22 @@ function RequestDetail({ request, agencies, onClose }) {
                 Close (partial)
               </button>
             )}
-            <button className="btn-primary text-sm flex items-center gap-1.5" onClick={() => setShowEndorse(true)} disabled={busy}>
+            <button className="btn-primary text-sm flex items-center gap-1.5" onClick={() => setShowEndorse(true)} disabled={busy || !canEndorse}>
               <MdSend size={14} /> Endorse
             </button>
+            </div>
           </div>
         )}
       </div>
 
       {showEndorse && (
         <EndorseModal request={request} slices={slices} agencies={agencies} onClose={() => setShowEndorse(false)} />
+      )}
+      {viewingDoc && (
+        <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
+      )}
+      {showInterview && (
+        <InterviewModal app={request} agency={null} onConfirm={scheduleInterview} onClose={() => setShowInterview(false)} />
       )}
     </div>
   )
@@ -398,8 +637,8 @@ export default function Requests() {
   // Keep the open detail in sync with live request updates
   const selectedLive = selected ? requests.find(r => r.id === selected.id) ?? selected : null
 
-  const needsAction = requests.filter(r => ['submitted', 'verifying'].includes(r.status))
-  const inProgress  = requests.filter(r => ['endorsing', 'partially_funded'].includes(r.status))
+  const needsAction = requests.filter(r => ['submitted', 'under_review', 'assessment', 'verifying'].includes(r.status))
+  const inProgress  = requests.filter(r => ['endorsed', 'partially_funded', 'endorsing'].includes(r.status))
   const done        = requests.filter(r => ['fully_funded', 'closed', 'rejected'].includes(r.status))
 
   const card = (r) => {
