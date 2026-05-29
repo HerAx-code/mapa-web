@@ -298,7 +298,7 @@ export default function TrackStatus() {
           agency names, awaiting-info messages, or app IDs can't push
           the page wider than the phone screen. Restores max-w-2xl
           for centering on tablet+. */}
-      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
 
         <div className="w-full min-w-0">
 

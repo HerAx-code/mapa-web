@@ -122,12 +122,12 @@ export default function IntakeWizard() {
   const isLast = step === STEPS.length - 1
 
   if (loading) {
-    return <Layout breadcrumb="Household Information"><div className="p-6 max-w-xl"><div className="card p-6 h-48 animate-pulse" /></div></Layout>
+    return <Layout breadcrumb="Household Information"><div className="p-6 max-w-xl mx-auto"><div className="card p-6 h-48 animate-pulse" /></div></Layout>
   }
 
   return (
     <Layout breadcrumb="Household Information">
-      <div className="px-4 py-5 sm:p-6 max-w-xl">
+      <div className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
 
         {/* Header + progress */}
         <button onClick={() => navigate('/patient/request')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium mb-3">

@@ -93,7 +93,7 @@ export default function PatientMore() {
         onSetModal={setActiveModal}
       />
 
-      <div className="px-3 py-4 sm:p-6 w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
 
         {/* Header */}
         <div className="mb-5">

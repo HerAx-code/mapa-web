@@ -335,7 +335,7 @@ export default function RequestAssistance() {
   if (submittedId) {
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
-        <div className="px-4 py-6 sm:p-6 max-w-xl">
+        <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto">
           <div className="card p-6 sm:p-8 text-center space-y-4">
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
               <MdCheckCircle size={36} className="text-green-500" />
@@ -363,7 +363,7 @@ export default function RequestAssistance() {
     const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, slices)
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
-        <div className="px-4 py-6 sm:p-6 max-w-xl">
+        <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto">
           <div className="card p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-3">
               <MdHourglassTop size={20} className="text-amber-500" />
@@ -560,7 +560,7 @@ export default function RequestAssistance() {
 
   return (
     <Layout breadcrumb={t('patient.request.navLabel')}>
-      <div className="px-4 py-5 sm:p-6 max-w-xl">
+      <div className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
         <div className="mb-3">
           <h1 className="page-title flex items-center gap-2"><MdFavorite className="text-brand-500" size={22} /> {t('patient.request.title')}</h1>
           <p className="page-sub">{t('patient.request.subtitle')}</p>
