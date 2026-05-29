@@ -126,7 +126,7 @@ export default function UserGuide() {
         t('patient.guide.sections.apply.s7'),
       ],
       note: t('patient.guide.sections.apply.note'),
-      link: { label: t('patient.guide.linkGoToScreening'), path: '/patient/screening' },
+      link: { label: t('patient.nav.requestAssistance'), path: '/patient/request' },
     },
     {
       icon:  MdUndo,

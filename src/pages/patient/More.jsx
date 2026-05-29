@@ -51,7 +51,7 @@ export default function PatientMore() {
     {
       heading: t('patient.more.navigation'),
       items: [
-        { icon: MdSearch,    label: t('patient.nav.findPrograms'), to: '/patient/screening' },
+        { icon: MdSearch,    label: t('patient.nav.findPrograms'), to: '/patient/programs' },
         { icon: MdVideoCall, label: t('patient.nav.interviews'),   to: '/patient/interviews' },
         { icon: MdMenuBook,  label: t('patient.nav.userGuide'),    to: '/patient/guide'      },
       ],

@@ -27,7 +27,6 @@ const Notifications    = lazy(() => import('./pages/Notifications'))
 const UserGuide        = lazy(() => import('./pages/patient/Guide'))
 const MedicalPrograms  = lazy(() => import('./pages/patient/MedicalPrograms'))
 const RequestAssistance = lazy(() => import('./pages/patient/RequestAssistance'))
-const Screening        = lazy(() => import('./pages/patient/Screening'))
 const TrackStatus      = lazy(() => import('./pages/patient/TrackStatus'))
 const Interviews       = lazy(() => import('./pages/patient/Interviews'))
 const PatientMore      = lazy(() => import('./pages/patient/More'))
@@ -110,7 +109,6 @@ export default function App() {
           <Route path="/patient/dashboard"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientDashboard /></PrivateRoute>} />
           <Route path="/patient/programs"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><MedicalPrograms /></PrivateRoute>} />
           <Route path="/patient/request"    element={<PrivateRoute allowedRoles={PATIENT_ROLES}><RequestAssistance /></PrivateRoute>} />
-          <Route path="/patient/screening"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><Screening /></PrivateRoute>} />
           <Route path="/patient/status"     element={<PrivateRoute allowedRoles={PATIENT_ROLES}><TrackStatus /></PrivateRoute>} />
           <Route path="/patient/interviews" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><Interviews /></PrivateRoute>} />
           <Route path="/patient/messages"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><AdminMessages /></PrivateRoute>} />

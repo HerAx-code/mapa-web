@@ -48,7 +48,7 @@ const makeTimeAgo = (t) => (ts) => {
 // drawer is only ever shown on lg+ now.
 const PATIENT_NAV = [
   { to: '/patient/dashboard',  icon: MdDashboard,  labelKey: 'patient.nav.dashboard'     },
-  { to: '/patient/screening',  icon: MdSearch,     labelKey: 'patient.nav.findPrograms'  },
+  { to: '/patient/programs',   icon: MdSearch,     labelKey: 'patient.nav.findPrograms'  },
   { to: '/patient/request',    icon: MdFavorite,   labelKey: 'patient.nav.requestAssistance' },
   { to: '/patient/status',     icon: MdTimeline,   labelKey: 'patient.nav.myApplication' },
   { to: '/patient/interviews', icon: MdVideoCall,  labelKey: 'patient.nav.interviews'    },
@@ -640,7 +640,7 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
 const APPS = {
   [ROLES.PATIENT]: [
     { labelKey: 'patient.nav.dashboard',        icon: MdDashboard,     to: '/patient/dashboard'  },
-    { labelKey: 'patient.nav.findPrograms',     icon: MdSearch,        to: '/patient/screening'  },
+    { labelKey: 'patient.nav.findPrograms',     icon: MdSearch,        to: '/patient/programs'   },
     { labelKey: 'patient.nav.medicalPrograms',  icon: MdLocalHospital, to: '/patient/programs'   },
     { labelKey: 'patient.nav.trackStatus',      icon: MdTimeline,      to: '/patient/status'     },
     { labelKey: 'patient.nav.requestAssistance', icon: MdFavorite,     to: '/patient/request'    },

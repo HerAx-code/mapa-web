@@ -333,8 +333,8 @@ export default function TrackStatus() {
                     {t('patient.track.viewHistory')} →
                   </button>
                 ) : (
-                  <button className="btn-primary text-sm" onClick={() => navigate('/patient/screening')}>
-                    {t('patient.track.findProgram')} →
+                  <button className="btn-primary text-sm" onClick={() => navigate('/patient/request')}>
+                    {t('patient.nav.requestAssistance')} →
                   </button>
                 )}
               </div>
@@ -596,8 +596,8 @@ export default function TrackStatus() {
               <div className="card p-8 text-center">
                 <p className="text-sm text-gray-400">{t('patient.track.noPast')}</p>
                 <p className="text-xs text-gray-400 mt-1">{t('patient.track.noPastSub')}</p>
-                <button className="btn-primary mt-3 text-sm" onClick={() => navigate('/patient/screening')}>
-                  {t('patient.track.findProgram')} →
+                <button className="btn-primary mt-3 text-sm" onClick={() => navigate('/patient/request')}>
+                  {t('patient.nav.requestAssistance')} →
                 </button>
               </div>
             ) : (

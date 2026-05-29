@@ -277,7 +277,7 @@ export default function PatientDashboard() {
     {
       num: 2, title: t('patient.dashboard.steps.s2Title'),
       desc:   t('patient.dashboard.steps.s2Desc'),
-      path:   '/patient/screening',
+      path:   '/patient/programs',
       done:   hasApp,
     },
     {

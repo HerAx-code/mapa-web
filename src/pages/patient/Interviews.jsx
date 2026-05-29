@@ -319,8 +319,8 @@ export default function Interviews() {
                   {t('patient.interviews.empty.noAppDesc')}
                 </p>
                 <button className="btn-primary text-sm mx-auto"
-                  onClick={() => navigate('/patient/screening')}>
-                  {t('patient.interviews.empty.noAppBtn')} →
+                  onClick={() => navigate('/patient/request')}>
+                  {t('patient.nav.requestAssistance')} →
                 </button>
               </>
             )}
