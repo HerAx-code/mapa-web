@@ -152,8 +152,18 @@ export function DocPreview({ docMeta, className = '' }) {
 
         {!loading && !error && content && isPdf && pdfBlobUrl && (
           <div className="w-full flex flex-col items-center">
-            <iframe src={pdfBlobUrl} title={docMeta?.name ?? 'Document'}
-              className="w-full h-[60vh] bg-white rounded-lg border border-gray-200 shadow-sm" />
+            {/* <object> renders the PDF inline when the browser supports it, and
+                shows the fallback children otherwise — unlike an <iframe>, it
+                won't trigger a download when the browser is set to download
+                PDFs (which was popping a Save dialog on view). */}
+            <object data={pdfBlobUrl} type="application/pdf"
+              className="w-full h-[60vh] bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="p-6 text-center">
+                <MdInsertDriveFile size={36} className="text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 font-medium mb-1">PDF preview isn't available in this browser</p>
+                <p className="text-xs text-gray-400">Your browser is set to download PDFs. Use <strong>Open in new tab</strong> or <strong>Download</strong> below.</p>
+              </div>
+            </object>
             <p className="text-xs text-gray-400 mt-2 text-center">
               Not showing? <button onClick={handleOpenInNewTab} className="text-brand-600 hover:underline font-medium">Open in a new tab</button>.
             </p>
