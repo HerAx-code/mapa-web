@@ -578,6 +578,8 @@
     "dashboard": {
       "title": "My Dashboard",
       "subtitle": "Welcome back, {{name}}.",
+      "activeRequestTitle": "Your assistance request",
+      "activeRequestDesc": "CRMC is processing your request. Track its progress and coverage under My Application.",
       "greeting": {
         "uploadDocs":    "Get started by uploading your documents.",
         "findProgram":   "Your documents are ready — browse programs to apply.",

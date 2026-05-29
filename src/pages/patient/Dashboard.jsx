@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
+import { REQUEST_STATUS_CONFIG } from '../../utils/constants'
 
 // Parses "YYYY-MM-DD" + "2:00 PM" / "14:00" / "2:00 pm" into a Date.
 // Returns null if either part can't be parsed.
@@ -152,6 +153,7 @@ export default function PatientDashboard() {
   })()
 
   const [activeApp,  setActiveApp]  = useState(null)
+  const [activeRequest, setActiveRequest] = useState(null)
   const [appCount,   setAppCount]   = useState(0)
   const [docStats,   setDocStats]   = useState({ verified: 0, pending: 0 })
   const [loading,    setLoading]    = useState(true)
@@ -189,6 +191,20 @@ export default function PatientDashboard() {
       setActiveApp(all.find(a => a.status !== 'rejected') ?? null)
       setLoading(false)
     })
+    return unsub
+  }, [user?.uid])
+
+  // Active co-funding request — the patient's primary tracked item.
+  useEffect(() => {
+    if (!user?.uid) return
+    const unsub = onSnapshot(
+      query(collection(db, 'requests'), where('patientId', '==', user.uid)),
+      snap => {
+        const reqs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        setActiveRequest(reqs.find(r => !['closed', 'rejected', 'fully_funded'].includes(r.status)) ?? null)
+      },
+      () => {},
+    )
     return unsub
   }, [user?.uid])
 
@@ -260,9 +276,11 @@ export default function PatientDashboard() {
   }, [user?.uid])
 
   const hasApp       = appCount > 0
+  const hasActivity  = hasApp || !!activeRequest
   const activeStatus = activeApp?.status ?? null
-  // Resolve null (initial) to true for new patients, false for returning ones.
-  const stepsOpenEffective = stepsOpen ?? (!loading && !hasApp)
+  // Resolve null (initial) to true for new patients, false for returning ones
+  // (an active co-funding request counts as activity too).
+  const stepsOpenEffective = stepsOpen ?? (!loading && !hasActivity)
 
   // ── Step guide ────────────────────────────────────────────────────────
   // Title/desc strings come from patient.dashboard.steps.* in the locale
@@ -352,7 +370,22 @@ export default function PatientDashboard() {
             <div className="h-4 bg-gray-100 rounded w-3/4 mb-5" />
             <div className="h-12 bg-gray-100 rounded-xl" />
           </div>
-        ) : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
+        ) : activeRequest ? (() => {
+          const rcfg = REQUEST_STATUS_CONFIG[activeRequest.status] ?? REQUEST_STATUS_CONFIG.submitted
+          return (
+            <div className="card p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-lg font-semibold text-gray-900">{t('patient.dashboard.activeRequestTitle')}</h2>
+                <span className={`badge text-xs ml-auto ${rcfg.badge}`}>{rcfg.label}</span>
+              </div>
+              <p className="text-sm text-gray-500 mb-1">{activeRequest.requestId} · {activeRequest.assistanceType}</p>
+              <p className="text-sm text-gray-500 mb-4">{t('patient.dashboard.activeRequestDesc')}</p>
+              <button className="btn-primary w-full text-sm" onClick={() => navigate('/patient/status')}>
+                {t('patient.nav.myApplication')} →
+              </button>
+            </div>
+          )
+        })() : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
           const vis = STATUS_VISUAL[activeApp.status]
           const txt = `patient.dashboard.statusCard.${activeApp.status}`
           const isAwaiting  = activeApp.status === 'awaiting_info'

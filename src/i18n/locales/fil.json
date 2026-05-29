@@ -578,6 +578,8 @@
     "dashboard": {
       "title": "Aking Dashboard",
       "subtitle": "Maligayang pagbabalik, {{name}}.",
+      "activeRequestTitle": "Ang inyong kahilingan ng tulong",
+      "activeRequestDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
       "greeting": {
         "uploadDocs":    "Magsimula sa pag-upload ng inyong mga dokumento.",
         "findProgram":   "Handa na ang inyong mga dokumento — tingnan ang mga programa upang mag-apply.",

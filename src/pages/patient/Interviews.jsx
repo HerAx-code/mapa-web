@@ -6,7 +6,7 @@ import {
   MdDescription, MdChat, MdTimer, MdAssignment, MdWifi,
   MdEvent,
 } from 'react-icons/md'
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
+import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
@@ -88,35 +88,34 @@ export default function Interviews() {
 
   useEffect(() => {
     if (!user?.uid) return
-    const q = query(
-      collection(db, 'applications'),
-      where('patientId', '==', user.uid),
-      where('status', '==', 'interview')
-    )
-    // Check if patient has any active application for context-aware empty state
-    getDocs(query(
-      collection(db, 'applications'),
-      where('patientId', '==', user.uid),
-    )).then(snap => {
-      const all = snap.docs.map(d => d.data())
-      setHasActiveApp(all.some(d =>
-        !['rejected', 'certificate'].includes(d.status)
-      ))
-      // Detect if patient recently went through an interview (has interviewDate + post-interview status)
-      setHasCompletedInterview(all.some(d =>
-        d.interviewDate && ['approved', 'rejected', 'certificate'].includes(d.status)
-      ))
-    })
-
-    const unsub = onSnapshot(q,
+    // The single assessment interview now lives on the patient's co-funding
+    // request (conducted by CRMC), not on per-agency applications.
+    const unsub = onSnapshot(
+      query(collection(db, 'requests'), where('patientId', '==', user.uid)),
       snap => {
-        setInterviews(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        const reqs   = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const active = reqs.find(r => !['closed', 'rejected', 'fully_funded'].includes(r.status)) ?? null
+        setHasActiveApp(!!active)
+        setHasCompletedInterview(reqs.some(r => r.interviewOutcome === 'completed'))
+
+        const list = []
+        if (active?.interviewDate && !['completed', 'no_show'].includes(active.interviewOutcome)) {
+          list.push({
+            id:             active.id,
+            appId:          active.requestId,
+            agencyName:     'CRMC Malasakit',
+            agencyInitials: 'MC',
+            agencyColor:    'bg-brand-500',
+            interviewDate:  active.interviewDate,
+            interviewTime:  active.interviewTime,
+            meetLink:       active.meetLink,
+            conductedBy:    active.conductedBy,
+          })
+        }
+        setInterviews(list)
         setLoading(false)
       },
-      () => {
-        toast.error(t('patient.interviews.loadError'))
-        setLoading(false)
-      }
+      () => { toast.error(t('patient.interviews.loadError')); setLoading(false) },
     )
     return unsub
   }, [user?.uid])
