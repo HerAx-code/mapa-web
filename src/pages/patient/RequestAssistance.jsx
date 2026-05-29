@@ -66,6 +66,7 @@ export default function RequestAssistance() {
   const [repForm,     setRepForm]     = useState({ name: '', relationship: '' })
   const [repAuthorized, setRepAuthorized] = useState(false)
   const setRep = (f) => (e) => setRepForm(p => ({ ...p, [f]: e.target.value }))
+  const [step, setStep] = useState(0)   // submission wizard step
 
   const attachReq = (typeName) => (e) => {
     const file = e.target.files?.[0]
@@ -539,16 +540,42 @@ export default function RequestAssistance() {
     )
   }
 
-  // ── Request form ──────────────────────────────────────────────────────────
+  // ── Request form — guided wizard ───────────────────────────────────────────
+  const STEP_LABELS = [
+    t('patient.request.stepNeed'), t('patient.request.stepDocs'),
+    t('patient.request.stepRep'), t('patient.request.stepReview'),
+  ]
+  const lastStep = STEP_LABELS.length - 1
+  const handleNext = () => {
+    if (step === 0) {
+      if (!form.assistanceType) { toast.error(t('patient.request.errType')); return }
+      if (amountNeeded <= 0)    { toast.error(t('patient.request.errNeeded')); return }
+    }
+    if (step === 1 && missingDocs.length) { toast.error(t('patient.request.errDocs')); return }
+    if (step === 2 && filedByRep && (!repForm.name.trim() || !repForm.relationship.trim() || !pendingFiles[REP_ID] || !pendingFiles[REP_SELFIE] || !repAuthorized)) {
+      toast.error(t('patient.request.errRep')); return
+    }
+    setStep(s => Math.min(s + 1, lastStep))
+  }
+
   return (
     <Layout breadcrumb={t('patient.request.navLabel')}>
       <div className="px-4 py-5 sm:p-6 max-w-lg mx-auto">
-        <div className="mb-5">
+        <div className="mb-3">
           <h1 className="page-title flex items-center gap-2"><MdFavorite className="text-brand-500" size={22} /> {t('patient.request.title')}</h1>
           <p className="page-sub">{t('patient.request.subtitle')}</p>
         </div>
 
+        {/* Progress */}
+        <div className="flex items-center gap-1.5 mb-1">
+          {STEP_LABELS.map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-brand-500' : 'bg-gray-200'}`} />
+          ))}
+        </div>
+        <p className="text-sm font-semibold text-gray-800 mb-4">{t('patient.request.stepN', { n: step + 1, total: STEP_LABELS.length })} · {STEP_LABELS[step]}</p>
+
         <div className="card p-5 space-y-4">
+          {step === 0 && (<>
           {/* Assistance type */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
@@ -574,7 +601,9 @@ export default function RequestAssistance() {
             <textarea className="input resize-none" rows={2} placeholder={t('patient.request.descPlaceholder')}
               value={form.description} onChange={set('description')} maxLength={300} />
           </div>
+          </>)}
 
+          {step === 1 && (<>
           {/* Required documents — the standard checklist (same for every
               request). CRMC verifies them; reusable ones (e.g. Valid ID) carry
               over once verified, while per-request ones (Billing/SOA) are
@@ -639,7 +668,9 @@ export default function RequestAssistance() {
               </div>
             )}
           </div>
+          </>)}
 
+          {step === 2 && (<>
           {/* Filed by a representative */}
           <div className="rounded-lg border border-gray-100 p-3">
             <label className="flex items-start gap-2 cursor-pointer select-none">
@@ -710,6 +741,30 @@ export default function RequestAssistance() {
               </div>
             )}
           </div>
+          </>)}
+
+          {step === 3 && (<>
+          {/* Review summary */}
+          <div className="space-y-2">
+            <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
+              <span className="text-gray-400">{t('patient.request.typeLabel')}</span>
+              <span className="font-medium text-gray-800 text-right">{form.assistanceType || '—'}</span>
+            </div>
+            <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
+              <span className="text-gray-400">{t('patient.request.amountLabel')}</span>
+              <span className="font-medium text-gray-800 text-right">{peso(amountNeeded)}</span>
+            </div>
+            <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
+              <span className="text-gray-400">{t('patient.request.documentsTitle')}</span>
+              <span className="font-medium text-gray-800 text-right">{reqDocTypes.length - missingDocs.length}/{reqDocTypes.length}</span>
+            </div>
+            {filedByRep && (
+              <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
+                <span className="text-gray-400">{t('patient.request.repName')}</span>
+                <span className="font-medium text-gray-800 text-right">{repForm.name} ({repForm.relationship})</span>
+              </div>
+            )}
+          </div>
 
           {/* Declaration */}
           <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -717,14 +772,29 @@ export default function RequestAssistance() {
               checked={declared} onChange={e => setDeclared(e.target.checked)} />
             <span className="text-sm text-gray-600 leading-snug">{t('patient.request.declaration')}</span>
           </label>
+          </>)}
         </div>
 
-        <button
-          className="btn-primary w-full mt-4 py-3 text-sm"
-          onClick={handleSubmit}
-          disabled={submitting || loading}>
-          {submitting ? t('patient.request.submitting') : `${t('patient.request.submit')} →`}
-        </button>
+        {/* Wizard nav */}
+        <div className="flex items-center gap-3 mt-4">
+          {step > 0 && (
+            <button className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium text-sm flex items-center justify-center gap-1.5"
+              onClick={() => setStep(s => s - 1)}>
+              ← {t('patient.request.back')}
+            </button>
+          )}
+          {step < lastStep ? (
+            <button className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm"
+              onClick={handleNext}>
+              {t('patient.request.next')} →
+            </button>
+          ) : (
+            <button className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm disabled:opacity-60"
+              onClick={handleSubmit} disabled={submitting || loading}>
+              {submitting ? t('patient.request.submitting') : `${t('patient.request.submit')} →`}
+            </button>
+          )}
+        </div>
         <p className="text-xs text-gray-400 text-center mt-2">{t('patient.request.routeNote')}</p>
       </div>
 
