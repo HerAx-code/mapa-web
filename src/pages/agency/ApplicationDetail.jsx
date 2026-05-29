@@ -118,21 +118,15 @@ const SECTION_DEFS = [
 function CompactStepper({ app }) {
   if (app.status === 'rejected') return null
 
-  const intakeReady   = isIntakeComplete(app.intakeSheet)
-  const interviewDone = app.outcome === 'completed' || ['approved','certificate'].includes(app.status)
   const glRedeemed    = app.glStatus === 'redeemed'
 
-  // awaiting_info is a paused-Reviewing state; treat it as still-in-Review
-  // for the stepper so we don't visually regress the application.
-  const inReviewOrLater = ['reviewing', 'awaiting_info', 'interview', 'approved', 'certificate'].includes(app.status)
-
+  // Funding-only agency view: CRMC owns document review + assessment, so the
+  // agency's track is just Submit -> For Funding -> Approve -> GL Done.
   const steps = [
-    { key: 'submitted', label: 'Submit',    done: true,                              active: false },
-    { key: 'reviewing', label: 'Review',    done: inReviewOrLater,                   active: app.status === 'reviewing' || app.status === 'awaiting_info' },
-    { key: 'intake',    label: 'Intake',    done: intakeReady,                       active: (app.status === 'reviewing' || app.status === 'awaiting_info') && !intakeReady },
-    { key: 'interview', label: 'Interview', done: interviewDone,                     active: app.status === 'interview' },
-    { key: 'approved',  label: 'Approve',   done: ['approved','certificate'].includes(app.status), active: app.status === 'interview' && interviewDone },
-    { key: 'gl',        label: 'GL Done',   done: glRedeemed,                        active: app.status === 'certificate' && !glRedeemed },
+    { key: 'submitted', label: 'Submit',      done: true,                                             active: false },
+    { key: 'reviewing', label: 'For Funding', done: ['approved','certificate'].includes(app.status), active: ['reviewing','awaiting_info','interview'].includes(app.status) },
+    { key: 'approved',  label: 'Approve',     done: ['approved','certificate'].includes(app.status), active: false },
+    { key: 'gl',        label: 'GL Done',     done: glRedeemed,                                       active: app.status === 'certificate' && !glRedeemed },
   ]
 
   return (
@@ -183,26 +177,14 @@ function getPrimaryActions(ctx) {
     }
   }
 
-  if (app.status === 'reviewing' && !intakeReady) {
+  // Funding-only: CRMC already verified the documents and completed the
+  // assessment (intake + interview), so the agency just decides funding.
+  if (app.status === 'reviewing') {
     return {
-      hint: 'Conduct the patient interview and complete the case assessment to unlock approval.',
-      tone: 'amber',
-      actions: [
-        { label: 'Open Assessment',    icon: MdAssignment,      variant: 'primary',   onClick: goIntake },
-        { label: 'Schedule Interview', icon: MdVideoCall,       variant: 'secondary', onClick: () => handlers.setShowInterview(true) },
-        { label: 'Request More Info',  icon: MdHourglassEmpty,  variant: 'secondary', onClick: () => handlers.setShowRequestInfo(true) },
-        { label: 'Reject',             icon: MdCancel,          variant: 'danger',    onClick: () => handlers.setShowReject(true) },
-      ],
-    }
-  }
-
-  if (app.status === 'reviewing' && intakeReady) {
-    return {
-      hint: 'Intake complete — approve, schedule an interview, request more info, or reject.',
+      hint: 'CRMC verified the documents and completed the assessment. Approve your share and issue the GL, request more info, or reject.',
       tone: 'brand',
       actions: [
         { label: 'Approve & Issue GL', icon: MdCheckCircle,     variant: 'primary-green', onClick: () => handlers.setShowApprove(true) },
-        { label: 'Schedule Interview', icon: MdVideoCall,       variant: 'secondary',     onClick: () => handlers.setShowInterview(true) },
         { label: 'Request More Info',  icon: MdHourglassEmpty,  variant: 'secondary',     onClick: () => handlers.setShowRequestInfo(true) },
         { label: 'Reject',             icon: MdCancel,          variant: 'danger',        onClick: () => handlers.setShowReject(true) },
       ],
@@ -1524,24 +1506,9 @@ export default function ApplicationDetail() {
                           <span className="text-xs text-brand-500 font-medium flex-shrink-0">View →</span>
                         )}
                       </button>
-                      {!d._missing && (user?.role === 'agency' || user?.role === 'agency_admin') &&
-                       ['pending', 'reviewing', 'interview', 'awaiting_info'].includes(app?.status) && (
-                        <div className="flex gap-2 mt-1 mb-1 ml-9">
-                          <button onClick={() => handleVerifyDoc(d, 'verified')}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 flex items-center gap-1 disabled:opacity-50"
-                            disabled={d.status === 'verified'}>
-                            <MdCheckCircle size={12} /> Verify
-                          </button>
-                          <button onClick={() => handleVerifyDoc(d, 'rejected')}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 flex items-center gap-1 disabled:opacity-50"
-                            disabled={d.status === 'rejected'}>
-                            <MdCancel size={12} /> Reject
-                          </button>
-                        </div>
-                      )}
                       </div>
                     ))}
-                    <p className="text-xs text-gray-400 mt-2 italic">Click a document to view it; use Verify / Reject to record your review.</p>
+                    <p className="text-xs text-gray-400 mt-2 italic">CRMC verified these documents before endorsing. Click a document to view it.</p>
                   </div>
                 )}
               </div>

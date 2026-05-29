@@ -91,8 +91,9 @@ export const APP_STATUS_CONFIG = {
   needs_info:    { label: 'Waiting on Patient', badge: 'badge-orange' },
   approved:      { label: 'Approved',           badge: 'badge-green'  },
   rejected:      { label: 'Rejected',           badge: 'badge-red'    },
-  // ── Back-compat (pre-redesign slice states; pruned once writers move) ──
-  reviewing:     { label: 'Reviewing',          badge: 'badge-amber'  },
+  // Post-Proceed funding state. The wire value stays 'reviewing' (the patient
+  // rule permits endorsed->reviewing), but to the agency it's a funding queue.
+  reviewing:     { label: 'For Funding',        badge: 'badge-amber'  },
   awaiting_info: { label: 'Waiting on Patient', badge: 'badge-orange' },
   interview:     { label: 'Interview',          badge: 'badge-purple' },
   certificate:   { label: 'GL Issued',          badge: 'badge-green'  },

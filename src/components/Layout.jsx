@@ -62,7 +62,6 @@ const AGENCY_NAV = [
   { to: '/agency/messages',     icon: MdMessage,        label: 'Messages' },
   { to: '/agency/program',      icon: MdDescription,    label: 'Agency Profile' },
   { to: '/agency/slots',        icon: MdBarChart,       label: 'Slot Management' },
-  { to: '/agency/interviews',   icon: MdVideoCall,      label: 'Online Interviews' },
   { to: '/agency/generator',    icon: MdCardMembership, label: 'Guarantee Letters' },
   { to: '/agency/funds',        icon: MdAttachMoney,    label: 'Funds' },
   { to: '/agency/allocation',   icon: MdAttachMoney,    label: 'Budget Allocation', adminOnly: true },
@@ -649,7 +648,6 @@ const APPS = {
   [ROLES.AGENCY]: [
     { label: 'Dashboard',     icon: MdDashboard,      to: '/agency/dashboard'    },
     { label: 'Inbox',         icon: MdInbox,          to: '/agency/inbox'        },
-    { label: 'Interviews',    icon: MdVideoCall,      to: '/agency/interviews'   },
     { label: 'GL Letters',    icon: MdCardMembership, to: '/agency/generator'    },
     { label: 'Funds',         icon: MdAttachMoney,    to: '/agency/funds'        },
     { label: 'Slot Mgmt',     icon: MdBarChart,       to: '/agency/slots'        },
@@ -661,7 +659,6 @@ const APPS = {
   [ROLES.AGENCY_ADMIN]: [
     { label: 'Dashboard',     icon: MdDashboard,      to: '/agency/dashboard'    },
     { label: 'Inbox',         icon: MdInbox,          to: '/agency/inbox'        },
-    { label: 'Interviews',    icon: MdVideoCall,      to: '/agency/interviews'   },
     { label: 'GL Letters',    icon: MdCardMembership, to: '/agency/generator'    },
     { label: 'Funds',         icon: MdAttachMoney,    to: '/agency/funds'        },
     { label: 'Allocation',    icon: MdAttachMoney,    to: '/agency/allocation'   },
