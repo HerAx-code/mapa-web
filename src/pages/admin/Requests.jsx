@@ -18,7 +18,7 @@ import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
-  MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack,
+  MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -685,6 +685,8 @@ export default function Requests() {
   const [agencies, setAgencies] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
+  const [search,   setSearch]   = useState('')
+  const [filter,   setFilter]   = useState('all')
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db, 'requests'), snap => {
@@ -700,50 +702,69 @@ export default function Requests() {
   // Keep the open detail in sync with live request updates
   const selectedLive = selected ? requests.find(r => r.id === selected.id) ?? selected : null
 
-  const needsAction = requests.filter(r => ['submitted', 'under_review', 'assessment', 'verifying'].includes(r.status))
-  const inProgress  = requests.filter(r => ['endorsed', 'partially_funded', 'endorsing'].includes(r.status))
-  const done        = requests.filter(r => ['fully_funded', 'closed', 'rejected'].includes(r.status))
+  const GROUP = {
+    needs:    ['submitted', 'under_review', 'assessment', 'verifying'],
+    progress: ['endorsed', 'partially_funded', 'endorsing'],
+    done:     ['fully_funded', 'closed', 'rejected'],
+  }
+  const counts = {
+    all:      requests.length,
+    needs:    requests.filter(r => GROUP.needs.includes(r.status)).length,
+    progress: requests.filter(r => GROUP.progress.includes(r.status)).length,
+    done:     requests.filter(r => GROUP.done.includes(r.status)).length,
+  }
+  const filtered = requests.filter(r => {
+    if (filter !== 'all' && !GROUP[filter].includes(r.status)) return false
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (r.patientName ?? '').toLowerCase().includes(q)
+      || (r.requestId ?? '').toLowerCase().includes(q)
+      || (r.assistanceType ?? '').toLowerCase().includes(q)
+  })
 
-  const card = (r) => {
-    const cfg = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
-    return (
-      <button key={r.id} onClick={() => setSelected(r)}
-        className="card p-4 text-left hover:shadow-md transition-all w-full">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <p className="text-sm font-semibold text-gray-800 truncate">{r.patientName}</p>
-          <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
-        </div>
-        <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span></span>
-          <span className="text-gray-400">Secured <span className="font-semibold text-green-600">{peso(r.amountCommitted ?? 0)}</span></span>
-        </div>
-      </button>
-    )
+  // Coarse pipeline stage for an at-a-glance chip (distinct from the status badge).
+  const stageChip = (r) => {
+    if (r.status === 'fully_funded')                          return { label: 'Funded',     cls: 'bg-green-100 text-green-700' }
+    if (['closed', 'rejected'].includes(r.status))            return { label: 'Closed',     cls: 'bg-gray-100 text-gray-500' }
+    if (GROUP.progress.includes(r.status))                    return { label: 'Endorsing',  cls: 'bg-purple-100 text-purple-700' }
+    if (r.status === 'assessment')                            return { label: 'Assessment', cls: 'bg-amber-100 text-amber-700' }
+    return { label: 'Verify docs', cls: 'bg-blue-100 text-blue-700' }
   }
 
-  const section = (label, items, empty) => (
-    <div>
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-        {label} {items.length > 0 && <span className="text-gray-300 font-normal">({items.length})</span>}
-      </p>
-      {items.length === 0
-        ? <p className="text-sm text-gray-400 italic mb-2">{empty}</p>
-        : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">{items.map(card)}</div>}
-    </div>
-  )
+  const FILTERS = [
+    ['all', 'All'], ['needs', 'Needs action'], ['progress', 'In progress'], ['done', 'Completed'],
+  ]
 
   return (
     <Layout breadcrumb="Assistance Requests">
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
         <div className="mb-5">
           <h1 className="page-title flex items-center gap-2"><MdReceiptLong className="text-brand-500" size={22} /> Assistance Requests</h1>
           <p className="page-sub">Review patient requests, verify the bill, and endorse them to agencies toward zero balance.</p>
         </div>
 
+        {/* Toolbar: search + status filter */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="relative flex-1">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input className="input pl-9" placeholder="Search patient, request ID, or type…"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="flex gap-1 overflow-x-auto">
+            {FILTERS.map(([key, label]) => (
+              <button key={key} onClick={() => setFilter(key)}
+                className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  filter === key ? 'bg-brand-500 text-white border-brand-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}>
+                {label} <span className={filter === key ? 'text-white/70' : 'text-gray-300'}>({counts[key]})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[1,2,3,4].map(i => <div key={i} className="card p-4 h-24 animate-pulse" />)}
+          <div className="card p-4 space-y-2">
+            {[1,2,3,4].map(i => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
           </div>
         ) : requests.length === 0 ? (
           <div className="card p-10 text-center">
@@ -751,12 +772,63 @@ export default function Requests() {
             <p className="text-sm font-medium text-gray-600 mb-1">No assistance requests yet</p>
             <p className="text-xs text-gray-400">Patient requests will appear here for endorsement.</p>
           </div>
-        ) : (
-          <div className="space-y-8">
-            {section('Needs Endorsement', needsAction, 'Nothing waiting for endorsement.')}
-            {section('In Progress', inProgress, 'No requests currently being funded.')}
-            {section('Completed', done, 'No completed requests yet.')}
+        ) : filtered.length === 0 ? (
+          <div className="card p-10 text-center">
+            <p className="text-sm text-gray-400">No requests match your search or filter.</p>
           </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="card overflow-x-auto hidden sm:block">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Patient</th><th>Request</th><th>Type</th>
+                    <th>Needs</th><th>Secured</th><th>Stage</th><th>Status</th><th>Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(r => {
+                    const cfg = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
+                    const st  = stageChip(r)
+                    return (
+                      <tr key={r.id} className="cursor-pointer hover:bg-gray-50" onClick={() => setSelected(r)}>
+                        <td className="font-medium text-gray-800">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</td>
+                        <td className="text-xs text-gray-500">{r.requestId}</td>
+                        <td className="text-xs text-gray-500">{r.assistanceType}</td>
+                        <td className="text-gray-700">{peso(r.amountNeeded)}</td>
+                        <td className="text-green-600 font-medium">{peso(r.amountCommitted ?? 0)}</td>
+                        <td><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span></td>
+                        <td><span className={`badge text-xs ${cfg.badge}`}>{cfg.label}</span></td>
+                        <td className="text-xs text-gray-400">{fmtDate(r.submittedAt)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="grid grid-cols-1 gap-3 sm:hidden">
+              {filtered.map(r => {
+                const cfg = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
+                const st  = stageChip(r)
+                return (
+                  <button key={r.id} onClick={() => setSelected(r)} className="card p-4 text-left hover:shadow-md transition-all w-full">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</p>
+                      <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span> · Secured <span className="font-semibold text-green-600">{peso(r.amountCommitted ?? 0)}</span></span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
 
