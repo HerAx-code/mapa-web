@@ -35,7 +35,7 @@ const STATUS_BADGE = {
 
 const STATUS_LABEL = {
   pending:   'Pending',
-  reviewing: 'Under Review',
+  reviewing: 'For Funding',
   interview: 'Interview',
   approved:  'Approved',
   rejected:  'Rejected',
@@ -254,10 +254,10 @@ export default function AgencyDashboard() {
           <div className="card p-4">
             <div className="flex items-center gap-2 mb-1">
               <MdWarning size={16} className="text-amber-500" />
-              <span className="text-xs text-gray-500">Pending Reviews</span>
+              <span className="text-xs text-gray-500">Awaiting Funding Decision</span>
             </div>
             <p className="text-2xl font-semibold text-amber-600">{pendingApps.length}</p>
-            <p className="text-xs text-gray-400">applications</p>
+            <p className="text-xs text-gray-400">endorsed to you</p>
           </div>
           <div className="card p-4">
             <div className="flex items-center gap-2 mb-1">
@@ -357,7 +357,6 @@ export default function AgencyDashboard() {
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
               { label: 'Inbox',          icon: MdInbox,          path: '/agency/inbox',       badge: pendingApps.length, color: 'bg-amber-50  text-amber-600'  },
-              { label: 'Interviews',     icon: MdVideoCall,      path: '/agency/interviews',                              color: 'bg-purple-50 text-purple-600' },
               { label: 'GL Letters',     icon: MdCardMembership, path: '/agency/generator',                               color: 'bg-green-50  text-green-600'  },
               { label: 'Slot Mgmt',      icon: MdBarChart,       path: '/agency/slots',                                   color: 'bg-brand-50  text-brand-600'  },
               { label: 'App Logs',       icon: MdListAlt,        path: '/agency/logs',                                    color: 'bg-teal-50   text-teal-600'   },
