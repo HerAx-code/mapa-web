@@ -592,34 +592,38 @@ export default function RequestAssistance() {
                   const ocr      = ocrResults[tp.name]
                   const ocrBusy  = ocrRunning[tp.name]
                   return (
-                    <div key={tp.id} className="p-2.5 rounded-lg border border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                    <div key={tp.id} className="p-3 rounded-lg border border-gray-100">
+                      <div className="flex items-start gap-2">
+                        <MdDescription size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700 truncate">{tp.name} <span className="text-red-400">*</span></p>
+                          <p className="text-sm text-gray-700">{tp.name} <span className="text-red-400">*</span></p>
                           {pending
-                            ? <p className="text-xs text-green-600 truncate">{pending.name}</p>
-                            : onFile && <p className="text-xs text-green-600 truncate">{t('patient.request.billingOnFile')}</p>}
+                            ? <p className="text-xs text-green-600 break-all">{pending.name}</p>
+                            : onFile && <p className="text-xs text-green-600">{t('patient.request.billingOnFile')}</p>}
                         </div>
-                        {pending ? (
-                          <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeReq(tp.name)}>
-                            <MdClose size={16} />
+                        {pending && (
+                          <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(tp.name)}>
+                            <MdClose size={18} />
                           </button>
-                        ) : isSelfieType(tp.name) ? (
-                          <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1 flex-shrink-0"
-                            onClick={() => setSelfieFor(tp.name)}>
-                            <MdCameraAlt size={14} /> {t('patient.request.takeSelfie')}
-                          </button>
-                        ) : (
-                          <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
-                            <MdUploadFile size={14} /> {onFile ? t('patient.request.replace') : t('patient.request.docAttach')}
-                            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(tp.name)} />
-                          </label>
                         )}
                       </div>
+                      {/* Full-width action — never clips on narrow screens. */}
+                      {!pending && (
+                        isSelfieType(tp.name) ? (
+                          <button type="button" onClick={() => setSelfieFor(tp.name)}
+                            className="mt-2 w-full py-2.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium flex items-center justify-center gap-1.5">
+                            <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
+                          </button>
+                        ) : (
+                          <label className="mt-2 w-full py-2.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium flex items-center justify-center gap-1.5 cursor-pointer">
+                            <MdUploadFile size={16} /> {onFile ? t('patient.request.replace') : t('patient.request.docAttach')}
+                            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(tp.name)} />
+                          </label>
+                        )
+                      )}
                       {/* Advisory on-device ID name-check — never blocks submit. */}
                       {isIdType(tp.name) && pending && (ocrBusy || ocr) && (
-                        <p className={`text-xs mt-1.5 pl-6 ${ocr?.match === true ? 'text-green-600' : ocr?.match === false ? 'text-amber-600' : 'text-gray-400'}`}>
+                        <p className={`text-xs mt-1.5 ${ocr?.match === true ? 'text-green-600' : ocr?.match === false ? 'text-amber-600' : 'text-gray-400'}`}>
                           {ocrBusy
                             ? t('patient.request.ocrChecking')
                             : ocr?.match === true
@@ -657,38 +661,44 @@ export default function RequestAssistance() {
                   <input className="input" value={repForm.relationship} onChange={setRep('relationship')} placeholder={t('patient.request.repRelationshipPlaceholder')} />
                 </div>
                 {/* Representative ID */}
-                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
-                  <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700 truncate">{t('patient.request.repId')} <span className="text-red-400">*</span></p>
-                    {pendingFiles[REP_ID] && <p className="text-xs text-green-600 truncate">{pendingFiles[REP_ID].name}</p>}
+                <div className="p-3 rounded-lg border border-gray-100">
+                  <div className="flex items-start gap-2">
+                    <MdDescription size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700">{t('patient.request.repId')} <span className="text-red-400">*</span></p>
+                      {pendingFiles[REP_ID] && <p className="text-xs text-green-600 break-all">{pendingFiles[REP_ID].name}</p>}
+                    </div>
+                    {pendingFiles[REP_ID] && (
+                      <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(REP_ID)}>
+                        <MdClose size={18} />
+                      </button>
+                    )}
                   </div>
-                  {pendingFiles[REP_ID] ? (
-                    <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeReq(REP_ID)}>
-                      <MdClose size={16} />
-                    </button>
-                  ) : (
-                    <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
-                      <MdUploadFile size={14} /> {t('patient.request.docAttach')}
+                  {!pendingFiles[REP_ID] && (
+                    <label className="mt-2 w-full py-2.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium flex items-center justify-center gap-1.5 cursor-pointer">
+                      <MdUploadFile size={16} /> {t('patient.request.docAttach')}
                       <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(REP_ID)} />
                     </label>
                   )}
                 </div>
                 {/* Representative selfie */}
-                <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100">
-                  <MdCameraAlt size={16} className="text-gray-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700 truncate">{t('patient.request.repSelfie')} <span className="text-red-400">*</span></p>
-                    {pendingFiles[REP_SELFIE] && <p className="text-xs text-green-600 truncate">{t('patient.request.selfieReady')}</p>}
+                <div className="p-3 rounded-lg border border-gray-100">
+                  <div className="flex items-start gap-2">
+                    <MdCameraAlt size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700">{t('patient.request.repSelfie')} <span className="text-red-400">*</span></p>
+                      {pendingFiles[REP_SELFIE] && <p className="text-xs text-green-600">{t('patient.request.selfieReady')}</p>}
+                    </div>
+                    {pendingFiles[REP_SELFIE] && (
+                      <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(REP_SELFIE)}>
+                        <MdClose size={18} />
+                      </button>
+                    )}
                   </div>
-                  {pendingFiles[REP_SELFIE] ? (
-                    <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0" onClick={() => removeReq(REP_SELFIE)}>
-                      <MdClose size={16} />
-                    </button>
-                  ) : (
-                    <button type="button" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1 flex-shrink-0"
-                      onClick={() => setSelfieFor(REP_SELFIE)}>
-                      <MdCameraAlt size={14} /> {t('patient.request.takeSelfie')}
+                  {!pendingFiles[REP_SELFIE] && (
+                    <button type="button" onClick={() => setSelfieFor(REP_SELFIE)}
+                      className="mt-2 w-full py-2.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium flex items-center justify-center gap-1.5">
+                      <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
                     </button>
                   )}
                 </div>
