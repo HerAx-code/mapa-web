@@ -881,7 +881,7 @@ export default function Layout({ children, breadcrumb }) {
           </div>
         ), { duration: 5000, position: 'bottom-right' })
       }
-    })
+    }, (err) => console.error('[Layout] notifications snapshot error:', err))
     return unsub
   }, [user?.uid])
 
@@ -894,7 +894,7 @@ export default function Layout({ children, breadcrumb }) {
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => (b.lastAt?.seconds ?? 0) - (a.lastAt?.seconds ?? 0))
       )
-    })
+    }, (err) => console.error('[Layout] conversations snapshot error:', err))
     return unsub
   }, [user?.uid])
 

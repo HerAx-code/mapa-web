@@ -170,6 +170,10 @@ export default function DocTypes() {
 
       setTypes(list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[DocTypes] types snapshot error:', err)
+      toast.error('Failed to load document types.')
     })
     return unsub
   }, [])

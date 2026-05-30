@@ -856,7 +856,9 @@ export default function Requests() {
       setLoading(false)
     }, () => setLoading(false))
     const u2 = onSnapshot(query(collection(db, 'agencies'), where('enabled', '==', true)),
-      snap => setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      snap => setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => { console.error('[Requests] agencies snapshot error:', err); setAgencies([]) },
+    )
     // All slices, so the list can surface cross-slice coverage warnings
     // (stale endorsements, rejected slices with unfunded balance). Admin
     // rule on /applications/{id} allows isAdmin() — see firestore.rules.

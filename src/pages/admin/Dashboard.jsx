@@ -68,8 +68,16 @@ export default function AdminDashboard() {
   // shown on the CRMC admin dashboard — funds are intra-agency per the
   // Malasakit Center model. See /agency/allocation (agency_admin role).
   useEffect(() => {
-    const u1 = onSnapshot(query(collection(db, 'users'),       where('role',    '==', 'patient')),    snap => setPatientCount(snap.size))
-    const u3 = onSnapshot(query(collection(db, 'agencies'),    where('enabled', '==', true)),         snap => setAgencyCount(snap.size))
+    const u1 = onSnapshot(
+      query(collection(db, 'users'),    where('role',    '==', 'patient')),
+      snap => setPatientCount(snap.size),
+      err => { console.error('[Dashboard] patient count failed:', err); setPatientCount('—') }
+    )
+    const u3 = onSnapshot(
+      query(collection(db, 'agencies'), where('enabled', '==', true)),
+      snap => setAgencyCount(snap.size),
+      err => { console.error('[Dashboard] agency count failed:', err); setAgencyCount('—') }
+    )
     // Open requests = anything still moving through the CRMC pipeline (not
     // closed/rejected/fully_funded). This is the CRMC's actual day-to-day queue.
     const u4 = onSnapshot(
@@ -91,7 +99,8 @@ export default function AdminDashboard() {
         id: d.id, targetId: d.id, type: 'registration',
         body: d.data().name ?? 'Unknown patient',
         createdAt: d.data().createdAt,
-      })))
+      }))),
+      err => { console.error('[Dashboard] recent patients failed:', err); setRecentPatients([]) }
     )
     const u2 = onSnapshot(
       query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(8)),
@@ -101,7 +110,8 @@ export default function AdminDashboard() {
             : d.data().status === 'rejected' ? 'doc_rejected' : 'doc_upload',
         body: `${d.data().patientName || 'Patient'} — ${d.data().name}`,
         createdAt: d.data().createdAt,
-      })))
+      }))),
+      err => { console.error('[Dashboard] recent docs failed:', err); setRecentDocs([]) }
     )
     const u3 = onSnapshot(
       query(collection(db, 'applications'), orderBy('submittedAt', 'desc'), limit(10)),
@@ -118,7 +128,8 @@ export default function AdminDashboard() {
           body:      `${data.patientName ?? 'Patient'} → ${data.agencyName ?? 'Agency'}`,
           createdAt: data.submittedAt,
         }
-      }))
+      })),
+      err => { console.error('[Dashboard] recent apps failed:', err); setRecentApps([]) }
     )
     return () => { u1(); u2(); u3() }
   }, [])
@@ -152,7 +163,8 @@ export default function AdminDashboard() {
             return total > 0 && rem <= Math.max(1, Math.floor(total * 0.1))
           })
         setLowSlotAgencies(low)
-      }
+      },
+      err => { console.error('[Dashboard] low-slot agencies failed:', err); setLowSlotAgencies([]) }
     )
     const u3 = onSnapshot(
       query(collection(db, 'reports'), where('status', 'in', ['open', 'in_progress'])),
@@ -171,11 +183,16 @@ export default function AdminDashboard() {
         setApprovedApps(snap.docs.map(d => ({ id: d.id, ...d.data() })))
         setApprovedCount(snap.size)
         setCertBacklog(snap.docs.filter(d => d.data().status === 'approved').length)
+      },
+      err => {
+        console.error('[Dashboard] approved apps failed:', err)
+        setApprovedApps([]); setApprovedCount('—'); setCertBacklog('—')
       }
     )
     const u2 = onSnapshot(
       query(collection(db, 'applications'), where('status', '==', 'rejected')),
-      snap => setRejectedCount(snap.size)
+      snap => setRejectedCount(snap.size),
+      err => { console.error('[Dashboard] rejected count failed:', err); setRejectedCount('—') }
     )
     return () => { u1(); u2() }
   }, [isSuperAdmin])

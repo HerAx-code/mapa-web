@@ -81,6 +81,9 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
     const unsub = onSnapshot(q, snap => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoadingMsgs(false)
+    }, (err) => {
+      setLoadingMsgs(false)
+      console.error('[Messages] thread snapshot error:', err)
     })
     updateDoc(doc(db, 'conversations', conv.id), {
       [`unread.${user.uid}`]:  0,
@@ -551,6 +554,9 @@ function ConversationThread({ conversation, user, text, setText }) {
     const unsub = onSnapshot(q, snap => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoadingMsgs(false)
+    }, (err) => {
+      setLoadingMsgs(false)
+      console.error('[Messages] thread snapshot error:', err)
     })
     updateDoc(doc(db, 'conversations', conversation.id), {
       [`unread.${user.uid}`]: 0,
@@ -727,6 +733,10 @@ export default function Messages() {
           .sort((a, b) => (b.lastAt?.seconds ?? 0) - (a.lastAt?.seconds ?? 0))
       )
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[Messages] conversations snapshot error:', err)
+      toast.error('Failed to load conversations.')
     })
     return unsub
   }, [user?.uid])

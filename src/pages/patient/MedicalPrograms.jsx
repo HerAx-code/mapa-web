@@ -30,6 +30,9 @@ export default function MedicalPrograms() {
           .sort((a, b) => a.name.localeCompare(b.name))
       )
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[MedicalPrograms] agencies snapshot error:', err)
     })
     return unsub
   }, [])

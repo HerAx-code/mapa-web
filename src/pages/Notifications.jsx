@@ -95,6 +95,9 @@ export default function Notifications() {
     const unsub = onSnapshot(q, snap => {
       setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[Notifications] snapshot error:', err)
     })
     return unsub
   }, [user?.uid])

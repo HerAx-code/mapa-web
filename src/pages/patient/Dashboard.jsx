@@ -190,6 +190,9 @@ export default function PatientDashboard() {
       setAppCount(all.length)
       setActiveApp(all.find(a => a.status !== 'rejected') ?? null)
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[PatientDashboard] applications snapshot error:', err)
     })
     return unsub
   }, [user?.uid])

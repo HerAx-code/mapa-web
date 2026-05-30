@@ -155,14 +155,19 @@ export default function AssistanceTypes() {
 
       setTypes(list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[AssistanceTypes] types snapshot error:', err)
+      toast.error('Failed to load assistance types.')
     })
     return unsub
   }, [])
 
   // Load agencies for coverage display
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'agencies'), snap =>
-      setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const unsub = onSnapshot(collection(db, 'agencies'),
+      snap => setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => console.error('[AssistanceTypes] agencies snapshot error:', err),
     )
     return unsub
   }, [])
