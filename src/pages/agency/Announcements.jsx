@@ -253,7 +253,12 @@ export default function AgencyAnnouncements() {
           <div className="card p-10 text-center">
             <MdCampaign size={32} className="text-gray-300 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600 mb-1">No promotions yet</p>
-            <p className="text-xs text-gray-400">Post one to show your programs on the patient Find Programs page.</p>
+            <p className="text-xs text-gray-400 mb-4">Post one to show your programs on the patient Find Programs page.</p>
+            <button
+              onClick={() => { setEditing(null); setShowForm(true) }}
+              className="btn-primary text-sm inline-flex items-center gap-1.5">
+              <MdAdd size={15} /> Post First Promotion
+            </button>
           </div>
         ) : (
           <div className="space-y-3">{announcements.map(renderCard)}</div>

@@ -11,7 +11,7 @@ import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   MdSearch, MdCheckCircle, MdDelete, MdDone, MdSend,
-  MdClose, MdMessage, MdChevronLeft, MdChevronRight,
+  MdClose, MdMessage, MdChevronLeft, MdChevronRight, MdAdd,
 } from 'react-icons/md'
 
 const MAX_CHARS = 1000
@@ -909,16 +909,17 @@ export default function Messages() {
           <p className="text-sm text-gray-400 mb-1">
             {search ? 'No conversations match your search.' : 'No messages yet.'}
           </p>
-          {!search && isPatient && (
-            <p className="text-xs text-gray-400">
-              Use the <strong>New Message</strong> button above to contact hospital staff or your agency.
-            </p>
-          )}
-          {search && (
+          {search ? (
             <button
               onClick={() => setSearch('')}
               className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
               Clear search
+            </button>
+          ) : isPatient && (
+            <button
+              onClick={() => setShowCompose(true)}
+              className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5">
+              <MdAdd size={15} /> New Message
             </button>
           )}
         </div>

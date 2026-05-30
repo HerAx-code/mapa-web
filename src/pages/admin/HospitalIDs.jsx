@@ -379,11 +379,17 @@ export default function HospitalIDs() {
                     <p className="text-sm text-gray-400">
                       {search ? 'No IDs match your search.' : 'No hospital IDs found.'}
                     </p>
-                    {search && (
+                    {search ? (
                       <button
                         onClick={() => setSearch('')}
                         className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
                         Clear search
+                      </button>
+                    ) : isSuperAdmin && (
+                      <button
+                        onClick={() => setShowBulkAdd(true)}
+                        className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5">
+                        <MdAdd size={15} /> Generate Hospital IDs
                       </button>
                     )}
                   </td>
