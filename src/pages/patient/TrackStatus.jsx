@@ -6,7 +6,7 @@ import {
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
@@ -157,17 +157,21 @@ export default function TrackStatus() {
         })),
       })
 
-      // Restore slot if submitted today
+      // Restore slot if submitted today — wrapped in a transaction so a
+      // simultaneous return (e.g., agency reject) on the same agency can't
+      // silently lose one increment via lost-update.
       const submittedDate = app.submittedAt?.toDate?.()
       const isToday = submittedDate &&
         submittedDate.toDateString() === new Date().toDateString()
       if (isToday) {
         try {
-          const agencySnap = await getDoc(doc(db, 'agencies', app.agencyId))
-          const current = agencySnap.data()?.slots?.remaining ?? 0
-          const total   = agencySnap.data()?.slots?.total    ?? 0
-          await updateDoc(doc(db, 'agencies', app.agencyId), {
-            'slots.remaining': Math.min(current + 1, total),
+          const agencyRef = doc(db, 'agencies', app.agencyId)
+          await runTransaction(db, async (tx) => {
+            const snap = await tx.get(agencyRef)
+            if (!snap.exists()) return
+            const current = snap.data()?.slots?.remaining ?? 0
+            const total   = snap.data()?.slots?.total    ?? 0
+            tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
           })
         } catch {}
       }

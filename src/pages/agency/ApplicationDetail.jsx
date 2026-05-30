@@ -733,11 +733,13 @@ export default function ApplicationDetail() {
       submittedDate.toDateString() === new Date().toDateString()
     if (isToday) {
       try {
-        const agencySnap = await getDoc(doc(db, 'agencies', user.agencyId))
-        const current = agencySnap.data()?.slots?.remaining ?? 0
-        const total   = agencySnap.data()?.slots?.total    ?? 0
-        await updateDoc(doc(db, 'agencies', user.agencyId), {
-          'slots.remaining': Math.min(current + 1, total),
+        const agencyRef = doc(db, 'agencies', user.agencyId)
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(agencyRef)
+          if (!snap.exists()) return
+          const current = snap.data()?.slots?.remaining ?? 0
+          const total   = snap.data()?.slots?.total    ?? 0
+          tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
         })
       } catch {}
     }
