@@ -28,6 +28,7 @@ export default function GLViewer() {
   const [loading, setLoading]         = useState(true)
   const [showUpload, setShowUpload]   = useState(false)
   const [markingIssued, setMarkingIssued] = useState(false)
+  const [showConfirmIssued, setShowConfirmIssued] = useState(false)
 
   // Load the application
   useEffect(() => {
@@ -78,15 +79,11 @@ export default function GLViewer() {
   // the print dialog to be silently blocked.
 
   // Mark the GL as Issued — flips status from approved → certificate, advances
-  // the stages array, and notifies the patient. Coordinator-only.
-  const handleMarkIssued = async () => {
+  // the stages array, and notifies the patient. Coordinator-only. The
+  // confirmation goes through an in-app modal (not window.confirm) so it
+  // matches the rest of the app's design language.
+  const performMarkIssued = async () => {
     if (!app || markingIssued) return
-    if (!window.confirm(
-      `Mark this Guarantee Letter as ISSUED?\n\n` +
-      `This sets the application status to "Guarantee Letter Issued" and notifies the patient. ` +
-      `Only confirm if the GL was successfully printed (and ideally also wet-signed).`
-    )) return
-
     setMarkingIssued(true)
     try {
       await updateDoc(doc(db, 'applications', app.id), {
@@ -104,6 +101,7 @@ export default function GLViewer() {
         body:  `Your Guarantee Letter for ₱${Number(app.approvedAmount ?? 0).toLocaleString()} from ${app.agencyName} has been issued. ${app.agencyName} is preparing the signed copy — you'll be notified when it's ready to download.`,
       })
       toast.success('Marked as Issued. Patient has been notified.')
+      setShowConfirmIssued(false)
     } catch (err) {
       console.error(err)
       toast.error('Failed to mark as Issued. Please try again.')
@@ -202,7 +200,7 @@ export default function GLViewer() {
             <button type="button"
               className="text-sm flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
               disabled={markingIssued}
-              onClick={handleMarkIssued}>
+              onClick={() => setShowConfirmIssued(true)}>
               <MdCheckCircle size={14} /> {markingIssued ? 'Marking…' : 'Mark as Issued'}
             </button>
           </div>
@@ -241,6 +239,42 @@ export default function GLViewer() {
       {/* ── Upload modal ── */}
       {showUpload && (
         <SignedGLUploadModal app={app} existing={signedScan} onClose={() => setShowUpload(false)} />
+      )}
+
+      {/* ── Confirm Mark-as-Issued modal ── */}
+      {showConfirmIssued && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 print:hidden"
+          onClick={e => e.target === e.currentTarget && !markingIssued && setShowConfirmIssued(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+              <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <MdCheckCircle size={18} className="text-amber-500" />
+              </div>
+              <h2 className="text-base font-semibold text-gray-900">Mark Guarantee Letter as Issued?</h2>
+            </div>
+            <div className="px-5 py-4 space-y-2">
+              <p className="text-sm text-gray-600 leading-relaxed">
+                This sets the application status to <strong>"Guarantee Letter Issued"</strong> and notifies the patient.
+              </p>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Only confirm if the GL was successfully printed (and ideally also wet-signed). The patient will then expect you to upload the wet-signed scan.
+              </p>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/60 flex gap-2 justify-end">
+              <button type="button" className="btn-secondary text-sm"
+                disabled={markingIssued}
+                onClick={() => setShowConfirmIssued(false)}>
+                Cancel
+              </button>
+              <button type="button"
+                className="text-sm flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={markingIssued}
+                onClick={performMarkIssued}>
+                <MdCheckCircle size={14} /> {markingIssued ? 'Marking…' : 'Mark as Issued'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Global print styles ── */}
