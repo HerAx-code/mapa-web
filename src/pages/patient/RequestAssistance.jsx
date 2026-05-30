@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
+  MdContentCopy,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -331,20 +332,18 @@ export default function RequestAssistance() {
 
       setSubmittedId(requestId)
 
-      // Fire-and-forget notifications — never block the success state.
-      Promise.all([
-        notify(user.uid, {
+      // Notify CRMC admins so they can pick up the request. The patient
+      // self-notification was dropped — they're literally on the success
+      // page already, the in-app toast it triggered was redundant chrome
+      // (and showed the same Request ID the success screen now displays
+      // in a more compact form).
+      getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])))
+        .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
           type:  'app_submitted',
-          title: t('patient.request.notifyPatientTitle'),
-          body:  t('patient.request.notifyPatientBody', { id: requestId }),
-        }),
-        getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])))
-          .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
-            type:  'app_submitted',
-            title: 'New assistance request',
-            body:  `${user.name} submitted a ${form.assistanceType} request for ${peso(amountNeeded)} (net). ID: ${requestId}.`,
-          })))),
-      ]).catch(() => {})
+          title: 'New assistance request',
+          body:  `${user.name} submitted a ${form.assistanceType} request for ${peso(amountNeeded)} (net). ID: ${requestId}.`,
+        }))))
+        .catch(err => console.error('[request] admin notify failed:', err))
     } catch (err) {
       console.error('[request] submit failed:', err?.code, err?.message, err)
       toast.error(t('patient.request.errFailed'))
@@ -357,7 +356,7 @@ export default function RequestAssistance() {
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
         <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto">
-          <div className="card p-6 sm:p-8 text-center space-y-4">
+          <div className="card p-6 sm:p-8 text-center space-y-5">
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
               <MdCheckCircle size={36} className="text-green-500" />
             </div>
@@ -365,13 +364,29 @@ export default function RequestAssistance() {
               <h2 className="text-lg font-bold text-gray-900 mb-1">{t('patient.request.successTitle')}</h2>
               <p className="text-sm text-gray-500">{t('patient.request.successDesc')}</p>
             </div>
-            <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4">
-              <p className="text-xs text-gray-400 mb-1">{t('patient.request.successIdLabel')}</p>
-              <p className="text-xl font-bold text-gray-900 tracking-wide">{submittedId}</p>
-            </div>
             <button className="btn-primary w-full py-3 text-sm" onClick={() => navigate('/patient/status')}>
               {t('patient.request.viewStatus')} →
             </button>
+            {/* Demoted Request ID — single-line w/ copy-to-clipboard. The
+                ID is reference-only (the patient is signed in and can see
+                everything in My Application), so it doesn't deserve hero
+                treatment under the green check. Kept here so they can
+                screenshot or quote it if they message CRMC. */}
+            <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5 pt-1">
+              <span>{t('patient.request.successIdLabel')}:</span>
+              <span className="font-mono text-gray-600">{submittedId}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(submittedId)
+                    .then(() => toast.success('Request ID copied'))
+                    .catch(err => console.error('[request] clipboard write failed:', err))
+                }}
+                className="text-brand-500 hover:text-brand-600 p-1 rounded hover:bg-brand-50"
+                title="Copy Request ID">
+                <MdContentCopy size={13} />
+              </button>
+            </p>
           </div>
         </div>
       </Layout>
