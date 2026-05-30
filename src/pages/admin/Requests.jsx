@@ -740,17 +740,30 @@ function RequestDetail({ request, agencies, onClose }) {
                   <div className="space-y-2">
                     <textarea className="input resize-none text-sm" rows={2} placeholder="Assessment notes (optional)…"
                       value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} maxLength={300} />
+                    {/* Outcome buttons promoted from text-link styling --
+                        Completed gates endorsement, No-show notifies the
+                        patient. Both deserve real button affordance, not the
+                        same visual weight as a "View Details" inline link.
+                        Layout: Completed primary on the left (most common,
+                        positive outcome), No-show as destructive secondary,
+                        Reschedule as plain secondary. */}
                     <div className="flex gap-2 flex-wrap">
-                      <button className="text-xs font-medium text-green-600 hover:text-green-700 flex items-center gap-1 disabled:opacity-50"
-                        disabled={busy} onClick={() => recordOutcome('completed')}>
+                      <button
+                        disabled={busy}
+                        onClick={() => recordOutcome('completed')}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
                         <MdCheckCircle size={14} /> Completed
                       </button>
-                      <button className="text-xs font-medium text-red-500 hover:text-red-600 flex items-center gap-1 disabled:opacity-50"
-                        disabled={busy} onClick={() => recordOutcome('no_show')}>
+                      <button
+                        disabled={busy}
+                        onClick={() => recordOutcome('no_show')}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 hover:bg-red-50 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
                         <MdBlock size={14} /> No-show
                       </button>
-                      <button className="text-xs font-medium text-amber-600 hover:text-amber-700 flex items-center gap-1 disabled:opacity-50"
-                        disabled={busy} onClick={() => setShowInterview(true)}>
+                      <button
+                        disabled={busy}
+                        onClick={() => setShowInterview(true)}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
                         <MdEventRepeat size={14} /> Reschedule
                       </button>
                     </div>
