@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, doc, getDocs, updateDoc,
-  serverTimestamp, runTransaction, arrayUnion,
+  serverTimestamp, runTransaction, arrayUnion, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -778,6 +778,41 @@ export default function Requests() {
       () => setAllSlices([]),
     )
     return () => { u1(); u2(); u3() }
+  }, [])
+
+  // Mirror trigger for the daily slot reset. The primary mechanism in the
+  // pilot is the lazy check on agency/Dashboard.jsx, but if a CRMC operator
+  // arrives before any agency user does, they'd see yesterday's remaining
+  // counts when endorsing. This fires the same reset from the CRMC side so
+  // the critical-path (Requests page) is guaranteed to see today's slots.
+  //
+  // Once the scheduled Cloud Function is deployable (project on Blaze), it
+  // becomes the primary and both lazy paths are belt-and-suspenders.
+  useEffect(() => {
+    const ensureSlotReset = async () => {
+      try {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+        const snap  = await getDocs(query(collection(db, 'agencies'), where('enabled', '==', true)))
+        const batch = writeBatch(db)
+        let resetCount = 0
+        snap.docs.forEach(d => {
+          const data = d.data()
+          if (data.lastResetDate !== today && (data.slots?.total ?? 0) > 0) {
+            batch.update(d.ref, {
+              'slots.remaining': data.slots.total,
+              lastResetDate:     today,
+            })
+            resetCount++
+          }
+        })
+        if (resetCount > 0) await batch.commit()
+      } catch (err) {
+        // Best-effort: if the batch fails (rule denial, network), CRMC will
+        // see slightly stale counts but endorsement still works.
+        console.error('[Requests] daily slot reset check failed:', err)
+      }
+    }
+    ensureSlotReset()
   }, [])
 
   // Group slices by requestId so each row in the list can look up its own

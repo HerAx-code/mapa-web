@@ -61,7 +61,10 @@ export default function AgencyDashboard() {
     const unsub = onSnapshot(doc(db, 'agencies', user.agencyId), async snap => {
       if (!snap.exists()) return
       const data  = snap.data()
-      const today = new Date().toISOString().slice(0, 10)
+      // Anchor the "today" key to Asia/Manila so the reset fires at the
+      // pilot-local midnight, not at UTC midnight (which is 08:00 PHT and
+      // would delay the reset by 8 hours).
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
       if (data.lastResetDate !== today && (data.slots?.total ?? 0) > 0) {
         // New day — reset remaining slots back to total
         await updateDoc(doc(db, 'agencies', snap.id), {
