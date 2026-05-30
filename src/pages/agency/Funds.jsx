@@ -7,7 +7,7 @@ import { PERIOD_ADJECTIVE } from '../../utils/constants'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   MdSearch, MdCheckCircle, MdCancel, MdHourglassEmpty,
-  MdReceipt, MdRefresh, MdArrowForward, MdWarning, MdFilterList,
+  MdReceipt, MdArrowForward, MdWarning, MdFilterList,
 } from 'react-icons/md'
 
 const PAGE_SIZE = 25
@@ -365,8 +365,19 @@ export default function AgencyFunds() {
                   {pageItems.map(e => {
                     const meta = EVENT_META[e.type]
                     const Icon = meta.icon
+                    // Build a one-line audit trailer for the row's hover
+                    // tooltip. Surfaces who-did-this + (for redeems) which
+                    // provider was paid, without taking up table column
+                    // real estate. The data was already loaded onto the
+                    // event object but never displayed.
+                    const tooltip = [
+                      e.actor && `By ${e.actor}`,
+                      e.payableTo && `Payable to ${e.payableTo}`,
+                      e.reason,
+                    ].filter(Boolean).join(' · ')
                     return (
                       <tr key={e.id}
+                        title={tooltip || undefined}
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
                         onClick={() => navigate(`/agency/applications/${e.appId}`)}>
                         <td>
@@ -429,7 +440,15 @@ export default function AgencyFunds() {
         </div>
 
         <p className="text-xs text-gray-400 mt-4 leading-relaxed">
-          <strong>Note —</strong> Events are derived from each application's current state. Legacy reversals (made before this version) may show "amount n/a"; new reversals preserve the original amount. For the actor-level audit trail, ask a system administrator to consult the Audit Log.
+          <strong>Note —</strong> Events are derived from each application's current state. Legacy reversals (made before this version) may show "amount n/a"; new reversals preserve the original amount. Hover any row for the actor and other context.{' '}
+          {user?.role === 'agency_admin' && (
+            <>The full agency audit trail lives in the{' '}
+              <button onClick={() => navigate('/agency/audit')}
+                className="text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
+                Audit Log
+              </button>.
+            </>
+          )}
         </p>
 
       </div>
