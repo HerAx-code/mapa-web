@@ -16,7 +16,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { InterviewModal } from '../../components/agency/ApplicationModals'
+import InterviewModal from '../../components/InterviewModal'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
