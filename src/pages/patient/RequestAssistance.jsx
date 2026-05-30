@@ -16,6 +16,7 @@ import { runIdOcr, isIdType } from '../../utils/idOcr'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
+import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
@@ -51,6 +52,13 @@ export default function RequestAssistance() {
   const [loading,       setLoading]       = useState(true)
   const [submitting,    setSubmitting]    = useState(false)
   const [submittedId,   setSubmittedId]   = useState('')
+  // Patient-initiated withdraw of an active request. CLAUDE.md is explicit:
+  // "Patient can withdraw before endorsement" -- so the action is only
+  // exposed while status is in the pre-endorsement window. Once CRMC has
+  // endorsed (slices exist), the agencies have committed time to review
+  // and we don't want the patient to silently pull the rug.
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false)
+  const [withdrawing,     setWithdrawing]     = useState(false)
 
   const [form, setForm] = useState({
     assistanceType: '', amountNeeded: '', description: '',
@@ -136,6 +144,38 @@ export default function RequestAssistance() {
       toast.error(t('patient.request.proceedErr'))
     } finally {
       setProceeding(false)
+    }
+  }
+
+  // Patient-initiated request withdrawal. Only callable while status is
+  // pre-endorsement -- the button isn't even rendered otherwise. Marks the
+  // request as 'closed' with closeReason so CRMC's logs still show what
+  // happened. The patient is then free to submit a new one.
+  const handleWithdraw = async () => {
+    if (!activeRequest || withdrawing) return
+    setWithdrawing(true)
+    try {
+      await updateDoc(doc(db, 'requests', activeRequest.id), {
+        status:      'closed',
+        closeReason: 'Withdrawn by applicant.',
+        updatedAt:   serverTimestamp(),
+      })
+      // Notify CRMC so the request disappears from their action queue and
+      // doesn't sit there as a stale "Needs action" row.
+      getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])))
+        .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
+          type:  'app_withdrawn',
+          title: 'Request withdrawn',
+          body:  `${user.name} withdrew their ${activeRequest.assistanceType} request (${activeRequest.requestId}).`,
+        }))))
+        .catch(err => console.error('[withdraw] admin notify failed:', err))
+      toast.success(t('patient.track.withdrawSuccess'))
+      setConfirmWithdraw(false)
+    } catch (err) {
+      console.error('[withdraw] update failed:', err)
+      toast.error(t('patient.track.withdrawFailed'))
+    } finally {
+      setWithdrawing(false)
     }
   }
 
@@ -584,8 +624,30 @@ export default function RequestAssistance() {
             <button className="btn-primary w-full mt-4 text-sm" onClick={() => navigate('/patient/status')}>
               {t('patient.request.viewStatus')} →
             </button>
+            {/* Withdraw is only offered while CRMC hasn't endorsed yet. Once
+                slices exist, agencies have started reviewing and the patient
+                shouldn't silently bow out -- they should reach out via
+                Messages instead. */}
+            {['submitted', 'under_review', 'assessment'].includes(activeRequest.status) && slices.length === 0 && (
+              <button
+                className="w-full min-h-[44px] inline-flex items-center justify-center mt-3 text-sm font-medium text-gray-500 hover:text-red-600"
+                onClick={() => setConfirmWithdraw(true)}>
+                {t('patient.track.withdraw')}
+              </button>
+            )}
           </div>
         </div>
+
+        <ConfirmModal
+          open={confirmWithdraw}
+          onClose={() => !withdrawing && setConfirmWithdraw(false)}
+          onConfirm={handleWithdraw}
+          title={t('patient.track.withdraw')}
+          body={t('patient.track.withdrawConfirm')}
+          tone="danger"
+          confirmLabel={t('patient.track.withdrawYes')}
+          confirmLabelBusy={t('patient.track.withdrawing')}
+        />
       </Layout>
     )
   }
