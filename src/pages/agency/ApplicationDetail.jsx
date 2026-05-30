@@ -51,35 +51,87 @@ const formatDate = (ts) => {
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
-const getUpdatedStages = (stages, newStatus, extra = {}) => {
-  const doneKeys = {
-    pending:        ['submitted'],
-    reviewing:      ['submitted', 'docs'],
-    awaiting_info:  ['submitted', 'docs'],
-    interview:      ['submitted', 'docs', 'reviewing'],
-    approved:       ['submitted', 'docs', 'reviewing', 'interview'],
-    certificate:    ['submitted', 'docs', 'reviewing', 'interview', 'approved'],
-    rejected:       ['submitted'],
-  }[newStatus] ?? ['submitted']
-  const activeKey = {
-    pending:        'docs',
-    reviewing:      'reviewing',
-    awaiting_info:  'reviewing',
-    interview:      'interview',
-    approved:       'approved',
-    certificate:    'certificate',
-    rejected:       null,
-  }[newStatus] ?? null
-  return stages.map(s => ({
-    ...s,
+// Timeline stages derived from app status. The previous implementation
+// updated a stored `stages` array on every status write, which (a) was
+// dead data for new-model slices since the rich per-stage dates and
+// notes were never written for them (sliceStages() in admin/Requests
+// was dropped earlier this session), and (b) hardcoded a 6-stage flow
+// that includes Document Verification and Interview Scheduled -- both
+// CRMC-owned under the redesign, not agency-owned.
+//
+// Co-funding slice (has requestId): 4-stage Submit -> For Funding ->
+// Approve -> GL Done (mirrors CompactStepper at the top of the page).
+// Legacy direct-to-agency app (no requestId): original 6-stage view
+// from before the redesign.
+const buildTimelineStages = (app) => {
+  const status = app?.status
+  if (app?.requestId) {
+    // New-model slice
+    const SLICE_DEFS = [
+      { key: 'endorsed',    label: 'Endorsed by CRMC' },
+      { key: 'reviewing',   label: 'Under Funding Review' },
+      { key: 'approved',    label: 'Approved' },
+      { key: 'certificate', label: 'Guarantee Letter Issued' },
+    ]
+    const sliceDoneMap = {
+      endorsed:      [],
+      reviewing:     ['endorsed'],
+      awaiting_info: ['endorsed'],
+      approved:      ['endorsed', 'reviewing'],
+      certificate:   ['endorsed', 'reviewing', 'approved'],
+      rejected:      [],
+    }
+    const sliceActiveMap = {
+      endorsed:      'endorsed',
+      reviewing:     'reviewing',
+      awaiting_info: 'reviewing',
+      approved:      'approved',
+      certificate:   'certificate',
+      rejected:      null,
+    }
+    const doneKeys  = sliceDoneMap[status]  ?? []
+    const activeKey = sliceActiveMap[status] ?? null
+    return SLICE_DEFS.map(s => ({
+      key:    s.key,
+      label:  s.label,
+      done:   doneKeys.includes(s.key),
+      active: s.key === activeKey,
+    }))
+  }
+  // Legacy direct-to-agency stepper
+  const STAGE_DEFS = [
+    { key: 'submitted',   label: 'Application Submitted' },
+    { key: 'docs',        label: 'Document Verification' },
+    { key: 'reviewing',   label: 'Under Agency Review' },
+    { key: 'interview',   label: 'Interview Scheduled' },
+    { key: 'approved',    label: 'Application Approved' },
+    { key: 'certificate', label: 'Guarantee Letter Issued' },
+  ]
+  const doneMap = {
+    pending:     ['submitted'],
+    reviewing:   ['submitted', 'docs'],
+    awaiting_info: ['submitted', 'docs'],
+    interview:   ['submitted', 'docs', 'reviewing'],
+    approved:    ['submitted', 'docs', 'reviewing', 'interview'],
+    certificate: ['submitted', 'docs', 'reviewing', 'interview', 'approved'],
+    rejected:    ['submitted'],
+  }
+  const activeMap = {
+    pending:     'docs',
+    reviewing:   'reviewing',
+    awaiting_info: 'reviewing',
+    interview:   'interview',
+    approved:    'approved',
+    certificate: 'certificate',
+    rejected:    null,
+  }
+  const doneKeys  = doneMap[status]  ?? ['submitted']
+  const activeKey = activeMap[status] ?? null
+  return STAGE_DEFS.map(s => ({
+    key:    s.key,
+    label:  s.label,
     done:   doneKeys.includes(s.key),
     active: s.key === activeKey,
-    date:   doneKeys.includes(s.key) && !s.date
-      ? new Date().toLocaleDateString()
-      : (s.date ?? null),
-    note:   s.key === 'interview' && extra.interviewDate
-      ? `Interview scheduled for ${extra.interviewDate} at ${extra.interviewTime}.`
-      : s.note,
   }))
 }
 
@@ -426,7 +478,6 @@ export default function ApplicationDetail() {
     try {
       await updateDoc(doc(db, 'applications', app.id), {
         status:    newStatus,
-        stages:    getUpdatedStages(app.stages ?? [], newStatus, extra),
         updatedAt: serverTimestamp(),
         ...extra,
       })
@@ -633,7 +684,6 @@ export default function ApplicationDetail() {
 
         tx.update(appRef, {
           status:              'approved',
-          stages:              getUpdatedStages(app.stages ?? [], 'approved', {}),
           approvedAmount,
           // Record the approved figure on the slice so the parent request's
           // funding tally and the coordination board reflect what this agency
@@ -881,7 +931,6 @@ export default function ApplicationDetail() {
       const batch = writeBatch(db)
       batch.update(doc(db, 'applications', app.id), {
         status:              'reviewing',
-        stages:              getUpdatedStages(app.stages ?? [], 'reviewing', {}),
         // Preserve approvedAmount and the other approval-context fields as
         // historical record. The status='reviewing' + approvedAt=null pair
         // is the authoritative "not currently approved" signal; every
@@ -1516,7 +1565,7 @@ export default function ApplicationDetail() {
                 <div className="card p-5">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Application Timeline</p>
                   <div className="space-y-2">
-                    {(app.stages ?? []).map((s, i) => (
+                    {buildTimelineStages(app).map((s, i) => (
                       <div key={s.key} className="flex items-start gap-3">
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5
                           ${s.done ? 'bg-brand-500 border-brand-500 text-white'
@@ -1528,7 +1577,6 @@ export default function ApplicationDetail() {
                           <p className={`text-sm font-medium ${s.done ? 'text-gray-800' : s.active ? 'text-amber-700' : 'text-gray-400'}`}>
                             {s.label} {s.active && <span className="badge badge-amber text-xs ml-1">Current</span>}
                           </p>
-                          {s.date && <p className="text-xs text-gray-400">{s.date}</p>}
                         </div>
                       </div>
                     ))}
