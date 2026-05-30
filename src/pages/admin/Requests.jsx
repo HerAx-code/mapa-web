@@ -1031,6 +1031,11 @@ export default function Requests() {
         ) : filtered.length === 0 ? (
           <div className="card p-10 text-center">
             <p className="text-sm text-gray-400">No requests match your search or filter.</p>
+            <button
+              onClick={() => { setSearch(''); setFilter('all') }}
+              className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+              Clear filters
+            </button>
           </div>
         ) : (
           <>

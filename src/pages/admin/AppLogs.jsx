@@ -184,8 +184,17 @@ export default function AppLogs() {
                 </tr>
               ))}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-sm text-gray-400">
-                  No applications found.
+                <tr><td colSpan={6} className="text-center py-10">
+                  <p className="text-sm text-gray-400">
+                    {search || filter !== 'all' ? 'No applications match your filter.' : 'No applications found.'}
+                  </p>
+                  {(search || filter !== 'all') && (
+                    <button
+                      onClick={() => { setSearch(''); setFilter('all') }}
+                      className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                      Clear filters
+                    </button>
+                  )}
                 </td></tr>
               )}
             </tbody>

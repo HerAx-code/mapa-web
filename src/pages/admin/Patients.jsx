@@ -563,12 +563,21 @@ export default function Patients() {
               })}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-sm text-gray-400">
-                    {search
-                      ? 'No patients match your search.'
-                      : tab === 'deletion'
-                        ? 'No patients are currently marked for deletion.'
-                        : 'No patients found.'}
+                  <td colSpan={5} className="text-center py-8">
+                    <p className="text-sm text-gray-400">
+                      {search
+                        ? 'No patients match your search.'
+                        : tab === 'deletion'
+                          ? 'No patients are currently marked for deletion.'
+                          : 'No patients found.'}
+                    </p>
+                    {search && (
+                      <button
+                        onClick={() => setSearch('')}
+                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                        Clear search
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}

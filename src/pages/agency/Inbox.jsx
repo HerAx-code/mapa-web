@@ -306,6 +306,13 @@ export default function Inbox() {
                         ? 'No applications match your filter.'
                         : 'No applications yet. They will appear here when CRMC endorses requests to your agency.'}
                     </p>
+                    {(search || statusFilter !== 'all') && (
+                      <button
+                        onClick={() => { setSearch(''); setStatusFilter('all') }}
+                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                        Clear filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}

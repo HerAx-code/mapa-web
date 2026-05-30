@@ -189,6 +189,13 @@ export default function AgencyLogs() {
                     <p className="text-sm text-gray-400">
                       {search || filter !== 'all' ? 'No applications match your filter.' : 'No applications yet.'}
                     </p>
+                    {(search || filter !== 'all') && (
+                      <button
+                        onClick={() => { setSearch(''); setFilter('all') }}
+                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                        Clear filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}
