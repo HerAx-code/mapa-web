@@ -15,9 +15,7 @@ import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '
 import { runIdOcr, isIdType } from '../../utils/idOcr'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
-
-const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
-import { REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
@@ -27,6 +25,7 @@ import {
 import toast from 'react-hot-toast'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
+const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
 
 // Active = anything not in a terminal state. A patient works one bill toward
 // zero balance at a time, so an active request blocks a new submission.
@@ -207,7 +206,10 @@ export default function RequestAssistance() {
         setActiveRequest(active ?? null)
         setLoading(false)
       },
-      () => setLoading(false),
+      (err) => {
+        console.error('[RequestAssistance] requests snapshot error:', err)
+        setLoading(false)
+      },
     )
     return unsub
   }, [user?.uid])
@@ -219,7 +221,7 @@ export default function RequestAssistance() {
     const unsub = onSnapshot(
       query(collection(db, 'applications'), where('requestId', '==', activeRequest.id)),
       snap => setSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-      () => {},
+      (err) => console.error('[RequestAssistance] slices snapshot error:', err),
     )
     return unsub
   }, [activeRequest?.id])
@@ -232,7 +234,7 @@ export default function RequestAssistance() {
     const unsub = onSnapshot(
       query(collection(db, 'documents'), where('patientId', '==', user.uid)),
       snap => setMyDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-      () => {},
+      (err) => console.error('[RequestAssistance] documents snapshot error:', err),
     )
     return unsub
   }, [user?.uid])
@@ -395,7 +397,6 @@ export default function RequestAssistance() {
 
   // ── Active request — block new submission, show its state ─────────────────
   if (!loading && activeRequest) {
-    const cfg = REQUEST_STATUS_CONFIG[activeRequest.status] ?? REQUEST_STATUS_CONFIG.submitted
     const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, slices)
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
@@ -404,14 +405,27 @@ export default function RequestAssistance() {
             <div className="flex items-center gap-2 mb-3">
               <MdHourglassTop size={20} className="text-amber-500" />
               <h2 className="text-base font-semibold text-gray-900">{t('patient.request.activeTitle')}</h2>
-              <span className={`badge text-xs ml-auto ${cfg.badge}`}>{cfg.label}</span>
+              <StatusBadge status={activeRequest.status} kind="request" className="ml-auto flex-shrink-0" />
             </div>
             <p className="text-sm text-gray-500 mb-4">{t('patient.request.activeDesc')}</p>
 
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between items-center text-sm gap-2">
                 <span className="text-gray-400">{t('patient.request.successIdLabel')}</span>
-                <span className="font-semibold text-gray-800">{activeRequest.requestId}</span>
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-semibold text-gray-800 truncate">{activeRequest.requestId}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(activeRequest.requestId)
+                        .then(() => toast.success('Request ID copied'))
+                        .catch(err => console.error('[request] clipboard write failed:', err))
+                    }}
+                    className="text-brand-500 hover:text-brand-600 p-1 rounded hover:bg-brand-50 flex-shrink-0"
+                    title="Copy Request ID">
+                    <MdContentCopy size={13} />
+                  </button>
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">{t('patient.request.typeLabel')}</span>
@@ -461,10 +475,10 @@ export default function RequestAssistance() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.coveragePlan')}</p>
                 <div className="space-y-3">
                   {slices.map(s => {
-                    const scfg     = APP_STATUS_CONFIG[s.status] ?? APP_STATUS_CONFIG.pending
                     const secured  = ['approved', 'certificate'].includes(s.status)
-                    const amt      = secured ? (s.amountApproved || s.amountRequested) : s.amountRequested
-                    const pctBill  = activeRequest.amountNeeded > 0 ? Math.round((amt / activeRequest.amountNeeded) * 100) : 0
+                    const amt      = Number(secured ? (s.amountApproved || s.amountRequested) : s.amountRequested) || 0
+                    const needed   = Number(activeRequest.amountNeeded) || 0
+                    const pctBill  = needed > 0 ? Math.round((amt / needed) * 100) : 0
                     const ag       = agencyMap[s.agencyId] ?? {}
                     const reqs     = ag.requirements ?? []
                     return (
@@ -477,7 +491,7 @@ export default function RequestAssistance() {
                             <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
                             <p className="text-xs text-gray-400">{peso(amt)} · {pctBill}% {t('patient.request.ofYourBill')}</p>
                           </div>
-                          <span className={`badge text-xs flex-shrink-0 ${scfg.badge}`}>{scfg.label}</span>
+                          <StatusBadge status={s.status} kind="app" className="flex-shrink-0" />
                         </div>
 
                         {ag.description && <p className="text-xs text-gray-500 mt-2 leading-snug">{ag.description}</p>}
@@ -688,7 +702,11 @@ export default function RequestAssistance() {
                       )}
                       {/* Advisory on-device ID name-check — never blocks submit. */}
                       {isIdType(tp.name) && pending && (ocrBusy || ocr) && (
-                        <p className={`text-xs mt-1.5 ${ocr?.match === true ? 'text-green-600' : ocr?.match === false ? 'text-amber-600' : 'text-gray-400'}`}>
+                        <p className={`text-xs mt-1.5 ${
+                          ocrBusy ? 'text-gray-400'
+                          : ocr?.match === true ? 'text-green-600'
+                          : 'text-amber-600' /* no-match AND unreadable both warn -- patient should look */
+                        }`}>
                           {ocrBusy
                             ? t('patient.request.ocrChecking')
                             : ocr?.match === true
