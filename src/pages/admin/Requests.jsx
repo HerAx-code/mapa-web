@@ -600,18 +600,34 @@ function RequestDetail({ request, agencies, onClose }) {
               <p className="text-sm text-gray-400 italic">Not yet endorsed to any agency.</p>
             ) : (
               <div className="space-y-2">
-                {slices.map(s => (
-                  <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100">
-                    <div className={`w-8 h-8 ${s.agencyColor ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
-                      {s.agencyInitials}
+                {slices.map(s => {
+                  // A slice stays in status 'endorsed' until the patient
+                  // accepts the coverage plan (Proceed) and the slice flips
+                  // to 'reviewing' on the agency side. If they sit on it,
+                  // surface a nudge so CRMC can poke them.
+                  const isEndorsed = s.status === 'endorsed'
+                  const daysSinceEndorsed = isEndorsed && s.endorsedAt
+                    ? Math.floor((Date.now() - (s.endorsedAt.toDate ? s.endorsedAt.toDate() : new Date(s.endorsedAt)).getTime()) / 86400000)
+                    : null
+                  const stale = daysSinceEndorsed != null && daysSinceEndorsed >= 3
+                  return (
+                    <div key={s.id} className={`flex items-start gap-3 p-2.5 rounded-lg border ${stale ? 'bg-amber-50 border-amber-200' : 'border-gray-100'}`}>
+                      <div className={`w-8 h-8 ${s.agencyColor ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                        {s.agencyInitials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
+                        <p className="text-xs text-gray-400">Asked {peso(s.amountRequested)}{s.amountApproved > 0 ? ` · approved ${peso(s.amountApproved)}` : ''}</p>
+                        {stale && (
+                          <p className="text-xs text-amber-700 mt-0.5">Awaiting patient acceptance · {daysSinceEndorsed}d. Message the patient to nudge them.</p>
+                        )}
+                      </div>
+                      <span className={`badge text-xs flex-shrink-0 ${stale ? 'badge-amber' : 'badge-gray'}`}>
+                        {stale ? 'Awaiting patient' : s.status}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
-                      <p className="text-xs text-gray-400">Asked {peso(s.amountRequested)}{s.amountApproved > 0 ? ` · approved ${peso(s.amountApproved)}` : ''}</p>
-                    </div>
-                    <span className="badge badge-gray text-xs flex-shrink-0">{s.status}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

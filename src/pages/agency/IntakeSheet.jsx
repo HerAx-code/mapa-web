@@ -68,6 +68,12 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const [hydrated, setHydrated] = useState(false)
   const [saveState, setSaveState] = useState({ status: 'idle', lastSavedAt: null })
   const [activeSection, setActiveSection] = useState('family')
+  // Under the co-funding redesign the assessment is owned by CRMC on the
+  // parent request. The legacy agency intake route still loads a slice doc
+  // (no edits possible — see canEdit below), but we mirror the request's
+  // intake into the displayed sheet so the agency actually sees what CRMC
+  // filled in instead of the slice's empty field.
+  const [parentRequest, setParentRequest] = useState(null)
 
   const dirtyRef       = useRef(false)
   const saveTimerRef   = useRef(null)
@@ -101,6 +107,25 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     }, () => { setLoading(false); toast.error('Failed to load application.') })
     return unsub
   }, [id, navigate])
+
+  // Agency mode only: load the parent request and re-hydrate the displayed
+  // sheet from request.intakeSheet (the actual source of truth). Skipped in
+  // patient/CRMC modes because they already load from the request directly.
+  useEffect(() => {
+    if (patientFacts || isRequestMode || !app?.requestId) return
+    const unsub = onSnapshot(doc(db, 'requests', app.requestId),
+      snap => {
+        if (!snap.exists()) return
+        const reqData = { id: snap.id, ...snap.data() }
+        setParentRequest(reqData)
+        if (reqData.intakeSheet) {
+          setSheet({ ...blankSheet(), ...reqData.intakeSheet })
+        }
+      },
+      (err) => console.error('[IntakeSheet] parent request snapshot error:', err),
+    )
+    return unsub
+  }, [app?.requestId, patientFacts, isRequestMode])
 
   // Permission: CRMC admins edit the request's intake; patients fill the
   // facts portion on their own request. Under the co-funding redesign the
@@ -272,9 +297,14 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 
   // ── Derived ──────────────────────────────────────────────────────────
 
+  // Source for "completedBy": in agency mode prefer the parent request's
+  // intake (the single source of truth under co-funding).
+  const intakeSource = (!patientFacts && !isRequestMode && parentRequest?.intakeSheet)
+    ? parentRequest.intakeSheet
+    : app?.intakeSheet
   const required = useMemo(
-    () => requiredFieldsStatus({ ...sheet, completedBy: app?.intakeSheet?.completedBy ?? user?.name }, user?.name),
-    [sheet, app?.intakeSheet?.completedBy, user?.name]
+    () => requiredFieldsStatus({ ...sheet, completedBy: intakeSource?.completedBy ?? user?.name }, user?.name),
+    [sheet, intakeSource?.completedBy, user?.name]
   )
   const completedCount = required.filter(r => r.done).length
   const completion     = Math.round((completedCount / required.length) * 100)
@@ -440,17 +470,25 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 )}
               </div>
 
-              {/* Editor info */}
-              {app.intakeSheet?.completedBy && (
-                <div className="card p-3">
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Originally completed by <strong className="text-gray-700">{app.intakeSheet.completedBy}</strong>.
-                    {app.intakeSheet?.lastEditedBy && app.intakeSheet.lastEditedBy !== app.intakeSheet.completedBy && (
-                      <> Last edited by <strong className="text-gray-700">{app.intakeSheet.lastEditedBy}</strong>.</>
-                    )}
-                  </p>
-                </div>
-              )}
+              {/* Editor info — agency mode prefers the parent request's
+                  intake authorship (the real CRMC source); other modes use
+                  the loaded doc itself. */}
+              {(() => {
+                const src = (!patientFacts && !isRequestMode && parentRequest?.intakeSheet)
+                  ? parentRequest.intakeSheet
+                  : app.intakeSheet
+                if (!src?.completedBy) return null
+                return (
+                  <div className="card p-3">
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Originally completed by <strong className="text-gray-700">{src.completedBy}</strong>.
+                      {src.lastEditedBy && src.lastEditedBy !== src.completedBy && (
+                        <> Last edited by <strong className="text-gray-700">{src.lastEditedBy}</strong>.</>
+                      )}
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
           </aside>
 

@@ -15,7 +15,7 @@ import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import { computeFunding } from '../../utils/requests'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
-  MdDescription, MdAssignment, MdAttachMoney,
+  MdDescription, MdAssignment, MdAttachMoney, MdVideoCall,
   MdNote, MdAdd, MdWarning,
   MdPrint, MdUpload, MdInfo, MdReceipt, MdHistory,
   MdHourglassEmpty, MdPlayArrow,
@@ -458,6 +458,13 @@ export default function ApplicationDetail() {
       title: 'Information requested by your agency',
       body:  `${app.agencyName} is asking you to: ${message}`,
     })
+    if (app.endorsedById) {
+      notify(app.endorsedById, {
+        type:  'app_advanced',
+        title: `${app.agencyName} requested more info from the patient`,
+        body:  `${app.patientName}'s endorsed slice paused — agency needs: "${message}".`,
+      }).catch(() => {})
+    }
     setShowRequestInfo(false)
     toast.success('Patient notified. Application paused from the urgent queue.')
   }
@@ -680,6 +687,16 @@ export default function ApplicationDetail() {
         title: 'Application approved! 🎉',
         body:  `Your application to ${app.agencyName} is approved for ₱${approvedAmount.toLocaleString()} (${purposeOfAssistance.join(', ')}). A Guarantee Letter will be issued shortly.`,
       })
+      if (app.endorsedById) {
+        const partial = approvedAmount < (app.amountRequested ?? 0)
+        notify(app.endorsedById, {
+          type:  'app_advanced',
+          title: `${app.agencyName} approved ${app.patientName}'s slice`,
+          body:  partial
+            ? `Approved ₱${approvedAmount.toLocaleString()} (less than the ₱${Number(app.amountRequested).toLocaleString()} endorsed). You may need to top up coverage from another agency.`
+            : `Approved the full endorsed ₱${approvedAmount.toLocaleString()}. Guarantee Letter pending issuance.`,
+        }).catch(() => {})
+      }
       setShowApprove(false)
       toast.success('Application approved. Guarantee Letter pending issuance.')
     } catch (err) {
@@ -729,6 +746,13 @@ export default function ApplicationDetail() {
       title: 'Application rejected',
       body:  `Your application to ${app.agencyName} was not approved. Reason: ${reason}.`,
     })
+    if (app.endorsedById) {
+      notify(app.endorsedById, {
+        type:  'app_advanced',
+        title: `${app.agencyName} rejected ${app.patientName}'s slice`,
+        body:  `Reason: ${reason}. Re-endorse to another agency to cover the balance.`,
+      }).catch(() => {})
+    }
     setShowReject(false)
     toast.error('Application rejected. Patient has been notified.')
   }
@@ -897,6 +921,13 @@ export default function ApplicationDetail() {
         title: 'Approval reversed',
         body:  `Your approved application to ${app.agencyName} has been returned to review. The agency may contact you with details.`,
       })
+      if (app.endorsedById) {
+        notify(app.endorsedById, {
+          type:  'app_advanced',
+          title: `${app.agencyName} reversed an approval`,
+          body:  `${app.patientName}'s slice is back to review. The previously-secured amount is no longer guaranteed.`,
+        }).catch(() => {})
+      }
       logAudit(user, { action: 'approval_reversed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released. Cooldown preserved until ${cooldownUntil?.toDate?.()?.toLocaleDateString?.() ?? 'n/a'}.` })
       toast.success('Approval reversed. Budget released. Cooldown preserved.')
     } catch (err) { console.error(err); toast.error('Failed to reverse approval.') }
@@ -954,10 +985,14 @@ export default function ApplicationDetail() {
 
   // ── Derived values ───────────────────────────────────────────────────
 
-  const intakeReady   = isIntakeComplete(app.intakeSheet)
-  const expired       = isGLExpired(app)
-  const isApproved    = ['approved', 'certificate'].includes(app.status)
-  const intakeStatus  = requiredFieldsStatus({ ...(app.intakeSheet ?? {}), completedBy: app.intakeSheet?.completedBy ?? user.name }, user.name)
+  // Under the co-funding redesign, the assessment is single-sourced on the
+  // parent request. Prefer request.intakeSheet (live data CRMC owns); fall
+  // back to app.intakeSheet for legacy pre-redesign slices.
+  const effectiveIntake = request?.intakeSheet ?? app.intakeSheet
+  const intakeReady     = isIntakeComplete(effectiveIntake)
+  const expired         = isGLExpired(app)
+  const isApproved      = ['approved', 'certificate'].includes(app.status)
+  const intakeStatus    = requiredFieldsStatus({ ...(effectiveIntake ?? {}), completedBy: effectiveIntake?.completedBy ?? user.name }, user.name)
   const intakeDone    = intakeStatus.filter(r => r.done).length
   const intakeTotal   = intakeStatus.length
 
@@ -1259,36 +1294,73 @@ export default function ApplicationDetail() {
             {/* INTAKE */}
             {section === 'intake' && (
               <div className="card p-5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Case Assessment</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Case Assessment <span className="text-gray-300 normal-case font-normal">· owned by CRMC</span></p>
                 <div className="flex items-start gap-3 mb-4">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    intakeReady ? 'bg-green-50' : app.intakeSheet ? 'bg-amber-50' : 'bg-gray-100'
+                    intakeReady ? 'bg-green-50' : effectiveIntake ? 'bg-amber-50' : 'bg-gray-100'
                   }`}>
                     <MdAssignment size={18} className={
-                      intakeReady ? 'text-green-600' : app.intakeSheet ? 'text-amber-600' : 'text-gray-400'
+                      intakeReady ? 'text-green-600' : effectiveIntake ? 'text-amber-600' : 'text-gray-400'
                     } />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-800 mb-0.5">
-                      {intakeReady ? `Completed by ${app.intakeSheet.completedBy}` : `${intakeDone} of ${intakeTotal} required fields filled`}
+                      {intakeReady ? `Completed by ${effectiveIntake.completedBy}` : `${intakeDone} of ${intakeTotal} required fields filled`}
                     </p>
                     <p className="text-xs text-gray-500">
                       {intakeReady
-                        ? 'All required fields filled. Approval unlocked.'
-                        : app.intakeSheet ? 'In progress — open the sheet to continue.' : 'Not started — required before approval.'}
+                        ? 'CRMC\'s assessment is complete. Approval unlocked.'
+                        : effectiveIntake ? 'CRMC\'s assessment is still in progress.' : 'CRMC has not completed the assessment yet.'}
                     </p>
                   </div>
                 </div>
 
+                {/* CRMC-conducted assessment interview — read-only context for
+                    the funding decision. Surfaces date/conductor/Meet link and
+                    the recorded outcome + any free-text notes. */}
+                {request && (request.interviewDate || request.interviewOutcome) && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <MdVideoCall size={14} className="text-blue-500 flex-shrink-0" />
+                      <p className="text-sm font-medium text-blue-800">CRMC Assessment Interview</p>
+                      {request.interviewOutcome && (
+                        <span className={`badge text-xs ml-auto ${
+                          request.interviewOutcome === 'completed' ? 'badge-green'
+                          : request.interviewOutcome === 'no_show' ? 'badge-red'
+                          : 'badge-amber'
+                        }`}>
+                          {request.interviewOutcome === 'no_show' ? 'No-show' : request.interviewOutcome}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-blue-700 space-y-1">
+                      {request.interviewDate && (
+                        <p><span className="text-blue-500/70">When:</span> {request.interviewDate}{request.interviewTime ? ` at ${request.interviewTime}` : ''}</p>
+                      )}
+                      {request.conductedBy && (
+                        <p><span className="text-blue-500/70">Conducted by:</span> {request.conductedBy}</p>
+                      )}
+                      {request.meetLink && (
+                        <p className="truncate"><span className="text-blue-500/70">Meet:</span>{' '}
+                          <a href={request.meetLink} target="_blank" rel="noopener noreferrer" className="underline break-all">{request.meetLink}</a>
+                        </p>
+                      )}
+                      {request.interviewNotes && (
+                        <p className="italic mt-1 bg-white/60 rounded px-2 py-1.5">"{request.interviewNotes}"</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {intakeReady && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Means-Test Category</p><p className="font-medium text-gray-800 capitalize">{app.intakeSheet.meansTestCategory?.replace('_', ' ')}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Household Size</p><p className="font-medium text-gray-800">{app.intakeSheet.householdSize ?? '—'}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Monthly Income</p><p className="font-medium text-gray-800">₱{Number(app.intakeSheet.monthlyIncome ?? 0).toLocaleString()}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Estimated Cost</p><p className="font-medium text-gray-800">₱{Number(app.intakeSheet.estimatedTotalCost ?? 0).toLocaleString()}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Diagnosis</p><p className="font-medium text-gray-800">{app.intakeSheet.diagnosis || '—'}</p></div>
-                    {app.intakeSheet.recommendation && (
-                      <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Recommendation</p><p className="text-gray-800 italic">"{app.intakeSheet.recommendation}"</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Means-Test Category</p><p className="font-medium text-gray-800 capitalize">{effectiveIntake.meansTestCategory?.replace('_', ' ')}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Household Size</p><p className="font-medium text-gray-800">{effectiveIntake.householdSize ?? '—'}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Monthly Income</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.monthlyIncome ?? 0).toLocaleString()}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Estimated Cost</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.estimatedTotalCost ?? 0).toLocaleString()}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Diagnosis</p><p className="font-medium text-gray-800">{effectiveIntake.diagnosis || '—'}</p></div>
+                    {effectiveIntake.recommendation && (
+                      <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Recommendation</p><p className="text-gray-800 italic">"{effectiveIntake.recommendation}"</p></div>
                     )}
                   </div>
                 )}
@@ -1296,7 +1368,7 @@ export default function ApplicationDetail() {
                 <button className="btn-primary text-sm flex items-center gap-1.5"
                   onClick={() => navigate(`/agency/applications/${app.id}/intake`)}>
                   <MdAssignment size={14} />
-                  {isApproved ? 'View Assessment' : intakeReady ? 'Edit Assessment' : app.intakeSheet ? 'Continue Assessment' : 'Open Assessment'}
+                  View Assessment
                 </button>
               </div>
             )}
