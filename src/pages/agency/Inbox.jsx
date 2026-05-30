@@ -16,10 +16,17 @@ import {
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
+// All timestamp inputs from Firestore are Timestamp objects in production, but
+// legacy/seed data sometimes lands as Date or ISO string -- tsToDate() is the
+// single defensive converter.
 const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const daysSince = (ts) => {
   const d = tsToDate(ts)
   return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null
+}
+const formatDate = (ts) => {
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 const isGLExpired = (app) => {
   if (app?.glStatus !== 'issued') return false
@@ -30,18 +37,6 @@ const isGLExpired = (app) => {
 // Status badge/label was inlined here. Now uses the shared <StatusBadge />
 // component sourced from APP_STATUS_CONFIG in constants.js — keeps wording
 // and colors consistent with every other page that shows app status.
-
-const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-const daysWaiting = (ts) => {
-  if (!ts) return null
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return Math.floor((Date.now() - d.getTime()) / 86400000)
-}
 
 // ── Main ─────────────────────────────────────────────────────────────────
 
@@ -220,8 +215,14 @@ export default function Inbox() {
               {!loading && filtered.map(app => {
                 const isDuplicate = duplicatePatientIds.has(app.patientId) &&
                   !['rejected','certificate'].includes(app.status)
-                const days = daysWaiting(app.submittedAt)
-                const dayColor = days >= 7 ? 'text-red-500' : days >= 3 ? 'text-amber-500' : 'text-gray-400'
+                const days = daysSince(app.submittedAt)
+                // null-safe: when days is null (no submittedAt), fall through
+                // to the gray-400 default rather than letting null >= N quietly
+                // evaluate to false.
+                const dayColor = days == null ? 'text-gray-400'
+                  : days >= 7 ? 'text-red-500'
+                  : days >= 3 ? 'text-amber-500'
+                  : 'text-gray-400'
                 return (
                   <tr key={app.id}
                     className={`cursor-pointer ${isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}
