@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -55,7 +55,11 @@ export default function IntakeWizard() {
   const [step, setStep]       = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
-  const hydrated = useState(() => ({ done: false }))[0]
+  // One-shot hydration guard: the onSnapshot listener fires after every save
+  // (the save itself triggers a snapshot), so we only seed the form state
+  // from Firestore once -- otherwise the patient's in-progress edits would
+  // be clobbered on every keystroke-save.
+  const hydrated = useRef(false)
 
   useEffect(() => {
     if (!id) return
@@ -63,14 +67,14 @@ export default function IntakeWizard() {
       if (!snap.exists()) { toast.error('Request not found.'); navigate('/patient/request'); return }
       const data = { id: snap.id, ...snap.data() }
       setRequest(data)
-      if (!hydrated.done) {
+      if (!hydrated.current) {
         setSheet({ ...blankSheet(), ...(data.intakeSheet ?? {}) })
-        hydrated.done = true
+        hydrated.current = true
       }
       setLoading(false)
     }, () => { setLoading(false); toast.error('Failed to load your request.') })
     return unsub
-  }, [id, navigate, hydrated])
+  }, [id, navigate])
 
   const set    = (f) => (e) => setSheet(p => ({ ...p, [f]: e.target.value }))
   const setExp = (k) => (e) => setSheet(p => ({ ...p, expenses: { ...(p.expenses ?? {}), [k]: e.target.value } }))
@@ -133,7 +137,10 @@ export default function IntakeWizard() {
         <button onClick={() => navigate('/patient/request')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium mb-3">
           <MdArrowBack size={16} /> Back to my request · Bumalik
         </button>
-        <h1 className="text-xl font-bold text-gray-900">{cur.en}</h1>
+        <div className="flex items-center gap-2 mb-1">
+          <cur.Icon className="text-brand-500 flex-shrink-0" size={24} />
+          <h1 className="text-xl font-bold text-gray-900">{cur.en}</h1>
+        </div>
         <p className="text-sm text-gray-500 mb-3">{cur.fil}</p>
         <div className="flex items-center gap-1.5 mb-1">
           {STEPS.map((s, i) => (
@@ -157,7 +164,11 @@ export default function IntakeWizard() {
                     <div key={i} className="flex gap-2">
                       <input className={inputCls} placeholder="Name · Pangalan" value={m.name} onChange={e => setMember(i, 'name', e.target.value)} />
                       <input className={inputCls} placeholder="Relationship · Kaugnayan" value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} />
-                      <button onClick={() => removeMember(i)} className="text-gray-300 hover:text-red-500 flex-shrink-0 px-2"><MdDelete size={20} /></button>
+                      <button onClick={() => removeMember(i)}
+                        aria-label="Remove family member"
+                        className="text-gray-300 hover:text-red-500 flex-shrink-0 min-w-[44px] min-h-[44px] inline-flex items-center justify-center">
+                        <MdDelete size={20} />
+                      </button>
                     </div>
                   ))}
                   <button onClick={addMember} className="flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700">
@@ -234,22 +245,56 @@ export default function IntakeWizard() {
           )}
 
           {/* ── Review ── */}
-          {cur.key === 'review' && (
-            <div className="space-y-3 text-sm">
-              <p className="text-gray-500">Please check your answers, then tap Submit.<br /><span className="text-gray-400">Pakitingnan ang inyong mga sagot, pagkatapos ay i-Submit.</span></p>
-              {[
+          {cur.key === 'review' && (() => {
+            const peso = (v) => v !== '' && v != null ? `₱${Number(v).toLocaleString()}` : '—'
+            const emp  = EMPLOYMENT.find(o => o.value === sheet.employmentType)
+            const familyCount = (sheet.familyMembers ?? []).filter(m => m.name?.trim() || m.relationship?.trim()).length
+            const sections = [
+              { stepIdx: 0, title: 'Your household · Sambahayan', rows: [
                 ['Household size · Laki ng sambahayan', sheet.householdSize || '—'],
-                ['Monthly income · Buwanang kita', sheet.monthlyIncome !== '' && sheet.monthlyIncome != null ? `₱${Number(sheet.monthlyIncome).toLocaleString()}` : '—'],
-                ['Illness · Sakit', sheet.diagnosis || '—'],
-              ].map(([label, val]) => (
-                <div key={label} className="flex justify-between gap-3 border-b border-gray-50 pb-2">
-                  <span className="text-gray-400">{label}</span>
-                  <span className="font-medium text-gray-800 text-right">{val}</span>
-                </div>
-              ))}
-              <p className="text-xs text-gray-400">CRMC will review this with you and complete the assessment. · Susuriin ito ng CRMC kasama kayo.</p>
-            </div>
-          )}
+                ['Family members listed · Nakalistang kasambahay', familyCount > 0 ? `${familyCount}` : '—'],
+              ]},
+              { stepIdx: 1, title: 'Income & work · Kita at trabaho', rows: [
+                ['Monthly income · Buwanang kita', peso(sheet.monthlyIncome)],
+                ['Work situation · Trabaho', emp?.value ? `${emp.en} · ${emp.fil}` : '—'],
+                ['Income source · Pinagkukunan', sheet.incomeSource || '—'],
+              ]},
+              { stepIdx: 2, title: 'Monthly expenses · Gastusin', rows: [
+                ['Food · Pagkain',           peso(sheet.expenses?.food)],
+                ['Water & power · Tubig at kuryente', peso(sheet.expenses?.utilities)],
+                ['Rent · Upa',               peso(sheet.expenses?.rent)],
+                ['Medicine · Gamot',         peso(sheet.expenses?.medicine)],
+              ]},
+              { stepIdx: 3, title: 'Medical · Medikal', rows: [
+                ['Illness · Sakit',                                 sheet.diagnosis || '—'],
+                ['Date admitted · Petsa ng pag-admit',              sheet.dateOfAdmission || '—'],
+                ['Estimated cost · Tinatayang gastos',              peso(sheet.estimatedTotalCost)],
+              ]},
+            ]
+            return (
+              <div className="space-y-4 text-sm">
+                <p className="text-gray-500">Please check your answers, then tap Submit.<br /><span className="text-gray-400">Pakitingnan ang inyong mga sagot, pagkatapos ay i-Submit.</span></p>
+                {sections.map(section => (
+                  <div key={section.title}>
+                    <div className="flex items-baseline justify-between mb-1">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{section.title}</p>
+                      <button onClick={() => setStep(section.stepIdx)}
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700">
+                        Edit · I-edit
+                      </button>
+                    </div>
+                    {section.rows.map(([label, val]) => (
+                      <div key={label} className="flex justify-between gap-3 border-b border-gray-50 py-1.5">
+                        <span className="text-gray-400">{label}</span>
+                        <span className="font-medium text-gray-800 text-right">{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                <p className="text-xs text-gray-400 pt-2">CRMC will review this with you and complete the assessment. · Susuriin ito ng CRMC kasama kayo.</p>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Nav buttons — large tap targets */}
@@ -269,7 +314,12 @@ export default function IntakeWizard() {
             </button>
           )}
         </div>
-        <button onClick={saveAndExit} disabled={saving} className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600">
+        {/* Save-and-exit is critical for slow connections / older devices --
+            this audience often gets pulled away mid-form. Promoted to a
+            visible secondary button instead of the previous low-contrast
+            text link. */}
+        <button onClick={saveAndExit} disabled={saving}
+          className="w-full min-h-[44px] inline-flex items-center justify-center mt-3 text-sm font-medium text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 rounded-xl px-4 disabled:opacity-60">
           Save and finish later · I-save at tapusin mamaya
         </button>
       </div>
