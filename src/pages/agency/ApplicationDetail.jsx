@@ -760,15 +760,11 @@ export default function ApplicationDetail() {
   // ── GL handlers ──────────────────────────────────────────────────────
 
   const handlePrintGL = () => {
-    // Open the GL Viewer page in a new tab. The viewer is now self-sufficient:
-    // it has Print + Save as PDF + Mark as Issued, so we don't need to show
-    // a confirmation modal back here.
-    const url = `/agency/applications/${app.id}/gl?action=print`
-    const win = window.open(url, '_blank')
-    if (!win) {
-      toast.error('Please allow pop-ups to print the Guarantee Letter.')
-      return
-    }
+    // Same-tab navigation. The viewer has its own 'Back to application' link
+    // and triggers the browser print dialog from its own Print button, so
+    // there's no reason to spawn a new tab (which trips popup blockers and
+    // breaks the back button on mobile).
+    navigate(`/agency/applications/${app.id}/gl`)
   }
 
   const handleRedeemGL = async () => {
