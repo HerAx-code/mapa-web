@@ -5,7 +5,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import {
-  MdArrowBack, MdPrint, MdSaveAlt, MdUpload, MdInfo, MdKeyboard,
+  MdArrowBack, MdPrint, MdUpload, MdInfo, MdKeyboard,
   MdCheckCircle, MdWarning,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -148,17 +148,15 @@ export default function GLViewer() {
             <span>{app.patientName}</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button type="button"
-              onClick={() => window.print()}
-              className="btn-secondary text-sm flex items-center gap-1.5"
-              title="Opens the print dialog — pick 'Save as PDF' as the destination to get a PDF file.">
-              <MdSaveAlt size={14} /> Save as PDF
-            </button>
+            {/* One button — both physical-print and PDF-save go through the
+                browser print dialog. A separate "Save as PDF" used to live
+                here but called the same window.print(), which misled users
+                into thinking the dialog would behave differently. */}
             <button type="button"
               onClick={() => window.print()}
               className="btn-primary text-sm flex items-center gap-1.5"
-              title="Opens the browser print dialog — pick your printer.">
-              <MdPrint size={14} /> Print
+              title="Opens the browser print dialog — pick your printer, or pick 'Save as PDF' as the destination to get a PDF file.">
+              <MdPrint size={14} /> Print / Save as PDF
             </button>
             {canUpload && (
               <button type="button"
@@ -175,7 +173,7 @@ export default function GLViewer() {
           <div className="max-w-5xl mx-auto px-4 py-2 flex items-start gap-2">
             <MdInfo size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-blue-700 leading-relaxed flex-1">
-              Use <strong>Print</strong> to send the GL to your printer for wet-signing. To save as a PDF instead, click <strong>Save as PDF</strong> and pick <em>"Save as PDF"</em> as the destination — the result is a true vector PDF identical to what you see here.
+              Click <strong>Print / Save as PDF</strong> to open the browser print dialog. Pick your printer to wet-sign the GL, or pick <em>"Save as PDF"</em> as the destination to get a true vector PDF identical to what you see here.
             </p>
             <span className="text-xs text-blue-600 flex items-center gap-1 flex-shrink-0 bg-white/60 px-2 py-1 rounded">
               <MdKeyboard size={12} /> Or press Ctrl/Cmd+P

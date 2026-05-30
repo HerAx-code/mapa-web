@@ -62,7 +62,7 @@ const buildGcalUrl = (app) => {
   }
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text:   `Interview with ${app.agencyName ?? 'agency'}`,
+    text:   'MAPA Assessment Interview · CRMC',
     dates,
     details: app.meetLink ? `Google Meet: ${app.meetLink}` : '',
   })
@@ -190,8 +190,11 @@ export default function Interviews() {
                   </div>
                 </div>
 
-                {/* Past interview warning — sends the patient to Messages
-                    with the agency name so they can locate the right thread. */}
+                {/* Past interview warning — routes the patient to Messages
+                    so they can reach CRMC about the missed/passed interview.
+                    Previously highlighted an "agency" conversation that
+                    doesn't exist under the co-funding model (the assessment
+                    interview is CRMC-conducted, not agency-conducted). */}
                 {isPast && (
                   <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
                     <div className="flex items-start gap-2 mb-2">
@@ -202,8 +205,8 @@ export default function Interviews() {
                     </div>
                     <button
                       className="w-full sm:w-auto text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg font-medium transition-colors min-h-[36px]"
-                      onClick={() => navigate('/patient/messages', { state: { highlightAgency: app.agencyName } })}>
-                      {t('patient.interviews.messageAgencyByName', { agency: app.agencyName })} →
+                      onClick={() => navigate('/patient/messages')}>
+                      {t('patient.interviews.messageCrmc')} →
                     </button>
                   </div>
                 )}
