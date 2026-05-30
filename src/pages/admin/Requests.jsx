@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, doc, getDocs, updateDoc,
@@ -711,6 +711,7 @@ function RequestDetail({ request, agencies, onClose }) {
 export default function Requests() {
   const [requests, setRequests] = useState([])
   const [agencies, setAgencies] = useState([])
+  const [allSlices, setAllSlices] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
   const [search,   setSearch]   = useState('')
@@ -724,8 +725,58 @@ export default function Requests() {
     }, () => setLoading(false))
     const u2 = onSnapshot(query(collection(db, 'agencies'), where('enabled', '==', true)),
       snap => setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-    return () => { u1(); u2() }
+    // All slices, so the list can surface cross-slice coverage warnings
+    // (stale endorsements, rejected slices with unfunded balance). Admin
+    // rule on /applications/{id} allows isAdmin() — see firestore.rules.
+    const u3 = onSnapshot(collection(db, 'applications'),
+      snap => setAllSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      () => setAllSlices([]),
+    )
+    return () => { u1(); u2(); u3() }
   }, [])
+
+  // Group slices by requestId so each row in the list can look up its own
+  // children without iterating the whole array per render.
+  const slicesByRequest = useMemo(() => {
+    const map = new Map()
+    for (const s of allSlices) {
+      if (!s.requestId) continue
+      const arr = map.get(s.requestId)
+      if (arr) arr.push(s); else map.set(s.requestId, [s])
+    }
+    return map
+  }, [allSlices])
+
+  // Single most-urgent coverage warning per request. Order: rejected with
+  // remaining balance (CRMC must re-endorse) > stale endorsement (CRMC must
+  // poke the patient). Both signal "CRMC has something to do here."
+  const coverageWarning = (r) => {
+    const slices = slicesByRequest.get(r.id) ?? []
+    if (slices.length === 0) return null
+    if (['fully_funded', 'closed'].includes(r.status)) return null
+    const needed   = Number(r.amountNeeded) || 0
+    const secured  = Number(r.amountCommitted) || 0
+    const balance  = needed - secured
+    const rejected = slices.filter(s => s.status === 'rejected')
+    if (rejected.length > 0 && balance > 0) {
+      return {
+        label: `${rejected.length} rejected · re-endorse`,
+        cls:   'bg-red-100 text-red-700',
+      }
+    }
+    const stale = slices.filter(s => {
+      if (s.status !== 'endorsed' || !s.endorsedAt) return false
+      const t = s.endorsedAt.toDate ? s.endorsedAt.toDate() : new Date(s.endorsedAt)
+      return Math.floor((Date.now() - t.getTime()) / 86400000) >= 3
+    })
+    if (stale.length > 0) {
+      return {
+        label: `${stale.length} awaiting patient`,
+        cls:   'bg-amber-100 text-amber-700',
+      }
+    }
+    return null
+  }
 
   // Keep the open detail in sync with live request updates
   const selectedLive = selected ? requests.find(r => r.id === selected.id) ?? selected : null
@@ -829,9 +880,10 @@ export default function Requests() {
                     const needed      = Number(r.amountNeeded) || 0
                     const secured     = Number(r.amountCommitted) || 0
                     const pct         = needed > 0 ? Math.min(100, Math.round((secured / needed) * 100)) : 0
+                    const warning     = coverageWarning(r)
                     return (
                       <tr key={r.id} className="cursor-pointer group" onClick={() => setSelected(r)}>
-                        <td className={needsAction ? 'border-l-2 border-brand-400' : 'border-l-2 border-transparent'}>
+                        <td className={needsAction || warning ? 'border-l-2 border-brand-400' : 'border-l-2 border-transparent'}>
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-brand-50 text-brand-600 border-2 border-brand-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
                               {initials(r.patientName)}
@@ -849,7 +901,14 @@ export default function Requests() {
                           </div>
                           <p className="text-xs text-gray-400 whitespace-nowrap">{peso(secured)} secured</p>
                         </td>
-                        <td><span className={`inline-block whitespace-nowrap text-xs font-semibold px-2.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span></td>
+                        <td>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                            {warning && (
+                              <span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.submittedAt)}</td>
                         <td className="text-right"><span className="text-xs font-medium text-brand-600 group-hover:text-brand-700 whitespace-nowrap">Review →</span></td>
                       </tr>
@@ -862,8 +921,9 @@ export default function Requests() {
             {/* Mobile cards */}
             <div className="grid grid-cols-1 gap-3 sm:hidden">
               {filtered.map(r => {
-                const cfg = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
-                const st  = stageChip(r)
+                const cfg     = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
+                const st      = stageChip(r)
+                const warning = coverageWarning(r)
                 return (
                   <button key={r.id} onClick={() => setSelected(r)} className="card p-4 text-left hover:shadow-md transition-all w-full">
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -875,6 +935,11 @@ export default function Requests() {
                       <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span> · Secured <span className="font-semibold text-green-600">{peso(r.amountCommitted ?? 0)}</span></span>
                       <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                     </div>
+                    {warning && (
+                      <div className="mt-2">
+                        <span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>
+                      </div>
+                    )}
                   </button>
                 )
               })}
