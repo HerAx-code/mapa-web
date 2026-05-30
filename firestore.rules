@@ -157,7 +157,21 @@ service cloud.firestore {
     // Agencies can read all patient documents (needed for application review).
     // Admins can read and update (verification status).
     match /documents/{docId} {
-      allow read:   if isAuth() && (resource.data.patientId == uid() || isAdmin() || isAgency());
+      // Agency reads are scoped to documents on requests they hold a slice
+      // for. The endorse transaction (admin/Requests EndorseModal) stamps
+      // an agencyIds[] array onto each attached document at endorse time.
+      // The legacy fallback (no field present) is intentional during the
+      // pilot transition so docs uploaded before this rule landed remain
+      // readable until a backfill stamps them. Remove the !'agencyIds' in
+      // resource.data clause after backfill completes.
+      allow read:   if isAuth() && (
+        resource.data.patientId == uid()
+        || isAdmin()
+        || (isAgency() && (
+          (resource.data.agencyIds is list && userAgencyId() in resource.data.agencyIds)
+          || !('agencyIds' in resource.data)
+        ))
+      );
       allow create: if isPatient();
       // CRMC-gateway redesign: document verification is CRMC's job (the single
       // intake gateway), so only admins verify/reject. Agencies keep READ for

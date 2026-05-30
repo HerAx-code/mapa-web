@@ -142,6 +142,17 @@ function EndorseModal({ request, slices, agencies, onClose }) {
           updatedAt: serverTimestamp(),
         })
         tx.update(agencyRef, { 'slots.remaining': remaining - 1 })
+
+        // Stamp each attached document with this agency id so the tightened
+        // documents.read rule (issue #5) can scope agency reads to only the
+        // documents on requests they hold a slice for. arrayUnion makes
+        // re-endorsement to the same agency idempotent.
+        for (const att of r.attachedDocuments ?? []) {
+          if (!att?.documentId) continue
+          tx.update(doc(db, 'documents', att.documentId), {
+            agencyIds: arrayUnion(agency.id),
+          })
+        }
       })
 
       logAudit(user, {
