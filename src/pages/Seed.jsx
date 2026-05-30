@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createUserWithEmailAndPassword, signOut, signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, addDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore'
+import { doc, setDoc, addDoc, collection, getDocs, deleteDoc, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
 const SEED_AGENCIES = [
@@ -110,8 +110,69 @@ export default function Seed() {
   const [log, setLog]     = useState([])
   const [running, setRunning] = useState(false)
   const [done, setDone]   = useState(false)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillDone, setBackfillDone] = useState(false)
 
   const push = (msg) => setLog(prev => [...prev, msg])
+
+  // One-shot migration for the documents.read scope tightening.
+  // Walks every applications doc, collects (documentId, agencyId) pairs
+  // from attachedDocuments, and arrayUnions the agencyId onto each
+  // document. Idempotent — safe to re-run.
+  //
+  // After running this on prod data, the legacy "(!('agencyIds' in
+  // resource.data))" fallback in firestore.rules documents.read can be
+  // removed.
+  const handleBackfillDocAgencyIds = async () => {
+    setBackfilling(true)
+    setLog([])
+    try {
+      push('Scanning applications...')
+      const appsSnap = await getDocs(collection(db, 'applications'))
+      push(`  Found ${appsSnap.size} applications`)
+
+      // Aggregate { documentId -> Set<agencyId> } so repeated docs across
+      // siblings only produce one update each.
+      const pairs = new Map()
+      for (const d of appsSnap.docs) {
+        const data = d.data()
+        if (!data.agencyId) continue
+        for (const att of data.attachedDocuments ?? []) {
+          if (!att?.documentId) continue
+          const set = pairs.get(att.documentId) ?? new Set()
+          set.add(data.agencyId)
+          pairs.set(att.documentId, set)
+        }
+      }
+      push(`  Found ${pairs.size} unique documents to stamp`)
+
+      // Walk the Map and arrayUnion each agencyId onto the document.
+      // Done as individual updates (not a batch) so a per-doc rule denial
+      // doesn't poison the whole run.
+      let ok = 0
+      let failed = 0
+      for (const [docId, agencyIdSet] of pairs.entries()) {
+        try {
+          await updateDoc(doc(db, 'documents', docId), {
+            agencyIds: arrayUnion(...Array.from(agencyIdSet)),
+          })
+          ok++
+        } catch (err) {
+          failed++
+          console.error(`[backfill] ${docId}:`, err?.code, err?.message)
+        }
+      }
+      push(`Done. Stamped ${ok} documents (${failed} failed — see console).`)
+      push('You can now remove the "!agencyIds in resource.data" legacy')
+      push('clause from firestore.rules documents.read.')
+      setBackfillDone(true)
+    } catch (err) {
+      console.error('[backfill] fatal:', err)
+      push(`Fatal: ${err?.message ?? err}`)
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   const handleSeed = async () => {
     setRunning(true)
@@ -226,11 +287,27 @@ export default function Seed() {
           <button
             className="btn-primary w-full py-2.5 mb-4"
             onClick={handleSeed}
-            disabled={running}
+            disabled={running || backfilling}
           >
             {running ? 'Seeding...' : 'Seed Database'}
           </button>
         )}
+
+        {/* One-shot migration: stamp agencyIds[] onto every document that
+            sits on an existing application's attachedDocuments. Idempotent.
+            See firestore.rules documents.read comment for context. */}
+        <div className="mb-4 border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">One-shot migrations</p>
+          <button
+            className="w-full py-2 rounded-lg text-sm font-medium border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+            onClick={handleBackfillDocAgencyIds}
+            disabled={running || backfilling}>
+            {backfilling ? 'Backfilling…' : backfillDone ? 'Backfill agencyIds — Done' : 'Backfill document.agencyIds (after rules tighten)'}
+          </button>
+          <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+            Stamps every legacy /documents/* row with the agencyId of any application it's attached to. Required once after deploying the tightened documents.read rule, so pre-existing scans stay readable to the right agency.
+          </p>
+        </div>
 
         {log.length > 0 && (
           <div className="bg-gray-900 rounded-lg p-4 text-xs font-mono space-y-1 max-h-60 overflow-y-auto">
