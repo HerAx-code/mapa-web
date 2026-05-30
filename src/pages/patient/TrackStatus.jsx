@@ -595,7 +595,7 @@ export default function TrackStatus() {
                             <span>{t('patient.track.banner.endorsed')}</span>
                           </p>
                           <button
-                            className="flex-shrink-0 text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                            className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-purple-500 hover:bg-purple-600 text-white px-4 rounded-lg font-medium transition-colors"
                             onClick={() => navigate('/patient/request')}>
                             {t('patient.track.banner.endorsedBtn')} →
                           </button>
@@ -608,7 +608,7 @@ export default function TrackStatus() {
                             <span>{t('patient.track.banner.interview')}</span>
                           </p>
                           <button
-                            className="flex-shrink-0 text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                            className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-purple-500 hover:bg-purple-600 text-white px-4 rounded-lg font-medium transition-colors"
                             onClick={() => navigate('/patient/interviews')}>
                             {t('patient.track.banner.interviewBtn')} →
                           </button>
@@ -631,7 +631,7 @@ export default function TrackStatus() {
                               <span>{t('patient.track.banner.reviewing')}</span>
                             </p>
                             <button
-                              className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                              className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-amber-500 hover:bg-amber-600 text-white px-4 rounded-lg font-medium transition-colors"
                               onClick={() => navigate('/patient/request')}>
                               {t('patient.track.banner.reviewingBtn')} →
                             </button>
@@ -647,7 +647,7 @@ export default function TrackStatus() {
                             <span>{t('patient.track.banner.awaitingInfo')}</span>
                           </p>
                           <button
-                            className="flex-shrink-0 text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                            className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 rounded-lg font-medium transition-colors"
                             onClick={() => navigate('/patient/request')}>
                             {t('patient.track.banner.awaitingInfoBtn')} →
                           </button>
@@ -762,7 +762,7 @@ export default function TrackStatus() {
                       {/* Expand / collapse future stages */}
                       {hiddenCount > 0 && (
                         <button
-                          className="mt-3 text-sm text-brand-500 hover:text-brand-600 font-medium border border-brand-200 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-lg transition-colors"
+                          className="mt-3 inline-flex items-center min-h-[44px] text-sm text-brand-500 hover:text-brand-600 font-medium border border-brand-200 bg-brand-50 hover:bg-brand-100 px-4 rounded-lg transition-colors"
                           onClick={() => toggleStages(app.id)}>
                           {isExpanded
                             ? `${t('patient.track.timeline.hideFuture')} ↑`

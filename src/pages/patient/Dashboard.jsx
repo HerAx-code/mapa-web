@@ -528,7 +528,7 @@ export default function PatientDashboard() {
               {t('patient.dashboard.welcomeCard.getStarted')} →
             </button>
             <button
-              className="w-full mt-2 text-xs text-brand-600 hover:text-brand-800 transition-colors text-center py-1"
+              className="w-full mt-2 min-h-[44px] inline-flex items-center justify-center text-sm text-brand-600 hover:text-brand-800 transition-colors"
               onClick={() => navigate('/patient/guide')}>
               {t('patient.dashboard.welcomeCard.newToMapa')} →
             </button>

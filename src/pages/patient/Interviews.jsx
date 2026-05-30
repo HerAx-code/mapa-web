@@ -204,7 +204,7 @@ export default function Interviews() {
                       </p>
                     </div>
                     <button
-                      className="w-full sm:w-auto text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg font-medium transition-colors min-h-[36px]"
+                      className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] text-sm bg-amber-500 hover:bg-amber-600 text-white px-4 rounded-lg font-medium transition-colors"
                       onClick={() => navigate('/patient/messages')}>
                       {t('patient.interviews.messageCrmc')} →
                     </button>
