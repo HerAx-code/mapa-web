@@ -9,13 +9,13 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { computeFunding } from '../../utils/requests'
-import { REQUEST_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { isIdType } from '../../utils/idOcr'
 import { isIntakeComplete } from '../../utils/intakeSheet'
 import { getOrCreateConversation } from '../../utils/messages'
 import { Link, useNavigate } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
@@ -41,18 +41,9 @@ const newAppId = () => {
   return `APP-${year}-${String(Date.now()).slice(-6)}${random}`
 }
 
-// Stage scaffold matching the patient apply flow so the endorsed slice renders
-// identically in the agency Inbox / patient TrackStatus. CRMC has already
-// verified docs at endorsement, so 'submitted' + 'docs' are marked done and
-// the agency picks it up at 'reviewing'.
-const sliceStages = () => ([
-  { key: 'submitted',   label: 'Application Submitted',   done: true,  active: false, date: new Date().toLocaleDateString(), note: 'Endorsed to the agency by CRMC.' },
-  { key: 'docs',        label: 'Document Verification',   done: true,  active: false, date: null, note: 'Documents verified by CRMC before endorsement.' },
-  { key: 'reviewing',   label: 'Under Agency Review',     done: false, active: true,  date: null, note: 'The agency is reviewing this endorsed request.' },
-  { key: 'interview',   label: 'Interview Scheduled',     done: false, active: false, date: null, note: 'You may be scheduled for a video interview.' },
-  { key: 'approved',    label: 'Application Approved',     done: false, active: false, date: null, note: 'The agency has approved its share.' },
-  { key: 'certificate', label: 'Guarantee Letter Issued', done: false, active: false, date: null, note: 'The agency issues its Guarantee Letter.' },
-])
+// Patient/agency surfaces derive the slice stepper from `app.status` directly
+// (see TrackStatus buildStages and the slice-specific 4-stage stepper). The
+// `stages` array previously written here was dead data.
 
 // ── Endorse modal ──────────────────────────────────────────────────────────
 
@@ -169,7 +160,6 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             // Optional free-text note from CRMC, shown in the agency's
             // ApproveModal so the operator sees the referral context.
             crmcNotes:         notesValue,
-            stages:            sliceStages(),
           })
           tx.update(doc(db, 'agencies', id), {
             'slots.remaining': remaining - 1,
@@ -368,6 +358,10 @@ function RequestDetail({ request, agencies, onClose }) {
   const [showInterview, setShowInterview] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showCloseModal, setShowCloseModal]   = useState(false)
+  // Which document is being rejected (drives the doc-reject ConfirmModal). The
+  // patient gets the reason in the in-app notification + email so they know
+  // what to fix on the re-upload.
+  const [rejectingDoc, setRejectingDoc]       = useState(null)
   const [outcomeNotes, setOutcomeNotes] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -412,7 +406,6 @@ function RequestDetail({ request, agencies, onClose }) {
   }, [request.patientId])
 
   const funding = computeFunding(request.amountNeeded, slices)
-  const cfg = REQUEST_STATUS_CONFIG[request.status] ?? REQUEST_STATUS_CONFIG.submitted
   const terminal = ['fully_funded', 'closed', 'rejected'].includes(request.status)
 
   // The documents attached to this request, with their live status/OCR merged
@@ -429,12 +422,20 @@ function RequestDetail({ request, agencies, onClose }) {
   const canEndorse = allVerified && !!request.interviewOutcome && intakeComplete
 
   // Verify / reject a document. First action also moves the request out of
-  // 'submitted' into 'under_review'. Rejection notifies the patient to re-upload.
-  const reviewDoc = async (docItem, newStatus) => {
+  // 'submitted' into 'under_review'. Rejection notifies the patient to
+  // re-upload and includes the operator's reason so the patient knows
+  // exactly what to fix.
+  const reviewDoc = async (docItem, newStatus, reason = null) => {
     setBusy(true)
     try {
+      const cleanReason = (reason ?? '').trim() || null
       await updateDoc(doc(db, 'documents', docItem.id), {
-        status: newStatus, reviewedBy: user.name ?? 'CRMC', reviewedAt: serverTimestamp(),
+        status: newStatus,
+        reviewedBy: user.name ?? 'CRMC',
+        reviewedAt: serverTimestamp(),
+        // Persist the rejection reason so the doc viewer / audit trail
+        // can surface it. Clear it on re-verify to avoid stale text.
+        rejectionReason: newStatus === 'rejected' ? cleanReason : null,
       })
       const updatedAttached = (request.attachedDocuments ?? []).map(a =>
         a.documentId === docItem.id ? { ...a, status: newStatus } : a)
@@ -446,13 +447,14 @@ function RequestDetail({ request, agencies, onClose }) {
       logAudit(user, {
         action: newStatus === 'verified' ? 'doc_verified' : 'doc_rejected',
         targetType: 'document', targetId: docItem.id, targetName: docItem.name,
-        details: `Request ${request.requestId}`,
+        details: `Request ${request.requestId}` + (cleanReason ? ` · reason: ${cleanReason}` : ''),
       })
       if (newStatus === 'rejected') {
         await notify(request.patientId, {
           type:  'doc_rejected',
           title: 'A document needs attention',
-          body:  `CRMC marked your "${docItem.name}" document for correction. Please re-upload it.`,
+          body:  `CRMC marked your "${docItem.name}" document for correction. Please re-upload it.`
+            + (cleanReason ? ` Reason: ${cleanReason}` : ''),
         }).catch(() => {})
       }
       toast.success(newStatus === 'verified' ? 'Document verified.' : 'Document marked for re-upload.')
@@ -546,7 +548,7 @@ function RequestDetail({ request, agencies, onClose }) {
             <p className="text-xs text-gray-400">{request.requestId} · {request.assistanceType}</p>
           </div>
         </div>
-        <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+        <StatusBadge status={request.status} kind="request" className="flex-shrink-0" />
       </div>
 
       {/* Single-column review, left-aligned to match the sub-header.
@@ -571,7 +573,7 @@ function RequestDetail({ request, agencies, onClose }) {
 
             <div className="pt-3 border-t border-gray-50 space-y-1.5 text-xs text-gray-500">
               {request.description && (
-                <p><span className="text-gray-400">Description: </span><span className="text-gray-600">{request.description}</span></p>
+                <p><span className="text-gray-400">Description: </span><span className="text-gray-600 whitespace-pre-wrap">{request.description}</span></p>
               )}
               <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-400 flex-shrink-0" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
               <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400 flex-shrink-0" /> submitted {fmtDate(request.submittedAt)}</p>
@@ -605,16 +607,21 @@ function RequestDetail({ request, agencies, onClose }) {
             ) : (
               <div className="space-y-2">
                 {reqDocs.map(d => {
-                  const dcfg = DOC_STATUS_CONFIG[d.status] ?? DOC_STATUS_CONFIG.pending
                   const showOcr = isIdType(d.documentTypeName ?? d.name) && (d.ocrMatch != null || d.ocrText)
+                  const reviewed = (d.status === 'verified' || d.status === 'rejected') && d.reviewedAt
                   return (
                     <div key={d.id} className="p-2.5 rounded-lg border border-gray-100">
                       <div className="flex items-center gap-2">
                         <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-gray-700 truncate">{d.documentTypeName || d.name}</p>
+                          {reviewed && (
+                            <p className="text-xs text-gray-400 truncate">
+                              {d.status === 'verified' ? 'Verified' : 'Rejected'} by {d.reviewedBy ?? 'CRMC'} · {fmtDate(d.reviewedAt)}
+                            </p>
+                          )}
                         </div>
-                        <span className={`badge text-xs flex-shrink-0 ${dcfg.badge}`}>{dcfg.label}</span>
+                        <StatusBadge status={d.status ?? 'pending'} kind="doc" className="flex-shrink-0" />
                         <button title="View" className="text-gray-400 hover:text-brand-600 flex-shrink-0"
                           onClick={() => !d._missing && setViewingDoc(d)}>
                           <MdVisibility size={16} />
@@ -634,7 +641,7 @@ function RequestDetail({ request, agencies, onClose }) {
                             <MdCheckCircle size={14} /> Verify
                           </button>
                           <button className="text-xs font-medium text-red-500 hover:text-red-600 flex items-center gap-1 disabled:opacity-50"
-                            disabled={busy} onClick={() => reviewDoc(d, 'rejected')}>
+                            disabled={busy} onClick={() => setRejectingDoc(d)}>
                             <MdBlock size={14} /> Reject
                           </button>
                         </div>
@@ -689,7 +696,12 @@ function RequestDetail({ request, agencies, onClose }) {
                   {request.meetLink && <p className="truncate"><span className="text-gray-400">Meet:</span> <a href={request.meetLink} target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline break-all">{request.meetLink}</a></p>}
                 </div>
                 {request.interviewOutcome ? (
-                  <p className="text-xs text-gray-600"><span className="text-gray-400">Outcome:</span> <span className="font-medium">{request.interviewOutcome}</span>{request.interviewNotes ? ` — ${request.interviewNotes}` : ''}</p>
+                  <div className="text-xs text-gray-600">
+                    <span className="text-gray-400">Outcome:</span> <span className="font-medium">{request.interviewOutcome}</span>
+                    {request.interviewNotes && (
+                      <p className="text-gray-600 whitespace-pre-wrap mt-0.5">{request.interviewNotes}</p>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <textarea className="input resize-none text-sm" rows={2} placeholder="Assessment notes (optional)…"
@@ -755,9 +767,9 @@ function RequestDetail({ request, agencies, onClose }) {
                           </div>
                         )}
                       </div>
-                      <span className={`badge text-xs flex-shrink-0 ${stale ? 'badge-amber' : 'badge-gray'}`}>
-                        {stale ? 'Awaiting patient' : s.status}
-                      </span>
+                      {stale
+                        ? <span className="badge text-xs flex-shrink-0 badge-amber">Awaiting patient</span>
+                        : <StatusBadge status={s.status} kind="app" className="flex-shrink-0" />}
                     </div>
                   )
                 })}
@@ -834,6 +846,23 @@ function RequestDetail({ request, agencies, onClose }) {
         confirmLabel="Close Request"
         confirmLabelBusy="Closing…"
       />
+
+      <ConfirmModal
+        open={!!rejectingDoc}
+        onClose={() => setRejectingDoc(null)}
+        onConfirm={async (reason) => {
+          if (rejectingDoc) await reviewDoc(rejectingDoc, 'rejected', reason)
+          setRejectingDoc(null)
+        }}
+        title={rejectingDoc ? `Reject "${rejectingDoc.documentTypeName || rejectingDoc.name}"?` : 'Reject document?'}
+        body="The patient will see your reason in the in-app notification and email, and can re-upload the document immediately."
+        tone="danger"
+        confirmLabel="Reject Document"
+        confirmLabelBusy="Rejecting…"
+        withReason
+        reasonPlaceholder="e.g. ID photo is blurry — please re-take in good lighting"
+        reasonMaxLength={300}
+      />
     </div>
   )
 }
@@ -859,10 +888,15 @@ export default function Requests() {
       snap => setAgencies(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       (err) => { console.error('[Requests] agencies snapshot error:', err); setAgencies([]) },
     )
-    // All slices, so the list can surface cross-slice coverage warnings
-    // (stale endorsements, rejected slices with unfunded balance). Admin
-    // rule on /applications/{id} allows isAdmin() — see firestore.rules.
-    const u3 = onSnapshot(collection(db, 'applications'),
+    // Live slices, scoped to statuses that drive coverage warnings or the
+    // funding bar (endorsed/reviewing/awaiting_info -> outstanding;
+    // approved/certificate -> committed; rejected -> unfunded-balance flag).
+    // Terminal slices that no longer contribute are filtered out so the
+    // listener cost stays bounded as the dataset grows. Admin rule on
+    // /applications/{id} allows isAdmin() -- see firestore.rules.
+    const u3 = onSnapshot(
+      query(collection(db, 'applications'), where('status', 'in',
+        ['endorsed', 'reviewing', 'awaiting_info', 'approved', 'certificate', 'rejected'])),
       snap => setAllSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => setAllSlices([]),
     )
@@ -923,9 +957,9 @@ export default function Requests() {
     const slices = slicesByRequest.get(r.id) ?? []
     if (slices.length === 0) return null
     if (['fully_funded', 'closed'].includes(r.status)) return null
-    const needed   = Number(r.amountNeeded) || 0
-    const secured  = Number(r.amountCommitted) || 0
-    const balance  = needed - secured
+    // Derive from slices, not from r.amountCommitted -- the request doc field
+    // can lag slice updates, the slice-derived figure is the source of truth.
+    const { balance } = computeFunding(r.amountNeeded, slices)
     const rejected = slices.filter(s => s.status === 'rejected')
     if (rejected.length > 0 && balance > 0) {
       return {
@@ -1052,8 +1086,7 @@ export default function Requests() {
                     const st          = stageChip(r)
                     const needsAction = GROUP.needs.includes(r.status)
                     const needed      = Number(r.amountNeeded) || 0
-                    const secured     = Number(r.amountCommitted) || 0
-                    const pct         = needed > 0 ? Math.min(100, Math.round((secured / needed) * 100)) : 0
+                    const funding     = computeFunding(needed, slicesByRequest.get(r.id) ?? [])
                     const warning     = coverageWarning(r)
                     return (
                       <tr key={r.id} className="cursor-pointer group" onClick={() => setSelected(r)}>
@@ -1071,9 +1104,9 @@ export default function Requests() {
                         <td>
                           <p className="font-medium text-gray-800 whitespace-nowrap">{peso(needed)}</p>
                           <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden my-1">
-                            <div className="h-full bg-green-400 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-green-400 rounded-full" style={{ width: `${funding.pct}%` }} />
                           </div>
-                          <p className="text-xs text-gray-400 whitespace-nowrap">{peso(secured)} secured</p>
+                          <p className="text-xs text-gray-400 whitespace-nowrap">{peso(funding.committed)} secured</p>
                         </td>
                         <td>
                           <div className="flex flex-col items-start gap-1">
@@ -1095,18 +1128,18 @@ export default function Requests() {
             {/* Mobile cards */}
             <div className="grid grid-cols-1 gap-3 sm:hidden">
               {filtered.map(r => {
-                const cfg     = REQUEST_STATUS_CONFIG[r.status] ?? REQUEST_STATUS_CONFIG.submitted
                 const st      = stageChip(r)
                 const warning = coverageWarning(r)
+                const funding = computeFunding(r.amountNeeded, slicesByRequest.get(r.id) ?? [])
                 return (
                   <button key={r.id} onClick={() => setSelected(r)} className="card p-4 text-left hover:shadow-md transition-all w-full">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-sm font-semibold text-gray-800 truncate">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</p>
-                      <span className={`badge text-xs flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+                      <StatusBadge status={r.status} kind="request" className="flex-shrink-0" />
                     </div>
                     <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span> · Secured <span className="font-semibold text-green-600">{peso(r.amountCommitted ?? 0)}</span></span>
+                      <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span> · Secured <span className="font-semibold text-green-600">{peso(funding.committed)}</span></span>
                       <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                     </div>
                     {warning && (

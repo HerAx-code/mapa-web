@@ -1,4 +1,4 @@
-import { APP_STATUS_CONFIG, DOC_STATUS_CONFIG, REPORT_STATUS_CONFIG } from '../../utils/constants'
+import { APP_STATUS_CONFIG, DOC_STATUS_CONFIG, REPORT_STATUS_CONFIG, REQUEST_STATUS_CONFIG } from '../../utils/constants'
 
 /**
  * Single source of truth for status display across the app. Replaces the
@@ -9,17 +9,19 @@ import { APP_STATUS_CONFIG, DOC_STATUS_CONFIG, REPORT_STATUS_CONFIG } from '../.
  *   <StatusBadge status={app.status} kind="app" />
  *   <StatusBadge status={doc.status} kind="doc" />
  *   <StatusBadge status={report.status} kind="report" />
+ *   <StatusBadge status={req.status} kind="request" />
  *
  * Props:
  *  - status: lowercase status string from Firestore
- *  - kind:   'app' (default) | 'doc' | 'report'
+ *  - kind:   'app' (default) | 'doc' | 'report' | 'request'
  *  - className: extra Tailwind classes (e.g., size override)
  */
 
 const CONFIGS = {
-  app:    APP_STATUS_CONFIG,
-  doc:    DOC_STATUS_CONFIG,
-  report: REPORT_STATUS_CONFIG,
+  app:     APP_STATUS_CONFIG,
+  doc:     DOC_STATUS_CONFIG,
+  report:  REPORT_STATUS_CONFIG,
+  request: REQUEST_STATUS_CONFIG,
 }
 
 export default function StatusBadge({ status, kind = 'app', className = '' }) {
