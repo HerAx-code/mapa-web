@@ -872,6 +872,7 @@
       "joinBtn": "Join Video Interview",
       "noLink": "Meeting link not yet provided",
       "meetHint": "Video call via Google Meet · No account needed · Opens in a new tab",
+      "conductedBy": "With {{name}}",
       "empty": {
         "completedTitle": "Interview Complete",
         "completedDesc": "Your interview has been completed. Check My Application to see the outcome of your application.",

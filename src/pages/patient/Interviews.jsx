@@ -151,7 +151,12 @@ export default function Interviews() {
           <div className="space-y-4 w-full">
             {interviews.map(app => {
               const isPast  = isPastDate(app.interviewDate)
-              const todayStr = new Date().toISOString().split('T')[0]
+              // Anchor "today" to PH local time. The previous toISOString()
+              // returns UTC, so an interview scheduled for today PH was
+              // mis-classified as "not today" between midnight UTC and PH-
+              // midnight (8 hours every morning). en-CA gives the YYYY-MM-DD
+              // format we already compare against interviewDate.
+              const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
               const isToday  = app.interviewDate === todayStr
               return (
               <div key={app.id} className={`card p-5 ${isToday ? 'border-2 border-brand-400' : ''}`}>
@@ -219,13 +224,21 @@ export default function Interviews() {
                   </strong>
                   {app.interviewTime && <span>{t('patient.interviews.atTime', { time: app.interviewTime })}</span>}
                 </div>
+                {/* Conducting social worker — reassures the patient about who
+                    they'll meet (single CRMC point of contact under the
+                    co-funding model). Shown only when CRMC has assigned one. */}
+                {app.conductedBy && (
+                  <p className="text-xs text-gray-500 mb-1 ml-6">
+                    {t('patient.interviews.conductedBy', { name: app.conductedBy })}
+                  </p>
+                )}
                 {/* Add-to-Calendar link — opens a pre-filled Google Calendar
                     event in a new tab. Patient won't forget the interview
                     even if they're offline when the in-app reminder fires. */}
                 {!isPast && (
                   <a href={buildGcalUrl(app)} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600 font-medium mt-1">
-                    <MdEvent size={13} /> {t('patient.interviews.addToCalendar')}
+                    className="inline-flex items-center gap-1 min-h-[44px] text-sm text-brand-500 hover:text-brand-600 font-medium mt-1">
+                    <MdEvent size={14} /> {t('patient.interviews.addToCalendar')}
                   </a>
                 )}
 
@@ -235,7 +248,7 @@ export default function Interviews() {
                       {t('patient.interviews.joinIntro')}
                     </p>
                     <button
-                      className="mt-2 text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1"
+                      className="mt-2 inline-flex items-center min-h-[44px] text-sm text-brand-500 hover:text-brand-600 font-medium gap-1"
                       onClick={() => togglePrep(app.id)}>
                       {expandedPrep.has(app.id)
                         ? `${t('patient.interviews.hideDetails')} ↑`

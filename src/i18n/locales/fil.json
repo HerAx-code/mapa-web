@@ -872,6 +872,7 @@
       "joinBtn": "Sumali sa Video Interview",
       "noLink": "Wala pang link sa pagpupulong",
       "meetHint": "Video call sa pamamagitan ng Google Meet · Hindi kailangan ng account · Magbubukas sa bagong tab",
+      "conductedBy": "Kasama si {{name}}",
       "empty": {
         "completedTitle": "Natapos na ang Panayam",
         "completedDesc": "Natapos na ang inyong panayam. Tingnan ang Aking Aplikasyon para sa resulta.",
