@@ -12,6 +12,7 @@ import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import { getOrCreateConversation } from '../../utils/messages'
 import { AgencyModal } from './Agencies'
+import ConfirmModal from '../../components/ConfirmModal'
 import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
   MdClose, MdWarning, MdRefresh, MdMessage,
@@ -113,6 +114,8 @@ export default function AgencyDetail() {
   const [confirmDelete,   setConfirmDelete]   = useState(false)
   const [showDisableDialog, setShowDisableDialog] = useState(false)
   const [disableChoice,     setDisableChoice]     = useState('reject')
+  // Holds the coordinator pending promote/demote confirmation, or null.
+  const [promotionTarget, setPromotionTarget] = useState(null)
   const [disabling,         setDisabling]         = useState(false)
 
   // Slot editing
@@ -357,9 +360,8 @@ export default function AgencyDetail() {
   // "last admin" guard is essential: an agency with zero admins has no
   // one to manage budget or promote others, leaving Super Admin
   // intervention as the only escape hatch.
-  const handleTogglePromotion = async (coord) => {
+  const handleTogglePromotion = (coord) => {
     const promoting = coord.role !== 'agency_admin'
-    const next      = promoting ? 'agency_admin' : 'agency'
 
     if (!promoting) {
       const otherAdmins = coordinators.filter(c => c.role === 'agency_admin' && c.uid !== coord.uid)
@@ -368,12 +370,14 @@ export default function AgencyDetail() {
         return
       }
     }
+    setPromotionTarget(coord)
+  }
 
-    if (!window.confirm(
-      promoting
-        ? `Promote ${coord.name} to Agency Administrator?\n\nThey will gain budget allocation, audit log, and team management access.`
-        : `Demote ${coord.name} back to Coordinator?\n\nThey will lose access to allocation, audit log, and team management.`
-    )) return
+  const performTogglePromotion = async () => {
+    const coord = promotionTarget
+    if (!coord) return
+    const promoting = coord.role !== 'agency_admin'
+    const next      = promoting ? 'agency_admin' : 'agency'
 
     try {
       await updateDoc(doc(db, 'users', coord.uid), { role: next })
@@ -392,6 +396,7 @@ export default function AgencyDetail() {
         details:    `${coord.name} → ${next} (by super admin)`,
       })
       toast.success(`${coord.name} ${promoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
+      setPromotionTarget(null)
     } catch (err) {
       console.error('[AgencyDetail] role toggle error:', err)
       toast.error('Failed to update role.')
@@ -860,6 +865,21 @@ export default function AgencyDetail() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!promotionTarget}
+        onClose={() => setPromotionTarget(null)}
+        onConfirm={performTogglePromotion}
+        title={promotionTarget?.role === 'agency_admin'
+          ? `Demote ${promotionTarget?.name} back to Coordinator?`
+          : `Promote ${promotionTarget?.name} to Agency Administrator?`}
+        body={promotionTarget?.role === 'agency_admin'
+          ? 'They will lose access to allocation, audit log, and team management.'
+          : 'They will gain budget allocation, audit log, and team management access.'}
+        tone={promotionTarget?.role === 'agency_admin' ? 'warning' : 'info'}
+        confirmLabel={promotionTarget?.role === 'agency_admin' ? 'Demote' : 'Promote'}
+        confirmLabelBusy={promotionTarget?.role === 'agency_admin' ? 'Demoting…' : 'Promoting…'}
+      />
     </Layout>
   )
 }

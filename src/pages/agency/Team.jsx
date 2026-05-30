@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import ConfirmModal from '../../components/ConfirmModal'
 import {
   collection, query, where, onSnapshot, doc, setDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
@@ -232,6 +233,8 @@ export default function AgencyTeam() {
   const [loading,   setLoading]   = useState(true)
   const [showAdd,   setShowAdd]   = useState(false)
   const [editing,   setEditing]   = useState(null)
+  // Coordinator awaiting promote/demote confirmation in the in-app modal.
+  const [promotionTarget, setPromotionTarget] = useState(null)
 
   const isAgencyAdmin = user?.role === 'agency_admin'
 
@@ -323,9 +326,8 @@ export default function AgencyTeam() {
     } catch { toast.error('Failed to send reset email.') }
   }
 
-  const handleTogglePromotion = async (coord) => {
+  const handleTogglePromotion = (coord) => {
     const promoting = coord.role !== 'agency_admin'
-    const next = promoting ? 'agency_admin' : 'agency'
 
     // Don't let an agency_admin demote themselves or the last agency_admin
     if (!promoting) {
@@ -339,12 +341,14 @@ export default function AgencyTeam() {
         return
       }
     }
+    setPromotionTarget(coord)
+  }
 
-    if (!window.confirm(
-      promoting
-        ? `Promote ${coord.name} to Agency Administrator?\n\nThey will gain budget allocation, audit log, and team management access.`
-        : `Demote ${coord.name} back to Coordinator?\n\nThey will lose access to allocation, audit log, and team management.`
-    )) return
+  const performTogglePromotion = async () => {
+    const coord = promotionTarget
+    if (!coord) return
+    const promoting = coord.role !== 'agency_admin'
+    const next = promoting ? 'agency_admin' : 'agency'
 
     try {
       await updateDoc(doc(db, 'users', coord.uid), { role: next })
@@ -363,6 +367,7 @@ export default function AgencyTeam() {
         details:    `${coord.name} → ${next} (by agency admin)`,
       })
       toast.success(`${coord.name} ${promoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
+      setPromotionTarget(null)
     } catch (err) {
       console.error('[Team] role toggle error:', err)
       toast.error('Failed to update role.')
@@ -480,6 +485,21 @@ export default function AgencyTeam() {
         {editing && (
           <EditCoordModal coord={editing} currentUser={user} onClose={() => setEditing(null)} />
         )}
+
+        <ConfirmModal
+          open={!!promotionTarget}
+          onClose={() => setPromotionTarget(null)}
+          onConfirm={performTogglePromotion}
+          title={promotionTarget?.role === 'agency_admin'
+            ? `Demote ${promotionTarget?.name} back to Coordinator?`
+            : `Promote ${promotionTarget?.name} to Agency Administrator?`}
+          body={promotionTarget?.role === 'agency_admin'
+            ? 'They will lose access to allocation, audit log, and team management.'
+            : 'They will gain budget allocation, audit log, and team management access.'}
+          tone={promotionTarget?.role === 'agency_admin' ? 'warning' : 'info'}
+          confirmLabel={promotionTarget?.role === 'agency_admin' ? 'Demote' : 'Promote'}
+          confirmLabelBusy={promotionTarget?.role === 'agency_admin' ? 'Demoting…' : 'Promoting…'}
+        />
       </div>
     </Layout>
   )

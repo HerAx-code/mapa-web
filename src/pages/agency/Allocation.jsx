@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import ConfirmModal from '../../components/ConfirmModal'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -26,6 +27,10 @@ export default function AgencyAllocation() {
   const [resetting, setResetting]       = useState(false)
   const [openRequests, setOpenRequests] = useState([])
   const [history, setHistory]           = useState([])
+  const [showConfirmReset, setShowConfirmReset] = useState(false)
+  // For the "you're changing the budget period" prompt during Save.
+  const [showPeriodChangeSave, setShowPeriodChangeSave] = useState(false)
+  const [restartPeriodClock, setRestartPeriodClock]     = useState(true)
   const [historyLoading, setHistoryLoading] = useState(true)
 
   const isAgencyAdmin = user?.role === 'agency_admin'
@@ -172,18 +177,27 @@ export default function AgencyAllocation() {
       return
     }
     // If the admin is switching periods (monthly ↔ quarterly ↔ yearly),
-    // ask whether to reset periodStart. Otherwise the new monthly rule
-    // applies to a 14-month-old periodStart and immediately fires
-    // "stale period". Default to resetting — it's the right call when
-    // changing periods unless the admin specifically wants to inherit.
+    // ask whether to reset periodStart via an in-app modal. Otherwise the
+    // new monthly rule applies to a 14-month-old periodStart and would
+    // immediately fire "stale period". Default to resetting — usually the
+    // right call when changing periods unless the admin specifically wants
+    // to inherit the old start date.
     const periodChanged = newPeriod !== (budget.period ?? 'monthly')
-    const shouldResetPeriodStart = periodChanged && window.confirm(
-      `You're changing the budget period from ${budget.period ?? 'monthly'} to ${newPeriod}. ` +
-      `Start a fresh period clock now?\n\n` +
-      `OK   — start the new ${newPeriod} clock today (recommended)\n` +
-      `Cancel — keep the existing period start date`
-    )
+    if (periodChanged) {
+      setRestartPeriodClock(true)
+      setShowPeriodChangeSave(true)
+      return
+    }
+    await performSaveAllocation(false)
+  }
 
+  // The actual save mutation. Split out so the period-change confirm
+  // modal can call it with the chosen restartClock setting.
+  const performSaveAllocation = async (shouldResetPeriodStart) => {
+    const next      = Number(newAlloc) || 0
+    const allocated = budget.allocated ?? 0
+    const committed = budget.committed ?? 0
+    const disbursed = budget.disbursed ?? 0
     setSaving(true)
     try {
       const fundSource      = newFundSource.trim()
@@ -248,13 +262,12 @@ export default function AgencyAllocation() {
       )
       return
     }
-    const periodNoun = PERIOD_NOUN[budget.period] ?? 'period'
-    if (!window.confirm(
-      `Start a new ${periodNoun}?\n\n` +
-      `This resets disbursed (₱${disbursed.toLocaleString()}) back to ₱0 and starts a fresh ${periodNoun} clock. ` +
-      `The allocation (₱${allocated.toLocaleString()}) stays the same.\n\n` +
-      `Use this at the start of each budget ${periodNoun}.`
-    )) return
+    // Open the in-app confirm modal; performResetPeriod (below) runs the
+    // actual mutation when the admin confirms.
+    setShowConfirmReset(true)
+  }
+
+  const performResetPeriod = async () => {
     setResetting(true)
     try {
       await updateDoc(doc(db, 'agencies', agency.id), {
@@ -279,6 +292,7 @@ export default function AgencyAllocation() {
         actorName: user?.name,
         createdAt: { toDate: () => new Date() },
       }, ...prev].slice(0, 10))
+      setShowConfirmReset(false)
     } catch (err) {
       console.error('[Allocation] reset error:', err)
       toast.error('Failed to reset budget period.')
@@ -573,6 +587,48 @@ export default function AgencyAllocation() {
         </p>
 
       </div>
+
+      <ConfirmModal
+        open={showConfirmReset}
+        onClose={() => setShowConfirmReset(false)}
+        onConfirm={performResetPeriod}
+        title={`Start a new ${PERIOD_NOUN[budget.period] ?? 'period'}?`}
+        body={`This resets disbursed (₱${(budget.disbursed ?? 0).toLocaleString()}) back to ₱0 and starts a fresh ${PERIOD_NOUN[budget.period] ?? 'period'} clock. The allocation (₱${(budget.allocated ?? 0).toLocaleString()}) stays the same.\n\nUse this at the start of each budget ${PERIOD_NOUN[budget.period] ?? 'period'}.`}
+        tone="warning"
+        confirmLabel={`Start new ${PERIOD_NOUN[budget.period] ?? 'period'}`}
+        confirmLabelBusy="Starting…"
+      />
+
+      <ConfirmModal
+        open={showPeriodChangeSave}
+        onClose={() => setShowPeriodChangeSave(false)}
+        onConfirm={async () => {
+          setShowPeriodChangeSave(false)
+          await performSaveAllocation(restartPeriodClock)
+        }}
+        title={`Changing budget period to ${newPeriod}`}
+        body={
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              You're switching the budget period from <strong>{budget.period ?? 'monthly'}</strong> to <strong>{newPeriod}</strong>.
+            </p>
+            <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={restartPeriodClock}
+                onChange={e => setRestartPeriodClock(e.target.checked)}
+              />
+              <span>
+                Restart the period clock now <span className="text-gray-400">(recommended — otherwise the new {newPeriod} rule applies to your old period start date and may immediately fire "stale period").</span>
+              </span>
+            </label>
+          </div>
+        }
+        tone="info"
+        confirmLabel="Save Allocation"
+        confirmLabelBusy="Saving…"
+      />
     </Layout>
   )
 }
