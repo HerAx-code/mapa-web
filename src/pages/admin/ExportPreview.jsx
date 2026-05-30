@@ -427,6 +427,13 @@ export default function ExportPreview() {
                     : 'No records available for this selection.'
                 }
               </p>
+              {(search || hasDateRange) && (
+                <button
+                  onClick={() => { setSearch(''); clearDates() }}
+                  className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <table className="data-table min-w-full">

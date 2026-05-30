@@ -318,6 +318,13 @@ export default function Reports() {
                 ? 'No reports match your current filter.'
                 : 'No reports yet. Reports submitted by users will appear here.'}
             </p>
+            {isFiltered && (
+              <button
+                onClick={() => { setSearch(''); setStatusFilter('all'); setCatFilter('all'); setRoleFilter('all') }}
+                className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                Clear filters
+              </button>
+            )}
           </div>
 
         ) : (

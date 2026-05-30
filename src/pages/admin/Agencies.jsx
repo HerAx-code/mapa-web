@@ -660,6 +660,13 @@ export default function Agencies() {
                   <MdAdd size={15} className="inline mr-1" /> Add First Agency
                 </button>
               )}
+              {(search || statusFilter !== 'all') && (
+                <button
+                  onClick={() => { setSearch(''); setStatusFilter('all') }}
+                  className="inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                  Clear filters
+                </button>
+              )}
             </div>
           )}
         </div>

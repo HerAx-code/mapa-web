@@ -340,6 +340,13 @@ export default function AgencyFunds() {
               <p className="text-sm text-gray-500">
                 {isFiltered ? 'No events match the current filters.' : 'No budget events yet. They\'ll appear here as you approve and redeem applications.'}
               </p>
+              {isFiltered && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <>

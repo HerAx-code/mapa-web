@@ -375,8 +375,17 @@ export default function HospitalIDs() {
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                    {search ? 'No IDs match your search.' : 'No hospital IDs found.'}
+                  <td colSpan={6} className="text-center py-8">
+                    <p className="text-sm text-gray-400">
+                      {search ? 'No IDs match your search.' : 'No hospital IDs found.'}
+                    </p>
+                    {search && (
+                      <button
+                        onClick={() => setSearch('')}
+                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                        Clear search
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}

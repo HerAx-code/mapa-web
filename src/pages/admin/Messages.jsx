@@ -914,6 +914,13 @@ export default function Messages() {
               Use the <strong>New Message</strong> button above to contact hospital staff or your agency.
             </p>
           )}
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+              Clear search
+            </button>
+          )}
         </div>
       )}
     </>

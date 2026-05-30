@@ -492,6 +492,13 @@ export default function Accounts() {
                         ? 'No accounts match your filter.'
                         : 'No accounts found.'}
                     </p>
+                    {(search || roleFilter !== 'all' || statusFilter !== 'all') && (
+                      <button
+                        onClick={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') }}
+                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                        Clear filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}

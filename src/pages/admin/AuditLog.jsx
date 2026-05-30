@@ -337,6 +337,13 @@ export default function AuditLog() {
                   ? 'No entries match your current filter. Try clearing the search or changing the category.'
                   : 'No audit log entries yet. Actions will be recorded here as admins use the portal.'}
               </p>
+              {isFiltered && (
+                <button
+                  onClick={() => { setSearch(''); setDateFilter('all'); setCategoryFilter('all') }}
+                  className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                  Clear filters
+                </button>
+              )}
             </div>
           )}
 

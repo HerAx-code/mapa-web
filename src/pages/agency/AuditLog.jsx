@@ -221,6 +221,13 @@ export default function AgencyAuditLog() {
                   ? 'No entries match the current filters.'
                   : 'No audit entries yet. Actions taken by your agency staff will appear here.'}
               </p>
+              {(search || dateFilter !== 'all' || categoryFilter !== 'all') && (
+                <button
+                  onClick={() => { setSearch(''); setDateFilter('all'); setCategoryFilter('all') }}
+                  className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
