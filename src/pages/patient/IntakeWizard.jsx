@@ -44,6 +44,10 @@ const STEPS = [
 ]
 
 const inputCls = 'w-full text-base rounded-xl border border-gray-200 px-4 py-3 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none'
+// Applied when validation jumps the patient back to a step -- visually
+// pinpoints WHICH required field is missing, since the toast alone
+// doesn't make that obvious on the small "back to step 0" round trip.
+const inputErrCls = 'border-red-400 ring-2 ring-red-100'
 
 export default function IntakeWizard() {
   const { id }   = useParams()
@@ -55,6 +59,11 @@ export default function IntakeWizard() {
   const [step, setStep]       = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
+  // Field name flagged by validation, or null. Drives the red-border state
+  // on the matching input + scrolls it into view via ref. Cleared as soon
+  // as the patient touches it (via the set() helper).
+  const [errorField, setErrorField] = useState(null)
+  const errorRef = useRef(null)
   // One-shot hydration guard: the onSnapshot listener fires after every save
   // (the save itself triggers a snapshot), so we only seed the form state
   // from Firestore once -- otherwise the patient's in-progress edits would
@@ -76,7 +85,20 @@ export default function IntakeWizard() {
     return unsub
   }, [id, navigate])
 
-  const set    = (f) => (e) => setSheet(p => ({ ...p, [f]: e.target.value }))
+  const set = (f) => (e) => {
+    if (errorField === f) setErrorField(null)
+    setSheet(p => ({ ...p, [f]: e.target.value }))
+  }
+
+  // Scroll the flagged field into view + focus the input the moment
+  // validation jumps the patient back to a step. Without this, they're
+  // dropped at the top of step N looking at a banner and have to scroll
+  // to find what's wrong.
+  useEffect(() => {
+    if (!errorField || !errorRef.current) return
+    errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    errorRef.current.focus?.()
+  }, [errorField, step])
   const setExp = (k) => (e) => setSheet(p => ({ ...p, expenses: { ...(p.expenses ?? {}), [k]: e.target.value } }))
   const members = sheet.familyMembers ?? []
   const setMember = (i, f, v) => setSheet(p => {
@@ -112,10 +134,16 @@ export default function IntakeWizard() {
     finally { setSaving(false) }
   }
 
+  const flagField = (field, stepIdx, message) => {
+    toast.error(message)
+    setErrorField(field)
+    setStep(stepIdx)
+  }
+
   const finish = async () => {
-    if (!sheet.householdSize || Number(sheet.householdSize) <= 0) { toast.error('Please enter your household size.'); setStep(0); return }
-    if (sheet.monthlyIncome === '' || sheet.monthlyIncome == null) { toast.error('Please enter your monthly income.'); setStep(1); return }
-    if (!sheet.diagnosis?.trim()) { toast.error('Please enter the illness or condition.'); setStep(3); return }
+    if (!sheet.householdSize || Number(sheet.householdSize) <= 0) { flagField('householdSize', 0, 'Please enter your household size.'); return }
+    if (sheet.monthlyIncome === '' || sheet.monthlyIncome == null) { flagField('monthlyIncome', 1, 'Please enter your monthly income.'); return }
+    if (!sheet.diagnosis?.trim())                                    { flagField('diagnosis', 3, 'Please enter the illness or condition.'); return }
     setSaving(true)
     try { await persist(); toast.success('Your household information was submitted.'); navigate('/patient/request') }
     catch { toast.error('Could not save — please try again.') }
@@ -155,7 +183,10 @@ export default function IntakeWizard() {
             <>
               <div>
                 <Q en="How many people live in your home, including you?" fil="Ilang tao ang nakatira sa inyong tahanan, kasama kayo?" required />
-                <input type="number" min="1" inputMode="numeric" className={inputCls} value={sheet.householdSize} onChange={set('householdSize')} placeholder="0" />
+                <input type="number" min="1" inputMode="numeric"
+                  ref={errorField === 'householdSize' ? errorRef : null}
+                  className={`${inputCls} ${errorField === 'householdSize' ? inputErrCls : ''}`}
+                  value={sheet.householdSize} onChange={set('householdSize')} placeholder="0" />
               </div>
               <div>
                 <Q en="Who lives with you? (optional)" fil="Sino ang kasama ninyo? (opsyonal)" />
@@ -186,7 +217,10 @@ export default function IntakeWizard() {
                 <Q en="About how much does your household earn each month?" fil="Halos magkano ang kinikita ng inyong sambahayan kada buwan?" required />
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
-                  <input type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.monthlyIncome} onChange={set('monthlyIncome')} placeholder="0" />
+                  <input type="number" min="0" inputMode="numeric"
+                    ref={errorField === 'monthlyIncome' ? errorRef : null}
+                    className={`${inputCls} pl-8 ${errorField === 'monthlyIncome' ? inputErrCls : ''}`}
+                    value={sheet.monthlyIncome} onChange={set('monthlyIncome')} placeholder="0" />
                 </div>
               </div>
               <div>
@@ -228,7 +262,10 @@ export default function IntakeWizard() {
             <>
               <div>
                 <Q en="What illness or condition needs help?" fil="Anong sakit o kondisyon ang kailangang tulungan?" required />
-                <input className={inputCls} value={sheet.diagnosis} onChange={set('diagnosis')} placeholder="e.g. Pneumonia, kidney disease" />
+                <input
+                  ref={errorField === 'diagnosis' ? errorRef : null}
+                  className={`${inputCls} ${errorField === 'diagnosis' ? inputErrCls : ''}`}
+                  value={sheet.diagnosis} onChange={set('diagnosis')} placeholder="e.g. Pneumonia, kidney disease" />
               </div>
               <div>
                 <Q en="When were you admitted? (optional)" fil="Kailan kayo na-admit? (opsyonal)" />
