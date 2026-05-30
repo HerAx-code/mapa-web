@@ -33,6 +33,8 @@ import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/ag
 // Application status badge + label rendering is delegated to <StatusBadge />
 // which reads APP_STATUS_CONFIG from constants.js.
 
+const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
+
 // GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
 const tsToDate  = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const daysSince = (ts) => {
@@ -347,22 +349,34 @@ export default function ApplicationDetail() {
 
   useEffect(() => {
     if (!app?.patientId) return
-    if (app.attachedDocuments?.length > 0) {
-      Promise.all(
-        app.attachedDocuments.map(attached =>
-          getDoc(doc(db, 'documents', attached.documentId))
-            .then(snap => snap.exists()
-              ? { id: snap.id, ...snap.data(), updatedAfterSubmission: attached.updatedAfterSubmission ?? false }
+    // Live subscription so the agency sees patient re-uploads while the
+    // application is in 'awaiting_info' without a page reload. The query
+    // returns every patient doc; if the slice has a frozen attachedDocuments
+    // list, we project onto that list (preserving order + the per-doc
+    // updatedAfterSubmission flag).
+    const unsub = onSnapshot(
+      query(collection(db, 'documents'), where('patientId', '==', app.patientId)),
+      (snap) => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        if (app.attachedDocuments?.length > 0) {
+          const byId = Object.fromEntries(all.map(d => [d.id, d]))
+          setPatientDocs(app.attachedDocuments.map(attached => {
+            const live = byId[attached.documentId]
+            return live
+              ? { ...live, updatedAfterSubmission: attached.updatedAfterSubmission ?? false }
               : { id: attached.documentId, name: attached.name, status: attached.status, date: attached.date, _missing: true }
-            )
-        )
-      ).then(docs => setPatientDocs(docs))
-    } else {
-      getDocs(query(collection(db, 'documents'), where('patientId', '==', app.patientId)))
-        .then(snap => setPatientDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-    }
+          }))
+        } else {
+          setPatientDocs(all)
+        }
+      },
+      (err) => console.error('[ApplicationDetail] patient documents snapshot error:', err),
+    )
+    // Patient profile is one-shot -- not expected to change mid-review.
     getDoc(doc(db, 'users', app.patientId))
       .then(snap => { if (snap.exists()) setPatientProfile(snap.data()) })
+      .catch(() => {})
+    return unsub
   }, [app?.patientId, app?.attachedDocuments])
 
   useEffect(() => {
@@ -662,9 +676,13 @@ export default function ApplicationDetail() {
           const r            = reqSnap.data()
           const need         = r.amountNeeded ?? 0
           const newCommitted = (r.amountCommitted ?? 0) + approvedAmount
-          const newStatus    = (need > 0 && newCommitted >= need)
+          // approvedAmount is always > 0 here (ApproveModal validates), so
+          // newCommitted > 0 is guaranteed -- the request can only move into
+          // 'fully_funded' or 'partially_funded'. The previous 'endorsing'
+          // fallback was unreachable.
+          const newStatus = (need > 0 && newCommitted >= need)
             ? 'fully_funded'
-            : newCommitted > 0 ? 'partially_funded' : 'endorsing'
+            : 'partially_funded'
           tx.update(reqRef, {
             amountCommitted: newCommitted,
             status:          newStatus,
@@ -996,7 +1014,10 @@ export default function ApplicationDetail() {
   const intakeDone    = intakeStatus.filter(r => r.done).length
   const intakeTotal   = intakeStatus.length
 
-  const days = app.submittedAt ? Math.floor((Date.now() - app.submittedAt.toDate().getTime()) / 86400000) : null
+  // tsToDate() guards against legacy/seed data where submittedAt was stored
+  // as a JS Date or ISO string instead of a Firestore Timestamp.
+  const submittedDate = tsToDate(app.submittedAt)
+  const days = submittedDate ? Math.floor((Date.now() - submittedDate.getTime()) / 86400000) : null
   const dayColor = days >= 7 ? 'text-red-500' : days >= 3 ? 'text-amber-600' : 'text-gray-500'
 
   // Visible sections
@@ -1191,7 +1212,6 @@ export default function ApplicationDetail() {
             {section === 'overview' && (
               <>
                 {app.requestId && request && siblings.length > 0 && (() => {
-                  const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
                   const need = Number(request.amountNeeded) || 0
                   const { committed, outstanding, headroom, pct } = computeFunding(need, siblings)
                   const ordered = [...siblings].sort((a, b) =>
@@ -1405,7 +1425,7 @@ export default function ApplicationDetail() {
                         }`}>
                         <span className="text-lg">📄</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{d.name}</p>
+                          <p className="text-sm font-medium text-gray-800 truncate">{d.documentTypeName || d.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                             <p className="text-xs text-gray-400">{d.date}</p>
                             {d.updatedAfterSubmission && (
@@ -1418,16 +1438,18 @@ export default function ApplicationDetail() {
                             )}
                           </div>
                         </div>
-                        <span className={`badge text-xs ${d.status === 'verified' ? 'badge-green' : d.status === 'rejected' ? 'badge-red' : 'badge-amber'}`}>
-                          {d.status}
-                        </span>
+                        <StatusBadge status={d.status ?? 'pending'} kind="doc" className="flex-shrink-0" />
                         {!d._missing && (
                           <span className="text-xs text-brand-500 font-medium flex-shrink-0">View →</span>
                         )}
                       </button>
                       </div>
                     ))}
-                    <p className="text-xs text-gray-400 mt-2 italic">CRMC verified these documents before endorsing. Click a document to view it.</p>
+                    {patientDocs.some(d => d.updatedAfterSubmission || d.status === 'pending') ? (
+                      <p className="text-xs text-gray-400 mt-2 italic">CRMC verified these documents before endorsement; any documents the patient re-uploaded since are pending re-verification.</p>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-2 italic">CRMC verified these documents before endorsing. Click a document to view it.</p>
+                    )}
                   </div>
                 )}
               </div>
