@@ -116,6 +116,7 @@ export default function AgencyDetail() {
   const [disableChoice,     setDisableChoice]     = useState('reject')
   // Holds the coordinator pending promote/demote confirmation, or null.
   const [promotionTarget, setPromotionTarget] = useState(null)
+  const [promoting,         setPromoting]         = useState(false)
   const [disabling,         setDisabling]         = useState(false)
 
   // Slot editing
@@ -144,7 +145,7 @@ export default function AgencyDetail() {
     const unsub = onSnapshot(
       query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency_admin', 'agency'])),
       snap => setCoordinators(snap.docs.map(d => ({ uid: d.id, ...d.data() }))),
-      () => {}
+      (err) => console.error('[AgencyDetail] coordinators snapshot error:', err),
     )
     return unsub
   }, [id])
@@ -168,7 +169,7 @@ export default function AgencyDetail() {
         setAppStats(s)
         setPendingApps(pendings)
       },
-      () => {}
+      (err) => console.error('[AgencyDetail] appStats snapshot error:', err),
     )
     return unsub
   }, [id])
@@ -266,7 +267,8 @@ export default function AgencyDetail() {
       })
       toast.success(`${agency.name} disabled.`)
       setShowDisableDialog(false)
-    } catch {
+    } catch (err) {
+      console.error('[AgencyDetail] disable cascade failed:', err)
       toast.error('Failed to disable agency.')
     } finally {
       setDisabling(false)
@@ -375,31 +377,34 @@ export default function AgencyDetail() {
 
   const performTogglePromotion = async () => {
     const coord = promotionTarget
-    if (!coord) return
-    const promoting = coord.role !== 'agency_admin'
-    const next      = promoting ? 'agency_admin' : 'agency'
+    if (!coord || promoting) return
+    const isPromoting = coord.role !== 'agency_admin'
+    const next      = isPromoting ? 'agency_admin' : 'agency'
 
+    setPromoting(true)
     try {
       await updateDoc(doc(db, 'users', coord.uid), { role: next })
       await notify(coord.uid, {
-        type:  promoting ? 'role_promoted' : 'role_demoted',
-        title: promoting ? 'Promoted to Agency Administrator' : 'Returned to Coordinator role',
-        body:  promoting
+        type:  isPromoting ? 'role_promoted' : 'role_demoted',
+        title: isPromoting ? 'Promoted to Agency Administrator' : 'Returned to Coordinator role',
+        body:  isPromoting
           ? 'You can now set your agency\'s budget, review top-up requests, and manage your team.'
           : 'Your Agency Administrator permissions have been removed.',
       })
       logAudit(user, {
-        action:     promoting ? 'role_promoted_to_agency_admin' : 'role_demoted_to_agency',
+        action:     isPromoting ? 'role_promoted_to_agency_admin' : 'role_demoted_to_agency',
         targetType: 'account',
         targetId:   coord.uid,
         targetName: coord.name,
         details:    `${coord.name} → ${next} (by super admin)`,
       })
-      toast.success(`${coord.name} ${promoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
+      toast.success(`${coord.name} ${isPromoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
       setPromotionTarget(null)
     } catch (err) {
       console.error('[AgencyDetail] role toggle error:', err)
       toast.error('Failed to update role.')
+    } finally {
+      setPromoting(false)
     }
   }
 
@@ -868,7 +873,7 @@ export default function AgencyDetail() {
 
       <ConfirmModal
         open={!!promotionTarget}
-        onClose={() => setPromotionTarget(null)}
+        onClose={() => !promoting && setPromotionTarget(null)}
         onConfirm={performTogglePromotion}
         title={promotionTarget?.role === 'agency_admin'
           ? `Demote ${promotionTarget?.name} back to Coordinator?`
