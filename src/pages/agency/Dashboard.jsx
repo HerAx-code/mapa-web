@@ -15,6 +15,7 @@ import {
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
+import StatusBadge from '../../components/ui/StatusBadge'
 import toast from 'react-hot-toast'
 
 // Threshold below which the agency gets a one-shot "budget running low"
@@ -24,22 +25,8 @@ const LOW_BALANCE_FRAC = 0.10
 const STALE_PERIOD_DAYS = 31
 
 // GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
-
-const STATUS_BADGE = {
-  pending:   'badge-blue',
-  reviewing: 'badge-amber',
-  interview: 'badge-purple',
-  approved:  'badge-green',
-  rejected:  'badge-red',
-}
-
-const STATUS_LABEL = {
-  pending:   'Pending',
-  reviewing: 'For Funding',
-  interview: 'Interview',
-  approved:  'Approved',
-  rejected:  'Rejected',
-}
+// Application status badge + label rendering is delegated to <StatusBadge />
+// which reads APP_STATUS_CONFIG from constants.js.
 
 const formatDate = (ts) => {
   if (!ts) return '—'
@@ -426,9 +413,7 @@ export default function AgencyDashboard() {
                     <td className="text-gray-400 text-xs font-mono">{app.appId}</td>
                     <td className="text-gray-400 text-xs">{formatDate(app.submittedAt)}</td>
                     <td>
-                      <span className={`badge text-xs ${STATUS_BADGE[app.status] ?? 'badge-gray'}`}>
-                        {STATUS_LABEL[app.status] ?? app.status}
-                      </span>
+                      <StatusBadge status={app.status} />
                     </td>
                     <td>
                       <button className="btn-primary text-xs py-1.5 px-3"

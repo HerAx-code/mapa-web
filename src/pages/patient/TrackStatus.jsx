@@ -40,19 +40,12 @@ import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const STATUS_BADGE = {
-  approved:      'badge-green',
-  rejected:      'badge-red',
-  reviewing:     'badge-amber',
-  awaiting_info: 'badge-orange',
-  pending:       'badge-blue',
-  endorsed:      'badge-purple',
-  interview:     'badge-purple',
-  certificate:   'badge-green',
-}
-
-// Status labels live in i18n at patient.status.* — read via
-// t(`patient.status.${app.status}`) at render time so they translate.
+// Badge colors come from APP_STATUS_CONFIG in utils/constants (shared
+// across patient/agency/admin). Labels stay in i18n at patient.status.*
+// because the patient-side wording is perspective-specific (e.g., "Needs
+// Info" reads as "you need to give us info" for the patient, whereas the
+// agency-side canonical label means the same thing from the agency's seat).
+const badgeFor = (s) => APP_STATUS_CONFIG[s]?.badge ?? 'badge-gray'
 
 const FALLBACK_COLOR = 'bg-gray-400'
 
@@ -544,7 +537,7 @@ export default function TrackStatus() {
                             {app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}
                           </p>
                         </div>
-                        <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'} ml-auto flex-shrink-0`}>
+                        <span className={`badge ${badgeFor(app.status)} ml-auto flex-shrink-0`}>
                           {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                         </span>
                       </div>
@@ -831,7 +824,7 @@ export default function TrackStatus() {
                       <p className="text-sm font-medium text-gray-800 truncate">{app.agencyName}</p>
                       <p className="text-sm text-gray-500 truncate">{app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}</p>
                     </div>
-                    <span className={`badge ${STATUS_BADGE[app.status] ?? 'badge-gray'}`}>
+                    <span className={`badge ${badgeFor(app.status)}`}>
                       {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                     </span>
                     {app.certificateUploaded && (

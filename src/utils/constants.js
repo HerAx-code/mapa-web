@@ -85,18 +85,22 @@ export const ROLE_BADGE = {
 // shadowed by per-file definitions everywhere.
 
 export const APP_STATUS_CONFIG = {
-  pending:       { label: 'Pending',            badge: 'badge-blue'   },
-  endorsed:      { label: 'Awaiting You',       badge: 'badge-purple' },
-  for_funding:   { label: 'For Funding',        badge: 'badge-amber'  },
-  needs_info:    { label: 'Waiting on Patient', badge: 'badge-orange' },
-  approved:      { label: 'Approved',           badge: 'badge-green'  },
-  rejected:      { label: 'Rejected',           badge: 'badge-red'    },
+  pending:       { label: 'Pending',                  badge: 'badge-blue'   },
+  // Endorsed means CRMC routed the slice to this agency; the patient still
+  // has to hit Proceed before the agency actually starts reviewing funding.
+  // So the previous "Awaiting You" label was wrong from the agency's seat --
+  // they're not the one being waited on.
+  endorsed:      { label: 'Endorsed',                 badge: 'badge-purple' },
   // Post-Proceed funding state. The wire value stays 'reviewing' (the patient
   // rule permits endorsed->reviewing), but to the agency it's a funding queue.
-  reviewing:     { label: 'For Funding',        badge: 'badge-amber'  },
-  awaiting_info: { label: 'Waiting on Patient', badge: 'badge-orange' },
-  interview:     { label: 'Interview',          badge: 'badge-purple' },
-  certificate:   { label: 'GL Issued',          badge: 'badge-green'  },
+  reviewing:     { label: 'For Funding',              badge: 'badge-amber'  },
+  awaiting_info: { label: 'Needs Info',               badge: 'badge-orange' },
+  approved:      { label: 'Approved',                 badge: 'badge-green'  },
+  certificate:   { label: 'Guarantee Letter Issued',  badge: 'badge-green'  },
+  rejected:      { label: 'Rejected',                 badge: 'badge-red'    },
+  // Legacy pre-redesign status -- only fires on applications written under
+  // the old direct-to-agency model.
+  interview:     { label: 'Interview',                badge: 'badge-purple' },
 }
 
 export const DOC_STATUS_CONFIG = {

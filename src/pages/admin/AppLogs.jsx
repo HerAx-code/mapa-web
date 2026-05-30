@@ -5,15 +5,7 @@ import { MdSearch, MdRefresh } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { collection, query, where, orderBy, limit, getDocs, startAfter, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase'
-
-const STATUS_BADGE = {
-  approved:  'badge-green',
-  rejected:  'badge-red',
-  reviewing: 'badge-amber',
-  pending:   'badge-blue',
-  interview: 'badge-purple',
-  certificate: 'badge-green',
-}
+import StatusBadge from '../../components/ui/StatusBadge'
 
 const PAGE_SIZE = 100
 
@@ -187,9 +179,7 @@ export default function AppLogs() {
                   <td className="text-xs text-gray-400">{formatDate(a.submittedAt)}</td>
                   <td className="text-xs text-gray-400">{formatDate(a.updatedAt)}</td>
                   <td>
-                    <span className={`badge text-xs ${STATUS_BADGE[a.status] || 'badge-blue'}`}>
-                      {a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : '—'}
-                    </span>
+                    <StatusBadge status={a.status} />
                   </td>
                 </tr>
               ))}

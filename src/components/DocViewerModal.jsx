@@ -6,12 +6,7 @@ import {
   MdOpenInNew, MdRefresh,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
-
-const STATUS_BADGE = {
-  verified: 'badge-green',
-  rejected: 'badge-red',
-  pending:  'badge-amber',
-}
+import StatusBadge from './ui/StatusBadge'
 
 // ── Fullscreen image lightbox ────────────────────────────────────────────
 
@@ -216,7 +211,7 @@ export default function DocViewerModal({ docMeta, onClose }) {
             <MdInsertDriveFile size={18} className="text-gray-400 flex-shrink-0" />
             <h2 className="text-base font-semibold text-gray-900 truncate">{docMeta?.name ?? 'Document'}</h2>
             {docMeta?.status && (
-              <span className={`badge text-xs ${STATUS_BADGE[docMeta.status] ?? 'badge-gray'}`}>{docMeta.status}</span>
+              <StatusBadge status={docMeta.status} kind="doc" />
             )}
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>

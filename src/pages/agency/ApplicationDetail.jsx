@@ -13,6 +13,7 @@ import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import { computeFunding } from '../../utils/requests'
+import StatusBadge from '../../components/ui/StatusBadge'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
   MdDescription, MdAssignment, MdAttachMoney, MdVideoCall,
@@ -29,25 +30,8 @@ import ConfirmModal from '../../components/ConfirmModal'
 import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-const STATUS_BADGE = {
-  pending:        'badge-blue',
-  reviewing:      'badge-amber',
-  awaiting_info:  'badge-orange',
-  interview:      'badge-purple',
-  approved:       'badge-green',
-  rejected:       'badge-red',
-  certificate:    'badge-green',
-}
-const STATUS_LABEL = {
-  pending:        'Pending',
-  reviewing:      'Reviewing',
-  awaiting_info:  'Waiting on Patient',
-  interview:      'Interview',
-  approved:       'Approved',
-  rejected:       'Rejected',
-  certificate:    'GL Issued',
-}
+// Application status badge + label rendering is delegated to <StatusBadge />
+// which reads APP_STATUS_CONFIG from constants.js.
 
 // GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
 const tsToDate  = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
@@ -1109,7 +1093,7 @@ export default function ApplicationDetail() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="text-lg font-bold text-gray-900">{app.patientName}</h1>
-                <span className={`badge text-xs ${STATUS_BADGE[app.status]}`}>{STATUS_LABEL[app.status]}</span>
+                <StatusBadge status={app.status} />
                 {isApproved && app.glStatus && (
                   <span className={`badge text-xs ${
                     app.glStatus === 'redeemed' ? 'badge-green'
@@ -1257,9 +1241,7 @@ export default function ApplicationDetail() {
                                 </p>
                                 <p className="text-xs text-gray-400">{peso(amt)}</p>
                               </div>
-                              <span className={`badge text-xs flex-shrink-0 ${STATUS_BADGE[s.status] ?? 'badge-blue'}`}>
-                                {STATUS_LABEL[s.status] ?? s.status}
-                              </span>
+                              <StatusBadge status={s.status} className="flex-shrink-0" />
                             </div>
                           )
                         })}

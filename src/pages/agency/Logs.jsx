@@ -5,31 +5,13 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { MdSearch, MdDownload, MdListAlt } from 'react-icons/md'
 import { exportToCSV, dateStamp } from '../../utils/export'
+import { APP_STATUS_CONFIG } from '../../utils/constants'
+import StatusBadge from '../../components/ui/StatusBadge'
 
-// Co-funding slice statuses + legacy pre-redesign statuses for back-compat.
-// Labels mirror the wording used in the rest of the app (For Funding,
-// Needs Info, Guarantee Letter Issued).
-const STATUS_BADGE = {
-  endorsed:      'badge-purple',
-  reviewing:     'badge-amber',
-  awaiting_info: 'badge-orange',
-  approved:      'badge-green',
-  certificate:   'badge-green',
-  rejected:      'badge-red',
-  pending:       'badge-blue',    // legacy
-  interview:     'badge-purple',  // legacy
-}
-
-const STATUS_LABEL = {
-  endorsed:      'Endorsed',
-  reviewing:     'For Funding',
-  awaiting_info: 'Needs Info',
-  approved:      'Approved',
-  certificate:   'Guarantee Letter Issued',
-  rejected:      'Rejected',
-  pending:       'Pending',     // legacy
-  interview:     'Interview',   // legacy
-}
+// Pull labels straight from the canonical APP_STATUS_CONFIG so the CSV
+// status column matches the rendered table cell. <StatusBadge /> handles
+// the in-table rendering.
+const statusLabel = (s) => APP_STATUS_CONFIG[s]?.label ?? s ?? ''
 
 const formatDate = (ts) => {
   if (!ts) return '—'
@@ -90,7 +72,7 @@ export default function AgencyLogs() {
               { label: 'Application ID', getValue: a => a.appId ?? '' },
               { label: 'Patient',        getValue: a => a.patientName ?? '' },
               { label: 'Contact',        getValue: a => a.patientContact ?? '' },
-              { label: 'Status',         getValue: a => STATUS_LABEL[a.status] ?? a.status ?? '' },
+              { label: 'Status',         getValue: a => statusLabel(a.status) },
               { label: 'Submitted',      getValue: a => formatDate(a.submittedAt) },
             ], filtered)}>
             <MdDownload size={16} /> Export CSV
@@ -196,9 +178,7 @@ export default function AgencyLogs() {
                   <td className="font-mono text-xs text-gray-500">{a.appId || a.id.slice(0, 12)}</td>
                   <td className="text-xs text-gray-400">{formatDate(a.submittedAt)}</td>
                   <td>
-                    <span className={`badge text-xs ${STATUS_BADGE[a.status] ?? 'badge-gray'}`}>
-                      {STATUS_LABEL[a.status] ?? a.status}
-                    </span>
+                    <StatusBadge status={a.status} />
                   </td>
                 </tr>
               ))}
