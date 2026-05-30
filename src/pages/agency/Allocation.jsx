@@ -203,32 +203,34 @@ export default function AgencyAllocation() {
   // The actual save mutation. Split out so the period-change confirm
   // modal can call it with the chosen restartClock setting.
   const performSaveAllocation = async (shouldResetPeriodStart) => {
-    const next      = Number(newAlloc) || 0
-    const allocated = budget.allocated ?? 0
-    const committed = budget.committed ?? 0
-    const disbursed = budget.disbursed ?? 0
+    const next = Number(newAlloc) || 0
     setSaving(true)
     try {
       const fundSource      = newFundSource.trim()
       const fundSourceNotes = newFundSourceNotes.trim()
       // Per-applicant cap: blank input or 0 = no cap (stored as null so the
       // ApproveModal's `(perCap > 0)` gate skips the check cleanly).
-      const capNum          = Number(newMaxPerApplicant) || 0
+      // Defense-in-depth: re-validate at save time even though the input
+      // handler clamps -- a paste or programmatic value could bypass it.
+      const capRaw = Number(newMaxPerApplicant)
+      const capNum = Number.isFinite(capRaw) && capRaw > 0 ? Math.floor(capRaw) : 0
       const maxPerApplicant = capNum > 0 ? capNum : null
+      // Dotted-field update so budget.committed and budget.disbursed are
+      // untouched. Those fields are owned exclusively by the approve /
+      // redeem / reverse paths (which use increment()). Writing the whole
+      // budget object here would race with a concurrent coordinator
+      // approval and silently overwrite the increment, losing committed
+      // dollars. Previous code did exactly that.
       await updateDoc(doc(db, 'agencies', agency.id), {
-        budget: {
-          period:                newPeriod,
-          allocated:             next,
-          committed:             committed,
-          disbursed:             disbursed,
-          // Reset periodStart on confirmed period change; otherwise inherit.
-          periodStart:           shouldResetPeriodStart ? serverTimestamp() : (budget.periodStart ?? serverTimestamp()),
-          // Fund source recorded for COA-style audit defense.
-          fundSource:            fundSource || null,
-          fundSourceNotes:       fundSourceNotes || null,
-          // Fresh allocation reopens the low-balance notification window
-          lowBalanceNotifiedAt:  null,
-        },
+        'budget.period':               newPeriod,
+        'budget.allocated':            next,
+        // Reset periodStart on confirmed period change; otherwise inherit.
+        'budget.periodStart':          shouldResetPeriodStart ? serverTimestamp() : (budget.periodStart ?? serverTimestamp()),
+        // Fund source recorded for COA-style audit defense.
+        'budget.fundSource':           fundSource || null,
+        'budget.fundSourceNotes':      fundSourceNotes || null,
+        // Fresh allocation reopens the low-balance notification window
+        'budget.lowBalanceNotifiedAt': null,
         maxPerApplicant,
       })
       const auditDetails = `Allocation set to ₱${next.toLocaleString()} (${newPeriod})` +
