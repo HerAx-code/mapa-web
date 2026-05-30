@@ -299,6 +299,13 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                   const rem        = Math.max(0, alloc - (a.budget?.committed ?? 0))
                   const budgetTxt  = alloc > 0 ? `${peso(rem)} budget` : 'no budget cap'
                   const overAgency = selected && alloc > 0 && allocNum > rem
+                  // Per-applicant cap: agencies often have a policy ceiling
+                  // per case (e.g., PCSO ₱25K, DSWD tier limits). null = no
+                  // cap configured; a soft warning is shown here so CRMC can
+                  // override for known exceptions. The hard block is on
+                  // ApproveModal at the agency side.
+                  const perCap     = Number(a.maxPerApplicant) || 0
+                  const overPerCap = selected && perCap > 0 && allocNum > perCap
                   return (
                     <div key={a.id}
                       className={`rounded-xl border p-3 transition-colors ${selected ? 'bg-brand-50 border-brand-200' : 'border-gray-200 hover:border-gray-300'}`}>
@@ -316,11 +323,20 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400">{a.slots?.remaining ?? 0} slots · {budgetTxt}</p>
+                          <p className="text-xs text-gray-400">
+                            {a.slots?.remaining ?? 0} slots · {budgetTxt}
+                            {perCap > 0 && <> · max {peso(perCap)}/applicant</>}
+                          </p>
                           {overAgency && (
                             <p className="text-xs text-amber-600 mt-0.5 flex items-start gap-1">
                               <MdWarning size={11} className="flex-shrink-0 mt-0.5" />
                               Exceeds this agency's remaining budget
+                            </p>
+                          )}
+                          {overPerCap && (
+                            <p className="text-xs text-amber-600 mt-0.5 flex items-start gap-1">
+                              <MdWarning size={11} className="flex-shrink-0 mt-0.5" />
+                              Exceeds the {peso(perCap)} per-applicant cap. The agency may approve less than requested.
                             </p>
                           )}
                         </div>

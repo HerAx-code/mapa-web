@@ -23,6 +23,10 @@ export default function AgencyAllocation() {
   const [newPeriod, setNewPeriod]       = useState('monthly')
   const [newFundSource, setNewFundSource]       = useState('')
   const [newFundSourceNotes, setNewFundSourceNotes] = useState('')
+  // Per-applicant cap: '' = no cap (null in DB), a positive number = the
+  // policy ceiling per case (PCSO ₱25K, DSWD tier limits, etc.). Enforced
+  // hard in ApproveModal and shown as a soft warning in EndorseModal.
+  const [newMaxPerApplicant, setNewMaxPerApplicant] = useState('')
   const [saving, setSaving]             = useState(false)
   const [resetting, setResetting]       = useState(false)
   const [openRequests, setOpenRequests] = useState([])
@@ -47,6 +51,11 @@ export default function AgencyAllocation() {
           setNewPeriod(data.budget?.period ?? 'monthly')
           setNewFundSource(data.budget?.fundSource ?? '')
           setNewFundSourceNotes(data.budget?.fundSourceNotes ?? '')
+          setNewMaxPerApplicant(
+            data.maxPerApplicant != null && data.maxPerApplicant > 0
+              ? String(data.maxPerApplicant)
+              : ''
+          )
         }
         setLoading(false)
       },
@@ -202,6 +211,10 @@ export default function AgencyAllocation() {
     try {
       const fundSource      = newFundSource.trim()
       const fundSourceNotes = newFundSourceNotes.trim()
+      // Per-applicant cap: blank input or 0 = no cap (stored as null so the
+      // ApproveModal's `(perCap > 0)` gate skips the check cleanly).
+      const capNum          = Number(newMaxPerApplicant) || 0
+      const maxPerApplicant = capNum > 0 ? capNum : null
       await updateDoc(doc(db, 'agencies', agency.id), {
         budget: {
           period:                newPeriod,
@@ -216,8 +229,10 @@ export default function AgencyAllocation() {
           // Fresh allocation reopens the low-balance notification window
           lowBalanceNotifiedAt:  null,
         },
+        maxPerApplicant,
       })
       const auditDetails = `Allocation set to ₱${next.toLocaleString()} (${newPeriod})` +
+                           (maxPerApplicant ? ` · max ₱${maxPerApplicant.toLocaleString()}/applicant` : '') +
                            (fundSource ? ` · source: ${fundSource}` : '') +
                            ' by agency admin'
       logAudit(user, {
@@ -417,6 +432,19 @@ export default function AgencyAllocation() {
                   </p>
                 </div>
               )}
+              {/* Per-applicant cap — read-only summary line. Always shown so
+                  agency admins see the current policy at a glance, even
+                  when it's "no cap". */}
+              <div className="mt-3 pt-3 border-t border-gray-50">
+                <p className="text-xs text-gray-400 mb-0.5">Per-applicant cap</p>
+                {agency.maxPerApplicant != null && agency.maxPerApplicant > 0 ? (
+                  <p className="text-sm font-medium text-gray-700">
+                    ₱{Number(agency.maxPerApplicant).toLocaleString()} maximum per case
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No cap configured — approvals bound only by overall budget.</p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
@@ -454,6 +482,24 @@ export default function AgencyAllocation() {
                 </p>
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Maximum per Applicant (₱) <span className="text-gray-400 font-normal">— optional</span>
+                </label>
+                <input type="number" min={0} step={1} className="input"
+                  placeholder="e.g. 25000 (PCSO ceiling). Leave blank for no cap."
+                  value={newMaxPerApplicant}
+                  onChange={e => {
+                    const v = e.target.value
+                    // Allow blank; otherwise clamp to non-negative integers.
+                    if (v === '') { setNewMaxPerApplicant(''); return }
+                    const n = Number(v)
+                    setNewMaxPerApplicant(Number.isFinite(n) && n >= 0 ? String(Math.floor(n)) : '')
+                  }} />
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  The most this agency may approve for a single case. PCSO uses ₱25,000; DSWD AICS varies by tier; Malasakit Center is based on case assessment. Leave blank if your agency has no per-case ceiling. CRMC sees a soft warning at endorsement; the agency's Approve modal hard-blocks any approval above this.
+                </p>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
                 <textarea className="input resize-none" rows={2}
                   placeholder="Sub-program, restrictions, contact person, board resolution date, etc."
@@ -468,6 +514,11 @@ export default function AgencyAllocation() {
                     setNewPeriod(budget.period ?? 'monthly')
                     setNewFundSource(budget.fundSource ?? '')
                     setNewFundSourceNotes(budget.fundSourceNotes ?? '')
+                    setNewMaxPerApplicant(
+                      agency.maxPerApplicant != null && agency.maxPerApplicant > 0
+                        ? String(agency.maxPerApplicant)
+                        : ''
+                    )
                   }}
                   className="btn-secondary text-sm"
                   disabled={saving}>

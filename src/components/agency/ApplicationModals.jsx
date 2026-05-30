@@ -216,6 +216,11 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
   const isSlice  = !!app?.requestId
   const sliceCap = Number(app?.amountRequested) || 0
 
+  // Per-applicant cap: the agency's policy ceiling per case (PCSO ₱25K,
+  // DSWD tier limits, etc.). Hard-enforced here; CRMC saw a soft warning
+  // at endorse time.
+  const perApplicantCap = Number(agency?.maxPerApplicant) || 0
+
   const purposeOptions = agency?.assistanceTypes ?? []
 
   const togglePurpose = (p) => {
@@ -227,8 +232,9 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
   }
 
   const amountNum = Number(amount) || 0
-  const exceedsBudget = hasBudget && amountNum > remaining
+  const exceedsBudget    = hasBudget && amountNum > remaining
   const exceedsRequested = isSlice && sliceCap > 0 && amountNum > sliceCap
+  const exceedsPerCap    = perApplicantCap > 0 && amountNum > perApplicantCap
 
   const handleSubmit = () => {
     if (amountNum <= 0)      { toast.error('Enter a valid amount greater than 0.'); return }
@@ -236,6 +242,7 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
     if (!payableTo.trim())   { toast.error('Specify the provider (Payable To).'); return }
     if (exceedsBudget)       { toast.error(`Amount exceeds remaining budget of ₱${remaining.toLocaleString()}.`); return }
     if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} CRMC endorsed for this slice.`); return }
+    if (exceedsPerCap)       { toast.error(`Amount exceeds this agency's per-applicant cap of ₱${perApplicantCap.toLocaleString()}.`); return }
 
     setSaving(true)
     onConfirm({
@@ -313,11 +320,14 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
               Approved Amount (₱) <span className="text-red-400">*</span>
             </label>
             <input type="number" min={1} max={isSlice && sliceCap > 0 ? sliceCap : undefined}
-              className={`input ${(exceedsBudget || exceedsRequested) ? 'border-red-400 bg-red-50' : ''}`}
+              className={`input ${(exceedsBudget || exceedsRequested || exceedsPerCap) ? 'border-red-400 bg-red-50' : ''}`}
               placeholder="e.g. 5000"
               value={amount} onChange={e => setAmount(e.target.value)} />
             {isSlice && sliceCap > 0 && !exceedsRequested && (
               <p className="text-xs text-gray-400 mt-1">Endorsed cap: ₱{sliceCap.toLocaleString()} — approve up to this amount.</p>
+            )}
+            {perApplicantCap > 0 && !exceedsPerCap && (
+              <p className="text-xs text-gray-400 mt-1">Per-applicant cap: ₱{perApplicantCap.toLocaleString()}.</p>
             )}
             {exceedsRequested && (
               <p className="text-xs text-red-500 mt-1">
@@ -327,6 +337,11 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
             {exceedsBudget && (
               <p className="text-xs text-red-500 mt-1">
                 Exceeds remaining budget by ₱{(amountNum - remaining).toLocaleString()}.
+              </p>
+            )}
+            {exceedsPerCap && (
+              <p className="text-xs text-red-500 mt-1">
+                Exceeds the per-applicant cap of ₱{perApplicantCap.toLocaleString()} by ₱{(amountNum - perApplicantCap).toLocaleString()}.
               </p>
             )}
           </div>
@@ -375,7 +390,7 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
         <div className="px-5 py-3 border-t border-gray-100 flex gap-2 justify-end flex-shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
           <button className="btn-primary text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            disabled={saving || exceedsBudget || exceedsRequested || !!priorApproval}
+            disabled={saving || exceedsBudget || exceedsRequested || exceedsPerCap || !!priorApproval}
             title={priorApproval ? `Blocked: prior approval within ${COOLDOWN_DAYS} days` : ''}
             onClick={handleSubmit}>
             <MdCheckCircle size={14} className="inline -mt-0.5 mr-1" />
