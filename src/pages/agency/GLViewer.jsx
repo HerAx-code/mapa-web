@@ -9,6 +9,7 @@ import {
   MdCheckCircle, MdWarning,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import Layout from '../../components/Layout'
 import GuaranteeLetter from '../../components/GuaranteeLetter'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 
@@ -125,15 +126,18 @@ export default function GLViewer() {
   }, [])
 
   if (loading || !app) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-sm text-gray-400 animate-pulse">Loading Guarantee Letter…</div>
-    </div>
+    <Layout breadcrumb="Guarantee Letter">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-sm text-gray-400 animate-pulse">Loading Guarantee Letter…</div>
+      </div>
+    </Layout>
   )
 
   const canUpload = (user?.role === 'agency' || user?.role === 'agency_admin') && (app.status === 'approved' || app.status === 'certificate')
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <Layout breadcrumb="Guarantee Letter">
+    <div className="bg-gray-100 min-h-full">
 
       {/* ── Thin nav strip (hidden during print) ── */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 print:hidden">
@@ -247,5 +251,6 @@ export default function GLViewer() {
         }
       `}</style>
     </div>
+    </Layout>
   )
 }

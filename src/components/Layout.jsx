@@ -1050,7 +1050,7 @@ export default function Layout({ children, breadcrumb }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
       <ProfileModals activeModal={activeModal} onClose={() => setActiveModal(null)} onSetModal={setActiveModal} />
       {showCompose && <ComposeModal user={user} onClose={() => setShowCompose(false)} />}
 
@@ -1066,7 +1066,7 @@ export default function Layout({ children, breadcrumb }) {
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 flex-shrink-0
         transform transition-transform duration-200 ease-in-out
-        lg:static lg:translate-x-0
+        lg:static lg:translate-x-0 print:hidden
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <SidebarContent
@@ -1079,10 +1079,10 @@ export default function Layout({ children, breadcrumb }) {
       </aside>
 
       {/* ── Main content ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:overflow-visible print:block">
 
         {/* ── Top navigation bar ───────────────────────────────────── */}
-        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3 sm:px-5 flex-shrink-0 z-30">
+        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3 sm:px-5 flex-shrink-0 z-30 print:hidden">
 
           {/* Left — hamburger + breadcrumb.
               Patients get the BottomTabBar's More tab as the menu opener
@@ -1233,7 +1233,7 @@ export default function Layout({ children, breadcrumb }) {
         {/* PWA offline detection — visible across all roles + all pages.
             Patients on flaky mobile connections need to know writes will
             fail BEFORE they tap submit. */}
-        <OfflineBanner />
+        <div className="print:hidden"><OfflineBanner /></div>
 
         {/* ── Announcement banners ─────────────────────────────────── */}
         {banners.map(b => {
@@ -1253,7 +1253,7 @@ export default function Layout({ children, breadcrumb }) {
             : null
           return (
             <div key={b.id}
-              className={`flex items-center gap-3 px-5 py-2.5 flex-shrink-0 border-b ${cfg.bg} ${cfg.border}`}>
+              className={`flex items-center gap-3 px-5 py-2.5 flex-shrink-0 border-b print:hidden ${cfg.bg} ${cfg.border}`}>
               <Icon size={17} className={`${cfg.iconCls} flex-shrink-0`} />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-semibold text-gray-900 mr-2">{b.title}</span>
@@ -1277,7 +1277,7 @@ export default function Layout({ children, breadcrumb }) {
             forbids horizontal scroll AND prevents the main from being
             sized by intrinsic-width children. pb-20 on patient mobile
             leaves room for the BottomTabBar (56 px + safe-area). */}
-        <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 ${
+        <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 print:overflow-visible print:block ${
           user?.role === ROLES.PATIENT ? 'pb-20 lg:pb-0' : ''
         }`}>
           {/* Key on pathname so each navigation re-mounts this wrapper
@@ -1295,7 +1295,7 @@ export default function Layout({ children, breadcrumb }) {
             /patient/more (a dedicated page); the sidebar drawer is no
             longer triggered for patients. */}
         {user?.role === ROLES.PATIENT && (
-          <BottomTabBar unreadMessages={totalUnreadMessages} />
+          <div className="print:hidden"><BottomTabBar unreadMessages={totalUnreadMessages} /></div>
         )}
       </div>
     </div>
