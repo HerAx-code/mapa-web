@@ -286,13 +286,19 @@ export default function TrackStatus() {
     try {
       const snap = await getDoc(doc(db, 'certificates', app.id))
       if (!snap.exists()) { toast.error(t('patient.track.certNotReady')); return }
-      const { base64, fileName } = snap.data()
-      const isPdf = typeof base64 === 'string' && base64.startsWith('data:application/pdf')
+      // New uploads carry a downloadUrl (Cloud Storage); pre-Storage uploads
+      // carry the file inline as a base64 data URL. Prefer the Storage URL.
+      const data     = snap.data()
+      const href     = data.downloadUrl ?? data.base64
+      if (!href) { toast.error(t('patient.track.certNotReady')); return }
+      const isPdf    = data.contentType === 'application/pdf'
+        || (typeof data.base64 === 'string' && data.base64.startsWith('data:application/pdf'))
       const a = document.createElement('a')
-      a.href     = base64
-      a.download = fileName ?? `guarantee-letter-${app.appId}.${isPdf ? 'pdf' : 'jpg'}`
+      a.href     = href
+      a.download = data.fileName ?? `guarantee-letter-${app.appId}.${isPdf ? 'pdf' : 'jpg'}`
       a.click()
-    } catch {
+    } catch (err) {
+      console.error('[TrackStatus] download certificate failed:', err)
       toast.error(t('patient.track.downloadFailed'))
     } finally {
       setDownloading(null)

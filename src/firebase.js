@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,6 +13,9 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
-export const db   = getFirestore(app)
+export const auth    = getAuth(app)
+export const db      = getFirestore(app)
+// Cloud Storage — used to host signed Guarantee Letter scans so they
+// aren't constrained by Firestore's 1 MiB doc cap. See storage.rules.
+export const storage = getStorage(app)
 export { firebaseConfig }

@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// Cloud Storage rules for MAPA. Currently scoped to the signed Guarantee
+// Letter scans — the only files we host outside of Firestore. Path layout:
+//
+//   /certificates/{appId}/{filename}
+//
+// One file per application. The {filename} segment is intentionally not
+// pegged so a re-upload (Replace Signed Scan) can use a fresh stem and the
+// old object can be cleaned up server-side later, but right now the client
+// overwrites with a stable name.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Helpers ────────────────────────────────────────────────────────
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+    function appDoc(appId) {
+      return firestore.get(/databases/(default)/documents/applications/$(appId));
+    }
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isAuth() && userDoc().data.role in ['super_admin', 'staff_admin'];
+    }
+    function isAgency() {
+      return isAuth() && userDoc().data.role in ['agency', 'agency_admin'];
+    }
+    function isPatient() {
+      return isAuth() && userDoc().data.role == 'patient';
+    }
+
+    // ── Signed GL scans ────────────────────────────────────────────────
+    match /certificates/{appId}/{file} {
+      // Read:
+      //  - the patient who owns this application
+      //  - the agency that owns this application (slice)
+      //  - any CRMC admin
+      allow read: if
+        (isPatient() && appDoc(appId).data.patientId == request.auth.uid)
+        || (isAgency() && appDoc(appId).data.agencyId == userDoc().data.agencyId)
+        || isAdmin();
+
+      // Write: only the owning agency, on supported content types, up to
+      // 10 MiB raw. This is the slack that Firestore couldn't give us —
+      // office scanner PDFs at 300 DPI typically land 1–3 MiB so the cap
+      // is comfortably above real-world inputs without inviting abuse.
+      allow write: if
+        isAgency()
+        && appDoc(appId).data.agencyId == userDoc().data.agencyId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
+    }
+  }
+}

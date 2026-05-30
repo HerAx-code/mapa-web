@@ -73,10 +73,15 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
     navigate(`/agency/applications/${app.id}/gl`)
   }
 
+  // Source URL for the signed scan. New uploads sit in Cloud Storage
+  // (downloadUrl); legacy uploads were base64 data URLs inside Firestore.
+  // Prefer the Storage URL, fall back to base64 for old docs.
+  const signedUrl = signedScan?.downloadUrl ?? signedScan?.base64 ?? null
+
   const handleDownload = () => {
-    if (!signedScan?.base64) return
+    if (!signedUrl) return
     const a = document.createElement('a')
-    a.href = signedScan.base64
+    a.href = signedUrl
     a.download = signedScan.fileName ?? `guarantee-letter-${app.appId}.${isSignedPdf ? 'pdf' : 'jpg'}`
     document.body.appendChild(a)
     a.click()
@@ -87,14 +92,19 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
   // what the Lightbox does for images, since PDFs render natively in
   // every modern browser tab.
   const handleOpenPdf = () => {
-    if (!signedScan?.base64) return
-    window.open(signedScan.base64, '_blank', 'noopener,noreferrer')
+    if (!signedUrl) return
+    window.open(signedUrl, '_blank', 'noopener,noreferrer')
   }
 
 
   // State derivations
   const hasSigned    = !!signedScan
-  const isSignedPdf  = hasSigned && isPdfDataUrl(signedScan.base64)
+  // Identify PDFs preferring the explicit contentType field (Storage path)
+  // and falling back to the data URL prefix sniff for legacy base64 docs.
+  const isSignedPdf  = hasSigned && (
+    signedScan.contentType === 'application/pdf' ||
+    isPdfDataUrl(signedUrl)
+  )
   const status       = app.glStatus
   const isRedeemed   = status === 'redeemed'
   const isExpired    = status === 'expired'
@@ -112,7 +122,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
       <>
         {/* Lightbox only renders for image scans. PDFs open in a new tab
             via handleOpenPdf since <img> can't display them. */}
-        {lightboxOpen && signedScan && !isSignedPdf && <Lightbox src={signedScan.base64} onClose={() => setLightboxOpen(false)} />}
+        {lightboxOpen && signedScan && !isSignedPdf && <Lightbox src={signedUrl} onClose={() => setLightboxOpen(false)} />}
         <div className="bg-white rounded-xl border border-gray-200 p-3 flex items-start gap-3">
           {/* Thumbnail / PDF chip / placeholder */}
           {hasSigned && isSignedPdf ? (
@@ -124,7 +134,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
           ) : hasSigned ? (
             <button onClick={() => setLightboxOpen(true)}
               className="relative w-20 h-24 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-brand-300 transition-all flex-shrink-0 bg-gray-50">
-              <img src={signedScan.base64} alt="Signed GL thumbnail"
+              <img src={signedUrl} alt="Signed GL thumbnail"
                 className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/0 hover:bg-black/30 flex items-center justify-center transition-colors">
                 <MdZoomIn size={20} className="text-white opacity-0 hover:opacity-100" />
@@ -165,7 +175,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
 
   return (
     <>
-      {lightboxOpen && signedScan && !isSignedPdf && <Lightbox src={signedScan.base64} onClose={() => setLightboxOpen(false)} />}
+      {lightboxOpen && signedScan && !isSignedPdf && <Lightbox src={signedUrl} onClose={() => setLightboxOpen(false)} />}
 
       <div className="card p-4">
         <div className="flex items-start justify-between mb-3 gap-2 flex-wrap">
@@ -198,7 +208,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
             ) : loaded && hasSigned ? (
               <button onClick={() => setLightboxOpen(true)}
                 className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-brand-300 transition-all bg-gray-50 group">
-                <img src={signedScan.base64} alt="Signed Guarantee Letter"
+                <img src={signedUrl} alt="Signed Guarantee Letter"
                   className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors">
                   <span className="text-white text-xs font-medium opacity-0 group-hover:opacity-100 flex items-center gap-1">
