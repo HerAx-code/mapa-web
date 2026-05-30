@@ -1,5 +1,7 @@
 # MAPA — Thesis Documentation
 
+**Last updated:** 2026-05-30 (reflects the CRMC-gateway redesign and the post-redesign read-pass review series — see `docs/revision-list.md` for the change log)
+
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.
 
 It is structured for direct lift into a thesis manuscript. Sections are self-contained; reuse them under whatever chapter naming your school uses.
@@ -8,9 +10,13 @@ It is structured for direct lift into a thesis manuscript. Sections are self-con
 
 ## 1. Executive Summary
 
-MAPA is a role-based, bilingual (Filipino + English) web platform that digitizes the medical financial assistance application process at CRMC. Patients apply online for assistance from partner government agencies (DSWD, PCSO, Malasakit Center, AMBaG Program), upload supporting documents, attend online interviews via Google Meet, and receive digital Guarantee Letters (GLs) for off-system settlement with healthcare providers. Agencies review, conduct case assessments, and issue GLs. CRMC administrators provide platform oversight, document verification, and reference-data management.
+MAPA is a role-based, bilingual (Filipino + English) web platform that digitizes the medical financial assistance application process at CRMC. It implements a **CRMC-gateway co-funding model**: the patient files **one request** stating the bill and amount needed, CRMC verifies the documents and conducts the single assessment interview, then CRMC endorses the request to one or more partner government agencies (Malasakit Center, AMBaG, PCSO, DSWD) as funding "slices" toward zero balance. Each agency makes its own funding decision and issues a digital Guarantee Letter (GL) for off-system settlement with healthcare providers.
 
-The system is delivered as a Progressive Web Application (PWA), giving patients an installable mobile experience while agency staff and administrators use the same codebase on desktop browsers. The PWA distinction is enforced through display-mode detection — patients see a mobile-optimized bottom-tab UI, while non-patient roles installing the PWA are routed to the web portal on a laptop.
+This single-intake gateway replaces the previous "apply to each agency separately" model. The patient uploads documents once, attends one Google Meet interview, and sees a unified coverage plan instead of running parallel applications. Agencies receive pre-verified, pre-assessed cases and focus on their funding decision (amount, purpose, payable-to provider) without re-doing intake work.
+
+The system is delivered as a Progressive Web Application (PWA), giving patients an installable mobile experience while agency staff and CRMC administrators use the same codebase on desktop browsers. The PWA distinction is enforced through display-mode detection — patients see a mobile-optimized bottom-tab UI, while non-patient roles installing the PWA are routed to the web portal on a laptop.
+
+Five roles are supported: **patient** (self-registers with a CRMC-issued Patient Access Code, files the single request), **agency coordinator** (funding decisions on slices endorsed to their agency), **agency_admin** (per-agency budget allocation, team management, plus all coordinator capabilities), **staff_admin** (CRMC operations: intake, verification, endorsement, announcements), and **super_admin** (full system administration including admin accounts and platform audit).
 
 ---
 
@@ -33,14 +39,15 @@ To design and implement a centralized web and mobile platform that consolidates 
 
 ### 2.3 Specific Objectives
 
-1. Provide patients with a single registration, application, and tracking surface accessible from any mobile phone with internet access.
-2. Implement role-based workflows for patients, agency coordinators, agency administrators, and CRMC system administrators.
-3. Digitize the Unified Intake Sheet and Client Information Sheet as a structured Case Assessment form.
-4. Generate Guarantee Letters in a layout matching CRMC's wet-signature paper form, supporting print-and-upload-signed-scan workflows.
-5. Enforce cooldown rules (30-day per-patient post-approval) across all agencies via shared Hospital ID tracking.
+1. Provide patients with a single registration and **single-intake** surface accessible from any mobile phone with internet access — one request, one document upload, one assessment interview, regardless of how many agencies ultimately co-fund the bill.
+2. Implement role-based workflows for patients, agency coordinators, agency administrators (with budget allocation authority), CRMC staff administrators (intake + endorsement), and CRMC super administrators (platform oversight).
+3. Digitize the Unified Intake Sheet and Client Information Sheet as a structured Case Assessment form filled jointly by the patient (factual portion via a guided wizard) and the CRMC social worker (assessment portion during the interview).
+4. Generate Guarantee Letters in a layout matching CRMC's wet-signature paper form, supporting print-and-upload-signed-scan workflows. Each endorsed agency issues its own GL for its committed slice.
+5. Enforce cooldown rules (30-day per-patient post-approval) across all agencies via shared Hospital ID tracking, with co-funding-aware exceptions for sibling slices of the same request.
 6. Provide bilingual (Filipino + English) patient-facing UI to match the constituent base.
-7. Deliver real-time notifications via in-app and email channels.
-8. Maintain a verifiable audit trail of all administrative actions.
+7. Deliver real-time notifications via in-app and email channels, including time-sensitive interview reminders (24h + 1h before).
+8. Maintain a verifiable audit trail of all administrative actions, including endorsement decisions, document verification, budget allocation changes, and approval reversals.
+9. Provide CRMC with a cross-slice coordination view so the agency the request was routed to has accountability, and CRMC can re-endorse to another agency if a slice is rejected or stalls.
 
 ### 2.4 Scope and Limitations
 
@@ -63,81 +70,107 @@ The system is scoped to CRMC's Cotabato City pilot. The following are explicitly
 
 #### 3.1.1 Patient Functional Requirements
 
-**FR-P-01 Registration.** A patient shall self-register with a Patient Access Code (format `CRMC-YYYY-NNNNN`) previously issued by CRMC Medical Social Services. Registration shall collect full name, contact number, complete address, and account credentials.
+**FR-P-01 Registration.** A patient shall self-register with a Patient Access Code (format `CRMC-YYYY-NNNNN`) previously issued by CRMC Medical Social Services. Registration shall collect full name, contact number, complete address (via cascading BARMM-region location dropdowns), and account credentials.
 
-**FR-P-02 Document Upload.** A patient shall upload supporting documents (Valid ID, Barangay Certificate of Indigency, Hospital Billing Statement, Medical Abstract, PhilHealth ID, Medical Certificate, Laboratory Results, Crisis Documentation) of types defined by the administrator. Each upload shall be subject to administrative verification.
+**FR-P-02 Request Submission.** A patient shall submit **one assistance request at a time** stating the assistance type, the bill amount needed, an optional description, and uploading the required documents (Valid ID, Barangay Certificate of Indigency, Hospital Billing Statement, Medical Abstract, PhilHealth ID, Medical Certificate, Laboratory Results, etc.). Submission is a 4-step guided wizard. Documents uploaded with the request are scoped per-request and reusable verified documents (e.g., Valid ID) carry over without re-upload.
 
-**FR-P-03 Program Discovery.** A patient shall view all enabled partner agencies and their available programs, including slot counts, processing time, and supported assistance types. A guided screening flow shall allow the patient to filter programs by their medical need.
+**FR-P-03 On-device ID OCR.** For ID-type documents, an on-device OCR pass shall extract the name and surface an advisory cross-check ("ID name matches account" / "name not auto-matched"). This is an advisory only; the CRMC social worker remains the verifier.
 
-**FR-P-04 Application Submission.** A patient shall submit an application to a single agency at a time. Submission shall verify document completeness, deduct an agency slot atomically, and notify the agency.
+**FR-P-04 Live Selfie Capture.** A live selfie shall be captured via the device camera (no upload from gallery) for the CRMC social worker to visually match against the uploaded ID.
 
-**FR-P-05 Application Tracking.** A patient shall view the current status of their application through the lifecycle: pending → reviewing → interview → approved → certificate (or rejected). Real-time updates shall be received without page refresh.
+**FR-P-05 Representative Filing.** A patient unable to file directly shall be permitted to designate a representative (relative). The representative provides their own ID, live selfie, name, and relationship; the patient remains the primary account holder.
 
-**FR-P-06 Withdrawal.** A patient shall withdraw their own application while it is in the `pending` status. Withdrawal shall restore the agency slot if same-day.
+**FR-P-06 Household Intake Wizard.** A patient shall complete the factual portion of the Unified Intake Sheet via a guided bilingual 5-step wizard (household, income, expenses, medical, review). Auto-save runs on a 2s debounce and on every step navigation. The wizard scrolls to and highlights any missing required field on validation.
 
-**FR-P-07 Interview Attendance.** A patient shall receive the agency's Google Meet link, scheduled date, and time. They shall be reminded 24 hours and 1 hour before the meeting.
+**FR-P-07 Coverage Plan Review.** Once CRMC endorses the request to one or more agencies, the patient shall see a coverage plan listing each endorsed agency, the agency's procedure/requirements, and the funding amount (request total per slice). The patient shall confirm via a single Proceed action that advances every endorsed slice into the agency's funding-review queue atomically.
 
-**FR-P-08 GL Receipt.** A patient shall download their signed Guarantee Letter (image or PDF) once the agency uploads the wet-signed scan. The GL shall be valid for 30 days from issuance.
+**FR-P-08 Per-Slice Compliance.** For each endorsed slice, the patient shall see the agency's specific requirements with a checklist of compliant vs missing items, and a direct upload affordance to satisfy any missing requirement.
 
-**FR-P-09 Bilingual Interface.** All patient-facing UI shall be available in both Filipino and English, with a toggle accessible at any time.
+**FR-P-09 Request Tracking.** A patient shall view the request lifecycle (Submitted → Under Review → Assessment → Endorsed → Partially Funded / Fully Funded) on a unified tracker, and a per-slice lifecycle (Endorsed → For Funding → Approved → GL Issued) for each endorsed agency. Real-time updates shall be received without page refresh.
 
-**FR-P-10 Messaging.** A patient shall be able to message hospital administrators and their assigned agency. They shall not be able to message other patients.
+**FR-P-10 Withdrawal.** A patient shall withdraw their own request while it is in a pre-endorsement state (`submitted` / `under_review` / `assessment`) and no slices exist yet. Withdrawal marks the request `closed` with reason "Withdrawn by applicant" and notifies CRMC.
+
+**FR-P-11 Interview Attendance.** A patient shall receive CRMC's Google Meet link, scheduled date, and time. They shall be reminded 24 hours and 1 hour before the meeting (per-device localStorage dedup). Interview reminders cover both the new-model CRMC assessment interview (on the parent request) and any legacy direct-to-agency interviews.
+
+**FR-P-12 GL Receipt.** A patient shall download their signed Guarantee Letter (image or PDF) once an agency uploads the wet-signed scan. Each GL is valid for 30 days from issuance; expiry is surfaced as a banner on the patient TrackStatus view.
+
+**FR-P-13 Bilingual Interface.** All patient-facing UI shall be available in both Filipino and English, with a toggle accessible at any time.
+
+**FR-P-14 Messaging.** A patient shall be able to message CRMC administrators and any agency endorsed on their request. They shall not be able to message other patients.
+
+**FR-P-15 Touch Target Floor.** All patient-facing interactive elements shall be at minimum 44 px in tappable height, in line with Apple Human Interface Guidelines for finger-tap targets on mobile.
 
 #### 3.1.2 Agency Coordinator Functional Requirements
 
-**FR-A-01 Application Inbox.** A coordinator shall view all applications submitted to their agency, with filters by status. Pending applications shall be highlighted.
+**FR-A-01 Funding Inbox.** A coordinator shall view all slices endorsed to their agency, with filters by status (For Funding / Needs Info / Approved / Rejected). Slices in the patient-pre-Proceed `endorsed` state are excluded from the inbox; they enter the queue only after the patient confirms via Proceed.
 
-**FR-A-02 Document Verification View.** A coordinator shall view all uploaded documents attached to an application, including the verification status set by the administrator.
+**FR-A-02 Document Review (read-only).** A coordinator shall view all CRMC-verified documents attached to the parent request. The coordinator does **not** re-verify documents; CRMC owns document verification as the single intake gateway. The coordinator may surface OCR advisory notes and request additional information via the Awaiting Info path if needed.
 
-**FR-A-03 Interview Scheduling.** A coordinator shall schedule an online interview by entering date, time, a Google Meet URL, and the name of the conducting social worker. The system shall provide a one-click shortcut to `meet.new` for generating a Meet link.
+**FR-A-03 Case Assessment View (read-only).** A coordinator shall view the Unified Intake Sheet completed jointly by the patient and CRMC, plus the CRMC interview outcome and notes. The coordinator does not edit the assessment; their role is the funding decision.
 
-**FR-A-04 Case Assessment.** A coordinator shall complete a structured assessment form (the digital equivalent of the CRMC Unified Intake Sheet) recording family composition, monthly income and expenses, employment, medical details, social case study narrative, recommendation, and means-test classification (Indigent / Marginalized / Low Income / Above Threshold).
+**FR-A-04 Co-funding Picture.** A coordinator shall see the full co-funding breakdown for the request: total bill, committed amount across all sibling slices, in-review amount, still-open balance, and per-agency status. This informs whether to approve in full, approve partial, or request more info.
 
-**FR-A-05 Approval.** A coordinator shall approve an application by entering the approved amount (in PHP), one or more purposes of assistance, and the provider name (payable-to). Approval shall be transactional: the agency's committed budget shall be incremented and a Guarantee Letter shall be issued.
+**FR-A-05 Approval.** A coordinator shall approve a slice by entering the approved amount (in PHP), one or more purposes of assistance, and the provider name (payable-to). Approval is transactional: the agency's committed budget is incremented; the parent request's `amountCommitted` is advanced; and the request status moves to `partially_funded` or `fully_funded` as the math allows. A Guarantee Letter is issued at the moment of approval. The approved amount is hard-capped by the agency's `maxPerApplicant` (if set) and by remaining budget.
 
-**FR-A-06 Cooldown Enforcement.** The system shall prevent a coordinator from approving a patient whose Hospital ID was approved by any agency within the past 30 days, or who has an active reversed-approval cooldown.
+**FR-A-06 Cooldown Enforcement.** The system shall prevent a coordinator from approving a patient whose Hospital ID was approved by any agency within the past 30 days, with an explicit exception for sibling slices of the same co-funding request (those are intentionally meant to layer). The check runs both at the application level (same-agency cooldown) and at the Hospital ID level (cross-agency cooldown that survives account churn).
 
-**FR-A-07 Rejection.** A coordinator shall reject an application with a written reason, drawn from common templates or entered as free text.
+**FR-A-07 Request More Info.** A coordinator shall request additional information from the patient by writing a message that is delivered via in-app notification and email. The slice moves to `awaiting_info` status and is removed from the urgent queue until the patient responds.
 
-**FR-A-08 Slot Management.** A coordinator shall set their agency's daily slot capacity, view the current remaining slots, and manually adjust the count with an audit-logged reason.
+**FR-A-08 Rejection.** A coordinator shall reject a slice with a written reason, drawn from common templates or entered as free text. The patient is notified and CRMC may re-endorse to another agency.
 
-**FR-A-09 GL Print and Upload.** A coordinator shall print or save-as-PDF the unsigned Guarantee Letter, wet-sign it physically, and upload the signed scan back to the system. The patient shall then be able to download the signed copy.
+**FR-A-09 Daily Slot Management.** A coordinator shall set their agency's daily slot capacity. Slots are decremented at CRMC endorsement time (not at patient submission) and reset daily via either a scheduled Cloud Function (Blaze-ready) or a lazy reset on the CRMC Requests page (belt-and-suspenders).
 
-**FR-A-10 GL Lifecycle.** A coordinator shall mark a GL as Redeemed (when the provider has billed), Expired (after 30 days without redemption), or reverse the approval to correct mistakes.
+**FR-A-10 GL Print and Upload.** A coordinator shall print or save-as-PDF the unsigned Guarantee Letter, wet-sign it physically, and upload the signed scan back to the system. The patient shall then be able to download the signed copy.
+
+**FR-A-11 GL Lifecycle.** A coordinator shall mark a GL as Redeemed (when the provider has billed), Expired (after 30 days without redemption), or reverse the approval to correct mistakes. Reversal preserves the patient's 30-day cooldown (the patient was actually helped at one point) but releases the agency's committed budget.
+
+**FR-A-12 Coordination Messaging.** A coordinator shall message both the patient and the CRMC social worker who endorsed the slice, via shortcut buttons that open or create the right conversation thread.
 
 #### 3.1.3 Agency Administrator Functional Requirements
 
-**FR-AA-01 Budget Allocation.** An agency administrator shall set the total budget for a fiscal period and start new periods, which resets committed and disbursed counters while preserving the allocation.
+**FR-AA-01 Budget Allocation.** An agency administrator shall set the total budget for a fiscal period (monthly / quarterly / yearly), record the fund source (e.g., "PCSO Resolution #2026-15") for COA-style audit defense, and start new periods. Starting a new period resets `committed` and `disbursed` counters while preserving the allocation. The allocation save uses dotted-field updates so concurrent coordinator approvals cannot lose committed dollars through a write race.
 
-**FR-AA-02 Team Management.** An agency administrator shall create, edit, deactivate, and delete coordinator accounts within their agency. They shall promote a coordinator to administrator or demote an administrator back to coordinator, with system-enforced guards preventing demotion of the last remaining administrator.
+**FR-AA-02 Per-Applicant Cap.** An agency administrator shall configure an optional per-applicant policy ceiling (e.g., PCSO ₱25K, DSWD tier limits). CRMC sees a soft warning at endorsement; the agency's Approve modal hard-blocks any approval above this cap.
 
-**FR-AA-03 Agency Audit Log.** An agency administrator shall view a log of all administrative actions within their agency, with action type, actor, timestamp, and target.
+**FR-AA-03 Team Management.** An agency administrator shall create, edit, deactivate, and delete coordinator accounts within their agency. They shall promote a coordinator to administrator or demote an administrator back to coordinator, with system-enforced guards preventing demotion of the last remaining administrator and self-demotion. Account creation rolls back the Firebase Auth user on Firestore setDoc failure to avoid orphan auth accounts.
 
-**FR-AA-04 Coordinator Functions.** All coordinator functional requirements (FR-A-01 through FR-A-10) shall also be available to agency administrators.
+**FR-AA-04 Agency Audit Log.** An agency administrator shall view a log of all administrative actions within their agency, with action type, actor, timestamp, and target. The Funds page links directly to the audit log for agency administrators.
+
+**FR-AA-05 Top-Up Request Visibility.** An agency administrator shall see open budget top-up requests submitted by coordinators on their team, surfaced inline on the Allocation page.
+
+**FR-AA-06 Coordinator Functions.** All coordinator functional requirements (FR-A-01 through FR-A-12) shall also be available to agency administrators.
 
 #### 3.1.4 CRMC Administrator Functional Requirements
 
-**FR-CRMC-01 Agency Management.** A CRMC administrator shall create, edit, enable, disable, and delete partner agencies. Disabling shall offer a choice of how to handle in-flight applications (auto-reject without cooldown, or hold pending re-enable).
+**FR-CRMC-01 Requests Workspace.** A CRMC administrator (both staff_admin and super_admin) shall view all submitted patient requests, with filters (Needs Action / In Progress / Completed) and search. The detail view is a guided stepper: verify documents → conduct interview + complete intake → endorse to one or more agencies. Cross-slice coverage warnings ("rejected — re-endorse", "X awaiting patient acceptance N days") surface on the list to highlight CRMC action items.
 
-**FR-CRMC-02 Document Verification.** A CRMC administrator shall review patient-uploaded documents, marking each as verified or rejected with a reason.
+**FR-CRMC-02 Document Verification.** A CRMC administrator shall review patient-uploaded documents, marking each as verified, rejected (with reason that flows to the patient notification and persists on the document), or reset to pending (accident-recovery path). Document review state is shown inline ("Verified by X · Mar 5"). The OCR advisory result is surfaced for ID-type documents.
 
-**FR-CRMC-03 Document Type Management.** A CRMC administrator shall define the document types accepted by the system, including which are required.
+**FR-CRMC-03 Case Assessment (Unified Intake Sheet).** A CRMC administrator shall conduct the single assessment interview via Google Meet (link generated via the meet.new shortcut) and complete the structured Unified Intake Sheet covering family composition, monthly income and expenses, employment, medical details, social case study narrative, recommendation, and means-test classification (Indigent / Marginalized / Low Income / Above Threshold).
 
-**FR-CRMC-04 Assistance Type Management.** A CRMC administrator shall define the categories of assistance (Hospital Bills, Medicines, Chemotherapy, Laboratory Tests, Surgery, Emergency Medical Assistance, Burial Assistance, etc.).
+**FR-CRMC-04 Endorsement (Pure-Selection).** A CRMC administrator shall endorse a verified, assessed request to one or more partner agencies. Endorsement is a pure-selection model: CRMC nominates which agencies should look at the case based on assistance-type match, slot availability, and per-applicant cap visibility; the funding amount is decided by the agency, not by CRMC. CRMC may attach an optional note that appears in each agency's Approve modal. Endorsement is transactional: it creates child application "slices" (one per selected agency), decrements each agency's daily slot atomically, stamps `documents.agencyIds[]` for read-scoped access, and notifies the patient.
 
-**FR-CRMC-05 Hospital ID Issuance.** A CRMC administrator shall generate and manage the pool of Patient Access Codes (`CRMC-YYYY-NNNNN`).
+**FR-CRMC-05 Document Type Management.** A CRMC administrator shall define the document types accepted by the system, including which are required and which are reusable across requests.
 
-**FR-CRMC-06 Patient Records.** A CRMC administrator shall view all registered patients and their application histories. They shall not be able to modify patient personal details.
+**FR-CRMC-06 Assistance Type Management.** A CRMC administrator shall define the categories of assistance (Hospital Bills, Medicines, Chemotherapy, Laboratory Tests, Surgery, Emergency Medical Assistance, Burial Assistance, etc.).
 
-**FR-CRMC-07 Application Logs.** A CRMC administrator shall view all applications across all agencies, with filters and CSV export.
+**FR-CRMC-07 Hospital ID Issuance.** A CRMC administrator shall generate and manage the pool of Patient Access Codes (`CRMC-YYYY-NNNNN`). Bulk creation is supported with sequential numbering and collision prevention. Revoke and delete operations are atomic via `writeBatch` so the user profile and the code doc cannot drift into orphan state.
 
-**FR-CRMC-08 Reports and Export.** A CRMC administrator shall generate aggregate reports (per agency, per status, per period) and export to CSV.
+**FR-CRMC-08 Patient Records.** A CRMC administrator shall view all registered patients and their request and application histories. They shall not be able to modify patient personal details.
 
-**FR-CRMC-09 Announcements.** A super administrator shall create system-wide announcements (Information, Warning, Maintenance) visible to all authenticated users during defined time windows.
+**FR-CRMC-09 Application Logs.** A CRMC administrator shall view all applications across all agencies, with filters and CSV export. Co-funding statuses (For Funding / Needs Info / Approved / Rejected / Guarantee Letter Issued) are surfaced consistently with the agency portal.
 
-**FR-CRMC-10 Audit Log.** A super administrator shall view the complete platform-wide audit trail of all administrative actions.
+**FR-CRMC-10 Agency Management.** A CRMC administrator shall create, edit, enable, disable, and delete partner agencies. Disabling shall offer a choice of how to handle in-flight applications (auto-reject without cooldown — recommended for indefinite closures, or hold pending re-enable — for short outages).
 
-**FR-CRMC-11 Admin Account Management.** A super administrator shall create, edit, deactivate, and delete administrator accounts (super and staff levels). Staff administrators cannot manage administrator accounts.
+**FR-CRMC-11 Reports and Export.** A CRMC administrator shall generate aggregate reports (per agency, per status, per period) and export to CSV via the Export Preview hub.
+
+**FR-CRMC-12 Messaging Coordination.** A CRMC administrator shall message any patient or agency endorsed on a request, including a top-of-detail Message Patient shortcut on the request workspace.
+
+**FR-CRMC-13 Announcements.** A super_admin or staff_admin shall create system-wide announcements (Information, Warning, Maintenance) visible to all authenticated users during defined time windows. A 24-hour-before reminder is auto-sent to all users.
+
+**FR-CRMC-14 Audit Log.** A super administrator shall view the complete platform-wide audit trail of all administrative actions (endorsements, document verifications, agency disables, role changes, budget changes, GL state transitions, etc.).
+
+**FR-CRMC-15 Admin Account Management.** A super administrator shall create, edit, deactivate, and delete administrator accounts (super and staff levels). Staff administrators cannot manage administrator accounts. Account creation rolls back the Firebase Auth user on Firestore setDoc failure to avoid orphan auth accounts.
 
 ### 3.2 Non-Functional Requirements
 
@@ -311,9 +344,9 @@ mapa-web/
 │   │       └── fil.json
 │   ├── pages/                    # Page-level route components
 │   │   ├── auth/                 # Landing, Login, Register, InstallApp
-│   │   ├── patient/              # 9 patient pages
+│   │   ├── patient/              # 8 patient pages
 │   │   ├── agency/               # 16 agency pages
-│   │   ├── admin/                # 19 admin pages
+│   │   ├── admin/                # 17 admin pages
 │   │   └── Notifications.jsx     # Cross-role
 │   ├── utils/                    # Helpers (auditLog, messages, etc.)
 │   ├── firebase.js               # SDK initialization
@@ -353,13 +386,14 @@ The install page detects whether the app is already installed and presents eithe
 | Collection | Document Key | Purpose |
 |------------|--------------|---------|
 | `users` | Firebase Auth UID | User profiles for all roles |
-| `applications` | auto-id | Patient applications to specific agencies |
-| `documents` | auto-id | Patient-uploaded supporting documents (metadata) |
+| `requests` | auto-id | **Parent of the co-funding model** — the single patient request CRMC verifies and endorses to one or more agencies |
+| `applications` | auto-id | Per-agency funding "slices" of a request; each agency gets one slice when CRMC endorses |
+| `documents` | auto-id | Patient-uploaded supporting documents (metadata + per-request scoping via `agencyIds[]`) |
 | `documentContents` | matches `documents.id` | Document file content (base64) |
 | `documentTypes` | slug from name | Catalog of document types |
 | `assistanceTypes` | slug from name | Catalog of assistance categories |
-| `agencies` | slug (e.g. `pcso`, `dswd`) | Partner agency profiles |
-| `hospitalIds` | the code itself (e.g. `CRMC-2026-00001`) | Patient Access Code records |
+| `agencies` | slug (e.g. `pcso`, `dswd`) | Partner agency profiles + per-applicant cap + budget |
+| `hospitalIds` | the code itself (e.g. `CRMC-2026-00001`) | Patient Access Code records + cross-account cooldown anchor |
 | `certificates` | matches `applications.id` | Signed GL scans (image or PDF, base64) |
 | `conversations` | auto-id | Message threads between users |
 | `conversations/{id}/messages` | auto-id | Individual messages within a thread |
@@ -395,13 +429,59 @@ The install page detects whether the app is already installed and presents eithe
 }
 ```
 
-**applications/{appId}**
+**requests/{requestId}** (the co-funding parent — new under the redesign)
+
+```
+{
+  requestId:         string,            // human-readable, e.g. REQ-2026-AB12CDE
+  patientId:         string,            // users.uid
+  patientName:       string,            // snapshot at submission
+  patientContact:    string,
+  patientAddress:    string,
+  patientHospitalId: string | null,     // snapshot for cooldown survival
+  assistanceType:    string,            // e.g. 'Hospital Bills'
+  description:       string,
+  amountNeeded:      number,            // the bill total
+  amountCommitted:   number,            // sum of approved slice amounts
+  agencyIds:         string[],          // agencies CRMC endorsed to
+  status:            'submitted' | 'under_review' | 'assessment'
+                    | 'endorsed' | 'partially_funded' | 'fully_funded'
+                    | 'closed' | 'rejected',
+  attachedDocuments: Array<{ documentId, name, documentTypeName, status, date }>,
+  filedBy:           { name, relationship, repIdDocId, repSelfieDocId } | null,
+  // Set when CRMC schedules the single assessment interview:
+  interviewDate:     string,            // 'YYYY-MM-DD'
+  interviewTime:     string,
+  meetLink:          string,
+  conductedBy:       string,            // CRMC social worker name
+  interviewOutcome:  'completed' | 'no_show' | null,
+  interviewNotes:    string,
+  // Intake sheet (factual portion by patient via wizard, assessment portion by CRMC):
+  intakeSheet:       { ...household, income, expenses, medical, assessment fields...,
+                       completedBy, patientFilledAt, lastEditedBy },
+  // Withdraw / close metadata:
+  closeReason:       string | null,
+  submittedAt:       Timestamp,
+  updatedAt:         Timestamp,
+}
+```
+
+**applications/{appId}** (per-agency funding slice — child of a request, or a legacy direct-to-agency app)
 
 ```
 {
   appId:               string,           // human-readable, e.g. APP-2026-AB12CDE
+  // Co-funding slice link (new model). Absent on legacy direct-to-agency apps.
+  requestId:           string | null,    // parent request id; null for legacy
+  amountRequested:     number,           // full request total at endorsement
+  amountApproved:      number,           // agency's actual approval (≤ amountRequested)
+  endorsedAt:          Timestamp | null,
+  endorsedBy:          string | null,    // CRMC social worker who endorsed
+  endorsedById:        string | null,    // CRMC user uid for messaging
+  crmcNotes:           string | null,    // optional CRMC context for the agency
+
   patientId:           string,           // users.uid
-  patientName:         string,           // snapshot at submission
+  patientName:         string,           // snapshot at submission/endorse
   patientContact:      string,
   patientAddress:      string,
   patientHospitalId:   string | null,    // snapshot for cooldown survival
@@ -409,20 +489,29 @@ The install page detects whether the app is already installed and presents eithe
   agencyName:          string,
   agencyColor:         string,
   agencyInitials:      string,
-  status:              'pending' | 'reviewing' | 'awaiting_info' | 'interview' | 'approved' | 'certificate' | 'rejected',
+  assistanceType:      string,
+  status:              'pending' | 'endorsed' | 'reviewing' | 'awaiting_info'
+                      | 'interview' | 'approved' | 'certificate' | 'rejected',
   attachedDocuments:   Array<{ documentId, name, documentTypeName, status, date }>,
-  stages:              Array<{ key, label, done, active, date, note }>,
+  // 'stages' field deprecated -- the Timeline view derives from `status` directly.
+
   submittedAt:         Timestamp,
   updatedAt:           Timestamp,
-  // Set during reviewing → interview transition:
-  interviewDate:       string,           // 'YYYY-MM-DD'
-  interviewTime:       string,           // free-form, e.g. '2:00 PM'
+
+  // Awaiting-info dialog:
+  awaitingInfoMessage:     string | null,
+  awaitingInfoRequestedAt: Timestamp | null,
+  awaitingInfoRequestedBy: string | null,
+  awaitingInfoResumedAt:   Timestamp | null,
+
+  // Legacy direct-to-agency interview (CRMC interview lives on the request now):
+  interviewDate:       string,
+  interviewTime:       string,
   meetLink:            string,
   conductedBy:         string,
   interviewOutcome:    'completed' | 'no_show' | null,
-  reminderSent24h:     boolean,
-  reminderSent1h:      boolean,
-  // Set during reviewing → approved transition:
+
+  // Approval + GL lifecycle:
   approvedAt:          Timestamp,
   approvedAmount:      number,
   purposeOfAssistance: string[],
@@ -432,15 +521,18 @@ The install page detects whether the app is already installed and presents eithe
   glStatus:            'issued' | 'redeemed' | 'expired' | null,
   glRedeemedAt:        Timestamp | null,
   glExpiredAt:         Timestamp | null,
-  // Set if reversed:
+
+  // Reversal preserves the cooldown clock so reverse-and-reapproved-elsewhere can't bypass:
   reversedAt:          Timestamp | null,
   reversedBy:          string | null,
   reversedByUid:       string | null,
   reversalReason:      string | null,
   cooldownUntilAt:     Timestamp | null,
   certificateUploaded: boolean,
-  // Case Assessment (formerly Intake Sheet):
-  intakeSheet:         { ...assessment fields..., completedBy, lastEditedBy },
+
+  // Rejection:
+  rejectionReason:     string | null,
+  rejectionType:       string | null,   // e.g. 'agency_disabled' for cascade rejections
 }
 ```
 
@@ -450,19 +542,31 @@ The install page detects whether the app is already installed and presents eithe
 {
   patientId:        string,
   patientName:      string,
-  name:             string,       // e.g. 'Valid ID'
+  name:             string,           // e.g. 'Valid ID'
   documentTypeId:   string,
   documentTypeName: string,
   fileName:         string,
-  type:             string,        // MIME type
-  size:             string,        // human-readable
-  date:             string,        // human-readable
+  type:             string,            // MIME type
+  size:             string,            // human-readable
+  date:             string,            // human-readable
   status:           'pending' | 'verified' | 'rejected',
-  idType:           string | null, // for Valid ID
+  idType:           string | null,     // for Valid ID
   rejectionReason:  string | null,
   agreedToAttestation: boolean,
-  verifiedBy:       string | null,
-  verifiedAt:       Timestamp | null,
+
+  // Reviewer trail (rendered inline on the CRMC Requests doc panel):
+  reviewedBy:       string | null,
+  reviewedAt:       Timestamp | null,
+
+  // OCR advisory (ID-type docs only):
+  ocrMatch:         boolean | null,
+  ocrText:          string | null,
+
+  // Co-funding scoping: agencies can read a document only if their id is
+  // in this list. CRMC stamps it at endorsement time for every doc on the
+  // parent request. The legacy /seed-page backfill populated this for
+  // pre-redesign documents.
+  agencyIds:        string[],
 }
 ```
 
@@ -486,21 +590,26 @@ The install page detects whether the app is already installed and presents eithe
   initials:         string,
   color:            string,
   description:      string,
+  procedure:        string,             // free-form patient-facing instructions
   location:         string,
   phone:            string,
   enabled:          boolean,
   processingTime:   string,
   assistanceTypes:  string[],
   requirements:     string[],
+  maxPerApplicant:  number | null,      // per-applicant policy cap (PCSO ₱25K, etc.)
+                                        // null = no cap; soft-warn at endorse, hard-block at approve
   slots:            { total: number, remaining: number },
+  lastResetDate:    string,             // YYYY-MM-DD anchor for the daily slot reset
   budget: {
-    allocated: number,
-    committed: number,
-    disbursed: number,
-    period:    'monthly' | 'quarterly' | 'yearly',
-    periodStartedAt: Timestamp,
-    fundSource:      string | null,
-    fundSourceNotes: string | null,
+    allocated:            number,
+    committed:            number,
+    disbursed:            number,
+    period:               'monthly' | 'quarterly' | 'yearly',
+    periodStart:          Timestamp,
+    fundSource:           string | null,
+    fundSourceNotes:      string | null,
+    lowBalanceNotifiedAt: Timestamp | null,
   },
   defaultSignatory: string,
   createdAt:        Timestamp,
@@ -637,10 +746,11 @@ The rules treat every collection as a separate authorization surface. Helper fun
 | Collection | Read | Create | Update | Delete |
 |------------|------|--------|--------|--------|
 | `users` | Self, admin, any agency | Authenticated | Self (limited fields) / admin / agency_admin (own agency, role swap only) | Super admin |
-| `applications` | Owner / own agency / admin | Patient | Patient (pending→rejected, awaiting_info→reviewing) / own agency / admin | Admin |
-| `documents` | Owner / admin / any agency | Patient | Owner / admin | Owner / admin |
+| `requests` | Owner / admin / agency holding a slice (via `agencyIds[]` membership) | Patient | Admin / patient (submitted → closed for withdraw, or intakeSheet update only) / agency (own slice: `amountCommitted` + `status` + `updatedAt` only) | Admin |
+| `applications` | Owner / own agency / agency holding a sibling slice (via the parent request's `agencyIds[]`) / admin | Patient (legacy direct apps) or admin (slice creation at endorsement) | Patient (status transitions only: pending→rejected, awaiting_info→reviewing, endorsed→reviewing) / own agency / admin | Admin |
+| `documents` | Owner / admin / agency in `agencyIds[]` (scoped to docs of requests they hold a slice for) | Patient | Admin (verification) / patient (re-upload own) | Admin / patient (own) |
 | `documentContents` | Owner / admin / any agency | Patient | Owner / admin | Owner / admin |
-| `agencies` | Public | Super admin | Admin / own agency / patient (slot decrement on apply, exactly -1 with constraints) | Super admin |
+| `agencies` | Public | Super admin | Admin / own agency_admin (budget/cap/team) / agency (slot fields) / patient (slot decrement only — exactly -1, fields constrained) | Super admin |
 | `documentTypes` | Authenticated | Super admin | Super admin | Super admin |
 | `assistanceTypes` | Authenticated | Super admin | Super admin | Super admin |
 | `hospitalIds` | Public single GET (registration) / authenticated list | Super admin | Admin / authenticated (registration claim, fields constrained) / agency (cooldown stamp, fields constrained) | Super admin |
@@ -650,7 +760,7 @@ The rules treat every collection as a separate authorization surface. Helper fun
 | `certificates` | Owner / own agency / admin (handles null resource for not-yet-uploaded docs) | Agency / admin | Agency / admin | Admin |
 | `docReviewPresence` | Admin | Admin | Admin | Admin |
 | `reports` | Admin / own agency admin | Authenticated | Admin / own agency admin | Admin |
-| `announcements` | Authenticated | Super admin | Super admin | Super admin |
+| `announcements` | Authenticated | Super admin or staff admin | Super admin or staff admin | Super admin |
 | `auditLog` | Super admin / agency admin (own agency entries) | Authenticated (append-only) | None | None |
 | `notificationErrors` | Admin | Authenticated (append-only) | None | None |
 
@@ -666,6 +776,12 @@ The rules treat every collection as a separate authorization surface. Helper fun
 
 **Immutability of audit-relevant collections.** `auditLog` and `notificationErrors` are append-only — no updates or deletes ever — which guarantees an attacker cannot tamper with the action history.
 
+**Co-funding request scoping.** An agency can read a `requests` document only if its id appears in the request's `agencyIds[]` array. CRMC populates this array at endorsement time. An agency's update on the request is further constrained to `amountCommitted`, `status`, and `updatedAt` only — the agency cannot rewrite patient data, the assistance type, the bill amount, or the agency list.
+
+**Patient request withdrawal field-level guard.** A patient updating their own request may either (a) change `status` from `'submitted'` to `'closed'` (withdraw), or (b) update `intakeSheet` and `updatedAt` only. No other patient-driven mutations are permitted; CRMC writes the lifecycle transitions beyond `submitted`.
+
+**Document agency scoping via `agencyIds[]`.** An agency user can read a patient document only if its `agencyIds[]` includes their agency id. CRMC stamps this list at endorsement time for every doc on the request. A `/seed`-page backfill populated this for pre-redesign documents; the transitional `('agencyIds' in resource.data)` fallback has since been removed (commit `f497a79`).
+
 ---
 
 ## 8. Use Case Diagrams (textual descriptions)
@@ -680,15 +796,17 @@ Actor: Patient
 Use Cases:
    - Register Account
    - Log In
-   - Upload Document
-   - Browse Programs (Find Programs)
-   - Take Screening Questionnaire
-   - Submit Application
-   - Track Application Status
-   - Withdraw Application
-   - Join Online Interview
-   - Download Guarantee Letter
-   - Message Agency / Admin
+   - Browse Medical Programs (Find Programs)
+   - Submit Assistance Request (4-step wizard: need + amount,
+     documents + live selfie, optional representative, review)
+   - Complete Household Intake Wizard (5 steps, auto-saved)
+   - Review Coverage Plan + Proceed (accept CRMC's endorsement)
+   - Comply with Per-Agency Requirements (upload any missing docs)
+   - Track Request Status (request stepper + per-slice steppers)
+   - Withdraw Request (pre-endorsement only)
+   - Join CRMC Assessment Interview
+   - Download Guarantee Letter (per approving agency)
+   - Message CRMC Admin / Endorsed Agency
    - Read Notifications
    - Read User Guide
    - Change Language
@@ -697,8 +815,11 @@ Use Cases:
 
 Includes:
    - Register Account «includes» Verify Patient Access Code
-   - Submit Application «includes» Confirm Document Completeness
-   - Submit Application «includes» Confirm Slot Availability
+   - Submit Assistance Request «includes» Confirm Document Completeness
+   - Submit Assistance Request «includes» Live Selfie Capture
+   - Submit Assistance Request «includes» (optional) Representative Identity Capture
+   - Review Coverage Plan + Proceed «includes» Atomic Slice Advancement
+     (all endorsed slices move from `endorsed` to `reviewing` in one batch)
 ```
 
 ### 8.2 Agency Coordinator Use Cases
@@ -708,27 +829,29 @@ Actor: Agency Coordinator
 
 Use Cases:
    - Log In
-   - View Application Inbox
-   - Start Review
-   - Schedule Interview
-   - Conduct Online Interview (external — Google Meet)
-   - Complete Case Assessment
-   - Approve Application
-   - Reject Application
-   - Request More Info
+   - View Funding Inbox (slices endorsed to this agency, post-Proceed)
+   - View Co-funding Picture (sibling slices + total funding progress)
+   - View Documents (CRMC-verified, read-only)
+   - View Case Assessment (CRMC-completed, read-only)
+   - Approve Slice (amount + purpose + payable-to)
+   - Reject Slice (with reason)
+   - Request More Info (moves slice to awaiting_info, notifies patient)
    - Print Guarantee Letter
    - Upload Signed Scan
    - Mark GL Redeemed
    - Mark GL Expired
-   - Reverse Approval
+   - Reverse Approval (preserves patient cooldown, releases budget)
    - Message Patient
+   - Message CRMC (the social worker who endorsed)
    - Manage Daily Slots
-   - View Application Logs
+   - View Application Logs / Funds
 
 Includes:
-   - Approve Application «includes» Check Cooldown
-   - Approve Application «includes» Check Budget Remaining
-   - Schedule Interview «includes» Generate Google Meet Link
+   - Approve Slice «includes» Check Cooldown (app-level + Hospital ID)
+   - Approve Slice «includes» Check Budget Remaining (transactional)
+   - Approve Slice «includes» Check Per-Applicant Cap
+   - Approve Slice «includes» Advance Parent Request (`amountCommitted` += approved;
+     status moves to `partially_funded` or `fully_funded`)
 ```
 
 ### 8.3 Agency Administrator Use Cases (additive)
@@ -738,9 +861,11 @@ Actor: Agency Administrator
 (inherits all Agency Coordinator use cases)
 
 Additional Use Cases:
-   - Set Budget Allocation
-   - Start New Fiscal Period
-   - Create Coordinator Account
+   - Set Budget Allocation (amount + period + fund source for COA defense)
+   - Set Per-Applicant Cap (PCSO ₱25K, DSWD tier limits, etc.)
+   - Start New Fiscal Period (zeros committed + disbursed, preserves allocation)
+   - View Open Top-Up Requests (from team coordinators)
+   - Create Coordinator Account (with Auth-rollback on Firestore failure)
    - Edit Coordinator Account
    - Deactivate / Reactivate Coordinator
    - Promote Coordinator to Admin
@@ -750,6 +875,8 @@ Additional Use Cases:
 Constraints:
    - Cannot demote self
    - Cannot demote the last remaining admin
+   - Budget allocation save uses dotted-field updates so concurrent
+     coordinator approvals cannot lose committed dollars through a write race
 ```
 
 ### 8.4 CRMC Administrator Use Cases
@@ -757,22 +884,32 @@ Constraints:
 ```
 Actor: CRMC Administrator (Staff or Super)
 
-Common Use Cases:
-   - Verify / Reject Document
+Common Use Cases (the CRMC-gateway workflow):
+   - Review Incoming Request (Requests workspace)
+   - Verify / Reject / Reset-to-Pending Document
+     (reject with reason → patient notification; reset for accident recovery)
+   - Schedule + Conduct Assessment Interview (single per request, CRMC-conducted)
+   - Record Interview Outcome (Completed / No-show / Reschedule)
+   - Complete Unified Intake Sheet (Case Assessment)
+   - Endorse Request to one or more Agencies (pure-selection;
+     amounts decided by agencies, not CRMC)
+   - Re-Endorse on Slice Rejection (cross-slice coverage warnings flag this)
+   - Reject / Close Request
+   - Message Patient (top-of-detail shortcut)
    - View Application Logs (all agencies)
    - Generate Report
    - Export CSV
    - View Patient Records
-   - Issue Patient Access Code
+   - Issue Patient Access Code (single + bulk)
    - Manage Document Types
    - Manage Assistance Types
    - Manage Agencies
-   - Disable Agency (with in-flight handling)
+   - Disable Agency (with in-flight handling: auto-reject or hold)
+   - Create / Edit Announcements (both staff_admin and super_admin)
 
 Super Admin Only:
-   - Manage Admin Accounts
+   - Manage Admin Accounts (with Auth-rollback on Firestore failure)
    - View Platform Audit Log
-   - Create / Edit Announcements
 ```
 
 ### 8.5 System Actor
@@ -781,10 +918,14 @@ Super Admin Only:
 Actor: System (automated)
 
 Use Cases:
-   - Send Interview Reminder (24 h, 1 h before)
-   - Reset Daily Slots (at midnight)
-   - Send Application Status Email (via Vercel /api/send-email)
-   - Send Announcement Reminder (24 h before)
+   - Send Interview Reminder 24 h + 1 h before (both legacy direct apps AND
+     new-model CRMC request interviews; per-device localStorage dedup)
+   - Reset Daily Slots at PH-local midnight (scheduled Cloud Function +
+     belt-and-suspenders lazy reset on CRMC Requests page on first visit)
+   - Send Application Status Email (via Vercel /api/send-email + Gmail SMTP)
+   - Send Announcement Reminder 24 h before window opens
+   - Compute Request Lifecycle Transitions from Slice Approvals
+     (request status flips to partially_funded / fully_funded as approvals land)
 ```
 
 ---
@@ -803,99 +944,99 @@ Each page is described in one paragraph: purpose, key features, and any mobile-v
 
 **Install — `/install`.** Detects the platform (iOS / Android / desktop) and presents context-specific install instructions. On Android Chrome, it triggers the captured `beforeinstallprompt` event. On iOS Safari, it walks through Share → Add to Home Screen. On desktop, it explains that the app is mobile-oriented. Shows an "already installed" confirmation if running standalone.
 
-### 9.2 Patient (9 pages)
+### 9.2 Patient (8 pages)
 
-**Dashboard — `/patient/dashboard`.** The post-login landing surface. Shows a personalized greeting, a contextual status line ("Get started by uploading your documents.", "Your application is under review.", "Interview scheduled.", etc.), the active application status card (color-coded by stage), a document-summary card, a five-step application-steps progress card, and a welcome card for first-time visitors. Status-card design surfaces the patient's current action — banking-app pattern. The Welcome card is dismissible per-user and auto-collapses once the patient has any progress.
+**Dashboard — `/patient/dashboard`.** The post-login landing surface. Shows a personalized greeting, a contextual status line driven by the active request or active slice ("Get started by uploading your documents.", "Your request is under review at CRMC.", "Coverage plan ready — confirm to proceed.", etc.), the active-request status card with a Status badge sourced from the shared `<StatusBadge>` component, a document-summary card with live `onSnapshot` counts (verified / pending), a five-step application-steps progress card, and a dismissible Welcome card for first-time visitors. Banner reminders for upcoming CRMC interviews fire at 24h and 1h before via per-device localStorage dedup; the sweep covers both the new-model CRMC interview (on requests) and legacy direct-app interviews.
 
-**Find Programs — `/patient/programs`.** Browse all enabled agencies with their live slot counts, processing times, assistance type tags, and Apply Now action. Includes search-by-name/type, a horizontal-scroll category chip row, and an inline application modal (rendered as a bottom sheet on mobile). The mobile card layout is compact (~120 px tall) versus the desktop layout (~280 px tall) to fit four cards per screen.
+**Find Programs — `/patient/programs`.** Browse all enabled agencies with their live slot counts, processing times, assistance type tags, and the agency's current promotion (announcement). Patient cannot apply directly from this page under the CRMC-gateway model — the page is informational; applications go through Request Assistance. A "Holding period active" banner shows when the patient has an in-flight request.
 
-**Screening — `/patient/screening`.** A guided pre-application questionnaire: the patient picks the categories of assistance they need (Hospital Bills, Medicines, etc.), and the system ranks programs by match score. Each match card shows a Top Pick badge for high-percentage matches, a slot bar, and Apply Now. Mobile compact variant mirrors Find Programs.
+**Request Assistance — `/patient/request`.** The 4-step guided wizard: (1) What you need — assistance type, amount, optional description. (2) Documents — billing statement + the standard required documents checklist; reusable verified docs (e.g., Valid ID) carry over without re-upload; live selfie via camera-only capture. (3) Representative (optional) — when filing on the patient's behalf, the rep supplies their own ID + live selfie + relationship + authorization checkbox. (4) Review + declaration + submit. After submission, this page becomes the patient's active-request view: shows funding progress, coverage plan once endorsed, per-slice compliance checklist, the Proceed gate to accept the coverage plan, and a Withdraw button (pre-endorsement only). Patient also sees the Household Intake Wizard link from here.
 
-**My Application — `/patient/status`.** Real-time application tracking. In Progress tab shows the active application with a stage timeline (Submitted → Document Verification → Under Review → Interview → Approved → GL Issued) and a status banner. Past Applications tab lists withdrawn/rejected/historical applications. For approved applications, the signed-GL panel renders a thumbnail (image) or PDF chip with download.
+**Household Intake Wizard — `/patient/request/:id/intake`.** Bilingual 5-step guided form (Household / Income / Expenses / Medical / Review). Auto-saves every 2 seconds and on every step navigation. Required-field validation jumps the patient back to the missing field with a red ring + scroll-into-view. Review step lists every section's values with per-section Edit links for one-tap return. The factual portion is the patient's responsibility; CRMC fills the assessment portion separately during the interview.
 
-**My Documents — `/patient/documents`.** Document upload and management. Tab-filtered list (All / Verified / Pending / Rejected) with summary tiles. Upload modal accepts JPG/PNG/PDF (PDF for ID documents, up to 700 KB for PDF or 4 MB image, with client-side image compression). Each document row shows status badge, file metadata, and delete (with verified-document warning).
+**My Application — `/patient/status`.** Real-time tracking. Top of the page shows the request lifecycle stepper (Submitted → Under Review → Assessment → Endorsed → Partially / Fully Funded). Below it, each endorsed agency slice has its own card with a 4-stage slice stepper (Endorsed → Funding Review → Approved → GL Issued) and a context-aware status banner (Confirm & Proceed when `endorsed`, View Details when `awaiting_info`, etc.). For approved slices, the signed-GL panel renders a thumbnail (image) or PDF chip with download.
 
-**Interviews — `/patient/interviews`.** Lists scheduled interviews with countdown chips (Today / Tomorrow / In N days). For upcoming interviews, the Join Google Meet button is the prominent CTA. Past interviews route to Messages with a hint to contact the agency. "What to expect in the interview" expandable panel sets expectations.
+**Interviews — `/patient/interviews`.** Lists the scheduled CRMC assessment interview (or any legacy agency interview still in-flight) with countdown chips (Today / Tomorrow / In N days), the conducting CRMC social worker's name, and an Add to Calendar (Google Calendar) link. The Join Google Meet button is the prominent CTA. Today's interview detection uses PH local time anchoring so the badge fires correctly even between UTC and PH midnight.
 
-**Messages — `/patient/messages`.** Conversations with hospital administrators and the patient's agency only (patient-to-patient is blocked). Empty state with "New Message" CTA; conversation rows show the other party, subject, last message, and timestamps. The compose flow restricts the recipient picker to admins and the patient's own agency.
+**Messages — `/patient/messages`.** Conversations with CRMC administrators and any agency endorsed on the patient's request. Patient-to-patient is blocked.
 
-**More — `/patient/more`.** Mobile-only dedicated page (replaces the slide-in drawer). Profile card at top, then grouped sections: Navigation (Find Programs / Interviews / User Guide), Account (Settings / Change Password), Settings (Language toggle / Privacy Notice / Help & Support / Report Problem), and Logout. On desktop, the same nav is rendered in the sidebar.
+**More — `/patient/more`.** Mobile-only dedicated page (replaces the slide-in drawer). Profile card at top, then grouped sections: Navigation, Account, Settings (Language toggle / Privacy Notice / Help & Support / Report Problem), and Logout.
 
-**User Guide — `/patient/guide`.** Long-form, collapsible FAQ covering registration, document upload, application, withdrawal, status meanings, interviews, GL download, contact, and password recovery. Bilingual.
+**User Guide — `/patient/guide`.** Long-form, collapsible FAQ covering registration, request submission, the intake wizard, the Proceed gate, the difference between request status and slice status, interview attendance, GL download, contact, and password recovery. Bilingual throughout.
 
 ### 9.3 Agency (16 pages)
 
-**Dashboard — `/agency/dashboard`.** At-a-glance operational dashboard for the agency: today's slot remaining, this period's budget remaining, pending applications count, and a 6-row quick action list. Cards link to Inbox, Slot Management, Online Interviews, Guarantee Letters, etc. Shows the conducting agency name and color.
+**Dashboard — `/agency/dashboard`.** At-a-glance operational dashboard: today's slot remaining, this period's budget remaining, count of slices "For Funding" + "Needs Info", recent applications list. Quick-action cards link to Inbox, Slot Management, Guarantee Letters, etc. Stale-period banner fires when the budget period clock is past its window.
 
-**Application Inbox — `/agency/inbox`.** The agency's primary work surface. Lists all applications submitted to this agency with status filters (Pending / Reviewing / Awaiting Info / Interview / Approved / Rejected). Each row shows patient name, app ID, days-waiting (color-coded amber at 3 days, red at 7), intake completion chip, and a Review button.
+**Funding Inbox — `/agency/inbox`.** The agency's primary work surface. Lists all slices endorsed to this agency (excluding pre-Proceed `endorsed` slices, which are still with the patient). Status filter chips (All / For Funding / Needs Info / Approved / Rejected) double as summary count tiles. Each row shows patient name, slice ID, days-waiting (color-coded amber at 3 days, red at 7 — null-safe), duplicate-patient flag (red border + chip if this patient has multiple in-flight slices), attached doc count, and an Open button. Empty state has a Clear filters CTA.
 
-**Application Detail — `/agency/applications/:id`.** Four-tab modal/page: Overview, Assessment, Documents, Timeline & Notes. The Overview tab includes the action footer (Start Review / Schedule Interview / Approve & Issue GL / Reject / Request More Info / Mark Outcome) gated by current status. Includes the Interview panel with Outcome buttons (Completed / No-Show / Reschedule) and an in-tab queue navigation showing N of M with prev/next arrows.
+**Application Detail — `/agency/applications/:id`.** Four-tab page: Overview, Assessment, Documents, Timeline & Notes. The Overview tab shows the Co-funding Picture (total bill, committed across all sibling slices, in-review, still-open), the action banner (Start Review / Approve & Issue GL / Request More Info / Reject / Print GL / Upload Signed Scan / Mark Redeemed / Reverse Approval) gated by current status, and a stepper. Documents tab is read-only (CRMC verifies); shows the document-type-name (e.g., "Barangay Certificate"), the `updatedAfterSubmission` chip on patient re-uploads, and a context-aware caption distinguishing CRMC-verified from pending-re-verification. Live `onSnapshot` on patient docs surfaces re-uploads without a page reload. Timeline derives from `status` directly (no stored `stages` field). Top-of-page nav offers prev/next within the current queue filter, "Message Patient", and (when the slice has an `endorsedById`) "Message CRMC".
 
-**Case Assessment — `/agency/applications/:id/intake`.** The structured assessment form, replacing the paper Unified Intake Sheet. Five sections (Family Composition, Income & Employment, Monthly Expenses, Medical Information, Assessment) with a left-side required-fields tracker. Auto-saves to Firestore with debounce. Includes a banner stating the form should be filled during or after the patient interview, not before. Print Form action generates a styled HTML printout matching CRMC's paper layout.
+**Case Assessment — `/agency/applications/:id/intake`.** Read-only view for the agency of the CRMC-completed Unified Intake Sheet. (The agency does not edit the assessment under the redesign; CRMC owns it.)
 
-**GL Viewer — `/agency/applications/:id/gl`.** Renders the Guarantee Letter exactly as it will print. Print and Save-as-PDF buttons open the browser print dialog (saving as PDF produces a true vector PDF). Upload Signed Scan modal accepts JPG/PNG/PDF. Read-only banner if the application is rejected.
+**GL Viewer — `/agency/applications/:id/gl`.** Renders the Guarantee Letter exactly as it will print. Print and Save-as-PDF buttons open the browser print dialog. Upload Signed Scan modal accepts JPG/PNG/PDF. Read-only banner if the application is rejected.
 
-**Online Interviews — `/agency/interviews`.** Lists all upcoming and past interviews for this agency. Each row shows patient, agency, date, time, and a Join Meet button. Reschedule and Outcome actions inline.
+**Messages — `/agency/messages`.** Two-pane layout (conversation list left, message thread right). Compose, Reply, Mark Read, and Delete supported. Both patient-initiated and CRMC-initiated conversations are visible.
 
-**Messages — `/agency/messages`.** Two-pane layout (conversation list left, message thread right). Compose, Reply, Mark Read, and Delete supported. Patient-initiated and admin-initiated conversations both visible.
+**Guarantee Letters — `/agency/generator`.** Lists all approved slices. Each row offers Open GL Viewer + Print + Upload Signed Scan. Status pill shows GL state (Issued / Redeemed / Expired). Same-tab navigation under the redesign (no popup-blocked new tabs).
 
-**Guarantee Letters — `/agency/generator`.** Lists all approved applications. Each row offers Open GL Viewer + Print + Upload Signed Scan. Status pill shows GL state (Issued / Redeemed / Expired).
-
-**Agency Profile — `/agency/program`.** View and (admin only) edit the agency's public profile: name, description, location, phone, processing time, assistance types, default signatory.
+**Agency Profile — `/agency/program`.** View and (agency_admin only) edit the agency's public profile: name, description, procedure, location, phone, processing time, assistance types, default signatory, requirements list.
 
 **Slot Management — `/agency/slots`.** Set the daily default slot capacity. View today's remaining and recent slot adjustments. Manual adjustment requires a reason and is audit-logged.
 
-**Application Logs — `/agency/logs`.** Historical view of all the agency's applications with filters and CSV export.
+**Application Logs — `/agency/logs`.** Historical view of all the agency's slices with filters (Endorsed / For Funding / Needs Info / Approved / Guarantee Letter / Rejected + legacy Pending / Interview) and CSV export. Filter tabs auto-hide when count is zero so a fully-migrated agency doesn't see permanent legacy tabs.
 
-**Funds — `/agency/funds`.** Read-only view of the agency's budget: allocated, committed, disbursed, remaining. Lists each approved GL with amount, payable-to, redemption status.
+**Funds — `/agency/funds`.** Read-only view of the agency's budget: allocated, committed, disbursed, remaining (deduced from the budget object, displayed with progress bar). Lists every budget event derived from each application's current state (approve / redeem / expire / reverse). Each event row exposes actor + payableTo + reason via a hover tooltip. Agency-admin viewers see a direct link to the audit log.
 
-**Budget Allocation — `/agency/allocation`.** Agency-admin only. Sets the period budget (monthly / quarterly / yearly), starts a new period (resets committed and disbursed), and records the fund source.
+**Budget Allocation — `/agency/allocation`.** Agency-admin only. Sets the period budget (monthly / quarterly / yearly), the per-applicant cap (PCSO ₱25K, etc.), and the fund source for COA audit defense. Starts a new period (resets committed + disbursed, preserves allocation). The save path uses dotted-field updates so concurrent coordinator approvals cannot lose committed dollars through a write race. Allocation history (last 10 changes) is shown inline with optimistic updates after Save.
 
-**Agency Audit Log — `/agency/audit`.** Agency-admin only. Lists all actions taken within this agency: approvals, rejections, slot adjustments, account changes, GL state transitions.
+**Agency Audit Log — `/agency/audit`.** Agency-admin only. Lists all actions taken within this agency: approvals, rejections, slot adjustments, account changes, GL state transitions, budget changes, period resets. Filter by date / category. Clear filters CTA on the empty state.
 
-**Team — `/agency/team`.** Agency-admin only. Manage coordinator accounts: create, edit, deactivate, send password reset, promote to admin, demote to coordinator. Guards: cannot demote self; cannot demote the last admin.
+**Team — `/agency/team`.** Agency-admin only. Manage coordinator accounts: create, edit, deactivate, send password reset, promote to admin, demote to coordinator. Guards: cannot demote self; cannot demote the last admin. Account creation rolls back the Firebase Auth user if Firestore setDoc fails (prevents orphan auth accounts). Promote/demote uses a busy-state guard so double-click can't fire twice.
 
-**Agency Guide — `/agency/guide`.** Long-form coordinator handbook covering inbox, intake/assessment, interview, approval, GL print/upload, redemption, expiry, reversal, slot management, budget, messaging, and FAQs.
+**Announcements — `/agency/announcements`.** Agency-admin only. Manage the agency's promotional announcements that appear on the patient Find Programs page.
+
+**Agency Guide — `/agency/guide`.** Long-form coordinator handbook covering the funding inbox, the agency's role under co-funding, approval, GL print/upload, redemption, expiry, reversal, slot management, budget, messaging, and FAQs.
 
 **Upload Certificates — `/agency/certificates`.** Auxiliary bulk-upload screen for legacy signed-scan migration (rarely used in normal operation).
 
-### 9.4 Admin (19 pages)
+### 9.4 Admin (17 pages)
 
-**Admin Dashboard — `/admin/dashboard`.** Platform-wide operational overview. Shows totals (registered patients, active applications, agencies enabled, pending document reviews), recent activity, and quick-action navigation to all admin surfaces.
+**Admin Dashboard — `/admin/dashboard`.** Platform-wide operational overview. Live counter tiles (patient count, agency count, open requests, pending docs, plus super-admin SLA tiles for approved / rejected / certificate backlog). All counters route through onSnapshot with error fallbacks that display "—" on permission failure rather than hanging the loading spinner forever. Stale-app detection covers both the new `awaiting_info` slice status and the legacy `pending` status.
 
-**Patients — `/admin/patients`.** Lists all registered patients with search by name / contact / email / Hospital ID. Detail panel shows their applications, document history, and Hospital ID. Deactivate / Delete account actions logged.
+**Requests — `/admin/requests`.** CRMC's primary work surface under the redesign. Lists all patient requests with filters (All / Needs Action / In Progress / Completed) and search. Each row shows the patient, the funding picture (needed / secured / progress bar) derived from slice-level `computeFunding()`, the pipeline stage chip, and any coverage warning ("X rejected — re-endorse", "Y awaiting patient acceptance"). The detail view is a guided workspace: ① Verify documents (with OCR advisory, Reset-to-Pending recovery, reject-with-reason ConfirmModal), ② Schedule + conduct interview + complete the Unified Intake Sheet, ③ Endorse to one or more agencies (pure-selection model with the optional CRMC note). Status sub-header includes a Message Patient shortcut and a Withdraw / Close / Reject path.
 
-**Hospital IDs (Access Codes) — `/admin/hospitalids`.** Issue and manage `CRMC-YYYY-NNNNN` Patient Access Codes. Bulk-create with a year-and-count picker. Manual reset (Available / Used) for edge cases.
+**Intake Sheet — `/admin/requests/:id/intake`.** The Unified Intake Sheet workspace for CRMC. Fillable sections for the assessment portion (the factual portion is patient-completed via the wizard at `/patient/request/:id/intake`). Print Form action generates a styled HTML printout matching CRMC's paper layout.
 
-**Agencies — `/admin/agencies`.** Lists all partner agencies with status badges and summary statistics. Search and CSV export. Click a row to open Agency Detail.
+**Patients — `/admin/patients`.** Lists all registered patients with search by name / contact / email / Hospital ID. Active-applicant query covers all in-flight statuses including `endorsed` (this was a bug pre-redesign — patients with endorsed slices were missing). Detail panel shows their requests, slices, document history, and Hospital ID. Deactivate / Delete account actions are audit-logged.
+
+**Hospital IDs (Access Codes) — `/admin/hospitalids`.** Issue and manage `CRMC-YYYY-NNNNN` Patient Access Codes. Bulk-create up to 100 codes per batch with sequential numbering (collision-safe — uses max existing number, not count). Atomic revoke and delete operations via `writeBatch` so the user profile and the code doc cannot drift into orphan state.
+
+**Agencies — `/admin/agencies`.** Lists all partner agencies with status badges and summary statistics. Search and filter. Click a row to open Agency Detail. Pristine empty state has an "Add First Agency" CTA.
 
 **Add Agency — `/admin/agencies/new`.** Super-admin only. Step-by-step creation: profile fields, color, requirements, assistance types, initial coordinator account.
 
-**Agency Detail — `/admin/agencies/:id`.** Full agency profile with edit, enable/disable (with in-flight application handling), team management (formerly /admin/coordinators, now inline here), budget read-only view, application statistics.
+**Agency Detail — `/admin/agencies/:id`.** Full agency profile with edit, enable / disable (with in-flight application handling: auto-reject or hold), team management inline (replaces the retired `/admin/coordinators`), budget read-only view, application statistics, and a delete action wrapped in a ConfirmModal. Disable cascade dialog explains both options before commit.
 
-**Admin Accounts — `/admin/accounts`.** Super-admin only. Manages CRMC system administrator accounts (super and staff levels). Agency staff are managed under each agency.
+**Admin Accounts — `/admin/accounts`.** Super-admin only. Manages CRMC system administrator accounts (super and staff levels). Agency staff are managed under their agency. Account creation rolls back the Firebase Auth user if Firestore setDoc fails. Empty state has an "Add First Account" CTA.
 
-**Document Types — `/admin/doctypes`.** Define document types: name, description, required flag, sort order.
+**Document Types — `/admin/doctypes`.** Define document types: name, description, required flag, reusable flag, sort order. Drag-to-reorder and duplicate-detection.
 
 **Assistance Types — `/admin/assistance`.** Define assistance categories.
 
-**App Logs — `/admin/logs`.** Cross-agency view of all applications. Status filters, search, CSV export.
+**App Logs — `/admin/logs`.** Cross-agency view of all applications. Status filters cover co-funding statuses (endorsed / reviewing / awaiting_info / approved / certificate / rejected) plus legacy (pending / interview). Search and CSV export. Filter tabs auto-hide when count is zero. Clear filters CTA on the empty state.
 
-**Document Review — `/admin/docreview`.** Queue of pending documents awaiting verification. Concurrent-review presence indicator. Filter by status and document type.
+**Messages — `/admin/messages`.** Same two-pane Messages component as agency, with admin-level conversation visibility. Compose modal restricted to patients and CRMC staff per the patient's relationships.
 
-**Document Review Detail — `/admin/docreview/:docId`.** Side-by-side document preview with metadata. Verify / Reject actions with rejection reason. Notifies the patient on outcome.
-
-**Messages — `/admin/messages`.** Same two-pane Messages component as agency, with admin-level conversation visibility.
-
-**Reports — `/admin/reports`.** Aggregate reports: applications per agency, per status, per period. Bug reports submitted via the Report a Problem dialog.
+**Reports — `/admin/reports`.** Aggregate reports: applications per agency, per status, per period. Bug reports submitted via the Report a Problem dialog. Empty-state CTA on filtered views.
 
 **Export — `/admin/export`.** CSV export hub: pick data type (applications, documents, users, audit log), preview, download.
 
-**Export Preview — `/admin/export/:type`.** Tabular preview of the exported data before download.
+**Export Preview — `/admin/export/:type`.** Tabular preview of the exported data before download. Date-range filter + search.
 
-**Audit Log — `/admin/auditlog`.** Super-admin only. Platform-wide immutable action history with filters by actor, action type, target, and date range.
+**Audit Log — `/admin/auditlog`.** Super-admin only. Platform-wide immutable action history with filters by actor, action type, target, and date range. Clear filters CTA on the empty state.
 
-**Announcements — `/admin/announcements`.** Super-admin only. Create system-wide banners (Information / Warning / Maintenance) with start and end times. 24-hour-before reminder is auto-sent to all users.
+**Announcements — `/admin/announcements`.** Super-admin or staff-admin. Create system-wide banners (Information / Warning / Maintenance) with start and end times. 24-hour-before reminder is auto-sent to all users.
 
 ### 9.5 Cross-Role
 
@@ -907,64 +1048,68 @@ Each page is described in one paragraph: purpose, key features, and any mobile-v
 
 These describe the user's perspective frame by frame. Each step is what the user does or sees; system responses are noted.
 
-### 10.1 Patient Application Workflow
+### 10.1 Patient End-to-End Workflow (CRMC-gateway model)
 
 1. Patient receives a Patient Access Code at the CRMC Medical Social Services office (offline, manual).
 2. Patient opens MAPA in their phone browser → taps "Download App" on Landing → installs the PWA via the Install page → opens the installed app from home screen.
-3. Patient taps Register → fills personal info, account credentials, and the Patient Access Code → submits.
-4. System verifies the access code, creates the user account and patient profile in one transaction, and signs the patient in.
-5. Patient lands on the Dashboard, which prompts "Get started by uploading your documents."
-6. Patient opens My Documents → uploads Valid ID, Barangay Certificate, Hospital Billing Statement, etc. Each upload is set to status `pending` and an in-app notification is sent to CRMC admins.
-7. (Asynchronously, hours to days) A CRMC administrator opens Document Review, opens each document, marks Verified or Rejected.
-8. Patient receives email + in-app notification: "Your Valid ID has been verified."
-9. Patient opens Find Programs (or takes the Screening questionnaire) → reviews available agencies → taps Apply Now on a chosen agency.
-10. Apply modal appears as a bottom sheet on mobile. Patient confirms document completeness, ticks declaration, taps Submit Application.
-11. System runs a transaction: creates the application, atomically decrements the agency's slot, and notifies the agency.
-12. Patient sees success screen with their Application ID and "What happens next" steps. They tap View My Application to land on Track Status.
-13. (Asynchronously) Agency reviews the application and schedules an interview. Patient receives notification with Date, Time, and Google Meet link.
-14. (24 h before) System sends reminder email + in-app notification.
-15. (1 h before) System sends second reminder.
-16. Patient joins the Google Meet from the My Interviews page (or Dashboard status card) at the scheduled time.
-17. (After interview) Coordinator records outcome, completes the Case Assessment, and approves the application. Patient receives "Application Approved" notification with approved amount and purpose.
-18. (Same day or next) Coordinator prints the Guarantee Letter, wet-signs it, scans it, uploads the scan. Patient receives "Your signed Guarantee Letter is ready" notification.
-19. Patient downloads the signed GL from My Application. They present it (digital or printed) at the provider (e.g., CRMC Billing Department, Mercury Drug Cotabato).
+3. Patient taps Register → fills personal info, account credentials (BARMM cascading location dropdowns), and the Patient Access Code → submits.
+4. System verifies the access code, creates the user account and claims the code in one transaction, signs the patient in.
+5. Patient lands on the Dashboard. Welcome card prompts "Get started by filing a request."
+6. Patient opens Request Assistance → 4-step wizard: (1) need + amount, (2) attach documents + take live selfie, (3) optional representative section, (4) review + declaration → submit.
+7. System creates the request as `submitted`, persists the document references on the request, notifies CRMC admins.
+8. Patient sees success screen with the Request ID + clipboard-copy button. Taps "View My Application" to land on TrackStatus.
+9. Patient opens the Household Intake Wizard from the active-request panel → 5-step bilingual form (household, income, expenses, medical, review). Auto-saves every 2 seconds + on every step navigation; the indicator shows "Saved · 2:45 PM".
+10. (Asynchronously, hours to days) A CRMC social worker opens the Requests workspace → verifies each document (rejection prompts a reason that flows back to the patient as notification + email; reset-to-pending is available for accident recovery).
+11. (Once all documents verified) CRMC schedules the assessment interview via the meet.new shortcut → patient receives notification with Date, Time, and Google Meet link.
+12. (24 h before) System sends reminder email + in-app notification (per-device localStorage dedup).
+13. (1 h before) Second reminder.
+14. Patient joins the Google Meet from `/patient/interviews` (or the Dashboard status card with inline Join Meet link) at the scheduled time. The interview details panel shows the CRMC social worker's name + Add to Calendar link.
+15. (After interview) CRMC records the outcome (Completed / No-show / Reschedule), finishes the Unified Intake Sheet assessment portion. Patient sees the request advance to `assessment` then to `endorsed` once CRMC endorses to one or more agencies.
+16. Patient sees the coverage plan in the active-request panel: each endorsed agency listed with its procedure, requirements, and the funding amount. Per-slice requirements compliance checklist surfaces any missing docs with a direct upload button.
+17. Patient taps the Proceed button → system atomically advances every endorsed slice from `endorsed` to `reviewing` in a single writeBatch and notifies every agency's coordinators.
+18. (Asynchronously) Each agency makes its funding decision. Patient sees per-slice status changes: Approved, GL Issued (with download), Needs Info (with View Details CTA), or Rejected. Cooldown rules layer correctly for sibling slices.
+19. Patient downloads each signed GL from My Application once the agency uploads the wet-signed scan. Presents the GL (digital or printed) at the provider (CRMC Billing Department, Mercury Drug Cotabato, etc.).
 20. (Off-system) Provider bills the agency directly for the guaranteed amount.
-21. (Asynchronously) Agency marks GL as Redeemed once the bill clears. Patient may receive a follow-up notification.
+21. (Asynchronously) Agency marks GL as Redeemed once the bill clears. Request status moves to `partially_funded` or `fully_funded` based on whether the bill is fully covered.
 
-### 10.2 Agency Coordinator Workflow (single application)
+**Withdrawal path (pre-endorsement only).** While the request is in `submitted`, `under_review`, or `assessment` (and no slices exist yet), the patient may tap "Withdraw Application" on the active-request panel → ConfirmModal → request marked `closed` with reason "Withdrawn by applicant" → CRMC notified. After CRMC endorses, withdrawal is not offered (agencies have committed time to review); the patient reaches out via Messages instead.
+
+### 10.2 Agency Coordinator Workflow — single slice under the CRMC-gateway model
 
 1. Coordinator signs in on a laptop browser. Lands on Agency Dashboard.
-2. Sees "12 pending applications" in inbox card. Taps to open Inbox.
-3. Inbox shows applications sorted by submission date. Days-waiting chips highlight 3-day amber and 7-day red rows.
-4. Coordinator clicks the oldest pending application. Detail modal opens on Overview tab.
-5. Reviews patient name, contact, hospital ID, attached documents. Switches to Documents tab to view each doc.
-6. Taps "Start Review" in the action footer. Status moves from `pending` to `reviewing`. Patient is notified.
-7. Coordinator taps Schedule Interview. Modal opens. Taps "Generate Meet" (opens meet.new in new tab → Google creates a meeting). Copies the URL, pastes into the Meet Link field. Enters date, time, conducting social worker name. Clicks Schedule Interview.
-8. System sets application status to `interview`, stores the meet link and date/time, and notifies the patient.
-9. (At the scheduled time) Coordinator joins the Google Meet, talks to the patient, learns family situation, income, expenses, medical history.
-10. (After interview) Coordinator returns to the application, opens the Assessment tab, clicks Open Assessment.
-11. Case Assessment page opens. Banner reminds: "Fill this during or after the patient interview." Coordinator fills Family Composition rows (add family member, name, relationship, age, occupation, monthly contribution), Income & Employment, Monthly Expenses, Medical Information, and Assessment narrative + recommendation + means-test category.
-12. Form auto-saves every 1.5 seconds. Required-fields tracker shows 6 of 6 done.
-13. Coordinator returns to the application Overview tab. Taps Mark Outcome on the Interview panel → Completed. Status moves to `reviewing` with outcome recorded.
-14. Taps Approve & Issue GL. Modal opens showing budget remaining. Enters approved amount, picks purposes (Hospital Bills, Medicines), enters provider name (e.g., "CRMC Billing Department"). Clicks Approve & Issue GL.
-15. System runs a transaction: updates application to `approved`, sets `glStatus: issued`, increments agency `budget.committed`, stamps Hospital ID `lastApprovedAt` (starts cooldown), and notifies the patient.
-16. Coordinator opens GL Viewer (Open Guarantee Letter button). Reviews the rendered GL on screen.
-17. Taps Print. Browser print dialog opens. Sends to physical printer.
-18. Coordinator wet-signs the printed page. Scans or photographs the signed page.
-19. Returns to GL Viewer. Taps Upload Signed Scan. Modal opens. Selects the PDF (or image) of the signed scan. Confirms upload.
-20. System stores the certificate document and notifies the patient: "Your signed Guarantee Letter is ready to download."
-21. (Days to weeks later, off-system) Provider bills the agency directly. Coordinator opens the Inbox → application → Mark GL Redeemed. Budget moves from committed → disbursed.
+2. Sees "5 For Funding · 2 Needs Info" in the inbox tile. Taps to open Funding Inbox.
+3. Inbox shows slices CRMC endorsed to this agency, already past the patient's Proceed gate. Days-waiting chips highlight 3-day amber and 7-day red rows. Duplicate-patient flag shows if the patient has multiple in-flight slices across agencies.
+4. Coordinator clicks the oldest For-Funding slice. ApplicationDetail opens with the Co-funding Picture at the top (Total bill ₱60,000 · Committed ₱20,000 · In review ₱20,000 · Still open ₱20,000) so the coordinator knows how much room there is.
+5. Switches to the Documents tab — all CRMC-verified, read-only. Notes that the Barangay Certificate is flagged "Updated after submission" (patient re-uploaded after CRMC verification — a chip highlights this; the caption qualifies "any re-uploaded files are pending re-verification").
+6. Switches to the Assessment tab — reads CRMC's completed Unified Intake Sheet + interview outcome + notes. Means-test category: Indigent.
+7. Returns to Overview. The action banner says "CRMC verified the documents and completed the assessment. Approve your share and issue the GL, request more info, or reject." Taps "Approve & Issue GL".
+8. ApproveModal opens. Pre-fills the agency's per-applicant cap (PCSO ₱25,000) as the hard ceiling. Shows budget remaining (₱150,000). Coordinator enters the approved amount (₱20,000), picks purposes (Hospital Bills, Medicines), enters payable-to ("CRMC Billing Department"), confirms approver name. Clicks "Approve & Issue GL".
+9. System runs cooldown checks (per-app + Hospital ID), then a transaction: updates the slice to `approved` with `glStatus: issued`, increments the agency's `budget.committed`, advances the parent request's `amountCommitted` (now ₱40,000 of ₱60,000 secured → status flips to `partially_funded`), stamps Hospital ID `lastApprovedAt` (starts cross-account cooldown), and notifies the patient + the CRMC social worker who endorsed.
+10. Coordinator opens the GL Viewer (Print Guarantee Letter button → opens in same tab). Reviews the rendered GL.
+11. Taps Print. Browser print dialog opens. Sends to physical printer.
+12. Coordinator wet-signs the printed page. Scans or photographs the signed page.
+13. Returns to GL Viewer. Taps Upload Signed Scan. Modal opens. Selects the PDF or image of the signed scan. Confirms upload.
+14. System stores the certificate document and notifies the patient: "Your signed Guarantee Letter is ready to download."
+15. (Days to weeks later, off-system) Provider bills the agency directly. Coordinator opens the slice → Mark GL Redeemed. Budget moves from committed → disbursed; agency Funds page logs the event with the actor + payable-to surfaced in the row tooltip.
 
-### 10.3 CRMC Admin — Document Review Workflow
+**Request-More-Info path (when the agency needs something from the patient before deciding).** Coordinator taps "Request More Info" → RequestInfoModal → enters a templated or free-text message → slice moves to `awaiting_info` → patient gets notification + email + "Needs Info" banner on TrackStatus with View Details CTA → patient uploads the requested doc / replies via Messages → coordinator taps "Resume Review" → slice flips back to `reviewing`.
+
+**Rejection path.** Coordinator taps "Reject" → RejectModal → picks a template reason or writes free-text → slice marked `rejected` with reason. CRMC sees the cross-slice coverage warning "1 rejected · re-endorse" on the Requests list and can endorse to another agency to cover the balance.
+
+### 10.3 CRMC Admin — Request Verification + Endorsement Workflow
 
 1. Admin signs in on a laptop. Lands on Admin Dashboard.
-2. Sees "Pending Documents: 7" tile. Taps to open Document Review queue.
-3. Queue lists pending documents oldest-first. Concurrent-review indicator shows "John is reviewing" if another admin is already on a document.
-4. Admin clicks a document row. Detail page opens with the document image / PDF embedded.
-5. Admin reads the document. Decides Verified or Rejected.
-6. If Verified: clicks Verify. System sets status to `verified`, notifies the patient.
-7. If Rejected: clicks Reject. Modal prompts for reason (template or free text). Clicks Confirm. System sets status to `rejected` with reason, notifies the patient.
-8. Admin returns to the queue. Next document loads automatically (queue navigation).
+2. Sees "Open requests: 7" tile (with cross-slice coverage warnings like "X awaiting patient acceptance"). Taps to open Requests workspace.
+3. Requests list shows the queue with stage chips and the per-request funding picture (needed / secured / progress bar derived from sibling slices, not from the cached `amountCommitted` field — fresh source of truth).
+4. Admin clicks a request. Detail opens as a guided stepper.
+5. **Step ① Verify documents.** Each attached doc is shown with its current status. For ID-type docs, the OCR advisory line is surfaced ("✓ OCR: ID name matches the account" or "⚠ OCR: name not auto-matched — verify manually"). Admin taps Verify on each doc, or Reject (opens ConfirmModal with reason — reason flows to patient notification + email + persists to `documents.rejectionReason`). Reset-to-Pending available on verified or rejected docs for accident recovery. Each verification stamps `reviewedBy` + `reviewedAt` shown inline on the doc row.
+6. **Step ② Interview + Assessment.** Once all docs are verified, "Schedule Interview" unlocks. Admin opens InterviewModal, taps "Generate Meet" (opens meet.new), copies the URL, fills date / time / conducting social worker. Submit advances the request to `assessment` and notifies the patient.
+7. (At the scheduled time) Admin joins the Google Meet, conducts the assessment.
+8. (After interview) Admin records the outcome (Completed / No-show / Reschedule — Reschedule re-opens InterviewModal). Then opens the Unified Intake Sheet workspace and completes the assessment portion (the patient already filled the factual portion via the wizard).
+9. **Step ③ Endorse.** Once the documents are verified, the intake is complete, AND the interview outcome is recorded, the "Endorse" button unlocks. Admin opens EndorseModal. Shows the funding summary (Needed / Secured / Endorsable). Lists eligible agencies sorted by best-fit (assistance-type match first, then alphabetical) with per-agency context (open slots, budget remaining, per-applicant cap). Pure-selection: admin ticks one or more agencies (no peso amounts at endorsement). Optionally attaches a CRMC note that surfaces on each agency's Approve modal. Confirms.
+10. System runs a transaction: creates one application "slice" per selected agency, atomically decrements each agency's daily slot, stamps `documents.agencyIds[]` for read-scoped access, sets the request status to `endorsed`, and notifies the patient (single notification covering all endorsed agencies).
+11. Patient sees the coverage plan in TrackStatus, hits Proceed when ready → each slice advances independently from then on. CRMC sees coverage warnings on the Requests list if any slice rejects (and the balance is not yet covered) or stalls in `endorsed` for > 3 days (patient hasn't Proceeded).
+12. If a slice rejects, admin opens the request again and re-endorses to a different agency. The earlier endorsement remains in the audit trail.
 
 ### 10.4 Agency Disable Workflow
 
@@ -977,11 +1122,13 @@ These describe the user's perspective frame by frame. Each step is what the user
 
 ### 10.5 Patient Withdrawal Workflow
 
-1. Patient regrets applying (chose wrong agency, found other assistance, etc.). Opens My Application.
-2. Finds the active application in the In Progress tab. Application is in `pending` status (this is the only status that allows withdrawal).
-3. Scrolls to the bottom of the application card. Taps Withdraw Application.
-4. Confirmation modal: "Withdraw this application? This cannot be undone." Patient confirms.
-5. System sets status to `rejected` with reason "Withdrawn by patient". If submitted today, restores the agency's slot. Notifies the agency.
+1. Patient regrets filing (found other assistance, made a mistake, etc.). Opens Request Assistance (the active-request panel).
+2. The "Withdraw Application" button is offered only when the request is in `submitted`, `under_review`, or `assessment` AND no slices exist yet (CLAUDE.md: "Patient can withdraw before endorsement").
+3. Patient taps Withdraw Application → ConfirmModal: "Withdraw this application? This cannot be undone."
+4. Patient confirms → system marks the request `closed` with reason "Withdrawn by applicant." → CRMC admins are notified so the row clears from their action queue.
+5. Patient is free to submit a new request anytime.
+
+Once CRMC has endorsed (slices exist with agencies committed to review), withdrawal is no longer offered. The patient instead Messages CRMC or the relevant agency if circumstances change.
 
 ---
 
@@ -999,36 +1146,55 @@ The system has been developed and tested with a **manual, scenario-based approac
 
 **Authentication and Identity**
 
-- Register with a valid Patient Access Code; confirm account is created.
+- Register with a valid Patient Access Code (cascading BARMM location dropdowns); confirm account is created.
 - Register with an invalid / used Patient Access Code; confirm rejection with helpful message.
 - Register with all required fields missing; confirm individual validation errors.
-- Log in as each demo role (patient, agency coordinator, agency admin, staff admin, super admin); confirm correct dashboard.
+- Log in as each demo role (patient, agency coordinator, agency_admin, staff_admin, super_admin); confirm correct dashboard.
 - Forgot password flow; confirm reset email is received.
 
-**Patient End-to-End**
+**Patient End-to-End (CRMC-gateway model)**
 
-- Register, upload all required documents, apply to an agency, see slot decrement.
-- Wait for document verification by admin; confirm in-app + email notification received.
+- Register, file a request via the 4-step wizard (need + amount + documents + live selfie + optional representative + review + declaration), see Request ID on success screen with clipboard-copy.
+- Complete the Household Intake Wizard 5-step bilingual form, confirm auto-save indicator shows "Saved · HH:MM" after 2-second debounce and on every step navigation.
+- Validate a required field is missing → confirm the wizard jumps to the step + scrolls the missing field into view + applies a red ring.
+- Wait for CRMC document verification; confirm in-app + email notification with the rejection reason if applicable.
+- Receive the CRMC interview invite; confirm 24h + 1h reminders fire (per-device localStorage dedup means a single device doesn't get duplicate reminders on dashboard re-open).
+- Confirm "Add to Calendar" link generates a working Google Calendar event with the PH-anchored date/time and the Meet link in details.
+- Verify "Today" badge on the Interviews page fires correctly at all PH local times (including 5 AM PH when UTC is still yesterday).
+- Receive coverage plan + tap Proceed → confirm all endorsed slices advance to `reviewing` in a single batch.
+- Withdraw a request before endorsement → confirm request marked `closed` and CRMC notified.
+- Confirm Withdraw button is NOT offered after endorsement (slices exist).
+- Receive and download a signed Guarantee Letter (image and PDF) per approving agency.
 - Confirm bilingual toggle works on every patient page.
-- Withdraw a pending application; confirm slot is restored same-day.
-- Receive and download a signed Guarantee Letter (image and PDF).
 
-**Agency End-to-End**
+**Agency End-to-End (slice-focused under the redesign)**
 
-- Schedule interview via meet.new shortcut; confirm patient gets the link.
-- Complete Case Assessment with all required fields; confirm Approve button unlocks.
+- Confirm Funding Inbox excludes pre-Proceed `endorsed` slices (they're with the patient until Proceed).
+- Open a `reviewing` slice → confirm Documents tab is read-only (CRMC-verified) → confirm Co-funding Picture shows the sibling slices and total funding progress.
+- Approve a slice; confirm transaction (a) increments agency `budget.committed`, (b) advances parent request's `amountCommitted`, (c) flips parent request to `partially_funded` or `fully_funded`, (d) stamps Hospital ID `lastApprovedAt` (starts cross-account cooldown).
 - Approve with amount exceeding budget; confirm validation blocks.
-- Approve same patient twice within 30 days; confirm cooldown blocks at the second approval.
+- Approve with amount exceeding `maxPerApplicant`; confirm validation blocks.
+- Approve same patient twice within 30 days at DIFFERENT requests; confirm cooldown blocks at the second approval.
+- Approve same patient at sibling slices of the SAME request; confirm cooldown intentionally allows this (co-funding exemption).
+- Request More Info → confirm slice moves to `awaiting_info`, patient sees the message in TrackStatus banner with View Details CTA, patient docs re-upload via `onSnapshot` reflects live in the agency view.
+- Reject slice → confirm CRMC sees the cross-slice coverage warning "1 rejected · re-endorse" on the Requests list.
 - Approve, print GL, upload PDF signed scan; confirm patient can download.
-- Mark GL Redeemed; confirm budget moves committed → disbursed.
-- Reverse approval; confirm cooldown preserved and budget released.
+- Mark GL Redeemed; confirm budget moves committed → disbursed; confirm Funds event tooltip surfaces actor + payable-to.
+- Reverse approval; confirm cooldown preserved (Hospital ID cooldownUntilAt set) and budget released.
+- Agency Allocation save while a coordinator is approving concurrently → confirm dotted-field update doesn't overwrite the increment.
 
-**Admin**
+**CRMC Admin (Requests Workspace)**
 
-- Verify document; confirm patient is notified.
-- Reject document with reason; confirm patient sees the reason.
-- Disable agency with in-flight applications; confirm cascade handling.
-- Issue Patient Access Codes in bulk; confirm new codes appear in registration verifier.
+- Verify document → confirm patient is notified.
+- Reject document with reason → confirm reason flows to patient notification AND persists on the document for audit.
+- Reset document to Pending → confirm reviewer trail is cleared, no patient notification (accident recovery only).
+- Schedule the assessment interview via meet.new shortcut; confirm patient gets the link.
+- Complete the Unified Intake Sheet during/after the interview; confirm patient's wizard-filled factual portion is preserved (not clobbered).
+- Endorse a request to multiple agencies via the pure-selection model → confirm transaction creates N slice docs, decrements N slots, stamps `documents.agencyIds[]`, notifies the patient.
+- Re-endorse after a slice rejection → confirm new slice is created, original rejection preserved in audit trail.
+- Disable agency with in-flight applications; confirm cascade handling (auto-reject with no cooldown, or hold).
+- Issue Patient Access Codes in bulk (up to 100 per batch); confirm new codes appear in registration verifier; confirm sequential numbering uses max existing + 1 (no collisions even after deletes).
+- Revoke + Delete a Hospital ID → confirm atomic `writeBatch` so users.hospitalId and the code doc never drift into orphan state.
 
 **Cross-Cutting**
 
@@ -1037,21 +1203,54 @@ The system has been developed and tested with a **manual, scenario-based approac
 - PWA install on Android Chrome (custom prompt fires) and iOS Safari (manual flow).
 - Topbar collapses to patient-friendly layout in standalone mode for patients.
 - Non-patient roles signing in to installed PWA are bounced with a friendly explanation.
+- Create admin account with bad Firestore rules → confirm Auth-user rollback fires (no orphan auth account).
+- All onSnapshot listeners with a permission failure → confirm the loading spinner clears + console.error fires (never hangs silently).
 
-### 11.3 Known Issues and Limitations
+### 11.3 Read-Pass Review Series (post-redesign quality pass)
+
+After the CRMC-gateway redesign stabilized, each major page was read end-to-end and reviewed for correctness, UX, and consistency. The full series produced ~30 commits and captured the bugs catalogued in §11.4 below. Pages covered:
+
+- Patient: TrackStatus, RequestAssistance, IntakeWizard, Interviews, Dashboard
+- Agency: Inbox, ApplicationDetail, Funds, Team, Allocation
+- Admin: Requests, AgencyDetail, HospitalIDs, Accounts, Reports
+
+The series also delivered cross-cutting cleanups: 20 onSnapshot error-callback fixes; 124 orphan i18n keys removed; `STATUS_CONFIG` consolidation across 6 pages (single source via `<StatusBadge>` component); empty-state CTAs across 14 filterable lists and 4 pristine-empty pages with creator authority; touch-target floor enforcement on all patient CTAs.
+
+### 11.4 Real Correctness Bugs Caught in the Read-Pass Series
+
+| # | Bug | Impact | Fix |
+|---|-----|--------|-----|
+| 1 | admin/Patients active-applicant query missing `endorsed` | Patients with endorsed slices were invisible in the admin list | Added to query |
+| 2 | 20 onSnapshot listeners had no error callback | Loading spinners would hang forever on permission errors | Sweep added handlers + setLoading(false) |
+| 3 | Interview reminder dedup writes silently denied by Firestore rules | Patients spammed with the same 24h/1h reminder on every dashboard mount | Switched dedup to per-device localStorage |
+| 4 | New-model CRMC interviews never reminded | Patients got no 24h/1h reminders for the most important interview | Added parallel sweep over requests |
+| 5 | agency/Allocation budget save race | Concurrent coordinator approval's committed-increment could be lost (silent money loss) | Switched to dotted-field updates so committed/disbursed are untouchable from the save path |
+| 6 | admin/HospitalIDs revoke/delete non-atomic | Orphan state possible between code doc and user profile | `writeBatch` for atomicity |
+| 7 | Orphan Firebase Auth user on Firestore setDoc failure | Account creation could leave a ghost auth user permanently registered | `deleteUser` rollback in both admin/Accounts + agency/Team paths |
+| 8 | patient/Interviews `todayStr` used UTC, not PH local | "Today" interview mis-classified for 8 hours every PH morning | Switched to `toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })` |
+| 9 | agency/ApplicationDetail `days` calc crashed on legacy data | `submittedAt.toDate()` failed if value was JS Date or ISO string | Switched to defensive `tsToDate()` |
+| 10 | agency/ApplicationDetail approve path had unreachable `endorsing` branch | Dead code | Simplified |
+| 11 | patient/RequestAssistance pctBill could render NaN% | `amt / amountNeeded` when amt was undefined | Guarded with `Number(amt) \|\| 0` |
+| 12 | agency/ApplicationDetail patientDocs frozen at one-shot fetch | Patient's awaiting-info re-uploads invisible to agency without refresh | Switched to onSnapshot |
+| 13 | agency/Inbox `days >= N` treated null as fresh | Apps with no submittedAt silently classified gray | Explicit null branch |
+| 14 | admin/Requests funding-column reads stale `r.amountCommitted` | List could show out-of-date funding figures vs detail view | Use slice-derived `computeFunding()` everywhere |
+| 15 | admin/Requests allSlices listener loaded entire collection | Scales linearly with system age | Scoped query to active statuses + rejected |
+| 16 | admin/Requests endorsement wrote dead `sliceStages()` | 6-stage scaffold written to slice docs but Timeline now derived from status | Dropped writes; deleted helper |
+
+### 11.5 Known Issues and Limitations
 
 | Severity | Item | Status / Plan |
 |----------|------|---------------|
-| Low | `DocReviewDetail.jsx:477` operator precedence bug shows "NaN" when document status is undefined during initial load race | Cosmetic; fix is a one-line change documented in audit |
 | Low | Console.log statements in production code | Vite production config does not strip console output (`drop: ['console']` recommended) |
-| Medium | Bundle size ~1.1 MB raw / 306 KB gzipped for the shared chunk | Largely Firebase SDK; acceptable for thesis pilot |
-| Medium | Some icon-only buttons missing `aria-label` | Identified during audit; gradual fix |
-| Low | Some catch blocks log to console but don't surface the underlying error in toasts | Identified and progressively fixed (apply, approve flows already done) |
+| Medium | Bundle size ~1.2 MB raw / ~317 KB gzipped for the shared chunk | Largely Firebase SDK; acceptable for thesis pilot |
+| Low | Some icon-only buttons missing `aria-label` | Identified during audit; gradually fixed |
 | Acknowledged | Email notifications require Vercel env vars (SMTP_USER, SMTP_PASS, SMTP_FROM) to be set in the deployment | One-time setup; documented in DEPLOY.md |
-| Acknowledged | Signed GL PDF upload capped at 700 KB raw (Firestore 1 MiB document limit) | Documented; full Firebase Storage migration is the production path |
-| Acknowledged | No automated tests | Outside scope; manual testing on every change |
+| Acknowledged | Signed GL PDF upload capped at ~700 KB raw (Firestore 1 MiB document limit, base64 expansion) | Documented; full Firebase Storage migration is the production path (currently blocked by Firebase Spark plan constraints on post-Oct-2024 projects) |
+| Acknowledged | No automated tests | Outside scope; manual testing + read-pass review series on every change |
+| Acknowledged | GL_STATUS_CONFIG not yet extracted | Two render sites use different visual treatments (badge vs text); would need a label-only helper rather than a full canonical config. Documented; not blocking |
+| Acknowledged | Bulk-verify / keyboard shortcuts on admin/Requests | Operator throughput feature; design call needed on which actions to bulk before implementing |
 
-### 11.4 Performance Observations
+### 11.6 Performance Observations
 
 | Metric | Measured | Target |
 |--------|----------|--------|
@@ -1069,31 +1268,43 @@ The system has been developed and tested with a **manual, scenario-based approac
 
 1. **Free-tier infrastructure assumptions.** The system runs on Firebase Spark plan (free) and Vercel Hobby plan (free). Both have rate limits that would be hit at large scale (>50,000 reads/day, etc.). For production deployment with CRMC's full patient volume, upgrade to Firebase Blaze and Vercel Pro would be required.
 
-2. **No Firebase Cloud Functions.** Email delivery uses a Vercel serverless route as a workaround. If Blaze plan is acquired, migration to Firebase Cloud Functions (or the official Trigger Email from Firestore extension) would simplify ops.
+2. **No Firebase Cloud Functions.** Email delivery uses a Vercel serverless route as a workaround. The scheduled daily slot reset has a Cloud Function ready (gated on Blaze) but currently relies on a belt-and-suspenders lazy reset on the CRMC Requests page on first visit of the day. If Blaze plan is acquired, migration to Firebase Cloud Functions (and the official Trigger Email from Firestore extension) would simplify ops.
 
-3. **No automated tests.** Manual testing is sufficient for thesis pilot but should be supplemented by Cypress (E2E) and Vitest (unit) before production.
+3. **No automated tests.** Manual testing + the read-pass review series is sufficient for thesis pilot but should be supplemented by Cypress (E2E) and Vitest (unit) before production. The read-pass series caught 16 real correctness bugs that an automated suite would have caught earlier.
 
-4. **Single-pilot scope.** The system is hardcoded for one hospital (CRMC). A multi-hospital deployment would require restructuring the `users.hospitalId` namespace and adding a `hospitals` collection.
+4. **Single-pilot scope.** The system is hardcoded for one hospital (CRMC). A multi-hospital deployment would require restructuring the `users.hospitalId` namespace, the Patient Access Code format, and adding a `hospitals` collection.
 
-5. **No SMS notification fallback.** Patients without consistent email access miss notifications. SMS via a service like Twilio would close this gap.
+5. **No SMS notification fallback.** Patients without consistent email access miss notifications. SMS via a service like Twilio would close this gap (cost-prohibitive for thesis pilot per CLAUDE.md).
 
-6. **Document storage in Firestore.** Documents and signed GL scans are stored as base64 in Firestore. This is convenient but inefficient at scale. Migration to Firebase Storage (with signed URLs) is the recommended long-term path.
+6. **Document storage in Firestore.** Documents and signed GL scans are stored as base64 in Firestore. This is convenient but inefficient at scale; the base64 expansion caps PDF GL scans at ~700 KB raw. Migration to Firebase Storage with signed URLs is the recommended long-term path, blocked currently by Spark-plan restrictions on Storage for post-Oct-2024 projects.
+
+7. **Mobile experience is responsive-web, not a native app.** A separate React Native or Flutter mobile app is planned (sharing the same Firebase backend) as the primary patient experience. The current PWA serves the responsive-web fallback.
+
+8. **Interview reminder is best-effort, client-side.** The 24h + 1h reminders fire only when the patient opens the dashboard. A scheduled push (Firebase Cloud Messaging on Blaze) would deliver reliably regardless of patient device state.
+
+9. **Cooldown system is per-Hospital-ID + per-application.** It survives account churn (delete-and-re-register) but doesn't catch a determined attacker creating multiple Hospital IDs. The intended mitigation is operational (CRMC issues codes in person after social-work intake).
 
 ### 12.2 Future Work
 
-- **PhilSys integration.** Once a public API is available, the manual social-worker ID verification could be supplemented by a national-ID check.
+- **PhilSys integration.** Once a public API is available, the manual social-worker ID verification could be supplemented by a national-ID check (currently OCR-assisted, social-worker-confirmed per CLAUDE.md).
 
-- **Push notifications via Firebase Cloud Messaging.** Free, supports both web and native, would deliver real-time updates without email-spam risk.
+- **Push notifications via Firebase Cloud Messaging.** Free, supports both web and native, would deliver real-time updates without email-spam risk and would make interview reminders reliable.
 
-- **Integration with IHOMIS hospital system.** Real-time billing data exchange would close the loop on GL redemption (currently manually marked).
+- **Integration with IHOMIS hospital system.** Real-time billing data exchange would close the loop on GL redemption (currently manually marked by the coordinator after the provider bills back).
 
-- **Donor portal.** A public-facing dashboard showing aggregate assistance disbursed could enable corporate/private donor matching.
+- **Donor portal.** A public-facing dashboard showing aggregate assistance disbursed could enable corporate / private donor matching.
 
 - **Multi-language expansion.** Adding Maguindanaon and Iranun would cover more of the BARMM constituent base.
 
-- **Offline-first patient applications.** Currently the app shell loads offline but writes require connectivity. Firestore's local persistence layer would allow patients on intermittent 4G to draft applications offline.
+- **Offline-first patient applications.** Currently the app shell loads offline but writes require connectivity. Firestore's local persistence layer would allow patients on intermittent 4G to draft requests offline.
 
 - **Cross-hospital network.** Adapting the schema to support multiple partner hospitals (BARMM-wide, eventually nationwide) is the largest architectural change but unlocks the most impact.
+
+- **Operator throughput features on admin/Requests.** Bulk-verify, bulk-reject, and keyboard shortcuts (V to verify, R to reject, J/K to navigate the doc queue) for high-volume CRMC days. Design call needed on which actions to bulk and how to surface bulk-error handling.
+
+- **GL_STATUS_CONFIG consolidation.** The agency/ApplicationDetail GL status pill and the agency/Inbox text indicator use different visual treatments. Extracting a shared label helper (keeping the visual treatments per-context) would centralize the "expired vs issued" decision currently duplicated.
+
+- **Live `allSlices` query bound.** admin/Requests' cross-slice coverage warnings currently load every slice in the system (scoped to active + rejected statuses). At larger scale, denormalizing a `coverageStatus` field onto the parent request would unbind this listener entirely.
 
 ---
 
@@ -1101,22 +1312,35 @@ The system has been developed and tested with a **manual, scenario-based approac
 
 | Term | Definition |
 |------|------------|
-| **Application** | A formal request from a patient to a single agency for assistance, with associated documents and lifecycle stages. |
-| **Application Lifecycle** | The state machine: pending → reviewing → (awaiting_info ↔ reviewing) → interview → approved → certificate (or rejected at any point). |
-| **Assistance Type** | A category of help the system supports (Hospital Bills, Medicines, Chemotherapy, etc.), defined by CRMC admin. |
-| **Case Assessment** | The structured form coordinators complete during/after an interview, digitally equivalent to CRMC's paper "Unified Intake Sheet + Social Case Study". |
-| **Committed Budget** | The total of approved-but-not-yet-redeemed GL amounts; subtracted from an agency's allocation when computing remaining budget. |
-| **Cooldown** | A 30-day window after a successful approval during which a patient cannot be re-approved by any agency. |
+| **Application** (a.k.a. Slice) | A per-agency funding slice of a request. Under the CRMC-gateway model, applications are created by CRMC at endorsement, one per selected agency, as children of the parent request. Each agency makes its own funding decision on its slice. |
+| **Application Lifecycle (Slice)** | endorsed → reviewing (post-Proceed) → (awaiting_info ↔ reviewing) → approved → certificate (or rejected at any point). |
+| **Assistance Type** | A category of help the system supports (Hospital Bills, Medicines, Chemotherapy, Laboratory Tests, Surgery, Emergency Medical Assistance, Burial Assistance, etc.), defined by CRMC admin. |
+| **Case Assessment** | The structured Unified Intake Sheet completed jointly by the patient (factual portion, via guided wizard) and the CRMC social worker (assessment portion, during the interview). Digitally equivalent to CRMC's paper "Unified Intake Sheet + Social Case Study". |
+| **Co-funding Model** | The CRMC-gateway approach: one patient request → CRMC verifies + endorses → multiple agencies fund the bill in parallel as slices, each issuing its own GL. The patient sees a unified coverage plan instead of running parallel applications. |
+| **Committed Budget** | The total of approved-but-not-yet-redeemed GL amounts; subtracted from an agency's allocation when computing remaining budget. Owned by the approve / redeem / reverse code paths only — never written by the Allocation save. |
+| **Cooldown** | A 30-day window after a successful approval during which a patient cannot be re-approved by any agency, with an explicit exception for sibling slices of the same co-funding request. Stored both on the application (per-app) and on the Hospital ID (cross-agency, survives account churn). |
+| **Coverage Plan** | The set of agencies CRMC endorsed the patient's request to, plus each agency's procedure and requirements, shown on the patient's TrackStatus + Request Assistance views. The patient confirms via Proceed to advance each slice into agency review. |
 | **Disbursed Budget** | The total of GL amounts the agency has finalized (Redeemed). |
-| **Guarantee Letter (GL)** | The official document issued to an approved patient, stating the guaranteed amount, purpose, and provider that will be billed. Valid for 30 days. |
+| **Endorsement** | CRMC's act of routing a verified, assessed request to one or more partner agencies for funding. Pure-selection: CRMC picks WHO, not HOW MUCH; each agency decides its own amount. |
+| **Endorsable Headroom** | `amountNeeded − committed − outstanding`. The peso amount CRMC may still endorse without breaching the bill cap; surfaced on the EndorseModal funding summary. |
+| **Funding Review** | The agency-side lifecycle phase from `endorsed → reviewing` (after the patient hits Proceed) until the agency approves or rejects. Visible to coordinators as the "For Funding" status. |
+| **Guarantee Letter (GL)** | The official document issued to an approved patient, stating the guaranteed amount, purpose, and provider that will be billed. Valid for 30 days. Each approving agency issues its own GL for its committed slice. |
 | **GL Status** | Issued / Redeemed / Expired. Tracks the lifecycle of an issued GL. |
-| **Hospital ID** | CRMC's Patient Access Code, format `CRMC-YYYY-NNNNN`. Issued offline by CRMC Medical Social Services. |
-| **In-Flight Application** | An application not yet in a terminal state (i.e., not approved, certificate, or rejected). |
-| **Means-Test Category** | The social worker's classification of the patient's financial situation: Indigent / Marginalized / Low Income / Above Threshold. |
+| **Hospital ID** | CRMC's Patient Access Code, format `CRMC-YYYY-NNNNN`. Issued offline by CRMC Medical Social Services. Also the anchor for cross-account cooldown (survives delete-and-re-register). |
+| **In-Flight Request** | A request not yet in a terminal state (i.e., not `fully_funded`, `closed`, or `rejected`). |
+| **In-Flight Slice** | A slice not yet in a terminal state (not `approved`-and-paid, `certificate`-and-redeemed, or `rejected`). |
+| **Means-Test Category** | The social worker's classification of the patient's financial situation: Indigent / Marginalized / Low Income / Above Threshold. Recorded on the Unified Intake Sheet. |
+| **Per-Applicant Cap** | Agency-set ceiling on how much a single case may receive (PCSO ₱25K, DSWD tier limits, etc.). CRMC sees a soft warning at endorsement; the agency's Approve modal hard-blocks any approval above this cap. |
+| **Proceed Gate** | The patient action that accepts the coverage plan and advances every endorsed slice from `endorsed` to `reviewing` in a single atomic writeBatch. Until the patient Proceeds, agencies see nothing in their inbox. |
 | **PWA** | Progressive Web Application — a web app installable to the device home screen with offline shell and app-like UX. |
-| **Reviewing Status** | The interim status after Start Review and before the interview is scheduled. The Assessment is filled here. |
-| **Slot** | A daily-capped count of new applications an agency can receive per day. Reset to default at midnight. |
-| **Stage** | A milestone in an application's lifecycle, rendered as a step in the patient's progress timeline. |
+| **Representative (filed-by)** | A relative filing on the patient's behalf. The representative supplies their own ID + live selfie + relationship + authorization. The patient remains the primary account holder. |
+| **Request** | The patient's single co-funding request stating the bill amount, assistance type, and uploaded documents. Created by the patient via the 4-step wizard. CRMC's primary unit of work. |
+| **Request Lifecycle** | submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). Visualized as a 6-stage stepper on patient TrackStatus. |
+| **Reviewer Trail** | The "verified by X · Mar 5" / "rejected by X · Mar 5" line shown inline on each document row in the CRMC Requests workspace. Sourced from `documents.reviewedBy` + `reviewedAt`. |
+| **Slice** | See Application. A per-agency funding child of a request. |
+| **Slot** | A daily-capped count of new endorsements an agency can receive per day. Decremented at CRMC endorsement (not patient submission, since the patient submits to CRMC, not to agencies). Reset at PH-local midnight. |
+| **Stage** | A milestone in a request's or slice's lifecycle, rendered as a step in the progress timeline. Slice stepper has 4 stages under the new model (Endorsed → Funding Review → Approved → GL Issued); legacy direct apps retain the 6-stage view. |
+| **Withdrawal** | Patient-initiated request close. Offered only in pre-endorsement states (`submitted`, `under_review`, `assessment`) with no slices yet. Once CRMC endorses, the patient must instead reach out via Messages. |
 
 ---
 
