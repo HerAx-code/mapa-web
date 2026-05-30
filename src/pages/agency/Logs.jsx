@@ -6,22 +6,29 @@ import { useAuth } from '../../contexts/AuthContext'
 import { MdSearch, MdDownload, MdListAlt } from 'react-icons/md'
 import { exportToCSV, dateStamp } from '../../utils/export'
 
+// Co-funding slice statuses + legacy pre-redesign statuses for back-compat.
+// Labels mirror the wording used in the rest of the app (For Funding,
+// Needs Info, Guarantee Letter Issued).
 const STATUS_BADGE = {
-  pending:     'badge-blue',
-  reviewing:   'badge-amber',
-  interview:   'badge-purple',
-  approved:    'badge-green',
-  rejected:    'badge-red',
-  certificate: 'badge-green',
+  endorsed:      'badge-purple',
+  reviewing:     'badge-amber',
+  awaiting_info: 'badge-orange',
+  approved:      'badge-green',
+  certificate:   'badge-green',
+  rejected:      'badge-red',
+  pending:       'badge-blue',    // legacy
+  interview:     'badge-purple',  // legacy
 }
 
 const STATUS_LABEL = {
-  pending:     'Pending',
-  reviewing:   'Reviewing',
-  interview:   'Interview',
-  approved:    'Approved',
-  rejected:    'Rejected',
-  certificate: 'Certificate Issued',
+  endorsed:      'Endorsed',
+  reviewing:     'For Funding',
+  awaiting_info: 'Needs Info',
+  approved:      'Approved',
+  certificate:   'Guarantee Letter Issued',
+  rejected:      'Rejected',
+  pending:       'Pending',     // legacy
+  interview:     'Interview',   // legacy
 }
 
 const formatDate = (ts) => {
@@ -90,15 +97,17 @@ export default function AgencyLogs() {
           </button>
         </div>
 
-        {/* Summary */}
+        {/* Summary — covers the co-funding slice lifecycle. 'Approved'
+            rolls up approved + certificate (post-GL-issuance) since
+            either way the agency has committed funds. */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-5">
           {[
-            { label: 'Total',       value: apps.length,                               color: 'text-gray-800'   },
-            { label: 'Pending',     value: countOf('pending'),                        color: 'text-blue-600'   },
-            { label: 'Reviewing',   value: countOf('reviewing'),                      color: 'text-amber-600'  },
-            { label: 'Interview',   value: countOf('interview'),                      color: 'text-purple-600' },
-            { label: 'Approved',    value: countOf('approved') + countOf('certificate'), color: 'text-green-600' },
-            { label: 'Rejected',    value: countOf('rejected'),                       color: 'text-red-500'    },
+            { label: 'Total',       value: apps.length,                                   color: 'text-gray-800'   },
+            { label: 'Endorsed',    value: countOf('endorsed'),                           color: 'text-purple-600' },
+            { label: 'For Funding', value: countOf('reviewing'),                          color: 'text-amber-600'  },
+            { label: 'Needs Info',  value: countOf('awaiting_info'),                      color: 'text-orange-600' },
+            { label: 'Approved',    value: countOf('approved') + countOf('certificate'),  color: 'text-green-600'  },
+            { label: 'Rejected',    value: countOf('rejected'),                           color: 'text-red-500'    },
           ].map((m, i) => (
             <div key={i} className="card p-4">
               <p className="text-xs text-gray-400 mb-1">{m.label}</p>
@@ -107,27 +116,33 @@ export default function AgencyLogs() {
           ))}
         </div>
 
-        {/* Filters */}
+        {/* Filter tabs — tabs hide when their count is 0 so legacy-only
+            statuses (pending/interview) don't show forever on a fully
+            migrated system. */}
         <div className="flex gap-1.5 mb-4 flex-wrap">
           {[
-            ['all',         'All'],
-            ['pending',     'Pending'],
-            ['reviewing',   'Reviewing'],
-            ['interview',   'Interview'],
-            ['approved',    'Approved'],
-            ['rejected',    'Rejected'],
-            ['certificate', 'Certificate'],
-          ].map(([key, label]) => (
-            <button key={key}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                filter === key
-                  ? 'bg-brand-500 text-white border-brand-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}
-              onClick={() => setFilter(key)}>
-              {label}
-            </button>
-          ))}
+            ['all',           'All'],
+            ['endorsed',      'Endorsed'],
+            ['reviewing',     'For Funding'],
+            ['awaiting_info', 'Needs Info'],
+            ['approved',      'Approved'],
+            ['certificate',   'Guarantee Letter'],
+            ['rejected',      'Rejected'],
+            ['pending',       'Pending (legacy)'],
+            ['interview',     'Interview (legacy)'],
+          ]
+            .filter(([key]) => key === 'all' || countOf(key) > 0 || filter === key)
+            .map(([key, label]) => (
+              <button key={key}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  filter === key
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+                onClick={() => setFilter(key)}>
+                {label}
+              </button>
+            ))}
         </div>
 
         {/* Search */}

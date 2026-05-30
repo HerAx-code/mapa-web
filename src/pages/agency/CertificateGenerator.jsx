@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -273,6 +274,7 @@ const formatDate = (ts) => {
 
 export default function CertificateGenerator() {
   const { user }          = useAuth()
+  const navigate          = useNavigate()
   const [apps, setApps]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [printing, setPrinting] = useState(null)
@@ -327,21 +329,13 @@ export default function CertificateGenerator() {
   })
 
   const handlePrint = (app) => {
-    setPrinting(app.id)
-    try {
-      // Open the GL Viewer in a new tab. The viewer itself has the
-      // "Mark as Issued" action and handles all GL workflow steps.
-      const url = `/agency/applications/${app.id}/gl?action=print`
-      const win = window.open(url, '_blank')
-      if (!win) {
-        toast.error('Please allow pop-ups to open the Guarantee Letter.')
-      }
-    } catch (err) {
-      console.error(err)
-      toast.error('Failed to open Guarantee Letter.')
-    } finally {
-      setPrinting(null)
-    }
+    // Same-tab navigation. GL Viewer has its own 'Back to application'
+    // link and its own Print / Save as PDF / Mark as Issued actions.
+    // (Previously this used window.open with a dead ?action=print query
+    // that the Viewer never read, so the new tab didn't auto-print — the
+    // user had to click Print on the new tab anyway. Same fix as the
+    // ApplicationDetail handlePrintGL we changed in commit ed4da10.)
+    navigate(`/agency/applications/${app.id}/gl`)
   }
 
   return (
