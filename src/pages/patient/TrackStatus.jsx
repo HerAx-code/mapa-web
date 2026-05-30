@@ -41,13 +41,14 @@ import toast from 'react-hot-toast'
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const STATUS_BADGE = {
-  approved:    'badge-green',
-  rejected:    'badge-red',
-  reviewing:   'badge-amber',
-  pending:     'badge-blue',
-  endorsed:    'badge-purple',
-  interview:   'badge-purple',
-  certificate: 'badge-green',
+  approved:      'badge-green',
+  rejected:      'badge-red',
+  reviewing:     'badge-amber',
+  awaiting_info: 'badge-orange',
+  pending:       'badge-blue',
+  endorsed:      'badge-purple',
+  interview:     'badge-purple',
+  certificate:   'badge-green',
 }
 
 // Status labels live in i18n at patient.status.* — read via
@@ -584,6 +585,22 @@ export default function TrackStatus() {
                           </div>
                         )
                       })()}
+                      {/* Endorsed (slice only): CRMC has sent this slice to
+                          the agency and the patient needs to confirm on the
+                          Request page before the agency review starts. */}
+                      {app.requestId && app.status === 'endorsed' && (
+                        <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                          <p className="text-sm text-purple-700 font-medium flex items-start gap-2 flex-1">
+                            <MdAssignment size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.endorsed')}</span>
+                          </p>
+                          <button
+                            className="flex-shrink-0 text-xs bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                            onClick={() => navigate('/patient/request')}>
+                            {t('patient.track.banner.endorsedBtn')} →
+                          </button>
+                        </div>
+                      )}
                       {app.status === 'interview' && (
                         <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3 flex items-center justify-between gap-3">
                           <p className="text-sm text-purple-700 font-medium flex items-start gap-2 flex-1">
@@ -598,15 +615,41 @@ export default function TrackStatus() {
                         </div>
                       )}
                       {app.status === 'reviewing' && (
-                        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                          <p className="text-sm text-amber-700 font-medium flex items-start gap-2 flex-1">
-                            <MdAssignment size={16} className="flex-shrink-0 mt-0.5" />
-                            <span>{t('patient.track.banner.reviewing')}</span>
+                        app.requestId ? (
+                          // Slice: agency is reviewing funding, patient has nothing to do.
+                          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                            <p className="text-sm text-amber-700 font-medium flex items-start gap-2">
+                              <MdAssignment size={16} className="flex-shrink-0 mt-0.5" />
+                              <span>{t('patient.track.banner.fundingReview')}</span>
+                            </p>
+                          </div>
+                        ) : (
+                          // Legacy direct-to-agency app: agency review may need docs.
+                          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                            <p className="text-sm text-amber-700 font-medium flex items-start gap-2 flex-1">
+                              <MdAssignment size={16} className="flex-shrink-0 mt-0.5" />
+                              <span>{t('patient.track.banner.reviewing')}</span>
+                            </p>
+                            <button
+                              className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                              onClick={() => navigate('/patient/request')}>
+                              {t('patient.track.banner.reviewingBtn')} →
+                            </button>
+                          </div>
+                        )
+                      )}
+                      {/* Awaiting info (slice only): agency asked the patient
+                          for more info; surface as actionable. */}
+                      {app.requestId && app.status === 'awaiting_info' && (
+                        <div className="mb-4 bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                          <p className="text-sm text-orange-700 font-medium flex items-start gap-2 flex-1">
+                            <MdWarning size={16} className="flex-shrink-0 mt-0.5" />
+                            <span>{t('patient.track.banner.awaitingInfo')}</span>
                           </p>
                           <button
-                            className="flex-shrink-0 text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                            className="flex-shrink-0 text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
                             onClick={() => navigate('/patient/request')}>
-                            {t('patient.track.banner.reviewingBtn')} →
+                            {t('patient.track.banner.awaitingInfoBtn')} →
                           </button>
                         </div>
                       )}
