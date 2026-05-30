@@ -477,7 +477,8 @@ export default function Register() {
         // #1 — Roll back the orphan Auth account so the patient can retry
         // (e.g. with a different access code) without their email being
         // permanently "already in use" with no profile attached.
-        try { await deleteUser(createdAuthUser) } catch {}
+        try { await deleteUser(createdAuthUser) }
+        catch (delErr) { console.error('[Register] orphan Auth rollback failed (tx path):', delErr) }
         createdAuthUser = null
         if (String(txErr.message) === 'CODE_USED') {
           setErrors({ hospitalId: t('register.errors.codeUsed') })
@@ -509,7 +510,8 @@ export default function Register() {
       // rolled back inside the transaction handler above, drop it so the
       // patient can retry registration cleanly.
       if (createdAuthUser) {
-        try { await deleteUser(createdAuthUser) } catch {}
+        try { await deleteUser(createdAuthUser) }
+        catch (delErr) { console.error('[Register] orphan Auth rollback failed (outer catch):', delErr) }
       }
       if (err.code === 'auth/email-already-in-use') {
         setErrors({ email: t('register.errors.emailInUse') })

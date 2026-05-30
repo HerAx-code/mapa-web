@@ -194,7 +194,9 @@ export default function AgencyDetail() {
           title: 'Agency Enabled',
           body:  `${agency.name} has been re-enabled.`,
         }).catch(() => {})))
-      } catch {}
+      } catch (err) {
+        console.error('[AgencyDetail] agency_enabled notify fan-out failed:', err)
+      }
       logAudit(user, { action: 'agency_enabled', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency re-enabled' })
       toast.success(`${agency.name} enabled.`)
     } catch { toast.error('Failed to update agency status.') }
@@ -248,7 +250,9 @@ export default function AgencyDetail() {
             ? `${agency.name} disabled. ${pendingApps.length} pending application(s) were auto-rejected.`
             : `${agency.name} disabled. ${pendingApps.length} application(s) on hold pending re-enable.`,
         }).catch(() => {})))
-      } catch {}
+      } catch (err) {
+        console.error('[AgencyDetail] agency_disabled notify fan-out failed:', err)
+      }
 
       logAudit(user, {
         action:     'agency_disabled',

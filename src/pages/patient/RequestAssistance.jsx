@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, onSnapshot, getDocs,
-  doc, setDoc, updateDoc, serverTimestamp,
+  doc, setDoc, updateDoc, writeBatch, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -94,24 +94,45 @@ export default function RequestAssistance() {
 
   // Proceed gate: the patient accepts the coverage plan, advancing every
   // endorsed slice into its agency's review queue and notifying the agencies.
+  // Slice transitions go through a single writeBatch so the patient never
+  // ends up in a half-accepted state (some slices 'reviewing', others still
+  // 'endorsed') if one update fails mid-batch.
   const handleProceed = async () => {
     const toProceed = slices.filter(s => s.status === 'endorsed')
     if (proceeding || toProceed.length === 0) return
     setProceeding(true)
     try {
-      await Promise.all(toProceed.map(s =>
-        updateDoc(doc(db, 'applications', s.id), { status: 'reviewing', updatedAt: serverTimestamp() })
-      ))
-      Promise.all(toProceed.map(s =>
-        getDocs(query(collection(db, 'users'), where('agencyId', '==', s.agencyId), where('role', 'in', ['agency', 'agency_admin'])))
-          .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
-            type:  'app_submitted',
-            title: 'New endorsed request',
-            body:  `${user.name} accepted the endorsement and submitted their request. Please review.`,
-          }))))
-      )).catch(() => {})
+      const batch = writeBatch(db)
+      for (const s of toProceed) {
+        batch.update(doc(db, 'applications', s.id), {
+          status:    'reviewing',
+          updatedAt: serverTimestamp(),
+        })
+      }
+      await batch.commit()
       toast.success(t('patient.request.proceedOk'))
-    } catch {
+
+      // Notify agency coordinators that a new endorsed slice landed in their
+      // inbox. Awaited (with allSettled) so transient failures are logged
+      // but never block the patient's success path — the slices themselves
+      // already committed.
+      const notifyResults = await Promise.allSettled(toProceed.map(s =>
+        getDocs(query(collection(db, 'users'),
+          where('agencyId', '==', s.agencyId),
+          where('role', 'in', ['agency', 'agency_admin'])
+        )).then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
+          type:  'app_submitted',
+          title: 'New endorsed request',
+          body:  `${user.name} accepted the endorsement and submitted their request. Please review.`,
+        }))))
+      ))
+      const failed = notifyResults.filter(r => r.status === 'rejected')
+      if (failed.length > 0) {
+        console.error('[handleProceed] agency notify failures:',
+          failed.map(f => f.reason))
+      }
+    } catch (err) {
+      console.error('[handleProceed] batch commit failed:', err)
       toast.error(t('patient.request.proceedErr'))
     } finally {
       setProceeding(false)

@@ -173,7 +173,10 @@ export default function TrackStatus() {
             const total   = snap.data()?.slots?.total    ?? 0
             tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
           })
-        } catch {}
+        } catch (err) {
+          // Slot restore is best-effort — the withdrawal already committed.
+          console.error('[TrackStatus] slot restore failed:', err)
+        }
       }
 
       // Notify agency users

@@ -143,7 +143,9 @@ export default function AddAgency() {
             body:  `"${agency.name.trim()}" has been registered as a new medical assistance agency.`,
           }).catch(() => {})
         ))
-      } catch {}
+      } catch (err) {
+        console.error('[AddAgency] admin notify fan-out failed:', err)
+      }
 
       // 2. Create the first Agency Administrator (mandatory — see validation
       // above). The senior agency officer who controls allocation and can

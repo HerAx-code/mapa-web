@@ -741,7 +741,10 @@ export default function ApplicationDetail() {
           const total   = snap.data()?.slots?.total    ?? 0
           tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
         })
-      } catch {}
+      } catch (err) {
+        // Slot restore is best-effort — the rejection already committed.
+        console.error('[ApplicationDetail] slot restore failed:', err)
+      }
     }
     await notify(app.patientId, {
       type:  'doc_rejected',
