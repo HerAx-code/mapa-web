@@ -182,7 +182,8 @@ function EditCoordModal({ coord, currentUser, onClose }) {
       })
       toast.success('Coordinator updated.')
       onClose()
-    } catch {
+    } catch (err) {
+      console.error('[EditCoordModal] update failed:', err)
       toast.error('Failed to update.')
     } finally {
       setSaving(false)
@@ -235,6 +236,7 @@ export default function AgencyTeam() {
   const [editing,   setEditing]   = useState(null)
   // Coordinator awaiting promote/demote confirmation in the in-app modal.
   const [promotionTarget, setPromotionTarget] = useState(null)
+  const [promoting,       setPromoting]       = useState(false)
 
   const isAgencyAdmin = user?.role === 'agency_admin'
 
@@ -323,7 +325,10 @@ export default function AgencyTeam() {
         body:  'A password reset link has been sent to your email by your agency administrator.',
       })
       toast.success(`Password reset email sent to ${coord.email}.`)
-    } catch { toast.error('Failed to send reset email.') }
+    } catch (err) {
+      console.error('[Team] password reset failed:', err)
+      toast.error('Failed to send reset email.')
+    }
   }
 
   const handleTogglePromotion = (coord) => {
@@ -346,31 +351,34 @@ export default function AgencyTeam() {
 
   const performTogglePromotion = async () => {
     const coord = promotionTarget
-    if (!coord) return
-    const promoting = coord.role !== 'agency_admin'
-    const next = promoting ? 'agency_admin' : 'agency'
+    if (!coord || promoting) return
+    const isPromoting = coord.role !== 'agency_admin'
+    const next = isPromoting ? 'agency_admin' : 'agency'
 
+    setPromoting(true)
     try {
       await updateDoc(doc(db, 'users', coord.uid), { role: next })
       await notify(coord.uid, {
-        type:  promoting ? 'role_promoted' : 'role_demoted',
-        title: promoting ? 'Promoted to Agency Administrator' : 'Returned to Coordinator role',
-        body:  promoting
+        type:  isPromoting ? 'role_promoted' : 'role_demoted',
+        title: isPromoting ? 'Promoted to Agency Administrator' : 'Returned to Coordinator role',
+        body:  isPromoting
           ? 'You can now set your agency\'s budget, review top-up requests, and manage your team.'
           : 'Your Agency Administrator permissions have been removed.',
       })
       logAudit(user, {
-        action:     promoting ? 'role_promoted_to_agency_admin' : 'role_demoted_to_agency',
+        action:     isPromoting ? 'role_promoted_to_agency_admin' : 'role_demoted_to_agency',
         targetType: 'account',
         targetId:   coord.uid,
         targetName: coord.name,
         details:    `${coord.name} → ${next} (by agency admin)`,
       })
-      toast.success(`${coord.name} ${promoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
+      toast.success(`${coord.name} ${isPromoting ? 'promoted to Agency Administrator' : 'returned to Coordinator'}.`)
       setPromotionTarget(null)
     } catch (err) {
       console.error('[Team] role toggle error:', err)
       toast.error('Failed to update role.')
+    } finally {
+      setPromoting(false)
     }
   }
 
@@ -414,7 +422,11 @@ export default function AgencyTeam() {
             <div className="p-8 text-center text-sm text-gray-400">Loading team…</div>
           ) : team.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-sm text-gray-500">No team members yet. Click "Add Coordinator" to onboard your first.</p>
+              <p className="text-sm text-gray-500 mb-3">No team members yet.</p>
+              <button onClick={() => setShowAdd(true)}
+                className="btn-primary text-sm inline-flex items-center gap-1.5">
+                <MdAdd size={15} /> Add First Coordinator
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -488,7 +500,7 @@ export default function AgencyTeam() {
 
         <ConfirmModal
           open={!!promotionTarget}
-          onClose={() => setPromotionTarget(null)}
+          onClose={() => !promoting && setPromotionTarget(null)}
           onConfirm={performTogglePromotion}
           title={promotionTarget?.role === 'agency_admin'
             ? `Demote ${promotionTarget?.name} back to Coordinator?`
