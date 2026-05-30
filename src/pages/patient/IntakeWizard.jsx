@@ -59,6 +59,13 @@ export default function IntakeWizard() {
   const [step, setStep]       = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
+  // Auto-save indicator state. autoSaving flips during the debounced write
+  // (separate from `saving` which drives the explicit "Save and finish
+  // later" / Submit buttons). lastSavedAt is the timestamp of the last
+  // successful save -- rendered as a small "Saved · 2:45 PM" near the
+  // progress bar so the patient sees progress is being preserved.
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState(null)
   // Field name flagged by validation, or null. Drives the red-border state
   // on the matching input + scrolls it into view via ref. Cleared as soon
   // as the patient touches it (via the set() helper).
@@ -69,6 +76,8 @@ export default function IntakeWizard() {
   // from Firestore once -- otherwise the patient's in-progress edits would
   // be clobbered on every keystroke-save.
   const hydrated = useRef(false)
+  // Debounce timer for auto-save; refreshed on every field change.
+  const autoSaveTimer = useRef(null)
 
   useEffect(() => {
     if (!id) return
@@ -127,6 +136,52 @@ export default function IntakeWizard() {
     await updateDoc(doc(db, 'requests', id), { intakeSheet: payload, updatedAt: serverTimestamp() })
   }
 
+  // Auto-save: debounced 2s after the last field change, plus an immediate
+  // save when the patient moves between steps. The target audience often
+  // works on slow connections and gets interrupted -- losing 4 steps of
+  // typed input because they backgrounded the tab for 10 minutes is a
+  // real concern. Silent: no toast (would be too noisy). The lastSavedAt
+  // indicator near the progress bar tells the patient their work is safe.
+  //
+  // Gated on:
+  //   - hydrated: don't save before initial Firestore load completes
+  //     (otherwise we'd write blankSheet() over any existing intake)
+  //   - !saving: don't fight a concurrent manual save (saveAndExit/finish)
+  useEffect(() => {
+    if (!hydrated.current || saving) return
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(async () => {
+      setAutoSaving(true)
+      try {
+        await persist()
+        setLastSavedAt(new Date())
+      } catch (err) {
+        console.error('[IntakeWizard] auto-save failed:', err)
+      } finally {
+        setAutoSaving(false)
+      }
+    }, 2000)
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    }
+    // sheet is the form state; saving the timestamp helpers / id / request
+    // don't need to be deps -- persist() reads from closure at fire time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet])
+
+  // Immediate save on step change so the patient never loses work when
+  // Next/Back is tapped, even if the 2s debounce hasn't fired.
+  useEffect(() => {
+    if (!hydrated.current || saving) return
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    setAutoSaving(true)
+    persist()
+      .then(() => setLastSavedAt(new Date()))
+      .catch(err => console.error('[IntakeWizard] step-change save failed:', err))
+      .finally(() => setAutoSaving(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
   const saveAndExit = async () => {
     setSaving(true)
     try { await persist(); toast.success('Saved. You can finish later.'); navigate('/patient/request') }
@@ -175,7 +230,20 @@ export default function IntakeWizard() {
             <div key={s.key} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-brand-500' : 'bg-gray-200'}`} />
           ))}
         </div>
-        <p className="text-xs text-gray-400 mb-5">Step {step + 1} of {STEPS.length} · Hakbang {step + 1} sa {STEPS.length}</p>
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-xs text-gray-400">Step {step + 1} of {STEPS.length} · Hakbang {step + 1} sa {STEPS.length}</p>
+          {/* Tiny auto-save indicator. Stays gentle so it doesn't compete
+              with the form -- the patient only needs to know "my work is
+              being saved". On error we surface a console log; no toast,
+              since the next field change or step navigation retries. */}
+          {autoSaving ? (
+            <p className="text-xs text-gray-400 italic">Saving…</p>
+          ) : lastSavedAt ? (
+            <p className="text-xs text-gray-400">
+              Saved · {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          ) : null}
+        </div>
 
         <div className="card p-5 space-y-5">
           {/* ── Family ── */}
