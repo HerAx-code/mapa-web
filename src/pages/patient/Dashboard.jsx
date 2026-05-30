@@ -10,10 +10,10 @@ import {
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import InstallPrompt from '../../components/InstallPrompt'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   collection, query, where, orderBy, onSnapshot, getDocs,
-  doc, updateDoc,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
@@ -206,56 +206,90 @@ export default function PatientDashboard() {
         const reqs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         setActiveRequest(reqs.find(r => !['closed', 'rejected', 'fully_funded'].includes(r.status)) ?? null)
       },
-      () => {},
+      (err) => console.error('[PatientDashboard] requests snapshot error:', err),
     )
     return unsub
   }, [user?.uid])
 
   // Interview reminder sweep — client-side, best-effort.
   // For each upcoming interview, fire a notification at 24h and 1h before
-  // the meeting. Each tier sets an idempotent flag on the application so the
-  // same reminder doesn't fire twice across sessions.
+  // the meeting. Per-device localStorage dedup: keys are scoped to user +
+  // interview id so a patient checking their dashboard repeatedly doesn't
+  // get the same reminder twice. The previous implementation tried to
+  // persist the dedup flag on the doc itself (reminderSent24h /
+  // reminderSent1h) but firestore.rules don't permit patients to write
+  // those fields -- the .catch was silently swallowing permission-denied
+  // and the dedup never actually worked.
+  //
+  // Two parallel sweeps because under the redesign:
+  //   - legacy direct-to-agency apps may still be in status 'interview'
+  //   - new-model interviews live on the REQUEST (CRMC-conducted, single
+  //     assessment) and never set application.status to 'interview'.
   useEffect(() => {
     if (!user?.uid) return
+    const remindedKey = (kind, id, tier) => `mapa_reminder_${tier}_${user.uid}_${kind}_${id}`
+    const isReminded = (kind, id, tier) => localStorage.getItem(remindedKey(kind, id, tier)) === '1'
+    const markReminded = (kind, id, tier) => {
+      try { localStorage.setItem(remindedKey(kind, id, tier), '1') } catch (_e) { /* private mode / quota: best-effort */ }
+    }
+    const fireReminder = async (kind, item, target, msUntil) => {
+      const within24h = msUntil <= 24 * 60 * 60 * 1000 && msUntil > 60 * 60 * 1000 && !isReminded(kind, item.id, '24h')
+      const within1h  = msUntil <= 60 * 60 * 1000      && !isReminded(kind, item.id, '1h')
+      const isRequest = kind === 'request'
+      const scope     = isRequest ? 'CRMC' : item.agencyName
+      if (within24h) {
+        await notify(user.uid, {
+          type:  'interview_sched',
+          title: isRequest ? 'Reminder: CRMC assessment tomorrow' : 'Reminder: interview tomorrow',
+          body:  `Your interview with ${scope} is scheduled for ${item.interviewDate} at ${item.interviewTime}. Make sure you have the Google Meet link ready.`,
+          conversationId: null,
+        }).catch(() => {})
+        markReminded(kind, item.id, '24h')
+      }
+      if (within1h) {
+        await notify(user.uid, {
+          type:  'interview_sched',
+          title: isRequest ? 'Your CRMC assessment starts soon' : 'Your interview starts soon',
+          body:  `Your interview with ${scope} starts in less than an hour (${item.interviewTime}). Open it from the Interviews page.`,
+          conversationId: null,
+        }).catch(() => {})
+        markReminded(kind, item.id, '1h')
+      }
+    }
+
     const run = async () => {
       try {
-        const snap = await getDocs(query(
+        const now = Date.now()
+        // Legacy: per-agency apps in status 'interview'.
+        const appSnap = await getDocs(query(
           collection(db, 'applications'),
           where('patientId', '==', user.uid),
           where('status', '==', 'interview'),
         ))
-        const now = Date.now()
-        for (const d of snap.docs) {
+        for (const d of appSnap.docs) {
           const a = { id: d.id, ...d.data() }
           if (!a.interviewDate || !a.interviewTime) continue
-          // interviewDate is YYYY-MM-DD; interviewTime is free-form
-          // (e.g. "2:00 PM"). Parse the combined string.
           const target = parseInterviewMoment(a.interviewDate, a.interviewTime)
           if (!target) continue
           const msUntil = target.getTime() - now
-          if (msUntil <= 0) continue   // already past
+          if (msUntil <= 0) continue
+          await fireReminder('app', a, target, msUntil)
+        }
 
-          const within24h = msUntil <= 24 * 60 * 60 * 1000 && !a.reminderSent24h
-          const within1h  = msUntil <= 60 * 60 * 1000      && !a.reminderSent1h
-
-          if (within24h) {
-            await notify(user.uid, {
-              type:  'interview_sched',
-              title: 'Reminder: interview tomorrow',
-              body:  `Your interview with ${a.agencyName} is scheduled for ${a.interviewDate} at ${a.interviewTime}. Make sure you have the Google Meet link ready.`,
-              conversationId: null,
-            }).catch(() => {})
-            updateDoc(doc(db, 'applications', a.id), { reminderSent24h: true }).catch(() => {})
-          }
-          if (within1h) {
-            await notify(user.uid, {
-              type:  'interview_sched',
-              title: 'Your interview starts soon',
-              body:  `Your interview with ${a.agencyName} starts in less than an hour (${a.interviewTime}). Open it from the Interviews page.`,
-              conversationId: null,
-            }).catch(() => {})
-            updateDoc(doc(db, 'applications', a.id), { reminderSent1h: true }).catch(() => {})
-          }
+        // New model: CRMC assessment interview on the request.
+        const reqSnap = await getDocs(query(
+          collection(db, 'requests'),
+          where('patientId', '==', user.uid),
+        ))
+        for (const d of reqSnap.docs) {
+          const r = { id: d.id, ...d.data() }
+          if (!r.interviewDate || !r.interviewTime) continue
+          if (r.interviewOutcome === 'completed' || r.interviewOutcome === 'no_show') continue
+          const target = parseInterviewMoment(r.interviewDate, r.interviewTime)
+          if (!target) continue
+          const msUntil = target.getTime() - now
+          if (msUntil <= 0) continue
+          await fireReminder('request', r, target, msUntil)
         }
       } catch (err) {
         console.error('Interview reminder sweep failed:', err)
@@ -264,18 +298,26 @@ export default function PatientDashboard() {
     run()
   }, [user?.uid])
 
-  // Document stats
+  // Live document stats so the verified/pending counts update the moment
+  // CRMC verifies or rejects a doc -- no reload required.
   useEffect(() => {
     if (!user?.uid) return
-    getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
-      .then(snap => {
+    const unsub = onSnapshot(
+      query(collection(db, 'documents'), where('patientId', '==', user.uid)),
+      snap => {
         const all = snap.docs.map(d => d.data())
         setDocStats({
           verified: all.filter(d => d.status === 'verified').length,
           pending:  all.filter(d => d.status === 'pending').length,
         })
         setDocLoading(false)
-      })
+      },
+      (err) => {
+        setDocLoading(false)
+        console.error('[PatientDashboard] documents snapshot error:', err)
+      },
+    )
+    return unsub
   }, [user?.uid])
 
   const hasApp       = appCount > 0
@@ -373,13 +415,11 @@ export default function PatientDashboard() {
             <div className="h-4 bg-gray-100 rounded w-3/4 mb-5" />
             <div className="h-12 bg-gray-100 rounded-xl" />
           </div>
-        ) : activeRequest ? (() => {
-          const rcfg = REQUEST_STATUS_CONFIG[activeRequest.status] ?? REQUEST_STATUS_CONFIG.submitted
-          return (
+        ) : activeRequest ? (
             <div className="card p-6">
               <div className="flex items-center gap-2 mb-2">
                 <h2 className="text-lg font-semibold text-gray-900">{t('patient.dashboard.activeRequestTitle')}</h2>
-                <span className={`badge text-xs ml-auto ${rcfg.badge}`}>{rcfg.label}</span>
+                <StatusBadge status={activeRequest.status} kind="request" className="ml-auto flex-shrink-0" />
               </div>
               <p className="text-sm text-gray-500 mb-1">{activeRequest.requestId} · {activeRequest.assistanceType}</p>
               <p className="text-sm text-gray-500 mb-4">{t('patient.dashboard.activeRequestDesc')}</p>
@@ -387,8 +427,7 @@ export default function PatientDashboard() {
                 {t('patient.nav.myApplication')} →
               </button>
             </div>
-          )
-        })() : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
+        ) : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
           const vis = STATUS_VISUAL[activeApp.status]
           const txt = `patient.dashboard.statusCard.${activeApp.status}`
           const isAwaiting  = activeApp.status === 'awaiting_info'
