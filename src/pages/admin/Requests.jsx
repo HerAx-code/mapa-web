@@ -548,7 +548,18 @@ function RequestDetail({ request, agencies, onClose }) {
             <p className="text-xs text-gray-400">{request.requestId} · {request.assistanceType}</p>
           </div>
         </div>
-        <StatusBadge status={request.status} kind="request" className="flex-shrink-0" />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Always-on Message Patient affordance -- the stale-endorsement
+              nudge below only fires once a slice has been endorsed and the
+              patient has sat on it. Operators need to reach the patient
+              earlier too (doc clarifications, intake follow-ups). */}
+          <button onClick={() => handleMessagePatient()} disabled={messagingPatient}
+            title="Message patient"
+            className="btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1.5 disabled:opacity-50">
+            <MdSend size={13} /> Message
+          </button>
+          <StatusBadge status={request.status} kind="request" />
+        </div>
       </div>
 
       {/* Single-column review, left-aligned to match the sub-header.
