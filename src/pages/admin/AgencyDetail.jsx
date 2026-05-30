@@ -118,6 +118,7 @@ export default function AgencyDetail() {
   const [promotionTarget, setPromotionTarget] = useState(null)
   const [promoting,         setPromoting]         = useState(false)
   const [disabling,         setDisabling]         = useState(false)
+  const [deletingAgency,    setDeletingAgency]    = useState(false)
 
   // Slot editing
   const [editSlots, setEditSlots] = useState(false)
@@ -297,12 +298,16 @@ export default function AgencyDetail() {
   // (agency_admin owns budget authority — CRMC is read-only).
 
   const handleDeleteAgency = async () => {
+    setDeletingAgency(true)
     try {
       await deleteDoc(doc(db, 'agencies', id))
       logAudit(user, { action: 'agency_deleted', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency permanently deleted' })
       toast.success('Agency deleted.')
       navigate('/admin/agencies')
-    } catch (err) { console.error(err); toast.error('Failed to delete agency.') }
+    } catch (err) {
+      console.error(err); toast.error('Failed to delete agency.')
+      setDeletingAgency(false)
+    }
   }
 
   const handleMessage = async () => {
@@ -486,19 +491,6 @@ export default function AgencyDetail() {
             </div>
           </div>
 
-          {/* Delete confirmation */}
-          {confirmDelete && (
-            <div className="mt-4 border-t border-red-100 pt-4 flex items-center gap-3">
-              <MdWarning size={16} className="text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-700 flex-1">
-                Delete <strong>{agency.name}</strong> permanently? Patients will no longer see this agency.
-              </p>
-              <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50"
-                onClick={() => setConfirmDelete(false)}>Cancel</button>
-              <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600"
-                onClick={handleDeleteAgency}>Delete</button>
-            </div>
-          )}
         </div>
 
         {/* ── Details grid ── */}
@@ -870,6 +862,17 @@ export default function AgencyDetail() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmDelete}
+        onClose={() => !deletingAgency && setConfirmDelete(false)}
+        onConfirm={handleDeleteAgency}
+        title={`Delete ${agency.name}?`}
+        body={`This permanently removes the agency from the portal. Patients will no longer see ${agency.name} as a funding option, and any existing applications stay in the audit trail but become orphan. Use Disable (with hold/auto-reject cascade) for temporary outages instead.`}
+        tone="danger"
+        confirmLabel="Delete Agency"
+        confirmLabelBusy="Deleting…"
+      />
 
       <ConfirmModal
         open={!!promotionTarget}
