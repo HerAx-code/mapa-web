@@ -52,7 +52,7 @@ export const getNotifRoute = (type, role) => {
     app_withdrawn:           isAgency  ? '/agency/inbox'       : '/admin/logs',
     interview_approved:      '/patient/status',
     certificate_ready:       '/patient/status',
-    interview_sched:         isPatient ? '/patient/interviews' : isAgency ? '/agency/interviews' : null,
+    interview_sched:         isPatient ? '/patient/interviews' : null,
 
     // ── awaiting_info flow ──
     awaiting_info_requested: '/patient/request',

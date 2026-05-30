@@ -15,18 +15,17 @@ import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import { computeFunding } from '../../utils/requests'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
-  MdVideoCall, MdDescription, MdAssignment, MdAttachMoney,
-  MdEventBusy, MdEventRepeat, MdNote, MdAdd, MdWarning,
+  MdDescription, MdAssignment, MdAttachMoney,
+  MdNote, MdAdd, MdWarning,
   MdPrint, MdUpload, MdInfo, MdReceipt, MdHistory,
   MdHourglassEmpty, MdPlayArrow,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { isIntakeComplete, requiredFieldsStatus } from '../../utils/intakeSheet'
-import OutcomeModal from '../../components/OutcomeModal'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import DocViewerModal from '../../components/DocViewerModal'
-import { InterviewModal, RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
+import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -65,13 +64,6 @@ const formatDate = (ts) => {
   const d = ts.toDate ? ts.toDate() : new Date(ts)
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
 }
-const fmtInterviewDate = (iso) => {
-  if (!iso) return '—'
-  return new Date(iso + 'T00:00:00').toLocaleDateString([], {
-    month: 'long', day: 'numeric', year: 'numeric',
-  })
-}
-
 const getUpdatedStages = (stages, newStatus, extra = {}) => {
   const doneKeys = {
     pending:        ['submitted'],
@@ -203,39 +195,9 @@ function getPrimaryActions(ctx) {
     }
   }
 
-  if (app.status === 'interview' && !app.outcome) {
-    return {
-      hint: 'After the meeting, record the outcome.',
-      tone: 'purple',
-      actions: [
-        { label: 'Mark Completed', icon: MdCheckCircle, variant: 'primary-green', onClick: () => handlers.setOutcomeRequest({ app, outcome: 'completed' }) },
-        { label: 'No-Show',        icon: MdEventBusy,   variant: 'danger',        onClick: () => handlers.setOutcomeRequest({ app, outcome: 'no_show' }) },
-        { label: 'Reschedule',     icon: MdEventRepeat, variant: 'secondary',     onClick: () => handlers.setOutcomeRequest({ app, outcome: 'rescheduled' }) },
-      ],
-    }
-  }
-
-  if (app.status === 'interview' && app.outcome === 'completed' && intakeReady) {
-    return {
-      hint: 'Interview completed — issue the Guarantee Letter or reject.',
-      tone: 'brand',
-      actions: [
-        { label: 'Approve & Issue GL', icon: MdCheckCircle, variant: 'primary-green', onClick: () => handlers.setShowApprove(true) },
-        { label: 'Reject',             icon: MdCancel,      variant: 'danger',        onClick: () => handlers.setShowReject(true) },
-      ],
-    }
-  }
-
-  if (app.status === 'interview' && (app.outcome === 'no_show' || app.outcome === 'rescheduled')) {
-    return {
-      hint: app.outcome === 'no_show' ? 'No-show recorded — reschedule or reject.' : 'Interview rescheduled — wait for the new date.',
-      tone: 'amber',
-      actions: [
-        { label: 'Reschedule',     icon: MdEventRepeat, variant: 'primary',  onClick: () => handlers.setOutcomeRequest({ app, outcome: 'rescheduled' }) },
-        { label: 'Reject',         icon: MdCancel,      variant: 'danger',   onClick: () => handlers.setShowReject(true) },
-      ],
-    }
-  }
+  // Note: under the co-funding redesign, slices never reach status 'interview'
+  // — the single assessment interview is on the parent request (CRMC-conducted),
+  // not per-slice. Legacy interview branches removed.
 
   if (app.status === 'approved') {
     return {
@@ -337,13 +299,10 @@ export default function ApplicationDetail() {
   const [signedScan, setSignedScan]         = useState(null)
 
   const [section, setSection]               = useState('overview')
-  const [showInterview, setShowInterview]     = useState(false)
-  const [showReschedule, setShowReschedule]   = useState(false)
   const [showReject, setShowReject]           = useState(false)
   const [showApprove, setShowApprove]         = useState(false)
   const [showUpload, setShowUpload]           = useState(false)
   const [showRequestInfo, setShowRequestInfo] = useState(false)
-  const [outcomeRequest, setOutcomeRequest] = useState(null)
   const [viewingDoc, setViewingDoc]         = useState(null)
   const [updating, setUpdating]             = useState(false)
   const [newNote, setNewNote]               = useState('')
@@ -517,57 +476,9 @@ export default function ApplicationDetail() {
     toast.success('Application resumed. Back in the active queue.')
   }
 
-  // #13 — Reject pasted meet links that aren't a recognized video-conference
-  // URL. Without validation, a coordinator pasting `meet.google.com/abc`
-  // (no scheme) creates a broken link the patient interprets as a relative
-  // route, breaking the most time-sensitive action in the journey.
-  const isValidMeetLink = (link) => {
-    if (!link) return true   // optional — empty is OK at create time
-    return /^https:\/\/(meet\.google\.com|.*\.zoom\.us|teams\.microsoft\.com|teams\.live\.com)\//i.test(link.trim())
-  }
-
-  const handleScheduleInterview = async (form) => {
-    if (!isValidMeetLink(form.link)) {
-      toast.error('Meet link must be a valid https:// URL (Google Meet, Zoom, or Teams).')
-      return
-    }
-    const extra = {
-      interviewDate: form.date,
-      interviewTime: form.time,
-      meetLink:      form.link,
-      conductedBy:   form.conductedBy,
-    }
-    const ok = await updateStatus('interview', extra)
-    if (!ok) return
-    await notify(app.patientId, {
-      type:  'interview_sched',
-      title: 'Interview scheduled',
-      body:  `Your interview with ${app.agencyName} is scheduled for ${form.date} at ${form.time}. Check your Interviews page for the link.`,
-    })
-    setShowInterview(false)
-    toast.success('Interview scheduled. Patient has been notified.')
-  }
-
-  const handleRescheduleInterview = async (form) => {
-    if (!isValidMeetLink(form.link)) {
-      toast.error('Meet link must be a valid https:// URL (Google Meet, Zoom, or Teams).')
-      return
-    }
-    const ok = await updateStatus('interview', {
-      interviewDate: form.date,
-      interviewTime: form.time,
-      meetLink:      form.link,
-      conductedBy:   form.conductedBy,
-    })
-    if (!ok) return
-    await notify(app.patientId, {
-      type:  'interview_sched',
-      title: 'Interview rescheduled',
-      body:  `Your interview with ${app.agencyName} has been rescheduled to ${form.date} at ${form.time}.`,
-    })
-    setShowReschedule(false)
-    toast.success('Interview rescheduled. Patient has been notified.')
-  }
+  // Interview scheduling/rescheduling lived here pre-co-funding when each
+  // agency interviewed its applicants. Removed: the single assessment
+  // interview is now on the parent request and conducted by CRMC.
 
   const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid }) => {
     setUpdating(true)
@@ -820,37 +731,6 @@ export default function ApplicationDetail() {
     })
     setShowReject(false)
     toast.error('Application rejected. Patient has been notified.')
-  }
-
-  // Agency document review (moved from CRMC): verify or reject a single
-  // attached document, mirror the status onto the application snapshot, and
-  // notify the patient on rejection so they can re-upload.
-  const handleVerifyDoc = async (docItem, newStatus) => {
-    try {
-      await updateDoc(doc(db, 'documents', docItem.id), {
-        status:     newStatus,
-        reviewedBy: user.name ?? 'Agency',
-        reviewedAt: serverTimestamp(),
-      })
-      const updatedAttached = (app.attachedDocuments ?? []).map(a =>
-        a.documentId === docItem.id ? { ...a, status: newStatus } : a)
-      await updateDoc(doc(db, 'applications', app.id), {
-        attachedDocuments: updatedAttached,
-        updatedAt:         serverTimestamp(),
-      })
-      setPatientDocs(prev => prev.map(d => d.id === docItem.id ? { ...d, status: newStatus } : d))
-      if (newStatus === 'rejected') {
-        await notify(app.patientId, {
-          type:  'doc_rejected',
-          title: 'A document needs attention',
-          body:  `${app.agencyName} marked your "${docItem.name}" document as needing correction. Please re-upload it.`,
-        }).catch(() => {})
-      }
-      toast.success(newStatus === 'verified' ? 'Document verified.' : 'Document marked for re-upload.')
-    } catch (err) {
-      console.error('[ApplicationDetail] doc review error:', err)
-      toast.error('Failed to update document.')
-    }
   }
 
   // ── GL handlers ──────────────────────────────────────────────────────
@@ -1113,11 +993,9 @@ export default function ApplicationDetail() {
       handleReverseApproval,
       handleResumeFromAwaiting,
       setShowApprove,
-      setShowInterview,
       setShowReject,
       setShowUpload,
       setShowRequestInfo,
-      setOutcomeRequest,
     },
   })
 
@@ -1348,42 +1226,6 @@ export default function ApplicationDetail() {
                     ))}
                   </div>
                 </div>
-
-                {app.interviewDate && (() => {
-                  const recorded = !!app.outcome
-                  const outcomeColor = { completed: 'badge-green', no_show: 'badge-red', rescheduled: 'badge-amber' }[app.outcome]
-                  const outcomeLabel = { completed: 'Completed', no_show: 'No-Show', rescheduled: 'Rescheduled' }[app.outcome]
-                  return (
-                    <div className="card p-5">
-                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                          <MdVideoCall size={13} /> Interview
-                          {recorded && <span className={`badge text-xs ${outcomeColor} normal-case`}>{outcomeLabel}</span>}
-                        </p>
-                        {app.status === 'interview' && !recorded && (
-                          <button className="text-xs text-brand-500 hover:text-brand-600 font-medium"
-                            onClick={() => setShowReschedule(true)}>
-                            Reschedule
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-1.5 text-sm text-gray-700">
-                        <p><span className="text-gray-400">When:</span> {fmtInterviewDate(app.interviewDate)} at {app.interviewTime}</p>
-                        {app.conductedBy && <p><span className="text-gray-400">Conducted by:</span> {app.conductedBy}</p>}
-                        {app.meetLink && (
-                          <p>
-                            <span className="text-gray-400">Meet:</span>{' '}
-                            <a href={app.meetLink} target="_blank" rel="noopener noreferrer"
-                              className="text-brand-500 hover:underline break-all">{app.meetLink}</a>
-                          </p>
-                        )}
-                        {app.outcomeNotes && (
-                          <p className="mt-2 italic bg-gray-50 rounded px-3 py-2 text-xs text-gray-600">"{app.outcomeNotes}"</p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })()}
 
                 {app.status === 'rejected' && app.rejectionReason && (
                   <div className="card p-5 border-l-4 border-red-300">
@@ -1633,16 +1475,6 @@ export default function ApplicationDetail() {
         </div>
 
         {/* ── Sub-modals ── */}
-        {showInterview && (
-          <InterviewModal app={app} agency={agency}
-            onConfirm={handleScheduleInterview}
-            onClose={() => setShowInterview(false)} />
-        )}
-        {showReschedule && (
-          <InterviewModal app={app} agency={agency}
-            onConfirm={handleRescheduleInterview}
-            onClose={() => setShowReschedule(false)} />
-        )}
         {showReject && (
           <RejectModal app={app} onConfirm={handleReject} onClose={() => setShowReject(false)} />
         )}
@@ -1658,10 +1490,6 @@ export default function ApplicationDetail() {
           <RequestInfoModal app={app}
             onConfirm={handleRequestInfo}
             onClose={() => setShowRequestInfo(false)} />
-        )}
-        {outcomeRequest && (
-          <OutcomeModal app={outcomeRequest.app} outcome={outcomeRequest.outcome}
-            currentUser={user} onClose={() => setOutcomeRequest(null)} />
         )}
         {viewingDoc && (
           <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />

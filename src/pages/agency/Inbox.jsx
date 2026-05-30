@@ -8,10 +8,9 @@ import {
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { getOrCreateConversation } from '../../utils/messages'
-import { isIntakeComplete } from '../../utils/intakeSheet'
 import { GL_VALIDITY_DAYS } from '../../utils/constants'
 import {
-  MdSearch, MdDescription, MdMessage, MdAssignment, MdInbox,
+  MdSearch, MdDescription, MdMessage, MdInbox,
   MdOpenInNew, MdClose,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -146,16 +145,17 @@ export default function Inbox() {
           <p className="page-sub">Click any row to open the full case record.</p>
         </div>
 
-        {/* Summary cards (clickable filters) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-5">
+        {/* Summary cards (clickable filters). Under the co-funding model,
+            slices only sit in For Funding (reviewing) / Needs Info
+            (awaiting_info) / Approved / Rejected — CRMC handles doc review
+            and the assessment interview on the parent request. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           {[
-            { label: 'Total',     value: applications.filter(a => a.status !== 'endorsed').length, color: 'text-gray-800',   key: 'all' },
-            { label: 'Pending',   value: countOf('pending'),                 color: 'text-blue-600',   key: 'pending' },
-            { label: 'Reviewing', value: countOf('reviewing'),               color: 'text-amber-600',  key: 'reviewing' },
-            { label: 'Waiting',   value: countOf('awaiting_info'),           color: 'text-orange-600', key: 'awaiting_info' },
-            { label: 'Interview', value: countOf('interview'),               color: 'text-purple-600', key: 'interview' },
-            { label: 'Approved',  value: countOf('approved') + countOf('certificate'), color: 'text-green-600', key: 'approved' },
-            { label: 'Rejected',  value: countOf('rejected'),                color: 'text-red-500',    key: 'rejected' },
+            { label: 'Total',       value: applications.filter(a => a.status !== 'endorsed').length, color: 'text-gray-800',   key: 'all' },
+            { label: 'For Funding', value: countOf('reviewing'),               color: 'text-amber-600',  key: 'reviewing' },
+            { label: 'Needs Info',  value: countOf('awaiting_info'),           color: 'text-orange-600', key: 'awaiting_info' },
+            { label: 'Approved',    value: countOf('approved') + countOf('certificate'), color: 'text-green-600', key: 'approved' },
+            { label: 'Rejected',    value: countOf('rejected'),                color: 'text-red-500',    key: 'rejected' },
           ].map(m => {
             const active = statusFilter === m.key
             return (
@@ -222,9 +222,6 @@ export default function Inbox() {
                   !['rejected','certificate'].includes(app.status)
                 const days = daysWaiting(app.submittedAt)
                 const dayColor = days >= 7 ? 'text-red-500' : days >= 3 ? 'text-amber-500' : 'text-gray-400'
-                const intakeStatus = ['reviewing','interview','approved','certificate'].includes(app.status)
-                  ? (isIntakeComplete(app.intakeSheet) ? 'complete' : app.intakeSheet ? 'partial' : 'missing')
-                  : null
                 return (
                   <tr key={app.id}
                     className={`cursor-pointer ${isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}
@@ -257,26 +254,14 @@ export default function Inbox() {
                       )}
                     </td>
                     <td>
-                      <div className="flex flex-col gap-0.5">
-                        {app.attachedDocuments?.length > 0 ? (
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <MdDescription size={13} className="text-gray-400" />
-                            {app.attachedDocuments.length} doc{app.attachedDocuments.length !== 1 ? 's' : ''}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                        {intakeStatus && (
-                          <span className={`text-xs flex items-center gap-1 ${
-                            intakeStatus === 'complete' ? 'text-green-600'
-                            : intakeStatus === 'partial' ? 'text-amber-600'
-                            : 'text-gray-400'
-                          }`}>
-                            <MdAssignment size={11} />
-                            {intakeStatus === 'complete' ? 'Intake ✓' : intakeStatus === 'partial' ? 'Intake in progress' : 'Intake needed'}
-                          </span>
-                        )}
-                      </div>
+                      {app.attachedDocuments?.length > 0 ? (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <MdDescription size={13} className="text-gray-400" />
+                          {app.attachedDocuments.length} doc{app.attachedDocuments.length !== 1 ? 's' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                     <td>
                       <div className="flex flex-col gap-0.5 items-start">
@@ -319,7 +304,7 @@ export default function Inbox() {
                     <p className="text-sm text-gray-400">
                       {search || statusFilter !== 'all'
                         ? 'No applications match your filter.'
-                        : 'No applications yet. They will appear here when patients apply.'}
+                        : 'No applications yet. They will appear here when CRMC endorses requests to your agency.'}
                     </p>
                   </td>
                 </tr>

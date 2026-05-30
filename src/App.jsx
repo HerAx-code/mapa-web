@@ -39,7 +39,6 @@ const Inbox                 = lazy(() => import('./pages/agency/Inbox'))
 const ApplicationDetail     = lazy(() => import('./pages/agency/ApplicationDetail'))
 const IntakeSheet           = lazy(() => import('./pages/agency/IntakeSheet'))
 const GLViewer              = lazy(() => import('./pages/agency/GLViewer'))
-const AgencyInterviews      = lazy(() => import('./pages/agency/Interviews'))
 const CertificateGenerator  = lazy(() => import('./pages/agency/CertificateGenerator'))
 const AgencyProgram         = lazy(() => import('./pages/agency/Program'))
 const UploadCertificates    = lazy(() => import('./pages/agency/UploadCertificates'))
@@ -124,7 +123,6 @@ export default function App() {
           <Route path="/agency/applications/:id"        element={<PrivateRoute allowedRoles={AGENCY_ROLES}><ApplicationDetail /></PrivateRoute>} />
           <Route path="/agency/applications/:id/intake" element={<PrivateRoute allowedRoles={AGENCY_ROLES}><IntakeSheet /></PrivateRoute>} />
           <Route path="/agency/applications/:id/gl"     element={<PrivateRoute allowedRoles={AGENCY_ROLES}><GLViewer /></PrivateRoute>} />
-          <Route path="/agency/interviews"  element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyInterviews /></PrivateRoute>} />
           <Route path="/agency/messages"    element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AdminMessages /></PrivateRoute>} />
           <Route path="/agency/generator"   element={<PrivateRoute allowedRoles={AGENCY_ROLES}><CertificateGenerator /></PrivateRoute>} />
           <Route path="/agency/program"        element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyProgram /></PrivateRoute>} />

@@ -399,7 +399,7 @@ export default function AgencyDashboard() {
         ) : pendingApps.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-sm text-gray-400">No pending applications.</p>
-            <p className="text-xs text-gray-300 mt-1">New applications will appear here when patients apply.</p>
+            <p className="text-xs text-gray-300 mt-1">New applications will appear here when CRMC endorses requests to your agency.</p>
           </div>
         ) : (
           <div className="card overflow-x-auto">

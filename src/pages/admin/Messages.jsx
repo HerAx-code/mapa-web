@@ -339,7 +339,7 @@ function PatientComposeModal({ user, onClose, onCreated }) {
               ))}
             </select>
             {filteredRecipients.length === 0 && patientAgencyIds.size === 0 && (
-              <p className="text-xs text-gray-400 mt-1">Apply to a program first to message your agency.</p>
+              <p className="text-xs text-gray-400 mt-1">Submit an assistance request first — agencies become reachable once CRMC endorses your request to them.</p>
             )}
           </div>
           <div>

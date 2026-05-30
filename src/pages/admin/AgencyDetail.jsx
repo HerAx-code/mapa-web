@@ -222,7 +222,7 @@ export default function AgencyDetail() {
           pendingApps.slice(i, i + 400).forEach(app => {
             batch.update(doc(db, 'applications', app.id), {
               status:          'rejected',
-              rejectionReason: 'Agency temporarily unavailable. You may apply to another program.',
+              rejectionReason: 'Agency temporarily unavailable. CRMC may endorse your request to another agency.',
               rejectionType:   'agency_disabled',  // distinguishes from a patient-fault rejection
               cooldownUntilAt: null,                // no 30-day penalty for the patient
               updatedAt:       serverTimestamp(),
@@ -234,7 +234,7 @@ export default function AgencyDetail() {
         await Promise.all(pendingApps.map(app => notify(app.patientId, {
           type:  'app_advanced',
           title: 'Application closed — agency unavailable',
-          body:  `Your application to ${agency.name} was closed because the agency is temporarily unavailable. You may apply to another program right away.`,
+          body:  `Your application to ${agency.name} was closed because the agency is temporarily unavailable. CRMC may endorse your request to another agency.`,
         }).catch(() => {})))
       }
 

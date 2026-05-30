@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   MdExpandMore, MdExpandLess, MdSearch, MdMenuBook,
-  MdInbox, MdCardMembership, MdBarChart, MdVideoCall,
+  MdInbox, MdCardMembership, MdBarChart,
   MdListAlt, MdMessage, MdUnfoldMore, MdUnfoldLess,
 } from 'react-icons/md'
 
@@ -316,7 +316,6 @@ const GROUPS = ['Orientation', 'Daily Processing', 'Approval & Guarantee Letter'
 
 const QUICK_LINKS = [
   { label: 'Application Inbox', path: '/agency/inbox',      Icon: MdInbox },
-  { label: 'Online Interviews', path: '/agency/interviews', Icon: MdVideoCall },
   { label: 'Guarantee Letters', path: '/agency/generator',  Icon: MdCardMembership },
   { label: 'Slot Management',   path: '/agency/slots',      Icon: MdBarChart },
   { label: 'Application Logs',  path: '/agency/logs',       Icon: MdListAlt },

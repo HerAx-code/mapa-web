@@ -275,7 +275,7 @@ export default function Patients() {
         title: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed',
         body:  newCooldown > 0
           ? 'A holding period has been applied to your account by the administrator.'
-          : 'Your holding period has been removed. You may apply to programs freely.',
+          : 'Your holding period has been removed. You may submit a new assistance request anytime.',
       })
       logAudit(adminUser, { action: newCooldown > 0 ? 'holding_applied' : 'holding_removed', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed' })
       toast.success(`Holding period ${newCooldown > 0 ? 'applied to' : 'removed from'} ${patient.name}.`)
@@ -515,8 +515,8 @@ export default function Patients() {
                         <MdSchedule size={16} className="text-amber-500 flex-shrink-0" />
                         <p className="text-sm text-amber-700 flex-1">
                           {p.cooldown > 0
-                            ? <>Remove holding period from <strong>{p.name}</strong>? They will be able to apply to programs again.</>
-                            : <>Apply a holding period to <strong>{p.name}</strong>? They will not be able to submit new applications until it is removed.</>
+                            ? <>Remove holding period from <strong>{p.name}</strong>? They will be able to submit new assistance requests again.</>
+                            : <>Apply a holding period to <strong>{p.name}</strong>? They will not be able to submit new assistance requests until it is removed.</>
                           }
                         </p>
                         <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"

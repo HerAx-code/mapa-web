@@ -102,14 +102,17 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     return unsub
   }, [id, navigate])
 
-  // Permission: CRMC admins edit the request's intake; the owning agency edits
-  // a (legacy) application's intake. Terminal states are read-only.
+  // Permission: CRMC admins edit the request's intake; patients fill the
+  // facts portion on their own request. Under the co-funding redesign the
+  // assessment is single-sourced on the parent request, so the legacy
+  // agency-application intake is view-only (kept accessible for old slices
+  // whose data was written before the redesign).
   const canEdit = app && (
     patientFacts
       ? app.patientId === user?.uid && !['closed', 'rejected', 'fully_funded'].includes(app.status)
       : isRequestMode
         ? isCrmcAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
-        : (user?.agencyId === app.agencyId) && !['rejected'].includes(app.status)
+        : false
   )
 
   // Autosave (debounced)
@@ -378,7 +381,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 ? `This ${isRequestMode ? 'request' : 'application'} was rejected — the assessment is now read-only.`
                 : isRequestMode
                   ? 'You are viewing this case assessment in read-only mode. Only CRMC staff can edit it.'
-                  : `You are viewing this case assessment in read-only mode. Only coordinators of ${app.agencyName} can edit it.`}
+                  : 'The case assessment is owned by CRMC on the parent request. This view is read-only.'}
             </p>
           </div>
         )}
