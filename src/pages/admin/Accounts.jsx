@@ -1,7 +1,7 @@
 import { Fragment, useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
-import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail } from 'firebase/auth'
+import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail, deleteUser } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app'
 import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -92,18 +92,31 @@ function AccountModal({ account, onClose }) {
         const secondaryAuth = getSecondaryAuth()
         const cred = await createUserWithEmailAndPassword(secondaryAuth, form.email.trim(), form.password)
         const uid  = cred.user.uid
+        // Create the Firestore user doc BEFORE signing out -- if setDoc
+        // fails (rules denial, network blip), we still have the Auth
+        // session and can deleteUser to avoid orphaning a ghost account
+        // (logged-in but invisible to the app). Without this rollback,
+        // failed creates leave the email permanently registered with no
+        // way to retry from this page (auth/email-already-in-use).
+        try {
+          await setDoc(doc(db, 'users', uid), {
+            name:      form.name.trim(),
+            email:     form.email.trim(),
+            role:      form.role,
+            agencyId:  null,
+            contact:   form.contact.trim(),
+            rank:      form.role === 'super_admin' ? 'high' : 'low',
+            active:    true,
+            createdAt: serverTimestamp(),
+          })
+        } catch (setDocErr) {
+          try { await deleteUser(cred.user) } catch (cleanupErr) {
+            console.error('[Accounts] orphaned Auth user cleanup failed for', form.email.trim(), cleanupErr)
+          }
+          await fbSignOut(secondaryAuth).catch(() => {})
+          throw setDocErr
+        }
         await fbSignOut(secondaryAuth)
-
-        await setDoc(doc(db, 'users', uid), {
-          name:      form.name.trim(),
-          email:     form.email.trim(),
-          role:      form.role,
-          agencyId:  null,
-          contact:   form.contact.trim(),
-          rank:      form.role === 'super_admin' ? 'high' : 'low',
-          active:    true,
-          createdAt: serverTimestamp(),
-        })
 
         if (form.sendReset) {
           await sendPasswordResetEmail(auth, form.email.trim())

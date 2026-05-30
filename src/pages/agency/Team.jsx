@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore'
 import {
   getAuth, createUserWithEmailAndPassword,
-  signOut as fbSignOut, sendPasswordResetEmail,
+  signOut as fbSignOut, sendPasswordResetEmail, deleteUser,
 } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app'
 import { db, auth, firebaseConfig } from '../../firebase'
@@ -59,20 +59,34 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
       const secondaryAuth = getSecondaryAuth()
       const cred = await createUserWithEmailAndPassword(secondaryAuth, form.email.trim(), form.password)
       const uid  = cred.user.uid
+      // Create the Firestore user doc BEFORE signing out -- if setDoc
+      // fails (rules denial, network blip), we still have the Auth
+      // session and can deleteUser to roll back. Without this, a failed
+      // create leaves the email permanently registered with no Firestore
+      // doc; the agency admin can't retry from this page (the next
+      // attempt hits auth/email-already-in-use), and the orphaned Auth
+      // user can technically sign in but is invisible to the app.
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          name:      form.name.trim(),
+          email:     form.email.trim(),
+          role:      'agency',
+          agencyId,
+          contact:   form.contact.trim() || null,
+          rank:      null,
+          active:    true,
+          cooldown:  0,
+          deletion:  false,
+          createdAt: serverTimestamp(),
+        })
+      } catch (setDocErr) {
+        try { await deleteUser(cred.user) } catch (cleanupErr) {
+          console.error('[Team] orphaned Auth user cleanup failed for', form.email.trim(), cleanupErr)
+        }
+        await fbSignOut(secondaryAuth).catch(() => {})
+        throw setDocErr
+      }
       await fbSignOut(secondaryAuth)
-
-      await setDoc(doc(db, 'users', uid), {
-        name:      form.name.trim(),
-        email:     form.email.trim(),
-        role:      'agency',
-        agencyId,
-        contact:   form.contact.trim() || null,
-        rank:      null,
-        active:    true,
-        cooldown:  0,
-        deletion:  false,
-        createdAt: serverTimestamp(),
-      })
 
       if (sendReset) await sendPasswordResetEmail(auth, form.email.trim())
 
