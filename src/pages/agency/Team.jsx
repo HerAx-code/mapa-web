@@ -408,7 +408,7 @@ export default function AgencyTeam() {
           </div>
           <div className="card p-4">
             <p className="text-xs text-gray-400 mb-1">Agency Administrators</p>
-            <p className="text-3xl font-semibold text-amber-600">{loading ? '—' : admins}</p>
+            <p className="text-3xl font-semibold text-purple-600">{loading ? '—' : admins}</p>
           </div>
           <div className="card p-4">
             <p className="text-xs text-gray-400 mb-1">Coordinators</p>
@@ -436,7 +436,7 @@ export default function AgencyTeam() {
                 return (
                   <div key={coord.uid} className={`flex items-center gap-3 px-5 py-3.5 ${!isActive ? 'opacity-50' : ''}`}>
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                      coord.role === 'agency_admin' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                      coord.role === 'agency_admin' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
                     }`}>
                       {coord.name?.[0]?.toUpperCase() ?? '?'}
                     </div>
@@ -447,7 +447,7 @@ export default function AgencyTeam() {
                           {isActive ? 'Active' : 'Deactivated'}
                         </span>
                         {coord.role === 'agency_admin' && (
-                          <span className="badge text-xs badge-amber flex items-center gap-0.5">
+                          <span className="badge text-xs badge-purple flex items-center gap-0.5">
                             <MdStar size={11} /> Agency Admin
                           </span>
                         )}
