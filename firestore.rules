@@ -159,18 +159,12 @@ service cloud.firestore {
     match /documents/{docId} {
       // Agency reads are scoped to documents on requests they hold a slice
       // for. The endorse transaction (admin/Requests EndorseModal) stamps
-      // an agencyIds[] array onto each attached document at endorse time.
-      // The legacy fallback (no field present) is intentional during the
-      // pilot transition so docs uploaded before this rule landed remain
-      // readable until a backfill stamps them. Remove the !'agencyIds' in
-      // resource.data clause after backfill completes.
+      // an agencyIds[] array onto each attached document at endorse time,
+      // and the /seed-page backfill stamped pre-existing legacy docs.
       allow read:   if isAuth() && (
         resource.data.patientId == uid()
         || isAdmin()
-        || (isAgency() && (
-          (resource.data.agencyIds is list && userAgencyId() in resource.data.agencyIds)
-          || !('agencyIds' in resource.data)
-        ))
+        || (isAgency() && resource.data.agencyIds is list && userAgencyId() in resource.data.agencyIds)
       );
       allow create: if isPatient();
       // CRMC-gateway redesign: document verification is CRMC's job (the single
