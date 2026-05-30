@@ -20,7 +20,7 @@ import InterviewModal from '../../components/InterviewModal'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
-  MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch,
+  MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch, MdRefresh,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -362,6 +362,11 @@ function RequestDetail({ request, agencies, onClose }) {
   // patient gets the reason in the in-app notification + email so they know
   // what to fix on the re-upload.
   const [rejectingDoc, setRejectingDoc]       = useState(null)
+  // Which document is being reset to Pending (un-verify or un-reject). Wrapped
+  // in a confirm step so the operator doesn't fat-finger their way out of a
+  // legitimate decision -- this action exists for accident recovery, not for
+  // routine flow.
+  const [unverifyingDoc, setUnverifyingDoc]   = useState(null)
   const [outcomeNotes, setOutcomeNotes] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -421,31 +426,36 @@ function RequestDetail({ request, agencies, onClose }) {
   // Unified Intake Sheet completed).
   const canEndorse = allVerified && !!request.interviewOutcome && intakeComplete
 
-  // Verify / reject a document. First action also moves the request out of
-  // 'submitted' into 'under_review'. Rejection notifies the patient to
-  // re-upload and includes the operator's reason so the patient knows
-  // exactly what to fix.
+  // Verify / reject / un-verify a document. First verify or reject also
+  // moves the request out of 'submitted' into 'under_review'. Rejection
+  // notifies the patient to re-upload and includes the operator's reason
+  // so the patient knows exactly what to fix. 'pending' is the un-verify
+  // (operator correction) path -- clears reviewer/reason and skips the
+  // patient notification (they were never told about the prior decision).
   const reviewDoc = async (docItem, newStatus, reason = null) => {
     setBusy(true)
     try {
       const cleanReason = (reason ?? '').trim() || null
+      const isPending = newStatus === 'pending'
       await updateDoc(doc(db, 'documents', docItem.id), {
         status: newStatus,
-        reviewedBy: user.name ?? 'CRMC',
-        reviewedAt: serverTimestamp(),
+        reviewedBy: isPending ? null : (user.name ?? 'CRMC'),
+        reviewedAt: isPending ? null : serverTimestamp(),
         // Persist the rejection reason so the doc viewer / audit trail
-        // can surface it. Clear it on re-verify to avoid stale text.
+        // can surface it. Clear it on re-verify or un-verify.
         rejectionReason: newStatus === 'rejected' ? cleanReason : null,
       })
       const updatedAttached = (request.attachedDocuments ?? []).map(a =>
         a.documentId === docItem.id ? { ...a, status: newStatus } : a)
       await updateDoc(doc(db, 'requests', request.id), {
         attachedDocuments: updatedAttached,
-        ...(request.status === 'submitted' ? { status: 'under_review' } : {}),
+        ...(request.status === 'submitted' && !isPending ? { status: 'under_review' } : {}),
         updatedAt: serverTimestamp(),
       })
       logAudit(user, {
-        action: newStatus === 'verified' ? 'doc_verified' : 'doc_rejected',
+        action: newStatus === 'verified' ? 'doc_verified'
+              : newStatus === 'rejected' ? 'doc_rejected'
+              : 'doc_unverified',
         targetType: 'document', targetId: docItem.id, targetName: docItem.name,
         details: `Request ${request.requestId}` + (cleanReason ? ` · reason: ${cleanReason}` : ''),
       })
@@ -457,7 +467,11 @@ function RequestDetail({ request, agencies, onClose }) {
             + (cleanReason ? ` Reason: ${cleanReason}` : ''),
         }).catch(() => {})
       }
-      toast.success(newStatus === 'verified' ? 'Document verified.' : 'Document marked for re-upload.')
+      toast.success(
+        newStatus === 'verified' ? 'Document verified.'
+        : newStatus === 'rejected' ? 'Document marked for re-upload.'
+        : 'Document reset to Pending.'
+      )
     } catch (err) {
       console.error('[Requests] doc review error:', err)
       toast.error('Failed to update document.')
@@ -645,18 +659,27 @@ function RequestDetail({ request, agencies, onClose }) {
                             : 'OCR: could not auto-read — verify manually'}
                         </p>
                       )}
-                      {d.status !== 'verified' && (
-                        <div className="flex gap-2 mt-2 pl-6">
+                      <div className="flex gap-2 mt-2 pl-6 flex-wrap">
+                        {d.status !== 'verified' && (
                           <button className="text-xs font-medium text-green-600 hover:text-green-700 flex items-center gap-1 disabled:opacity-50"
                             disabled={busy} onClick={() => reviewDoc(d, 'verified')}>
                             <MdCheckCircle size={14} /> Verify
                           </button>
+                        )}
+                        {d.status !== 'verified' && d.status !== 'rejected' && (
                           <button className="text-xs font-medium text-red-500 hover:text-red-600 flex items-center gap-1 disabled:opacity-50"
                             disabled={busy} onClick={() => setRejectingDoc(d)}>
                             <MdBlock size={14} /> Reject
                           </button>
-                        </div>
-                      )}
+                        )}
+                        {(d.status === 'verified' || d.status === 'rejected') && (
+                          <button className="text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1 disabled:opacity-50"
+                            disabled={busy} onClick={() => setUnverifyingDoc(d)}
+                            title="Mark this document as Pending review again">
+                            <MdRefresh size={14} /> Reset to Pending
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -873,6 +896,20 @@ function RequestDetail({ request, agencies, onClose }) {
         withReason
         reasonPlaceholder="e.g. ID photo is blurry — please re-take in good lighting"
         reasonMaxLength={300}
+      />
+
+      <ConfirmModal
+        open={!!unverifyingDoc}
+        onClose={() => setUnverifyingDoc(null)}
+        onConfirm={async () => {
+          if (unverifyingDoc) await reviewDoc(unverifyingDoc, 'pending')
+          setUnverifyingDoc(null)
+        }}
+        title={unverifyingDoc ? `Reset "${unverifyingDoc.documentTypeName || unverifyingDoc.name}" to Pending?` : 'Reset document?'}
+        body="Clears the verifier name and timestamp so the document is back in the unreviewed queue. The patient is not notified -- this action is meant for accident recovery (Verify or Reject clicked in error)."
+        tone="warning"
+        confirmLabel="Reset to Pending"
+        confirmLabelBusy="Resetting…"
       />
     </div>
   )
