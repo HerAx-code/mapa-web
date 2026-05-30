@@ -7,14 +7,13 @@ import { logAudit } from '../../utils/auditLog'
 import { useAuth } from '../../contexts/AuthContext'
 import { MdSearch, MdDelete, MdFlag, MdCheckCircle, MdHourglassEmpty, MdWarning, MdRefresh } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import StatusBadge from '../../components/ui/StatusBadge'
 
 // ── Config ────────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG = {
-  open:        { label: 'Open',        badge: 'badge-amber', dot: 'bg-amber-400' },
-  in_progress: { label: 'In Progress', badge: 'badge-blue',  dot: 'bg-blue-400'  },
-  resolved:    { label: 'Resolved',    badge: 'badge-green', dot: 'bg-green-500' },
-}
+// Report badge rendering is delegated to <StatusBadge kind="report" />
+// which reads REPORT_STATUS_CONFIG from constants.js. The summary tiles
+// below have their own inline color config (bg/dot/color trio) since
+// they're navigational tiles, not status pills.
 
 const CATEGORY_BADGE = {
   'Bug / Error':                       'badge-red',
@@ -331,7 +330,6 @@ export default function Reports() {
           <div className="space-y-3">
             {filtered.map(r => {
               const status    = r.status ?? 'open'
-              const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.open
               const catBadge  = CATEGORY_BADGE[r.category] ?? 'badge-gray'
               const rRole     = r.reporterRole ?? r.role
               const avatarCls = ROLE_AVATAR[rRole] ?? 'bg-gray-100 text-gray-600'
@@ -358,7 +356,7 @@ export default function Reports() {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span className={`badge text-xs ${catBadge}`}>{r.category ?? '—'}</span>
-                        <span className={`badge text-xs ${statusCfg.badge}`}>{statusCfg.label}</span>
+                        <StatusBadge status={status} kind="report" />
                       </div>
                     </div>
 
