@@ -1,0 +1,20 @@
+{
+  "name": "mapa-functions",
+  "description": "Cloud Functions for MAPA - scheduled jobs + future triggers",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions --project mapa-crmc",
+    "logs": "firebase functions:log --project mapa-crmc"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.0.1"
+  }
+}
