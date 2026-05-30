@@ -947,6 +947,23 @@ export default function ApplicationDetail() {
     }
   }
 
+  // Direct ping to the CRMC coordinator who endorsed this slice — closes the
+  // agency -> CRMC ad-hoc-question loop without making the agency hunt for
+  // the right admin in their messages list.
+  const handleMessageCrmc = async () => {
+    if (!app?.endorsedById) return
+    try {
+      const convId = await getOrCreateConversation(user.uid, app.endorsedById, {
+        names:   { [user.uid]: user.name, [app.endorsedById]: app.endorsedBy ?? 'CRMC' },
+        roles:   { [user.uid]: user.role ?? 'agency', [app.endorsedById]: 'admin' },
+        subject: `Re: Endorsed ${app.appId || app.id.slice(0, 8)} · ${app.patientName}`,
+      })
+      navigate(`/agency/messages?conv=${convId}`)
+    } catch {
+      toast.error('Could not open conversation. Please try again.')
+    }
+  }
+
   const handleAddNote = async () => {
     if (!newNote.trim()) return
     setSavingNote(true)
@@ -1073,6 +1090,13 @@ export default function ApplicationDetail() {
               className="btn-secondary text-sm flex items-center gap-1.5 ml-1">
               <MdMessage size={14} /> Message Patient
             </button>
+            {app.endorsedById && (
+              <button onClick={handleMessageCrmc}
+                className="btn-secondary text-sm flex items-center gap-1.5"
+                title={`Message ${app.endorsedBy ?? 'CRMC'} (endorsing coordinator)`}>
+                <MdMessage size={14} /> Message CRMC
+              </button>
+            )}
           </div>
         </div>
 

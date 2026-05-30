@@ -12,7 +12,8 @@ import { computeFunding } from '../../utils/requests'
 import { REQUEST_STATUS_CONFIG, DOC_STATUS_CONFIG } from '../../utils/constants'
 import { isIdType } from '../../utils/idOcr'
 import { isIntakeComplete } from '../../utils/intakeSheet'
-import { Link } from 'react-router-dom'
+import { getOrCreateConversation } from '../../utils/messages'
+import { Link, useNavigate } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
@@ -259,13 +260,35 @@ function EndorseModal({ request, slices, agencies, onClose }) {
 
 function RequestDetail({ request, agencies, onClose }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [slices, setSlices] = useState([])
+  const [messagingPatient, setMessagingPatient] = useState(false)
   const [patientDocs, setPatientDocs] = useState([])
   const [viewingDoc, setViewingDoc] = useState(null)
   const [showEndorse, setShowEndorse] = useState(false)
   const [showInterview, setShowInterview] = useState(false)
   const [outcomeNotes, setOutcomeNotes] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Open (or create) a conversation with the patient and jump to Messages.
+  // Used for the stale-endorsement nudge so CRMC can poke the patient without
+  // hunting through the conversation list.
+  const handleMessagePatient = async (subjectHint) => {
+    if (messagingPatient) return
+    setMessagingPatient(true)
+    try {
+      const convId = await getOrCreateConversation(user.uid, request.patientId, {
+        names:   { [user.uid]: user.name, [request.patientId]: request.patientName },
+        roles:   { [user.uid]: user.role, [request.patientId]: 'patient' },
+        subject: subjectHint ?? `Re: Request ${request.requestId}`,
+      })
+      navigate(`/admin/messages?conv=${convId}`)
+    } catch {
+      toast.error('Could not open conversation. Please try again.')
+    } finally {
+      setMessagingPatient(false)
+    }
+  }
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -619,7 +642,16 @@ function RequestDetail({ request, agencies, onClose }) {
                         <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
                         <p className="text-xs text-gray-400">Asked {peso(s.amountRequested)}{s.amountApproved > 0 ? ` · approved ${peso(s.amountApproved)}` : ''}</p>
                         {stale && (
-                          <p className="text-xs text-amber-700 mt-0.5">Awaiting patient acceptance · {daysSinceEndorsed}d. Message the patient to nudge them.</p>
+                          <div className="text-xs text-amber-700 mt-0.5">
+                            <p>Awaiting patient acceptance · {daysSinceEndorsed}d.</p>
+                            <button
+                              type="button"
+                              onClick={() => handleMessagePatient(`Reminder: please accept the endorsement to ${s.agencyName}`)}
+                              disabled={messagingPatient}
+                              className="mt-1 font-medium underline underline-offset-2 hover:text-amber-800 disabled:opacity-50">
+                              Message patient →
+                            </button>
+                          </div>
                         )}
                       </div>
                       <span className={`badge text-xs flex-shrink-0 ${stale ? 'badge-amber' : 'badge-gray'}`}>
