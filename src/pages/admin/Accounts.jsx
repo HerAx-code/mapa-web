@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail } from 'firebase/auth'
@@ -226,6 +226,10 @@ export default function Accounts() {
     const unsub = onSnapshot(q, snap => {
       setAccounts(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
       setLoading(false)
+    }, (err) => {
+      setLoading(false)
+      console.error('[Accounts] users snapshot error:', err)
+      toast.error('Failed to load accounts.')
     })
     return unsub
   }, [])
@@ -244,30 +248,35 @@ export default function Accounts() {
 
   const handleToggleActive = async (account) => {
     const nowActive = account.active === false
-    await updateDoc(doc(db, 'users', account.uid), { active: nowActive })
+    try {
+      await updateDoc(doc(db, 'users', account.uid), { active: nowActive })
 
-    if (nowActive) {
-      await notify(account.uid, {
-        type: 'account_activated', title: 'Account Reactivated',
-        body: 'Your account has been reactivated. You can now log in to the portal.',
-      })
-      await notifySuperAdmins({
-        type: 'account_activated', title: 'Account Reactivated',
-        body: `${account.name}'s account has been reactivated by ${currentUser?.name}.`,
-      })
-      logAudit(currentUser, { action: 'account_activated', targetType: 'account', targetId: account.uid, targetName: account.name, details: 'Account reactivated' })
-      toast.success(`${account.name}'s account reactivated.`)
-    } else {
-      await notify(account.uid, {
-        type: 'account_deactivated', title: 'Account Deactivated',
-        body: 'Your account has been deactivated by the administrator. Contact your supervisor for assistance.',
-      })
-      await notifySuperAdmins({
-        type: 'account_deactivated', title: 'Account Deactivated',
-        body: `${account.name}'s account has been deactivated by ${currentUser?.name}.`,
-      })
-      logAudit(currentUser, { action: 'account_deactivated', targetType: 'account', targetId: account.uid, targetName: account.name, details: 'Account deactivated' })
-      toast.success(`${account.name}'s account deactivated.`)
+      if (nowActive) {
+        await notify(account.uid, {
+          type: 'account_activated', title: 'Account Reactivated',
+          body: 'Your account has been reactivated. You can now log in to the portal.',
+        })
+        await notifySuperAdmins({
+          type: 'account_activated', title: 'Account Reactivated',
+          body: `${account.name}'s account has been reactivated by ${currentUser?.name}.`,
+        })
+        logAudit(currentUser, { action: 'account_activated', targetType: 'account', targetId: account.uid, targetName: account.name, details: 'Account reactivated' })
+        toast.success(`${account.name}'s account reactivated.`)
+      } else {
+        await notify(account.uid, {
+          type: 'account_deactivated', title: 'Account Deactivated',
+          body: 'Your account has been deactivated by the administrator. Contact your supervisor for assistance.',
+        })
+        await notifySuperAdmins({
+          type: 'account_deactivated', title: 'Account Deactivated',
+          body: `${account.name}'s account has been deactivated by ${currentUser?.name}.`,
+        })
+        logAudit(currentUser, { action: 'account_deactivated', targetType: 'account', targetId: account.uid, targetName: account.name, details: 'Account deactivated' })
+        toast.success(`${account.name}'s account deactivated.`)
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error(`Failed to ${nowActive ? 'reactivate' : 'deactivate'} account.`)
     }
   }
 
@@ -283,14 +292,19 @@ export default function Accounts() {
   }
 
   const handleDelete = async (account) => {
-    await deleteDoc(doc(db, 'users', account.uid))
-    await notifySuperAdmins({
-      type: 'account_deleted', title: 'Account Deleted',
-      body: `${account.name}'s account (${ROLE_LABEL[account.role]}) was permanently deleted by ${currentUser?.name}.`,
-    })
-    setConfirmDelete(null)
-    logAudit(currentUser, { action: 'account_deleted', targetType: 'account', targetId: account.uid, targetName: account.name, details: `Role was: ${ROLE_LABEL[account.role] ?? account.role}` })
-    toast.success('Account deleted.')
+    try {
+      await deleteDoc(doc(db, 'users', account.uid))
+      await notifySuperAdmins({
+        type: 'account_deleted', title: 'Account Deleted',
+        body: `${account.name}'s account (${ROLE_LABEL[account.role]}) was permanently deleted by ${currentUser?.name}.`,
+      })
+      setConfirmDelete(null)
+      logAudit(currentUser, { action: 'account_deleted', targetType: 'account', targetId: account.uid, targetName: account.name, details: `Role was: ${ROLE_LABEL[account.role] ?? account.role}` })
+      toast.success('Account deleted.')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to delete account.')
+    }
   }
 
   return (
@@ -389,8 +403,8 @@ export default function Accounts() {
                 const isDeleting   = confirmDelete?.uid === a.uid
 
                 return (
-                  <>
-                    <tr key={a.uid} className={!isActive ? 'opacity-50' : ''}>
+                  <Fragment key={a.uid}>
+                    <tr className={!isActive ? 'opacity-50' : ''}>
                       <td>
                         <div className="flex items-center gap-2.5">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
@@ -451,7 +465,7 @@ export default function Accounts() {
 
                     {/* Delete confirmation row */}
                     {isDeleting && (
-                      <tr key={a.uid + '_del'} className="bg-red-50">
+                      <tr className="bg-red-50">
                         <td colSpan={5} className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <MdWarning size={16} className="text-red-500 flex-shrink-0" />
@@ -466,15 +480,17 @@ export default function Accounts() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={5} className="text-center py-12">
                     <MdSupervisedUserCircle size={36} className="text-gray-200 mx-auto mb-2" />
                     <p className="text-sm text-gray-400">
-                      {search || roleFilter !== 'all' ? 'No accounts match your filter.' : 'No accounts found.'}
+                      {search || roleFilter !== 'all' || statusFilter !== 'all'
+                        ? 'No accounts match your filter.'
+                        : 'No accounts found.'}
                     </p>
                   </td>
                 </tr>

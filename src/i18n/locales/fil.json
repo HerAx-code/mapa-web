@@ -1,10 +1,10 @@
 {
   "pwa": {
     "installPrompt": {
-      "title":   "I-install ang MAPA para sa mas mabilis na access",
-      "desc":    "Madaling makapunta sa inyong mga aplikasyon mula sa home screen, kahit mabagal ang koneksyon.",
+      "title": "I-install ang MAPA para sa mas mabilis na access",
+      "desc": "Madaling makapunta sa inyong mga aplikasyon mula sa home screen, kahit mabagal ang koneksyon.",
       "install": "I-install",
-      "notNow":  "Hindi muna",
+      "notNow": "Hindi muna",
       "iosHint": "Pindutin ang Share button sa ibaba, pagkatapos piliin ang 'Add to Home Screen' upang i-install ang MAPA."
     },
     "offlineBanner": {
@@ -15,7 +15,7 @@
     "backHome": "Bumalik sa home",
     "hero": {
       "title": "I-install ang MAPA sa inyong telepono",
-      "desc":  "Mag-apply para sa tulong medikal mula sa inyong home screen — hindi na kailangan tandaan ang URL ng website."
+      "desc": "Mag-apply para sa tulong medikal mula sa inyong home screen — hindi na kailangan tandaan ang URL ng website."
     },
     "cta": {
       "install": "I-install ang MAPA app",
@@ -34,51 +34,36 @@
       "iosStep2": "Mag-scroll pababa at pindutin ang 'Add to Home Screen'.",
       "iosStep3": "Pindutin ang 'Add' sa kanang itaas.",
       "desktopTitle": "Kayo ay nasa desktop computer",
-      "desktopDesc":  "Ang MAPA mobile app ay para sa mga telepono. Buksan ang page na ito sa inyong Android phone o iPhone upang i-install."
+      "desktopDesc": "Ang MAPA mobile app ay para sa mga telepono. Buksan ang page na ito sa inyong Android phone o iPhone upang i-install."
     },
     "fallback": {
-      "ios":     "Sa iPhone, ang pag-install ay ginagawa sa Share menu ng Safari. Sundan ang mga hakbang sa ibaba.",
+      "ios": "Sa iPhone, ang pag-install ay ginagawa sa Share menu ng Safari. Sundan ang mga hakbang sa ibaba.",
       "desktop": "Ang MAPA ay ginawa para sa mga telepono. Buksan ang page na ito sa inyong Android phone o iPhone upang i-install.",
       "android": "Hindi pa naipakita ng Chrome ang install option. Sundan ang mga manu-manong hakbang sa ibaba upang i-install ang MAPA."
     },
     "manual": {
-      "iosTitle":     "Paano i-install sa iPhone",
+      "iosTitle": "Paano i-install sa iPhone",
       "desktopTitle": "Pag-install sa desktop",
       "androidTitle": "Paano i-install nang manu-mano"
     },
     "alreadyInstalled": {
       "title": "Naka-install na ang MAPA",
-      "desc":  "Ginagamit niyo na ngayon ang naka-install na app. Walang na kailangang gawin dito — bumalik sa home screen para makita ang MAPA icon."
+      "desc": "Ginagamit niyo na ngayon ang naka-install na app. Walang na kailangang gawin dito — bumalik sa home screen para makita ang MAPA icon."
     },
     "benefits": {
-      "title":     "Bakit i-install",
+      "title": "Bakit i-install",
       "homescreen": "May MAPA icon sa inyong home screen — hindi na kailangang tandaan ang address ng website.",
-      "faster":     "Mabilis bumukas, kahit mabagal ang 4G.",
-      "offline":    "Gumagana kahit walang internet para sa mga bagay na binuksan na.",
-      "notifs":     "Tumanggap ng abiso kapag may pagbabago sa status ng aplikasyon (paparating)."
+      "faster": "Mabilis bumukas, kahit mabagal ang 4G.",
+      "offline": "Gumagana kahit walang internet para sa mga bagay na binuksan na.",
+      "notifs": "Tumanggap ng abiso kapag may pagbabago sa status ng aplikasyon (paparating)."
     },
     "footer": "Libre · Ginawa ng Cotabato Regional Medical Center · Walang app store na kailangan"
   },
   "common": {
-    "appName": "MAPA",
-    "appFull": "Medical Assistance Portal Access",
-    "loading": "Naglo-load...",
-    "save": "I-save",
-    "cancel": "Kanselahin",
-    "close": "Isara",
-    "submit": "Isumite",
-    "back": "Bumalik",
-    "next": "Sunod",
-    "yes": "Oo",
-    "no": "Hindi",
-    "english": "English",
-    "filipino": "Filipino",
-    "viewAll": "Tingnan lahat",
-    "noData": "Walang data"
+    "close": "Isara"
   },
   "auth": {
     "welcome": "Maligayang pagdating sa MAPA",
-    "subtitle": "Medical Assistance Portal Access · CRMC",
     "signinSubtitle": "Mag-sign in sa inyong account",
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
@@ -89,8 +74,6 @@
     "forgotPassword": "Nakalimutan ang password?",
     "noAccount": "Wala pang account?",
     "registerHere": "Mag-register dito",
-    "haveAccount": "Mayroon nang account?",
-    "loginHere": "Mag-sign in",
     "backHome": "← Bumalik sa Home",
     "banner": {
       "ongoing": "Kasalukuyan: ",
@@ -391,13 +374,34 @@
       "submitTicketDesc": "Mag-ulat direkta sa loob ng portal",
       "close": "Isara",
       "patientFaqs": [
-        { "q": "Paano humiling ng tulong medikal?",                     "a": "Buksan ang Humiling ng Tulong, piliin ang uri ng tulong na kailangan (hal. Bayarin sa Ospital), ilagay ang halaga, at i-upload ang dokumentong kinakailangan para sa uring iyon. Susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong. Susuriin ninyo ang plano ng tulong, pindutin ang Magpatuloy, at kumpletuhin ang mga kinakailangan ng bawat ahensya." },
-        { "q": "Saan ako kukuha ng Patient Access Code?",                "a": "Ang Patient Access Codes ay ibinibigay nang personal ng CRMC Medical Social Services. Magdala ng valid na ID. Ang code ay sumusunod sa format na CRMC-YYYY-NNNNN." },
-        { "q": "Ano ang Guarantee Letter?",                              "a": "Ang Guarantee Letter (GL) ay opisyal na dokumentong inisyu ng ahensya kapag inaprubahan nito ang bahagi ng inyong bayarin. Ipakita ito sa provider upang ma-claim ang tulong. May 30 araw na bisa mula sa pag-isyu. Maaaring makatanggap ng higit sa isang GL kapag maraming ahensya ang tumulong." },
-        { "q": "Paano ko malalaman ang status ng aking kahilingan?",     "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — kapag in-endorso ng CRMC, kapag sinuri ng mga ahensya, at sa bawat aproba. Ipinapakita sa pahinang Humiling ng Tulong ang plano ng tulong at kung magkano na ang natipon tungo sa zero balance." },
-        { "q": "Paano sumali sa online interview?",                      "a": "Kung mag-iskedyul ang ahensya ng interview, lalabas ang Google Meet link sa inyong Interviews at Dashboard. Pindutin ito ilang minuto bago ang inyong slot — walang i-install sa kasalukuyang browser." },
-        { "q": "Pinipili ko ba kung aling ahensya ang tutulong?",        "a": "Hindi — magsusumite kayo ng isang kahilingan at ire-route ito ng CRMC sa mga ahensyang makakasaklaw, minsan hinahati sa ilang ahensya upang maabot ang zero balance. Maaaring magkaroon ng isang aktibong kahilingan sa bawat pagkakataon." },
-        { "q": "Paano mag-withdraw ng aking kahilingan?",                "a": "Maaaring i-withdraw ang kahilingan habang sinusuri pa ito ng CRMC (bago ma-endorso). Pagkatapos ma-endorso sa mga ahensya, makipag-ugnayan sa CRMC o sa ahensya sa Messages." }
+        {
+          "q": "Paano humiling ng tulong medikal?",
+          "a": "Buksan ang Humiling ng Tulong, piliin ang uri ng tulong na kailangan (hal. Bayarin sa Ospital), ilagay ang halaga, at i-upload ang dokumentong kinakailangan para sa uring iyon. Susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong. Susuriin ninyo ang plano ng tulong, pindutin ang Magpatuloy, at kumpletuhin ang mga kinakailangan ng bawat ahensya."
+        },
+        {
+          "q": "Saan ako kukuha ng Patient Access Code?",
+          "a": "Ang Patient Access Codes ay ibinibigay nang personal ng CRMC Medical Social Services. Magdala ng valid na ID. Ang code ay sumusunod sa format na CRMC-YYYY-NNNNN."
+        },
+        {
+          "q": "Ano ang Guarantee Letter?",
+          "a": "Ang Guarantee Letter (GL) ay opisyal na dokumentong inisyu ng ahensya kapag inaprubahan nito ang bahagi ng inyong bayarin. Ipakita ito sa provider upang ma-claim ang tulong. May 30 araw na bisa mula sa pag-isyu. Maaaring makatanggap ng higit sa isang GL kapag maraming ahensya ang tumulong."
+        },
+        {
+          "q": "Paano ko malalaman ang status ng aking kahilingan?",
+          "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — kapag in-endorso ng CRMC, kapag sinuri ng mga ahensya, at sa bawat aproba. Ipinapakita sa pahinang Humiling ng Tulong ang plano ng tulong at kung magkano na ang natipon tungo sa zero balance."
+        },
+        {
+          "q": "Paano sumali sa online interview?",
+          "a": "Kung mag-iskedyul ang ahensya ng interview, lalabas ang Google Meet link sa inyong Interviews at Dashboard. Pindutin ito ilang minuto bago ang inyong slot — walang i-install sa kasalukuyang browser."
+        },
+        {
+          "q": "Pinipili ko ba kung aling ahensya ang tutulong?",
+          "a": "Hindi — magsusumite kayo ng isang kahilingan at ire-route ito ng CRMC sa mga ahensyang makakasaklaw, minsan hinahati sa ilang ahensya upang maabot ang zero balance. Maaaring magkaroon ng isang aktibong kahilingan sa bawat pagkakataon."
+        },
+        {
+          "q": "Paano mag-withdraw ng aking kahilingan?",
+          "a": "Maaaring i-withdraw ang kahilingan habang sinusuri pa ito ng CRMC (bago ma-endorso). Pagkatapos ma-endorso sa mga ahensya, makipag-ugnayan sa CRMC o sa ahensya sa Messages."
+        }
       ]
     },
     "report": {
@@ -462,7 +466,7 @@
     "timeAgo": {
       "justNow": "ngayon lang",
       "min": "{{count}}m nakalipas",
-      "hr":  "{{count}}h nakalipas",
+      "hr": "{{count}}h nakalipas",
       "day": "{{count}}d nakalipas"
     }
   },
@@ -589,18 +593,18 @@
     },
     "tab": {
       "dashboard": "Home",
-      "apply":     "Apply",
-      "docs":      "Dokumento",
-      "request":   "Kahilingan",
-      "messages":  "Mensahe"
+      "apply": "Apply",
+      "docs": "Dokumento",
+      "request": "Kahilingan",
+      "messages": "Mensahe"
     },
     "more": {
-      "title":      "Iba pa",
-      "subtitle":   "Account, settings, at iba pang opsyon.",
+      "title": "Iba pa",
+      "subtitle": "Account, settings, at iba pang opsyon.",
       "navigation": "Nabigasyon",
-      "account":    "Account",
-      "settings":   "Settings",
-      "language":   "Wika"
+      "account": "Account",
+      "settings": "Settings",
+      "language": "Wika"
     },
     "dashboard": {
       "title": "Aking Dashboard",
@@ -608,15 +612,15 @@
       "activeRequestTitle": "Ang inyong kahilingan ng tulong",
       "activeRequestDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
       "greeting": {
-        "uploadDocs":    "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
-        "findProgram":   "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",
-        "pending":       "Sinusuri ang inyong kahilingan — walang kailangang gawin ngayon.",
-        "reviewing":     "Veverifyin ng CRMC ang inyong mga dokumento.",
+        "uploadDocs": "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
+        "findProgram": "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",
+        "pending": "Sinusuri ang inyong kahilingan — walang kailangang gawin ngayon.",
+        "reviewing": "Veverifyin ng CRMC ang inyong mga dokumento.",
         "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang CRMC.",
-        "interview":     "Naka-iskedyul ang interview — sumali sa Google Meet sa takdang oras.",
-        "approved":      "Naaprubahan! Inihahanda na ang inyong Guarantee Letter.",
-        "certificate":   "Handa na ang inyong Guarantee Letter.",
-        "rejected":      "Hindi naaprubahan ang inyong kahilingan sa pagkakataong ito."
+        "interview": "Naka-iskedyul ang interview — sumali sa Google Meet sa takdang oras.",
+        "approved": "Naaprubahan! Inihahanda na ang inyong Guarantee Letter.",
+        "certificate": "Handa na ang inyong Guarantee Letter.",
+        "rejected": "Hindi naaprubahan ang inyong kahilingan sa pagkakataong ito."
       },
       "noApplication": "Wala ka pang aktibong aplikasyon.",
       "browseSomeAgencies": "Maghanap ng Programa upang magsimula",
@@ -699,15 +703,15 @@
         "done": "Tapos",
         "current": "Kasalukuyan",
         "s1Title": "Isumite ang Inyong Kahilingan",
-        "s1Desc":  "Magsimula ng kahilingan, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID.",
+        "s1Desc": "Magsimula ng kahilingan, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID.",
         "s2Title": "Susuriin at I-eendorso ng CRMC",
-        "s2Desc":  "Veverifyin ng CRMC ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito.",
+        "s2Desc": "Veverifyin ng CRMC ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito.",
         "s3Title": "Subaybayan ang Inyong Progreso",
-        "s3Desc":  "Sundan ang status at funding coverage ng inyong kahilingan anumang oras.",
+        "s3Desc": "Sundan ang status at funding coverage ng inyong kahilingan anumang oras.",
         "s4Title": "Dumalo sa Inyong Panayam",
-        "s4Desc":  "Sumali sa inyong online na assessment interview kasama ang CRMC.",
+        "s4Desc": "Sumali sa inyong online na assessment interview kasama ang CRMC.",
         "s5Title": "Tanggapin ang Inyong Guarantee Letter",
-        "s5Desc":  "Kapag napondohan na ng mga ahensya ang inyong pangangailangan, kunin ang Guarantee Letter upang iharap sa pinangalanang provider."
+        "s5Desc": "Kapag napondohan na ng mga ahensya ang inyong pangangailangan, kunin ang Guarantee Letter upang iharap sa pinangalanang provider."
       }
     },
     "track": {
@@ -737,62 +741,62 @@
       "withdrawFailed": "Nabigong i-withdraw. Pakisubukan muli.",
       "reviewCoverage": "Tingnan ang coverage at magpatuloy",
       "reqStages": {
-        "submittedLabel":    "Naisumite ang Kahilingan",
-        "submittedNote":     "Naisumite sa CRMC ang inyong kahilingan at mga dokumento.",
-        "reviewLabel":       "Sinusuri",
-        "reviewNote":        "Vine-verify ng CRMC ang inyong mga dokumento at bayarin.",
-        "assessmentLabel":   "Pagsusuri at Panayam",
-        "assessmentNote":    "Sinusuri ng CRMC ang inyong kaso at isinasagawa ang assessment interview.",
-        "endorsedLabel":     "Na-endorso sa mga Ahensya",
-        "endorsedNote":      "Ini-refer ng CRMC ang inyong kahilingan sa isa o higit pang ahensya para tulungan ang inyong bayarin.",
-        "fundedLabel":       "Naaprubahan at Napondohan",
-        "fundedNote":        "Inaaprubahan ng mga ahensya ang kani-kanilang bahagi at inilalabas ang inyong Guarantee Letters.",
-        "completedLabel":    "Tapos na",
-        "completedNote":     "Lubos nang nasaklaw ang inyong bayarin. Kunin ang inyong Guarantee Letters sa opisina ng ahensya."
+        "submittedLabel": "Naisumite ang Kahilingan",
+        "submittedNote": "Naisumite sa CRMC ang inyong kahilingan at mga dokumento.",
+        "reviewLabel": "Sinusuri",
+        "reviewNote": "Vine-verify ng CRMC ang inyong mga dokumento at bayarin.",
+        "assessmentLabel": "Pagsusuri at Panayam",
+        "assessmentNote": "Sinusuri ng CRMC ang inyong kaso at isinasagawa ang assessment interview.",
+        "endorsedLabel": "Na-endorso sa mga Ahensya",
+        "endorsedNote": "Ini-refer ng CRMC ang inyong kahilingan sa isa o higit pang ahensya para tulungan ang inyong bayarin.",
+        "fundedLabel": "Naaprubahan at Napondohan",
+        "fundedNote": "Inaaprubahan ng mga ahensya ang kani-kanilang bahagi at inilalabas ang inyong Guarantee Letters.",
+        "completedLabel": "Tapos na",
+        "completedNote": "Lubos nang nasaklaw ang inyong bayarin. Kunin ang inyong Guarantee Letters sa opisina ng ahensya."
       },
       "stages": {
-        "submittedLabel":   "Naisumite ang Aplikasyon",
-        "submittedNote":    "Matagumpay na naisumite ang inyong aplikasyon.",
-        "docsLabel":        "Pag-verify ng Dokumento",
-        "docsNote":         "I-upload ang mga kinakailangang dokumento. Sinusuri at iniberipika ng ahensya ang mga ito habang pinoproseso ang inyong kahilingan.",
-        "reviewingLabel":   "Sinusuri ng Ahensya",
-        "reviewingNote":    "Sinusuri ng ahensya ang inyong aplikasyon.",
-        "interviewLabel":   "Naka-iskedyul ang Panayam",
-        "interviewNote":    "May naka-iskedyul kayong video interview.",
-        "approvedLabel":    "Aprubado ang Aplikasyon",
-        "approvedNote":     "Aprubado na ang inyong aplikasyon.",
+        "submittedLabel": "Naisumite ang Aplikasyon",
+        "submittedNote": "Matagumpay na naisumite ang inyong aplikasyon.",
+        "docsLabel": "Pag-verify ng Dokumento",
+        "docsNote": "I-upload ang mga kinakailangang dokumento. Sinusuri at iniberipika ng ahensya ang mga ito habang pinoproseso ang inyong kahilingan.",
+        "reviewingLabel": "Sinusuri ng Ahensya",
+        "reviewingNote": "Sinusuri ng ahensya ang inyong aplikasyon.",
+        "interviewLabel": "Naka-iskedyul ang Panayam",
+        "interviewNote": "May naka-iskedyul kayong video interview.",
+        "approvedLabel": "Aprubado ang Aplikasyon",
+        "approvedNote": "Aprubado na ang inyong aplikasyon.",
         "certificateLabel": "Naibigay na ang Guarantee Letter",
-        "certificateNote":  "Naibigay na ang inyong Guarantee Letter."
+        "certificateNote": "Naibigay na ang inyong Guarantee Letter."
       },
       "waitingDays": "Naghihintay {{count}}d",
       "banner": {
-        "pending":            "Natanggap na ang inyong aplikasyon. Susuriin ito ng ahensya sa lalong madaling panahon — walang kailangang gawin sa ngayon.",
-        "interview":          "May naka-iskedyul kayong panayam. I-tap para tingnan ang mga detalye.",
-        "interviewBtn":       "Tingnan ang Panayam",
-        "reviewing":          "Tiyaking nakapag-upload kayo ng lahat ng kinakailangang dokumento.",
-        "reviewingBtn":       "Tingnan ang mga Dokumento",
-        "certReady":          "Handa nang i-download ang inyong Guarantee Letter.",
-        "certPreparing":      "Naibigay na ang inyong Guarantee Letter. Inihahanda ng ahensya ang nilagdaang kopya — i-download ito kapag na-upload na nila sa ibaba.",
-        "approvedPreparing":  "Aprubado na ang inyong aplikasyon. Inihahanda na ang inyong Guarantee Letter.",
-        "approvedNoAmount":   "Aprubado na ang inyong aplikasyon. Ihahanda ang inyong Guarantee Letter sa lalong madaling panahon.",
-        "agencyPaused":       "Pansamantalang hindi available ang {{agency}}. Naka-pause ang inyong aplikasyon at ipagpapatuloy kapag bumalik na ang ahensya."
+        "pending": "Natanggap na ang inyong aplikasyon. Susuriin ito ng ahensya sa lalong madaling panahon — walang kailangang gawin sa ngayon.",
+        "interview": "May naka-iskedyul kayong panayam. I-tap para tingnan ang mga detalye.",
+        "interviewBtn": "Tingnan ang Panayam",
+        "reviewing": "Tiyaking nakapag-upload kayo ng lahat ng kinakailangang dokumento.",
+        "reviewingBtn": "Tingnan ang mga Dokumento",
+        "certReady": "Handa nang i-download ang inyong Guarantee Letter.",
+        "certPreparing": "Naibigay na ang inyong Guarantee Letter. Inihahanda ng ahensya ang nilagdaang kopya — i-download ito kapag na-upload na nila sa ibaba.",
+        "approvedPreparing": "Aprubado na ang inyong aplikasyon. Inihahanda na ang inyong Guarantee Letter.",
+        "approvedNoAmount": "Aprubado na ang inyong aplikasyon. Ihahanda ang inyong Guarantee Letter sa lalong madaling panahon.",
+        "agencyPaused": "Pansamantalang hindi available ang {{agency}}. Naka-pause ang inyong aplikasyon at ipagpapatuloy kapag bumalik na ang ahensya."
       },
       "approval": {
-        "amountLabel":  "Aprubadong Halaga",
-        "forLabel":     "Para sa",
+        "amountLabel": "Aprubadong Halaga",
+        "forLabel": "Para sa",
         "payableLabel": "Babayaran kay",
-        "payableHint":  "Iharap ang inyong Guarantee Letter sa provider na ito."
+        "payableHint": "Iharap ang inyong Guarantee Letter sa provider na ito."
       },
       "expiry": {
-        "expiredOn":    "Nag-expire na ang Guarantee Letter na ito noong {{date}}.",
-        "expiredDesc":  "Hindi na ito tinatanggap sa provider. Makipag-ugnayan sa ahensya sa Messages upang humingi ng bagong issuance.",
-        "expiresIn":    "Mag-e-expire sa {{count}} araw.",
-        "expiresDesc":  "Iharap ang Guarantee Letter na ito sa nakasaad na provider bago mag-expire."
+        "expiredOn": "Nag-expire na ang Guarantee Letter na ito noong {{date}}.",
+        "expiredDesc": "Hindi na ito tinatanggap sa provider. Makipag-ugnayan sa ahensya sa Messages upang humingi ng bagong issuance.",
+        "expiresIn": "Mag-e-expire sa {{count}} araw.",
+        "expiresDesc": "Iharap ang Guarantee Letter na ito sa nakasaad na provider bago mag-expire."
       },
       "timeline": {
-        "current":    "Kasalukuyan",
+        "current": "Kasalukuyan",
         "hideFuture": "Itago ang mga susunod na hakbang",
-        "seeAll":     "Tingnan lahat ng hakbang ({{count}} susunod pa)"
+        "seeAll": "Tingnan lahat ng hakbang ({{count}} susunod pa)"
       }
     },
     "status": {
@@ -803,87 +807,6 @@
       "approved": "Aprubado",
       "rejected": "Hindi Aprubado",
       "certificate": "Naibigay na ang Guarantee Letter"
-    },
-    "documents": {
-      "title": "Aking mga Dokumento",
-      "subtitle": "I-upload ang inyong mga dokumento dito. Kapag na-verify na ng administrator, awtomatiko itong gagamitin kapag nag-apply kayo sa mga programa.",
-      "uploadBtn": "Mag-upload ng Dokumento",
-      "howItWorksTitle": "Paano ito gumagana:",
-      "howItWorksBody": "I-upload muna ang inyong mga dokumento dito. Ang mga bagong upload ay Naghihintay ng Pagsusuri ng administrator. Kapag Na-verify na, awtomatiko itong gagamitin kapag nag-apply kayo sa mga programang medikal — walang karagdagang hakbang.",
-      "summary": {
-        "verifiedHeading": "Na-verify na mga Dokumento ({{count}})",
-        "noVerifiedYet": "Wala pang na-verify na dokumento.",
-        "verifiedStat": "Na-verify",
-        "pendingStat": "Sinusuri pa"
-      },
-      "tabs": {
-        "all": "Lahat",
-        "verified": "Na-verify",
-        "pending": "Sinusuri pa",
-        "rejected": "Tinanggihan",
-        "allHeading": "Lahat ng Dokumento ({{count}})",
-        "verifiedHeading": "Mga Na-verify ({{count}})",
-        "pendingHeading": "Mga Sinusuri pa ({{count}})",
-        "rejectedHeading": "Mga Tinanggihan ({{count}})"
-      },
-      "list": {
-        "noneYet": "Wala pang na-upload na dokumento. I-click ang \"Mag-upload ng Dokumento\" upang magsimula.",
-        "noneAll": "Walang tugmang dokumento.",
-        "noneVerified": "Walang na-verify na dokumento.",
-        "nonePending": "Walang sinusuring dokumento.",
-        "noneRejected": "Walang tinanggihang dokumento."
-      },
-      "delete": {
-        "warningVerified": "⚠ Na-verify — maaaring maantala ang inyong aplikasyon kung tatanggalin.",
-        "prompt": "Tanggalin?",
-        "yes": "Oo",
-        "no": "Hindi",
-        "success": "Natanggal ang dokumento.",
-        "failed": "Nabigong tanggalin ang dokumento. Pakisubukan muli.",
-        "inUseError": "Ang dokumentong ito ay nakakabit sa aplikasyon {{appId}} at hindi pwedeng tanggalin habang nasa proseso. I-withdraw muna ang aplikasyon kung kailangan itong burahin."
-      },
-      "rejection": {
-        "label": "Dahilan:",
-        "suffix": "— pakiulit na i-upload ang naitamang kopya."
-      },
-      "docStatus": {
-        "verified": "Na-verify",
-        "pending": "Naghihintay ng Pagsusuri",
-        "rejected": "Tinanggihan"
-      },
-      "upload": {
-        "modalTitle": "Mag-upload ng Dokumento",
-        "docTypeLabel": "Uri ng Dokumento",
-        "noDocTypes": "Wala pang naka-set up na uri ng dokumento. Makipag-ugnayan sa inyong administrator.",
-        "selectDocType": "Pumili ng uri ng dokumento...",
-        "required": "── Kinakailangan ──",
-        "optional": "── Opsyonal ──",
-        "requiredHint": "Kinakailangan ang dokumentong ito para sa inyong aplikasyon.",
-        "alreadyVerified": "Mayroon na kayong na-verify na {{type}}. Maaaring malito ang reviewer kung mag-upload kayo ng isa pa. Mag-upload lamang kung kailangan itong palitan.",
-        "alreadyPending": "Mayroon na kayong naisumiteng {{type}} na sinusuri pa. Mag-upload lamang ng isa pa kung mali ang naunang isinumite.",
-        "idTypeLabel": "Anong uri ng ID?",
-        "selectIdType": "Pumili ng uri ng ID...",
-        "idNotSure": "Hindi sigurado",
-        "idHint": "Tumutulong sa reviewer na i-verify ang inyong ID gamit ang tamang portal ng pamahalaan.",
-        "attachLabel": "Ikabit ang Inyong Dokumento",
-        "uploading": "Nag-a-upload...",
-        "tapChange": "I-tap para palitan",
-        "tapBrowse": "I-tap para magpili ng file",
-        "fileTypesHint": "JPG, PNG — awtomatikong nire-compress · PDF — max 650KB",
-        "or": "o kaya",
-        "takePhoto": "Kumuha ng Larawan gamit ang Camera",
-        "cameraHint": "Magbubukas ng camera sa mobile · Magbubukas ng mga larawan sa desktop",
-        "attestation": "Pinatutunayan ko na ito ay tunay at hindi binago na dokumentong ibinigay sa akin. Nauunawaan ko na ang pag-submit ng mapanlinlang na mga dokumento upang makakuha ng tulong mula sa pamahalaan ay isang parusahang krimen sa ilalim ng batas ng Pilipinas.",
-        "uploadBtn": "Mag-upload ng Dokumento",
-        "cancel": "Kanselahin",
-        "errFileType": "Image files lamang (JPG, PNG) at PDF na dokumento ang tinatanggap.",
-        "errPdfTooBig": "Dapat na mas mababa sa 650KB ang PDF files. Pakikompress muna ang file.",
-        "errNoDocType": "Mangyaring pumili ng uri ng dokumento.",
-        "errNoIdType": "Mangyaring piliin ang uri ng ID na ina-upload ninyo.",
-        "errNoFile": "Mangyaring pumili ng file.",
-        "success": "Na-upload na ang dokumento! Naghihintay ng pagsusuri ng administrator.",
-        "failed": "Nabigo ang pag-upload. Pakisubukan muli."
-      }
     },
     "programs": {
       "breadcrumb": "Maghanap ng Programa",
@@ -912,40 +835,6 @@
       "noneAvailableDesc": "Lahat ng ahensya ay kasalukuyang naka-disable. Pakisubukan muli mamaya.",
       "clearFilter": "Alisin ang filter"
     },
-    "apply": {
-      "title": "Mag-apply sa {{agency}}",
-      "processing": "Pagproseso: {{time}}",
-      "spotsTodayLabel": "Slot ngayon",
-      "alreadyApplied": "May aktibong aplikasyon na kayo sa ahensyang ito. Hindi kayo maaaring mag-apply muli hanggang maresolba ang kasalukuyan.",
-      "activeElsewhere": "May aktibong aplikasyon kayo sa {{agency}}. Isang aplikasyon lamang ang pinapayagan. Hintayin itong maresolba bago mag-apply dito.",
-      "noSpotsWarning": "Walang slot na available ngayon. Nire-reset ang slot tuwing hatinggabi.",
-      "requirementsTitle": "Checklist ng mga Kinakailangan",
-      "reqVerified": "(na-verify)",
-      "reqPending": "(sinusuri pa)",
-      "reqMissing": "(hindi pa na-upload)",
-      "missingOne": "May 1 kulang na dokumento. Maaari pa rin kayong mag-apply ngunit maaaring maantala ang inyong aplikasyon.",
-      "missingMany": "May {{count}} kulang na dokumento. Maaari pa rin kayong mag-apply ngunit maaaring maantala ang inyong aplikasyon.",
-      "upload": "Mag-upload",
-      "declaration": "Pinatutunayan ko na ang aking impormasyon at mga dokumento ay tunay.",
-      "cancel": "Kanselahin",
-      "checking": "Sinusuri...",
-      "submitting": "Isinusumite...",
-      "submit": "Isumite ang Aplikasyon",
-      "errAlreadyApplied": "May aktibong aplikasyon na kayo sa ahensyang ito.",
-      "errActiveElsewhere": "Tapusin muna ang aplikasyon sa {{agency}}.",
-      "errNoSlots": "Walang slot na available ngayon.",
-      "errSpotsRanOut": "Naubos na ang slot. Subukan sa ibang ahensya o bumalik bukas.",
-      "errFailed": "Nabigong isumite ang aplikasyon. Pakisubukan muli.",
-      "successTitle": "Naisumite na ang Aplikasyon!",
-      "successDesc": "Natanggap na ang inyong aplikasyon sa {{agency}}.",
-      "successIdLabel": "Inyong Application ID",
-      "successIdNote": "Itago ang ID na ito para sa inyong record.",
-      "nextStepsTitle": "Ano ang susunod?",
-      "nextStep1": "Susuriin ng administrator ang inyong mga dokumento.",
-      "nextStep2": "Susuriin ng {{agency}} ang inyong aplikasyon.",
-      "nextStep2WithTime": "Susuriin ng {{agency}} ang inyong aplikasyon sa loob ng {{time}}.",
-      "nextStep3": "Aabisuhan kayo ng mga update sa pamamagitan ng portal na ito."
-    },
     "interviews": {
       "title": "Aking Panayam",
       "subtitle": "Sumali sa inyong naka-iskedyul na assessment interview kasama ang CRMC.",
@@ -966,23 +855,23 @@
       "prep": {
         "documents": "Ihanda ang inyong mga na-verify na dokumento sakaling hingin.",
         "questions": "Asahan ang mga tanong tungkol sa inyong kalagayang medikal at pangangailangang pinansiyal.",
-        "duration":  "Karaniwang tumatagal ng 15–20 minuto ang panayam.",
-        "decision":  "Ipapaalam sa inyo ang desisyon pagkatapos ng pagsusuri.",
-        "internet":  "Tiyaking matatag ang inyong koneksyon sa internet."
+        "duration": "Karaniwang tumatagal ng 15–20 minuto ang panayam.",
+        "decision": "Ipapaalam sa inyo ang desisyon pagkatapos ng pagsusuri.",
+        "internet": "Tiyaking matatag ang inyong koneksyon sa internet."
       },
       "joinBtn": "Sumali sa Video Interview",
       "noLink": "Wala pang link sa pagpupulong",
       "meetHint": "Video call sa pamamagitan ng Google Meet · Hindi kailangan ng account · Magbubukas sa bagong tab",
       "empty": {
         "completedTitle": "Natapos na ang Panayam",
-        "completedDesc":  "Natapos na ang inyong panayam. Tingnan ang Aking Aplikasyon para sa resulta.",
-        "completedBtn":   "Tingnan ang Aking Aplikasyon",
-        "notYetTitle":    "Wala pang naka-iskedyul na Panayam",
-        "notYetDesc":     "Kapag na-verify na ng CRMC ang inyong mga dokumento, mag-iiskedyul sila ng assessment interview at aabisuhan kayo.",
-        "notYetBtn":      "Tingnan ang Aking Aplikasyon",
-        "noAppTitle":     "Wala pang Kahilingan",
-        "noAppDesc":      "Kailangan munang magsumite ng kahilingan ng tulong. Nag-iiskedyul ang CRMC ng assessment interview pagkatapos ma-verify ang inyong mga dokumento.",
-        "noAppBtn":       "Humiling ng Tulong"
+        "completedDesc": "Natapos na ang inyong panayam. Tingnan ang Aking Aplikasyon para sa resulta.",
+        "completedBtn": "Tingnan ang Aking Aplikasyon",
+        "notYetTitle": "Wala pang naka-iskedyul na Panayam",
+        "notYetDesc": "Kapag na-verify na ng CRMC ang inyong mga dokumento, mag-iiskedyul sila ng assessment interview at aabisuhan kayo.",
+        "notYetBtn": "Tingnan ang Aking Aplikasyon",
+        "noAppTitle": "Wala pang Kahilingan",
+        "noAppDesc": "Kailangan munang magsumite ng kahilingan ng tulong. Nag-iiskedyul ang CRMC ng assessment interview pagkatapos ma-verify ang inyong mga dokumento.",
+        "noAppBtn": "Humiling ng Tulong"
       }
     },
     "guide": {
@@ -990,17 +879,17 @@
       "subtitle": "Lahat ng kailangan ninyong malaman tungkol sa paggamit ng MAPA.",
       "tapHint": "I-tap ang anumang tanong sa ibaba para basahin ang sagot.",
       "footer": "May iba pang katanungan? Pumunta sa CRMC Medical Social Services office o magpadala ng mensahe sa pamamagitan ng portal gamit ang envelope icon sa itaas.",
-      "linkGoToDocuments":  "Pumunta sa Aking mga Dokumento",
-      "linkGoToStatus":     "Pumunta sa Aking Aplikasyon",
+      "linkGoToDocuments": "Pumunta sa Aking mga Dokumento",
+      "linkGoToStatus": "Pumunta sa Aking Aplikasyon",
       "linkGoToInterviews": "Pumunta sa Aking mga Panayam",
-      "linkGoToMessages":   "Pumunta sa mga Mensahe",
+      "linkGoToMessages": "Pumunta sa mga Mensahe",
       "sections": {
         "whatIsMapa": {
-          "title":   "Ano ang MAPA?",
+          "title": "Ano ang MAPA?",
           "content": "Ang MAPA (Medical Assistance Portal Access) ay ang opisyal na online system ng Cotabato Regional Medical Center (CRMC) para sa pagproseso ng mga aplikasyon ng tulong medikal. Pinapahintulutan nito ang mga pasyente na mag-apply para sa tulong pinansiyal o materyal mula sa mga kasosyong ahensya ng pamahalaan tulad ng DSWD, PCSO, at Malasakit Center — sa isang lugar lamang, nang hindi na pumipila sa maraming opisina."
         },
         "whoCanUse": {
-          "title":   "Sino ang maaaring gumamit ng MAPA?",
+          "title": "Sino ang maaaring gumamit ng MAPA?",
           "content": "Sinumang pasyente ng CRMC na nasuri na ng Medical Social Services ay maaaring magparehistro at gumamit ng MAPA. Makakatanggap kayo ng Patient Access Code (format: CRMC-YYYY-XXXXX) mula sa CRMC Medical Social Services office. Kailangan ninyo ang code na ito upang makagawa ng account."
         },
         "register": {
@@ -1043,18 +932,18 @@
         },
         "statuses": {
           "title": "Ano ang ibig sabihin ng bawat status ng aplikasyon?",
-          "pendingLabel":   "Naghihintay ng Pagsusuri",
-          "pendingDesc":    "Natanggap na ang inyong aplikasyon at naghihintay na simulan ng ahensya ang pagsusuri.",
+          "pendingLabel": "Naghihintay ng Pagsusuri",
+          "pendingDesc": "Natanggap na ang inyong aplikasyon at naghihintay na simulan ng ahensya ang pagsusuri.",
           "reviewingLabel": "Sinusuri",
-          "reviewingDesc":  "Binuksan na ng ahensya ang inyong aplikasyon at kasalukuyang sinusuri.",
+          "reviewingDesc": "Binuksan na ng ahensya ang inyong aplikasyon at kasalukuyang sinusuri.",
           "interviewLabel": "Naka-iskedyul ang Panayam",
-          "interviewDesc":  "May naka-iskedyul na video interview ang ahensya sa inyo. Tingnan ang Interviews page para sa petsa at Google Meet link.",
-          "approvedLabel":  "Aprubado",
-          "approvedDesc":   "Aprubado na ang inyong aplikasyon para sa isang halaga. Inihahanda ng ahensya ang inyong Guarantee Letter.",
-          "certLabel":      "Naibigay ang GL",
-          "certDesc":       "Naibigay na ang inyong Guarantee Letter. Kapag na-upload na ng ahensya ang nilagdaang scan, maaari ninyo itong i-download mula sa Aking Aplikasyon.",
-          "rejectedLabel":  "Tinanggihan",
-          "rejectedDesc":   "Hindi aprubado ang inyong aplikasyon. May ibibigay na dahilan. Maaari kayong mag-apply muli pagkatapos malutas ang isyu."
+          "interviewDesc": "May naka-iskedyul na video interview ang ahensya sa inyo. Tingnan ang Interviews page para sa petsa at Google Meet link.",
+          "approvedLabel": "Aprubado",
+          "approvedDesc": "Aprubado na ang inyong aplikasyon para sa isang halaga. Inihahanda ng ahensya ang inyong Guarantee Letter.",
+          "certLabel": "Naibigay ang GL",
+          "certDesc": "Naibigay na ang inyong Guarantee Letter. Kapag na-upload na ng ahensya ang nilagdaang scan, maaari ninyo itong i-download mula sa Aking Aplikasyon.",
+          "rejectedLabel": "Tinanggihan",
+          "rejectedDesc": "Hindi aprubado ang inyong aplikasyon. May ibibigay na dahilan. Maaari kayong mag-apply muli pagkatapos malutas ang isyu."
         },
         "interview": {
           "title": "Paano ako sasali sa aking panayam?",
@@ -1075,122 +964,108 @@
           "note": "Ang Guarantee Letter ay may bisa nang 30 araw mula sa petsa ng pagbibigay. Maaaring direktang singilin ng pinangalanang provider ang ahensya para sa garantisadong halaga — hindi ninyo pananagutan ang garantisadong porsyon."
         },
         "contact": {
-          "title":   "Paano ako makikipag-ugnayan sa admin o ahensya?",
+          "title": "Paano ako makikipag-ugnayan sa admin o ahensya?",
           "content": "Pumunta sa Messages sa sidebar upang tingnan ang lahat ng inyong mga usapan. I-tap ang New Message button sa kanang itaas upang magsimula ng bagong usapan sa hospital staff o sa inyong itinalagang ahensya. Maaari ninyong direktang i-message ang mga ito kung may mga tanong tungkol sa aplikasyon, dokumento, o kung kailangang i-reschedule ang isang panayam."
         },
         "forgotPw": {
-          "title":   "Nakalimutan ko ang aking password. Ano ang gagawin ko?",
+          "title": "Nakalimutan ko ang aking password. Ano ang gagawin ko?",
           "content": "Sa Login page, i-click ang \"Forgot Password?\" at ipasok ang inyong rehistradong email address. Magpapadala ng password reset link sa inyong email. I-click ang link upang gumawa ng bagong password. Kung hindi ninyo natanggap ang email, tingnan ang inyong spam o junk folder. Para sa karagdagang tulong, makipag-ugnayan sa CRMC Medical Social Services."
         }
       }
-    },
-    "gl": {
-      "title": "Guarantee Letter",
-      "amount": "Aprubadong Halaga",
-      "for": "Para sa",
-      "payableTo": "Babayaran kay",
-      "download": "I-download",
-      "pending": "Lalabas dito ang nilagdaang kopya kapag na-upload na ng inyong ahensya.",
-      "ready": "Handa nang i-download ang inyong Guarantee Letter.",
-      "preparing": "Naibigay na ang inyong Guarantee Letter. Inihahanda ng ahensya ang nilagdaang kopya."
     }
-  },
-  "registration": {
-    "accessCode": "Patient Access Code",
-    "accessCodeHint": "Ipasok ang code na ibinigay ng CRMC Medical Social Services."
   },
   "register": {
     "backHome": "Bumalik sa Home",
     "title": "Mag-apply para sa Patient Account",
     "subtitle": "Gumawa ng account upang mag-apply para sa tulong medikal.",
     "stepPersonal": "Personal na Impormasyon",
-    "stepAccount":  "Pag-setup ng Account",
-    "stepCode":     "Access Code",
+    "stepAccount": "Pag-setup ng Account",
+    "stepCode": "Access Code",
     "step1": {
       "sectionTitle": "Personal na Impormasyon",
-      "sectionDesc":  "Ipasok ang inyong pangalan at impormasyon sa pakikipag-ugnayan ayon sa nakasaad sa inyong opisyal na ID.",
-      "firstName":    "Pangalan",
-      "lastName":     "Apelyido",
-      "middleName":   "Gitnang Pangalan",
-      "optional":     "(opsyonal)",
-      "suffix":       "Suffix",
-      "suffixNone":   "Wala",
+      "sectionDesc": "Ipasok ang inyong pangalan at impormasyon sa pakikipag-ugnayan ayon sa nakasaad sa inyong opisyal na ID.",
+      "firstName": "Pangalan",
+      "lastName": "Apelyido",
+      "middleName": "Gitnang Pangalan",
+      "optional": "(opsyonal)",
+      "suffix": "Suffix",
+      "suffixNone": "Wala",
       "contactNumber": "Numero ng Telepono",
-      "contactHint":  "11-digit na Philippine mobile number, mga numero lamang",
+      "contactHint": "11-digit na Philippine mobile number, mga numero lamang",
       "addressLabel": "Kumpletong Tirahan",
-      "addressHint":  "Lalabas sa inyong opisyal na Guarantee Letter.",
-      "barangay":     "Barangay",
-      "city":         "Lungsod / Munisipalidad",
-      "province":     "Probinsya",
+      "addressHint": "Lalabas sa inyong opisyal na Guarantee Letter.",
+      "barangay": "Barangay",
+      "city": "Lungsod / Munisipalidad",
+      "province": "Probinsya",
       "selectProvince": "Pumili ng probinsya",
-      "selectCity":     "Pumili ng lungsod / munisipalidad",
+      "selectCity": "Pumili ng lungsod / munisipalidad",
       "otherNotListed": "Iba pa (wala sa listahan)",
-      "otherProvince":  "Ilagay ang probinsya",
-      "otherCity":      "Ilagay ang lungsod / munisipalidad"
+      "otherProvince": "Ilagay ang probinsya",
+      "otherCity": "Ilagay ang lungsod / munisipalidad"
     },
     "step2": {
       "sectionTitle": "Pag-setup ng Account",
-      "sectionDesc":  "Gumawa ng inyong login credentials. Gumamit ng email na pwede ninyong i-access — magpapadala kami ng reset link at abiso doon.",
-      "email":               "Email Address",
-      "password":            "Password",
+      "sectionDesc": "Gumawa ng inyong login credentials. Gumamit ng email na pwede ninyong i-access — magpapadala kami ng reset link at abiso doon.",
+      "email": "Email Address",
+      "password": "Password",
       "passwordPlaceholder": "Hindi bababa sa 8 character, mga titik + numero",
-      "confirmPassword":     "Kumpirmahin ang Password",
-      "confirmPlaceholder":  "Ulitin ang inyong password"
+      "confirmPassword": "Kumpirmahin ang Password",
+      "confirmPlaceholder": "Ulitin ang inyong password"
     },
     "step3": {
-      "sectionTitle":  "Patient Access Code",
-      "sectionDesc":   "Kinakailangan ang inyong Patient Access Code. Ibinigay ito sa inyo ng CRMC Medical Social Services.",
-      "accessCode":    "Patient Access Code",
+      "sectionTitle": "Patient Access Code",
+      "sectionDesc": "Kinakailangan ang inyong Patient Access Code. Ibinigay ito sa inyo ng CRMC Medical Social Services.",
+      "accessCode": "Patient Access Code",
       "accessCodeHint": "Ipasok ang 5-digit na numero pagkatapos ng prefix",
-      "verifyBtn":     "I-verify",
-      "verified":      "Na-verify",
-      "edit":          "I-edit",
-      "reviewToggle":  "Suriin ang inyong detalye bago isumite",
-      "noCodeHint":    "Walang access code? Bisitahin ang CRMC Medical Social Services upang masuri at makakuha ng isa.",
+      "verifyBtn": "I-verify",
+      "verified": "Na-verify",
+      "edit": "I-edit",
+      "reviewToggle": "Suriin ang inyong detalye bago isumite",
+      "noCodeHint": "Walang access code? Bisitahin ang CRMC Medical Social Services upang masuri at makakuha ng isa.",
       "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa CRMC Medical Social Services para masuri at mabigyan ng bago.",
       "codeUsedRecoveryAction": "I-email ang CRMC Medical Social Services",
-      "termsAgree":    "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang CRMC na kolektahin ang aking personal na impormasyon para sa layuning medikal."
+      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang CRMC na kolektahin ang aking personal na impormasyon para sa layuning medikal."
     },
-    "back":      "Bumalik",
-    "next":      "Sunod",
-    "creating":  "Ginagawa ang account...",
-    "create":    "Gumawa ng Account",
+    "back": "Bumalik",
+    "next": "Sunod",
+    "creating": "Ginagawa ang account...",
+    "create": "Gumawa ng Account",
     "haveAccount": "Mayroon nang account?",
-    "signIn":    "Mag-sign in",
+    "signIn": "Mag-sign in",
     "errors": {
       "firstNameRequired": "Kinakailangan ang pangalan.",
-      "nameLettersOnly":   "Mga titik lamang.",
-      "lastNameRequired":  "Kinakailangan ang apelyido.",
-      "contactRequired":   "Kinakailangan ang numero ng telepono.",
-      "contactInvalid":    "Magpasok ng wastong 11-digit na Philippine mobile number (hal. 09171234567).",
-      "barangayRequired":  "Kinakailangan ang Barangay.",
-      "cityRequired":      "Kinakailangan ang Lungsod/Munisipalidad.",
-      "provinceRequired":  "Kinakailangan ang Probinsya.",
-      "emailRequired":     "Kinakailangan ang email address.",
-      "emailInvalid":      "Mangyaring magpasok ng wastong email address.",
-      "passwordWeak":      "Ang password ay dapat may hindi bababa sa 8 character at may mga titik at numero.",
-      "passwordMismatch":  "Hindi tugma ang mga password.",
-      "codeFormat":        "Format: CRMC-{{year}}-00001",
-      "codeVerifyFirst":   "Mangyaring i-verify muna ang inyong Patient Access Code.",
-      "termsRequired":     "Kailangan ninyong tanggapin ang Privacy Notice at Terms of Use.",
-      "codeNotFound":      "Hindi nakita ang access code. Pakisuri at subukan muli.",
-      "codeUsed":          "Nagamit na ang access code na ito.",
-      "verifyFailed":      "Nabigo ang pag-verify. Pakisubukan muli.",
-      "verifyRateLimit":   "Sobrang dami ng pag-verify mula sa device na ito. Maghintay ng isang oras bago muling subukan, o makipag-ugnayan sa CRMC Medical Social Services para sa tulong.",
-      "emailInUse":        "Nakarehistro na ang email na ito.",
-      "passwordTooWeak":   "Mahina pa ang password. Pumili ng mas matibay.",
-      "generic":           "Nabigo ang pagpaparehistro."
+      "nameLettersOnly": "Mga titik lamang.",
+      "lastNameRequired": "Kinakailangan ang apelyido.",
+      "contactRequired": "Kinakailangan ang numero ng telepono.",
+      "contactInvalid": "Magpasok ng wastong 11-digit na Philippine mobile number (hal. 09171234567).",
+      "barangayRequired": "Kinakailangan ang Barangay.",
+      "cityRequired": "Kinakailangan ang Lungsod/Munisipalidad.",
+      "provinceRequired": "Kinakailangan ang Probinsya.",
+      "emailRequired": "Kinakailangan ang email address.",
+      "emailInvalid": "Mangyaring magpasok ng wastong email address.",
+      "passwordWeak": "Ang password ay dapat may hindi bababa sa 8 character at may mga titik at numero.",
+      "passwordMismatch": "Hindi tugma ang mga password.",
+      "codeFormat": "Format: CRMC-{{year}}-00001",
+      "codeVerifyFirst": "Mangyaring i-verify muna ang inyong Patient Access Code.",
+      "termsRequired": "Kailangan ninyong tanggapin ang Privacy Notice at Terms of Use.",
+      "codeNotFound": "Hindi nakita ang access code. Pakisuri at subukan muli.",
+      "codeUsed": "Nagamit na ang access code na ito.",
+      "verifyFailed": "Nabigo ang pag-verify. Pakisubukan muli.",
+      "verifyRateLimit": "Sobrang dami ng pag-verify mula sa device na ito. Maghintay ng isang oras bago muling subukan, o makipag-ugnayan sa CRMC Medical Social Services para sa tulong.",
+      "emailInUse": "Nakarehistro na ang email na ito.",
+      "passwordTooWeak": "Mahina pa ang password. Pumili ng mas matibay.",
+      "generic": "Nabigo ang pagpaparehistro."
     },
     "toast": {
-      "codeVerified":  "Na-verify ang access code!",
-      "welcome":       "Maligayang pagdating, {{name}}! Nagawa na ang inyong account."
+      "codeVerified": "Na-verify ang access code!",
+      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account."
     },
     "password": {
-      "tooShort":   "Masyadong maikli",
-      "strong":     "Matibay",
-      "good":       "Maayos",
-      "weakNeed8":  "Mahina — kailangan ng 8+ character",
-      "weakAddLN":  "Mahina — magdagdag ng titik at numero"
+      "tooShort": "Masyadong maikli",
+      "strong": "Matibay",
+      "good": "Maayos",
+      "weakNeed8": "Mahina — kailangan ng 8+ character",
+      "weakAddLN": "Mahina — magdagdag ng titik at numero"
     }
   }
 }

@@ -1,10 +1,10 @@
 {
   "pwa": {
     "installPrompt": {
-      "title":   "Install MAPA for faster access",
-      "desc":    "Get to your applications from your home screen, even on a slow connection.",
+      "title": "Install MAPA for faster access",
+      "desc": "Get to your applications from your home screen, even on a slow connection.",
       "install": "Install",
-      "notNow":  "Not now",
+      "notNow": "Not now",
       "iosHint": "Tap the Share button below, then choose 'Add to Home Screen' to install MAPA."
     },
     "offlineBanner": {
@@ -15,7 +15,7 @@
     "backHome": "Back to home",
     "hero": {
       "title": "Install MAPA on your phone",
-      "desc":  "Apply for medical assistance from your home screen — no need to remember the website URL."
+      "desc": "Apply for medical assistance from your home screen — no need to remember the website URL."
     },
     "cta": {
       "install": "Install MAPA app",
@@ -34,51 +34,36 @@
       "iosStep2": "Scroll down and tap 'Add to Home Screen'.",
       "iosStep3": "Tap 'Add' in the top-right corner.",
       "desktopTitle": "You're on a desktop computer",
-      "desktopDesc":  "MAPA's mobile app is designed for phones. Open this page on your Android phone or iPhone to install it."
+      "desktopDesc": "MAPA's mobile app is designed for phones. Open this page on your Android phone or iPhone to install it."
     },
     "fallback": {
-      "ios":     "On iPhone, installing is done through Safari's Share menu. Follow the steps below.",
+      "ios": "On iPhone, installing is done through Safari's Share menu. Follow the steps below.",
       "desktop": "MAPA is designed for phones. Open this page on your Android phone or iPhone to install.",
       "android": "Chrome hasn't offered the install option yet. Follow the manual steps below to install MAPA."
     },
     "manual": {
-      "iosTitle":     "How to install on iPhone",
+      "iosTitle": "How to install on iPhone",
       "desktopTitle": "Installing on desktop",
       "androidTitle": "How to install manually"
     },
     "alreadyInstalled": {
       "title": "MAPA is already installed",
-      "desc":  "You're using the installed app right now. There's nothing more to do here — return to the home screen to find MAPA's icon."
+      "desc": "You're using the installed app right now. There's nothing more to do here — return to the home screen to find MAPA's icon."
     },
     "benefits": {
-      "title":     "Why install",
+      "title": "Why install",
       "homescreen": "A MAPA icon on your home screen — no need to remember a website address.",
-      "faster":     "Opens instantly, even on slow 4G.",
-      "offline":    "Works without internet for things you've already opened.",
-      "notifs":     "Get notified when your application status changes (coming soon)."
+      "faster": "Opens instantly, even on slow 4G.",
+      "offline": "Works without internet for things you've already opened.",
+      "notifs": "Get notified when your application status changes (coming soon)."
     },
     "footer": "Free · Made by Cotabato Regional Medical Center · No app store needed"
   },
   "common": {
-    "appName": "MAPA",
-    "appFull": "Medical Assistance Portal Access",
-    "loading": "Loading...",
-    "save": "Save",
-    "cancel": "Cancel",
-    "close": "Close",
-    "submit": "Submit",
-    "back": "Back",
-    "next": "Next",
-    "yes": "Yes",
-    "no": "No",
-    "english": "English",
-    "filipino": "Filipino",
-    "viewAll": "View all",
-    "noData": "No data yet"
+    "close": "Close"
   },
   "auth": {
     "welcome": "Welcome to MAPA",
-    "subtitle": "Medical Assistance Portal Access · CRMC",
     "signinSubtitle": "Sign in to your account",
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
@@ -89,8 +74,6 @@
     "forgotPassword": "Forgot password?",
     "noAccount": "Don't have an account?",
     "registerHere": "Register here",
-    "haveAccount": "Already have an account?",
-    "loginHere": "Sign in",
     "backHome": "← Back to Home",
     "banner": {
       "ongoing": "Ongoing: ",
@@ -391,13 +374,34 @@
       "submitTicketDesc": "Report directly inside the portal",
       "close": "Close",
       "patientFaqs": [
-        { "q": "How do I request medical assistance?",                 "a": "Open Request Assistance, choose the type of help you need (e.g. Hospital Bill), enter the amount, and upload the document required for that type. CRMC reviews it and endorses it to the agencies that can help. You then review your coverage plan, tap Proceed, and complete each agency's requirements." },
-        { "q": "Where do I get a Patient Access Code?",                 "a": "Patient Access Codes are issued in person by CRMC Medical Social Services. Bring a valid ID. The code follows the format CRMC-YYYY-NNNNN." },
-        { "q": "What is a Guarantee Letter?",                           "a": "A Guarantee Letter (GL) is the official document an agency issues when it approves its share of your bill. Present it at the provider to claim the assistance. GLs are valid for 30 days from issue. A request may receive more than one GL when several agencies co-fund it." },
-        { "q": "How will I know the status of my request?",            "a": "You'll receive in-app + email notifications at each step — when CRMC endorses your request, when agencies review it, and at each approval. The Request Assistance page shows your coverage plan and how much has been secured toward zero balance." },
-        { "q": "How do I join my online interview?",                    "a": "If an agency schedules an interview, a Google Meet link appears on your Interviews page and Dashboard. Click it a few minutes before your slot — no install needed on a recent browser." },
-        { "q": "Do I choose which agencies help me?",                  "a": "No — you submit one request and CRMC routes it to the agencies that can cover it, sometimes splitting it across several to reach a zero balance. You can have one active request at a time." },
-        { "q": "How do I withdraw my request?",                         "a": "You can withdraw a request while it's still being reviewed by CRMC (before it's endorsed). After it's endorsed to agencies, contact CRMC or the agency through Messages." }
+        {
+          "q": "How do I request medical assistance?",
+          "a": "Open Request Assistance, choose the type of help you need (e.g. Hospital Bill), enter the amount, and upload the document required for that type. CRMC reviews it and endorses it to the agencies that can help. You then review your coverage plan, tap Proceed, and complete each agency's requirements."
+        },
+        {
+          "q": "Where do I get a Patient Access Code?",
+          "a": "Patient Access Codes are issued in person by CRMC Medical Social Services. Bring a valid ID. The code follows the format CRMC-YYYY-NNNNN."
+        },
+        {
+          "q": "What is a Guarantee Letter?",
+          "a": "A Guarantee Letter (GL) is the official document an agency issues when it approves its share of your bill. Present it at the provider to claim the assistance. GLs are valid for 30 days from issue. A request may receive more than one GL when several agencies co-fund it."
+        },
+        {
+          "q": "How will I know the status of my request?",
+          "a": "You'll receive in-app + email notifications at each step — when CRMC endorses your request, when agencies review it, and at each approval. The Request Assistance page shows your coverage plan and how much has been secured toward zero balance."
+        },
+        {
+          "q": "How do I join my online interview?",
+          "a": "If an agency schedules an interview, a Google Meet link appears on your Interviews page and Dashboard. Click it a few minutes before your slot — no install needed on a recent browser."
+        },
+        {
+          "q": "Do I choose which agencies help me?",
+          "a": "No — you submit one request and CRMC routes it to the agencies that can cover it, sometimes splitting it across several to reach a zero balance. You can have one active request at a time."
+        },
+        {
+          "q": "How do I withdraw my request?",
+          "a": "You can withdraw a request while it's still being reviewed by CRMC (before it's endorsed). After it's endorsed to agencies, contact CRMC or the agency through Messages."
+        }
       ]
     },
     "report": {
@@ -462,7 +466,7 @@
     "timeAgo": {
       "justNow": "just now",
       "min": "{{count}}m ago",
-      "hr":  "{{count}}h ago",
+      "hr": "{{count}}h ago",
       "day": "{{count}}d ago"
     }
   },
@@ -589,18 +593,18 @@
     },
     "tab": {
       "dashboard": "Home",
-      "apply":     "Apply",
-      "docs":      "Docs",
-      "request":   "Request",
-      "messages":  "Messages"
+      "apply": "Apply",
+      "docs": "Docs",
+      "request": "Request",
+      "messages": "Messages"
     },
     "more": {
-      "title":      "More",
-      "subtitle":   "Account, settings, and other options.",
+      "title": "More",
+      "subtitle": "Account, settings, and other options.",
       "navigation": "Navigation",
-      "account":    "Account",
-      "settings":   "Settings",
-      "language":   "Language"
+      "account": "Account",
+      "settings": "Settings",
+      "language": "Language"
     },
     "dashboard": {
       "title": "My Dashboard",
@@ -608,15 +612,15 @@
       "activeRequestTitle": "Your assistance request",
       "activeRequestDesc": "CRMC is processing your request. Track its progress and coverage under My Application.",
       "greeting": {
-        "uploadDocs":    "Get started by submitting your assistance request.",
-        "findProgram":   "Your documents are ready — submit your assistance request.",
-        "pending":       "Your request is under review — no action needed right now.",
-        "reviewing":     "CRMC is verifying your documents.",
+        "uploadDocs": "Get started by submitting your assistance request.",
+        "findProgram": "Your documents are ready — submit your assistance request.",
+        "pending": "Your request is under review — no action needed right now.",
+        "reviewing": "CRMC is verifying your documents.",
         "awaiting_info": "Action needed: CRMC asked you for more information.",
-        "interview":     "Interview scheduled — join the Google Meet at the scheduled time.",
-        "approved":      "Approved! Your Guarantee Letter is being prepared.",
-        "certificate":   "Your Guarantee Letter is ready.",
-        "rejected":      "Your request was not approved this time."
+        "interview": "Interview scheduled — join the Google Meet at the scheduled time.",
+        "approved": "Approved! Your Guarantee Letter is being prepared.",
+        "certificate": "Your Guarantee Letter is ready.",
+        "rejected": "Your request was not approved this time."
       },
       "noApplication": "You don't have an active application yet.",
       "browseSomeAgencies": "Find Programs to start an application",
@@ -699,15 +703,15 @@
         "done": "Done",
         "current": "Current",
         "s1Title": "Submit Your Request",
-        "s1Desc":  "Start a request, upload your required documents, and verify your ID.",
+        "s1Desc": "Start a request, upload your required documents, and verify your ID.",
         "s2Title": "CRMC Reviews & Endorses",
-        "s2Desc":  "CRMC verifies your documents and endorses your request to the agencies that can help fund it.",
+        "s2Desc": "CRMC verifies your documents and endorses your request to the agencies that can help fund it.",
         "s3Title": "Track Your Progress",
-        "s3Desc":  "Follow your request's status and funding coverage anytime.",
+        "s3Desc": "Follow your request's status and funding coverage anytime.",
         "s4Title": "Attend Your Interview",
-        "s4Desc":  "Join your online assessment interview with CRMC.",
+        "s4Desc": "Join your online assessment interview with CRMC.",
         "s5Title": "Receive your Guarantee Letter",
-        "s5Desc":  "Once agencies fund your care, get your Guarantee Letter to present at the named provider."
+        "s5Desc": "Once agencies fund your care, get your Guarantee Letter to present at the named provider."
       }
     },
     "track": {
@@ -737,62 +741,62 @@
       "withdrawFailed": "Failed to withdraw. Please try again.",
       "reviewCoverage": "Review coverage & proceed",
       "reqStages": {
-        "submittedLabel":    "Request Submitted",
-        "submittedNote":     "Your request and documents were submitted to CRMC.",
-        "reviewLabel":       "Under Review",
-        "reviewNote":        "CRMC is verifying your documents and your bill.",
-        "assessmentLabel":   "Assessment & Interview",
-        "assessmentNote":    "CRMC reviews your case and conducts your assessment interview.",
-        "endorsedLabel":     "Endorsed to Agencies",
-        "endorsedNote":      "CRMC referred your request to one or more agencies to help cover your bill.",
-        "fundedLabel":       "Approved & Funded",
-        "fundedNote":        "Agencies approve their share and issue your Guarantee Letters.",
-        "completedLabel":    "Completed",
-        "completedNote":     "Your bill is fully covered. Claim your Guarantee Letters at the agency office."
+        "submittedLabel": "Request Submitted",
+        "submittedNote": "Your request and documents were submitted to CRMC.",
+        "reviewLabel": "Under Review",
+        "reviewNote": "CRMC is verifying your documents and your bill.",
+        "assessmentLabel": "Assessment & Interview",
+        "assessmentNote": "CRMC reviews your case and conducts your assessment interview.",
+        "endorsedLabel": "Endorsed to Agencies",
+        "endorsedNote": "CRMC referred your request to one or more agencies to help cover your bill.",
+        "fundedLabel": "Approved & Funded",
+        "fundedNote": "Agencies approve their share and issue your Guarantee Letters.",
+        "completedLabel": "Completed",
+        "completedNote": "Your bill is fully covered. Claim your Guarantee Letters at the agency office."
       },
       "stages": {
-        "submittedLabel":   "Application Submitted",
-        "submittedNote":    "Your application was successfully submitted.",
-        "docsLabel":        "Document Verification",
-        "docsNote":         "Upload the required documents. The agency reviews and verifies them as it processes your request.",
-        "reviewingLabel":   "Under Agency Review",
-        "reviewingNote":    "The agency is reviewing your application.",
-        "interviewLabel":   "Interview Scheduled",
-        "interviewNote":    "You have been scheduled for a video interview.",
-        "approvedLabel":    "Application Approved",
-        "approvedNote":     "Your application has been approved.",
+        "submittedLabel": "Application Submitted",
+        "submittedNote": "Your application was successfully submitted.",
+        "docsLabel": "Document Verification",
+        "docsNote": "Upload the required documents. The agency reviews and verifies them as it processes your request.",
+        "reviewingLabel": "Under Agency Review",
+        "reviewingNote": "The agency is reviewing your application.",
+        "interviewLabel": "Interview Scheduled",
+        "interviewNote": "You have been scheduled for a video interview.",
+        "approvedLabel": "Application Approved",
+        "approvedNote": "Your application has been approved.",
         "certificateLabel": "Guarantee Letter Issued",
-        "certificateNote":  "Your Guarantee Letter has been issued."
+        "certificateNote": "Your Guarantee Letter has been issued."
       },
       "waitingDays": "Waiting {{count}}d",
       "banner": {
-        "pending":            "Your application has been received. The agency will review it soon — no action needed right now.",
-        "interview":          "You have an interview scheduled. Tap to see the details.",
-        "interviewBtn":       "View Interview",
-        "reviewing":          "Make sure all required documents are uploaded.",
-        "reviewingBtn":       "Check Docs",
-        "certReady":          "Your Guarantee Letter is ready to download.",
-        "certPreparing":      "Your Guarantee Letter has been issued. The agency is preparing the signed copy — you can download it once they upload it below.",
-        "approvedPreparing":  "Your application is approved. Your Guarantee Letter is being prepared.",
-        "approvedNoAmount":   "Your application is approved. Your Guarantee Letter will be prepared soon.",
-        "agencyPaused":       "{{agency}} is temporarily unavailable. Your application is paused and will resume when the agency is back online."
+        "pending": "Your application has been received. The agency will review it soon — no action needed right now.",
+        "interview": "You have an interview scheduled. Tap to see the details.",
+        "interviewBtn": "View Interview",
+        "reviewing": "Make sure all required documents are uploaded.",
+        "reviewingBtn": "Check Docs",
+        "certReady": "Your Guarantee Letter is ready to download.",
+        "certPreparing": "Your Guarantee Letter has been issued. The agency is preparing the signed copy — you can download it once they upload it below.",
+        "approvedPreparing": "Your application is approved. Your Guarantee Letter is being prepared.",
+        "approvedNoAmount": "Your application is approved. Your Guarantee Letter will be prepared soon.",
+        "agencyPaused": "{{agency}} is temporarily unavailable. Your application is paused and will resume when the agency is back online."
       },
       "approval": {
-        "amountLabel":  "Approved Amount",
-        "forLabel":     "For",
+        "amountLabel": "Approved Amount",
+        "forLabel": "For",
         "payableLabel": "Payable To",
-        "payableHint":  "Present your Guarantee Letter at this provider."
+        "payableHint": "Present your Guarantee Letter at this provider."
       },
       "expiry": {
-        "expiredOn":    "This Guarantee Letter expired on {{date}}.",
-        "expiredDesc":  "It is no longer accepted at the provider. Contact your agency through Messages to request re-issuance.",
-        "expiresIn":    "Expires in {{count}} days.",
-        "expiresDesc":  "Present this Guarantee Letter at the named provider before it expires."
+        "expiredOn": "This Guarantee Letter expired on {{date}}.",
+        "expiredDesc": "It is no longer accepted at the provider. Contact your agency through Messages to request re-issuance.",
+        "expiresIn": "Expires in {{count}} days.",
+        "expiresDesc": "Present this Guarantee Letter at the named provider before it expires."
       },
       "timeline": {
-        "current":    "Current",
+        "current": "Current",
         "hideFuture": "Hide future steps",
-        "seeAll":     "See all steps ({{count}} upcoming)"
+        "seeAll": "See all steps ({{count}} upcoming)"
       }
     },
     "status": {
@@ -803,87 +807,6 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "certificate": "Guarantee Letter Issued"
-    },
-    "documents": {
-      "title": "My Documents",
-      "subtitle": "Upload your documents here. Once verified by an administrator, they will be used automatically when you apply for programs.",
-      "uploadBtn": "Upload Document",
-      "howItWorksTitle": "How it works:",
-      "howItWorksBody": "Upload your documents here first. New uploads will be Pending review by an administrator. Once Verified, they will be used automatically when you apply for medical programs — no extra steps needed.",
-      "summary": {
-        "verifiedHeading": "Verified Documents ({{count}})",
-        "noVerifiedYet": "No verified documents yet.",
-        "verifiedStat": "Verified",
-        "pendingStat": "Pending"
-      },
-      "tabs": {
-        "all": "All",
-        "verified": "Verified",
-        "pending": "Pending",
-        "rejected": "Rejected",
-        "allHeading": "All Documents ({{count}})",
-        "verifiedHeading": "Verified Documents ({{count}})",
-        "pendingHeading": "Pending Documents ({{count}})",
-        "rejectedHeading": "Rejected Documents ({{count}})"
-      },
-      "list": {
-        "noneYet": "No documents uploaded yet. Click \"Upload Document\" to get started.",
-        "noneAll": "No documents match.",
-        "noneVerified": "No verified documents.",
-        "nonePending": "No pending documents.",
-        "noneRejected": "No rejected documents."
-      },
-      "delete": {
-        "warningVerified": "⚠ Verified — deleting may delay your application.",
-        "prompt": "Remove?",
-        "yes": "Yes",
-        "no": "No",
-        "success": "Document removed.",
-        "failed": "Failed to remove document. Please try again.",
-        "inUseError": "This document is attached to application {{appId}} and cannot be removed while the application is in progress. Withdraw the application first if you need to delete it."
-      },
-      "rejection": {
-        "label": "Reason:",
-        "suffix": "— please re-upload a corrected copy."
-      },
-      "docStatus": {
-        "verified": "Verified",
-        "pending": "Pending Review",
-        "rejected": "Rejected"
-      },
-      "upload": {
-        "modalTitle": "Upload Document",
-        "docTypeLabel": "Document Type",
-        "noDocTypes": "No document types configured yet. Contact your administrator.",
-        "selectDocType": "Select document type...",
-        "required": "── Required ──",
-        "optional": "── Optional ──",
-        "requiredHint": "This document is required for your application.",
-        "alreadyVerified": "You already have a verified {{type}}. Uploading another may confuse the reviewer. Only upload if you need to replace it.",
-        "alreadyPending": "You already submitted a {{type}} that is pending review. Upload another only if the previous one was incorrect.",
-        "idTypeLabel": "What type of ID?",
-        "selectIdType": "Select ID type...",
-        "idNotSure": "I'm not sure",
-        "idHint": "Helps the reviewer verify your ID using the correct government portal.",
-        "attachLabel": "Attach Your Document",
-        "uploading": "Uploading...",
-        "tapChange": "Tap to change",
-        "tapBrowse": "Tap to browse your files",
-        "fileTypesHint": "JPG, PNG — auto-compressed · PDF — max 650KB",
-        "or": "or",
-        "takePhoto": "Take a Photo with Camera",
-        "cameraHint": "Opens camera on mobile · Opens image files on desktop",
-        "attestation": "I confirm that this is a genuine and unaltered document issued to me. I understand that submitting fraudulent documents to obtain government assistance is a punishable offense under Philippine law.",
-        "uploadBtn": "Upload Document",
-        "cancel": "Cancel",
-        "errFileType": "Only image files (JPG, PNG) and PDF documents are accepted.",
-        "errPdfTooBig": "PDF files must be under 650KB. Please compress the file first.",
-        "errNoDocType": "Please select a document type.",
-        "errNoIdType": "Please select the type of ID you are uploading.",
-        "errNoFile": "Please select a file.",
-        "success": "Document uploaded! Pending review by administrator.",
-        "failed": "Upload failed. Please try again."
-      }
     },
     "programs": {
       "breadcrumb": "Find Programs",
@@ -912,40 +835,6 @@
       "noneAvailableDesc": "All agencies are currently disabled. Please check back later.",
       "clearFilter": "Clear filter"
     },
-    "apply": {
-      "title": "Apply to {{agency}}",
-      "processing": "Processing: {{time}}",
-      "spotsTodayLabel": "Spots today",
-      "alreadyApplied": "You already have an active application to this agency. You cannot apply again until the current one is resolved.",
-      "activeElsewhere": "You already have an active application at {{agency}}. Only one application is allowed at a time. Wait for it to be resolved before applying here.",
-      "noSpotsWarning": "No spots available today. Spots reset daily at midnight.",
-      "requirementsTitle": "Requirements Checklist",
-      "reqVerified": "(verified)",
-      "reqPending": "(pending review)",
-      "reqMissing": "(not yet uploaded)",
-      "missingOne": "You have 1 missing document. You can still apply but your application may be delayed.",
-      "missingMany": "You have {{count}} missing documents. You can still apply but your application may be delayed.",
-      "upload": "Upload",
-      "declaration": "I confirm that my information and documents are genuine.",
-      "cancel": "Cancel",
-      "checking": "Checking...",
-      "submitting": "Submitting...",
-      "submit": "Submit Application",
-      "errAlreadyApplied": "You already have an active application to this agency.",
-      "errActiveElsewhere": "Complete your application at {{agency}} first.",
-      "errNoSlots": "No slots available for today.",
-      "errSpotsRanOut": "Spots just ran out. Please try another agency or come back tomorrow.",
-      "errFailed": "Failed to submit application. Please try again.",
-      "successTitle": "Application Submitted!",
-      "successDesc": "Your application to {{agency}} has been received.",
-      "successIdLabel": "Your Application ID",
-      "successIdNote": "Keep this ID for your records.",
-      "nextStepsTitle": "What happens next?",
-      "nextStep1": "Your documents will be reviewed by the administrator.",
-      "nextStep2": "{{agency}} will review your application.",
-      "nextStep2WithTime": "{{agency}} will review your application within {{time}}.",
-      "nextStep3": "You will be notified of updates through this portal."
-    },
     "interviews": {
       "title": "My Interview",
       "subtitle": "Join your scheduled assessment interview with CRMC.",
@@ -966,23 +855,23 @@
       "prep": {
         "documents": "Have your verified documents ready to show if asked.",
         "questions": "Expect questions about your medical situation and financial need.",
-        "duration":  "The interview typically takes 15–20 minutes.",
-        "decision":  "A decision will be communicated to you after the review.",
-        "internet":  "Make sure you have a stable internet connection."
+        "duration": "The interview typically takes 15–20 minutes.",
+        "decision": "A decision will be communicated to you after the review.",
+        "internet": "Make sure you have a stable internet connection."
       },
       "joinBtn": "Join Video Interview",
       "noLink": "Meeting link not yet provided",
       "meetHint": "Video call via Google Meet · No account needed · Opens in a new tab",
       "empty": {
         "completedTitle": "Interview Complete",
-        "completedDesc":  "Your interview has been completed. Check My Application to see the outcome of your application.",
-        "completedBtn":   "View My Application",
-        "notYetTitle":    "No Interview Scheduled Yet",
-        "notYetDesc":     "Once CRMC verifies your documents, they will schedule your assessment interview and you will be notified.",
-        "notYetBtn":      "View My Application",
-        "noAppTitle":     "No Request Yet",
-        "noAppDesc":      "You need to submit an assistance request first. CRMC schedules your assessment interview after verifying your documents.",
-        "noAppBtn":       "Request Assistance"
+        "completedDesc": "Your interview has been completed. Check My Application to see the outcome of your application.",
+        "completedBtn": "View My Application",
+        "notYetTitle": "No Interview Scheduled Yet",
+        "notYetDesc": "Once CRMC verifies your documents, they will schedule your assessment interview and you will be notified.",
+        "notYetBtn": "View My Application",
+        "noAppTitle": "No Request Yet",
+        "noAppDesc": "You need to submit an assistance request first. CRMC schedules your assessment interview after verifying your documents.",
+        "noAppBtn": "Request Assistance"
       }
     },
     "guide": {
@@ -990,17 +879,17 @@
       "subtitle": "Everything you need to know about using MAPA.",
       "tapHint": "Tap any question below to read the answer.",
       "footer": "Need further assistance? Visit the CRMC Medical Social Services office or send a message through the portal using the envelope icon in the top bar.",
-      "linkGoToDocuments":  "Go to My Documents",
-      "linkGoToStatus":     "Go to My Application",
+      "linkGoToDocuments": "Go to My Documents",
+      "linkGoToStatus": "Go to My Application",
       "linkGoToInterviews": "Go to My Interviews",
-      "linkGoToMessages":   "Go to Messages",
+      "linkGoToMessages": "Go to Messages",
       "sections": {
         "whatIsMapa": {
-          "title":   "What is MAPA?",
+          "title": "What is MAPA?",
           "content": "MAPA (Medical Assistance Portal Access) is the official online system of Cotabato Regional Medical Center (CRMC) for processing medical assistance applications. It allows patients to apply for financial or material assistance from partner government agencies such as DSWD, PCSO, and the Malasakit Center — all in one place, without lining up at multiple offices."
         },
         "whoCanUse": {
-          "title":   "Who can use MAPA?",
+          "title": "Who can use MAPA?",
           "content": "Any patient of CRMC who has been assessed by Medical Social Services can register and use MAPA. You will receive a Patient Access Code (format: CRMC-YYYY-XXXXX) from the CRMC Medical Social Services office. You must have this code to create an account."
         },
         "register": {
@@ -1043,18 +932,18 @@
         },
         "statuses": {
           "title": "What do the application statuses mean?",
-          "pendingLabel":   "Pending Review",
-          "pendingDesc":    "Your application was received and is waiting for the agency to start reviewing.",
+          "pendingLabel": "Pending Review",
+          "pendingDesc": "Your application was received and is waiting for the agency to start reviewing.",
           "reviewingLabel": "Under Review",
-          "reviewingDesc":  "The agency has opened your application and is currently evaluating it.",
+          "reviewingDesc": "The agency has opened your application and is currently evaluating it.",
           "interviewLabel": "Interview Scheduled",
-          "interviewDesc":  "The agency has scheduled a video interview with you. Check your Interviews page for the date and Google Meet link.",
-          "approvedLabel":  "Approved",
-          "approvedDesc":   "Your application has been approved for a specific amount. The agency is preparing your Guarantee Letter.",
-          "certLabel":      "GL Issued",
-          "certDesc":       "Your Guarantee Letter has been issued. Once the agency uploads the signed scan, you can download it from My Application.",
-          "rejectedLabel":  "Rejected",
-          "rejectedDesc":   "Your application was not approved. A reason will be provided. You may apply again after addressing the issue."
+          "interviewDesc": "The agency has scheduled a video interview with you. Check your Interviews page for the date and Google Meet link.",
+          "approvedLabel": "Approved",
+          "approvedDesc": "Your application has been approved for a specific amount. The agency is preparing your Guarantee Letter.",
+          "certLabel": "GL Issued",
+          "certDesc": "Your Guarantee Letter has been issued. Once the agency uploads the signed scan, you can download it from My Application.",
+          "rejectedLabel": "Rejected",
+          "rejectedDesc": "Your application was not approved. A reason will be provided. You may apply again after addressing the issue."
         },
         "interview": {
           "title": "How do I join my interview?",
@@ -1075,122 +964,108 @@
           "note": "The Guarantee Letter is valid for 30 days from the date of issuance. The named provider may bill the agency directly for the guaranteed amount — you are not responsible for the guaranteed portion."
         },
         "contact": {
-          "title":   "How do I contact the admin or agency?",
+          "title": "How do I contact the admin or agency?",
           "content": "Go to Messages from the sidebar to view all your conversations. Tap the New Message button at the top right to start a new conversation with hospital staff or your assigned agency. You can message them directly if you have questions about your application, documents, or need to reschedule an interview."
         },
         "forgotPw": {
-          "title":   "I forgot my password. What do I do?",
+          "title": "I forgot my password. What do I do?",
           "content": "On the Login page, click \"Forgot Password?\" and enter your registered email address. A password reset link will be sent to your email. Click the link to set a new password. If you did not receive the email, check your spam or junk folder. For further help, contact CRMC Medical Social Services."
         }
       }
-    },
-    "gl": {
-      "title": "Guarantee Letter",
-      "amount": "Approved Amount",
-      "for": "For",
-      "payableTo": "Payable To",
-      "download": "Download",
-      "pending": "The signed copy will appear here once your agency uploads it.",
-      "ready": "Your Guarantee Letter is ready to download.",
-      "preparing": "Your Guarantee Letter has been issued. The agency is preparing the signed copy."
     }
-  },
-  "registration": {
-    "accessCode": "Patient Access Code",
-    "accessCodeHint": "Enter the code issued by CRMC Medical Social Services."
   },
   "register": {
     "backHome": "Back to Home",
     "title": "Apply for Patient Account",
     "subtitle": "Create an account to apply for medical assistance.",
     "stepPersonal": "Personal Info",
-    "stepAccount":  "Account Setup",
-    "stepCode":     "Access Code",
+    "stepAccount": "Account Setup",
+    "stepCode": "Access Code",
     "step1": {
       "sectionTitle": "Personal Information",
-      "sectionDesc":  "Enter your name and contact details as they appear on your official ID.",
-      "firstName":    "First Name",
-      "lastName":     "Last Name",
-      "middleName":   "Middle Name",
-      "optional":     "(optional)",
-      "suffix":       "Suffix",
-      "suffixNone":   "None",
+      "sectionDesc": "Enter your name and contact details as they appear on your official ID.",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "middleName": "Middle Name",
+      "optional": "(optional)",
+      "suffix": "Suffix",
+      "suffixNone": "None",
       "contactNumber": "Contact Number",
-      "contactHint":  "11-digit Philippine mobile number, digits only",
+      "contactHint": "11-digit Philippine mobile number, digits only",
       "addressLabel": "Complete Address",
-      "addressHint":  "Appears on your official Guarantee Letter.",
-      "barangay":     "Barangay",
-      "city":         "City / Municipality",
-      "province":     "Province",
+      "addressHint": "Appears on your official Guarantee Letter.",
+      "barangay": "Barangay",
+      "city": "City / Municipality",
+      "province": "Province",
       "selectProvince": "Select province",
-      "selectCity":     "Select city / municipality",
+      "selectCity": "Select city / municipality",
       "otherNotListed": "Other (not listed)",
-      "otherProvince":  "Enter province",
-      "otherCity":      "Enter city / municipality"
+      "otherProvince": "Enter province",
+      "otherCity": "Enter city / municipality"
     },
     "step2": {
       "sectionTitle": "Account Setup",
-      "sectionDesc":  "Create your login credentials. Use an email you can access — we'll send reset links and notifications there.",
-      "email":               "Email Address",
-      "password":            "Password",
+      "sectionDesc": "Create your login credentials. Use an email you can access — we'll send reset links and notifications there.",
+      "email": "Email Address",
+      "password": "Password",
       "passwordPlaceholder": "Min. 8 characters, letters + numbers",
-      "confirmPassword":     "Confirm Password",
-      "confirmPlaceholder":  "Repeat your password"
+      "confirmPassword": "Confirm Password",
+      "confirmPlaceholder": "Repeat your password"
     },
     "step3": {
-      "sectionTitle":  "Patient Access Code",
-      "sectionDesc":   "Your Patient Access Code is required. It was provided to you by CRMC Medical Social Services.",
-      "accessCode":    "Patient Access Code",
+      "sectionTitle": "Patient Access Code",
+      "sectionDesc": "Your Patient Access Code is required. It was provided to you by CRMC Medical Social Services.",
+      "accessCode": "Patient Access Code",
       "accessCodeHint": "Enter the 5-digit number after the prefix",
-      "verifyBtn":     "Verify",
-      "verified":      "Verified",
-      "edit":          "Edit",
-      "reviewToggle":  "Review your details before submitting",
-      "noCodeHint":    "Don't have an access code? Visit CRMC Medical Social Services to be assessed and receive one.",
+      "verifyBtn": "Verify",
+      "verified": "Verified",
+      "edit": "Edit",
+      "reviewToggle": "Review your details before submitting",
+      "noCodeHint": "Don't have an access code? Visit CRMC Medical Social Services to be assessed and receive one.",
       "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to CRMC Medical Social Services so they can investigate and issue a new one.",
       "codeUsedRecoveryAction": "Email CRMC Medical Social Services",
-      "termsAgree":    "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to CRMC collecting my personal information for medical assistance purposes."
+      "termsAgree": "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to CRMC collecting my personal information for medical assistance purposes."
     },
-    "back":      "Back",
-    "next":      "Next",
-    "creating":  "Creating account...",
-    "create":    "Create Account",
+    "back": "Back",
+    "next": "Next",
+    "creating": "Creating account...",
+    "create": "Create Account",
     "haveAccount": "Already have an account?",
-    "signIn":    "Sign in",
+    "signIn": "Sign in",
     "errors": {
       "firstNameRequired": "First name is required.",
-      "nameLettersOnly":   "Letters only.",
-      "lastNameRequired":  "Last name is required.",
-      "contactRequired":   "Contact number is required.",
-      "contactInvalid":    "Enter a valid 11-digit Philippine mobile number (e.g. 09171234567).",
-      "barangayRequired":  "Barangay is required.",
-      "cityRequired":      "City/Municipality is required.",
-      "provinceRequired":  "Province is required.",
-      "emailRequired":     "Email address is required.",
-      "emailInvalid":      "Please enter a valid email address.",
-      "passwordWeak":      "Password must be at least 8 characters and include letters and numbers.",
-      "passwordMismatch":  "Passwords do not match.",
-      "codeFormat":        "Format: CRMC-{{year}}-00001",
-      "codeVerifyFirst":   "Please verify your Patient Access Code first.",
-      "termsRequired":     "You must accept the Privacy Notice and Terms of Use.",
-      "codeNotFound":      "Access code not found. Please check and try again.",
-      "codeUsed":          "This access code has already been used.",
-      "verifyFailed":      "Verification failed. Please try again.",
-      "verifyRateLimit":   "Too many verification attempts from this device. Please wait an hour before trying again, or contact CRMC Medical Social Services for help.",
-      "emailInUse":        "This email is already registered.",
-      "passwordTooWeak":   "Password is too weak. Please choose a stronger one.",
-      "generic":           "Registration failed."
+      "nameLettersOnly": "Letters only.",
+      "lastNameRequired": "Last name is required.",
+      "contactRequired": "Contact number is required.",
+      "contactInvalid": "Enter a valid 11-digit Philippine mobile number (e.g. 09171234567).",
+      "barangayRequired": "Barangay is required.",
+      "cityRequired": "City/Municipality is required.",
+      "provinceRequired": "Province is required.",
+      "emailRequired": "Email address is required.",
+      "emailInvalid": "Please enter a valid email address.",
+      "passwordWeak": "Password must be at least 8 characters and include letters and numbers.",
+      "passwordMismatch": "Passwords do not match.",
+      "codeFormat": "Format: CRMC-{{year}}-00001",
+      "codeVerifyFirst": "Please verify your Patient Access Code first.",
+      "termsRequired": "You must accept the Privacy Notice and Terms of Use.",
+      "codeNotFound": "Access code not found. Please check and try again.",
+      "codeUsed": "This access code has already been used.",
+      "verifyFailed": "Verification failed. Please try again.",
+      "verifyRateLimit": "Too many verification attempts from this device. Please wait an hour before trying again, or contact CRMC Medical Social Services for help.",
+      "emailInUse": "This email is already registered.",
+      "passwordTooWeak": "Password is too weak. Please choose a stronger one.",
+      "generic": "Registration failed."
     },
     "toast": {
-      "codeVerified":  "Access code verified!",
-      "welcome":       "Welcome, {{name}}! Your account has been created."
+      "codeVerified": "Access code verified!",
+      "welcome": "Welcome, {{name}}! Your account has been created."
     },
     "password": {
-      "tooShort":   "Too short",
-      "strong":     "Strong",
-      "good":       "Good",
-      "weakNeed8":  "Weak — needs 8+ chars",
-      "weakAddLN":  "Weak — add letters & numbers"
+      "tooShort": "Too short",
+      "strong": "Strong",
+      "good": "Good",
+      "weakNeed8": "Weak — needs 8+ chars",
+      "weakAddLN": "Weak — add letters & numbers"
     }
   }
 }
