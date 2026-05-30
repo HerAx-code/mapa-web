@@ -174,7 +174,12 @@ export default function HospitalIDs() {
 
   const handleRevoke = async (h) => {
     try {
-      await updateDoc(doc(db, 'hospitalIds', h.id), {
+      // Atomic: reset the hospital ID doc + clear the user's hospitalId
+      // field together. If either fails, neither happens -- so we never
+      // end up with the code reset but the user's profile still pointing
+      // at it (or vice-versa).
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'hospitalIds', h.id), {
         status:    'available',
         usedBy:    null,
         patId:     null,
@@ -182,9 +187,8 @@ export default function HospitalIDs() {
         time:      '',
         revokedAt: serverTimestamp(),
       })
-      if (h.patId) {
-        await updateDoc(doc(db, 'users', h.patId), { hospitalId: null })
-      }
+      if (h.patId) batch.update(doc(db, 'users', h.patId), { hospitalId: null })
+      await batch.commit()
       logAudit(user, { action: 'hospitalid_revoked', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: `Previously used by ${h.usedBy ?? '—'}` })
       toast.success(`${h.id} reset to Available.`)
     } catch (err) { console.error(err); toast.error('Failed to reset Hospital ID. Please try again.') }
@@ -192,10 +196,14 @@ export default function HospitalIDs() {
 
   const handleDelete = async (h) => {
     try {
-      if (h.patId) {
-        await updateDoc(doc(db, 'users', h.patId), { hospitalId: null })
-      }
-      await deleteDoc(doc(db, 'hospitalIds', h.id))
+      // Atomic: delete the hospital ID doc + clear the user's hospitalId
+      // field together. Previously these were two sequential updateDocs --
+      // if deleteDoc failed after the user update, the patient was orphaned
+      // from a code that still existed.
+      const batch = writeBatch(db)
+      if (h.patId) batch.update(doc(db, 'users', h.patId), { hospitalId: null })
+      batch.delete(doc(db, 'hospitalIds', h.id))
+      await batch.commit()
       logAudit(user, { action: 'hospitalid_deleted', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: h.usedBy ? `Was used by ${h.usedBy}` : 'Was available' })
       setConfirmDelete(null)
       toast.success(`${h.id} deleted.`)
@@ -260,7 +268,8 @@ export default function HospitalIDs() {
             { key: 'available', label: 'Available' },
             { key: 'used',      label: 'Used'      },
           ].map(f => (
-            <button key={f.key} onClick={() => setStatusFilter(f.key)}
+            <button key={f.key}
+              onClick={() => setStatusFilter(statusFilter === f.key && f.key !== 'all' ? 'all' : f.key)}
               className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                 statusFilter === f.key
                   ? 'bg-brand-500 text-white border-brand-500'
@@ -274,8 +283,16 @@ export default function HospitalIDs() {
         {/* Search */}
         <div className="relative mb-4">
           <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by access code or patient name..."
+          <input className="input pl-9 pr-10" placeholder="Search by access code or patient name..."
             value={search} onChange={e => setSearch(e.target.value)} />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              <MdClose size={14} />
+            </button>
+          )}
         </div>
 
         {/* Table */}
