@@ -766,7 +766,11 @@
         "approvedLabel": "Aprubado ang Aplikasyon",
         "approvedNote": "Aprubado na ang inyong aplikasyon.",
         "certificateLabel": "Naibigay na ang Guarantee Letter",
-        "certificateNote": "Naibigay na ang inyong Guarantee Letter."
+        "certificateNote": "Naibigay na ang inyong Guarantee Letter.",
+        "endorsedLabel": "Naendorso sa Ahensya",
+        "endorsedNote": "Naendorso ng CRMC ang inyong kahilingan sa ahensyang ito para sa pondo.",
+        "fundingLabel": "Pagsusuri ng Pondo",
+        "fundingNote": "Sinusuri ng ahensya ang desisyon sa pondo para sa inyong bahagi."
       },
       "waitingDays": "Naghihintay {{count}}d",
       "banner": {

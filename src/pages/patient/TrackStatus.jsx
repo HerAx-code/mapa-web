@@ -76,6 +76,46 @@ const glExpiryInfo = (app) => {
 // come from the locale files (patient.track.stages.*) rather than being
 // hardcoded English.
 const buildStages = (app, t) => {
+  // Co-funding slice (new model): CRMC owns intake, doc verification, and
+  // the interview on the parent request, so a per-slice stepper that
+  // shows "Document Verification" or "Interview Scheduled" is misleading.
+  // Slices only cover the agency's funding leg: Endorsed → Funding Review
+  // → Approved → GL Issued.
+  if (app.requestId) {
+    const SLICE_DEFS = [
+      { key: 'endorsed',    label: t('patient.track.stages.endorsedLabel'),    note: t('patient.track.stages.endorsedNote') },
+      { key: 'funding',     label: t('patient.track.stages.fundingLabel'),     note: t('patient.track.stages.fundingNote') },
+      { key: 'approved',    label: t('patient.track.stages.approvedLabel'),    note: t('patient.track.stages.approvedNote') },
+      { key: 'certificate', label: t('patient.track.stages.certificateLabel'), note: t('patient.track.stages.certificateNote') },
+    ]
+    const sliceDoneMap = {
+      endorsed:      [],
+      reviewing:     ['endorsed'],
+      awaiting_info: ['endorsed'],
+      approved:      ['endorsed', 'funding'],
+      certificate:   ['endorsed', 'funding', 'approved'],
+      rejected:      [],
+    }
+    const sliceActiveMap = {
+      endorsed:      'endorsed',
+      reviewing:     'funding',
+      awaiting_info: 'funding',
+      approved:      'approved',
+      certificate:   'certificate',
+      rejected:      null,
+    }
+    const doneKeys  = sliceDoneMap[app.status]  ?? []
+    const activeKey = sliceActiveMap[app.status] ?? null
+    return SLICE_DEFS.map(s => ({
+      ...s,
+      done:   doneKeys.includes(s.key),
+      active: s.key === activeKey,
+      date:   s.key === 'endorsed' ? formatDate(app.submittedAt) : null,
+    }))
+  }
+
+  // Legacy direct-to-agency application (pre-redesign): the agency owned
+  // verification + interview, so the full 6-stage stepper still applies.
   const STAGE_DEFS = [
     { key: 'submitted',   label: t('patient.track.stages.submittedLabel'),   note: t('patient.track.stages.submittedNote') },
     { key: 'docs',        label: t('patient.track.stages.docsLabel'),        note: t('patient.track.stages.docsNote') },

@@ -766,7 +766,11 @@
         "approvedLabel": "Application Approved",
         "approvedNote": "Your application has been approved.",
         "certificateLabel": "Guarantee Letter Issued",
-        "certificateNote": "Your Guarantee Letter has been issued."
+        "certificateNote": "Your Guarantee Letter has been issued.",
+        "endorsedLabel": "Endorsed to Agency",
+        "endorsedNote": "CRMC has endorsed your request to this agency for funding.",
+        "fundingLabel": "Funding Review",
+        "fundingNote": "The agency is reviewing the funding decision for your share."
       },
       "waitingDays": "Waiting {{count}}d",
       "banner": {
