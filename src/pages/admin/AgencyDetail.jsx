@@ -52,7 +52,7 @@ function EditCoordinatorModal({ coordinator, onClose }) {
       })
       toast.success('Coordinator updated.')
       onClose()
-    } catch { toast.error('Failed to update. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update. Please try again.') }
     finally { setSaving(false) }
   }
 
@@ -181,7 +181,7 @@ export default function AgencyDetail() {
       logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: id, targetName: data.name, details: 'Agency details updated' })
       toast.success('Agency updated.')
       setShowEdit(false)
-    } catch { toast.error('Failed to save agency.') }
+    } catch (err) { console.error(err); toast.error('Failed to save agency.') }
   }
 
   // Re-enabling is a single-step action (no choice needed). Disabling
@@ -202,7 +202,7 @@ export default function AgencyDetail() {
       }
       logAudit(user, { action: 'agency_enabled', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency re-enabled' })
       toast.success(`${agency.name} enabled.`)
-    } catch { toast.error('Failed to update agency status.') }
+    } catch (err) { console.error(err); toast.error('Failed to update agency status.') }
   }
 
   // #7 — Disable cascade: when an agency is disabled mid-flow, the admin
@@ -280,7 +280,7 @@ export default function AgencyDetail() {
       logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: id, targetName: agency.name, details: `Slot capacity changed to ${newTotal}` })
       setEditSlots(false)
       toast.success('Slot capacity updated.')
-    } catch { toast.error('Failed to update slots.') }
+    } catch (err) { console.error(err); toast.error('Failed to update slots.') }
   }
 
   const handleResetSlots = async () => {
@@ -288,7 +288,7 @@ export default function AgencyDetail() {
       const total = agency.slots?.total ?? 25
       await updateDoc(doc(db, 'agencies', id), { 'slots.remaining': total })
       toast.success(`Slots reset to ${total}.`)
-    } catch { toast.error('Failed to reset slots.') }
+    } catch (err) { console.error(err); toast.error('Failed to reset slots.') }
   }
 
   // handleSaveBudget / handleResetBudgetPeriod moved to agency/Allocation.jsx
@@ -300,7 +300,7 @@ export default function AgencyDetail() {
       logAudit(user, { action: 'agency_deleted', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency permanently deleted' })
       toast.success('Agency deleted.')
       navigate('/admin/agencies')
-    } catch { toast.error('Failed to delete agency.') }
+    } catch (err) { console.error(err); toast.error('Failed to delete agency.') }
   }
 
   const handleMessage = async () => {
@@ -319,7 +319,7 @@ export default function AgencyDetail() {
       })
       navigate('/admin/messages')
       toast.success('Conversation opened in Messages.')
-    } catch { toast.error('Failed to open conversation.') }
+    } catch (err) { console.error(err); toast.error('Failed to open conversation.') }
   }
 
   // ── Coordinator actions ───────────────────────────────────────────────
@@ -335,7 +335,7 @@ export default function AgencyDetail() {
       })
       logAudit(user, { action: nowActive ? 'account_activated' : 'account_deactivated', targetType: 'account', targetId: coord.uid, targetName: coord.name, details: `Agency coordinator ${nowActive ? 'reactivated' : 'deactivated'}` })
       toast.success(`${coord.name} ${nowActive ? 'reactivated' : 'deactivated'}.`)
-    } catch { toast.error('Failed to update account.') }
+    } catch (err) { console.error(err); toast.error('Failed to update account.') }
   }
 
   const handleResetPassword = async (coord) => {
@@ -343,7 +343,7 @@ export default function AgencyDetail() {
       await sendPasswordResetEmail(auth, coord.email)
       await notify(coord.uid, { type: 'password_reset_sent', title: 'Password Reset Email Sent', body: 'A password reset link has been sent to your email.' })
       toast.success(`Password reset email sent to ${coord.email}.`)
-    } catch { toast.error('Failed to send reset email.') }
+    } catch (err) { console.error(err); toast.error('Failed to send reset email.') }
   }
 
   const handleDeleteCoord = async (coord) => {
@@ -352,7 +352,7 @@ export default function AgencyDetail() {
       logAudit(user, { action: 'account_deleted', targetType: 'account', targetId: coord.uid, targetName: coord.name, details: `${coord.role === 'agency_admin' ? 'Agency Administrator' : 'Coordinator'} account deleted` })
       setConfirmCoord(null)
       toast.success(`${coord.name}'s account deleted.`)
-    } catch { toast.error('Failed to delete account.') }
+    } catch (err) { console.error(err); toast.error('Failed to delete account.') }
   }
 
   // Mirrors /agency/team's own toggle (Team.jsx) so a Super Admin and

@@ -73,7 +73,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
         toast.success('Assistance type added.')
       }
       onClose()
-    } catch { toast.error('Failed to save.') }
+    } catch (err) { console.error(err); toast.error('Failed to save.') }
     finally { setSaving(false) }
   }
 

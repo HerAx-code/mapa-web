@@ -484,7 +484,7 @@ function RequestDetail({ request, agencies, onClose }) {
       }).catch(() => {})
       toast.success('Interview scheduled.')
       setShowInterview(false)
-    } catch { toast.error('Failed to schedule interview.') }
+    } catch (err) { console.error(err); toast.error('Failed to schedule interview.') }
     finally { setBusy(false) }
   }
 
@@ -498,7 +498,7 @@ function RequestDetail({ request, agencies, onClose }) {
       })
       logAudit(user, { action: 'interview_completed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `Outcome: ${outcome}` })
       toast.success('Interview outcome recorded.')
-    } catch { toast.error('Failed to record outcome.') }
+    } catch (err) { console.error(err); toast.error('Failed to record outcome.') }
     finally { setBusy(false) }
   }
 
@@ -527,7 +527,7 @@ function RequestDetail({ request, agencies, onClose }) {
       }).catch(() => {})
       toast.success(status === 'rejected' ? 'Request rejected.' : 'Request closed.')
       onClose()
-    } catch { toast.error('Failed to update request.') }
+    } catch (err) { console.error(err); toast.error('Failed to update request.') }
     finally { setBusy(false) }
   }
 

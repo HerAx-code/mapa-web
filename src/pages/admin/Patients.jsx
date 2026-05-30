@@ -228,13 +228,20 @@ export default function Patients() {
     }
   }, [patients, searchParams])
 
+  // "Active applicant" = a patient with at least one non-terminal slice.
+  // Covers both the co-funding slice statuses (endorsed before patient
+  // Proceed, reviewing while agency assesses, awaiting_info while patient
+  // gathers more docs, approved with GL pending issuance) and the legacy
+  // pre-redesign statuses (pending, interview). Without including
+  // 'endorsed' here, the previous version missed patients with brand-new
+  // CRMC endorsements waiting on the patient to accept the coverage plan.
   useEffect(() => {
     getDocs(query(
       collection(db, 'applications'),
-      where('status', 'in', ['pending', 'reviewing', 'interview', 'approved'])
+      where('status', 'in', ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview', 'approved'])
     )).then(snap => {
       setActiveApplicantIds(new Set(snap.docs.map(d => d.data().patientId).filter(Boolean)))
-    }).catch(() => {})
+    }).catch(err => console.error('[Patients] active applicants query failed:', err))
   }, [])
 
   const filtered = patients.filter(p => {
@@ -263,7 +270,7 @@ export default function Patients() {
       })
       navigate('/admin/messages')
       toast.success('Conversation opened in Messages.')
-    } catch { toast.error('Failed to open conversation.') }
+    } catch (err) { console.error(err); toast.error('Failed to open conversation.') }
   }
 
   const handleToggleHolding = async (patient) => {
@@ -279,7 +286,7 @@ export default function Patients() {
       })
       logAudit(adminUser, { action: newCooldown > 0 ? 'holding_applied' : 'holding_removed', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed' })
       toast.success(`Holding period ${newCooldown > 0 ? 'applied to' : 'removed from'} ${patient.name}.`)
-    } catch { toast.error('Failed to update holding period. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update holding period. Please try again.') }
   }
 
   const handleToggleDeletion = async (patient) => {
@@ -295,7 +302,7 @@ export default function Patients() {
       })
       logAudit(adminUser, { action: newDeletion ? 'patient_marked' : 'patient_unmarked', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newDeletion ? 'Marked for deletion' : 'Restored to active' })
       toast.success(`${patient.name} ${newDeletion ? 'marked for deletion' : 'restored to active'}.`)
-    } catch { toast.error('Failed to update account status. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update account status. Please try again.') }
   }
 
   const handleDeleteAccount = async (patient) => {

@@ -115,7 +115,7 @@ export default function Reports() {
       toast.success(`Report ${labels[status] ?? 'updated'}.`)
       setActiveAction(null)
       setResolutionNote('')
-    } catch { toast.error('Failed to update report. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update report. Please try again.') }
   }
 
   const handleDelete = async (report) => {
@@ -129,7 +129,7 @@ export default function Reports() {
       })
       setActiveAction(null)
       toast.success('Report deleted.')
-    } catch { toast.error('Failed to delete report. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to delete report. Please try again.') }
   }
 
   const handleReopen = async (report) => {
@@ -149,7 +149,7 @@ export default function Reports() {
         details:    `Report re-opened — submitted by ${report.reporterName ?? '—'}`,
       })
       toast.success('Report re-opened.')
-    } catch { toast.error('Failed to re-open report. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to re-open report. Please try again.') }
   }
 
   const openAction = (id, type) => {

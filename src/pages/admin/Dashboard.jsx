@@ -123,16 +123,23 @@ export default function AdminDashboard() {
     return () => { u1(); u2(); u3() }
   }, [])
 
-  // Alerts: stale applications (pending/reviewing > 7 days), low slot agencies, open reports
+  // Alerts: stale applications > 7 days, low slot agencies, open reports.
+  // Status list covers both the co-funding slice statuses (reviewing while
+  // an agency sits on it, awaiting_info while a patient is being chased)
+  // and the legacy pre-redesign statuses (pending) that older applications
+  // still carry. Endorsed-but-not-Proceeded slices already have their own
+  // amber chip on the CRMC Requests detail + list, so they're excluded
+  // here to avoid double-flagging.
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'applications'), where('status', 'in', ['pending', 'reviewing'])),
+      query(collection(db, 'applications'), where('status', 'in', ['pending', 'reviewing', 'awaiting_info'])),
       snap => {
         const stale = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(a => daysSince(a.submittedAt) >= 7)
         setStaleApps(stale)
-      }
+      },
+      err => console.error('[Dashboard] stale apps query failed:', err),
     )
     const u2 = onSnapshot(
       query(collection(db, 'agencies'), where('enabled', '==', true)),

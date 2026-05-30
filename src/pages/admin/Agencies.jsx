@@ -126,7 +126,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
       })
       toast.success(isEdit ? 'Agency updated.' : 'Agency added.')
       onClose()
-    } catch { toast.error('Failed to save agency.') }
+    } catch (err) { console.error(err); toast.error('Failed to save agency.') }
     finally { setSaving(false) }
   }
 
@@ -339,7 +339,7 @@ export default function Agencies() {
       })
       logAudit(user, { action: nowEnabled ? 'agency_enabled' : 'agency_disabled', targetType: 'agency', targetId: agency.id, targetName: agency.name, details: `Agency ${nowEnabled ? 're-enabled' : 'disabled'}` })
       toast.success(`${agency.name} ${nowEnabled ? 'enabled' : 'disabled'}.`)
-    } catch { toast.error('Failed to update agency status. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update agency status. Please try again.') }
   }
 
   const handleSaveSlots = async (agency) => {
@@ -353,7 +353,7 @@ export default function Agencies() {
       logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: agency.id, targetName: agency.name, details: `Slot capacity changed to ${newTotal}` })
       setEditSlots(null)
       toast.success('Slot capacity updated.')
-    } catch { toast.error('Failed to update slot capacity. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update slot capacity. Please try again.') }
   }
 
   const handleResetSlots = async (agency) => {
@@ -365,7 +365,7 @@ export default function Agencies() {
         body: `Slots for ${agency.name} were manually reset to ${total} outside the normal midnight cycle.`,
       })
       toast.success(`Slots reset to ${total}.`)
-    } catch { toast.error('Failed to reset slots. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to reset slots. Please try again.') }
   }
 
   const handleDelete = async (id) => {
@@ -379,7 +379,7 @@ export default function Agencies() {
       logAudit(user, { action: 'agency_deleted', targetType: 'agency', targetId: id, targetName: agency?.name, details: 'Agency permanently deleted' })
       setConfirmDelete(null)
       toast.success('Agency deleted.')
-    } catch { toast.error('Failed to delete agency. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to delete agency. Please try again.') }
   }
 
   const handleSaveAgency = async (data) => {
@@ -410,7 +410,7 @@ export default function Agencies() {
       })
       navigate('/admin/messages')
       toast.success('Conversation opened in Messages.')
-    } catch { toast.error('Failed to open conversation.') }
+    } catch (err) { console.error(err); toast.error('Failed to open conversation.') }
   }
 
   // ── Filter + Sort ────────────────────────────────────────────────────

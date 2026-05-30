@@ -279,7 +279,7 @@ export default function Accounts() {
         body: 'A password reset link has been sent to your email by the administrator.',
       })
       toast.success(`Password reset email sent to ${account.email}.`)
-    } catch { toast.error('Failed to send reset email.') }
+    } catch (err) { console.error(err); toast.error('Failed to send reset email.') }
   }
 
   const handleDelete = async (account) => {

@@ -51,14 +51,19 @@ const SECTION_CONFIG = {
     statusField: 'status',
     extraConstraints: [],
     searchFields: ['patientName', 'agencyName', 'appId'],
+    // Co-funding slice statuses first; legacy (pending / interview) kept
+    // last so pre-redesign data is still exportable but the active set
+    // leads the list.
     statuses: [
-      { key: 'all',         label: 'All'         },
-      { key: 'pending',     label: 'Pending'     },
-      { key: 'reviewing',   label: 'Reviewing'   },
-      { key: 'interview',   label: 'Interview'   },
-      { key: 'approved',    label: 'Approved'    },
-      { key: 'rejected',    label: 'Rejected'    },
-      { key: 'certificate', label: 'Certificate' },
+      { key: 'all',           label: 'All'                },
+      { key: 'endorsed',      label: 'Endorsed'           },
+      { key: 'reviewing',     label: 'For Funding'        },
+      { key: 'awaiting_info', label: 'Needs Info'         },
+      { key: 'approved',      label: 'Approved'           },
+      { key: 'certificate',   label: 'Guarantee Letter'   },
+      { key: 'rejected',      label: 'Rejected'           },
+      { key: 'pending',       label: 'Pending (legacy)'   },
+      { key: 'interview',     label: 'Interview (legacy)' },
     ],
     cols: [
       { label: '#',           getValue: (d, i) => i + 1 },
@@ -78,12 +83,14 @@ const SECTION_CONFIG = {
     extraConstraints: [],
     searchFields: ['patientName', 'agencyName', 'appId'],
     statuses: [
-      { key: 'all',         label: 'All'         },
-      { key: 'pending',     label: 'Pending'     },
-      { key: 'reviewing',   label: 'Reviewing'   },
-      { key: 'approved',    label: 'Approved'    },
-      { key: 'rejected',    label: 'Rejected'    },
-      { key: 'certificate', label: 'Certificate' },
+      { key: 'all',           label: 'All'                },
+      { key: 'endorsed',      label: 'Endorsed'           },
+      { key: 'reviewing',     label: 'For Funding'        },
+      { key: 'awaiting_info', label: 'Needs Info'         },
+      { key: 'approved',      label: 'Approved'           },
+      { key: 'certificate',   label: 'Guarantee Letter'   },
+      { key: 'rejected',      label: 'Rejected'           },
+      { key: 'pending',       label: 'Pending (legacy)'   },
     ],
     cols: [
       { label: '#',               getValue: (d, i) => i + 1 },
@@ -204,7 +211,7 @@ export default function ExportPreview() {
       }
       data.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
       setDocs(data)
-    } catch { toast.error('Failed to load data. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to load data. Please try again.') }
     finally { setLoading(false) }
   }
 

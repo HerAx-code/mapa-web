@@ -55,7 +55,7 @@ function BulkAddModal({ nextNum, onClose }) {
       logAudit(user, { action: 'hospitalid_bulk', targetType: 'hospitalId', targetName: `${first} → ${last}`, details: `Bulk added ${n} hospital ID${n !== 1 ? 's' : ''}` })
       toast.success(`${n} Hospital ID${n !== 1 ? 's' : ''} added.`)
       onClose()
-    } catch { toast.error('Failed to add IDs.') }
+    } catch (err) { console.error(err); toast.error('Failed to add IDs.') }
     finally { setAdding(false) }
   }
 
@@ -169,7 +169,7 @@ export default function HospitalIDs() {
       })
       logAudit(user, { action: 'hospitalid_added', targetType: 'hospitalId', targetId: newId, targetName: newId, details: 'Single ID added' })
       toast.success(`${newId} added.`)
-    } catch { toast.error('Failed to add Hospital ID. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to add Hospital ID. Please try again.') }
   }
 
   const handleRevoke = async (h) => {
@@ -187,7 +187,7 @@ export default function HospitalIDs() {
       }
       logAudit(user, { action: 'hospitalid_revoked', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: `Previously used by ${h.usedBy ?? '—'}` })
       toast.success(`${h.id} reset to Available.`)
-    } catch { toast.error('Failed to reset Hospital ID. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to reset Hospital ID. Please try again.') }
   }
 
   const handleDelete = async (h) => {
@@ -199,7 +199,7 @@ export default function HospitalIDs() {
       logAudit(user, { action: 'hospitalid_deleted', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: h.usedBy ? `Was used by ${h.usedBy}` : 'Was available' })
       setConfirmDelete(null)
       toast.success(`${h.id} deleted.`)
-    } catch { toast.error('Failed to delete Hospital ID. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to delete Hospital ID. Please try again.') }
   }
 
   return (

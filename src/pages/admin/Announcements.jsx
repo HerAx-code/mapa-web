@@ -290,7 +290,7 @@ export default function Announcements() {
     try {
       const snap = await getDocs(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')))
       setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    } catch { toast.error('Failed to load announcements. Please refresh the page.') }
+    } catch (err) { console.error(err); toast.error('Failed to load announcements. Please refresh the page.') }
     finally { setLoading(false) }
   }, [])
 
@@ -345,7 +345,7 @@ export default function Announcements() {
       logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: ann.title, details: ann.active ? 'Deactivated' : 'Activated' })
       toast.success(ann.active ? 'Announcement deactivated.' : 'Announcement activated.')
       load()
-    } catch { toast.error('Failed to update announcement. Please try again.') }
+    } catch (err) { console.error(err); toast.error('Failed to update announcement. Please try again.') }
   }
 
   const handleDelete = async () => {
@@ -357,7 +357,7 @@ export default function Announcements() {
       toast.success('Announcement deleted.')
       setConfirmDelete(null)
       load()
-    } catch { toast.error('Failed to delete.') }
+    } catch (err) { console.error(err); toast.error('Failed to delete.') }
     finally { setDeleting(false) }
   }
 
