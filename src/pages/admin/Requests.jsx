@@ -15,6 +15,7 @@ import { isIntakeComplete } from '../../utils/intakeSheet'
 import { getOrCreateConversation } from '../../utils/messages'
 import { Link, useNavigate } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
+import ConfirmModal from '../../components/ConfirmModal'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
@@ -267,6 +268,8 @@ function RequestDetail({ request, agencies, onClose }) {
   const [viewingDoc, setViewingDoc] = useState(null)
   const [showEndorse, setShowEndorse] = useState(false)
   const [showInterview, setShowInterview] = useState(false)
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showCloseModal, setShowCloseModal]   = useState(false)
   const [outcomeNotes, setOutcomeNotes] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -676,12 +679,12 @@ function RequestDetail({ request, agencies, onClose }) {
               <div className="flex flex-wrap gap-2 justify-end">
                 <button className="btn-secondary text-sm flex items-center gap-1.5 text-red-500"
                   disabled={busy}
-                  onClick={() => { const r = window.prompt('Reason for rejecting this request? (shown to patient)'); if (r !== null) setRequestStatus('rejected', { reason: r || undefined }) }}>
+                  onClick={() => setShowRejectModal(true)}>
                   <MdBlock size={14} /> Reject
                 </button>
                 {funding.committed > 0 && (
                   <button className="btn-secondary text-sm" disabled={busy}
-                    onClick={() => { if (window.confirm('Close this request? No further endorsements. The patient keeps any issued Guarantee Letters.')) setRequestStatus('closed') }}>
+                    onClick={() => setShowCloseModal(true)}>
                     Close (partial)
                   </button>
                 )}
@@ -702,6 +705,37 @@ function RequestDetail({ request, agencies, onClose }) {
       {showInterview && (
         <InterviewModal app={request} agency={null} onConfirm={scheduleInterview} onClose={() => setShowInterview(false)} />
       )}
+
+      <ConfirmModal
+        open={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        onConfirm={async (reason) => {
+          await setRequestStatus('rejected', { reason: reason || undefined })
+          setShowRejectModal(false)
+        }}
+        title="Reject this request?"
+        body="The patient will see the reason below. Use this only when the request can't move forward — e.g., the bill or the indigency situation doesn't meet criteria."
+        tone="danger"
+        confirmLabel="Reject Request"
+        confirmLabelBusy="Rejecting…"
+        withReason
+        reasonPlaceholder="Reason (shown to patient)"
+        reasonMaxLength={500}
+      />
+
+      <ConfirmModal
+        open={showCloseModal}
+        onClose={() => setShowCloseModal(false)}
+        onConfirm={async () => {
+          await setRequestStatus('closed')
+          setShowCloseModal(false)
+        }}
+        title="Close this request?"
+        body="No further endorsements can be made. The patient keeps any Guarantee Letters that were already issued. Use this when partial coverage is the final outcome."
+        tone="warning"
+        confirmLabel="Close Request"
+        confirmLabelBusy="Closing…"
+      />
     </div>
   )
 }

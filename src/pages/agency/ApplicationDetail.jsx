@@ -25,6 +25,7 @@ import { isIntakeComplete, requiredFieldsStatus } from '../../utils/intakeSheet'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import DocViewerModal from '../../components/DocViewerModal'
+import ConfirmModal from '../../components/ConfirmModal'
 import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -303,6 +304,12 @@ export default function ApplicationDetail() {
   const [showApprove, setShowApprove]         = useState(false)
   const [showUpload, setShowUpload]           = useState(false)
   const [showRequestInfo, setShowRequestInfo] = useState(false)
+  // Confirm-modal flags for the four GL-lifecycle actions that used to
+  // fire window.confirm. The actual action runs from the modal's onConfirm.
+  const [showConfirmRedeem, setShowConfirmRedeem]       = useState(false)
+  const [showConfirmUnmark, setShowConfirmUnmark]       = useState(false)
+  const [showConfirmExpire, setShowConfirmExpire]       = useState(false)
+  const [showConfirmReverse, setShowConfirmReverse]     = useState(false)
   const [viewingDoc, setViewingDoc]         = useState(null)
   const [updating, setUpdating]             = useState(false)
   const [newNote, setNewNote]               = useState('')
@@ -772,12 +779,11 @@ export default function ApplicationDetail() {
     navigate(`/agency/applications/${app.id}/gl`)
   }
 
-  const handleRedeemGL = async () => {
-    if (!window.confirm(
-      `Mark Guarantee Letter as REDEEMED?\n\n` +
-      `This records that ${app.payableTo} has billed back for ₱${Number(app.approvedAmount).toLocaleString()}. ` +
-      `The agency's committed budget will move to disbursed.`
-    )) return
+  // Each of the GL lifecycle actions below now opens an in-app ConfirmModal
+  // (see render at the end of the page). The actual mutation lives in a
+  // performX function that the modal's onConfirm invokes.
+  const handleRedeemGL = () => setShowConfirmRedeem(true)
+  const performRedeemGL = async () => {
     setUpdating(true)
     try {
       const amount = Number(app.approvedAmount) || 0
@@ -796,6 +802,7 @@ export default function ApplicationDetail() {
       await batch.commit()
       logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} redeemed by ${app.payableTo}` })
       toast.success('GL marked as redeemed.')
+      setShowConfirmRedeem(false)
     } catch (err) { console.error(err); toast.error('Failed to mark GL redeemed.') }
     finally { setUpdating(false) }
   }
@@ -803,12 +810,8 @@ export default function ApplicationDetail() {
   // Reverses a mistaken Mark Redeemed: moves the amount back from disbursed to
   // committed and flips glStatus back to 'issued'. Use only to correct errors
   // (e.g. the provider hadn't actually billed back yet). Audit-logged.
-  const handleUnmarkRedeemed = async () => {
-    if (!window.confirm(
-      `Reverse the redemption?\n\n` +
-      `This moves ₱${Number(app.approvedAmount).toLocaleString()} back from disbursed to committed ` +
-      `and sets the Guarantee Letter back to "Issued". Use only to correct a mistaken Mark Redeemed.`
-    )) return
+  const handleUnmarkRedeemed = () => setShowConfirmUnmark(true)
+  const performUnmarkRedeemed = async () => {
     setUpdating(true)
     try {
       const amount = Number(app.approvedAmount) || 0
@@ -827,15 +830,13 @@ export default function ApplicationDetail() {
       await batch.commit()
       logAudit(user, { action: 'gl_unmark_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} returned to committed (redemption reversed)` })
       toast.success('Redemption reversed. Amount returned to committed.')
+      setShowConfirmUnmark(false)
     } catch (err) { console.error(err); toast.error('Failed to reverse redemption.') }
     finally { setUpdating(false) }
   }
 
-  const handleExpireGL = async () => {
-    if (!window.confirm(
-      `Mark Guarantee Letter as EXPIRED?\n\n` +
-      `The 30-day validity window has passed. The committed budget of ₱${Number(app.approvedAmount).toLocaleString()} will be released back to the agency.`
-    )) return
+  const handleExpireGL = () => setShowConfirmExpire(true)
+  const performExpireGL = async () => {
     setUpdating(true)
     try {
       const amount = Number(app.approvedAmount) || 0
@@ -853,17 +854,13 @@ export default function ApplicationDetail() {
       await batch.commit()
       logAudit(user, { action: 'gl_expired', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released back to budget` })
       toast.success('GL marked as expired. Budget released.')
+      setShowConfirmExpire(false)
     } catch (err) { console.error(err); toast.error('Failed to mark GL expired.') }
     finally { setUpdating(false) }
   }
 
-  const handleReverseApproval = async () => {
-    if (!window.confirm(
-      `Reverse this approval?\n\n` +
-      `The application will return to 'Reviewing' status, the committed budget of ₱${Number(app.approvedAmount).toLocaleString()} will be released, and the patient will be notified.\n\n` +
-      `Note: the 30-day cooldown clock keeps running from the original approval date. The patient cannot be re-approved at any agency until that cooldown elapses.\n\n` +
-      `This should only be used to correct mistakes — not to deny assistance after the fact.`
-    )) return
+  const handleReverseApproval = () => setShowConfirmReverse(true)
+  const performReverseApproval = async () => {
     setUpdating(true)
     try {
       const amount = Number(app.approvedAmount) || 0
@@ -931,6 +928,7 @@ export default function ApplicationDetail() {
       }
       logAudit(user, { action: 'approval_reversed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released. Cooldown preserved until ${cooldownUntil?.toDate?.()?.toLocaleDateString?.() ?? 'n/a'}.` })
       toast.success('Approval reversed. Budget released. Cooldown preserved.')
+      setShowConfirmReverse(false)
     } catch (err) { console.error(err); toast.error('Failed to reverse approval.') }
     finally { setUpdating(false) }
   }
@@ -1591,6 +1589,50 @@ export default function ApplicationDetail() {
         {viewingDoc && (
           <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
         )}
+
+        <ConfirmModal
+          open={showConfirmRedeem}
+          onClose={() => setShowConfirmRedeem(false)}
+          onConfirm={performRedeemGL}
+          title="Mark Guarantee Letter as Redeemed?"
+          body={`This records that ${app?.payableTo ?? 'the provider'} has billed back for ₱${Number(app?.approvedAmount ?? 0).toLocaleString()}. The agency's committed budget will move to disbursed.`}
+          tone="success"
+          confirmLabel="Mark Redeemed"
+          confirmLabelBusy="Marking…"
+        />
+
+        <ConfirmModal
+          open={showConfirmUnmark}
+          onClose={() => setShowConfirmUnmark(false)}
+          onConfirm={performUnmarkRedeemed}
+          title="Reverse the redemption?"
+          body={`This moves ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} back from disbursed to committed and sets the Guarantee Letter back to "Issued". Use only to correct a mistaken Mark Redeemed.`}
+          tone="warning"
+          confirmLabel="Reverse Redemption"
+          confirmLabelBusy="Reversing…"
+        />
+
+        <ConfirmModal
+          open={showConfirmExpire}
+          onClose={() => setShowConfirmExpire(false)}
+          onConfirm={performExpireGL}
+          title="Mark Guarantee Letter as Expired?"
+          body={`The 30-day validity window has passed. The committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} will be released back to the agency.`}
+          tone="warning"
+          confirmLabel="Mark Expired"
+          confirmLabelBusy="Marking…"
+        />
+
+        <ConfirmModal
+          open={showConfirmReverse}
+          onClose={() => setShowConfirmReverse(false)}
+          onConfirm={performReverseApproval}
+          title="Reverse this approval?"
+          body={`The application returns to 'Reviewing' status, the committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} is released, and the patient is notified.\n\nThe 30-day cooldown clock keeps running from the original approval date — the patient cannot be re-approved at any agency until the cooldown elapses.\n\nUse this only to correct mistakes, not to deny assistance after the fact.`}
+          tone="warning"
+          confirmLabel="Reverse Approval"
+          confirmLabelBusy="Reversing…"
+        />
 
       </div>
     </Layout>
