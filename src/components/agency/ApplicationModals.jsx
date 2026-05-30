@@ -161,7 +161,11 @@ export function RejectModal({ app, onConfirm, onClose }) {
 // ── Approve / Issue GL Modal ─────────────────────────────────────────────
 
 export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
-  const [amount, setAmount]               = useState(app?.amountRequested ? String(app.amountRequested) : '')
+  // Don't prefill the amount. Under the pure-selection endorsement model
+  // amountRequested = the full bill, so prefilling it would tee up an
+  // auto-approve-the-whole-thing — the opposite of the case-assessment
+  // judgment we want the agency operator to apply.
+  const [amount, setAmount]               = useState('')
   const [payableTo, setPayableTo]         = useState('')
   const [purposes, setPurposes]           = useState(new Set())
   const [saving, setSaving]               = useState(false)
@@ -290,7 +294,16 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
 
           {isSlice && (
             <div className="bg-brand-50 border border-brand-100 rounded-xl p-3 text-xs text-brand-700">
-              <strong>Co-funded request.</strong> CRMC endorsed this slice asking you to cover up to <strong>₱{sliceCap.toLocaleString()}</strong>. Approve any amount up to that — the remainder returns to the patient's balance for another agency.
+              <strong>Co-funded request.</strong> CRMC referred this case asking you to cover up to <strong>₱{sliceCap.toLocaleString()}</strong> (the full bill). Approve what your agency can — other endorsed agencies are also assessing this case (see the application page for current coverage).
+            </div>
+          )}
+
+          {/* CRMC's free-text referral note, if provided in EndorseModal. Shows
+              the agency's coordinator the context CRMC wanted them to know. */}
+          {app.crmcNotes && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+              <p className="text-xs font-semibold text-amber-800 mb-0.5">Note from CRMC</p>
+              <p className="text-xs text-amber-700 leading-relaxed whitespace-pre-line">{app.crmcNotes}</p>
             </div>
           )}
 
@@ -324,7 +337,7 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
               placeholder="e.g. 5000"
               value={amount} onChange={e => setAmount(e.target.value)} />
             {isSlice && sliceCap > 0 && !exceedsRequested && (
-              <p className="text-xs text-gray-400 mt-1">Endorsed cap: ₱{sliceCap.toLocaleString()} — approve up to this amount.</p>
+              <p className="text-xs text-gray-400 mt-1">Bill total: ₱{sliceCap.toLocaleString()} — approve what your agency can.</p>
             )}
             {perApplicantCap > 0 && !exceedsPerCap && (
               <p className="text-xs text-gray-400 mt-1">Per-applicant cap: ₱{perApplicantCap.toLocaleString()}.</p>

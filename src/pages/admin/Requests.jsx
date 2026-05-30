@@ -18,7 +18,7 @@ import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import { InterviewModal } from '../../components/agency/ApplicationModals'
 import {
-  MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend,
+  MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
   MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch,
 } from 'react-icons/md'
@@ -60,12 +60,19 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const { user } = useAuth()
   const { committed, headroom } = computeFunding(request.amountNeeded, slices)
 
-  // allocations: { [agencyId]: amountString }. Only agencies with a positive
-  // amount are treated as selected. CRMC can split a bill across multiple
-  // agencies in one transaction — matches the co-funding model directly,
-  // instead of re-opening the modal per agency.
-  const [allocations, setAllocations] = useState({})
-  const [saving,      setSaving]      = useState(false)
+  // Pure-selection model: CRMC nominates which agencies should look at this
+  // case. No per-agency amounts. Each agency does its own case assessment
+  // and decides their portion, capped by their per-applicant policy, their
+  // budget headroom, and the live coverage of sibling slices visible on
+  // their Application Detail page.
+  //
+  // Why no amounts here: CRMC's expertise is "who fits this patient" (slot
+  // availability, assistance-type match, recent track record). The "how
+  // much" question is the agency's case-by-case judgment, informed by
+  // policy ceilings CRMC doesn't always know.
+  const [selected, setSelected] = useState(() => new Set())
+  const [notes,    setNotes]    = useState('')
+  const [saving,   setSaving]   = useState(false)
 
   // Agencies already holding a slice in this request can't be picked again;
   // sort matching-type agencies first, then alphabetically.
@@ -78,102 +85,79 @@ function EndorseModal({ request, slices, agencies, onClose }) {
     }))
     .sort((a, b) => (b.matches ? 1 : 0) - (a.matches ? 1 : 0) || a.name.localeCompare(b.name))
 
-  // Derived totals
-  const totalAllocated = Object.values(allocations)
-    .reduce((sum, v) => sum + (Number(v) || 0), 0)
-  const overHeadroom = totalAllocated > headroom
-  const selectedEntries = Object.entries(allocations)
-    .map(([agencyId, amt]) => ({ agencyId, amount: Number(amt) || 0 }))
-    .filter(e => e.amount > 0)
-  const selectedCount = selectedEntries.length
-  const canSubmit     = !saving && selectedCount > 0 && !overHeadroom
+  const selectedCount = selected.size
+  const canSubmit     = !saving && selectedCount > 0 && headroom > 0
 
-  const setAmt = (agencyId, val) => {
-    setAllocations(prev => {
-      const next = { ...prev }
-      // Empty input → drop the key so totals + selection count reflect it.
-      if (val === '' || val == null) { delete next[agencyId]; return next }
-      next[agencyId] = String(val)
+  const toggle = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
-
-  // Quick-fill: put the full remaining headroom on one agency (clears others).
-  const fillFullOn = (agencyId) => {
-    setAllocations({ [agencyId]: String(headroom) })
-  }
-
-  // Split the headroom evenly across the currently selected agencies. Useful
-  // when CRMC has already picked the 2–3 agencies that should help and just
-  // wants an even split. Remainder lands on the first one.
-  const splitEvenly = () => {
-    const ids = selectedEntries.map(e => e.agencyId)
-    if (ids.length === 0) return
-    const each      = Math.floor(headroom / ids.length)
-    const remainder = headroom - each * ids.length
-    const next = {}
-    ids.forEach((id, i) => { next[id] = String(each + (i === 0 ? remainder : 0)) })
-    setAllocations(next)
-  }
+  const clear = () => setSelected(new Set())
 
   const handleEndorse = async () => {
     if (!canSubmit) return
     setSaving(true)
     try {
+      const selectedIds = [...selected]
+      const notesValue  = notes.trim() || null
+      // Slice's amountRequested = the full request total. Each agency may
+      // approve up to that, but should coordinate with sibling slices
+      // (visible to them on ApplicationDetail) so the patient isn't
+      // over-funded. Real Philippine practice: agencies do their own case
+      // assessment and approve what their policy allows; over-commitment
+      // is rare at this scale and resolved manually.
+      const sliceAmount = Number(request.amountNeeded) || 0
+
       await runTransaction(db, async (tx) => {
         const reqRef = doc(db, 'requests', request.id)
 
-        // ── All reads first (transaction requirement) ──
+        // ── All reads first ──
         const rSnap = await tx.get(reqRef)
         if (!rSnap.exists()) throw new Error('GONE')
-        const agencyRefs  = selectedEntries.map(e => doc(db, 'agencies', e.agencyId))
+        const agencyRefs  = selectedIds.map(id => doc(db, 'agencies', id))
         const agencySnaps = await Promise.all(agencyRefs.map(ref => tx.get(ref)))
 
-        for (let i = 0; i < selectedEntries.length; i++) {
-          const e   = selectedEntries[i]
+        for (let i = 0; i < selectedIds.length; i++) {
           const snp = agencySnaps[i]
-          if (!snp.exists()) throw new Error(`GONE:${e.agencyId}`)
+          if (!snp.exists()) throw new Error(`GONE:${selectedIds[i]}`)
           const remaining = snp.data()?.slots?.remaining ?? 0
-          if (remaining <= 0) throw new Error(`NO_SLOTS:${e.agencyId}`)
+          if (remaining <= 0) throw new Error(`NO_SLOTS:${selectedIds[i]}`)
         }
 
-        const r          = rSnap.data()
-        const room       = (r.amountNeeded ?? 0) - (r.amountCommitted ?? 0)
-        if (totalAllocated > room) throw new Error('OVER_BALANCE')
+        const r = rSnap.data()
 
         // ── Writes ──
-        // One slice per selected agency, plus the parent request update,
-        // plus an arrayUnion stamping all selected agencies onto each
-        // attached document.
-        const selectedIds = selectedEntries.map(e => e.agencyId)
         tx.update(reqRef, {
           agencyIds: arrayUnion(...selectedIds),
           status:    'endorsed',
           updatedAt: serverTimestamp(),
         })
 
-        for (let i = 0; i < selectedEntries.length; i++) {
-          const e     = selectedEntries[i]
-          const aData = agencySnaps[i].data()
+        for (let i = 0; i < selectedIds.length; i++) {
+          const id        = selectedIds[i]
+          const aData     = agencySnaps[i].data()
           const remaining = aData?.slots?.remaining ?? 0
-          const sliceRef = doc(collection(db, 'applications'))
+          const sliceRef  = doc(collection(db, 'applications'))
           tx.set(sliceRef, {
             appId:             newAppId(),
             requestId:         request.id,
-            amountRequested:   e.amount,
+            amountRequested:   sliceAmount,
             amountApproved:    0,
             patientId:         r.patientId,
             patientName:       r.patientName ?? '',
             patientContact:    r.patientContact ?? '',
             patientAddress:    r.patientAddress ?? '',
             patientHospitalId: r.patientHospitalId ?? null,
-            agencyId:          e.agencyId,
+            agencyId:          id,
             agencyName:        aData.name,
             agencyColor:       aData.color ?? 'bg-gray-500',
             agencyInitials:    aData.initials ?? aData.name?.slice(0, 2).toUpperCase(),
             assistanceType:    r.assistanceType ?? '',
-            // 'endorsed' = awaiting the patient to review the coverage plan
-            // and Proceed. The agency only sees / acts on it once the
+            // 'endorsed' = awaiting the patient to review the coverage
+            // plan and Proceed. The agency only sees / acts on it once the
             // patient proceeds (slice -> reviewing).
             status:            'endorsed',
             submittedAt:       serverTimestamp(),
@@ -182,9 +166,12 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             endorsedById:      user.uid,
             endorsedBy:        user.name ?? 'CRMC',
             endorsedAt:        serverTimestamp(),
+            // Optional free-text note from CRMC, shown in the agency's
+            // ApproveModal so the operator sees the referral context.
+            crmcNotes:         notesValue,
             stages:            sliceStages(),
           })
-          tx.update(doc(db, 'agencies', e.agencyId), {
+          tx.update(doc(db, 'agencies', id), {
             'slots.remaining': remaining - 1,
           })
         }
@@ -198,37 +185,35 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       })
 
       // ── Post-transaction: audit + patient notification + UI ──
-      const summary = selectedEntries.map(e => {
-        const a = eligible.find(x => x.id === e.agencyId)
-        return `${peso(e.amount)} → ${a?.name ?? e.agencyId}`
-      }).join(', ')
+      const names = selectedIds
+        .map(id => eligible.find(x => x.id === id)?.name ?? id)
+        .join(', ')
 
       logAudit(user, {
         action: 'request_endorsed', targetType: 'request', targetId: request.id,
         targetName: request.requestId,
-        details: `Endorsed ${peso(totalAllocated)} across ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}: ${summary}`,
+        details: `Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}: ${names}`
+          + (notesValue ? ` · note: ${notesValue}` : ''),
       })
 
       notify(request.patientId, {
         type:  'app_advanced',
         title: 'Your request was endorsed',
-        body:  `CRMC endorsed your request across ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${summary}). Review your coverage plan and proceed.`,
+        body:  `CRMC referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.`,
       }).catch(() => {})
 
-      toast.success(`Endorsed ${peso(totalAllocated)} across ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}.`)
+      toast.success(`Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}.`)
       onClose()
     } catch (err) {
       const m = String(err.message)
       if (m.startsWith('NO_SLOTS:')) {
         const id = m.split(':')[1]
         const a  = eligible.find(x => x.id === id)
-        toast.error(`${a?.name ?? 'An agency'} just ran out of slots. Lower its allocation to 0 and retry.`)
-      } else if (m === 'OVER_BALANCE') {
-        toast.error('Total exceeds the remaining balance — somebody else endorsed in parallel.')
+        toast.error(`${a?.name ?? 'An agency'} just ran out of slots. Unselect it and retry.`)
       } else if (m === 'GONE' || m.startsWith('GONE:')) {
         toast.error('Request or agency no longer exists.')
       } else {
-        console.error('[endorse-multi]', err)
+        console.error('[endorse-select]', err)
         toast.error('Failed to endorse. Please try again.')
       }
       setSaving(false)
@@ -266,49 +251,40 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             <p className="text-xs text-amber-600">No eligible agencies (need open slots and not already endorsed for this request).</p>
           ) : (
             <>
-              {/* Running total + helpers */}
+              {/* Header + helpers */}
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <p className="text-xs">
-                  <span className={`font-medium ${overHeadroom ? 'text-red-600' : 'text-gray-500'}`}>Allocated:</span>
-                  {' '}
-                  <span className={`font-bold ${overHeadroom ? 'text-red-600' : 'text-gray-900'}`}>{peso(totalAllocated)}</span>
-                  {' '}<span className="text-gray-400">/ {peso(headroom)}</span>
-                  {selectedCount > 0 && <span className="text-gray-400 ml-1">· {selectedCount} {selectedCount === 1 ? 'agency' : 'agencies'}</span>}
+                <p className="text-xs text-gray-500">
+                  {selectedCount === 0
+                    ? <>Select agencies to refer this case to.</>
+                    : <>Endorsing to <span className="font-bold text-gray-900">{selectedCount}</span> {selectedCount === 1 ? 'agency' : 'agencies'} for <span className="font-bold text-gray-900">{peso(headroom)}</span> needed.</>}
                 </p>
-                <div className="flex items-center gap-3 text-xs">
-                  {selectedCount >= 2 && (
-                    <button type="button" className="text-brand-600 font-medium hover:underline" onClick={splitEvenly}>
-                      Split evenly
-                    </button>
-                  )}
-                  {selectedCount > 0 && (
-                    <button type="button" className="text-gray-500 font-medium hover:underline" onClick={() => setAllocations({})}>
-                      Clear
-                    </button>
-                  )}
-                </div>
+                {selectedCount > 0 && (
+                  <button type="button" className="text-xs text-gray-500 font-medium hover:underline" onClick={clear}>
+                    Clear
+                  </button>
+                )}
               </div>
 
-              {/* Agency list */}
+              {/* Agency list — click-to-toggle. Each row's visible state
+                  (background + check mark) reflects whether it's selected. */}
               <div className="space-y-2">
                 {eligible.map(a => {
-                  const allocStr   = allocations[a.id] ?? ''
-                  const allocNum   = Number(allocStr) || 0
-                  const selected   = allocNum > 0
+                  const isSelected = selected.has(a.id)
                   const alloc      = a.budget?.allocated ?? 0
                   const rem        = Math.max(0, alloc - (a.budget?.committed ?? 0))
                   const budgetTxt  = alloc > 0 ? `${peso(rem)} budget` : 'no budget cap'
-                  const overAgency = selected && alloc > 0 && allocNum > rem
-                  // Per-applicant cap: agencies often have a policy ceiling
-                  // per case (e.g., PCSO ₱25K, DSWD tier limits). null = no
-                  // cap configured; a soft warning is shown here so CRMC can
-                  // override for known exceptions. The hard block is on
-                  // ApproveModal at the agency side.
                   const perCap     = Number(a.maxPerApplicant) || 0
-                  const overPerCap = selected && perCap > 0 && allocNum > perCap
                   return (
-                    <div key={a.id}
-                      className={`rounded-xl border p-3 transition-colors ${selected ? 'bg-brand-50 border-brand-200' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => !saving && toggle(a.id)}
+                      disabled={saving}
+                      className={`w-full text-left rounded-xl border p-3 transition-colors ${
+                        isSelected
+                          ? 'bg-brand-50 border-brand-300'
+                          : 'border-gray-200 hover:border-gray-300'
+                      } disabled:opacity-60`}>
                       <div className="flex items-start gap-3">
                         <div className={`w-9 h-9 ${a.color ?? 'bg-gray-400'} rounded-lg text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
                           {a.initials}
@@ -327,50 +303,38 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             {a.slots?.remaining ?? 0} slots · {budgetTxt}
                             {perCap > 0 && <> · max {peso(perCap)}/applicant</>}
                           </p>
-                          {overAgency && (
-                            <p className="text-xs text-amber-600 mt-0.5 flex items-start gap-1">
-                              <MdWarning size={11} className="flex-shrink-0 mt-0.5" />
-                              Exceeds this agency's remaining budget
-                            </p>
-                          )}
-                          {overPerCap && (
-                            <p className="text-xs text-amber-600 mt-0.5 flex items-start gap-1">
-                              <MdWarning size={11} className="flex-shrink-0 mt-0.5" />
-                              Exceeds the {peso(perCap)} per-applicant cap. The agency may approve less than requested.
-                            </p>
-                          )}
                         </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min="0"
-                            max={headroom}
-                            className="input w-28 text-right"
-                            placeholder="₱0"
-                            value={allocStr}
-                            disabled={saving}
-                            onChange={e => setAmt(a.id, e.target.value)}
-                          />
-                          {!selected && (
-                            <button type="button" className="text-xs text-brand-600 hover:underline"
-                              disabled={saving} onClick={() => fillFullOn(a.id)}>
-                              Use full
-                            </button>
-                          )}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isSelected
+                            ? 'bg-brand-500 border-brand-500 text-white'
+                            : 'border-gray-300 bg-white'
+                        }`}>
+                          {isSelected && <MdCheck size={14} />}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
 
-              {overHeadroom && (
-                <p className="text-xs text-red-600 flex items-start gap-1">
-                  <MdWarning size={12} className="flex-shrink-0 mt-0.5" />
-                  Total allocation exceeds the remaining endorsable balance ({peso(headroom)}). Lower one or more amounts.
+              {/* Optional notes — shown to agencies in their ApproveModal */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Notes for the agencies <span className="text-gray-400 font-normal">— optional</span>
+                </label>
+                <textarea
+                  className="input resize-none text-sm"
+                  rows={2}
+                  maxLength={400}
+                  placeholder="e.g. urgent surgery scheduled Friday; family already raised ₱5K out of pocket"
+                  value={notes}
+                  disabled={saving}
+                  onChange={e => setNotes(e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Shown to each agency's coordinator when they open the Approve dialog. Doesn't enforce anything — just communicates context.
                 </p>
-              )}
+              </div>
             </>
           )}
         </div>
@@ -378,8 +342,12 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         <div className="px-5 pb-4 pt-2 flex gap-2 justify-end border-t border-gray-50 sticky bottom-0 bg-white">
           <button className="btn-secondary text-sm" onClick={onClose} disabled={saving}>Cancel</button>
           <button className="btn-primary text-sm flex items-center gap-1.5" onClick={handleEndorse}
-            disabled={!canSubmit || headroom <= 0}>
-            <MdSend size={14} /> {saving ? 'Endorsing…' : selectedCount > 0 ? `Endorse ${peso(totalAllocated)}` : 'Endorse'}
+            disabled={!canSubmit}>
+            <MdSend size={14} /> {saving
+              ? 'Endorsing…'
+              : selectedCount > 0
+                ? `Endorse to ${selectedCount} ${selectedCount === 1 ? 'agency' : 'agencies'}`
+                : 'Endorse'}
           </button>
         </div>
       </div>
