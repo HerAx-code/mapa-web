@@ -369,6 +369,17 @@ function RequestDetail({ request, agencies, onClose }) {
   const [unverifyingDoc, setUnverifyingDoc]   = useState(null)
   const [outcomeNotes, setOutcomeNotes] = useState('')
   const [busy, setBusy] = useState(false)
+  // Per-doc OCR-text expander state. When a doc's OCR verdict is "no match"
+  // or "could not auto-read", the verifier needs to see WHAT OCR actually
+  // read to judge whether the failure is an OCR misread, a patient-side
+  // name mistype, or a genuinely wrong ID. Set of document ids that are
+  // currently expanded.
+  const [ocrExpanded, setOcrExpanded] = useState(() => new Set())
+  const toggleOcrExpanded = (docId) => setOcrExpanded(prev => {
+    const next = new Set(prev)
+    next.has(docId) ? next.delete(docId) : next.add(docId)
+    return next
+  })
 
   // Open (or create) a conversation with the patient and jump to Messages.
   // Used for the stale-endorsement nudge so CRMC can poke the patient without
@@ -653,11 +664,31 @@ function RequestDetail({ request, agencies, onClose }) {
                         </button>
                       </div>
                       {showOcr && (
-                        <p className={`text-xs mt-1 pl-6 ${d.ocrMatch === true ? 'text-green-600' : d.ocrMatch === false ? 'text-amber-600' : 'text-gray-400'}`}>
-                          {d.ocrMatch === true ? '✓ OCR: ID name matches the account'
-                            : d.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
-                            : 'OCR: could not auto-read — verify manually'}
-                        </p>
+                        <div className="mt-1 pl-6">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={`text-xs ${d.ocrMatch === true ? 'text-green-600' : d.ocrMatch === false ? 'text-amber-600' : 'text-gray-400'}`}>
+                              {d.ocrMatch === true ? '✓ OCR: ID name matches the account'
+                                : d.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
+                                : 'OCR: could not auto-read — verify manually'}
+                            </p>
+                            {/* Show-text toggle helps the verifier judge a no-match
+                                verdict. Without seeing what OCR read, "no match"
+                                is opaque -- could be misread, mistyped at
+                                registration, or a wrong ID. */}
+                            {d.ocrText && (
+                              <button type="button"
+                                onClick={() => toggleOcrExpanded(d.id)}
+                                className="text-xs text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
+                                {ocrExpanded.has(d.id) ? 'Hide OCR text' : 'See what OCR read'}
+                              </button>
+                            )}
+                          </div>
+                          {ocrExpanded.has(d.id) && d.ocrText && (
+                            <pre className="mt-1.5 max-h-40 overflow-auto bg-gray-50 border border-gray-100 rounded-lg p-2 text-xs text-gray-600 font-mono whitespace-pre-wrap break-words">
+                              {d.ocrText}
+                            </pre>
+                          )}
+                        </div>
                       )}
                       <div className="flex gap-2 mt-2 pl-6 flex-wrap">
                         {d.status !== 'verified' && (
