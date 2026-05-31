@@ -758,7 +758,7 @@ The rules treat every collection as a separate authorization surface. Helper fun
 | `applications` | Owner / own agency / agency holding a sibling slice (via the parent request's `agencyIds[]`) / admin | Patient (legacy direct apps) or admin (slice creation at endorsement) | Patient (status transitions only: pending→rejected, awaiting_info→reviewing, endorsed→reviewing) / own agency / admin | Admin |
 | `documents` | Owner / admin / agency in `agencyIds[]` (scoped to docs of requests they hold a slice for) | Patient | Admin (verification) / patient (re-upload own) | Admin / patient (own) |
 | `documentContents` | Owner / admin / any agency | Patient | Owner / admin | Owner / admin |
-| `agencies` | Public | Super admin | Admin / own agency_admin (budget/cap/team) / agency (slot fields) / patient (slot decrement only — exactly -1, fields constrained) | Super admin |
+| `agencies` | Public | Super admin | Admin / own agency (any agency role on own agency — field-level constraints, e.g. budget/cap vs slots vs operational fields, are enforced in the client UI) | Super admin |
 | `documentTypes` | Authenticated | Super admin | Super admin | Super admin |
 | `assistanceTypes` | Authenticated | Super admin | Super admin | Super admin |
 | `hospitalIds` | Public single GET (registration) / authenticated list | Super admin | Admin / authenticated (registration claim, fields constrained) / agency (cooldown stamp, fields constrained) | Super admin |
@@ -768,7 +768,7 @@ The rules treat every collection as a separate authorization surface. Helper fun
 | `certificates` | Owner / own agency / admin (handles null resource for not-yet-uploaded docs) | Agency / admin | Agency / admin | Admin |
 | `docReviewPresence` | Admin | Admin | Admin | Admin |
 | `reports` | Admin / own agency admin | Authenticated | Admin / own agency admin | Admin |
-| `announcements` | Authenticated | Super admin or staff admin | Super admin or staff admin | Super admin |
+| `announcements` | Authenticated | Admin / own agency_admin (when `source == 'agency'` and `agencyId` matches) | Admin / own agency_admin (when `source == 'agency'` and `agencyId` matches) | Admin / own agency_admin (when `source == 'agency'` and `agencyId` matches) |
 | `auditLog` | Super admin / agency admin (own agency entries) | Authenticated (append-only) | None | None |
 | `notificationErrors` | Admin | Authenticated (append-only) | None | None |
 
@@ -778,7 +778,7 @@ The rules treat every collection as a separate authorization surface. Helper fun
 
 **Cross-account cooldown through Hospital ID.** Cooldown is tracked on the `hospitalIds` document rather than the `users` document. This means a patient who deletes their account and re-registers with a new email cannot bypass the 30-day post-approval cooldown — the Hospital ID is the durable identifier.
 
-**Patient apply-slot transaction.** A patient submitting an application atomically creates the application document AND decrements `agencies/{id}.slots.remaining` by exactly 1. The agency-update branch of the rule allows this specific patch (`diff().affectedKeys().hasOnly(['slots'])` + `slots.remaining == resource.data.slots.remaining - 1`) without granting general write access to the agency document.
+**CRMC-consumed slot transaction (replaces the legacy patient apply-slot rule).** Under the redesign, slots are consumed at CRMC endorsement, not at patient submission. The endorse transaction in `admin/Requests` atomically creates the application "slice" documents for each selected agency and decrements `agencies/{id}.slots.remaining` by 1 per slice. The agencies-update branch of the rule allows any agency role on its own agency (the field-level shape of the decrement is enforced in the client UI, consistent with the broader agencies-update policy). The previous patient-driven slot-decrement branch on `agencies` — which constrained the patch to `diff().affectedKeys().hasOnly(['slots'])` and `slots.remaining == resource.data.slots.remaining - 1` — was removed when the direct-to-agency apply flow was retired (see `firestore.rules` agencies comment).
 
 **Application read-scoping by agency.** An agency user can read only applications whose `agencyId` matches their `userAgencyId()`. Cross-agency reads are denied at the query level (the patient-cooldown check in approve was rewritten to include `where('agencyId', '==', user.agencyId)` to satisfy this constraint).
 
