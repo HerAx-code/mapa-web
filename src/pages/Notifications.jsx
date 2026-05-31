@@ -109,10 +109,17 @@ export default function Notifications() {
       return next
     })
 
+  // Select-all is scoped to the CURRENT category filter so it matches the
+  // checkbox's displayed state (which compares against filtered.length).
+  // Previously this used notifications.length / notifications.map(),
+  // which meant clicking the box under an active filter selected every
+  // notification across all categories -- then the box immediately
+  // un-checked itself because the full selection was a superset of
+  // what's visible. Confusing.
   const selectAll = () =>
-    setSelected(selected.size === notifications.length && notifications.length > 0
+    setSelected(selected.size === filtered.length && filtered.length > 0
       ? new Set()
-      : new Set(notifications.map(n => n.id))
+      : new Set(filtered.map(n => n.id))
     )
 
   const markSelectedRead = async () => {

@@ -27,7 +27,10 @@ export default function MedicalPrograms() {
     const unsub = onSnapshot(q, snap => {
       setAgencies(
         snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          // Null-safe sort: a corrupt agency doc missing `name` would
+          // throw on .localeCompare and wipe the whole catalog -- one
+          // bad row should not blank the entire Find Programs page.
+          .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
       )
       setLoading(false)
     }, (err) => {
