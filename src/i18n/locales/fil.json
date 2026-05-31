@@ -604,7 +604,9 @@
       "navigation": "Nabigasyon",
       "account": "Account",
       "settings": "Settings",
-      "language": "Wika"
+      "language": "Wika",
+      "showTour": "Ipakita ulit ang welcome tour",
+      "tourReset": "Na-reset ang tour — pupunta sa inyong dashboard."
     },
     "dashboard": {
       "title": "Aking Dashboard",

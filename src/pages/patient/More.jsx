@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next'
 import {
   MdSearch, MdVideoCall, MdMenuBook,
   MdPerson, MdLock, MdShield, MdHelp, MdFlag,
-  MdLogout, MdChevronRight, MdLanguage,
+  MdLogout, MdChevronRight, MdLanguage, MdTour,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
 import ProfileModals from '../../components/ProfileModals'
 import { useAuth } from '../../contexts/AuthContext'
+import { resetTourFlag } from '../../utils/tours'
 import i18n from '../../i18n'
 
 /**
@@ -44,6 +45,15 @@ export default function PatientMore() {
     toast.success(t('shell.toast.loggedOut'))
   }
 
+  // Clears the patient-dashboard tour-seen flag, then routes home so
+  // the dashboard mounts fresh and <Tour> auto-fires again. Quicker
+  // than walking the user through DevTools for re-watching.
+  const handleReplayTour = () => {
+    resetTourFlag('patient-dashboard', user?.uid)
+    toast.success(t('patient.more.tourReset'))
+    navigate('/patient/dashboard')
+  }
+
   // Section model — each section gets a header + a list of rows.
   // Rows that open a modal pass `modal`, rows that navigate pass `to`,
   // rows that fire an action pass `action`.
@@ -74,6 +84,7 @@ export default function PatientMore() {
         },
         { icon: MdShield, label: t('shell.profile.privacyNotice'), modal: 'settings' },
         { icon: MdHelp,   label: t('shell.profile.helpSupport'),   modal: 'help'     },
+        { icon: MdTour,   label: t('patient.more.showTour'),       action: handleReplayTour },
         { icon: MdFlag,   label: t('shell.profile.reportProblem'), modal: 'report'   },
       ],
     },

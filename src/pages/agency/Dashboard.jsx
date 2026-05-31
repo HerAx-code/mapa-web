@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   MdWarning, MdCalendarToday, MdArrowForward,
   MdInbox, MdVideoCall, MdCardMembership, MdBarChart,
-  MdListAlt, MdMessage, MdDescription, MdMenuBook,
+  MdListAlt, MdMessage, MdDescription, MdMenuBook, MdTour,
 } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { PERIOD_NOUN, PERIOD_ADJECTIVE, GL_VALIDITY_DAYS } from '../../utils/constants'
@@ -17,7 +17,7 @@ import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
-import { agencyDashboardTour } from '../../utils/tours'
+import { agencyDashboardTour, resetTourFlag } from '../../utils/tours'
 import toast from 'react-hot-toast'
 
 // Threshold below which the agency gets a one-shot "budget running low"
@@ -429,6 +429,22 @@ export default function AgencyDashboard() {
             </table>
           </div>
         )}
+
+        {/* Replay-tour link. Unobtrusive footer placement so it's
+            available when needed (training new coordinators, thesis
+            demo) without crowding the daily-use surface. */}
+        <div className="mt-8 pt-4 border-t border-gray-100 text-center">
+          <button
+            onClick={() => {
+              resetTourFlag('agency-dashboard', user?.uid)
+              // Force a refresh so <Tour> re-evaluates its localStorage
+              // gate on mount. Simpler than wiring an external trigger.
+              window.location.reload()
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors">
+            <MdTour size={14} /> Show welcome tour again
+          </button>
+        </div>
       </div>
 
       {showTopUp && (

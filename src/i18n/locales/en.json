@@ -604,7 +604,9 @@
       "navigation": "Navigation",
       "account": "Account",
       "settings": "Settings",
-      "language": "Language"
+      "language": "Language",
+      "showTour": "Show welcome tour again",
+      "tourReset": "Tour reset — heading to your dashboard."
     },
     "dashboard": {
       "title": "My Dashboard",

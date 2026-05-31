@@ -1,3 +1,12 @@
+// Clears the per-user tour-seen flag so the next mount of <Tour>
+// re-fires. Used by the "Show tour again" affordances. Caller is
+// expected to navigate to (or already be on) the page that owns the
+// tour after clearing.
+export function resetTourFlag(storageKey, uid) {
+  if (!uid) return
+  try { localStorage.removeItem(`mapa_tour_${storageKey}_${uid}`) } catch { /* private mode / quota */ }
+}
+
 // First-time guided tour step definitions per dashboard.
 //
 // Patient tour uses i18n keys via t() so the tour speaks Filipino when

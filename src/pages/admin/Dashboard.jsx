@@ -9,10 +9,10 @@ import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
   MdListAlt, MdGroup, MdMessage, MdDescription, MdFavorite,
   MdHistory, MdFlag, MdDownload, MdCampaign,
-  MdWarning, MdSpeed, MdCheckCircle, MdTimer,
+  MdWarning, MdSpeed, MdCheckCircle, MdTimer, MdTour,
 } from 'react-icons/md'
 import Tour from '../../components/Tour'
-import { adminDashboardTour } from '../../utils/tours'
+import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
 
 const timeAgo = (ts) => {
   if (!ts) return ''
@@ -474,6 +474,22 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+        </div>
+
+        {/* Replay-tour link. Unobtrusive footer placement so it's
+            available when needed (onboarding new staff_admins, thesis
+            demo) without crowding the daily-use surface. */}
+        <div className="mt-8 pt-4 border-t border-gray-100 text-center">
+          <button
+            onClick={() => {
+              resetTourFlag('admin-dashboard', user?.uid)
+              // Force a refresh so <Tour> re-evaluates its localStorage
+              // gate on mount. Simpler than wiring an external trigger.
+              window.location.reload()
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors">
+            <MdTour size={14} /> Show welcome tour again
+          </button>
         </div>
       </div>
 
