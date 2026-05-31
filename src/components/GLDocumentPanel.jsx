@@ -7,13 +7,13 @@ import {
   MdCardMembership, MdDownload, MdRefresh,
   MdZoomIn, MdClose, MdLock, MdOpenInNew, MdPictureAsPdf,
 } from 'react-icons/md'
+import { tsToDate } from '../utils/dates'
 
 // Signed scans are stored as base64 data URLs. Detect PDF vs image
 // from the prefix so we can render the right preview surface — PDFs
 // don't render in <img>, they need an iframe / new tab.
 const isPdfDataUrl = (s) => typeof s === 'string' && s.startsWith('data:application/pdf')
 
-const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const formatDate = (ts) => {
   const d = tsToDate(ts)
   return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'

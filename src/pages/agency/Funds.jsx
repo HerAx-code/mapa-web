@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { PERIOD_ADJECTIVE } from '../../utils/constants'
+import { tsToDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   MdSearch, MdCheckCircle, MdCancel, MdHourglassEmpty,
@@ -18,8 +19,6 @@ const EVENT_META = {
   expire:  { label: 'GL Expired',      icon: MdHourglassEmpty, bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', sign: '−',  desc: 'Released to remaining' },
   reverse: { label: 'Reversed',        icon: MdCancel,         bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    sign: '−',  desc: 'Released to remaining' },
 }
-
-const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 
 const formatDate = (ts) => {
   const d = tsToDate(ts)

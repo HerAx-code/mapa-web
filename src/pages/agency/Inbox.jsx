@@ -9,6 +9,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { getOrCreateConversation } from '../../utils/messages'
 import { isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
+import { tsToDate } from '../../utils/dates'
 import {
   MdSearch, MdDescription, MdMessage, MdInbox,
   MdOpenInNew, MdClose,
@@ -16,10 +17,8 @@ import {
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-// All timestamp inputs from Firestore are Timestamp objects in production, but
-// legacy/seed data sometimes lands as Date or ISO string -- tsToDate() is the
-// single defensive converter.
-const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
+// tsToDate (the defensive Firestore Timestamp converter) is sourced from
+// utils/dates so legacy/seed-data handling stays consistent across files.
 const daysSince = (ts) => {
   const d = tsToDate(ts)
   return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null

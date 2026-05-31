@@ -12,6 +12,7 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
+import { tsToDate } from '../../utils/dates'
 import { computeFunding } from '../../utils/requests'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
@@ -36,7 +37,6 @@ import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/ag
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
 // GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
-const tsToDate  = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const daysSince = (ts) => {
   const d = tsToDate(ts)
   return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null

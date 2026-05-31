@@ -4,7 +4,7 @@
 // pixel-perfect, vector-graphic, selectable-text PDF when the user picks
 // "Save as PDF" as the print destination.
 
-const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
+import { tsToDate } from '../utils/dates'
 
 const fmtDate = (ts) => {
   const d = tsToDate(ts)

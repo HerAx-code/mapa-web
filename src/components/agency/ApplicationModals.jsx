@@ -4,6 +4,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { tsToDate } from '../../utils/dates'
 
 // InterviewModal lived here historically but it's shared with admin/Requests
 // (CRMC schedules the assessment interview on the parent request under the
@@ -19,7 +20,6 @@ const REQUEST_INFO_TEMPLATES = [
 
 const COOLDOWN_DAYS = 30
 
-const tsToDate = (ts) => !ts ? null : (ts.toDate ? ts.toDate() : new Date(ts))
 const daysSince = (ts) => {
   const d = tsToDate(ts)
   return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null
