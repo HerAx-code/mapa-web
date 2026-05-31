@@ -1,6 +1,6 @@
 # MAPA — Thesis Documentation
 
-**Last updated:** 2026-05-30 (reflects the CRMC-gateway redesign and the post-redesign read-pass review series — see `docs/revision-list.md` for the change log)
+**Last updated:** 2026-05-31 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, and the operator-throughput follow-up batch — see `docs/revision-list.md` for the change log)
 
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.
 
@@ -349,6 +349,14 @@ mapa-web/
 │   │   ├── admin/                # 17 admin pages
 │   │   └── Notifications.jsx     # Cross-role
 │   ├── utils/                    # Helpers (auditLog, messages, etc.)
+│   │   ├── constants.js          # ROLES, status configs, GL helpers (isGLExpired, isGLExpiringSoon, glDaysRemaining)
+│   │   ├── dates.js              # Shared tsToDate (defensive Firestore Timestamp converter)
+│   │   ├── notifications.js      # notify() — Firestore + email
+│   │   ├── auditLog.js           # logAudit() — append-only audit writes
+│   │   ├── intakeSheet.js        # Unified Intake Sheet field validation
+│   │   ├── messages.js           # getOrCreateConversation()
+│   │   ├── idOcr.js              # On-device tesseract OCR (lazy-loaded, shared worker)
+│   │   └── requests.js           # computeFunding() — slice-derived funding picture
 │   ├── firebase.js               # SDK initialization
 │   ├── App.jsx                   # Route registry with lazy() splits
 │   └── main.jsx                  # React root + i18n bootstrap
@@ -968,9 +976,9 @@ Each page is described in one paragraph: purpose, key features, and any mobile-v
 
 **Dashboard — `/agency/dashboard`.** At-a-glance operational dashboard: today's slot remaining, this period's budget remaining, count of slices "For Funding" + "Needs Info", recent applications list. Quick-action cards link to Inbox, Slot Management, Guarantee Letters, etc. Stale-period banner fires when the budget period clock is past its window.
 
-**Funding Inbox — `/agency/inbox`.** The agency's primary work surface. Lists all slices endorsed to this agency (excluding pre-Proceed `endorsed` slices, which are still with the patient). Status filter chips (All / For Funding / Needs Info / Approved / Rejected) double as summary count tiles. Each row shows patient name, slice ID, days-waiting (color-coded amber at 3 days, red at 7 — null-safe), duplicate-patient flag (red border + chip if this patient has multiple in-flight slices), attached doc count, and an Open button. Empty state has a Clear filters CTA.
+**Funding Inbox — `/agency/inbox`.** The agency's primary work surface. Lists all slices endorsed to this agency (excluding pre-Proceed `endorsed` slices, which are still with the patient). Status filter chips (All / For Funding / Needs Info / Approved / Rejected) double as summary count tiles. Each row shows patient name, slice ID, days-waiting (color-coded amber at 3 days, red at 7 — null-safe), duplicate-patient flag (red border + chip if this patient has multiple in-flight slices), attached doc count, GL status indicator, and an Open button. For approved-and-issued slices, a pre-expiry triage chip ("⚠ GL expires in Nd") surfaces when the validity window closes within 3 days — distinct from the existing post-expiry "Expired (action needed)" line — so coordinators can nudge patients to redeem *before* the committed budget is released. Empty state has a Clear filters CTA.
 
-**Application Detail — `/agency/applications/:id`.** Four-tab page: Overview, Assessment, Documents, Timeline & Notes. The Overview tab shows the Co-funding Picture (total bill, committed across all sibling slices, in-review, still-open), the action banner (Start Review / Approve & Issue GL / Request More Info / Reject / Print GL / Upload Signed Scan / Mark Redeemed / Reverse Approval) gated by current status, and a stepper. Documents tab is read-only (CRMC verifies); shows the document-type-name (e.g., "Barangay Certificate"), the `updatedAfterSubmission` chip on patient re-uploads, and a context-aware caption distinguishing CRMC-verified from pending-re-verification. Live `onSnapshot` on patient docs surfaces re-uploads without a page reload. Timeline derives from `status` directly (no stored `stages` field). Top-of-page nav offers prev/next within the current queue filter, "Message Patient", and (when the slice has an `endorsedById`) "Message CRMC".
+**Application Detail — `/agency/applications/:id`.** Four-tab page: Overview, Assessment, Documents, Timeline & Notes. The Overview tab shows the Co-funding Picture (total bill, committed across all sibling slices, in-review, still-open), the action banner (Start Review / Approve & Issue GL / Request More Info / Reject / Print GL / Upload Signed Scan / Mark Redeemed / Reverse Approval) gated by current status, and a stepper. The header GL badge flips amber and reads "expires in Nd" when the pre-expiry triage window (3 days) is hit, and the Approve-and-Issue-GL hint copy on the action banner re-keys to an urgency message in the same window, prompting the coordinator to message the patient before the lapse. Documents tab is read-only (CRMC verifies); shows the document-type-name (e.g., "Barangay Certificate"), the `updatedAfterSubmission` chip on patient re-uploads, and a context-aware caption distinguishing CRMC-verified from pending-re-verification. Live `onSnapshot` on patient docs surfaces re-uploads without a page reload. Timeline derives from `status` directly (no stored `stages` field). Top-of-page nav offers prev/next within the current queue filter, "Message Patient", and (when the slice has an `endorsedById`) "Message CRMC".
 
 **Case Assessment — `/agency/applications/:id/intake`.** Read-only view for the agency of the CRMC-completed Unified Intake Sheet. (The agency does not edit the assessment under the redesign; CRMC owns it.)
 
@@ -1004,13 +1012,13 @@ Each page is described in one paragraph: purpose, key features, and any mobile-v
 
 **Admin Dashboard — `/admin/dashboard`.** Platform-wide operational overview. Live counter tiles (patient count, agency count, open requests, pending docs, plus super-admin SLA tiles for approved / rejected / certificate backlog). All counters route through onSnapshot with error fallbacks that display "—" on permission failure rather than hanging the loading spinner forever. Stale-app detection covers both the new `awaiting_info` slice status and the legacy `pending` status.
 
-**Requests — `/admin/requests`.** CRMC's primary work surface under the redesign. Lists all patient requests with filters (All / Needs Action / In Progress / Completed) and search. Each row shows the patient, the funding picture (needed / secured / progress bar) derived from slice-level `computeFunding()`, the pipeline stage chip, and any coverage warning ("X rejected — re-endorse", "Y awaiting patient acceptance"). The detail view is a guided workspace: ① Verify documents (with OCR advisory, Reset-to-Pending recovery, reject-with-reason ConfirmModal), ② Schedule + conduct interview + complete the Unified Intake Sheet, ③ Endorse to one or more agencies (pure-selection model with the optional CRMC note). Status sub-header includes a Message Patient shortcut and a Withdraw / Close / Reject path.
+**Requests — `/admin/requests`.** CRMC's primary work surface under the redesign. Lists all patient requests with filters (All / Needs Action / In Progress / Completed) and search. Each row shows the patient, the funding picture (needed / secured / progress bar) derived from slice-level `computeFunding()`, the pipeline stage chip, and any coverage warning ("X rejected — re-endorse", "Y awaiting patient acceptance"). The detail view is a guided workspace: ① Verify documents (with OCR advisory, Reset-to-Pending recovery, reject-with-reason ConfirmModal, **plus a "Verify all pending (N)" bulk action** that commits every pending doc in a single Firestore `writeBatch` — rejection intentionally stays per-doc because it requires a reason and notifies the patient; only the safe direction is bulked), ② Schedule + conduct interview + complete the Unified Intake Sheet, ③ Endorse to one or more agencies (pure-selection model with the optional CRMC note). Status sub-header includes a Message Patient shortcut and a Withdraw / Close / Reject path.
 
 **Intake Sheet — `/admin/requests/:id/intake`.** The Unified Intake Sheet workspace for CRMC. Fillable sections for the assessment portion (the factual portion is patient-completed via the wizard at `/patient/request/:id/intake`). Print Form action generates a styled HTML printout matching CRMC's paper layout.
 
 **Patients — `/admin/patients`.** Lists all registered patients with search by name / contact / email / Hospital ID. Active-applicant query covers all in-flight statuses including `endorsed` (this was a bug pre-redesign — patients with endorsed slices were missing). Detail panel shows their requests, slices, document history, and Hospital ID. Deactivate / Delete account actions are audit-logged.
 
-**Hospital IDs (Access Codes) — `/admin/hospitalids`.** Issue and manage `CRMC-YYYY-NNNNN` Patient Access Codes. Bulk-create up to 100 codes per batch with sequential numbering (collision-safe — uses max existing number, not count). Atomic revoke and delete operations via `writeBatch` so the user profile and the code doc cannot drift into orphan state.
+**Hospital IDs (Access Codes) — `/admin/hospitalids`.** Issue and manage `CRMC-YYYY-NNNNN` Patient Access Codes. Bulk-create up to 100 codes per batch with sequential numbering (collision-safe — uses max existing number, not count). Atomic revoke and delete operations via `writeBatch` so the user profile and the code doc cannot drift into orphan state. **Print Available batch** opens a self-contained print window with the currently-filtered available codes laid out 4-up on A4 with dashed cut lines, CRMC + MAPA header per card, the registration URL (derived from `window.location.origin` so it works in any deployment), brief patient instructions, and the issue date — closing the real-world workflow gap that Medical Social Services issues codes in person and previously had to hand-copy each one. The action is audit-logged (`hospitalid_printed`) so code issuance remains traceable.
 
 **Agencies — `/admin/agencies`.** Lists all partner agencies with status badges and summary statistics. Search and filter. Click a row to open Agency Detail. Pristine empty state has an "Add First Agency" CTA.
 
@@ -1102,7 +1110,7 @@ These describe the user's perspective frame by frame. Each step is what the user
 2. Sees "Open requests: 7" tile (with cross-slice coverage warnings like "X awaiting patient acceptance"). Taps to open Requests workspace.
 3. Requests list shows the queue with stage chips and the per-request funding picture (needed / secured / progress bar derived from sibling slices, not from the cached `amountCommitted` field — fresh source of truth).
 4. Admin clicks a request. Detail opens as a guided stepper.
-5. **Step ① Verify documents.** Each attached doc is shown with its current status. For ID-type docs, the OCR advisory line is surfaced ("✓ OCR: ID name matches the account" or "⚠ OCR: name not auto-matched — verify manually"). Admin taps Verify on each doc, or Reject (opens ConfirmModal with reason — reason flows to patient notification + email + persists to `documents.rejectionReason`). Reset-to-Pending available on verified or rejected docs for accident recovery. Each verification stamps `reviewedBy` + `reviewedAt` shown inline on the doc row.
+5. **Step ① Verify documents.** Each attached doc is shown with its current status. For ID-type docs, the OCR advisory line is surfaced ("✓ OCR: ID name matches the account" or "⚠ OCR: name not auto-matched — verify manually"). Admin taps Verify on each doc, or Reject (opens ConfirmModal with reason — reason flows to patient notification + email + persists to `documents.rejectionReason`). Reset-to-Pending available on verified or rejected docs for accident recovery. Each verification stamps `reviewedBy` + `reviewedAt` shown inline on the doc row. When two or more docs are pending and the admin has reviewed them all and they look fine, **Verify all pending (N)** commits every pending doc in a single `writeBatch` — typical request has 4-7 docs, saving 3-6 clicks in the common path. Rejection deliberately stays per-doc (reason required + patient notification).
 6. **Step ② Interview + Assessment.** Once all docs are verified, "Schedule Interview" unlocks. Admin opens InterviewModal, taps "Generate Meet" (opens meet.new), copies the URL, fills date / time / conducting social worker. Submit advances the request to `assessment` and notifies the patient.
 7. (At the scheduled time) Admin joins the Google Meet, conducts the assessment.
 8. (After interview) Admin records the outcome (Completed / No-show / Reschedule — Reschedule re-opens InterviewModal). Then opens the Unified Intake Sheet workspace and completes the assessment portion (the patient already filled the factual portion via the wizard).
@@ -1236,6 +1244,10 @@ The series also delivered cross-cutting cleanups: 20 onSnapshot error-callback f
 | 14 | admin/Requests funding-column reads stale `r.amountCommitted` | List could show out-of-date funding figures vs detail view | Use slice-derived `computeFunding()` everywhere |
 | 15 | admin/Requests allSlices listener loaded entire collection | Scales linearly with system age | Scoped query to active statuses + rejected |
 | 16 | admin/Requests endorsement wrote dead `sliceStages()` | 6-stage scaffold written to slice docs but Timeline now derived from status | Dropped writes; deleted helper |
+| 17 | `isGLExpired` duplicated in agency/Inbox + agency/ApplicationDetail | Threshold/boundary drift risk between two surfaces showing the same GL state | Consolidated to `utils/constants` so the canonical answer is shared |
+| 18 | GL state surfaced "Expired (action needed)" only AFTER lapse | Coordinator triage window already closed; committed budget had to be released instead of redeemed | Added `isGLExpiringSoon` + `glDaysRemaining`; pre-expiry amber chip on Inbox + ApplicationDetail header + urgency hint copy on the action banner |
+| 19 | `tsToDate` defensive Firestore Timestamp converter declared in 6 files | Same one-line helper drift-prone across surfaces | Extracted to `utils/dates.js`; 6 files swapped to imports (the remaining ~20 files keep the pattern inline inside per-file `formatDate` helpers — opportunistic migration) |
+| 20 | admin/HospitalIDs had no print view despite codes being issued in person | Medical Social Services had to hand-copy each code to issue physically; didn't scale past a handful | Added "Print Available" — 4-up A4 cards with dashed cut lines, derived registration URL, audit-logged issuance |
 
 ### 11.5 Known Issues and Limitations
 
@@ -1248,7 +1260,8 @@ The series also delivered cross-cutting cleanups: 20 onSnapshot error-callback f
 | Acknowledged | Signed GL PDF upload capped at ~700 KB raw (Firestore 1 MiB document limit, base64 expansion) | Documented; full Firebase Storage migration is the production path (currently blocked by Firebase Spark plan constraints on post-Oct-2024 projects) |
 | Acknowledged | No automated tests | Outside scope; manual testing + read-pass review series on every change |
 | Acknowledged | GL_STATUS_CONFIG not yet extracted | Two render sites use different visual treatments (badge vs text); would need a label-only helper rather than a full canonical config. Documented; not blocking |
-| Acknowledged | Bulk-verify / keyboard shortcuts on admin/Requests | Operator throughput feature; design call needed on which actions to bulk before implementing |
+| Acknowledged | Keyboard shortcuts on admin/Requests (V to verify focused doc, J/K to navigate queue) | Bulk-verify shipped 2026-05-31. Keyboard shortcuts deferred — useful for high-volume CRMC days but design call needed on focus model and shortcut conflict with browser shortcuts |
+| Acknowledged | Inline `formatDate` / `fmtDate` helpers still inline the `tsToDate` pattern in ~20 files | Same one-line pattern, but the canonical helper now lives at `utils/dates.js` and migration is opportunistic on touch | Tracked; low priority since the pattern is stable and identical across all 20 sites |
 
 ### 11.6 Performance Observations
 
@@ -1300,7 +1313,7 @@ The series also delivered cross-cutting cleanups: 20 onSnapshot error-callback f
 
 - **Cross-hospital network.** Adapting the schema to support multiple partner hospitals (BARMM-wide, eventually nationwide) is the largest architectural change but unlocks the most impact.
 
-- **Operator throughput features on admin/Requests.** Bulk-verify, bulk-reject, and keyboard shortcuts (V to verify, R to reject, J/K to navigate the doc queue) for high-volume CRMC days. Design call needed on which actions to bulk and how to surface bulk-error handling.
+- **Keyboard shortcuts on admin/Requests.** Bulk-verify shipped 2026-05-31 (Verify all pending — single-batch `writeBatch`). The remaining throughput lever is keyboard shortcuts (V to verify focused doc, J/K to navigate the doc queue) for high-volume CRMC days. Design call needed on focus model and conflict avoidance with browser shortcuts.
 
 - **GL_STATUS_CONFIG consolidation.** The agency/ApplicationDetail GL status pill and the agency/Inbox text indicator use different visual treatments. Extracting a shared label helper (keeping the visual treatments per-context) would centralize the "expired vs issued" decision currently duplicated.
 
@@ -1326,6 +1339,8 @@ The series also delivered cross-cutting cleanups: 20 onSnapshot error-callback f
 | **Funding Review** | The agency-side lifecycle phase from `endorsed → reviewing` (after the patient hits Proceed) until the agency approves or rejects. Visible to coordinators as the "For Funding" status. |
 | **Guarantee Letter (GL)** | The official document issued to an approved patient, stating the guaranteed amount, purpose, and provider that will be billed. Valid for 30 days. Each approving agency issues its own GL for its committed slice. |
 | **GL Status** | Issued / Redeemed / Expired. Tracks the lifecycle of an issued GL. |
+| **GL Pre-Expiry Triage Window** | The 3-day window before a GL's 30-day validity lapses (`GL_EXPIRING_SOON_DAYS` in `utils/constants`). Surfaces on the agency Inbox + ApplicationDetail as an amber "⚠ GL expires in Nd" chip + urgency hint copy so coordinators can nudge the patient to redeem before the committed budget has to be released. Distinct from the patient TrackStatus warning, which uses a wider 7-day window to give patients more planning runway. |
+| **`glDaysRemaining`** | Helper in `utils/constants` returning days left in a GL's validity window (positive while valid, negative once expired, null when not applicable). Drives the "expires in Nd" copy across surfaces. |
 | **Hospital ID** | CRMC's Patient Access Code, format `CRMC-YYYY-NNNNN`. Issued offline by CRMC Medical Social Services. Also the anchor for cross-account cooldown (survives delete-and-re-register). |
 | **In-Flight Request** | A request not yet in a terminal state (i.e., not `fully_funded`, `closed`, or `rejected`). |
 | **In-Flight Slice** | A slice not yet in a terminal state (not `approved`-and-paid, `certificate`-and-redeemed, or `rejected`). |
