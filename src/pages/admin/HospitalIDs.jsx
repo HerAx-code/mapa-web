@@ -1,6 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect, Fragment } from 'react'
-import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning } from 'react-icons/md'
+import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
@@ -194,6 +194,96 @@ export default function HospitalIDs() {
     } catch (err) { console.error(err); toast.error('Failed to reset Hospital ID. Please try again.') }
   }
 
+  // Print the currently-filtered available codes as a tear-off batch.
+  // Medical Social Services issues these in person -- without a print
+  // view they'd have to hand-copy each code, which doesn't scale past a
+  // handful. 4-up on A4 keeps each card large enough to read at arm's
+  // length and gives a clean dashed border for scissors.
+  const handlePrintAvailable = () => {
+    const codes = filtered.filter(h => h.status === 'available')
+    if (codes.length === 0) {
+      toast.error('No available codes in the current view. Filter to "Available" or generate codes first.')
+      return
+    }
+    const win = window.open('', '_blank', 'width=900,height=900')
+    if (!win) {
+      toast.error('Could not open the print window. Check your browser pop-up settings.')
+      return
+    }
+    const registerUrl = `${window.location.origin}/register`
+    const today = new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+    const escape = (s) => String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ))
+    const cards = codes.map(c => `
+      <div class="card">
+        <div class="header">
+          <div class="brand">MAPA</div>
+          <div class="sub">Cotabato Regional Medical Center</div>
+        </div>
+        <div class="label">Patient Access Code</div>
+        <div class="code">${escape(c.id)}</div>
+        <div class="instructions">
+          <p>Register online at:</p>
+          <p class="url">${escape(registerUrl)}</p>
+          <p class="note">Use this code once during sign-up.<br/>Keep it private — do not share.</p>
+        </div>
+        <div class="issued">Issued ${escape(today)} · Medical Social Services</div>
+      </div>
+    `).join('')
+    // Self-contained HTML so the popup doesn't depend on app CSS that
+    // won't be loaded in the new window context.
+    win.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MAPA Patient Access Codes (${codes.length})</title>
+  <style>
+    @page { size: A4; margin: 1cm; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; color: #1f2937; }
+    .toolbar { padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px; align-items: center; }
+    .toolbar button { font: inherit; font-size: 14px; padding: 6px 14px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+    .toolbar button.primary { background: #0d9488; color: white; border-color: #0d9488; }
+    .toolbar .count { font-size: 13px; color: #6b7280; margin-left: auto; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5cm; padding: 0.5cm; }
+    .card { border: 1px dashed #9ca3af; border-radius: 8px; padding: 0.8cm 0.6cm; text-align: center; page-break-inside: avoid; min-height: 8.5cm; display: flex; flex-direction: column; justify-content: space-between; }
+    .header .brand { font-size: 22pt; font-weight: 700; color: #0f766e; letter-spacing: 0.05em; }
+    .header .sub { font-size: 9pt; color: #6b7280; margin-top: 2px; }
+    .label { font-size: 9pt; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
+    .code { font-family: 'Courier New', monospace; font-size: 20pt; font-weight: 700; letter-spacing: 0.08em; color: #111827; margin: 6px 0 12px; }
+    .instructions p { margin: 4px 0; font-size: 10pt; color: #374151; }
+    .instructions .url { font-family: 'Courier New', monospace; font-size: 9pt; color: #0f766e; word-break: break-all; }
+    .instructions .note { font-size: 8.5pt; color: #6b7280; margin-top: 8px; line-height: 1.4; }
+    .issued { font-size: 7.5pt; color: #9ca3af; margin-top: 8px; border-top: 1px solid #f3f4f6; padding-top: 6px; }
+    @media print {
+      .toolbar { display: none; }
+      .grid { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="primary" onclick="window.print()">Print</button>
+    <button onclick="window.close()">Close</button>
+    <span class="count">${codes.length} access code${codes.length === 1 ? '' : 's'} · A4 · 4 per page</span>
+  </div>
+  <div class="grid">${cards}</div>
+</body>
+</html>`)
+    win.document.close()
+    // Best-effort auto-print so the operator skips one click on the common
+    // case. The toolbar's manual Print button stays available if the auto
+    // call is suppressed by the browser (popup-from-popup heuristics).
+    win.onload = () => { try { win.focus(); win.print() } catch { /* manual */ } }
+    logAudit(user, {
+      action: 'hospitalid_printed',
+      targetType: 'hospitalId',
+      targetName: `${codes.length} code${codes.length === 1 ? '' : 's'}`,
+      details: `Printed available codes (filter: ${statusFilter})`,
+    })
+  }
+
   const handleDelete = async (h) => {
     try {
       // Atomic: delete the hospital ID doc + clear the user's hospitalId
@@ -220,9 +310,25 @@ export default function HospitalIDs() {
             <h1 className="page-title">Patient Access Codes</h1>
             <p className="page-sub">Generate and issue access codes for patients to register on the portal.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {isSuperAdmin && (
               <>
+                {/* Print is staff_admin + super_admin friendly (it doesn't
+                    write anything destructive). Show count of what'll print
+                    based on the current filter so the operator knows
+                    they're about to hand out exactly that batch. */}
+                {(() => {
+                  const printable = filtered.filter(h => h.status === 'available').length
+                  if (printable === 0) return null
+                  return (
+                    <button
+                      className="btn-secondary flex items-center gap-1.5"
+                      onClick={handlePrintAvailable}
+                      title="Open a print-friendly view of the available codes in the current filter">
+                      <MdPrint size={16} /> Print ({printable})
+                    </button>
+                  )
+                })()}
                 <button className="btn-secondary flex items-center gap-1.5" onClick={handleAddOne}>
                   <MdAdd size={16} /> Add One
                 </button>
