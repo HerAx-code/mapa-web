@@ -790,6 +790,15 @@ The rules treat every collection as a separate authorization surface. Helper fun
 
 **Document agency scoping via `agencyIds[]`.** An agency user can read a patient document only if its `agencyIds[]` includes their agency id. CRMC stamps this list at endorsement time for every doc on the request. A `/seed`-page backfill populated this for pre-redesign documents; the transitional `('agencyIds' in resource.data)` fallback has since been removed (commit `f497a79`).
 
+**Known broad-write surfaces (acknowledged tradeoffs).** Four rule branches grant broader writes than what the UI exercises, with comments in `firestore.rules` explicitly documenting the deferral and reasoning. These are pragmatic choices for the thesis pilot's client-driven Firestore architecture; each could be tightened later as the UI gating stabilizes:
+
+1. **`agencies` update for any agency role.** The rule allows `isAdmin() || (isAgency() && userAgencyId() == agencyId)`. A coordinator using the Firestore SDK directly could in principle write to `budget.allocated`, `defaultSignatory`, or other fields that the UI hides behind agency-admin gating. The intended tightening (per the rule comment) is a `request.resource.data.budget == resource.data.budget` field-level guard once the UI has been audited to never write budget from a coordinator path.
+2. **`applications` update for own agency.** Same shape — `isAgency() && resource.data.agencyId == userAgencyId()` allows any field write on a slice for the agency's own application. A direct SDK write could fake `amountApproved` or `glStatus` outside the Approve modal flow. The UI is the gate today; a field-level diff guard scoped to the lifecycle transitions (e.g., `reviewing → approved` may set the approval fields, `approved → certificate` may flip `glStatus`, etc.) would close this.
+3. **`auditLog` create is `isAuth()` with no actor-must-match-caller check.** Any authenticated user could append an entry claiming any actor identity, since the rule does not enforce `request.resource.data.actorUid == uid()`. The mitigation today is that only legitimate UI paths call `logAudit()`; a one-line rule addition (`request.resource.data.actorUid == uid()` on create) would make audit attribution forge-proof at the data layer.
+4. **`conversations` create is open.** Any authenticated user can create a conversation between any two users. The UI restricts the compose flow to legitimate counterpart relationships (patient ↔ CRMC, patient ↔ endorsed agency, etc.), but a malicious actor with scraped UIDs could craft conversations outside those relationships at the SDK level. A rule-side check that the creator is one of `participants[]` (and that the counterpart is a legitimate role pair for the creator) would close it.
+
+None of these is a doc-vs-rules drift — each is an intentional, commented design choice that prioritizes shipping speed and UI-as-gate over rule-level field constraint. Listed here for thesis-defense candor about the authorization model's granularity.
+
 ---
 
 ## 8. Use Case Diagrams (textual descriptions)
@@ -1262,6 +1271,7 @@ The series also delivered cross-cutting cleanups: 20 onSnapshot error-callback f
 | Acknowledged | GL_STATUS_CONFIG not yet extracted | Two render sites use different visual treatments (badge vs text); would need a label-only helper rather than a full canonical config. Documented; not blocking |
 | Acknowledged | Keyboard shortcuts on admin/Requests (V to verify focused doc, J/K to navigate queue) | Bulk-verify shipped 2026-05-31. Keyboard shortcuts deferred — useful for high-volume CRMC days but design call needed on focus model and shortcut conflict with browser shortcuts |
 | Acknowledged | Inline `formatDate` / `fmtDate` helpers still inline the `tsToDate` pattern in ~20 files | Same one-line pattern, but the canonical helper now lives at `utils/dates.js` and migration is opportunistic on touch | Tracked; low priority since the pattern is stable and identical across all 20 sites |
+| Acknowledged | Four `firestore.rules` branches grant broader writes than the UI exercises (`agencies` update for any agency role, `applications` update for own agency, `auditLog` create with no actor-must-match check, `conversations` create open to any authenticated user) | Comments in `firestore.rules` document each as an intentional deferral; UI is the gate today | See §7.3 "Known broad-write surfaces" for the per-surface tightening path. Each could be closed with a small rule addition once the UI gating is fully audited; deferred to post-pilot |
 
 ### 11.6 Performance Observations
 
