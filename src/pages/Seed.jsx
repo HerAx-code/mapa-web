@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createUserWithEmailAndPassword, signOut, signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, addDoc, collection, getDocs, deleteDoc, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
+import { doc, setDoc, addDoc, collection, getDocs, getDoc, deleteDoc, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
 const SEED_AGENCIES = [
@@ -178,7 +178,16 @@ export default function Seed() {
     setRunning(true)
     setLog([])
 
-    // 1. Create auth accounts + Firestore profiles
+    // 1. Create auth accounts + Firestore profiles.
+    //
+    // Self-healing: if the Auth account already exists but the matching
+    // Firestore user doc is gone, we re-create the doc. This happens
+    // after an admin/Accounts.jsx or admin/Patients.jsx Delete -- those
+    // only remove the Firestore profile (client-side Firebase can't
+    // delete the Auth account without admin SDK or recent sign-in), so
+    // the email becomes permanently "already in use" with no profile.
+    // Without this branch, a deleted demo account was unrepairable
+    // from the Seed page.
     for (const u of SEED_USERS) {
       try {
         const cred = await createUserWithEmailAndPassword(auth, u.email, u.password)
@@ -186,8 +195,27 @@ export default function Seed() {
         await signOut(auth)
         push(`✅ Created user: ${u.email}`)
       } catch (err) {
-        if (err.code === 'auth/email-already-in-use') push(`⚠️ Already exists: ${u.email}`)
-        else push(`❌ Failed ${u.email}: ${err.message}`)
+        if (err.code !== 'auth/email-already-in-use') {
+          push(`❌ Failed ${u.email}: ${err.message}`)
+          continue
+        }
+        // Email already registered in Auth -- check the Firestore side.
+        try {
+          const cred         = await signInWithEmailAndPassword(auth, u.email, u.password)
+          const profileSnap  = await getDoc(doc(db, 'users', cred.user.uid))
+          if (profileSnap.exists()) {
+            push(`⚠️ Already exists: ${u.email}`)
+          } else {
+            await setDoc(doc(db, 'users', cred.user.uid), { ...u.profile, email: u.email, active: true, createdAt: new Date() })
+            push(`🔧 Repaired orphan: ${u.email}`)
+          }
+          await signOut(auth)
+        } catch (signinErr) {
+          // Wrong password (user changed it via Forgot Password), or
+          // some other Auth issue. Surface clearly so the operator
+          // knows to delete the Auth row from Firebase Console.
+          push(`❌ Cannot repair ${u.email}: ${signinErr.message ?? signinErr.code} — delete the Auth account from Firebase Console and re-run.`)
+        }
       }
     }
 
