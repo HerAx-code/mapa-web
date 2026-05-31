@@ -62,9 +62,10 @@ export default function Reports() {
   useEffect(() => {
     const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
     const unsub = onSnapshot(q, snap => {
-      // Filter out Budget Requests — these are intra-agency matters routed
-      // to the agency's own agency_admin, not CRMC. CRMC's Reports queue
-      // is for platform-level issues (bugs, UI problems, etc.).
+      // Filter out Budget Requests client-side. Firestore's '!=' filter
+      // forces an orderBy on the inequality field first, which would
+      // override the createdAt DESC sort. The wire-transfer waste here
+      // is small (Budget Requests are rare relative to issue reports).
       const items = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(r => r.category !== 'Budget Request')
@@ -359,20 +360,6 @@ export default function Reports() {
                         <StatusBadge status={status} kind="report" />
                       </div>
                     </div>
-
-                    {/* Budget Request quick-facts callout */}
-                    {r.category === 'Budget Request' && (
-                      <div className="bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5 mb-3">
-                        <p className="text-xs font-semibold text-orange-800 mb-1">
-                          {r.agencyName ?? 'Unknown agency'} is requesting <strong>₱{Number(r.amountRequested ?? 0).toLocaleString()}</strong>
-                        </p>
-                        {(r.currentAllocated != null || r.currentRemaining != null) && (
-                          <p className="text-xs text-orange-700">
-                            Current budget: ₱{Number(r.currentRemaining ?? 0).toLocaleString()} remaining of ₱{Number(r.currentAllocated ?? 0).toLocaleString()} allocated.
-                          </p>
-                        )}
-                      </div>
-                    )}
 
                     {/* Description — always fully visible */}
                     <p className="text-sm text-gray-700 leading-relaxed mb-3">{r.description ?? '—'}</p>
