@@ -1,6 +1,6 @@
 # MAPA — Thesis Documentation
 
-**Last updated:** 2026-05-31 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, and the operator-throughput follow-up batch — see `docs/revision-list.md` for the change log)
+**Last updated:** 2026-06-01 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, and the first-visit guided tour batch — see `docs/revision-list.md` for the change log)
 
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.
 
@@ -333,6 +333,7 @@ mapa-web/
 │   │   ├── DocViewerModal.jsx
 │   │   ├── GLDocumentPanel.jsx
 │   │   ├── OutcomeModal.jsx      # Interview outcome recording
+│   │   ├── Tour.jsx              # First-visit guided tour (DIY portal, spotlight + tooltip)
 │   │   ├── agency/               # Agency-specific shared components
 │   │   └── ui/                   # Atomic UI elements (Logo, etc.)
 │   ├── contexts/
@@ -356,7 +357,8 @@ mapa-web/
 │   │   ├── intakeSheet.js        # Unified Intake Sheet field validation
 │   │   ├── messages.js           # getOrCreateConversation()
 │   │   ├── idOcr.js              # On-device tesseract OCR (lazy-loaded, shared worker)
-│   │   └── requests.js           # computeFunding() — slice-derived funding picture
+│   │   ├── requests.js           # computeFunding() — slice-derived funding picture
+│   │   └── tours.js              # First-visit guided tour step definitions + resetTourFlag()
 │   ├── firebase.js               # SDK initialization
 │   ├── App.jsx                   # Route registry with lazy() splits
 │   └── main.jsx                  # React root + i18n bootstrap
@@ -1059,6 +1061,23 @@ Each page is described in one paragraph: purpose, key features, and any mobile-v
 
 **Notifications — `/notifications`.** All authenticated roles. Shows the full list of in-app notifications with category filters, mark-all-read, and clear-all. Tap a notification to open its detail modal and navigate to the related page. On patient mobile, tapping the bell in the topbar navigates to this page instead of opening a dropdown.
 
+### 9.6 First-Visit Guided Tour (cross-cutting onboarding)
+
+A reusable `<Tour>` component delivers a Canva-style first-visit walkthrough on the landing pages of all three roles. New users see a four-step tooltip tour highlighting key elements; returning users see nothing (the dismissal flag is keyed `mapa_tour_{storageKey}_{uid}` in `localStorage`, so it survives logout-and-back-in on the same device and is per-user on shared devices). Implementation is DIY (~200 lines, no library dependency) — Tailwind-styled portal with a four-quadrant dim overlay, a pulsing brand-color spotlight ring on the target, and a tooltip card with Back / Next / Skip / Done controls. Targets are addressed via `data-tour-id="..."` attributes; missing targets fall back gracefully to a centered tooltip so the tour still works when a conditional element isn't currently rendered. Tour string content is bilingual on the patient surface (via `t()` against the `tour.patient.*` i18n keys) and English-only on the agency and admin surfaces, matching the rest of those role's UI per CLAUDE.md.
+
+Per-page tour coverage:
+
+| Page | Steps | Spotlights |
+|------|-------|------------|
+| **Patient Dashboard** (`/patient/dashboard`) | 4 | Greeting · hero card (whichever conditional variant is rendered) · 5-step journey card · document status |
+| **Patient TrackStatus** (`/patient/status`) | 3 | Active/past tabs · request lifecycle stepper · per-agency slice cards (falls back to centered before CRMC endorses) |
+| **Agency Dashboard** (`/agency/dashboard`) | 4 | Metrics grid · slot meter · budget card · quick-action shortcuts |
+| **Admin Dashboard** (`/admin/dashboard`) | 4 | Metric tiles · alerts panel · activity feed · Manage/Review shortcuts |
+
+Re-trigger affordances: patients re-launch the tour from `/patient/more` → Settings → "Show welcome tour again" (proper home for user-facing toggles); agency coordinators and admins use an unobtrusive footer link "Show welcome tour again" at the bottom of their dashboard. Both call `resetTourFlag(storageKey, uid)` from `utils/tours.js` to clear the localStorage gate, then either navigate home (patient) or reload (agency / admin) so `<Tour>` re-evaluates its mount-time gate. This makes the tour fully demoable to the thesis panel without clearing `localStorage` by hand.
+
+The patient `RequestAssistance` wizard and `IntakeWizard` are intentionally not toured: they are step-by-step wizards with their own progress indicators + Back/Next navigation, so a tour overlay on top would duplicate orientation already present in the wizard chrome.
+
 ---
 
 ## 10. Workflow Storyboards
@@ -1212,6 +1231,15 @@ The system has been developed and tested with a **manual, scenario-based approac
 - Disable agency with in-flight applications; confirm cascade handling (auto-reject with no cooldown, or hold).
 - Issue Patient Access Codes in bulk (up to 100 per batch); confirm new codes appear in registration verifier; confirm sequential numbering uses max existing + 1 (no collisions even after deletes).
 - Revoke + Delete a Hospital ID → confirm atomic `writeBatch` so users.hospitalId and the code doc never drift into orphan state.
+
+**First-Visit Guided Tour**
+
+- Sign in as a fresh patient → confirm 4-step tour auto-fires on Dashboard with pulsing spotlight on the greeting, hero card, steps card, and docs status; toggle to Filipino → re-trigger via More → Settings → Show welcome tour again; confirm tooltip copy renders in Filipino.
+- Navigate to TrackStatus as a freshly-submitted patient → confirm 3-step tour auto-fires; confirm the third "Agency cards" step falls back to centered (no slices yet) without breaking the flow.
+- Sign in as an agency coordinator → confirm 4-step English tour fires on Agency Dashboard with spotlights on metrics, slot meter, budget card, and quick actions; refresh page → confirm tour does NOT re-fire (localStorage gate working).
+- Sign in as a super_admin → confirm 4-step English tour fires on Admin Dashboard with spotlights on metrics, alerts, activity feed, and Manage/Review shortcuts.
+- Replay-tour affordances: patient More → Settings → "Show welcome tour again" → confirm toast + navigate to dashboard + tour re-fires; agency / admin footer "Show welcome tour again" link → confirm page reloads and tour re-fires.
+- Per-user scope: log out the patient and log in as a different patient on the same device → confirm the second patient sees the tour fresh (uid scoping).
 
 **Cross-Cutting**
 
