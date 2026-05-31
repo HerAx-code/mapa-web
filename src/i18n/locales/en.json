@@ -60,7 +60,8 @@
     "footer": "Free · Made by Cotabato Regional Medical Center · No app store needed"
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "clear": "Clear"
   },
   "auth": {
     "welcome": "Welcome to MAPA",
@@ -891,6 +892,8 @@
       "title": "User Guide",
       "subtitle": "Everything you need to know about using MAPA.",
       "tapHint": "Tap any question below to read the answer.",
+      "searchPlaceholder": "Search the guide (e.g., interview, withdraw, agency)…",
+      "noResults": "No sections match \"{{query}}\". Try a different keyword.",
       "footer": "Need further assistance? Visit the CRMC Medical Social Services office or send a message through the portal using the envelope icon in the top bar.",
       "linkGoToDocuments": "Go to My Documents",
       "linkGoToStatus": "Go to My Application",
@@ -943,20 +946,52 @@
           "s5": "Tap Yes, Withdraw to confirm. The spot will be returned and you can apply again.",
           "note": "You can only withdraw while your application is in Pending Review status. Once the agency starts reviewing, withdrawal is no longer available."
         },
+        "cofunding": {
+          "title": "What is co-funding? Why do I see multiple agencies?",
+          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. CRMC verifies your documents and interviews you, then endorses your request to one or more partner agencies (DSWD, PCSO, Malasakit, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — CRMC routes the case for you.",
+          "note": "After CRMC endorses your request, you'll see a Coverage Plan listing each agency. Tap Proceed to confirm and start their reviews."
+        },
+        "intakeWizard": {
+          "title": "What is the Household Intake Wizard?",
+          "content": "After CRMC starts reviewing your documents, you'll be asked to fill a 5-step household form covering your family, income, expenses, and medical situation. This is the factual part of the Unified Intake Sheet — CRMC adds the assessment portion during your interview. Your social worker uses this to recommend which agencies should fund your request.",
+          "s1": "Open Request Assistance and tap the Household Intake link, or go directly to /patient/request/<id>/intake.",
+          "s2": "Step 1 — Household: list each family member living with you.",
+          "s3": "Step 2-3 — Income and expenses: monthly income, employment, and household expenses.",
+          "s4": "Step 4 — Medical: diagnosis, attending physician, hospital case number, estimated cost.",
+          "s5": "Step 5 — Review: confirm everything and submit. Auto-save runs every 2 seconds so you won't lose work.",
+          "note": "You can save partial progress and return any time before submission. The wizard remembers where you left off."
+        },
+        "requestLifecycle": {
+          "title": "What are the stages of my request?",
+          "content": "Your request goes through six stages from submission to fully funded. The progress stepper on My Application shows where you are.",
+          "submittedLabel": "Submitted",
+          "submittedDesc": "You filed the request. CRMC will start reviewing your attached documents shortly.",
+          "underReviewLabel": "Under Review",
+          "underReviewDesc": "CRMC is verifying your documents. You may be asked to re-upload any unclear or rejected ones.",
+          "assessmentLabel": "Assessment",
+          "assessmentDesc": "CRMC has scheduled your single assessment interview via Google Meet. After the interview, your social worker completes the Unified Intake Sheet.",
+          "endorsedLabel": "Endorsed",
+          "endorsedDesc": "CRMC has routed your request to one or more agencies. Review the Coverage Plan on My Application and tap Proceed to start their reviews.",
+          "partiallyFundedLabel": "Partially Funded",
+          "partiallyFundedDesc": "At least one agency has approved their portion. Others may still be reviewing — your bill is being progressively covered.",
+          "fullyFundedLabel": "Fully Funded",
+          "fullyFundedDesc": "Every approving agency has covered their portion and your bill is at (or near) zero balance. Download each agency's Guarantee Letter and present it at the named provider."
+        },
         "statuses": {
-          "title": "What do the application statuses mean?",
-          "pendingLabel": "Pending Review",
-          "pendingDesc": "Your application was received and is waiting for the agency to start reviewing.",
-          "reviewingLabel": "Under Review",
-          "reviewingDesc": "The agency has opened your application and is currently evaluating it.",
-          "interviewLabel": "Interview Scheduled",
-          "interviewDesc": "The agency has scheduled a video interview with you. Check your Interviews page for the date and Google Meet link.",
+          "title": "What do the per-agency (slice) statuses mean?",
+          "content": "Each agency CRMC endorses your request to gets its own card on My Application. Each card has its own status as the agency processes your portion.",
+          "endorsedLabel": "Endorsed",
+          "endorsedDesc": "CRMC has routed your request to this agency. The agency hasn't started reviewing yet — you need to tap Proceed on the Coverage Plan first.",
+          "reviewingLabel": "For Funding",
+          "reviewingDesc": "You tapped Proceed and the agency is now reviewing whether to fund this portion of your bill.",
+          "awaitingInfoLabel": "Needs Info",
+          "awaitingInfoDesc": "The agency needs something from you (a clearer document, a missed detail, etc.). You'll see their message and a re-upload prompt.",
           "approvedLabel": "Approved",
-          "approvedDesc": "Your application has been approved for a specific amount. The agency is preparing your Guarantee Letter.",
-          "certLabel": "GL Issued",
-          "certDesc": "Your Guarantee Letter has been issued. Once the agency uploads the signed scan, you can download it from My Application.",
+          "approvedDesc": "The agency approved a specific amount toward your bill. Their Guarantee Letter is being prepared.",
+          "certLabel": "Guarantee Letter Issued",
+          "certDesc": "The agency has issued and signed their Guarantee Letter. Download it from My Application and present it at the named provider (e.g., CRMC Billing, Mercury Drug).",
           "rejectedLabel": "Rejected",
-          "rejectedDesc": "Your application was not approved. A reason will be provided. You may apply again after addressing the issue."
+          "rejectedDesc": "This agency couldn't cover its portion. CRMC may re-endorse to another agency, or your overall request may stay partially funded."
         },
         "interview": {
           "title": "How do I join my interview?",
