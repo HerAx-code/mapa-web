@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
-  collection, addDoc, setDoc, doc, serverTimestamp, query, orderBy, where, getDocs,
+  collection, addDoc, setDoc, deleteDoc, doc, serverTimestamp, query, orderBy, where, getDocs,
 } from 'firebase/firestore'
 import {
   getAuth, createUserWithEmailAndPassword,
-  signOut as fbSignOut, sendPasswordResetEmail,
+  signOut as fbSignOut, sendPasswordResetEmail, deleteUser,
 } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app'
 import { db, auth, firebaseConfig } from '../../firebase'
@@ -107,31 +107,102 @@ export default function AddAgency() {
     if (coord.password.length < 6) { toast.error('Password must be at least 6 characters.'); return }
 
     setSaving(true)
+    // Order of operations is deliberate:
+    //   1. Create the Agency Administrator FIRST (Auth + Firestore profile)
+    //      so an 'auth/email-already-in-use' failure doesn't leave an orphan
+    //      agency in Firestore with no admin able to log in.
+    //   2. Only after the admin succeeds, create the agency doc and link
+    //      the admin's profile to it via updateDoc.
+    //   3. If the agency creation itself fails after the admin exists,
+    //      roll back both the Auth account and the Firestore profile.
+    // The previous order created the agency first, then the admin -- a
+    // failure on step 2 stranded the agency. Plus the old code signed out
+    // of the secondary auth BEFORE setDoc, which made deleteUser
+    // unreachable if setDoc failed (the rollback couldn't fire).
+    let secondaryAuthCred = null
+    let adminUid           = null
+    let agencyRef          = null
     try {
-      // 1. Create agency
-      const slots = Number(agency.slotsTotal)
-      const ref = await addDoc(collection(db, 'agencies'), {
-        name:           agency.name.trim(),
-        initials:       agency.initials.trim().toUpperCase().slice(0, 3),
-        color:          agency.color,
-        description:    agency.description.trim(),
-        location:       agency.location.trim(),
-        phone:          agency.phone.trim(),
-        processingTime: agency.processingTime,
-        requirements:   [...selectedReqs],
-        assistanceTypes:[...selectedTypes],
-        slots:          { total: slots, remaining: slots },
-        enabled:        true,
-        createdAt:      serverTimestamp(),
-      })
+      // ── 1a. Create the Agency Administrator's Auth account ──
+      const secondaryAuth = getSecondaryAuth()
+      secondaryAuthCred   = await createUserWithEmailAndPassword(secondaryAuth, coord.email.trim(), coord.password)
+      adminUid            = secondaryAuthCred.user.uid
 
+      // ── 1b. Write the Firestore user profile WHILE still signed in to
+      //   the secondary auth, so a setDoc failure can call deleteUser to
+      //   roll back the orphan Auth account.
+      // agencyId is filled in step 2 once we know the new agency's id;
+      // for now write null so the doc validates against the users rules.
+      try {
+        await setDoc(doc(db, 'users', adminUid), {
+          name:      coord.name.trim(),
+          email:     coord.email.trim(),
+          role:      'agency_admin',
+          agencyId:  null,
+          contact:   null,
+          rank:      null,
+          active:    true,
+          cooldown:  0,
+          deletion:  false,
+          createdAt: serverTimestamp(),
+        })
+      } catch (setDocErr) {
+        try { await deleteUser(secondaryAuthCred.user) } catch (cleanupErr) {
+          console.error('[AddAgency] orphan Auth rollback failed for', coord.email.trim(), cleanupErr)
+        }
+        await fbSignOut(secondaryAuth).catch(() => {})
+        throw setDocErr
+      }
+      await fbSignOut(secondaryAuth)
+
+      // ── 2. Create the agency doc, then link the admin's profile. If
+      //   either fails, roll back the admin (both Firestore profile + Auth)
+      //   so the operator can retry cleanly.
+      try {
+        const slots = Number(agency.slotsTotal)
+        agencyRef = await addDoc(collection(db, 'agencies'), {
+          name:           agency.name.trim(),
+          initials:       agency.initials.trim().toUpperCase().slice(0, 3),
+          color:          agency.color,
+          description:    agency.description.trim(),
+          location:       agency.location.trim(),
+          phone:          agency.phone.trim(),
+          processingTime: agency.processingTime,
+          requirements:   [...selectedReqs],
+          assistanceTypes:[...selectedTypes],
+          slots:          { total: slots, remaining: slots },
+          enabled:        true,
+          createdAt:      serverTimestamp(),
+        })
+        // Now stamp the admin's profile with the agencyId.
+        await setDoc(doc(db, 'users', adminUid), { agencyId: agencyRef.id }, { merge: true })
+      } catch (agencyErr) {
+        // Roll back the admin profile we just wrote. We can't deleteUser
+        // anymore (signed out of secondary auth above), so the Auth
+        // account stays as a permanent orphan -- log it loudly so the
+        // operator can clean it up from Firebase Console.
+        await deleteDocSafe(doc(db, 'users', adminUid))
+        console.error(
+          '[AddAgency] agency creation failed after admin Auth was created.',
+          'Auth account is orphaned and must be deleted manually from Firebase Console:',
+          coord.email.trim(),
+          agencyErr,
+        )
+        throw agencyErr
+      }
+
+      // ── 3. Audit + notify + reset email (best-effort; failures here
+      //   don't roll back since the agency + admin are fully created). ──
       logAudit(user, {
         action: 'agency_created', targetType: 'agency',
-        targetId: ref.id, targetName: agency.name.trim(),
+        targetId: agencyRef.id, targetName: agency.name.trim(),
         details: 'New agency registered',
       })
-
-      // Notify admins
+      logAudit(user, {
+        action: 'account_created', targetType: 'account', targetId: adminUid,
+        targetName: coord.name.trim(),
+        details: `First Agency Administrator for ${agency.name.trim()}`,
+      })
       try {
         const usersSnap = await getDocs(
           query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin']))
@@ -146,35 +217,11 @@ export default function AddAgency() {
       } catch (err) {
         console.error('[AddAgency] admin notify fan-out failed:', err)
       }
-
-      // 2. Create the first Agency Administrator (mandatory — see validation
-      // above). The senior agency officer who controls allocation and can
-      // add coordinators from the agency portal's Team page.
-      const secondaryAuth = getSecondaryAuth()
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, coord.email.trim(), coord.password)
-      const adminUid = cred.user.uid
-      await fbSignOut(secondaryAuth)
-
-      await setDoc(doc(db, 'users', adminUid), {
-        name:      coord.name.trim(),
-        email:     coord.email.trim(),
-        role:      'agency_admin',
-        agencyId:  ref.id,
-        contact:   null,
-        rank:      null,
-        active:    true,
-        cooldown:  0,
-        deletion:  false,
-        createdAt: serverTimestamp(),
-      })
-
-      if (sendReset) await sendPasswordResetEmail(auth, coord.email.trim())
-
-      logAudit(user, {
-        action: 'account_created', targetType: 'account', targetId: adminUid,
-        targetName: coord.name.trim(),
-        details: `First Agency Administrator for ${agency.name.trim()}`,
-      })
+      if (sendReset) {
+        await sendPasswordResetEmail(auth, coord.email.trim()).catch(err =>
+          console.error('[AddAgency] reset email failed:', err)
+        )
+      }
 
       toast.success(`${agency.name.trim()} created with its Agency Administrator account.`)
       navigate('/admin/agencies')
@@ -184,6 +231,14 @@ export default function AddAgency() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Defensive deleteDoc -- swallows failures so a rollback path doesn't
+  // throw on top of the original error. Logged so an operator can clean
+  // up manually if needed.
+  const deleteDocSafe = async (ref) => {
+    try { await deleteDoc(ref) }
+    catch (err) { console.error('[AddAgency] rollback deleteDoc failed:', err) }
   }
 
   // ── Render ────────────────────────────────────────────────────────────
