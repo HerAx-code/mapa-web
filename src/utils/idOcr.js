@@ -5,9 +5,29 @@
 // patient's expected name against that text. The image never leaves the
 // device. This is a *hint* for the CRMC social worker — it never blocks a
 // submission, and any failure resolves to a neutral { match: null } result.
+//
+// The pipeline:
+//   1. Preprocess the image (downscale + grayscale + contrast) so OCR runs
+//      faster and reads cleaner text off colored ID backgrounds.
+//   2. Recognize with the eng+fil language combo so Filipino names + Tagalog
+//      text on government IDs (UMID, PhilHealth, etc.) parse correctly.
+//   3. Fuzzy-match the patient's name, Unicode-normalized so 'n with tilde'
+//      and other diacritics don't get stripped to spaces.
 
+// ̀-ͯ is the Unicode Combining Diacritical Marks block. NFD
+// decomposes accented characters into base + combining mark; we then drop
+// the marks. Without this step "Pena with tilde" became "PE A" -- the
+// tilde turned into a space, breaking the fuzzy match for any patient
+// with an accented or tilde'd name (common in Philippine names: Jose,
+// Maria, Pena, Nino, Dona, etc.).
 const normalize = (s) =>
-  (s || '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+  (s || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '') // strip combining marks left behind by NFD
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 // Does the expected name plausibly appear in the OCR text? Returns
 // true / false / null (couldn't tell). Fuzzy: at least half of the name's
@@ -24,14 +44,70 @@ export function nameMatches(text, expectedName) {
 // True for document-type names that look like an ID (so we only OCR those).
 export const isIdType = (name) => /\bid\b|identification/i.test(name || '')
 
+// Preprocess a phone-camera photo to give tesseract its best shot:
+//   - Downscale anything larger than 2000px on the long edge. Phones produce
+//     12MP+ images; tesseract is slow on them and OCR accuracy plateaus well
+//     below that resolution for ID-sized text. 2000px keeps text legible
+//     while cutting OCR time roughly in half on big images.
+//   - Grayscale + contrast boost. Most Philippine government IDs print dark
+//     text on a colored background (PhilHealth pink, Driver's License
+//     yellow-green, PhilSys blue). Stripping color and pushing contrast
+//     makes the text more separable from the background.
+// Returns a Blob if processing succeeded, or the original file as a fallback
+// if anything went wrong (canvas unavailable, image load failed, etc.) so
+// the caller can still feed something to tesseract.
+async function preprocessImage(file) {
+  const MAX_DIM = 2000
+  const CONTRAST = 1.4 // 1.0 = unchanged; >1 widens dark/light separation
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const i = new Image()
+      i.onload = () => { URL.revokeObjectURL(url); resolve(i) }
+      i.onerror = (err) => { URL.revokeObjectURL(url); reject(err) }
+      i.src = url
+    })
+    const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height))
+    const w = Math.round(img.width * scale)
+    const h = Math.round(img.height * scale)
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(img, 0, 0, w, h)
+    const imgData = ctx.getImageData(0, 0, w, h)
+    const d = imgData.data
+    const intercept = 128 * (1 - CONTRAST)
+    for (let i = 0; i < d.length; i += 4) {
+      // Luminance-weighted grayscale (Rec. 709)
+      const gray = d[i] * 0.2126 + d[i + 1] * 0.7152 + d[i + 2] * 0.0722
+      // Linear contrast around mid-gray (128), clamped to [0, 255]
+      const adj = Math.max(0, Math.min(255, gray * CONTRAST + intercept))
+      d[i] = d[i + 1] = d[i + 2] = adj
+      // alpha (d[i+3]) untouched
+    }
+    ctx.putImageData(imgData, 0, 0)
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9))
+    return blob || file
+  } catch {
+    return file
+  }
+}
+
 // Runs OCR on an image File. Returns { text, match } where match is the
 // fuzzy name-check result. Images only (PDFs are skipped → { match: null }).
 export async function runIdOcr(file, expectedName = '') {
   if (!file || !file.type?.startsWith('image/')) return { text: '', match: null }
   try {
+    const processed = await preprocessImage(file)
     const mod = await import('tesseract.js')
     const recognize = mod.recognize || mod.default?.recognize
-    const { data } = await recognize(file, 'eng')
+    // 'eng+fil' loads BOTH language packs on first run (~10 MB combined,
+    // cached by the browser thereafter). Filipino covers Tagalog text on
+    // government IDs and improves name recognition for Filipino-script
+    // contexts. English alone misses some characters and word boundaries.
+    const { data } = await recognize(processed, 'eng+fil')
     const text = (data?.text ?? '').trim()
     return { text, match: nameMatches(text, expectedName) }
   } catch {
