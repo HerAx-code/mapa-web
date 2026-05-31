@@ -1098,6 +1098,20 @@
       "s4": {
         "title": "Document status",
         "body": "Verified and pending document counts at a glance. Tap to manage uploads or check rejection reasons."
+      },
+      "track": {
+        "s1": {
+          "title": "Active vs past",
+          "body": "Switch between your in-progress request and past applications. The number badge shows how many are in each."
+        },
+        "s2": {
+          "title": "Your request journey",
+          "body": "Six stages from Submitted to Fully Funded. The active stage is highlighted; CRMC moves you forward as documents verify, the interview happens, and agencies decide."
+        },
+        "s3": {
+          "title": "Agency cards",
+          "body": "Once CRMC endorses your request to one or more agencies, each one shows up here with its own funding status (Funding → Approved → Guarantee Letter)."
+        }
       }
     }
   }

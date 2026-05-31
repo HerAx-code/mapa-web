@@ -19,6 +19,32 @@ export function resetTourFlag(storageKey, uid) {
 // puts on the elements it wants spotlighted. Missing targets fall back
 // to a centered, fully-dimmed step (the Tour component handles it).
 
+export const patientTrackStatusTour = (t) => [
+  {
+    targetId: 'track-tabs',
+    title:    t('tour.patient.track.s1.title'),
+    body:     t('tour.patient.track.s1.body'),
+    position: 'bottom',
+  },
+  {
+    targetId: 'track-request',
+    title:    t('tour.patient.track.s2.title'),
+    body:     t('tour.patient.track.s2.body'),
+    position: 'bottom',
+  },
+  // The slices list only exists once CRMC has endorsed to at least one
+  // agency. For a freshly-submitted request, no slice cards render yet
+  // and the Tour component falls back to centered + full-page dim,
+  // which keeps the explainer copy meaningful ("when endorsed, each
+  // agency will show here").
+  {
+    targetId: 'track-slices',
+    title:    t('tour.patient.track.s3.title'),
+    body:     t('tour.patient.track.s3.body'),
+    position: 'top',
+  },
+]
+
 export const patientDashboardTour = (t) => [
   {
     targetId: 'patient-greeting',

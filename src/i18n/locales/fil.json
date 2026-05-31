@@ -1098,6 +1098,20 @@
       "s4": {
         "title": "Status ng dokumento",
         "body": "Tingnan ang bilang ng na-verify at nakabinbing dokumento. I-tap para mag-upload o tingnan ang mga dahilan ng rejection."
+      },
+      "track": {
+        "s1": {
+          "title": "Aktibo at nakaraan",
+          "body": "Lumipat sa pagitan ng inyong kasalukuyang hiling at mga nakaraang aplikasyon. Ipinapakita ng badge ang bilang sa bawat tab."
+        },
+        "s2": {
+          "title": "Ang paglalakbay ng hiling",
+          "body": "Anim na yugto mula Submitted hanggang Fully Funded. Naka-highlight ang kasalukuyang yugto; ina-advance ng CRMC ang inyong hiling habang nave-verify ang mga dokumento, naidaraos ang panayam, at nagdedesisyon ang mga ahensya."
+        },
+        "s3": {
+          "title": "Mga agency card",
+          "body": "Kapag na-endorse na ng CRMC ang hiling sa isa o higit pang ahensya, lalabas dito ang bawat isa kasama ang kanilang funding status (Funding → Approved → Guarantee Letter)."
+        }
       }
     }
   }

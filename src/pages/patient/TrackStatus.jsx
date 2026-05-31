@@ -13,6 +13,8 @@ import { notify } from '../../utils/notifications'
 import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG } from '../../utils/constants'
 import { computeFunding } from '../../utils/requests'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
+import Tour from '../../components/Tour'
+import { patientTrackStatusTour } from '../../utils/tours'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
@@ -357,7 +359,7 @@ export default function TrackStatus() {
         {/* Tabs — flex-wrap allows the second tab to drop to its own
             row if the active/past labels are long (Filipino is longer
             than English). */}
-        <div className="flex gap-2 mb-5 flex-wrap">
+        <div data-tour-id="track-tabs" className="flex gap-2 mb-5 flex-wrap">
           <button
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'active' ? 'bg-brand-500 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
             onClick={() => setTab('active')}>
@@ -418,7 +420,7 @@ export default function TrackStatus() {
           const stages  = buildRequestStages(activeRequest, t)
           const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, reqSlices)
           return (
-            <div className="card p-5 mb-5">
+            <div data-tour-id="track-request" className="card p-5 mb-5">
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
                 <div className="w-10 h-10 bg-brand-500 rounded-xl text-white flex items-center justify-center flex-shrink-0">
                   <MdAssignment size={20} />
@@ -510,7 +512,7 @@ export default function TrackStatus() {
                 )}
               </div>
             ) : (
-              <div className="space-y-5">
+              <div data-tour-id="track-slices" className="space-y-5">
                 {activeApps.map(app => {
                   const stages = buildStages(app, t)
                   const color    = agencyColor(app)
@@ -853,6 +855,12 @@ export default function TrackStatus() {
 
         </div> {/* end inner content wrapper */}
       </div>
+
+      {/* First-visit guided tour. Auto-fires once per uid; spotlights
+          the active/past tabs, the request lifecycle stepper, and the
+          per-agency slice cards (latter falls back to centered when
+          the request hasn't been endorsed yet). */}
+      <Tour steps={patientTrackStatusTour(t)} storageKey="patient-track" />
     </Layout>
   )
 }
