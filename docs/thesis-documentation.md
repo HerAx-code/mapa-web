@@ -699,16 +699,16 @@ The install page detects whether the app is already installed and presents eithe
 
 ```
 {
-  actor:        string,    // user.name
-  actorUid:     string,
-  actorRole:    string,
-  actorAgencyId:string | null,
-  action:       string,    // 'agency_disabled', 'doc_verified', etc.
-  targetType:   string,    // 'agency', 'application', 'account', etc.
-  targetId:     string,
-  targetName:   string,
-  details:      string,
-  at:           Timestamp,
+  action:        string,           // 'agency_disabled', 'doc_verified', etc.
+  actorId:       string,           // user.uid; 'system' for automated entries
+  actorName:     string,           // user.name; 'System' for automated entries
+  actorRole:     string,           // 'super_admin', 'agency_admin', etc.
+  actorAgencyId: string | null,    // null for CRMC admin entries
+  targetType:    string,           // 'agency', 'application', 'account', etc.
+  targetId:      string,
+  targetName:    string,
+  details:       string,
+  createdAt:     Timestamp,
 }
 ```
 
@@ -796,7 +796,7 @@ The rules treat every collection as a separate authorization surface. Helper fun
 
 1. **`agencies` update for any agency role.** The rule allows `isAdmin() || (isAgency() && userAgencyId() == agencyId)`. A coordinator using the Firestore SDK directly could in principle write to `budget.allocated`, `defaultSignatory`, or other fields that the UI hides behind agency-admin gating. The intended tightening (per the rule comment) is a `request.resource.data.budget == resource.data.budget` field-level guard once the UI has been audited to never write budget from a coordinator path.
 2. **`applications` update for own agency.** Same shape — `isAgency() && resource.data.agencyId == userAgencyId()` allows any field write on a slice for the agency's own application. A direct SDK write could fake `amountApproved` or `glStatus` outside the Approve modal flow. The UI is the gate today; a field-level diff guard scoped to the lifecycle transitions (e.g., `reviewing → approved` may set the approval fields, `approved → certificate` may flip `glStatus`, etc.) would close this.
-3. **`auditLog` create is `isAuth()` with no actor-must-match-caller check.** Any authenticated user could append an entry claiming any actor identity, since the rule does not enforce `request.resource.data.actorUid == uid()`. The mitigation today is that only legitimate UI paths call `logAudit()`; a one-line rule addition (`request.resource.data.actorUid == uid()` on create) would make audit attribution forge-proof at the data layer.
+3. **`auditLog` create is `isAuth()` with no actor-must-match-caller check.** Any authenticated user could append an entry claiming any actor identity, since the rule does not enforce `request.resource.data.actorId == uid()`. The mitigation today is that only legitimate UI paths call `logAudit()`; a one-line rule addition (`request.resource.data.actorId == uid()` on create) would make audit attribution forge-proof at the data layer.
 4. **`conversations` create is open.** Any authenticated user can create a conversation between any two users. The UI restricts the compose flow to legitimate counterpart relationships (patient ↔ CRMC, patient ↔ endorsed agency, etc.), but a malicious actor with scraped UIDs could craft conversations outside those relationships at the SDK level. A rule-side check that the creator is one of `participants[]` (and that the counterpart is a legitimate role pair for the creator) would close it.
 
 None of these is a doc-vs-rules drift — each is an intentional, commented design choice that prioritizes shipping speed and UI-as-gate over rule-level field constraint. Listed here for thesis-defense candor about the authorization model's granularity.
