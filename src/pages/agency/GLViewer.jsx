@@ -78,10 +78,16 @@ export default function GLViewer() {
   // Any indirection (toast first, setTimeout, helper functions) can cause
   // the print dialog to be silently blocked.
 
-  // Mark the GL as Issued — flips status from approved → certificate, advances
-  // the stages array, and notifies the patient. Coordinator-only. The
-  // confirmation goes through an in-app modal (not window.confirm) so it
-  // matches the rest of the app's design language.
+  // Mark the GL as Issued — flips status from approved → certificate and
+  // notifies the patient. Coordinator-only. The confirmation goes through
+  // an in-app modal (not window.confirm) so it matches the rest of the
+  // app's design language.
+  //
+  // Note: previously also wrote a stages[] array map here. The stages
+  // field on applications is deprecated -- the Timeline view derives
+  // from `status` directly (see admin/Requests sliceStages cleanup +
+  // §6.2 thesis doc). Other writers were dropped earlier; this was the
+  // last lingering one.
   const performMarkIssued = async () => {
     if (!app || markingIssued) return
     setMarkingIssued(true)
@@ -89,11 +95,6 @@ export default function GLViewer() {
       await updateDoc(doc(db, 'applications', app.id), {
         status:    'certificate',
         updatedAt: serverTimestamp(),
-        stages: (app.stages ?? []).map(s =>
-          s.key === 'certificate'
-            ? { ...s, done: true, active: false, date: new Date().toLocaleDateString() }
-            : s
-        ),
       })
       await notify(app.patientId, {
         type:  'certificate_ready',

@@ -408,7 +408,6 @@ export default function CertificateGenerator() {
         ) : (
           <div className="space-y-3">
             {filtered.map(app => {
-              const approvedStage = (app.stages ?? []).find(s => s.key === 'approved')
               const isIssued      = app.status === 'certificate'
               const hasSigned     = !!uploaded[app.id]
 
@@ -443,7 +442,7 @@ export default function CertificateGenerator() {
                         <span className="mx-1.5 text-gray-200">·</span>
                         ₱{Number(app.approvedAmount ?? 0).toLocaleString()}
                         <span className="mx-1.5 text-gray-200">·</span>
-                        Approved: {approvedStage?.date ?? formatDate(app.approvedAt) ?? '—'}
+                        Approved: {formatDate(app.approvedAt) ?? '—'}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className={`badge ${STATE_VISUAL.badge} text-xs`}>{STATE_VISUAL.label}</span>
