@@ -86,6 +86,31 @@ export default function RequestAssistance() {
   // fresh OCR result could be overwritten by the older promise.
   const ocrTokens = useRef({})
 
+  // Shared OCR launcher used by both the initial file attach and the retry
+  // button. Skips non-ID document types. For rep ID, the OCR cross-checks
+  // against repForm.name (the rep's own name); for everything else, against
+  // the patient's account name. Per-attach token guards against stale
+  // promises from a removed or re-attached file overwriting fresh results.
+  const startOcr = (typeName, file) => {
+    const isRepId = typeName === REP_ID
+    if (!isIdType(typeName) && !isRepId) return
+    const token = (ocrTokens.current[typeName] ?? 0) + 1
+    ocrTokens.current[typeName] = token
+    setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
+    setOcrRunning(p => ({ ...p, [typeName]: true }))
+    const expectedName = isRepId ? repForm.name : (user?.name ?? '')
+    runIdOcr(file, expectedName)
+      .then(res => {
+        if (ocrTokens.current[typeName] !== token) return // stale: dropped
+        setOcrResults(p => ({ ...p, [typeName]: res }))
+      })
+      .finally(() => {
+        if (ocrTokens.current[typeName] === token) {
+          setOcrRunning(p => ({ ...p, [typeName]: false }))
+        }
+      })
+  }
+
   const attachReq = (typeName) => (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -93,31 +118,19 @@ export default function RequestAssistance() {
     const err = validateDocFile(file)
     if (err) { toast.error(err); return }
     setPendingFiles(p => ({ ...p, [typeName]: file }))
+    // ID documents (including the rep-ID sentinel) get an advisory
+    // on-device OCR name-check. Never blocks the submission.
+    startOcr(typeName, file)
+  }
 
-    // ID documents get an advisory on-device OCR name-check (never blocks).
-    // Includes the representative-ID sentinel key, which isIdType() can't
-    // match because /\bid\b/ doesn't word-boundary inside '__rep_id__'.
-    // For rep ID, the OCR cross-checks against repForm.name (the rep's own
-    // name) at the moment of attach -- if the rep types their name AFTER
-    // attaching, the match will reflect whatever was typed at attach time.
-    const isRepId = typeName === REP_ID
-    if (isIdType(typeName) || isRepId) {
-      const token = (ocrTokens.current[typeName] ?? 0) + 1
-      ocrTokens.current[typeName] = token
-      setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
-      setOcrRunning(p => ({ ...p, [typeName]: true }))
-      const expectedName = isRepId ? repForm.name : (user?.name ?? '')
-      runIdOcr(file, expectedName)
-        .then(res => {
-          if (ocrTokens.current[typeName] !== token) return // stale: dropped
-          setOcrResults(p => ({ ...p, [typeName]: res }))
-        })
-        .finally(() => {
-          if (ocrTokens.current[typeName] === token) {
-            setOcrRunning(p => ({ ...p, [typeName]: false }))
-          }
-        })
-    }
+  // Re-runs OCR on the already-attached file. Surfaced via a "Try again"
+  // button next to the OCR advisory when the previous attempt failed
+  // outright (network blip during the language pack download, tesseract
+  // wasm load error, etc.). Without this the patient had to detach +
+  // reattach to retry, which is heavy for a transient error.
+  const retryOcr = (typeName) => {
+    const file = pendingFiles[typeName]
+    if (file) startOcr(typeName, file)
   }
 
   const removeReq = (typeName) => {
@@ -796,19 +809,30 @@ export default function RequestAssistance() {
                       )}
                       {/* Advisory on-device ID name-check — never blocks submit. */}
                       {isIdType(tp.name) && pending && (ocrBusy || ocr) && (
-                        <p className={`text-xs mt-1.5 ${
-                          ocrBusy ? 'text-gray-400'
-                          : ocr?.match === true ? 'text-green-600'
-                          : 'text-amber-600' /* no-match AND unreadable both warn -- patient should look */
-                        }`}>
-                          {ocrBusy
-                            ? t('patient.request.ocrChecking')
-                            : ocr?.match === true
-                              ? t('patient.request.ocrMatch')
-                              : ocr?.match === false
-                                ? t('patient.request.ocrNoMatch')
-                                : t('patient.request.ocrUnreadable')}
-                        </p>
+                        <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+                          <p className={`text-xs ${
+                            ocrBusy ? 'text-gray-400'
+                            : ocr?.match === true ? 'text-green-600'
+                            : 'text-amber-600' /* no-match AND unreadable both warn -- patient should look */
+                          }`}>
+                            {ocrBusy
+                              ? t('patient.request.ocrChecking')
+                              : ocr?.match === true
+                                ? t('patient.request.ocrMatch')
+                                : ocr?.match === false
+                                  ? t('patient.request.ocrNoMatch')
+                                  : t('patient.request.ocrUnreadable')}
+                          </p>
+                          {/* Hard-failure retry: OCR errored (no text + null match).
+                              Skips retry if text was read but name didn't match --
+                              same file would just produce the same result. */}
+                          {!ocrBusy && ocr && ocr.match == null && !ocr.text && (
+                            <button type="button" onClick={() => retryOcr(tp.name)}
+                              className="text-xs text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
+                              Try again
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )
@@ -863,23 +887,32 @@ export default function RequestAssistance() {
                       Matched against repForm.name at attach time, so if the
                       rep typed their name AFTER attaching, the match may
                       not reflect the typed name -- detaching + reattaching
-                      re-runs OCR with the latest name. */}
+                      re-runs OCR with the latest name (or tap Try again). */}
                   {pendingFiles[REP_ID] && (ocrRunning[REP_ID] || ocrResults[REP_ID]) && (() => {
                     const ocr = ocrResults[REP_ID]
+                    const busy = ocrRunning[REP_ID]
                     return (
-                      <p className={`text-xs mt-1.5 ${
-                        ocrRunning[REP_ID] ? 'text-gray-400'
-                        : ocr?.match === true ? 'text-green-600'
-                        : 'text-amber-600'
-                      }`}>
-                        {ocrRunning[REP_ID]
-                          ? t('patient.request.ocrChecking')
-                          : ocr?.match === true
-                            ? t('patient.request.ocrMatch')
-                            : ocr?.match === false
-                              ? t('patient.request.ocrNoMatch')
-                              : t('patient.request.ocrUnreadable')}
-                      </p>
+                      <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+                        <p className={`text-xs ${
+                          busy ? 'text-gray-400'
+                          : ocr?.match === true ? 'text-green-600'
+                          : 'text-amber-600'
+                        }`}>
+                          {busy
+                            ? t('patient.request.ocrChecking')
+                            : ocr?.match === true
+                              ? t('patient.request.ocrMatch')
+                              : ocr?.match === false
+                                ? t('patient.request.ocrNoMatch')
+                                : t('patient.request.ocrUnreadable')}
+                        </p>
+                        {!busy && ocr && ocr.match == null && !ocr.text && (
+                          <button type="button" onClick={() => retryOcr(REP_ID)}
+                            className="text-xs text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
+                            Try again
+                          </button>
+                        )}
+                      </div>
                     )
                   })()}
                 </div>

@@ -116,19 +116,57 @@ async function preprocessImage(file) {
   }
 }
 
-// Runs OCR on an image File. Returns { text, match } where match is the
-// fuzzy name-check result. Images only (PDFs are skipped → { match: null }).
-export async function runIdOcr(file, expectedName = '') {
-  if (!file || !file.type?.startsWith('image/')) return { text: '', match: null }
-  try {
-    const processed = await preprocessImage(file)
+// Long-lived tesseract worker shared across OCR calls. The convenience
+// recognize() function in tesseract.js spawns a fresh worker per call and
+// re-loads the ~10MB eng+fil language data each time -- wasteful when a
+// single request submission OCRs both the patient's Valid ID AND the
+// representative's ID (now that rep IDs also get OCR'd). A shared worker
+// loads the language data once and serves every subsequent call from the
+// same instance.
+//
+// Concurrency: worker.recognize() is internally serialized, so two OCRs
+// fired at the same time queue on the same worker rather than spinning up
+// two parallel tesseract processes. On the target low-RAM phones that's a
+// feature -- two parallel tesseract instances would saturate memory.
+//
+// The worker is created lazily on first call. _workerPromise caches the
+// in-flight initialization so concurrent first calls share one create()
+// rather than racing two.
+let _workerPromise = null
+async function getWorker() {
+  if (_workerPromise) return _workerPromise
+  _workerPromise = (async () => {
     const mod = await import('tesseract.js')
-    const recognize = mod.recognize || mod.default?.recognize
+    const createWorker = mod.createWorker || mod.default?.createWorker
+    if (!createWorker) throw new Error('tesseract.js createWorker not available')
     // 'eng+fil' loads BOTH language packs on first run (~10 MB combined,
     // cached by the browser thereafter). Filipino covers Tagalog text on
     // government IDs and improves name recognition for Filipino-script
     // contexts. English alone misses some characters and word boundaries.
-    const { data } = await recognize(processed, 'eng+fil')
+    return await createWorker('eng+fil')
+  })().catch((err) => {
+    // Reset so a future call can retry from scratch instead of inheriting
+    // the failed promise forever.
+    _workerPromise = null
+    throw err
+  })
+  return _workerPromise
+}
+
+// Runs OCR on an image File. Returns { text, match } where match is the
+// fuzzy name-check result. Images only (PDFs are skipped → { match: null }).
+//
+// Preprocessing and the (lazy) tesseract worker init run in parallel so the
+// first OCR call doesn't pay both costs back-to-back -- on cold cache the
+// tesseract chunk + language data download can take a few seconds.
+export async function runIdOcr(file, expectedName = '') {
+  if (!file || !file.type?.startsWith('image/')) return { text: '', match: null }
+  try {
+    const [processed, worker] = await Promise.all([
+      preprocessImage(file),
+      getWorker(),
+    ])
+    const { data } = await worker.recognize(processed)
     const text = (data?.text ?? '').trim()
     return { text, match: nameMatches(text, expectedName) }
   } catch {
