@@ -16,6 +16,8 @@ import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
+import Tour from '../../components/Tour'
+import { agencyDashboardTour } from '../../utils/tours'
 import toast from 'react-hot-toast'
 
 // Threshold below which the agency gets a one-shot "budget running low"
@@ -240,7 +242,7 @@ export default function AgencyDashboard() {
         </div>
 
         {/* Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+        <div data-tour-id="agency-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
           <div className="card p-4">
             <div className="flex items-center gap-2 mb-1">
               <MdWarning size={16} className="text-amber-500" />
@@ -265,7 +267,7 @@ export default function AgencyDashboard() {
         </div>
 
         {/* Slot bar */}
-        <div className="card p-4 mb-5">
+        <div data-tour-id="agency-slots" className="card p-4 mb-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Today's Slot Usage</span>
             <span className="text-xs text-gray-400">Resets midnight</span>
@@ -303,7 +305,7 @@ export default function AgencyDashboard() {
           const isStale = budget.period === 'monthly' && periodDays != null && periodDays > STALE_PERIOD_DAYS
 
           return (
-            <div className={`card p-4 mb-5 ${warn ? 'border-amber-200 bg-amber-50/30' : ''}`}>
+            <div data-tour-id="agency-budget" className={`card p-4 mb-5 ${warn ? 'border-amber-200 bg-amber-50/30' : ''}`}>
               {isStale && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-700">
                   <MdWarning size={13} className="inline mr-1" />
@@ -342,7 +344,7 @@ export default function AgencyDashboard() {
         })()}
 
         {/* Quick Actions */}
-        <div className="mb-5">
+        <div data-tour-id="agency-actions" className="mb-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Quick Actions</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
@@ -436,6 +438,11 @@ export default function AgencyDashboard() {
           onClose={() => setShowTopUp(false)}
         />
       )}
+
+      {/* First-visit guided tour for coordinators / agency admins.
+          Auto-fires once per uid; spotlights metrics, slot meter,
+          budget card, and quick-action shortcuts. */}
+      <Tour steps={agencyDashboardTour} storageKey="agency-dashboard" />
     </Layout>
   )
 }

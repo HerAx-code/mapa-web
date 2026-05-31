@@ -1078,5 +1078,25 @@
       "weakNeed8": "Weak — needs 8+ chars",
       "weakAddLN": "Weak — add letters & numbers"
     }
+  },
+  "tour": {
+    "patient": {
+      "s1": {
+        "title": "Welcome to MAPA",
+        "body": "This is your home. Your application status, latest updates, and next steps all live here."
+      },
+      "s2": {
+        "title": "Your active request",
+        "body": "Your current request or the get-started card lives here. Tap it to act on the next step CRMC needs from you."
+      },
+      "s3": {
+        "title": "Your 5-step journey",
+        "body": "Track your progress from upload → review → interview → approval → Guarantee Letter. Tap any step to jump in."
+      },
+      "s4": {
+        "title": "Document status",
+        "body": "Verified and pending document counts at a glance. Tap to manage uploads or check rejection reasons."
+      }
+    }
   }
 }

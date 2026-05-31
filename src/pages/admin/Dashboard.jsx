@@ -11,6 +11,8 @@ import {
   MdHistory, MdFlag, MdDownload, MdCampaign,
   MdWarning, MdSpeed, MdCheckCircle, MdTimer,
 } from 'react-icons/md'
+import Tour from '../../components/Tour'
+import { adminDashboardTour } from '../../utils/tours'
 
 const timeAgo = (ts) => {
   if (!ts) return ''
@@ -311,7 +313,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Metric cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div data-tour-id="admin-metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           {METRICS.map((m, i) => (
             <button key={i} onClick={() => navigate(m.path)}
               className="card p-4 text-left hover:shadow-md transition-all">
@@ -375,7 +377,7 @@ export default function AdminDashboard() {
 
         {/* ── Alerts panel ── */}
         {alerts.length > 0 && (
-          <div className="mb-5">
+          <div data-tour-id="admin-alerts" className="mb-5">
             <div className="flex items-center gap-2 mb-2">
               <MdWarning size={16} className="text-amber-500" />
               <p className="text-sm font-semibold text-gray-800">Needs Attention</p>
@@ -400,7 +402,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
 
           {/* Recent Activity (3/5) */}
-          <div className="xl:col-span-3">
+          <div data-tour-id="admin-activity" className="xl:col-span-3">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-800">Recent Activity</h2>
               <button onClick={() => navigate('/admin/logs')}
@@ -439,7 +441,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Quick Actions (2/5) */}
-          <div className="xl:col-span-2 flex flex-col gap-4">
+          <div data-tour-id="admin-actions" className="xl:col-span-2 flex flex-col gap-4">
             {/* Manage */}
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Manage</p>
@@ -474,6 +476,11 @@ export default function AdminDashboard() {
 
         </div>
       </div>
+
+      {/* First-visit guided tour for CRMC operators. Auto-fires once per
+          uid; spotlights metrics, alerts, activity feed, and Manage /
+          Review shortcuts. */}
+      <Tour steps={adminDashboardTour} storageKey="admin-dashboard" />
     </Layout>
   )
 }

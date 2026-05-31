@@ -1078,5 +1078,25 @@
       "weakNeed8": "Mahina — kailangan ng 8+ character",
       "weakAddLN": "Mahina — magdagdag ng titik at numero"
     }
+  },
+  "tour": {
+    "patient": {
+      "s1": {
+        "title": "Maligayang pagdating sa MAPA",
+        "body": "Ito ang inyong tahanan. Nandito ang status ng inyong aplikasyon, mga pinakabagong update, at mga susunod na hakbang."
+      },
+      "s2": {
+        "title": "Ang inyong kasalukuyang hiling",
+        "body": "Nandito ang inyong aktibong hiling o ang get-started card. I-tap para gawin ang susunod na hinihiling ng CRMC."
+      },
+      "s3": {
+        "title": "Ang inyong 5-hakbang na paglalakbay",
+        "body": "Subaybayan ang inyong progreso: upload → review → panayam → pag-apruba → Guarantee Letter. I-tap ang anumang hakbang para magpatuloy."
+      },
+      "s4": {
+        "title": "Status ng dokumento",
+        "body": "Tingnan ang bilang ng na-verify at nakabinbing dokumento. I-tap para mag-upload o tingnan ang mga dahilan ng rejection."
+      }
+    }
   }
 }

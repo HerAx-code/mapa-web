@@ -11,6 +11,8 @@ import {
 import Layout from '../../components/Layout'
 import InstallPrompt from '../../components/InstallPrompt'
 import StatusBadge from '../../components/ui/StatusBadge'
+import Tour from '../../components/Tour'
+import { patientDashboardTour } from '../../utils/tours'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   collection, query, where, orderBy, onSnapshot, getDocs,
@@ -398,7 +400,7 @@ export default function PatientDashboard() {
             small line at the top, the STATUS card below is the hero.
             On desktop (sm+) the greeting returns to page-title weight
             so the dashboard reads like a landing page. */}
-        <div>
+        <div data-tour-id="patient-greeting">
           <h1 className="text-base sm:text-xl font-semibold text-gray-700 sm:text-gray-900">
             {t('patient.dashboard.subtitle', { name: firstName })}
           </h1>
@@ -407,7 +409,10 @@ export default function PatientDashboard() {
           )}
         </div>
 
-        {/* Main status card */}
+        {/* Main status card — wrapped so the tour can spotlight whichever
+            of the conditional branches is currently rendered (welcome
+            hero / active request / status / rejected). */}
+        <div data-tour-id="patient-hero">
         {loading ? (
           <div className="card p-6 animate-pulse">
             <div className="h-6 bg-gray-100 rounded w-48 mb-3" />
@@ -576,6 +581,7 @@ export default function PatientDashboard() {
             </button>
           </div>
         )}
+        </div>{/* /patient-hero wrapper */}
 
         {/* Document status — always a clickable card, shows both verified
             and pending counts so the patient sees their full picture. */}
@@ -606,6 +612,7 @@ export default function PatientDashboard() {
 
           return (
             <button
+              data-tour-id="patient-docs"
               className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
               onClick={() => navigate('/patient/request')}>
               <div className={`w-10 h-10 rounded-xl ${tone.iconBg} flex items-center justify-center flex-shrink-0`}>
@@ -621,7 +628,7 @@ export default function PatientDashboard() {
         })()}
 
         {/* Step guide — collapsible */}
-        <div className="card overflow-hidden">
+        <div data-tour-id="patient-steps" className="card overflow-hidden">
           <button
             className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
             onClick={() => setStepsOpen(!stepsOpenEffective)}>
@@ -696,6 +703,12 @@ export default function PatientDashboard() {
         <InstallPrompt />
 
       </div>
+
+      {/* First-visit guided tour. Auto-fires once per user (localStorage-
+          scoped to uid), four steps spotlighting the greeting, hero card,
+          steps card, and docs summary. Strings come from i18n so the
+          tour speaks Filipino when the language toggle is set. */}
+      <Tour steps={patientDashboardTour(t)} storageKey="patient-dashboard" />
     </Layout>
   )
 }
