@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { MdSearch, MdDownload, MdListAlt } from 'react-icons/md'
 import { exportToCSV, dateStamp } from '../../utils/export'
 import { APP_STATUS_CONFIG } from '../../utils/constants'
+import { tsToDate } from '../../utils/dates'
 import StatusBadge from '../../components/ui/StatusBadge'
 
 // Pull labels straight from the canonical APP_STATUS_CONFIG so the CSV
@@ -14,9 +15,8 @@ import StatusBadge from '../../components/ui/StatusBadge'
 const statusLabel = (s) => APP_STATUS_CONFIG[s]?.label ?? s ?? ''
 
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 export default function AgencyLogs() {
@@ -36,7 +36,11 @@ export default function AgencyLogs() {
       setApps(
         snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (b.submittedAt?.seconds ?? 0) - (a.submittedAt?.seconds ?? 0))
+          // Sort via tsToDate so legacy data stored as JS Date or ISO
+          // string still sorts correctly. The previous `.seconds`
+          // accessor only worked on Firestore Timestamp objects --
+          // legacy entries fell back to 0 and clustered at the top.
+          .sort((a, b) => (tsToDate(b.submittedAt)?.getTime() ?? 0) - (tsToDate(a.submittedAt)?.getTime() ?? 0))
       )
       setLoading(false)
     }, (err) => {
