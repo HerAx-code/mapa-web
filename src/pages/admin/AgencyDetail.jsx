@@ -778,14 +778,19 @@ export default function AgencyDetail() {
                       )}
                     </div>
                     {isDeleting && (
-                      <div className="bg-red-50 border-t border-red-100 px-5 py-3 flex items-center gap-3">
-                        <MdWarning size={16} className="text-red-500 flex-shrink-0" />
-                        <p className="text-sm text-red-700 flex-1">
-                          Delete <strong>{coord.name}</strong>? They will lose portal access immediately.
-                        </p>
-                        <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50"
+                      <div className="bg-red-50 border-t border-red-100 px-5 py-3 flex items-start gap-3">
+                        <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm text-red-700">
+                            Delete <strong>{coord.name}</strong>? They will lose portal access immediately.
+                          </p>
+                          <p className="text-xs text-red-600/80 mt-1 leading-relaxed">
+                            Note: The Firebase Auth account can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console → Authentication.
+                          </p>
+                        </div>
+                        <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
                           onClick={() => setConfirmCoord(null)}>Cancel</button>
-                        <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600"
+                        <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0"
                           onClick={() => handleDeleteCoord(coord)}>Delete</button>
                       </div>
                     )}
