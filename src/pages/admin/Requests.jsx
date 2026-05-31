@@ -489,6 +489,51 @@ function RequestDetail({ request, agencies, onClose }) {
     } finally { setBusy(false) }
   }
 
+  // Bulk-verify every pending doc on this request in a single Firestore batch.
+  // Saves clicks on the common case where the operator has read all the docs
+  // and they all look fine. Only the safe (verified) direction is bulked --
+  // rejection stays per-doc because it requires a reason and notifies the
+  // patient, both of which need individual judgment.
+  const bulkVerifyPending = async (pendingDocs) => {
+    if (!pendingDocs?.length) return
+    setBusy(true)
+    try {
+      const batch = writeBatch(db)
+      const now = serverTimestamp()
+      const reviewer = user.name ?? 'CRMC'
+      pendingDocs.forEach(d => {
+        batch.update(doc(db, 'documents', d.id), {
+          status: 'verified',
+          reviewedBy: reviewer,
+          reviewedAt: now,
+          rejectionReason: null,
+        })
+      })
+      const pendingIds = new Set(pendingDocs.map(d => d.id))
+      const updatedAttached = (request.attachedDocuments ?? []).map(a =>
+        pendingIds.has(a.documentId) ? { ...a, status: 'verified' } : a)
+      batch.update(doc(db, 'requests', request.id), {
+        attachedDocuments: updatedAttached,
+        ...(request.status === 'submitted' ? { status: 'under_review' } : {}),
+        updatedAt: now,
+      })
+      await batch.commit()
+      // Audit entries fan out after the batch commits -- logAudit writes are
+      // best-effort and shouldn't block or roll back a successful bulk verify.
+      pendingDocs.forEach(d => {
+        logAudit(user, {
+          action: 'doc_verified',
+          targetType: 'document', targetId: d.id, targetName: d.name,
+          details: `Request ${request.requestId} · bulk verify`,
+        })
+      })
+      toast.success(`Verified ${pendingDocs.length} document${pendingDocs.length === 1 ? '' : 's'}.`)
+    } catch (err) {
+      console.error('[Requests] bulk verify error:', err)
+      toast.error('Failed to bulk verify documents.')
+    } finally { setBusy(false) }
+  }
+
   // ② Assessment — schedule the single CRMC interview on the request, and
   // record its outcome. Scheduling advances the request to 'assessment'.
   const scheduleInterview = async (form) => {
@@ -627,16 +672,32 @@ function RequestDetail({ request, agencies, onClose }) {
 
           {/* ① Document verification */}
           <div className="card p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
                 Verify documents
               </h3>
-              {reqDocs.length > 0 && (
-                <span className={`badge text-xs ${allVerified ? 'badge-green' : 'badge-amber'}`}>
-                  {reqDocs.filter(d => d.status === 'verified').length}/{reqDocs.length} verified
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const pendingDocs = reqDocs.filter(d => d.status === 'pending' && !d._missing)
+                  if (pendingDocs.length < 2) return null
+                  return (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => bulkVerifyPending(pendingDocs)}
+                      className="text-xs font-medium text-green-700 hover:text-green-800 inline-flex items-center gap-1 disabled:opacity-50"
+                      title="Mark every Pending document on this request as Verified">
+                      <MdCheckCircle size={14} /> Verify all pending ({pendingDocs.length})
+                    </button>
+                  )
+                })()}
+                {reqDocs.length > 0 && (
+                  <span className={`badge text-xs ${allVerified ? 'badge-green' : 'badge-amber'}`}>
+                    {reqDocs.filter(d => d.status === 'verified').length}/{reqDocs.length} verified
+                  </span>
+                )}
+              </div>
             </div>
             {reqDocs.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No documents attached.</p>
