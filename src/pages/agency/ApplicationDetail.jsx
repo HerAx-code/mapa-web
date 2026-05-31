@@ -11,7 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
-import { GL_VALIDITY_DAYS, isGLExpired } from '../../utils/constants'
+import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { computeFunding } from '../../utils/requests'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
@@ -192,7 +192,7 @@ function CompactStepper({ app }) {
 // ── Compute the next-action CTA buttons for the hero ─────────────────────
 
 function getPrimaryActions(ctx) {
-  const { app, intakeReady, expired, handlers, navigate, signedScan } = ctx
+  const { app, intakeReady, expired, expiringSoon, handlers, navigate, signedScan } = ctx
   const goIntake = () => navigate(`/agency/applications/${app.id}/intake`)
 
   if (app.status === 'pending') {
@@ -259,8 +259,11 @@ function getPrimaryActions(ctx) {
   }
 
   if (app.status === 'certificate' && app.glStatus === 'issued' && !signedScan) {
+    const days = glDaysRemaining(app)
     return {
-      hint: 'Wet-sign the printed copy, then upload the scan so the patient can download it.',
+      hint: expiringSoon
+        ? `⚠ GL expires in ${days} day${days === 1 ? '' : 's'} — wet-sign the printed copy and upload the scan now so the patient can still redeem it.`
+        : 'Wet-sign the printed copy, then upload the scan so the patient can download it.',
       tone: 'amber',
       actions: [
         { label: 'Upload Signed Scan', icon: MdUpload, variant: 'primary',   onClick: () => handlers.setShowUpload(true) },
@@ -270,9 +273,12 @@ function getPrimaryActions(ctx) {
   }
 
   if (app.status === 'certificate' && app.glStatus === 'issued' && signedScan) {
+    const days = glDaysRemaining(app)
     return {
-      hint: 'When the provider bills back, mark the GL as redeemed.',
-      tone: 'brand',
+      hint: expiringSoon
+        ? `⚠ GL expires in ${days} day${days === 1 ? '' : 's'} — message the patient now so they redeem it before the committed budget is released.`
+        : 'When the provider bills back, mark the GL as redeemed.',
+      tone: expiringSoon ? 'amber' : 'brand',
       actions: [
         { label: 'Mark GL Redeemed', icon: MdCheckCircle, variant: 'primary-green', onClick: handlers.handleRedeemGL },
         { label: 'Reverse Approval', icon: MdCancel,      variant: 'secondary',     onClick: handlers.handleReverseApproval },
@@ -1056,6 +1062,11 @@ export default function ApplicationDetail() {
   const effectiveIntake = request?.intakeSheet ?? app.intakeSheet
   const intakeReady     = isIntakeComplete(effectiveIntake)
   const expired         = isGLExpired(app)
+  // Pre-expiry triage: still valid but the validity window closes soon.
+  // Drives the amber header chip + a dedicated hint state in
+  // getPrimaryActions so the coordinator's CTA reflects the urgency
+  // before the GL actually lapses (and the budget has to be released).
+  const expiringSoon    = isGLExpiringSoon(app)
   const isApproved      = ['approved', 'certificate'].includes(app.status)
   const intakeStatus    = requiredFieldsStatus({ ...(effectiveIntake ?? {}), completedBy: effectiveIntake?.completedBy ?? user.name }, user.name)
   const intakeDone    = intakeStatus.filter(r => r.done).length
@@ -1086,6 +1097,7 @@ export default function ApplicationDetail() {
     app,
     intakeReady,
     expired,
+    expiringSoon,
     signedScan,
     navigate,
     handlers: {
@@ -1167,9 +1179,14 @@ export default function ApplicationDetail() {
                     app.glStatus === 'redeemed' ? 'badge-green'
                     : app.glStatus === 'expired' ? 'bg-orange-100 text-orange-700'
                     : expired ? 'bg-orange-100 text-orange-700'
+                    : expiringSoon ? 'bg-amber-100 text-amber-700'
                     : 'badge-blue'
                   }`}>
-                    GL {expired && app.glStatus === 'issued' ? 'expired' : app.glStatus}
+                    GL {expired && app.glStatus === 'issued'
+                      ? 'expired'
+                      : expiringSoon && app.glStatus === 'issued'
+                        ? `expires in ${glDaysRemaining(app)}d`
+                        : app.glStatus}
                   </span>
                 )}
               </div>

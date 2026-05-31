@@ -8,7 +8,7 @@ import {
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { getOrCreateConversation } from '../../utils/messages'
-import { isGLExpired } from '../../utils/constants'
+import { isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import {
   MdSearch, MdDescription, MdMessage, MdInbox,
   MdOpenInNew, MdClose,
@@ -275,6 +275,16 @@ export default function Inbox() {
                             : 'text-gray-500'
                           }`}>
                             GL: {isGLExpired(app) && app.glStatus === 'issued' ? 'Expired (action needed)' : app.glStatus}
+                          </span>
+                        )}
+                        {/* Pre-expiry triage chip: nudges the coordinator to
+                            contact the patient before the GL lapses and the
+                            committed budget has to be reclaimed. Only shown
+                            while still valid (isGLExpired() handles the post-
+                            expiry state above). */}
+                        {isGLExpiringSoon(app) && (
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            ⚠ GL expires in {glDaysRemaining(app)}d
                           </span>
                         )}
                       </div>

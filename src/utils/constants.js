@@ -225,3 +225,35 @@ export const isGLExpired = (app) => {
   const days = Math.floor((Date.now() - issued.getTime()) / 86400000)
   return days > GL_VALIDITY_DAYS
 }
+
+// Default window for the pre-expiry "act now" warning. 3 days is the
+// triage signal: still time for the patient to redeem, but tight enough
+// that the agency coordinator should nudge them today rather than later.
+// (Patient TrackStatus uses a wider 7-day window so patients have more
+// runway to plan; agency triage wants a sharper threshold.)
+export const GL_EXPIRING_SOON_DAYS = 3
+
+// Days remaining in the GL validity window. Returns a positive integer
+// while valid, 0 on the last valid day, negative once past expiry, or
+// null when GL is not in 'issued' state or the issued-at date is missing.
+// For the simple "is it past?" answer use isGLExpired() — this helper
+// exists for "expires in N days" copy.
+export const glDaysRemaining = (app) => {
+  if (app?.glStatus !== 'issued') return null
+  const issued = app.approvedAt?.toDate
+    ? app.approvedAt.toDate()
+    : (app.approvedAt ? new Date(app.approvedAt) : null)
+  if (!issued) return null
+  const daysSinceIssue = Math.floor((Date.now() - issued.getTime()) / 86400000)
+  return GL_VALIDITY_DAYS - daysSinceIssue
+}
+
+// Pre-expiry triage signal: GL is issued, still valid, but its validity
+// window closes within the next `withinDays` days. Use this to surface
+// "expires in 3 days" chips so coordinators / patients can act before
+// the committed budget is reclaimed. False once the GL has actually
+// expired (use isGLExpired() for the post-window state).
+export const isGLExpiringSoon = (app, withinDays = GL_EXPIRING_SOON_DAYS) => {
+  const days = glDaysRemaining(app)
+  return days != null && days >= 0 && days <= withinDays
+}
