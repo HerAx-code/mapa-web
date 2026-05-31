@@ -6,6 +6,14 @@ export const BRAND_NAME = 'MAPA'
 export const BRAND_SUBTITLE = 'CRMC'
 export const BRAND_FULL = 'Medical Assistance Portal Access'
 
+// CRMC gateway identity — surfaces wherever the patient sees "who is
+// conducting my assessment" / "who endorsed my request". Centralized
+// so a rename or a multi-hospital rollout doesn't require chasing
+// hardcoded strings across patient/Interviews, GL templates, etc.
+export const CRMC_GATEWAY_NAME     = 'CRMC Malasakit'
+export const CRMC_GATEWAY_INITIALS = 'MC'
+export const CRMC_GATEWAY_COLOR    = 'bg-brand-500'
+
 // Budget period helpers — budget.period is an adjective ('monthly') which
 // reads awkwardly when embedded in phrases like "Budget this monthly".
 // Use PERIOD_NOUN[period] for "this {month/quarter/year}" / "per {month}"

@@ -9,6 +9,7 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { CRMC_GATEWAY_NAME, CRMC_GATEWAY_INITIALS, CRMC_GATEWAY_COLOR } from '../../utils/constants'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
@@ -103,9 +104,13 @@ export default function Interviews() {
           list.push({
             id:             active.id,
             appId:          active.requestId,
-            agencyName:     'CRMC Malasakit',
-            agencyInitials: 'MC',
-            agencyColor:    'bg-brand-500',
+            // CRMC is the assessment-interview gateway under the redesign
+            // (single interview per request, not per agency). Branding
+            // sourced from utils/constants so a rename or multi-hospital
+            // rollout doesn't need an edit in every interview surface.
+            agencyName:     CRMC_GATEWAY_NAME,
+            agencyInitials: CRMC_GATEWAY_INITIALS,
+            agencyColor:    CRMC_GATEWAY_COLOR,
             interviewDate:  active.interviewDate,
             interviewTime:  active.interviewTime,
             meetLink:       active.meetLink,

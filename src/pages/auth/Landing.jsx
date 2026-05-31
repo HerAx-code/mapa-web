@@ -9,8 +9,16 @@ import { MdShield, MdArrowForward, MdDownload, MdClose } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import LanguageToggle from '../../components/LanguageToggle'
 
+// Per-role landing destination when a signed-in user hits Landing or
+// the PWA bounces them out of standalone mode. Patient lands on the
+// Dashboard (status, steps, interviews) to match the home-base
+// pattern used by every other surface in the app -- previously the
+// patient was sent straight to /patient/request, which conflicted
+// with the line-41 fallback ('/patient/dashboard') and threw a
+// fresh patient straight into the wizard instead of letting them
+// orient first.
 const DASHBOARD = {
-  [ROLES.PATIENT]:      '/patient/request',
+  [ROLES.PATIENT]:      '/patient/dashboard',
   [ROLES.AGENCY]:       '/agency/dashboard',
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
