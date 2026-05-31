@@ -11,7 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
-import { GL_VALIDITY_DAYS } from '../../utils/constants'
+import { GL_VALIDITY_DAYS, isGLExpired } from '../../utils/constants'
 import { computeFunding } from '../../utils/requests'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
@@ -41,11 +41,9 @@ const daysSince = (ts) => {
   const d = tsToDate(ts)
   return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null
 }
-const isGLExpired = (app) => {
-  if (app?.glStatus !== 'issued') return false
-  const d = daysSince(app.approvedAt)
-  return d != null && d > GL_VALIDITY_DAYS
-}
+// isGLExpired now imported from utils/constants -- shared with Inbox,
+// Dashboard, and TrackStatus so all four surfaces agree on when an
+// 'issued' GL is past its validity window.
 const formatDate = (ts) => {
   if (!ts) return '—'
   const d = ts.toDate ? ts.toDate() : new Date(ts)

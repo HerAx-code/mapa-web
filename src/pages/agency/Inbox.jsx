@@ -8,7 +8,7 @@ import {
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { getOrCreateConversation } from '../../utils/messages'
-import { GL_VALIDITY_DAYS } from '../../utils/constants'
+import { isGLExpired } from '../../utils/constants'
 import {
   MdSearch, MdDescription, MdMessage, MdInbox,
   MdOpenInNew, MdClose,
@@ -28,11 +28,11 @@ const formatDate = (ts) => {
   const d = tsToDate(ts)
   return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
-const isGLExpired = (app) => {
-  if (app?.glStatus !== 'issued') return false
-  const d = daysSince(app.approvedAt)
-  return d != null && d > GL_VALIDITY_DAYS
-}
+// isGLExpired now lives in utils/constants alongside GL_VALIDITY_DAYS so
+// every consumer (Inbox, ApplicationDetail, Dashboard, TrackStatus) shares
+// one definition of "GL past its validity window but glStatus still says
+// issued" and there's no risk of the threshold or the boundary condition
+// drifting between files.
 
 // Status badge/label was inlined here. Now uses the shared <StatusBadge />
 // component sourced from APP_STATUS_CONFIG in constants.js — keeps wording

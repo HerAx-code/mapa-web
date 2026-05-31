@@ -207,3 +207,21 @@ export const AGENCIES = [
 // Surfaced on both patient (TrackStatus expiry banner) and agency
 // (Inbox / ApplicationDetail / Dashboard expiry handlers).
 export const GL_VALIDITY_DAYS = 30
+
+// "Is this GL past its validity window even though glStatus still says
+// 'issued'?" The post-window state machine flip to glStatus='expired'
+// happens via the lazy expiry sweep on agency/Dashboard (or a future
+// Cloud Function). Until that flip lands, the UI uses isGLExpired() to
+// show "Expired (action needed)" so the coordinator knows to release
+// committed budget. Duplicated in agency/Inbox + agency/ApplicationDetail
+// before extraction; now sourced from here so the threshold and the
+// answer match across surfaces.
+export const isGLExpired = (app) => {
+  if (app?.glStatus !== 'issued') return false
+  const issued = app.approvedAt?.toDate
+    ? app.approvedAt.toDate()
+    : (app.approvedAt ? new Date(app.approvedAt) : null)
+  if (!issued) return false
+  const days = Math.floor((Date.now() - issued.getTime()) / 86400000)
+  return days > GL_VALIDITY_DAYS
+}
