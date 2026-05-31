@@ -9,6 +9,7 @@ import {
 import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { tsToDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -36,7 +37,11 @@ function ProfileModal({ patient, onClose }) {
       setGlApps(
         apps
           .filter(a => ['approved', 'certificate'].includes(a.status) && a.approvedAmount != null)
-          .sort((a, b) => (b.approvedAt?.seconds ?? 0) - (a.approvedAt?.seconds ?? 0))
+          // Sort via tsToDate so legacy data stored as JS Date or ISO
+          // string still sorts correctly. The previous `.seconds`
+          // accessor was Firestore-Timestamp-only; legacy entries
+          // fell back to 0 and clustered at the top.
+          .sort((a, b) => (tsToDate(b.approvedAt)?.getTime() ?? 0) - (tsToDate(a.approvedAt)?.getTime() ?? 0))
       )
       const docs = docsSnap.docs.map(d => d.data())
       setDocSummary({ total: docs.length, verified: docs.filter(d => d.status === 'verified').length })
@@ -598,9 +603,12 @@ export default function Patients() {
               <p className="text-sm text-gray-500 mb-1">
                 You are about to permanently delete <strong>{confirmDeletePatient.name}</strong>'s account and all associated data.
               </p>
-              <p className="text-xs text-red-500 mb-5">
+              <p className="text-xs text-red-500 mb-3">
                 This will erase all uploaded documents, file contents, application history, and notifications.
                 This cannot be undone and satisfies the patient's right to erasure under RA 10173.
+              </p>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5 leading-relaxed">
+                <strong>Note:</strong> Their Firebase Auth account can't be deleted from the browser. The email stays registered until you also remove it from Firebase Console → Authentication. Required for full RA 10173 erasure.
               </p>
               <div className="flex gap-2 justify-end">
                 <button className="btn-secondary text-sm" onClick={() => setConfirmDeletePatient(null)}>Cancel</button>
