@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
@@ -76,6 +76,16 @@ export default function RequestAssistance() {
   const setRep = (f) => (e) => setRepForm(p => ({ ...p, [f]: e.target.value }))
   const [step, setStep] = useState(0)   // submission wizard step
 
+  // Per-attachment OCR tokens. Each attach (or remove) bumps the token for
+  // that typeName; when the OCR promise resolves we check that the token
+  // still matches before writing the result. This prevents a slow OCR that
+  // started before the patient removed or re-attached from leaving a stale
+  // result behind. Without this, the UI mostly hid the bug (the doc row
+  // wouldn't render OCR text unless `pending` was also set), but if the
+  // patient re-attached before the old promise resolved, the new file's
+  // fresh OCR result could be overwritten by the older promise.
+  const ocrTokens = useRef({})
+
   const attachReq = (typeName) => (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -85,16 +95,34 @@ export default function RequestAssistance() {
     setPendingFiles(p => ({ ...p, [typeName]: file }))
 
     // ID documents get an advisory on-device OCR name-check (never blocks).
-    if (isIdType(typeName)) {
+    // Includes the representative-ID sentinel key, which isIdType() can't
+    // match because /\bid\b/ doesn't word-boundary inside '__rep_id__'.
+    // For rep ID, the OCR cross-checks against repForm.name (the rep's own
+    // name) at the moment of attach -- if the rep types their name AFTER
+    // attaching, the match will reflect whatever was typed at attach time.
+    const isRepId = typeName === REP_ID
+    if (isIdType(typeName) || isRepId) {
+      const token = (ocrTokens.current[typeName] ?? 0) + 1
+      ocrTokens.current[typeName] = token
       setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
       setOcrRunning(p => ({ ...p, [typeName]: true }))
-      runIdOcr(file, user?.name ?? '')
-        .then(res => setOcrResults(p => ({ ...p, [typeName]: res })))
-        .finally(() => setOcrRunning(p => ({ ...p, [typeName]: false })))
+      const expectedName = isRepId ? repForm.name : (user?.name ?? '')
+      runIdOcr(file, expectedName)
+        .then(res => {
+          if (ocrTokens.current[typeName] !== token) return // stale: dropped
+          setOcrResults(p => ({ ...p, [typeName]: res }))
+        })
+        .finally(() => {
+          if (ocrTokens.current[typeName] === token) {
+            setOcrRunning(p => ({ ...p, [typeName]: false }))
+          }
+        })
     }
   }
 
   const removeReq = (typeName) => {
+    // Bump the token so any in-flight OCR for this slot is dropped on resolve.
+    ocrTokens.current[typeName] = (ocrTokens.current[typeName] ?? 0) + 1
     setPendingFiles(p => { const n = { ...p }; delete n[typeName]; return n })
     setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
     setOcrRunning(p => { const n = { ...p }; delete n[typeName]; return n })
@@ -331,7 +359,11 @@ export default function RequestAssistance() {
       // Representative identity documents (when filing on the patient's behalf).
       let filedBy = null
       if (filedByRep) {
-        const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', user })
+        // Persist the rep-ID OCR result so the CRMC verifier sees the same
+        // advisory line they get on the patient's own ID. The OCR ran at
+        // attach time against repForm.name (see attachReq).
+        const repIdOcr     = ocrResults[REP_ID] ?? null
+        const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', ocr: repIdOcr, user })
         const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', user })
         filedBy = {
           name:          repForm.name.trim(),
@@ -827,6 +859,29 @@ export default function RequestAssistance() {
                       <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(REP_ID)} />
                     </label>
                   )}
+                  {/* Advisory on-device OCR name-check for the rep's ID.
+                      Matched against repForm.name at attach time, so if the
+                      rep typed their name AFTER attaching, the match may
+                      not reflect the typed name -- detaching + reattaching
+                      re-runs OCR with the latest name. */}
+                  {pendingFiles[REP_ID] && (ocrRunning[REP_ID] || ocrResults[REP_ID]) && (() => {
+                    const ocr = ocrResults[REP_ID]
+                    return (
+                      <p className={`text-xs mt-1.5 ${
+                        ocrRunning[REP_ID] ? 'text-gray-400'
+                        : ocr?.match === true ? 'text-green-600'
+                        : 'text-amber-600'
+                      }`}>
+                        {ocrRunning[REP_ID]
+                          ? t('patient.request.ocrChecking')
+                          : ocr?.match === true
+                            ? t('patient.request.ocrMatch')
+                            : ocr?.match === false
+                              ? t('patient.request.ocrNoMatch')
+                              : t('patient.request.ocrUnreadable')}
+                      </p>
+                    )
+                  })()}
                 </div>
                 {/* Representative selfie */}
                 <div className="p-3 rounded-lg border border-gray-100">

@@ -44,6 +44,29 @@ export function nameMatches(text, expectedName) {
 // True for document-type names that look like an ID (so we only OCR those).
 export const isIdType = (name) => /\bid\b|identification/i.test(name || '')
 
+// Decode an image File to a drawable source, preferring createImageBitmap
+// (GPU-resident, much lower JS-heap footprint than new Image() + URL.create-
+// ObjectURL). The Image() fallback is kept for older browsers without
+// createImageBitmap support.
+//
+// Why this matters: a 12MP phone photo via the Image() path materializes
+// the full decoded bitmap in JS heap (~48 MB just for the pixels). On older
+// Android phones with 2-3 GB RAM and other tabs open this can OOM-crash.
+// createImageBitmap keeps the decoded image GPU-side until drawImage(), and
+// we close() it immediately after to release that memory.
+async function loadImage(file) {
+  if (typeof createImageBitmap === 'function') {
+    try { return await createImageBitmap(file) } catch { /* fall through */ }
+  }
+  return await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const i = new Image()
+    i.onload = () => { URL.revokeObjectURL(url); resolve(i) }
+    i.onerror = (err) => { URL.revokeObjectURL(url); reject(err) }
+    i.src = url
+  })
+}
+
 // Preprocess a phone-camera photo to give tesseract its best shot:
 //   - Downscale anything larger than 2000px on the long edge. Phones produce
 //     12MP+ images; tesseract is slow on them and OCR accuracy plateaus well
@@ -60,22 +83,20 @@ async function preprocessImage(file) {
   const MAX_DIM = 2000
   const CONTRAST = 1.4 // 1.0 = unchanged; >1 widens dark/light separation
   try {
-    const img = await new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file)
-      const i = new Image()
-      i.onload = () => { URL.revokeObjectURL(url); resolve(i) }
-      i.onerror = (err) => { URL.revokeObjectURL(url); reject(err) }
-      i.src = url
-    })
-    const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height))
-    const w = Math.round(img.width * scale)
-    const h = Math.round(img.height * scale)
+    const img = await loadImage(file)
+    const srcW = img.width, srcH = img.height
+    const scale = Math.min(1, MAX_DIM / Math.max(srcW, srcH))
+    const w = Math.round(srcW * scale)
+    const h = Math.round(srcH * scale)
     const canvas = document.createElement('canvas')
     canvas.width = w
     canvas.height = h
     const ctx = canvas.getContext('2d')
-    if (!ctx) return file
+    if (!ctx) { img.close?.(); return file }
     ctx.drawImage(img, 0, 0, w, h)
+    // Release the decoded bitmap immediately — we have the pixels we need
+    // on the canvas now, and on low-RAM devices holding both is wasteful.
+    img.close?.()
     const imgData = ctx.getImageData(0, 0, w, h)
     const d = imgData.data
     const intercept = 128 * (1 - CONTRAST)
