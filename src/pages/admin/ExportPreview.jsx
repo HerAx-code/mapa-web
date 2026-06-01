@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import ConfirmModal from '../../components/ConfirmModal'
 import {
   collection, query, where, getDocs, Timestamp,
 } from 'firebase/firestore'
@@ -11,6 +12,12 @@ import {
   MdArrowBack, MdSearch, MdRefresh, MdDownload, MdClose,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
+
+// Past this row count, an export will visibly chug the browser tab
+// (CSV string build + Blob copy) and Excel/Sheets will struggle to
+// open the file. Operators rarely need 10K+ rows in a single CSV --
+// usually it's because they forgot to date-filter. Confirm intent.
+const LARGE_EXPORT_THRESHOLD = 10000
 
 // ── Column definitions ────────────────────────────────────────────────────
 
@@ -254,12 +261,33 @@ export default function ExportPreview() {
   // ── Downloads ─────────────────────────────────────────────────────────
   const label = `${config?.title} — ${config?.statuses.find(s => s.key === selected)?.label ?? 'All'}`
 
+  // Pending-export shape lets ConfirmModal pull the rows + filename
+  // without closing over a stale `filtered` between renders.
+  const [pendingExport, setPendingExport] = useState(null)
+
+  const runExport = ({ rows, filename }) => exportToCSV(filename, config.cols, rows)
+
+  const requestExport = ({ rows, filename }) => {
+    if (rows.length === 0) return
+    if (rows.length >= LARGE_EXPORT_THRESHOLD) {
+      setPendingExport({ rows, filename })
+    } else {
+      runExport({ rows, filename })
+    }
+  }
+
   const downloadAll = () =>
-    exportToCSV(`${type}-all-${dateStamp()}.csv`, config.cols, filtered)
+    requestExport({
+      rows:     filtered,
+      filename: `${type}-all-${dateStamp()}.csv`,
+    })
 
   const downloadSelected = () => {
     const rows = filtered.filter(d => checkedIds.has(d.id))
-    exportToCSV(`${type}-selected-${dateStamp()}.csv`, config.cols, rows)
+    requestExport({
+      rows,
+      filename: `${type}-selected-${dateStamp()}.csv`,
+    })
   }
 
   const printAll = () =>
@@ -514,6 +542,39 @@ export default function ExportPreview() {
         </div>
 
       </div>
+
+      {/* Large-export confirmation. Triggered when filtered (or
+          selected) row count crosses LARGE_EXPORT_THRESHOLD. The
+          warning prevents an accidental 50K-row export from chugging
+          the browser tab and producing a CSV Excel can't open. */}
+      <ConfirmModal
+        open={!!pendingExport}
+        tone="warning"
+        title={`Export ${pendingExport?.rows.length.toLocaleString() ?? ''} rows?`}
+        body={
+          <>
+            <p className="mb-2">
+              You're about to download <strong>{pendingExport?.rows.length.toLocaleString()}</strong> rows
+              as a single CSV. Files this size can:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+              <li>Take several seconds to generate (the tab will look frozen)</li>
+              <li>Exceed Excel's row limit on older versions (1,048,576 rows in modern Excel, fine here, but Numbers/Sheets are slower)</li>
+              <li>Be slow to email or attach to a report</li>
+            </ul>
+            <p className="text-sm text-gray-600 mt-3">
+              Consider narrowing with a date range or status filter before downloading. Continue anyway?
+            </p>
+          </>
+        }
+        confirmLabel="Download anyway"
+        confirmLabelBusy="Generating CSV…"
+        onClose={() => setPendingExport(null)}
+        onConfirm={async () => {
+          runExport(pendingExport)
+          setPendingExport(null)
+        }}
+      />
     </Layout>
   )
 }
