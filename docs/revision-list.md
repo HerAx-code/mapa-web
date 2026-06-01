@@ -286,9 +286,16 @@ Continuation of §B.7 #7.5. The inline `ts.toDate ? ts.toDate() : new Date(ts)` 
 | 12.3 | Final batch (16 files, 27 sites) | All 12 admin pages with the pattern + agency/CertificateGenerator + agency/ApplicationDetail (4 cooldown sites) + agency/ApplicationModals + utils/intakeSheetHTML | `46a1196` |
 | 12.4 | Thesis doc close | §11.4 #19 expanded to reflect full migration arc; §11.5 acknowledged item removed (no longer accurate) | `eb51812` |
 
----
+### B.13 — Live-browser audit follow-ups (Playwright)
 
-## Part C — Summary
+Findings from driving the system live via Playwright at mobile (375×667) and desktop (1280×800) viewports. Three were shipped same-day in commit `d891f64` (L1 RequestAssistance slices permission-denied, L2 bottom tab "Apply" misleading label, L3 Login vs Landing route inconsistency). The remaining four were triaged in this batch:
+
+| # | Bug | Status | Resolution |
+|---|---|---|---|
+| 13.1 | **L4** admin avatar showed "U" instead of "SA" for super_admin | ✅ Shipped (`1afb7cd`) | Root cause: Firestore user doc for `admin@crmc.gov.ph` has `displayName` ("System Administrator") but no `name` field — likely an older seed or manual edit. Layout reads `user.name` everywhere → undefined → getInitials fallback "U". Defensive fix: `userDisplayName = user.name \|\| user.displayName \|\| ROLE_LABEL_SHORT[role]`, applied across all three Layout avatar/name call sites. getInitials also made null-safe |
+| 13.2 | **L5** Tour Skip button delayed dismissal | ⏳ Deferred | Investigated `finish()` in components/Tour.jsx — `setActive(false)` logic is correct. The "delay" observed via Playwright is likely a test-harness artifact: the snapshot was taken in the same tick as the click, before React's re-render committed. In normal human use, the next paint reflects the dismissed state. To fix conclusively would need an isolated React Testing Library reproduction; not worth the time unless real users report it |
+| 13.3 | **L6** notification bell badge inconsistent across patient pages | ⏳ Deferred | Investigated Layout.jsx — the unread-count subscription is correctly Layout-scoped, but each route component wraps content in `<Layout>` separately, so the subscription tears down and re-establishes on every navigation. The brief gap before the first onSnapshot delivery is when Playwright observed "no badge". Real users would see the badge ~100ms after page load. Proper fix: hoist Layout to App.jsx as a stable outer wrapper, OR move notifications subscription to AuthContext. Deferred because it's a meaningful refactor with potential to break role-based layout switching |
+| 13.4 | **L7** Landing agency cards all show "0 slots remaining" | ⏳ Deferred (data state) | Render logic in Landing.jsx:252-258 is correct — reads `agency.slots?.total ?? 0` and `agency.slots?.remaining ?? 0` with proper null-safe fallback. The "0" comes from the actual Firestore data, not the code. The seed sets `slots: { total: 25, remaining: 25 }` on first creation but uses `setDoc({ merge: true })` so existing docs with consumed slots aren't reset on re-seed. Resolution paths: (a) hit `/seed` after using `setDoc({ merge: false })` for agencies (reseed restores 25/25), (b) wait for the daily slot reset to fire on next admin/Requests open, (c) manually reset via admin/AgencyDetail. Not a code bug |
 
 | Metric | Count |
 |---|---|
