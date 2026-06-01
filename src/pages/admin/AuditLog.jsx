@@ -4,8 +4,9 @@ import {
   collection, query, orderBy, limit, getDocs, startAfter, getCountFromServer,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { MdSearch, MdHistory } from 'react-icons/md'
+import { MdSearch, MdHistory, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { exportToCSV, dateStamp } from '../../utils/export'
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -170,10 +171,37 @@ export default function AuditLog() {
     <Layout breadcrumb="Audit Log">
       <div className="p-4 sm:p-6">
 
-        {/* Header */}
-        <div className="mb-5">
-          <h1 className="page-title">Audit Log</h1>
-          <p className="page-sub">Complete record of all administrative actions across the portal.</p>
+        {/* Header — Export CSV uses the current filter set so a
+            compliance reviewer asking for "this week's account ops"
+            gets exactly the rows visible after the category +
+            search filters are applied. Disabled while loading or
+            when there's nothing to export. */}
+        <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="page-title">Audit Log</h1>
+            <p className="page-sub">Complete record of all administrative actions across the portal.</p>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary flex items-center gap-1.5 text-sm"
+            disabled={loading || filtered.length === 0}
+            onClick={() => exportToCSV(
+              `platform-audit-${dateStamp()}.csv`,
+              [
+                { label: 'Timestamp',     getValue: e => fullDate(e.createdAt) },
+                { label: 'Action',        getValue: e => (ACTION_CONFIG[e.action]?.label ?? e.action) },
+                { label: 'Action Code',   getValue: e => e.action },
+                { label: 'Actor',         getValue: e => e.actorName ?? 'System' },
+                { label: 'Actor Role',    getValue: e => e.actorRole ?? '' },
+                { label: 'Actor Agency',  getValue: e => e.actorAgencyId ?? '' },
+                { label: 'Target',        getValue: e => e.targetName ?? '' },
+                { label: 'Target Type',   getValue: e => e.targetType ?? '' },
+                { label: 'Details',       getValue: e => e.details ?? '' },
+              ],
+              filtered,
+            )}>
+            <MdDownload size={15} /> Export CSV ({filtered.length})
+          </button>
         </div>
 
         {/* Summary */}

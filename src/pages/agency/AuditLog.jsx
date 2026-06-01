@@ -6,8 +6,9 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { MdSearch, MdHistory, MdLockOutline } from 'react-icons/md'
+import { MdSearch, MdHistory, MdLockOutline, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { exportToCSV, dateStamp } from '../../utils/export'
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -163,12 +164,38 @@ export default function AgencyAuditLog() {
     <Layout breadcrumb="Audit Log">
       <div className="p-4 sm:p-6 max-w-5xl">
 
-        {/* Header */}
-        <div className="mb-5">
-          <h1 className="page-title">Audit Log</h1>
-          <p className="page-sub">
-            Every action taken by your agency's staff. Use this to satisfy COA-style accountability for fund movements and role changes.
-          </p>
+        {/* Header — Export CSV uses the current filter set so a
+            COA auditor asking for "this quarter's budget actions"
+            gets exactly the rows visible after the chips + search
+            are applied. Disabled while loading or when there's
+            nothing to export. */}
+        <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="page-title">Audit Log</h1>
+            <p className="page-sub">
+              Every action taken by your agency's staff. Use this to satisfy COA-style accountability for fund movements and role changes.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary flex items-center gap-1.5 text-sm"
+            disabled={loading || filtered.length === 0}
+            onClick={() => exportToCSV(
+              `agency-audit-${dateStamp()}.csv`,
+              [
+                { label: 'Timestamp',     getValue: e => fullDate(e.createdAt) },
+                { label: 'Action',        getValue: e => (ACTION_CONFIG[e.action]?.label ?? e.action) },
+                { label: 'Action Code',   getValue: e => e.action },
+                { label: 'Actor',         getValue: e => e.actorName ?? 'System' },
+                { label: 'Actor Role',    getValue: e => e.actorRole ?? '' },
+                { label: 'Target',        getValue: e => e.targetName ?? '' },
+                { label: 'Target Type',   getValue: e => e.targetType ?? '' },
+                { label: 'Details',       getValue: e => e.details ?? '' },
+              ],
+              filtered,
+            )}>
+            <MdDownload size={15} /> Export CSV ({filtered.length})
+          </button>
         </div>
 
         {/* Category chips */}
