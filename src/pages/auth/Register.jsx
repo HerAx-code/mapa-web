@@ -12,6 +12,7 @@ import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
 import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../../utils/barmm'
 import { BARANGAYS } from '../../utils/barmm-barangays'
+import { hasReservedToken } from '../../utils/names'
 import toast from 'react-hot-toast'
 
 const CURRENT_YEAR        = new Date().getFullYear()
@@ -23,24 +24,6 @@ const ACCESS_CODE_PREFIX_RE = /^CRMC-(\d{4})-/
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
 const SUFFIXES        = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
-
-// Names that look like internal services or staff roles, which we don't
-// want patients to register with. We discovered fake accounts like
-// "CRMC Admin", "System Diagnostics", and "NUKE" in the patient list
-// (paired with prompt-injection attempts in the audit log), so refuse
-// these at the gate instead of relying on social-worker review to catch
-// impersonation post-hoc. Match on whole tokens (case-insensitive) so
-// names that happen to contain a substring like "admiNAL" still pass.
-const RESERVED_NAME_TOKENS = new Set([
-  'admin', 'administrator', 'system', 'crmc', 'mapa', 'malasakit',
-  'diagnostic', 'diagnostics', 'recovery', 'migration', 'daemon',
-  'agency', 'staff', 'super', 'root', 'test', 'nuke', 'cascade',
-  'claude', 'gpt', 'bot',
-])
-const hasReservedToken = (name) => {
-  const tokens = (name || '').toLowerCase().split(/[^a-zñ]+/i).filter(Boolean)
-  return tokens.some(t => RESERVED_NAME_TOKENS.has(t))
-}
 
 // Sanitizers
 const sanitizeName  = (val) => val.replace(/[^A-Za-zÑñ\s\-'.,]/g, '').slice(0, 50)
