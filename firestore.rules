@@ -254,21 +254,36 @@ service cloud.firestore {
     // ── notifications ─────────────────────────────────────────────────────────
     // Only the owner can read and manage their notifications.
     // Any authenticated user can create a notification for any user (needed for
-    // cross-role notifications: agency notifies patient, admin notifies agency, etc.)
+    // cross-role notifications: agency notifies patient, admin notifies agency,
+    // etc.). Title and body are bounded so a malicious authenticated client
+    // can't push a multi-KB payload (phishing copy, prompt-injection text)
+    // into another user's notification panel.
     match /notifications/{userId}/items/{notifId} {
       allow read:   if isAuth() && uid() == userId;
-      allow create: if isAuth();
+      allow create: if isAuth() &&
+                       (!('title' in request.resource.data) ||
+                        (request.resource.data.title is string &&
+                         request.resource.data.title.size() <= 200)) &&
+                       (!('body' in request.resource.data) ||
+                        (request.resource.data.body is string &&
+                         request.resource.data.body.size() <= 2000));
       allow update: if isAuth() && uid() == userId;
       allow delete: if isAuth() && uid() == userId;
     }
 
     // ── conversations ─────────────────────────────────────────────────────────
     // Only participants can read and write a conversation and its messages.
-    // Any authenticated user can create a conversation (starts a new thread).
+    // Any authenticated user can create a conversation, but they MUST list
+    // themselves in participants — otherwise an attacker could spawn
+    // unreadable conversations (the read rule requires participation) to
+    // pollute other users' message indexes or surface adversarial titles in
+    // any list view that doesn't filter participants.
     // Admins can delete conversations (Messages page delete feature).
     match /conversations/{convId} {
       allow read:   if isAuth() && uid() in resource.data.participants;
-      allow create: if isAuth();
+      allow create: if isAuth() &&
+                       request.resource.data.participants is list &&
+                       uid() in request.resource.data.participants;
       allow update: if isAuth() && uid() in resource.data.participants;
       allow delete: if isAdmin() || (isAuth() && uid() in resource.data.participants);
 
@@ -314,10 +329,23 @@ service cloud.firestore {
     // Reads: super_admin + staff_admin only — entries can include
     //   recipient UIDs and notification bodies, which are PII-adjacent.
     // Writes: any authenticated user can append (notify() runs from
-    //   patient, agency, and admin contexts). Immutable.
+    //   patient, agency, and admin contexts). The string fields are
+    //   bounded so a misconfigured caller — or a malicious one — can't
+    //   bury this admin-only collection with multi-KB payloads. The
+    //   notify() utility only writes <500 char strings in practice.
+    //   Immutable.
     match /notificationErrors/{errorId} {
       allow read:           if isAdmin();
-      allow create:         if isAuth();
+      allow create:         if isAuth() &&
+                               (!('title' in request.resource.data) ||
+                                (request.resource.data.title is string &&
+                                 request.resource.data.title.size() <= 200)) &&
+                               (!('body' in request.resource.data) ||
+                                (request.resource.data.body is string &&
+                                 request.resource.data.body.size() <= 2000)) &&
+                               (!('error' in request.resource.data) ||
+                                (request.resource.data.error is string &&
+                                 request.resource.data.error.size() <= 2000));
       allow update, delete: if false;
     }
 
@@ -369,7 +397,15 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow read:   if isAdmin() ||
                        (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
-      allow create: if isAuth();
+      // Caller must self-attribute (reportedBy == uid()) and the
+      // description is bounded — defends the same admin-visible surface
+      // from multi-KB or impersonated submissions.
+      allow create: if isAuth() &&
+                       (!('reportedBy' in request.resource.data) ||
+                        request.resource.data.reportedBy == uid()) &&
+                       (!('description' in request.resource.data) ||
+                        (request.resource.data.description is string &&
+                         request.resource.data.description.size() <= 5000));
       allow update: if isAdmin() ||
                        (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
       allow delete: if isAdmin();
