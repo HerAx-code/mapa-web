@@ -7,7 +7,7 @@ import {
   MdListAlt, MdMessage, MdUnfoldMore, MdUnfoldLess,
 } from 'react-icons/md'
 
-const LAST_UPDATED = '2026-05-19'
+const LAST_UPDATED = '2026-06-01'
 
 // ── Sections (Glossary lives here too, no special-case rendering) ──────────
 
@@ -20,9 +20,12 @@ const SECTIONS = [
     title: 'How MAPA works for your agency',
     content:
       `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for CRMC. ` +
-      `As an agency coordinator (social worker), you receive applications from patients, conduct case assessment, ` +
-      `interview applicants via Google Meet, decide on approval with a specific guaranteed amount, and issue a ` +
-      `Guarantee Letter that the named provider redeems with your agency.\n\n` +
+      `Under the co-funding model, CRMC is the single intake gateway: patients submit ONE request for their full bill, ` +
+      `CRMC verifies the documents, conducts the assessment interview, and fills the Unified Intake Sheet. CRMC then ` +
+      `endorses the request to one or more agencies — each endorsement is a "slice" toward zero balance.\n\n` +
+      `Your job as an agency coordinator is the funding decision only. You do NOT re-verify documents and you do NOT ` +
+      `re-interview the patient. You read CRMC's assessment, decide whether to approve your slice (and for how much), ` +
+      `and issue the Guarantee Letter that the named provider redeems with your agency.\n\n` +
       `MAPA does not move money — it records commitments. Actual settlement happens off-system between your ` +
       `agency and the provider.`,
   },
@@ -30,14 +33,14 @@ const SECTIONS = [
     id: 'lifecycle',
     group: 'Orientation',
     icon: '🔄',
-    title: 'Application lifecycle',
+    title: 'Slice lifecycle',
     items: [
-      { label: 'Pending',     desc: 'Patient submitted. Slot was auto-deducted. Awaiting your first review.' },
-      { label: 'Reviewing',   desc: 'You clicked Start Review. Schedule the interview, conduct it, then open the Assessment to record what you learned.' },
-      { label: 'Interview',   desc: 'You scheduled a Google Meet interview. Date, time, link, and conducting social worker are recorded.' },
-      { label: 'Approved',    desc: 'You issued the approval with amount, purpose, and payable-to. GL status: Issued. Committed budget incremented.' },
-      { label: 'Certificate', desc: 'GL has been printed and confirmed. The patient is notified. Upload the wet-signed scan so the patient can download it.' },
-      { label: 'Rejected',    desc: 'Application denied. Reason is sent to the patient.' },
+      { label: 'Endorsed',     desc: 'CRMC routed a slice of the patient\'s request to your agency. Waiting on the patient to confirm they want to proceed with your share.' },
+      { label: 'For Funding',  desc: 'Patient confirmed. The slice is in your queue for a funding decision. CRMC has already verified docs and done the assessment — you decide approve / needs info / reject.' },
+      { label: 'Needs Info',   desc: 'You requested clarification from the patient. They\'ve been notified; the slice waits in your queue with the amber chip until they respond.' },
+      { label: 'Approved',     desc: 'You issued the approval with amount, purpose, and payable-to. GL status: Issued. Committed budget incremented. Patient notified.' },
+      { label: 'Certificate',  desc: 'GL has been printed and confirmed. Upload the wet-signed scan so the patient can download it.' },
+      { label: 'Rejected',     desc: 'Slice denied. Reason is sent to the patient. Other agency slices on the same request continue independently.' },
     ],
   },
   {
@@ -47,9 +50,11 @@ const SECTIONS = [
     title: 'Glossary — key terms',
     items: [
       { label: 'Patient Access Code',   desc: 'CRMC-YYYY-NNNNN code issued by Medical Social Services. Patients must enter it to register.' },
-      { label: 'Application',           desc: 'A request from a patient for assistance from a specific agency. Has a status: pending → reviewing → interview → approved → certificate (or rejected).' },
-      { label: 'Case Assessment',      desc: 'A long form the social worker fills in during or after the patient interview, recording family/income/medical details and a recommendation. Required before approval. (Printed copy retains the official "Unified Intake Sheet" header for COA audit purposes.)' },
-      { label: 'Means-Test Category',   desc: 'Manual classification of the patient: Indigent / Marginalized / Low Income / Above Threshold.' },
+      { label: 'Request',               desc: 'The patient\'s top-level ask — one bill, one amount needed. Owned by CRMC after submission. The parent of one or more agency slices.' },
+      { label: 'Application slice',     desc: 'Your agency\'s portion of a patient request. Created when CRMC endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or needs_info / rejected).' },
+      { label: 'Endorsement',           desc: 'CRMC\'s decision to route part of a verified request to your agency. Endorsement carries CRMC\'s assessment + verified documents — you do not re-do that work.' },
+      { label: 'CRMC Assessment',       desc: 'The Unified Intake Sheet that CRMC fills during their single assessment interview. You see it read-only on each slice. Replaces the agency-side Case Assessment that existed before the redesign.' },
+      { label: 'Means-Test Category',   desc: 'Manual classification recorded by CRMC: Indigent / Marginalized / Low Income / Above Threshold.' },
       { label: 'Guarantee Letter (GL)', desc: 'The official document issued to an approved patient. States the guaranteed amount, the purpose, and the provider that will be billed.' },
       { label: 'GL Status',             desc: 'Issued (just approved), Redeemed (provider billed back), or Expired (30-day window passed).' },
       { label: 'Committed Budget',      desc: 'Total money approved but not yet redeemed. Subtracted from your allocation.' },
@@ -65,78 +70,48 @@ const SECTIONS = [
     icon: '📥',
     title: 'Working the Inbox',
     steps: [
-      'Open Application Inbox from the sidebar. The badge shows pending + reviewing applications.',
-      'Each row shows: patient name, app ID, days waiting, document count, intake status, status badge.',
-      'Click a row to open the four-tab detail modal: Overview, Assessment, Documents, Timeline & Notes.',
-      'The Message icon on the right opens a chat with the patient. The blue button reads "Review" or "View" based on status.',
-      'Summary cards at the top filter the list by status — click "Pending" to focus your queue.',
+      'Open Application Inbox from the sidebar. The badge shows slices waiting on you (For Funding + Needs Info).',
+      'Each row shows: patient name, slice ID, days since endorsement, document count, and a status chip.',
+      'Click a row to open the four-tab detail view: Overview, CRMC Assessment (read-only), Documents (read-only), Timeline & Notes.',
+      'The Message icon opens a chat with the patient. The blue action button reads "Review" or "View" depending on status.',
+      'Summary cards at the top filter the list by status — click "For Funding" to focus your decision queue.',
     ],
-    note: 'Days-waiting on each row turns amber at 3+ days and red at 7+ days. Tackle red rows first.',
+    note: 'Days-since-endorsement turns amber at 3+ days and red at 7+ days. Tackle red rows first — patients are waiting on your funding decision after CRMC has already done their part.',
   },
   {
-    id: 'start-review',
+    id: 'review-endorsement',
     group: 'Daily Processing',
     icon: '▶️',
-    title: 'Start reviewing a pending application',
-    steps: [
-      'Click a Pending row → the application detail modal opens on the Overview tab.',
-      'Verify patient info, attached documents (Documents tab), and any past notes.',
-      'Click Start Review in the action footer. Status becomes Reviewing and the patient is notified.',
-      'The Assessment tab unlocks. Schedule the interview first, then open the Assessment to record what you learn during/after the interview.',
-    ],
-  },
-  {
-    id: 'intake',
-    group: 'Daily Processing',
-    icon: '📋',
-    title: 'Completing the Case Assessment',
+    title: 'Reviewing an endorsed slice',
     content:
-      `The Case Assessment is the digital equivalent of CRMC's paper Client's Information Sheet + Social Case Study. ` +
-      `Fill it during or after the patient interview — the data here comes from what the patient tells you, not from ` +
-      `the application documents alone. It must be completed before approval — the Approve button stays disabled until ` +
-      `6 required fields are filled: Household Size, Monthly Income, Diagnosis, Recommendation, Means-Test Category, ` +
-      `and Author (auto-filled). The printed copy retains the official "Unified Intake Sheet" header for COA audit purposes.`,
+      `When a slice reaches "For Funding," CRMC has already verified the patient's documents, conducted the assessment ` +
+      `interview, and filled the Unified Intake Sheet. Your review is a funding judgment, not a re-verification.`,
     steps: [
-      'Schedule and conduct the patient interview first.',
-      'Open the application → Assessment tab → click Open Assessment.',
-      'Fill family composition (one row per member), income and employment, monthly expenses.',
-      'Fill medical details: diagnosis (required), attending physician, hospital case number (IHOMIS reference), estimated cost.',
-      'Write the social case study narrative (free text) and your recommendation (required).',
-      'Pick the means-test category (required): Indigent / Marginalized / Low Income / Above Threshold.',
-      'Save. The assessment chip on the Inbox row turns green when complete.',
+      'Click a "For Funding" row → the application detail opens on the Overview tab.',
+      'Read the CRMC Assessment tab to see household composition, income, expenses, diagnosis, social case narrative, and CRMC\'s recommendation. This is the same Unified Intake Sheet CRMC used; you cannot edit it.',
+      'Open the Documents tab to view the patient\'s attached files (also read-only on your side).',
+      'Check the request context — your slice is part of a larger ask; the page shows what other agencies have already approved toward zero balance.',
+      'Choose one of three actions: Approve & Issue GL, Request More Info, or Reject.',
     ],
-    note: 'You can save partial progress at any time and return after a follow-up call. Empty optional fields are fine — mirror what you would write on paper.',
+    note: 'If something in CRMC\'s assessment looks wrong or incomplete, use Request More Info (sends a question to the patient) or Reject with a clear reason — do not edit CRMC\'s sheet.',
   },
   {
-    id: 'interview',
+    id: 'needs-info',
     group: 'Daily Processing',
-    icon: '🎥',
-    title: 'Scheduling an interview',
-    steps: [
-      'In the Inbox app modal, click Schedule Interview (only available on Reviewing status).',
-      'Create a Google Meet link in advance at meet.google.com.',
-      'Enter date, time, the Meet link, and your name as the conducting social worker.',
-      'Click Schedule Interview. The patient is notified with the date, time, and Meet link.',
-      'The interview also appears on the Online Interviews page.',
-    ],
-    note: 'To reschedule: open the application → Overview tab → click Reschedule in the purple interview panel, or use the Reschedule outcome action.',
-  },
-  {
-    id: 'outcome',
-    group: 'Daily Processing',
-    icon: '✍️',
-    title: 'Recording an interview outcome',
+    icon: '❔',
+    title: 'Requesting more info from the patient',
     content:
-      `After the Google Meet ends, record what happened — this is required so the application can move forward.`,
+      `If CRMC\'s assessment is missing something your agency specifically needs — proof of address for a province-locked ` +
+      `program, a more recent billing statement, etc. — you can pause the slice and request it from the patient ` +
+      `directly without rejecting.`,
     steps: [
-      'Open the application (or open it on the Online Interviews page).',
-      'In the Overview tab\'s purple interview panel, click one of three buttons:',
-      '  • Mark Completed — interview went as planned. Add observations in notes.',
-      '  • No-Show — patient missed the interview. The patient is notified to contact you.',
-      '  • Reschedule — pick a new date/time and Meet link.',
-      'Save. The outcome and any notes are recorded permanently.',
+      'In the application detail, click Request More Info.',
+      'Write a specific question or list. The patient will see exactly this text.',
+      'Click Send. Slice status moves to Needs Info; the patient is notified with your message.',
+      'When the patient responds, the slice returns to your queue with the original For Funding chip.',
+      'Click Resume Review to continue, or Update Request to ask a follow-up.',
     ],
-    note: 'Outcomes can be edited after saving — open the application again and click "Edit outcome" on the Interviews page.',
+    note: 'Use Request More Info sparingly — CRMC already did the standard verification. This is for agency-specific extras.',
   },
 
   // ── Approval and GL ────────────────────────────────────────────
@@ -147,31 +122,32 @@ const SECTIONS = [
     title: 'Approving and issuing a Guarantee Letter',
     content:
       `The Approve & Issue GL action captures three pieces of information: the guaranteed amount, the purpose, ` +
-      `and the provider (Payable To). The application moves to Approved, the agency's committed budget increases ` +
-      `by the approved amount, and the patient is notified.`,
+      `and the provider (Payable To). The slice moves to Approved, your agency's committed budget increases ` +
+      `by the approved amount, and the patient is notified. There is no separate "complete the assessment first" ` +
+      `prerequisite under the co-funding redesign — CRMC has already completed that on the parent request.`,
     steps: [
-      'In the application modal, click Approve & Issue GL (only available after the Case Assessment is complete).',
+      'Open the slice → click Approve & Issue GL (available once status is "For Funding").',
       'Review the budget remaining banner — your approval cannot exceed this amount.',
-      'If a cooldown warning appears (a recent approval for the same patient), decide whether to proceed.',
-      'Enter the approved amount in pesos. Validation blocks amounts exceeding the remaining budget.',
+      'If a cooldown warning appears (a recent approval for the same patient by any agency), decide whether to proceed.',
+      'Enter the approved amount in pesos. Validation blocks amounts exceeding the remaining budget OR the slice\'s outstanding balance on the parent request.',
       'Pick one or more purposes from your agency\'s assistance types.',
       'Enter the provider name (Payable To) — e.g. "CRMC Billing Department", "Mercury Drug Cotabato".',
       'Click Approve & Issue GL. The committed budget increments and the patient is notified.',
     ],
-    note: 'Approve only what your agency can actually fund. The budget enforcement is real — exceeding it is blocked.',
+    note: 'Approve only what your agency can actually fund. The budget enforcement is real — exceeding it is blocked. You can approve LESS than the slice asks for; the remaining balance stays open for other agencies to fund.',
   },
   {
     id: 'reject',
     group: 'Approval & Guarantee Letter',
     icon: '⛔',
-    title: 'Rejecting an application',
+    title: 'Rejecting a slice',
     steps: [
-      'Open the application → click Reject in the action footer.',
-      'Pick a template reason (Incomplete documents, Income ineligible, etc.) or write a custom reason.',
+      'Open the slice → click Reject in the action footer.',
+      'Pick a template reason (Income ineligible for our program, Provider not in our network, etc.) or write a custom reason.',
       'Click Confirm Reject. The patient is notified with the exact reason.',
-      'If the application was submitted today, the slot is automatically restored.',
+      'If the slice was endorsed today, the slot is automatically restored.',
     ],
-    note: 'Be specific so the patient knows what to correct before reapplying.',
+    note: 'Be specific so the patient knows whether to appeal, ask CRMC for re-endorsement to another agency, or correct something for next time. Rejecting one slice does not close the parent request — other agency slices continue independently.',
   },
   {
     id: 'print-upload',
@@ -181,15 +157,15 @@ const SECTIONS = [
     content:
       `After approval, the Guarantee Letter has its own dedicated viewer page. From there you can print to a physical printer for wet-signing, or save as a true vector PDF using the browser's "Save as PDF" option.`,
     items: [
-      { label: 'Open GL Viewer', desc: 'From the application detail (or the Guarantee Letters page), click "Open GL Viewer" to see the full GL rendered exactly as it will print.' },
+      { label: 'Open GL Viewer', desc: 'From the slice detail (or the Guarantee Letters page), click "Open GL Viewer" to see the full GL rendered exactly as it will print.' },
       { label: 'Print',          desc: 'On the viewer page, click Print. The browser print dialog opens — pick your physical printer for wet-signing on paper.' },
       { label: 'Save as PDF',    desc: 'On the viewer page, click Save as PDF. The same print dialog opens — pick "Save as PDF" as the destination to get a real vector PDF (selectable text, crisp graphics) on disk.' },
       { label: 'Upload Signed Scan', desc: 'After wet-signing the printed copy, scan or photograph it (JPG/PNG, ≤4 MB) and upload via the "Upload Signed Scan" button. The patient can then download the signed copy from their Track Status page.' },
     ],
     steps: [
-      'Open the application → Guarantee Letter section → click Open GL Viewer.',
+      'Open the slice → Guarantee Letter section → click Open GL Viewer.',
       'On the viewer, click Print (for paper) or Save as PDF (then pick "Save as PDF" in the print dialog).',
-      'Return to the application and confirm "Yes, mark as Issued" only after the print/save actually succeeds — that flips the application to Guarantee Letter Issued.',
+      'Return to the slice and confirm "Yes, mark as Issued" only after the print/save actually succeeds — that flips the slice to Guarantee Letter Issued.',
       'Wet-sign the printed copy on paper. (MAPA never generates a "pre-signed" file — the wet signature is the legal step.)',
       'Scan or photograph the signed page, then click Upload Signed Scan to attach it. The patient is notified that the signed copy is ready to download.',
     ],
@@ -202,9 +178,9 @@ const SECTIONS = [
     title: 'GL lifecycle: redemption, expiry, reversal',
     content: `A Guarantee Letter is "Issued" when approved, valid for 30 days. Three things can happen next:`,
     items: [
-      { label: 'Redeemed', desc: 'The named provider billed back for the amount. In the Inbox app modal, click Mark GL Redeemed. Budget moves from committed → disbursed.' },
-      { label: 'Expired',  desc: '30 days passed without redemption. The Inbox row and app modal show "Expired (action needed)". Click Mark GL Expired to release the committed budget back to your allocation.' },
-      { label: 'Reversed', desc: 'You made a mistake (wrong amount, wrong provider). Click Reverse Approval in the app modal. The application returns to Reviewing, the committed budget is released, the patient is notified.' },
+      { label: 'Redeemed', desc: 'The named provider billed back for the amount. In the slice detail, click Mark GL Redeemed. Budget moves from committed → disbursed.' },
+      { label: 'Expired',  desc: '30 days passed without redemption. The Inbox row and slice detail show "Expired (action needed)". Click Mark GL Expired to release the committed budget back to your allocation.' },
+      { label: 'Reversed', desc: 'You made a mistake (wrong amount, wrong provider). Click Reverse Approval. The slice returns to For Funding, the committed budget is released, the patient is notified.' },
     ],
     note: 'Always close the loop. Unredeemed GLs that never get marked expired will lock your committed budget indefinitely.',
   },
@@ -215,15 +191,20 @@ const SECTIONS = [
     group: 'Operations',
     icon: '🎫',
     title: 'Daily slot management',
+    content:
+      `Slots represent your agency's daily processing capacity. Under the co-funding redesign, slots are consumed when ` +
+      `CRMC endorses a slice to your agency (not when a patient submits an application). If your slots are full for ` +
+      `the day, CRMC's endorse modal warns the staff member and they can choose a different agency or hold the request ` +
+      `for tomorrow.`,
     steps: [
       'Open Slot Management from the sidebar.',
-      'Default Slot Capacity is your daily cap (max 100). Edit to change it.',
-      'Today\'s Slots shows current remaining/total with a backlog indicator if there are unprocessed apps.',
-      'Slots auto-deduct when patients submit applications. They reset to default at the start of each new day, applied when the first coordinator opens the workspace.',
-      'For walk-ins or corrections, use Manual Adjustment. Add a reason — every change is logged in the audit trail.',
+      'Default Slot Capacity is your daily cap (max 100). Edit to change it — the new default takes effect from the next reset.',
+      'Today\'s Slots shows current remaining/total. The Usage chip turns amber/red as you near the cap.',
+      'Slots reset to default at the start of each new day. The reset fires when the first coordinator opens the workspace.',
+      'For walk-ins or corrections that bypassed the endorsement flow, use Manual Adjustment. Add a reason — every change is logged in the audit trail.',
       'Recent Adjustments shows the last 10 changes with author and time.',
     ],
-    note: 'Reject-today restores the slot automatically. Manual deduct is for walk-ins not submitted through the portal.',
+    note: 'Reject-today restores the slot automatically. Manual deduct is for walk-ins handled in person outside the MAPA endorsement flow.',
   },
   {
     id: 'budget',
@@ -250,10 +231,11 @@ const SECTIONS = [
     title: 'Messaging a patient',
     steps: [
       'From the Inbox, click the chat icon next to a row to open a conversation directly.',
-      'Or open the application modal → click Message Patient in the footer → type → Send.',
+      'Or open the slice detail → click Message Patient in the footer → type → Send.',
       'All conversations are listed under Messages in the sidebar.',
       'The patient receives an in-portal notification and can reply.',
     ],
+    note: 'For clarifications that the patient needs to formally respond to with documents, use Request More Info on the slice instead — it pauses the slice and surfaces the prompt in their queue.',
   },
   {
     id: 'notes',
@@ -261,13 +243,14 @@ const SECTIONS = [
     icon: '📝',
     title: 'Adding case notes',
     content:
-      `Case notes are an append-only log on the application — distinct from the Case Assessment narrative. ` +
-      `Use them for ongoing observations: "Called patient on 5/19, voicemail" or "Provider confirmed receipt of GL".`,
+      `Case notes are an append-only log on the slice. Use them for your own ongoing observations: ` +
+      `"Called patient on 5/19, voicemail" or "Provider confirmed receipt of GL". They are NOT how you record an ` +
+      `assessment — CRMC owns the Unified Intake Sheet under the redesign.`,
     steps: [
-      'Open the application → Timeline & Notes tab.',
+      'Open the slice → Timeline & Notes tab.',
       'Type your note in the textarea (up to 500 characters).',
       'Click Add. The note is permanent (no edit/delete).',
-      'Notes are visible to your agency\'s coordinators and to admins for audit.',
+      'Notes are visible to your agency\'s coordinators and to CRMC admins for audit.',
     ],
   },
   {
@@ -277,8 +260,8 @@ const SECTIONS = [
     title: 'Application Logs and history',
     steps: [
       'Open Application Logs from the sidebar.',
-      'All applications — current and past — are listed.',
-      'Filter by status tab (Pending/Reviewing/Interview/Approved/Rejected/Certificate) or search by name/contact/app ID.',
+      'All slices — current and past — are listed.',
+      'Filter by status tab (Endorsed / For Funding / Needs Info / Approved / Rejected / Certificate) or search by name/contact/slice ID.',
       'Export CSV downloads the current filtered list for reporting.',
     ],
     note: 'The audit trail of every status change, slot adjustment, and GL action is stored separately in the admin Audit Log.',
@@ -291,13 +274,15 @@ const SECTIONS = [
     icon: '❓',
     title: 'Common problems',
     items: [
-      { label: 'The Approve button is disabled',     desc: 'The Case Assessment is incomplete. Open it and fill the 6 required fields.' },
-      { label: 'My approval was blocked',            desc: 'You tried to approve more than the agency\'s remaining budget. Lower the amount or ask the admin to increase the allocation.' },
-      { label: 'I see "GL Expired (action needed)"', desc: 'A GL passed its 30-day validity window. Open the app and click Mark GL Expired to release the committed budget.' },
+      { label: 'The Approve button is disabled',     desc: 'Slice is not yet at "For Funding" — the patient may not have confirmed they want to proceed with your share, or CRMC hasn\'t finalized the endorsement. Check the status chip on the slice.' },
+      { label: 'CRMC\'s assessment looks incomplete', desc: 'You cannot edit it from your side. Use Request More Info to ask the patient directly, or message CRMC via the admin Messages flow if the gap is on CRMC\'s side.' },
+      { label: 'My approval was blocked',            desc: 'Either you tried to approve more than the agency\'s remaining budget, OR more than the slice\'s outstanding balance on the parent request. Lower the amount or ask the admin to increase the allocation.' },
+      { label: 'I see "GL Expired (action needed)"', desc: 'A GL passed its 30-day validity window. Open the slice and click Mark GL Expired to release the committed budget.' },
       { label: 'A patient says they didn\'t get the notification', desc: 'Check Messages and send a direct message. The patient may not have logged in to the portal yet.' },
-      { label: 'I approved by mistake',              desc: 'Open the app → click Reverse Approval. The committed budget is released and the application returns to Reviewing.' },
-      { label: 'The print window cancelled',         desc: 'Answer "Not yet" on the confirmation prompt. The application stays at Approved so you can retry.' },
-      { label: 'No budget allocated message',        desc: 'Ask the system administrator to set a budget on the Agency Detail page.' },
+      { label: 'I approved by mistake',              desc: 'Open the slice → click Reverse Approval. The committed budget is released and the slice returns to For Funding.' },
+      { label: 'The print window cancelled',         desc: 'Answer "Not yet" on the confirmation prompt. The slice stays at Approved so you can retry.' },
+      { label: 'No budget allocated message',        desc: 'Ask your Agency Administrator to set a budget on /agency/allocation, or the CRMC system administrator if your agency has none on file.' },
+      { label: 'Why don\'t I schedule interviews anymore', desc: 'Under the co-funding redesign, CRMC conducts a single assessment interview on the parent request and shares the result with all endorsed agencies. Your agency makes a funding decision based on that — no per-agency interview.' },
     ],
   },
   {
@@ -323,8 +308,8 @@ const QUICK_LINKS = [
 ]
 
 const WORKFLOW = [
-  'Receive', 'Review', 'Interview', 'Assessment',
-  'Outcome', 'Approve + GL', 'Print → Upload', 'Redeem',
+  'Endorsed', 'Patient Proceeds', 'For Funding',
+  'Approve + GL', 'Print → Upload', 'Redeem',
 ]
 
 // ── Reusable section card ─────────────────────────────────────────────────
@@ -428,7 +413,7 @@ export default function AgencyGuide() {
               <MdMenuBook size={22} className="text-brand-500" />
               Agency User Guide
             </h1>
-            <p className="page-sub">Step-by-step instructions for processing medical assistance applications.</p>
+            <p className="page-sub">Step-by-step instructions for funding endorsed application slices under the CRMC-gateway model.</p>
           </div>
           <span className="text-xs text-gray-400">Last updated {LAST_UPDATED}</span>
         </div>
