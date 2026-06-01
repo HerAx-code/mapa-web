@@ -47,6 +47,12 @@ export default function Inbox() {
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]             = useState('')
   const [messaging, setMessaging]       = useState(null)
+  // Default sort = newest first (matches the snapshot order operators
+  // see when checking in for the day). Oldest-first is the triage view
+  // for clearing the backlog -- the days-waiting chip on each row
+  // already turns amber at 3 days and red at 7, so this just brings
+  // those rows to the top.
+  const [sortMode, setSortMode]         = useState('newest')
 
   const statusFilter = searchParams.get('status') ?? 'all'
   const setStatusFilter = (next) => {
@@ -65,12 +71,15 @@ export default function Inbox() {
       where('agencyId', '==', user.agencyId),
     )
     const unsub = onSnapshot(q, snap => {
+      // Snapshot arrival order is unstable -- always normalize to
+      // newest-first here. The render layer applies the user's chosen
+      // sortMode on top so toggling Oldest is instant (no re-fetch).
+      // Uses tsToDate so legacy data stored as JS Date / ISO string
+      // sorts alongside Timestamp objects instead of falling back to 0.
       const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      rows.sort((a, b) => {
-        const ta = a.submittedAt?.toMillis?.() ?? 0
-        const tb = b.submittedAt?.toMillis?.() ?? 0
-        return tb - ta
-      })
+      rows.sort((a, b) =>
+        (tsToDate(b.submittedAt)?.getTime() ?? 0) - (tsToDate(a.submittedAt)?.getTime() ?? 0)
+      )
       setApplications(rows)
       setLoading(false)
     }, (err) => {
@@ -129,6 +138,14 @@ export default function Inbox() {
       a.patientContact?.includes(q)
   })
 
+  // Re-sort the filtered list per user choice. Newest = arrival order
+  // (matches the snapshot's own sort, default). Oldest = triage view --
+  // brings the days-waiting amber/red rows to the top so a coordinator
+  // clearing backlog doesn't have to scroll to find them.
+  const sortedFiltered = sortMode === 'oldest'
+    ? [...filtered].reverse()
+    : filtered
+
   return (
     <Layout breadcrumb="Application Inbox">
       <div className="p-4 sm:p-6">
@@ -163,19 +180,34 @@ export default function Inbox() {
           })}
         </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9 pr-10" placeholder="Search by patient name, contact, or application ID..."
-            value={search} onChange={e => setSearch(e.target.value)} />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-              <MdClose size={14} />
-            </button>
-          )}
+        {/* Search + sort */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input className="input pl-9 pr-10" placeholder="Search by patient name, contact, or application ID..."
+              value={search} onChange={e => setSearch(e.target.value)} />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                <MdClose size={14} />
+              </button>
+            )}
+          </div>
+          {/* Sort toggle: Newest (arrival order, default) ↔ Oldest
+              (triage view -- brings overdue rows to the top). Single
+              button that flips between the two; saves operators a
+              dropdown they'd only use to pick one of two options. */}
+          <button
+            type="button"
+            className="btn-secondary text-sm flex items-center gap-1.5 flex-shrink-0"
+            onClick={() => setSortMode(s => s === 'newest' ? 'oldest' : 'newest')}
+            title={sortMode === 'newest'
+              ? 'Showing newest first -- click to flip to oldest first (triage view)'
+              : 'Showing oldest first (triage view) -- click to flip back to newest first'}>
+            {sortMode === 'newest' ? '↓ Newest first' : '↑ Oldest first'}
+          </button>
         </div>
 
         {/* Table */}
@@ -211,7 +243,7 @@ export default function Inbox() {
                 </tr>
               ))}
 
-              {!loading && filtered.map(app => {
+              {!loading && sortedFiltered.map(app => {
                 const isDuplicate = duplicatePatientIds.has(app.patientId) &&
                   !['rejected','certificate'].includes(app.status)
                 const days = daysSince(app.submittedAt)
@@ -307,7 +339,7 @@ export default function Inbox() {
                 )
               })}
 
-              {!loading && filtered.length === 0 && (
+              {!loading && sortedFiltered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-12">
                     <MdInbox size={36} className="text-gray-200 mx-auto mb-2" />
