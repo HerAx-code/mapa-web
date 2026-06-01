@@ -15,11 +15,11 @@ import {
   MdVisibilityOff, MdLock, MdInfo, MdGroup,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { tsToDate } from '../../utils/dates'
 
 const formatDate = (ts) => {
-  if (!ts) return null
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : null
 }
 
 // ── Reusable editable field row ───────────────────────────────────────────

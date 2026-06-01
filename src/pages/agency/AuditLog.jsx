@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { MdSearch, MdHistory, MdLockOutline, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { exportToCSV, dateStamp } from '../../utils/export'
+import { tsToDate } from '../../utils/dates'
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -52,14 +53,13 @@ const DATE_FILTERS = [
 ]
 
 const fullDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 }
 
 const timeAgo = (ts) => {
-  if (!ts) return ''
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return ''
   const min = Math.floor((Date.now() - d.getTime()) / 60000)
   if (min < 1)  return 'just now'
   if (min < 60) return `${min}m ago`
@@ -139,7 +139,8 @@ export default function AgencyAuditLog() {
   const filtered = entries.filter(e => {
     // Date
     if (dateFilter !== 'all' && e.createdAt) {
-      const d = e.createdAt.toDate ? e.createdAt.toDate() : new Date(e.createdAt)
+      const d = tsToDate(e.createdAt)
+      if (!d) return false
       const now = new Date()
       const ms = now.getTime() - d.getTime()
       if (dateFilter === 'today' && d.toDateString() !== now.toDateString()) return false

@@ -18,6 +18,7 @@ import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
 import { agencyDashboardTour, resetTourFlag } from '../../utils/tours'
+import { tsToDate } from '../../utils/dates'
 import toast from 'react-hot-toast'
 
 // Threshold below which the agency gets a one-shot "budget running low"
@@ -31,9 +32,8 @@ const STALE_PERIOD_DAYS = 31
 // which reads APP_STATUS_CONFIG from constants.js.
 
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 export default function AgencyDashboard() {
@@ -107,8 +107,8 @@ export default function AgencyDashboard() {
         const expired = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(a => {
-            if (!a.approvedAt) return false
-            const d = a.approvedAt.toDate ? a.approvedAt.toDate() : new Date(a.approvedAt)
+            const d = tsToDate(a.approvedAt)
+            if (!d) return false
             const days = Math.floor((now - d.getTime()) / 86400000)
             return days > GL_VALIDITY_DAYS
           })

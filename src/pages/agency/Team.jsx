@@ -21,6 +21,7 @@ import {
   MdContentCopy, MdRefresh,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { tsToDate } from '../../utils/dates'
 
 const getSecondaryAuth = () => {
   const existing = getApps().find(a => a.name === 'secondary')
@@ -29,9 +30,8 @@ const getSecondaryAuth = () => {
 }
 
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 // ── Add Coordinator Modal ──────────────────────────────────────────────────
