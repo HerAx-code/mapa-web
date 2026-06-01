@@ -287,13 +287,22 @@ service cloud.firestore {
     //   - agency_admin: only entries scoped to their own agency. This lets
     //     them satisfy COA-style accountability for their fund usage
     //     without exposing other agencies' operations.
-    // Writes: any authenticated user can append (the actor record is the
-    // gate — only legitimate UI paths call logAudit()). Entries are
-    // immutable — no updates or deletes ever.
+    // Writes: any authenticated user can append, but the actorId MUST equal
+    // their auth uid — so an authenticated user can't impersonate a "System"
+    // actor or another user by hand-crafting a logAudit body. The earlier
+    // version trusted client paths to set actorId honestly, which made the
+    // log surface vulnerable to crafted entries (the details field is
+    // displayed verbatim in admin/AuditLog and was used as an injection
+    // vector against AI agents reviewing the dashboard). The `details`
+    // field is bounded at 2000 chars to defang multi-paragraph payloads.
+    // Entries are immutable — no updates or deletes ever.
     match /auditLog/{logId} {
-      allow read:           if isSuperAdmin() ||
-                               (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId());
-      allow create:         if isAuth();
+      allow read:   if isSuperAdmin() ||
+                       (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId());
+      allow create: if isAuth() &&
+                       request.resource.data.actorId == uid() &&
+                       request.resource.data.details is string &&
+                       request.resource.data.details.size() <= 2000;
       allow update, delete: if false;
     }
 

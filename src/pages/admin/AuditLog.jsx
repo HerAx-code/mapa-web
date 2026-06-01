@@ -90,6 +90,33 @@ const timeAgo = (ts) => {
   return ''
 }
 
+// ── Audit details cell ────────────────────────────────────────────────────
+// The `details` string is user-supplied (any authenticated caller of
+// logAudit() can put anything in it). Clamp to 240 chars by default so a
+// long payload doesn't dominate the row; "Show more" reveals the rest.
+// Display only — never executed — but a 2 KB block of attacker-controlled
+// text right under an admin's eye is exactly what we want to defuse.
+const DETAILS_PREVIEW_LIMIT = 240
+function AuditDetails({ text }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!text) return null
+  const isLong = text.length > DETAILS_PREVIEW_LIMIT
+  const shown  = isLong && !expanded ? text.slice(0, DETAILS_PREVIEW_LIMIT) + '…' : text
+  return (
+    <p className="text-xs text-gray-400 leading-relaxed">
+      {shown}
+      {isLong && (
+        <button
+          type="button"
+          className="ml-1 text-brand-500 hover:text-brand-600 underline underline-offset-2"
+          onClick={() => setExpanded(v => !v)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </p>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 100
@@ -345,10 +372,11 @@ export default function AuditLog() {
                     )}
                   </div>
 
-                  {/* Row 3: details */}
-                  {e.details && (
-                    <p className="text-xs text-gray-400 leading-relaxed">{e.details}</p>
-                  )}
+                  {/* Row 3: details — clamped to 240 chars by default so a
+                      maliciously long payload (we've seen prompt-injection
+                      attempts embedded here) can't push other rows out of
+                      sight. The full text is one click away. */}
+                  {e.details && <AuditDetails text={e.details} />}
                 </div>
               </div>
             )

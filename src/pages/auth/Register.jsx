@@ -24,6 +24,24 @@ const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
 const SUFFIXES        = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
 
+// Names that look like internal services or staff roles, which we don't
+// want patients to register with. We discovered fake accounts like
+// "CRMC Admin", "System Diagnostics", and "NUKE" in the patient list
+// (paired with prompt-injection attempts in the audit log), so refuse
+// these at the gate instead of relying on social-worker review to catch
+// impersonation post-hoc. Match on whole tokens (case-insensitive) so
+// names that happen to contain a substring like "admiNAL" still pass.
+const RESERVED_NAME_TOKENS = new Set([
+  'admin', 'administrator', 'system', 'crmc', 'mapa', 'malasakit',
+  'diagnostic', 'diagnostics', 'recovery', 'migration', 'daemon',
+  'agency', 'staff', 'super', 'root', 'test', 'nuke', 'cascade',
+  'claude', 'gpt', 'bot',
+])
+const hasReservedToken = (name) => {
+  const tokens = (name || '').toLowerCase().split(/[^a-zñ]+/i).filter(Boolean)
+  return tokens.some(t => RESERVED_NAME_TOKENS.has(t))
+}
+
 // Sanitizers
 const sanitizeName  = (val) => val.replace(/[^A-Za-zÑñ\s\-'.,]/g, '').slice(0, 50)
 // Accept +63 / 63 international prefix by normalizing to local 09… form
@@ -290,9 +308,12 @@ export default function Register() {
     const e = {}
     if (!form.firstName.trim()) e.firstName = t('register.errors.firstNameRequired')
     else if (!NAME_RE.test(form.firstName)) e.firstName = t('register.errors.nameLettersOnly')
+    else if (hasReservedToken(form.firstName)) e.firstName = t('register.errors.nameReserved')
     if (!form.lastName.trim())  e.lastName  = t('register.errors.lastNameRequired')
     else if (!NAME_RE.test(form.lastName)) e.lastName = t('register.errors.nameLettersOnly')
+    else if (hasReservedToken(form.lastName)) e.lastName = t('register.errors.nameReserved')
     if (form.middleName && !NAME_RE.test(form.middleName)) e.middleName = t('register.errors.nameLettersOnly')
+    else if (form.middleName && hasReservedToken(form.middleName)) e.middleName = t('register.errors.nameReserved')
 
     if (!form.contactNumber) {
       e.contactNumber = t('register.errors.contactRequired')

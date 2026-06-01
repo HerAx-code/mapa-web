@@ -1083,6 +1083,7 @@
     "errors": {
       "firstNameRequired": "Kinakailangan ang pangalan.",
       "nameLettersOnly": "Mga titik lamang.",
+      "nameReserved": "Pakipasok ang totoo mong pangalan (mukhang tungkulin o salita ng sistema ito).",
       "lastNameRequired": "Kinakailangan ang apelyido.",
       "contactRequired": "Kinakailangan ang numero ng telepono.",
       "contactInvalid": "Magpasok ng wastong 11-digit na Philippine mobile number (hal. 09171234567).",

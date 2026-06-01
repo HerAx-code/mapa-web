@@ -1083,6 +1083,7 @@
     "errors": {
       "firstNameRequired": "First name is required.",
       "nameLettersOnly": "Letters only.",
+      "nameReserved": "Please enter your real name (this looks like a role or system word).",
       "lastNameRequired": "Last name is required.",
       "contactRequired": "Contact number is required.",
       "contactInvalid": "Enter a valid 11-digit Philippine mobile number (e.g. 09171234567).",

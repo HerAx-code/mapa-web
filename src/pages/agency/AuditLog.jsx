@@ -72,6 +72,31 @@ const timeAgo = (ts) => {
 
 const PAGE_SIZE = 100
 
+// Mirror of admin/AuditLog's defense: clamp long user-supplied details to
+// 240 chars by default. The Firestore rule caps writes at 2000 chars, but
+// even 2000 chars is enough to bury a row — let the admin opt in to seeing
+// the full payload.
+const DETAILS_PREVIEW_LIMIT = 240
+function AuditDetails({ text }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!text) return null
+  const isLong = text.length > DETAILS_PREVIEW_LIMIT
+  const shown  = isLong && !expanded ? text.slice(0, DETAILS_PREVIEW_LIMIT) + '…' : text
+  return (
+    <p className="text-xs text-gray-500 leading-relaxed">
+      {shown}
+      {isLong && (
+        <button
+          type="button"
+          className="ml-1 text-brand-500 hover:text-brand-600 underline underline-offset-2"
+          onClick={() => setExpanded(v => !v)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </p>
+  )
+}
+
 export default function AgencyAuditLog() {
   const { user }      = useAuth()
   const navigate      = useNavigate()
@@ -271,9 +296,7 @@ export default function AgencyAuditLog() {
                             <span className="text-sm font-medium text-gray-800 truncate">{e.targetName}</span>
                           )}
                         </div>
-                        {e.details && (
-                          <p className="text-xs text-gray-500 leading-relaxed">{e.details}</p>
-                        )}
+                        {e.details && <AuditDetails text={e.details} />}
                         <p className="text-xs text-gray-400 mt-1">
                           by <strong>{e.actorName ?? 'System'}</strong>
                         </p>
