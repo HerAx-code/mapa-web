@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { MdCardMembership, MdPrint, MdSearch, MdCheckCircle, MdUpload, MdClose } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { notify } from '../../utils/notifications'
+import { tsToDate } from '../../utils/dates'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 
 // ── Certificate HTML builder ──────────────────────────────────────────────
@@ -267,9 +268,17 @@ export const buildCertificateHTML = ({ app, patient, approvalDate, issueDate, si
 // ── Main page ─────────────────────────────────────────────────────────────
 
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'
+}
+
+// Days since a date (whole days). Used to drive the GL aging chip --
+// approved-but-unsigned GLs are budget held hostage; once they're a
+// few days old the coordinator probably forgot.
+const daysSince = (ts) => {
+  const d = tsToDate(ts)
+  if (!d) return null
+  return Math.floor((Date.now() - d.getTime()) / 86_400_000)
 }
 
 export default function CertificateGenerator() {
@@ -423,6 +432,14 @@ export default function CertificateGenerator() {
                 'awaiting-upload':   { border: 'border-amber-300', iconBg: 'bg-amber-50', iconColor: 'text-amber-500', badge: 'badge-amber', label: 'Awaiting signed scan' },
                 'complete':          { border: 'border-green-400', iconBg: 'bg-green-50', iconColor: 'text-green-500', badge: 'badge-green', label: 'Complete' },
               }[state]
+              // Aging chip: only surfaces on non-complete rows. Three days
+              // is a reasonable "you probably forgot" threshold; seven days
+              // escalates to red because the committed budget is held
+              // hostage by the unsigned/unissued GL.
+              const days     = state !== 'complete' ? daysSince(app.approvedAt) : null
+              const ageChip  = days == null || days < 3 ? null
+                             : days >= 7 ? { cls: 'bg-red-100 text-red-700',     label: `${days}d since approval` }
+                             :             { cls: 'bg-amber-100 text-amber-700', label: `${days}d since approval` }
               return (
                 <div key={app.id} className={`card p-4 border-l-4 ${STATE_VISUAL.border}`}>
                   <div className="flex items-center gap-4 flex-wrap">
@@ -446,6 +463,11 @@ export default function CertificateGenerator() {
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className={`badge ${STATE_VISUAL.badge} text-xs`}>{STATE_VISUAL.label}</span>
+                        {ageChip && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${ageChip.cls}`}>
+                            ⚠ {ageChip.label}
+                          </span>
+                        )}
                       </div>
                     </div>
 
