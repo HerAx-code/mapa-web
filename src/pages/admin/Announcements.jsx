@@ -13,44 +13,15 @@ import {
   MdWarning, MdInfo, MdCampaign, MdSchedule, MdCheckCircle,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import AnnouncementBanner from '../../components/AnnouncementBanner'
 
 // ── Config ────────────────────────────────────────────────────────────────
-
-export const TYPE_CONFIG = {
-  maintenance: {
-    label:      'Maintenance',
-    icon:       MdBuildCircle,
-    emoji:      '⚙️',
-    bg:         'bg-amber-50',
-    border:     'border-amber-200',
-    badge:      'bg-amber-100 text-amber-700',
-    iconColor:  'text-amber-600',
-    pillActive: 'bg-amber-500 text-white',
-    pillInact:  'bg-white text-amber-700 border border-amber-300',
-  },
-  warning: {
-    label:      'Warning',
-    icon:       MdWarning,
-    emoji:      '⚠️',
-    bg:         'bg-red-50',
-    border:     'border-red-200',
-    badge:      'bg-red-100 text-red-700',
-    iconColor:  'text-red-600',
-    pillActive: 'bg-red-500 text-white',
-    pillInact:  'bg-white text-red-700 border border-red-300',
-  },
-  info: {
-    label:      'Info',
-    icon:       MdInfo,
-    emoji:      'ℹ️',
-    bg:         'bg-blue-50',
-    border:     'border-blue-200',
-    badge:      'bg-blue-100 text-blue-700',
-    iconColor:  'text-blue-600',
-    pillActive: 'bg-blue-500 text-white',
-    pillInact:  'bg-white text-blue-700 border border-blue-300',
-  },
-}
+// TYPE_CONFIG lives in utils/announcements now (broke a circular import
+// once Layout's live banner needed it via AnnouncementBanner). Re-exported
+// here so existing consumers (agency/Announcements) keep working without
+// a path update.
+import { TYPE_CONFIG } from '../../utils/announcements'
+export { TYPE_CONFIG }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -100,31 +71,25 @@ const inputsToTs = (date, time) => {
 
 // ── Banner Preview (shared between form and management page) ───────────────
 
+// Renders the announcement banner exactly as it will appear in the
+// app's chrome (via the shared AnnouncementBanner component). The
+// date range below is a form-only caption -- the live banner shows
+// just the countdown, not the full window.
 function BannerPreview({ type, title, message, startAt, endAt }) {
-  const cfg  = TYPE_CONFIG[type] ?? TYPE_CONFIG.info
-  const Icon = cfg.icon
   const countdown = endAt ? getCountdown(endAt) : null
-
   return (
-    <div className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${cfg.bg} ${cfg.border}`}>
-      <Icon size={18} className={`${cfg.iconColor} flex-shrink-0 mt-0.5`} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900">
-          {title || <span className="text-gray-400 italic">Enter a title…</span>}
+    <div>
+      <AnnouncementBanner
+        type={type}
+        title={title}
+        message={message}
+        countdownLabel={countdown ? `Ends in ${countdown}` : null}
+        placeholder
+      />
+      {(startAt || endAt) && (
+        <p className="text-xs text-gray-500 mt-1.5">
+          {fmtDt(startAt)} – {fmtDt(endAt)}
         </p>
-        <p className="text-xs text-gray-600 mt-0.5">
-          {message || <span className="text-gray-400 italic">Enter a message…</span>}
-        </p>
-        {(startAt || endAt) && (
-          <p className="text-xs text-gray-500 mt-1">
-            {fmtDt(startAt)} – {fmtDt(endAt)}
-          </p>
-        )}
-      </div>
-      {countdown && (
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.badge}`}>
-          Ends in {countdown}
-        </span>
       )}
     </div>
   )

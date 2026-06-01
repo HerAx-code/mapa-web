@@ -24,6 +24,7 @@ import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
 import OfflineBanner from './OfflineBanner'
+import AnnouncementBanner from './AnnouncementBanner'
 import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -1235,39 +1236,30 @@ export default function Layout({ children, breadcrumb }) {
             fail BEFORE they tap submit. */}
         <div className="print:hidden"><OfflineBanner /></div>
 
-        {/* ── Announcement banners ─────────────────────────────────── */}
+        {/* ── Announcement banners ───────────────────────────────────
+            Uses the shared <AnnouncementBanner> so the live banner
+            here and the admin/Announcements form preview are
+            guaranteed to render identically (single source of truth
+            for type colors + layout). Countdown is computed +
+            translated here so the component stays presentation-only;
+            the t() lookup happens at the call site. */}
         {banners.map(b => {
-          const BANNER_CONFIG = {
-            maintenance: { Icon: MdBuildCircle, bg: 'bg-amber-50', border: 'border-amber-200', iconCls: 'text-amber-600', badge: 'bg-amber-100 text-amber-700' },
-            warning:     { Icon: MdWarning,     bg: 'bg-red-50',   border: 'border-red-200',   iconCls: 'text-red-600',   badge: 'bg-red-100 text-red-700'   },
-            info:        { Icon: MdInfo,        bg: 'bg-blue-50',  border: 'border-blue-200',  iconCls: 'text-blue-600',  badge: 'bg-blue-100 text-blue-700' },
-          }
-          const cfg = BANNER_CONFIG[b.type] ?? BANNER_CONFIG.info
-          const { Icon } = cfg
           const end = b.endAt?.toDate?.()?.getTime() ?? 0
           const diff = end - Date.now()
           const hrs  = diff > 0 ? Math.floor(diff / 3600000) : 0
           const mins = diff > 0 ? Math.floor((diff % 3600000) / 60000) : 0
-          const countdown = diff > 0
+          const countdownLabel = diff > 0
             ? hrs > 0 ? t('shell.banner.endsInHm', { hrs, mins }) : t('shell.banner.endsInM', { mins })
             : null
           return (
-            <div key={b.id}
-              className={`flex items-center gap-3 px-5 py-2.5 flex-shrink-0 border-b print:hidden ${cfg.bg} ${cfg.border}`}>
-              <Icon size={17} className={`${cfg.iconCls} flex-shrink-0`} />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold text-gray-900 mr-2">{b.title}</span>
-                <span className="text-sm text-gray-600">{b.message}</span>
-              </div>
-              {countdown && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.badge}`}>
-                  {countdown}
-                </span>
-              )}
-              <button onClick={() => dismissBanner(b.id)}
-                className={`${cfg.iconCls} opacity-50 hover:opacity-100 flex-shrink-0 transition-opacity`}>
-                <MdClose size={16} />
-              </button>
+            <div key={b.id} className="flex-shrink-0 border-b print:hidden">
+              <AnnouncementBanner
+                type={b.type}
+                title={b.title}
+                message={b.message}
+                countdownLabel={countdownLabel}
+                onDismiss={() => dismissBanner(b.id)}
+              />
             </div>
           )
         })}
