@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { sendMessage, getOrCreateConversation } from '../../utils/messages'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { tsToDate } from '../../utils/dates'
 import {
   MdSearch, MdCheckCircle, MdDelete, MdDone, MdSend,
   MdClose, MdMessage, MdChevronLeft, MdChevronRight, MdAdd,
@@ -17,8 +18,8 @@ import {
 const MAX_CHARS = 1000
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d   = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return '—'
   const now = new Date()
   return d.toDateString() === now.toDateString()
     ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -26,14 +27,13 @@ const fmtDate = (ts) => {
 }
 
 const fmtFull = (ts) => {
-  if (!ts) return ''
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 }
 
 const fmtDateLabel = (ts) => {
-  if (!ts) return ''
-  const d   = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return ''
   const now = new Date()
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)

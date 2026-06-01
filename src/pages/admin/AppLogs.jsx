@@ -5,6 +5,7 @@ import { MdSearch, MdRefresh } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { collection, query, where, orderBy, limit, getDocs, startAfter, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { tsToDate } from '../../utils/dates'
 import StatusBadge from '../../components/ui/StatusBadge'
 
 const PAGE_SIZE = 100
@@ -68,9 +69,8 @@ export default function AppLogs() {
   })
 
   const formatDate = (ts) => {
-    if (!ts) return '—'
-    const d = ts.toDate ? ts.toDate() : new Date(ts)
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+    const d = tsToDate(ts)
+    return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
   }
 
   return (

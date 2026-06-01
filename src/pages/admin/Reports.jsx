@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { MdSearch, MdDelete, MdFlag, MdCheckCircle, MdHourglassEmpty, MdWarning, MdRefresh } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { tsToDate } from '../../utils/dates'
 
 // ── Config ────────────────────────────────────────────────────────────────
 // Report badge rendering is delegated to <StatusBadge kind="report" />
@@ -41,9 +42,8 @@ const ROLE_AVATAR = {
 }
 
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────

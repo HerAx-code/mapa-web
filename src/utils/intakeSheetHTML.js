@@ -2,6 +2,8 @@
 // Mirrors the CRMC paper form: letterhead, sectioned fields as label:value,
 // family composition table, narrative blocks, and signature lines.
 
+import { tsToDate } from './dates'
+
 const peso = (v) => v == null || v === '' ? '—' : `₱${Number(v).toLocaleString()}`
 
 const orDash = (v) => {
@@ -11,9 +13,8 @@ const orDash = (v) => {
 }
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts?.toDate ? ts.toDate() : new Date(ts)
-  if (Number.isNaN(d?.getTime?.())) return '—'
+  const d = tsToDate(ts)
+  if (!d || Number.isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 

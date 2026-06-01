@@ -7,6 +7,7 @@ import { db } from '../../firebase'
 import { MdSearch, MdHistory, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { exportToCSV, dateStamp } from '../../utils/export'
+import { tsToDate } from '../../utils/dates'
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -72,14 +73,13 @@ const ROLE_AVATAR = {
 }
 
 const fullDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 }
 
 const timeAgo = (ts) => {
-  if (!ts) return ''
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return ''
   const min = Math.floor((Date.now() - d.getTime()) / 60000)
   if (min < 1)  return 'just now'
   if (min < 60) return `${min}m ago`
@@ -134,20 +134,19 @@ export default function AuditLog() {
   const now = new Date()
 
   const todayCount = entries.filter(e => {
-    if (!e.createdAt) return false
-    const d = e.createdAt.toDate ? e.createdAt.toDate() : new Date(e.createdAt)
-    return (now - d) / 3600000 < 24
+    const d = tsToDate(e.createdAt)
+    return d ? (now - d) / 3600000 < 24 : false
   }).length
 
   const weekCount = entries.filter(e => {
-    if (!e.createdAt) return false
-    const d = e.createdAt.toDate ? e.createdAt.toDate() : new Date(e.createdAt)
-    return (now - d) / 3600000 < 168
+    const d = tsToDate(e.createdAt)
+    return d ? (now - d) / 3600000 < 168 : false
   }).length
 
   const filtered = entries.filter(e => {
     if (dateFilter !== 'all' && e.createdAt) {
-      const d = e.createdAt.toDate ? e.createdAt.toDate() : new Date(e.createdAt)
+      const d = tsToDate(e.createdAt)
+      if (!d) return false
       const diffHrs = (now - d) / 3600000
       if (dateFilter === 'today' && diffHrs > 24)  return false
       if (dateFilter === 'week'  && diffHrs > 168) return false

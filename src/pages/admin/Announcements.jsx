@@ -14,6 +14,7 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import AnnouncementBanner from '../../components/AnnouncementBanner'
+import { tsToDate } from '../../utils/dates'
 
 // ── Config ────────────────────────────────────────────────────────────────
 // TYPE_CONFIG lives in utils/announcements now (broke a circular import
@@ -26,17 +27,17 @@ export { TYPE_CONFIG }
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 export const fmtDt = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleString([], {
+  const d = tsToDate(ts)
+  return d ? d.toLocaleString([], {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
-  })
+  }) : '—'
 }
 
 export const getCountdown = (ts) => {
-  if (!ts) return null
-  const diff = (ts.toDate ? ts.toDate() : new Date(ts)).getTime() - Date.now()
+  const d = tsToDate(ts)
+  if (!d) return null
+  const diff = d.getTime() - Date.now()
   if (diff <= 0) return null
   const hrs  = Math.floor(diff / 3600000)
   const mins = Math.floor((diff % 3600000) / 60000)
@@ -56,8 +57,8 @@ export const getStatus = (ann) => {
 }
 
 const tsToInputs = (ts) => {
-  if (!ts) return { date: '', time: '' }
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return { date: '', time: '' }
   return {
     date: d.toISOString().slice(0, 10),
     time: d.toTimeString().slice(0, 5),

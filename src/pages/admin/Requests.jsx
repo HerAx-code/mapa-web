@@ -12,6 +12,7 @@ import { computeFunding } from '../../utils/requests'
 import { isIdType } from '../../utils/idOcr'
 import { isIntakeComplete } from '../../utils/intakeSheet'
 import { getOrCreateConversation } from '../../utils/messages'
+import { tsToDate } from '../../utils/dates'
 import { Link, useNavigate } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
@@ -30,9 +31,8 @@ const initials = (name) =>
   (name ?? '').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '—'
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 const newAppId = () => {
@@ -881,8 +881,9 @@ function RequestDetail({ request, agencies, onClose }) {
                   // to 'reviewing' on the agency side. If they sit on it,
                   // surface a nudge so CRMC can poke them.
                   const isEndorsed = s.status === 'endorsed'
-                  const daysSinceEndorsed = isEndorsed && s.endorsedAt
-                    ? Math.floor((Date.now() - (s.endorsedAt.toDate ? s.endorsedAt.toDate() : new Date(s.endorsedAt)).getTime()) / 86400000)
+                  const endorsedDate = isEndorsed ? tsToDate(s.endorsedAt) : null
+                  const daysSinceEndorsed = endorsedDate
+                    ? Math.floor((Date.now() - endorsedDate.getTime()) / 86400000)
                     : null
                   const stale = daysSinceEndorsed != null && daysSinceEndorsed >= 3
                   return (
@@ -1121,9 +1122,9 @@ export default function Requests() {
       }
     }
     const stale = slices.filter(s => {
-      if (s.status !== 'endorsed' || !s.endorsedAt) return false
-      const t = s.endorsedAt.toDate ? s.endorsedAt.toDate() : new Date(s.endorsedAt)
-      return Math.floor((Date.now() - t.getTime()) / 86400000) >= 3
+      if (s.status !== 'endorsed') return false
+      const t = tsToDate(s.endorsedAt)
+      return t ? Math.floor((Date.now() - t.getTime()) / 86400000) >= 3 : false
     })
     if (stale.length > 0) {
       return {

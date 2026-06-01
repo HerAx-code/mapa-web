@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { tsToDate } from '../../utils/dates'
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -111,9 +112,8 @@ function BulkAddModal({ nextNum, onClose }) {
 // ── Main page ─────────────────────────────────────────────────────────────
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 export default function HospitalIDs() {

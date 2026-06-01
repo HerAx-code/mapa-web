@@ -220,7 +220,7 @@ export const buildCertificateHTML = ({ app, patient, approvalDate, issueDate, si
     </tr>
     <tr>
       <td>Date Applied:</td>
-      <td>${app.submittedAt ? (app.submittedAt.toDate ? app.submittedAt.toDate() : new Date(app.submittedAt)).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}</td>
+      <td>${tsToDate(app.submittedAt)?.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) ?? '—'}</td>
     </tr>
     <tr>
       <td>Date Approved:</td>

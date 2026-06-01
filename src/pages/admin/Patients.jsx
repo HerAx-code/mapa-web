@@ -50,9 +50,8 @@ function ProfileModal({ patient, onClose }) {
   }, [patient?.uid])
 
   const fmt = (ts) => {
-    if (!ts) return '—'
-    const d = ts.toDate ? ts.toDate() : new Date(ts)
-    return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+    const d = tsToDate(ts)
+    return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
   }
 
   const rows = [
@@ -259,9 +258,8 @@ export default function Patients() {
   })
 
   const formatDate = (ts) => {
-    if (!ts) return '—'
-    const d = ts.toDate ? ts.toDate() : new Date(ts)
-    return d.toLocaleDateString()
+    const d = tsToDate(ts)
+    return d ? d.toLocaleDateString() : '—'
   }
 
   // ── Actions ──────────────────────────────────────────────────────────

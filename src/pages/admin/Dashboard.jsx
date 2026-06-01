@@ -13,10 +13,11 @@ import {
 } from 'react-icons/md'
 import Tour from '../../components/Tour'
 import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
+import { tsToDate } from '../../utils/dates'
 
 const timeAgo = (ts) => {
-  if (!ts) return ''
-  const d   = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return ''
   const min = Math.floor((Date.now() - d.getTime()) / 60000)
   if (min < 1)   return 'just now'
   if (min < 60)  return `${min}m ago`
@@ -26,9 +27,8 @@ const timeAgo = (ts) => {
 }
 
 const daysSince = (ts) => {
-  if (!ts) return 0
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return Math.floor((Date.now() - d.getTime()) / 86400000)
+  const d = tsToDate(ts)
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : 0
 }
 
 const ACTIVITY_CONFIG = {
@@ -210,9 +210,9 @@ export default function AdminDashboard() {
     const avgDays = withDates.length === 0 ? null
       : Math.round(
           withDates.reduce((sum, a) => {
-            const sub = a.submittedAt.toDate ? a.submittedAt.toDate() : new Date(a.submittedAt)
-            const app = a.approvedAt.toDate  ? a.approvedAt.toDate()  : new Date(a.approvedAt)
-            return sum + (app.getTime() - sub.getTime()) / 86400000
+            const sub = tsToDate(a.submittedAt)
+            const app = tsToDate(a.approvedAt)
+            return sum + ((app?.getTime() ?? 0) - (sub?.getTime() ?? 0)) / 86400000
           }, 0) / withDates.length
         )
     const total = approvedCount + rejectedCount

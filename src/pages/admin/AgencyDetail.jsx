@@ -20,14 +20,14 @@ import {
   MdAttachMoney, MdArrowUpward, MdArrowDownward,
 } from 'react-icons/md'
 import { PERIOD_ADJECTIVE } from '../../utils/constants'
+import { tsToDate } from '../../utils/dates'
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 // ── Edit Coordinator Modal ────────────────────────────────────────────────
@@ -639,7 +639,7 @@ export default function AgencyDetail() {
                 </div>
                 {budget.periodStart && (
                   <p className="text-xs text-gray-400">
-                    Period started {(budget.periodStart.toDate ? budget.periodStart.toDate() : new Date(budget.periodStart)).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                    Period started {tsToDate(budget.periodStart)?.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 )}
               </div>

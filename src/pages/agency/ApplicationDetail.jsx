@@ -45,9 +45,8 @@ const daysSince = (ts) => {
 // Dashboard, and TrackStatus so all four surfaces agree on when an
 // 'issued' GL is past its validity window.
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 }
 // Timeline stages derived from app status. The previous implementation
 // updated a stored `stages` array on every status write, which (a) was
@@ -583,16 +582,16 @@ export default function ApplicationDetail() {
         .filter(a => a.id !== app.id && !(app.requestId && a.requestId === app.requestId))
         .filter(a => {
           // Signal 1: live approval within window
-          if (a.approvedAt && ['approved', 'certificate'].includes(a.status)) {
-            const d = a.approvedAt.toDate ? a.approvedAt.toDate() : new Date(a.approvedAt)
-            const days = Math.floor((now - d.getTime()) / 86400000)
-            if (days <= COOLDOWN_DAYS) return true
+          if (['approved', 'certificate'].includes(a.status)) {
+            const d = tsToDate(a.approvedAt)
+            if (d) {
+              const days = Math.floor((now - d.getTime()) / 86400000)
+              if (days <= COOLDOWN_DAYS) return true
+            }
           }
           // Signal 2: reversed approval whose cooldown hasn't elapsed yet
-          if (a.cooldownUntilAt) {
-            const until = a.cooldownUntilAt.toDate ? a.cooldownUntilAt.toDate() : new Date(a.cooldownUntilAt)
-            if (until.getTime() > now) return true
-          }
+          const until = tsToDate(a.cooldownUntilAt)
+          if (until && until.getTime() > now) return true
           return false
         })
       if (blocking.length > 0) {
@@ -630,8 +629,8 @@ export default function ApplicationDetail() {
         const hidSnap = await getDoc(doc(db, 'hospitalIds', patientHospitalId)).catch(() => null)
         const hid = hidSnap?.exists?.() ? hidSnap.data() : null
         if (hid?.cooldownUntilAt) {
-          const until = hid.cooldownUntilAt.toDate ? hid.cooldownUntilAt.toDate() : new Date(hid.cooldownUntilAt)
-          if (until.getTime() > now) {
+          const until = tsToDate(hid.cooldownUntilAt)
+          if (until && until.getTime() > now) {
             toast.error(
               `This patient (Hospital ID ${patientHospitalId}) has an active cooldown until ${until.toLocaleDateString()}. ` +
               `Approval blocked. Contact an administrator if a second approval is genuinely needed.`,
@@ -641,8 +640,8 @@ export default function ApplicationDetail() {
           }
         }
         if (hid?.lastApprovedAt) {
-          const lastAp = hid.lastApprovedAt.toDate ? hid.lastApprovedAt.toDate() : new Date(hid.lastApprovedAt)
-          const days = Math.floor((now - lastAp.getTime()) / 86400000)
+          const lastAp = tsToDate(hid.lastApprovedAt)
+          const days = lastAp ? Math.floor((now - lastAp.getTime()) / 86400000) : Infinity
           if (days <= COOLDOWN_DAYS) {
             toast.error(
               `This patient (Hospital ID ${patientHospitalId}) was approved less than ${COOLDOWN_DAYS} days ago ` +

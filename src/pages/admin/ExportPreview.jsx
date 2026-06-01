@@ -8,6 +8,7 @@ import {
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { exportToCSV, dateStamp, readableFileType, openPrintTab } from '../../utils/export'
+import { tsToDate } from '../../utils/dates'
 import {
   MdArrowBack, MdSearch, MdRefresh, MdDownload, MdClose,
 } from 'react-icons/md'
@@ -22,9 +23,8 @@ const LARGE_EXPORT_THRESHOLD = 10000
 // ── Column definitions ────────────────────────────────────────────────────
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString()
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString() : '—'
 }
 
 

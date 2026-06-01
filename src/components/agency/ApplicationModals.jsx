@@ -125,12 +125,10 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
               return { ...a, _daysAgo: days, _reversed: false }
             }
           }
-          if (a.cooldownUntilAt) {
-            const until = a.cooldownUntilAt.toDate ? a.cooldownUntilAt.toDate() : new Date(a.cooldownUntilAt)
-            if (until.getTime() > now) {
-              const daysRemaining = Math.ceil((until.getTime() - now) / 86400000)
-              return { ...a, _daysAgo: COOLDOWN_DAYS - daysRemaining, _reversed: true, _daysRemaining: daysRemaining }
-            }
+          const until = tsToDate(a.cooldownUntilAt)
+          if (until && until.getTime() > now) {
+            const daysRemaining = Math.ceil((until.getTime() - now) / 86400000)
+            return { ...a, _daysAgo: COOLDOWN_DAYS - daysRemaining, _reversed: true, _daysRemaining: daysRemaining }
           }
           return null
         })
