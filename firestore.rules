@@ -166,7 +166,19 @@ service cloud.firestore {
         || isAdmin()
         || (isAgency() && resource.data.agencyIds is list && userAgencyId() in resource.data.agencyIds)
       );
-      allow create: if isPatient();
+      // Patient creates own document. patientId must match auth (no creating
+      // docs attributed to other patients), status must start at 'pending'
+      // (can't pre-stamp verified to bypass CRMC review), and agencyIds[]
+      // can't be pre-stamped (admins set this at endorse time, granting
+      // agency read access). The OCR text from uploadDocument.js is already
+      // sliced to 2000 chars client-side; we bound it server-side too.
+      allow create: if isPatient() &&
+                       request.resource.data.patientId == uid() &&
+                       request.resource.data.status == 'pending' &&
+                       !('agencyIds' in request.resource.data) &&
+                       (!('ocrText' in request.resource.data) ||
+                        (request.resource.data.ocrText is string &&
+                         request.resource.data.ocrText.size() <= 4000));
       // CRMC-gateway redesign: document verification is CRMC's job (the single
       // intake gateway), so only admins verify/reject. Agencies keep READ for
       // the funding decision but no longer write document status. Patients may
@@ -290,8 +302,14 @@ service cloud.firestore {
       match /messages/{msgId} {
         allow read:   if isAuth() && uid() in
           get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        // Sender must self-attribute, and the text is bounded so a single
+        // message can't render a multi-KB block in another participant's
+        // thread (the UI textarea is already capped; the rule is the gate).
         allow create: if isAuth() && uid() in
-          get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+          get(/databases/$(database)/documents/conversations/$(convId)).data.participants &&
+          (!('from' in request.resource.data) || request.resource.data.from == uid()) &&
+          (!('text' in request.resource.data) ||
+           (request.resource.data.text is string && request.resource.data.text.size() <= 5000));
         allow delete: if isAdmin();
       }
     }
@@ -367,7 +385,13 @@ service cloud.firestore {
         (isAgency() && resource.data.agencyId == userAgencyId()) ||
         isAdmin()
       );
-      allow create, update: if isAgency() || isAdmin();
+      // Agencies can only write certs scoped to their own agency. Admins
+      // can write any (e.g. moving a cert between agencies during a
+      // remediation). Without the agencyId match, one agency could upload
+      // a Guarantee Letter attributed to another -- not currently exploited
+      // in the UI but the read rule already trusts agencyId to gate access.
+      allow create, update: if isAdmin() ||
+                               (isAgency() && request.resource.data.agencyId == userAgencyId());
       allow delete:         if isAdmin();
     }
 
@@ -384,7 +408,11 @@ service cloud.firestore {
       allow read:   if isAuth() && (
         resource.data.patientId == uid() || isAdmin() || isAgency()
       );
-      allow create: if isPatient();
+      // patientId must match auth so a patient can't write content
+      // attributed to another patient. The actual file content goes in a
+      // single 'content' string (a base64 data URL); we trust the
+      // ~1MB Firestore doc cap to bound size rather than enforce it here.
+      allow create: if isPatient() && request.resource.data.patientId == uid();
       allow update: if isAdmin() || (isPatient() && resource.data.patientId == uid());
       allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
     }
@@ -419,11 +447,31 @@ service cloud.firestore {
     // patients via the Layout banner.
     match /announcements/{annId} {
       allow read:   if isAuth();
-      allow create: if isAdmin() ||
+      // Size caps on title/message: announcements render in a Layout
+      // banner visible to all users -- a long payload would dominate the
+      // viewport. The UI inputs are already maxLength-constrained but the
+      // server is the actual gate.
+      allow create: if (isAdmin() ||
                        (isAgencyAdmin() &&
                         request.resource.data.source == 'agency' &&
-                        request.resource.data.agencyId == userAgencyId());
-      allow update, delete: if isAdmin() ||
+                        request.resource.data.agencyId == userAgencyId())) &&
+                       (!('title' in request.resource.data) ||
+                        (request.resource.data.title is string &&
+                         request.resource.data.title.size() <= 200)) &&
+                       (!('message' in request.resource.data) ||
+                        (request.resource.data.message is string &&
+                         request.resource.data.message.size() <= 2000));
+      allow update: if (isAdmin() ||
+                       (isAgencyAdmin() &&
+                        resource.data.source == 'agency' &&
+                        resource.data.agencyId == userAgencyId())) &&
+                       (!('title' in request.resource.data) ||
+                        (request.resource.data.title is string &&
+                         request.resource.data.title.size() <= 200)) &&
+                       (!('message' in request.resource.data) ||
+                        (request.resource.data.message is string &&
+                         request.resource.data.message.size() <= 2000));
+      allow delete: if isAdmin() ||
                        (isAgencyAdmin() &&
                         resource.data.source == 'agency' &&
                         resource.data.agencyId == userAgencyId());
