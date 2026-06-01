@@ -204,11 +204,21 @@ service cloud.firestore {
     match /agencies/{agencyId} {
       allow read:   if true;
       allow create: if isSuperAdmin();
-      // CRMC admins + the agency itself manage agency fields. (The legacy
-      // patient slot-decrement branch was removed with the direct apply flow —
-      // slots are now consumed by CRMC at endorsement.)
+      // Update authority split:
+      //   - CRMC admin: anything (operational fields + emergency budget
+      //     overrides during incident response).
+      //   - agency_admin: own agency. Allowed to write budget.* because
+      //     they are the allocation authority for their own fund source.
+      //   - agency coordinator (role=='agency'): own agency, but the
+      //     budget object must stay byte-identical. This prevents an
+      //     authenticated coordinator from calling the Firestore SDK
+      //     directly to inflate budget.allocated past whatever the UI
+      //     gate enforces -- the previous version trusted the client
+      //     for that.
       allow update: if isAdmin() ||
-                       (isAgency() && userAgencyId() == agencyId);
+                       (isAgencyAdmin() && userAgencyId() == agencyId) ||
+                       (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
+                        request.resource.data.budget == resource.data.budget);
       allow delete: if isSuperAdmin();
     }
 
