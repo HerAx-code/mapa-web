@@ -297,15 +297,29 @@ export default function RequestAssistance() {
 
   // Live slices (agency applications) of the active request — drives the
   // real funding figures + the per-agency breakdown.
+  //
+  // The patientId where-clause is required even though requestId already
+  // narrows the result set: Firestore rules only allow a query if every
+  // returned doc is reachable via the rule's allowed-read clauses. The
+  // applications rule allows `resource.data.patientId == uid()`, so the
+  // query must include that constraint up front -- otherwise the rule
+  // engine rejects the query at parse time and we get "Missing or
+  // insufficient permissions" (caught live via Playwright on the patient
+  // surface). The duplicate filter is redundant data-wise but mandatory
+  // for the rules check.
   useEffect(() => {
-    if (!activeRequest?.id) { setSlices([]); return }
+    if (!activeRequest?.id || !user?.uid) { setSlices([]); return }
     const unsub = onSnapshot(
-      query(collection(db, 'applications'), where('requestId', '==', activeRequest.id)),
+      query(
+        collection(db, 'applications'),
+        where('requestId', '==', activeRequest.id),
+        where('patientId', '==', user.uid),
+      ),
       snap => setSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       (err) => console.error('[RequestAssistance] slices snapshot error:', err),
     )
     return unsub
-  }, [activeRequest?.id])
+  }, [activeRequest?.id, user?.uid])
 
   // Live list of the patient's documents — powers the "already uploaded"
   // markers on the form and the document status + re-upload list on the

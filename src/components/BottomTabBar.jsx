@@ -26,7 +26,12 @@ export default function BottomTabBar({ unreadMessages = 0 }) {
   // convention ("Mail", "Photos", "Settings").
   const tabs = [
     { to: '/patient/dashboard', Icon: MdDashboard, labelKey: 'patient.tab.dashboard' },
-    { to: '/patient/status',    Icon: MdTimeline,  labelKey: 'patient.tab.apply'     },
+    // Label is 'Status' (not 'Apply' as before) -- this tab routes to
+    // /patient/status (the application tracker), not the apply flow.
+    // The old 'Apply' wording was a navigation lie -- new patients
+    // tapped it expecting to start a new request and landed on the
+    // tracker instead. The 'Request' tab below is the actual apply flow.
+    { to: '/patient/status',    Icon: MdTimeline,  labelKey: 'patient.tab.status'    },
     { to: '/patient/request',   Icon: MdFavorite,  labelKey: 'patient.tab.request'   },
     {
       to:        '/patient/messages',

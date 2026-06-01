@@ -16,9 +16,15 @@ import toast from 'react-hot-toast'
 // for obvious typos in the reset modal.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
+// Per-role post-login destination. Patients land on the Dashboard
+// (status hero + welcome tour + 5-step journey) to match the home-base
+// pattern every other role uses, and to match Landing.jsx's DASHBOARD
+// map (commit 671dc86). The previous '/patient/request' default
+// short-circuited the orientation surface I added later -- new
+// patients with no active request were dropped into the wizard
+// without ever seeing the Dashboard's welcome card.
 const DASHBOARD = {
-  // Patients land on Request Assistance — the primary task — for accessibility.
-  [ROLES.PATIENT]:      '/patient/request',
+  [ROLES.PATIENT]:      '/patient/dashboard',
   [ROLES.AGENCY]:       '/agency/dashboard',
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',

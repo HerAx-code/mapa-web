@@ -594,7 +594,7 @@
     },
     "tab": {
       "dashboard": "Home",
-      "apply": "Apply",
+      "status": "Status",
       "docs": "Docs",
       "request": "Request",
       "messages": "Messages"
