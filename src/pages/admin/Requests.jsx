@@ -1242,6 +1242,13 @@ export default function Requests() {
                     const needed      = Number(r.amountNeeded) || 0
                     const funding     = computeFunding(needed, slicesByRequest.get(r.id) ?? [])
                     const warning     = coverageWarning(r)
+                    // Invariant: status='fully_funded' should imply committed >= needed.
+                    // A break in this contract is a data-state symptom (legacy seed
+                    // data, manual write, a slice approval rolled back without
+                    // adjusting the request status) and worth flagging for an
+                    // operator to investigate -- the row otherwise looks like a
+                    // successful funding.
+                    const dataMismatch = r.status === 'fully_funded' && needed > 0 && funding.committed < needed
                     return (
                       <tr key={r.id} className="cursor-pointer group" onClick={() => setSelected(r)}>
                         <td className={needsAction || warning ? 'border-l-2 border-brand-400' : 'border-l-2 border-transparent'}>
@@ -1268,6 +1275,13 @@ export default function Requests() {
                             {warning && (
                               <span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>
                             )}
+                            {dataMismatch && (
+                              <span
+                                className="inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
+                                title={`Funded status but only ${peso(funding.committed)} of ${peso(needed)} is actually secured. Likely legacy data — investigate or re-derive.`}>
+                                ⚠ data check
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.submittedAt)}</td>
@@ -1282,9 +1296,11 @@ export default function Requests() {
             {/* Mobile cards */}
             <div className="grid grid-cols-1 gap-3 sm:hidden">
               {filtered.map(r => {
-                const st      = stageChip(r)
-                const warning = coverageWarning(r)
-                const funding = computeFunding(r.amountNeeded, slicesByRequest.get(r.id) ?? [])
+                const st           = stageChip(r)
+                const warning      = coverageWarning(r)
+                const needed       = Number(r.amountNeeded) || 0
+                const funding      = computeFunding(needed, slicesByRequest.get(r.id) ?? [])
+                const dataMismatch = r.status === 'fully_funded' && needed > 0 && funding.committed < needed
                 return (
                   <button key={r.id} onClick={() => setSelected(r)} className="card p-4 text-left hover:shadow-md transition-all w-full">
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -1293,12 +1309,19 @@ export default function Requests() {
                     </div>
                     <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(r.amountNeeded)}</span> · Secured <span className="font-semibold text-green-600">{peso(funding.committed)}</span></span>
+                      <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(needed)}</span> · Secured <span className="font-semibold text-green-600">{peso(funding.committed)}</span></span>
                       <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                     </div>
                     {warning && (
                       <div className="mt-2">
                         <span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>
+                      </div>
+                    )}
+                    {dataMismatch && (
+                      <div className="mt-2">
+                        <span className="inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                          ⚠ data check — only {peso(funding.committed)} secured
+                        </span>
                       </div>
                     )}
                   </button>
