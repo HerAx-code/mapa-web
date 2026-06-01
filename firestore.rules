@@ -50,9 +50,30 @@ service cloud.firestore {
     // Patients own their profile.
     // Admins and agencies can read all users (needed for messaging compose search
     // and for agencies to fetch patient address/hospitalId in the Inbox AppModal).
+    //
+    // Create split (post seed refactor):
+    //   - self-create: userId must equal uid AND role must be 'patient'.
+    //     This is the patient registration flow. Self-creating with any
+    //     other role would let an attacker mint themselves admin / agency
+    //     privileges immediately after createUserWithEmailAndPassword.
+    //   - isAdmin: any role, any user. Covers admin/Accounts.jsx which
+    //     uses a secondary Firebase app to create new admins/coordinators
+    //     while the current admin session writes the user doc.
+    //   - isAgencyAdmin: own-agency coordinators only. Covers agency/Team.jsx
+    //     where an agency admin adds a new coordinator to their own agency.
+    //
+    // Seed admin/agency_admin/agency users come from scripts/bootstrap-users.js
+    // which uses the Admin SDK and bypasses Firestore rules entirely; the /seed
+    // web page no longer self-creates users.
     match /users/{userId} {
       allow read:   if isAuth() && (uid() == userId || isAdmin() || isAgency());
-      allow create: if isAuth();
+      allow create: if isAuth() && (
+        (uid() == userId && request.resource.data.role == 'patient') ||
+        isAdmin() ||
+        (isAgencyAdmin() &&
+         request.resource.data.agencyId == userAgencyId() &&
+         request.resource.data.role in ['agency', 'agency_admin'])
+      );
       // Update permissions:
       //   - self: only profile fields. role / agencyId / active / rank are
       //     managed elsewhere — without this, any user could self-promote

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { createUserWithEmailAndPassword, signOut, signInWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, addDoc, collection, getDocs, getDoc, deleteDoc, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
+import { doc, setDoc, collection, getDocs, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
 const SEED_AGENCIES = [
@@ -32,55 +31,16 @@ const SEED_ASSISTANCE_TYPES = [
   { name: 'Burial Assistance',                description: 'Financial support for funeral and burial expenses',                  order: 7 },
 ]
 
-const SEED_USERS = [
-  {
-    email: 'admin@crmc.gov.ph', password: 'admin123',
-    profile: { name: 'Super Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
-  },
-  {
-    email: 'staff@crmc.gov.ph', password: 'staff123',
-    profile: { name: 'Staff Admin', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false },
-  },
-  // Agency Admins — one per agency. Has access to /agency/allocation,
-  // /agency/audit, and /agency/team in addition to all coordinator pages.
-  {
-    email: 'admin@malasakit.gov.ph',       password: 'agency123',
-    profile: { name: 'Dr. Roberto Velasco',     role: 'agency_admin', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'admin@ambag.gov.ph',           password: 'agency123',
-    profile: { name: 'Bai Sittie Mamondiong',   role: 'agency_admin', agencyId: 'ambag',     rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'admin@pcso.gov.ph',            password: 'agency123',
-    profile: { name: 'Dr. Carmen Reyes',         role: 'agency_admin', agencyId: 'pcso',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'admin@dswd.gov.ph',            password: 'agency123',
-    profile: { name: 'Datu Hakim Sangcopan',     role: 'agency_admin', agencyId: 'dswd',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  // Agency Coordinators — one per agency. Frontline application reviewers.
-  {
-    email: 'coordinator@malasakit.gov.ph', password: 'agency123',
-    profile: { name: 'Maria Santos',    role: 'agency', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'coordinator@ambag.gov.ph',     password: 'agency123',
-    profile: { name: 'Ahmad Dimaporo', role: 'agency', agencyId: 'ambag',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'coordinator@pcso.gov.ph',      password: 'agency123',
-    profile: { name: 'Leonora Guia',    role: 'agency', agencyId: 'pcso',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'coordinator@dswd.gov.ph',      password: 'agency123',
-    profile: { name: 'Fatima Macalawi', role: 'agency', agencyId: 'dswd',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
-  },
-  {
-    email: 'patient@gmail.com', password: 'patient123',
-    profile: { name: 'Baher Blah', role: 'patient', agencyId: null, rank: null, contact: '09324324344', hospitalId: 'CRMC-2026-00014', patientId: 'PAT-013', cooldown: 0, deletion: false },
-  },
-]
+// SEED_USERS moved to scripts/bootstrap-users.js — the tightened
+// users/create rule (allowing self-create only with role=='patient')
+// blocks the prior web-flow approach of signing in as each user
+// and writing their own doc with elevated role. The admin-SDK script
+// bypasses Firestore rules and handles every role cleanly.
+//
+// Before re-seeding the reference data below, run:
+//   GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+//     node scripts/bootstrap-users.js
+// then sign in as admin@crmc.gov.ph and click Seed Database here.
 
 const SEED_IDS = [
   'CRMC-2026-00001', 'CRMC-2026-00002', 'CRMC-2026-00003',
@@ -178,54 +138,18 @@ export default function Seed() {
     setRunning(true)
     setLog([])
 
-    // 1. Create auth accounts + Firestore profiles.
-    //
-    // Self-healing: if the Auth account already exists but the matching
-    // Firestore user doc is gone, we re-create the doc. This happens
-    // after an admin/Accounts.jsx or admin/Patients.jsx Delete -- those
-    // only remove the Firestore profile (client-side Firebase can't
-    // delete the Auth account without admin SDK or recent sign-in), so
-    // the email becomes permanently "already in use" with no profile.
-    // Without this branch, a deleted demo account was unrepairable
-    // from the Seed page.
-    for (const u of SEED_USERS) {
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, u.email, u.password)
-        await setDoc(doc(db, 'users', cred.user.uid), { ...u.profile, email: u.email, active: true, createdAt: new Date() })
-        await signOut(auth)
-        push(`✅ Created user: ${u.email}`)
-      } catch (err) {
-        if (err.code !== 'auth/email-already-in-use') {
-          push(`❌ Failed ${u.email}: ${err.message}`)
-          continue
-        }
-        // Email already registered in Auth -- check the Firestore side.
-        try {
-          const cred         = await signInWithEmailAndPassword(auth, u.email, u.password)
-          const profileSnap  = await getDoc(doc(db, 'users', cred.user.uid))
-          if (profileSnap.exists()) {
-            push(`⚠️ Already exists: ${u.email}`)
-          } else {
-            await setDoc(doc(db, 'users', cred.user.uid), { ...u.profile, email: u.email, active: true, createdAt: new Date() })
-            push(`🔧 Repaired orphan: ${u.email}`)
-          }
-          await signOut(auth)
-        } catch (signinErr) {
-          // Wrong password (user changed it via Forgot Password), or
-          // some other Auth issue. Surface clearly so the operator
-          // knows to delete the Auth row from Firebase Console.
-          push(`❌ Cannot repair ${u.email}: ${signinErr.message ?? signinErr.code} — delete the Auth account from Firebase Console and re-run.`)
-        }
-      }
+    // 1. Sanity check: the operator must already be signed in as a
+    //    super_admin before any privileged write can succeed. User
+    //    creation is now scripts/bootstrap-users.js (admin-SDK); this
+    //    page only seeds reference data + runs migrations.
+    if (!auth.currentUser) {
+      push('❌ Not signed in. Run scripts/bootstrap-users.js first, then sign in as admin@crmc.gov.ph and re-open this page.')
+      setRunning(false)
+      return
     }
+    push(`✅ Signed in as ${auth.currentUser.email}`)
 
-    // 2. Sign in as super admin before writing privileged collections
-    try {
-      await signInWithEmailAndPassword(auth, 'admin@crmc.gov.ph', 'admin123')
-      push('✅ Signed in as Super Admin')
-    } catch (e) { push(`⚠️ Admin sign-in failed: ${e.message}`) }
-
-    // 3. Seed Hospital IDs
+    // 2. Seed Hospital IDs
     for (const id of SEED_IDS) {
       try {
         await setDoc(doc(db, 'hospitalIds', id), {
