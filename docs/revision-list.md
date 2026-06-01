@@ -1,8 +1,8 @@
 # MAPA Revision List
 
 **Project:** Medical Assistance Portal Access (MAPA) — Cotabato Regional Medical Center
-**Status:** Compiled 2026-05-30
-**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series.
+**Status:** Updated 2026-06-02
+**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, and the full-system 46-page audit + sweep.
 
 ---
 
@@ -212,21 +212,101 @@ The frozen redesign from patient-applies-direct-to-agency to patient-files-one-r
 | 6.12 | agency/Funds dead import + audit-log link | MdRefresh dropped, audit-log linked for agency_admin | `e16eda5` |
 | 6.13 | admin/HospitalIDs filter chip toggle + search clear-X | UI consistency with sibling pages | `3abed72` |
 
+### B.7 — Operator-throughput follow-up batch
+
+Five focused operator productivity + data-integrity wins shipped after the read-pass series stabilized.
+
+| # | Item | Action Taken | Commit |
+|---|---|---|---|
+| 7.1 | `isGLExpired` duplicated in agency/Inbox + agency/ApplicationDetail | Consolidated to `utils/constants` so the canonical answer is shared across all GL surfaces | `591f688` |
+| 7.2 | admin/Requests doc verification was one-at-a-time | "Verify all pending (N)" bulk action via single `writeBatch` for the common case where every doc looks fine | `01546dc` |
+| 7.3 | GL state surfaced "Expired (action needed)" only AFTER lapse | Added `isGLExpiringSoon` + `glDaysRemaining` + amber "GL expires in Nd" chip on Inbox + ApplicationDetail header + urgency hint copy on action banner | `34c0a51` |
+| 7.4 | admin/HospitalIDs had no print view despite codes being issued in person | "Print Available" — 4-up A4 cards with dashed cut lines, derived registration URL, audit-logged issuance | `7b48c95` |
+| 7.5 | `tsToDate` defensive Firestore Timestamp converter duplicated in 6 files | Extracted to `utils/dates.js`; 6 files swapped to imports (start of the sweep finished in §B.10) | `d01a910` |
+
+### B.8 — First-visit guided tour batch
+
+DIY Canva-style tour on each role's dashboard so first-time users get a 4-step walkthrough of the key elements. Reusable `<Tour>` component, no library dependency.
+
+| # | Item | Action Taken | Commit |
+|---|---|---|---|
+| 8.1 | New users had no orientation on any of the three dashboards | `<Tour>` component (portal + dim overlay + pulsing spotlight + tooltip card); 4-step tours on patient / agency / admin dashboards; bilingual EN+FIL on patient; per-user localStorage dismiss flag | `e5e3ad8` |
+| 8.2 | No way to re-watch the tour without DevTools | "Show welcome tour again" affordances: patient More → Settings; agency + admin dashboard footer link; `resetTourFlag()` helper | `784490a` |
+| 8.3 | TrackStatus also dense (request + slice steppers) but had no tour | 3-step tour on patient TrackStatus; gracefully centers when slice cards don't exist yet (freshly-submitted state) | `4caa9c5` |
+| 8.4 | Thesis doc didn't cover the tour feature | New §9.6 cross-cutting onboarding subsection + §11.2 test scenarios block + §5.3 components/utils tree updates | `ef68799` |
+
+### B.9 — Demo accounts investigation + repair
+
+Root-cause investigation of "some demo accounts vanished from the dev panel" surfaced the orphan-Auth pattern that drives §B.10 #29 below.
+
+| # | Item | Action Taken | Commit |
+|---|---|---|---|
+| 9.1 | Demo accounts on the Seed page couldn't be repaired after deletion | Root cause: admin/Accounts Delete only removes the Firestore profile; the Auth account stays orphaned, and Seed printed "Already exists" + skipped, so the email was permanently broken. Self-healing Seed: on `auth/email-already-in-use`, sign in with the demo password, check whether the Firestore profile exists, recreate it if not; failed sign-in (wrong password) surfaces a clear "delete from Firebase Console" message | `b528914` |
+
+### B.10 — Full-system 46-page audit
+
+Second audit pass — explicitly avoiding the subagent-skim that produced false positives the first time. Every page read directly against its actual source. Ran in three batches (Patient + Auth = 13 pages, Agency = 16 pages, Admin = 17 pages) and produced bugs #22 through #31 plus a thesis doc §6.2 schema realignment (#28).
+
+| # | Item | Action Taken | Commit |
+|---|---|---|---|
+| 10.1 | patient/MedicalPrograms agency-list sort crashed on null `name` | `(a.name ?? '').localeCompare(...)` — one corrupt agency doc no longer wipes the page | `f597044` |
+| 10.2 | Notifications select-all toggled `notifications.length` but checkbox state used `filtered.length` | Scoped selectAll to `filtered` so what gets selected matches what's on screen | `f597044` |
+| 10.3 | patient/Guide statuses section described the legacy direct-to-agency lifecycle | Rewrote with NEW "What is co-funding?" section, NEW Intake Wizard section, NEW request-lifecycle section, restructured statuses as per-slice journey. Bilingual EN+FIL. Plus a search box across the whole Guide | `1ee194a` |
+| 10.4 | agency/GLViewer wrote to deprecated `applications.stages[]` field on Mark-as-Issued | Dropped the `stages:` field from the updateDoc | `02fcc9b` |
+| 10.5 | agency/CertificateGenerator read `app.stages` to look up approvedStage.date | Removed dead lookup; reads `app.approvedAt` directly | `02fcc9b` |
+| 10.6 | agency/Logs sort used `.seconds` (Firestore-only) | Switched to `tsToDate(b.submittedAt)?.getTime()`; also migrated inline formatDate to the shared helper | `91e7350` |
+| 10.7 | Thesis §6.2 auditLog schema listed wrong field names (`actor`/`actorUid`/`at`) | Realigned to actual names from the writer (`actorName`/`actorId`/`createdAt`); §7.3 broad-write surfaces paragraph also updated | `c5609d1` |
+| 10.8 | admin/Reports rendered an unreachable "Budget Request quick-facts callout" | Removed dead branch | `84ab693` |
+| 10.9 | admin/Patients sort `.seconds` legacy break + no orphan-Auth delete warning | Same `tsToDate` sort fix + new amber callout in the permanent-delete modal | `12517ba` |
+| 10.10 | admin/Accounts + admin/AgencyDetail Delete modals never explained the orphan-Auth constraint | Added explicit warning to both: "Firebase Auth can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console" | `dc0c294` |
+| 10.11 | admin/AddAgency: agency created BEFORE admin Auth + sign-out BEFORE setDoc | Reordered: create admin Auth + profile first (with `deleteUser` rollback on setDoc failure), then create agency with `deleteDocSafe` rollback on the admin profile if agency creation fails. Atomic-feeling outcome — either both succeed or neither does | `ee3807f` |
+| 10.12 | Thesis doc didn't cover the audit batch | §11.3 expanded to describe the second pass; §11.4 11 new rows (bugs #21-31); §11.5 three new acknowledged items (orphan-Auth Cloud Function gap, AppLogs server-side search, AddAgency rare step-2 Auth leak) | `38d76f2` |
+| 10.13 | Landing route inconsistency: signed-in patient sent to `/patient/request` from map but `/patient/dashboard` from fallback | Picked `/patient/dashboard` for consistency with the home-base pattern; also extracted `CRMC_GATEWAY_NAME/INITIALS/COLOR` constants used by patient/Interviews | `671dc86` |
+
+### B.11 — Targeted UX wins + cross-cutting consolidation
+
+Four focused improvements + one anti-drift refactor shipped after the audit.
+
+| # | Item | Action Taken | Commit |
+|---|---|---|---|
+| 11.1 | Audit logs were COA-defense-grade but had no CSV export | Added Export CSV to both agency/AuditLog and admin/AuditLog. Exports the currently-filtered rows so an auditor's narrow request maps 1:1 to the file. Disabled while loading or when filtered is empty | `b795fd6` |
+| 11.2 | admin/ExportPreview could thoughtlessly export 50K+ rows | Added `LARGE_EXPORT_THRESHOLD = 10000` ConfirmModal warning. Above the threshold the Download click prompts for confirmation explaining the cost; below, downloads fire immediately (unchanged) | `3cea7f0` |
+| 11.3 | agency/CertificateGenerator had no aging cue on forgotten approved-but-unsigned GLs | Inline chip next to state label: hidden under 3 days, amber 3-6 days, red 7+ days. Drives operator triage on un-signed/un-uploaded GLs that hold committed budget hostage. Also migrated inline formatDate to the shared helper | `fc1c847` |
+| 11.4 | agency/Inbox sorted newest-first only; backlog triage required scrolling | Sort toggle: "↓ Newest first" (default, arrival order) ↔ "↑ Oldest first" (triage view, brings overdue rows to top). Also fixed snapshot sort using `.toMillis?.()` which broke on legacy Date/ISO data | `e94fcd5` |
+| 11.5 | Layout's live announcement banner and the admin/Announcements form preview used two separately-written JSX blocks with two config maps (drift risk) | Extracted `<AnnouncementBanner>` component as single source of truth. New `utils/announcements.js` owns `TYPE_CONFIG` (breaks the circular import from putting it in admin/Announcements). Layout + preview now render via the same code path | `5e41218` |
+
+### B.12 — `tsToDate` consolidation sweep (finish)
+
+Continuation of §B.7 #7.5. The inline `ts.toDate ? ts.toDate() : new Date(ts)` pattern was duplicated across 26 files; this batch eliminated the remaining 20 sites so the pattern now exists in exactly one place — `utils/dates.js`, where it belongs.
+
+| # | Batch | Files | Commit |
+|---|---|---|---|
+| 12.1 | 5 high-touch files | Layout, NotificationModal, Notifications, patient/Dashboard, patient/TrackStatus | `4ba96c0` |
+| 12.2 | Agency batch | agency/AuditLog (3 sites), Dashboard (2), Program, Team | `3b1e398` |
+| 12.3 | Final batch (16 files, 27 sites) | All 12 admin pages with the pattern + agency/CertificateGenerator + agency/ApplicationDetail (4 cooldown sites) + agency/ApplicationModals + utils/intakeSheetHTML | `46a1196` |
+| 12.4 | Thesis doc close | §11.4 #19 expanded to reflect full migration arc; §11.5 acknowledged item removed (no longer accurate) | `eb51812` |
+
 ---
 
 ## Part C — Summary
 
 | Metric | Count |
 |---|---|
-| Total commits across the full revision program | ~120 |
+| Total commits across the full revision program | ~150 |
 | Adviser revisions addressed | 12 of 12 |
-| Real correctness bugs caught in the read-pass series | 16 |
+| Real correctness bugs caught in the read-pass series (#1-20) | 20 |
+| Real correctness bugs caught in the full-system audit (#21-31) | 11 |
 | UX gaps closed in the read-pass series | 17 |
-| Code consolidations in the read-pass series | 13 |
+| UX gaps closed in the post-audit follow-up | 5 (AuditLog CSV, ExportPreview row-warning, GL aging chip, Inbox sort toggle, AnnouncementBanner consolidation) |
+| Code consolidations across the program | 18 (13 from read-pass + 5 post-audit: isGLExpired, tsToDate full sweep across 26 files, CRMC_GATEWAY constants, AnnouncementBanner, deprecated stages[] cleanup) |
 | New i18n keys added (FIL + EN) | Hundreds (initial rollout) + parity maintained throughout |
 | i18n orphan keys removed | 124 |
+| First-visit guided tours shipped | 4 (patient Dashboard + TrackStatus, agency Dashboard, admin Dashboard) |
 
 ### Items still on the table (the user's call, not blocking)
 
-- Bulk-verify / keyboard shortcuts on `admin/Requests` (operator-throughput feature; design call needed on which actions to bulk)
-- `GL_STATUS_CONFIG` label-only helper (two render sites use different visual treatments — badge vs text)
+- **Keyboard shortcuts on `admin/Requests`** (V to verify focused doc, J/K to navigate queue). Bulk-verify shipped 2026-05-31 (commit `01546dc`); keyboard shortcuts deferred — needs design call on focus model and browser-shortcut conflict avoidance
+- **`GL_STATUS_CONFIG` label-only helper** (two render sites use different visual treatments — badge vs text)
+- **`MAX_CAPACITY = 100` hardcoded** in agency/SlotManagement — needs DB schema decision for a per-agency `slots.maxCapacity` field with sensible default
+- **admin/AppLogs server-side search** — currently search + filter only apply to the loaded page (PAGE_SIZE = 100); server-side rewrite is a real but non-blocking workflow gap
+- **Cloud Function for Auth account deletion** — would close the orphan-Auth gap properly (currently mitigated by warning copy in three Delete modals). Blocked by Firebase Spark plan per CLAUDE.md scope
