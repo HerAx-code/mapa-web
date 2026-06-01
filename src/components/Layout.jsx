@@ -992,7 +992,15 @@ export default function Layout({ children, breadcrumb }) {
     toast.success(t('shell.toast.loggedOut'))
   }
 
-  const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+  // Defensive name lookup: prefer user.name (the seeded / patient-registered
+  // field), fall back to displayName (Firebase Auth convention used by some
+  // older / manually-edited admin docs), then to the role label. Without
+  // this, admin accounts whose Firestore doc has `displayName` but no `name`
+  // showed the topbar with an empty name line and the avatar fell back to
+  // the literal "U" initial -- caught live via Playwright (L4 live-audit).
+  const userDisplayName = user?.name || user?.displayName || ROLE_LABEL_SHORT[user?.role] || ''
+  const getInitials = (name) => (name?.split(' ') ?? [])
+    .map(n => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() || 'U'
 
   const getAvatarColor = () => {
     switch (user?.role) {
@@ -1203,7 +1211,7 @@ export default function Layout({ children, breadcrumb }) {
             {user && (
               <div className="relative flex items-center gap-1.5 ml-1 pl-1.5 border-l border-gray-100">
                 <div className="hidden md:block text-right">
-                  <p className="text-xs font-medium text-gray-800 leading-tight">{user.name}</p>
+                  <p className="text-xs font-medium text-gray-800 leading-tight">{userDisplayName}</p>
                   <p className="text-xs text-gray-400 leading-tight">{getRoleLabel()}</p>
                 </div>
                 <button
@@ -1212,15 +1220,15 @@ export default function Layout({ children, breadcrumb }) {
                   title={t('shell.profile.tooltip')}
                 >
                   {user.photoURL
-                    ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
-                    : getInitials(user.name)
+                    ? <img src={user.photoURL} alt={userDisplayName} className="w-full h-full object-cover" />
+                    : getInitials(userDisplayName)
                   }
                 </button>
                 {showProfile && (
                   <ProfilePanel
                     user={user}
                     avatarColor={getAvatarColor()}
-                    initials={getInitials(user.name)}
+                    initials={getInitials(userDisplayName)}
                     roleLabel={getRoleLabel()}
                     onLogout={handleLogout}
                     onClose={() => setShowProfile(false)}
