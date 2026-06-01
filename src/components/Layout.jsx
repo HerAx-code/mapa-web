@@ -25,13 +25,14 @@ import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
 import OfflineBanner from './OfflineBanner'
 import AnnouncementBanner from './AnnouncementBanner'
+import { tsToDate } from '../utils/dates'
 import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
 const makeTimeAgo = (t) => (ts) => {
-  if (!ts) return ''
-  const d   = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return ''
   const min = Math.floor((Date.now() - d.getTime()) / 60000)
   if (min < 1)   return t('notif.timeAgo.justNow')
   if (min < 60)  return t('notif.timeAgo.min', { count: min })

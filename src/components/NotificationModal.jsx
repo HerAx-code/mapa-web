@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { tsToDate } from '../utils/dates'
 import { MdClose, MdChevronLeft, MdChevronRight, MdDelete, MdArrowForward } from 'react-icons/md'
 
 // ── Notification visual config ────────────────────────────────────────────
@@ -94,8 +95,8 @@ export const getNotifRoute = (type, role) => {
 }
 
 const fmtFull = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return '—'
   return d.toLocaleString([], {
     month: 'long', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit',

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import { collection, query, orderBy, onSnapshot, doc, writeBatch, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { tsToDate } from '../utils/dates'
 import { useAuth } from '../contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
 import {
@@ -62,8 +63,8 @@ const NOTIF_VISUAL = {
 
 
 const fmtDate = (ts) => {
-  if (!ts) return '—'
-  const d   = ts.toDate ? ts.toDate() : new Date(ts)
+  const d = tsToDate(ts)
+  if (!d) return '—'
   const now = new Date()
   return d.toDateString() === now.toDateString()
     ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

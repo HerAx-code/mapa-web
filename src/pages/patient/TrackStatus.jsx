@@ -15,6 +15,7 @@ import { computeFunding } from '../../utils/requests'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import Tour from '../../components/Tour'
 import { patientTrackStatusTour } from '../../utils/tours'
+import { tsToDate } from '../../utils/dates'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
@@ -52,9 +53,8 @@ const badgeFor = (s) => APP_STATUS_CONFIG[s]?.badge ?? 'badge-gray'
 const FALLBACK_COLOR = 'bg-gray-400'
 
 const formatDate = (ts) => {
-  if (!ts) return null
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : null
 }
 
 // GL_VALIDITY_DAYS imported from utils/constants so the patient view

@@ -13,6 +13,7 @@ import InstallPrompt from '../../components/InstallPrompt'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
 import { patientDashboardTour } from '../../utils/tours'
+import { tsToDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   collection, query, where, orderBy, onSnapshot, getDocs,
@@ -131,9 +132,8 @@ const STATUS_VISUAL = {
 }
 
 const formatDate = (ts) => {
-  if (!ts) return '—'
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+  const d = tsToDate(ts)
+  return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────
