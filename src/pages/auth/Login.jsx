@@ -116,7 +116,17 @@ export default function Login() {
       setLoginError(false)
       // Greet with first name only so the toast fits on a phone screen
       // (full name like "Juan Dela Cruz Jr." overflows mobile toasts).
-      const firstName = (loggedIn.name?.split(' ')[0] || '').replace(/[,;]+$/, '') || loggedIn.name
+      // Skip honorific prefixes ("Dr. Roberto" → "Roberto") so the greeting
+      // stays personal — "Welcome back, Dr.!" was reported as awkward.
+      const HONORIFICS = new Set(['dr', 'dra', 'mr', 'mrs', 'ms', 'atty', 'engr', 'hon', 'prof', 'rev', 'sr', 'br', 'fr'])
+      const firstName = (() => {
+        const tokens = (loggedIn.name || '').split(/\s+/).filter(Boolean)
+        for (const tok of tokens) {
+          const key = tok.replace(/[.,;]+$/, '').toLowerCase()
+          if (!HONORIFICS.has(key)) return tok.replace(/[,;]+$/, '')
+        }
+        return loggedIn.name
+      })()
       toast.success(t('auth.toast.welcomeBack', { name: firstName }))
       navigate(DASHBOARD[loggedIn.role] ?? '/patient/dashboard')
     } catch (err) {
