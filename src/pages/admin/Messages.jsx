@@ -51,6 +51,9 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
   const conv      = conversations[activeIndex]
   const [messages, setMessages]     = useState([])
   const [loadingMsgs, setLoadingMsgs] = useState(true)
+  // R23: distinct from loadingMsgs so a failed snapshot doesn't look
+  // identical to a brand-new empty conversation.
+  const [loadError, setLoadError]   = useState(false)
   const [text, setText]             = useState('')
   const [sending, setSending]       = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
@@ -77,18 +80,25 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
     if (!conv?.id) return
     setText('')
     setLoadingMsgs(true)
+    setLoadError(false)
     const q = query(collection(db, 'conversations', conv.id, 'messages'), orderBy('createdAt', 'asc'))
     const unsub = onSnapshot(q, snap => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoadingMsgs(false)
+      setLoadError(false)
     }, (err) => {
       setLoadingMsgs(false)
+      setLoadError(true)
       console.error('[Messages] thread snapshot error:', err)
     })
+    // R27: was silently swallowed -- a rules denial here would never
+    // surface in dev or production diagnostics. Log so it's at least
+    // visible in the console even if we don't want to alarm the user
+    // (read receipts are best-effort, not a user-facing failure mode).
     updateDoc(doc(db, 'conversations', conv.id), {
       [`unread.${user.uid}`]:  0,
       [`seenBy.${user.uid}`]: serverTimestamp(),
-    }).catch(() => {})
+    }).catch(err => console.warn('[Messages] mark read failed:', err))
     return unsub
   }, [conv?.id])
 
@@ -99,9 +109,20 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
   const handleSend = async () => {
     if (!text.trim() || sending) return
     setSending(true)
-    await sendMessage(conv.id, { from: user.uid, fromName: user.name, text: text.trim(), toUid: oUid })
-    setText('')
-    setSending(false)
+    // R21: previously had no try/catch -- a thrown sendMessage left
+    // `sending` stuck true forever, the button stayed disabled, and
+    // the user got no feedback. They had to refresh the page to
+    // recover. finally{} guarantees the loading state always clears.
+    try {
+      await sendMessage(conv.id, { from: user.uid, fromName: user.name, text: text.trim(), toUid: oUid })
+      setText('')
+    } catch (err) {
+      console.error('[Messages] send failed:', err)
+      toast.error('Could not send your message. Please try again.')
+      // Keep `text` intact so the user doesn't lose what they typed.
+    } finally {
+      setSending(false)
+    }
   }
 
   const lastMsg   = messages[messages.length - 1]
@@ -161,7 +182,19 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
               </div>
             </div>
           )}
-          {!loadingMsgs && messages.length === 0 && (
+          {/* R23: distinguishable error vs. genuinely empty thread. */}
+          {!loadingMsgs && loadError && (
+            <div className="flex flex-col items-center py-10 gap-3 text-center">
+              <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+                <MdMessage size={22} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Couldn't load this thread</p>
+                <p className="text-xs text-gray-500 mt-0.5">Check your connection and try reopening the conversation.</p>
+              </div>
+            </div>
+          )}
+          {!loadingMsgs && !loadError && messages.length === 0 && (
             <div className="flex flex-col items-center py-10 gap-3 text-center">
               <div className="w-12 h-12 bg-brand-50 rounded-full flex items-center justify-center">
                 <MdMessage size={22} className="text-brand-400" />
@@ -177,7 +210,7 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
               )}
             </div>
           )}
-          {!loadingMsgs && messages.map((m, idx) => {
+          {!loadingMsgs && !loadError && messages.map((m, idx) => {
             const isMe      = m.from === user.uid
             const dateLabel = fmtDateLabel(m.createdAt)
             const prevLabel = idx > 0 ? fmtDateLabel(messages[idx - 1].createdAt) : null
