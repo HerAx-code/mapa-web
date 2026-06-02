@@ -748,6 +748,7 @@
       "cancel": "Cancel",
       "downloadGL": "Download Guarantee Letter",
       "downloading": "Downloading...",
+      "awaitingScan": "Awaiting signed scan from agency",
       "submittedOn": "Submitted {{date}}",
       "noActive": "No applications in progress",
       "hasPastApps": "Your previous applications are in the History tab.",

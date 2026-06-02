@@ -829,7 +829,7 @@ export default function TrackStatus() {
                     <span className={`badge ${badgeFor(app.status)}`}>
                       {t(`patient.status.${app.status}`, { defaultValue: app.status })}
                     </span>
-                    {app.certificateUploaded && (
+                    {app.certificateUploaded ? (
                       <button
                         className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-semibold transition-colors disabled:opacity-60 shadow-sm"
                         onClick={() => handleDownloadCertificate(app)}
@@ -837,7 +837,18 @@ export default function TrackStatus() {
                         <MdDownload size={15} />
                         {downloading === app.id ? t('patient.track.downloading') : t('patient.track.downloadGL')}
                       </button>
-                    )}
+                    ) : app.status === 'certificate' ? (
+                      // R12 (2026-06-03): when the slice is at 'certificate'
+                      // but the agency hasn't uploaded the wet-signed scan
+                      // yet, the Download GL button is intentionally absent.
+                      // Without this hint the patient sees an empty space
+                      // next to a green 'Issued' badge and reports
+                      // 'where?' (real field report from the demo patient
+                      // 2026-06-03). Inline pill makes the wait visible.
+                      <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md whitespace-nowrap">
+                        {t('patient.track.awaitingScan')}
+                      </span>
+                    ) : null}
                   </div>
                   {app.status === 'rejected' && app.rejectionReason && (
                     <div className="mt-3 bg-red-50 border border-red-100 rounded-xl p-3">

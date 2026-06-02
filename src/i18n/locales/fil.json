@@ -748,6 +748,7 @@
       "cancel": "Kanselahin",
       "downloadGL": "I-download ang Guarantee Letter",
       "downloading": "Nagda-download...",
+      "awaitingScan": "Hinihintay ang nakapirmang scan mula sa ahensya",
       "submittedOn": "Naisumite noong {{date}}",
       "noActive": "Walang aktibong aplikasyon",
       "hasPastApps": "Nasa History tab ang inyong nakaraang mga aplikasyon.",
