@@ -28,6 +28,14 @@
       "collectionGroup": "applications",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "glStatus",   "order": "ASCENDING" },
+        { "fieldPath": "approvedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "applications",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "patientId",   "order": "ASCENDING"  },
         { "fieldPath": "submittedAt", "order": "DESCENDING" }
       ]

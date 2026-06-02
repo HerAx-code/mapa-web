@@ -42,6 +42,48 @@ firebase deploy --only hosting
 The build output goes to `dist/`. Firebase Hosting takes ~30 seconds to
 roll over.
 
+### Deploy Cloud Functions
+
+```powershell
+firebase deploy --only functions
+```
+
+Deploys both scheduled functions:
+- `resetAgencySlots` — daily 00:00 Asia/Manila, region `asia-southeast1`
+- `glExpirySweep` — hourly, region `asia-southeast1`
+
+**Blaze plan required.** Scheduled functions cannot deploy on the free
+Spark plan even with zero compute usage. Upgrade at
+https://console.firebase.google.com/project/mapa-crmc/usage/details
+before the first functions deploy. The two functions combined are well
+below the Blaze free tier (2M invocations/month).
+
+**Local emulator** (no Blaze required, no billing):
+
+```powershell
+firebase emulators:start --only firestore,functions
+```
+
+Loads both function definitions; their scheduler triggers won't fire
+without the Pub/Sub emulator, which is fine for verifying the code
+loads. To exercise them manually:
+
+```powershell
+firebase functions:shell
+> resetAgencySlots()
+> glExpirySweep()
+```
+
+### Deploy Firestore indexes
+
+```powershell
+firebase deploy --only firestore:indexes
+```
+
+Add this alongside the rules deploy whenever a new index is added to
+`firestore.indexes.json`. Indexes can take several minutes to build on
+prod.
+
 ### Run unit tests
 
 ```powershell

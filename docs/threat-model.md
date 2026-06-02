@@ -242,7 +242,7 @@ vs server-written entries.
 
 | Aspect | Status |
 |--------|--------|
-| No Cloud Functions / no background jobs | Slot reset / GL expiry / notification retry happen client-side when a relevant page loads |
+| Cloud Functions ready, Blaze required for prod deploy | `resetAgencySlots` (daily) + `glExpirySweep` (hourly) live in `functions/`; web-side lazy fallbacks remain as safety nets for the day the scheduler misfires |
 | No tamper-evident audit log | Admin SDK deletes are unrecorded; service-account key holders are trusted |
 | No staging environment | Dev work hits the same Firestore as the pilot |
 | No automated CI / no rule-deploy gate | Manual `firebase deploy --only firestore:rules`; tests must be run locally |
