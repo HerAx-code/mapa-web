@@ -202,11 +202,21 @@ service cloud.firestore {
       // for. The endorse transaction (admin/Requests EndorseModal) stamps
       // an agencyIds[] array onto each attached document at endorse time,
       // and the /seed-page backfill stamped pre-existing legacy docs.
-      allow read:   if isAuth() && (
-        resource.data.patientId == uid()
-        || isAdmin()
-        || (isAgency() && resource.data.agencyIds is list && userAgencyId() in resource.data.agencyIds)
-      );
+      //
+      // R9 (2026-06-03): split into three allow read statements so each
+      // is evaluated independently by Firestore's query-rule analyzer.
+      // The original combined-OR clause + `is list` defensive check
+      // confused the analyzer on the agency-side LIST query
+      // `where('agencyIds', 'array-contains', userAgencyId)` -- the
+      // analyzer couldn't determine that `array-contains` aligned with
+      // the rule's `in` operator, so the query was denied even though
+      // every individual result document would pass the rule. The
+      // simpler single-clause form below works because the analyzer
+      // can match `array-contains` directly against `in` without
+      // intervening conjunctions.
+      allow read: if isAuth() && resource.data.patientId == uid();
+      allow read: if isAdmin();
+      allow read: if isAgency() && userAgencyId() in resource.data.agencyIds;
       // Patient creates own document. patientId must match auth (no creating
       // docs attributed to other patients), status must start at 'pending'
       // (can't pre-stamp verified to bypass CRMC review), agencyIds[]
