@@ -30,6 +30,7 @@ const resizeToBase64 = (file) => new Promise((resolve, reject) => {
 })
 import { useAuth } from '../contexts/AuthContext'
 import { ROLE_LABEL } from '../utils/constants'
+import { buildPatientDataExport, downloadAsJSON, patientExportFilename } from '../utils/dataExport'
 import { useTranslation, Trans } from 'react-i18next'
 import {
   MdClose, MdVisibility, MdVisibilityOff, MdCameraAlt,
@@ -439,6 +440,25 @@ function ChangePasswordModal({ onClose }) {
 
 function SettingsModal({ onClose }) {
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const [exporting, setExporting] = useState(false)
+
+  const isPatient = user?.role === 'patient'
+
+  const handleExport = async () => {
+    if (!user?.uid || exporting) return
+    setExporting(true)
+    try {
+      const data = await buildPatientDataExport(user.uid)
+      downloadAsJSON(data, patientExportFilename(user.uid))
+      toast.success(t('profile.privacy.exportSuccess'))
+    } catch (err) {
+      console.error('[dataExport] failed:', err)
+      toast.error(t('profile.privacy.exportFailed'))
+    } finally {
+      setExporting(false)
+    }
+  }
   const sections = [
     { title: t('profile.privacy.dataTitle'), items: [t('profile.privacy.data1'), t('profile.privacy.data2'), t('profile.privacy.data3'), t('profile.privacy.data4'), t('profile.privacy.data5'), t('profile.privacy.data6')] },
     { title: t('profile.privacy.useTitle'),  items: [t('profile.privacy.use1'),  t('profile.privacy.use2'),  t('profile.privacy.use3'),  t('profile.privacy.use4'),  t('profile.privacy.use5')] },
@@ -493,6 +513,26 @@ function SettingsModal({ onClose }) {
             ))}
           </ul>
         </div>
+
+        {/* Data portability — RA 10173 §16(f). Patient-only so a logged-in
+            agency/admin doesn't accidentally try to "export their own data"
+            which has different shape and meaning. */}
+        {isPatient && (
+          <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
+            <p className="text-sm font-semibold text-brand-700 mb-1">
+              {t('profile.privacy.exportTitle')}
+            </p>
+            <p className="text-xs text-brand-700/80 mb-3 leading-relaxed">
+              {t('profile.privacy.exportDesc')}
+            </p>
+            <button
+              className="btn-secondary text-sm w-full flex items-center justify-center gap-1.5"
+              onClick={handleExport}
+              disabled={exporting}>
+              {exporting ? t('profile.privacy.exporting') : `↓ ${t('profile.privacy.exportButton')}`}
+            </button>
+          </div>
+        )}
 
         {/* Contact */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">

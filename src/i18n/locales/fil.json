@@ -360,7 +360,13 @@
       "right5": "Karapatang ipa-delete — humingi ng pagtanggal ng inyong datos ayon sa legal na pangangailangan.",
       "right6": "Karapatang mag-file ng reklamo — magsumite ng reklamo sa National Privacy Commission (privacy.gov.ph).",
       "contact": "Para sa mga tanong tungkol sa inyong datos o upang gamitin ang inyong mga karapatan, makipag-ugnayan sa <b>CRMC Medical Social Services</b> o mag-email sa <b>mss@crmc.gov.ph</b>.",
-      "close": "Isara"
+      "close": "Isara",
+      "exportTitle": "I-download ang kopya ng inyong datos",
+      "exportDesc": "Gamitin ang inyong karapatang mag-port ng datos sa ilalim ng RA 10173 §16(f). Ang download ay isang JSON file na naglalaman ng inyong profile, mga kahilingan, aplikasyon, dokumento (kasama ang nilalaman), Guarantee Letters, mga notipikasyon, at mga usapan. Maaaring ilang MB ang laki.",
+      "exportButton": "I-download ang aking datos (JSON)",
+      "exporting": "Hinahanda ang inyong datos…",
+      "exportSuccess": "Na-download na ang inyong datos.",
+      "exportFailed": "Hindi nahanda ang inyong datos. Subukan muli o makipag-ugnayan sa MSS."
     },
     "help": {
       "title": "Tulong at Suporta",

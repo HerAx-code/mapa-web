@@ -360,7 +360,13 @@
       "right5": "Right to erasure — request deletion of your data subject to legal retention requirements.",
       "right6": "Right to file a complaint — lodge a complaint with the National Privacy Commission (privacy.gov.ph).",
       "contact": "For questions about your data or to exercise your rights, contact <b>CRMC Medical Social Services</b> or email <b>mss@crmc.gov.ph</b>.",
-      "close": "Close"
+      "close": "Close",
+      "exportTitle": "Download a copy of your data",
+      "exportDesc": "Exercise your right to data portability under RA 10173 §16(f). The download is a JSON file containing your profile, requests, applications, documents (including their content), Guarantee Letters, notifications, and conversations. It may be several MB large.",
+      "exportButton": "Download my data (JSON)",
+      "exporting": "Preparing your data…",
+      "exportSuccess": "Your data has been downloaded.",
+      "exportFailed": "Couldn't prepare your data. Please try again or contact MSS."
     },
     "help": {
       "title": "Help & Support",
