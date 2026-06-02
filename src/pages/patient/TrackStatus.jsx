@@ -195,6 +195,52 @@ export default function TrackStatus() {
   const [expandedApps,     setExpandedApps]     = useState(new Set())
   const [confirmWithdrawId, setConfirmWithdrawId] = useState(null)
   const [withdrawing,      setWithdrawing]      = useState(null)
+  const [proceedingId,     setProceedingId]     = useState(null)
+
+  // R16: previously the "Confirm & Proceed" banner navigated to
+  // /patient/request hoping the RequestAssistance page would detect the
+  // active request and render its proceed view. That detection is fragile
+  // (parent-request lookup misses when the slice's parent request is
+  // missing or in a terminal status) -- patients landed on the new-request
+  // wizard instead, with no obvious way back to confirming the slice.
+  //
+  // Doing the proceed inline on this page removes the navigation dead-end
+  // entirely: the slice is the unit of action, and the banner that asks
+  // the patient to confirm should be the same UI that performs the
+  // confirmation.
+  const handleSliceProceed = async (app) => {
+    if (proceedingId || app.status !== 'endorsed') return
+    setProceedingId(app.id)
+    try {
+      await updateDoc(doc(db, 'applications', app.id), {
+        status:    'reviewing',
+        updatedAt: serverTimestamp(),
+      })
+      toast.success(t('patient.track.proceedOk'))
+
+      // Notify the receiving agency's coordinators. Wrapped in its own
+      // try so a notification failure never undoes the slice update.
+      try {
+        const staffSnap = await getDocs(query(
+          collection(db, 'users'),
+          where('agencyId', '==', app.agencyId),
+          where('role', 'in', ['agency', 'agency_admin']),
+        ))
+        await Promise.all(staffSnap.docs.map(d => notify(d.id, {
+          type:  'app_submitted',
+          title: 'New endorsed request',
+          body:  `${user.name} accepted the endorsement and submitted their request. Please review.`,
+        })))
+      } catch (notifyErr) {
+        console.error('[handleSliceProceed] agency notify failed:', notifyErr)
+      }
+    } catch (err) {
+      console.error('[handleSliceProceed] update failed:', err)
+      toast.error(t('patient.track.proceedErr'))
+    } finally {
+      setProceedingId(null)
+    }
+  }
 
   const handleWithdraw = async (app) => {
     setWithdrawing(app.id)
@@ -632,9 +678,12 @@ export default function TrackStatus() {
                             <span>{t('patient.track.banner.endorsed')}</span>
                           </p>
                           <button
-                            className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-purple-500 hover:bg-purple-600 text-white px-4 rounded-lg font-medium transition-colors"
-                            onClick={() => navigate('/patient/request')}>
-                            {t('patient.track.banner.endorsedBtn')} →
+                            className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-purple-500 hover:bg-purple-600 text-white px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            disabled={proceedingId === app.id}
+                            onClick={() => handleSliceProceed(app)}>
+                            {proceedingId === app.id
+                              ? t('patient.track.banner.proceeding')
+                              : `${t('patient.track.banner.endorsedBtn')} →`}
                           </button>
                         </div>
                       )}
