@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { MdEdit, MdAdd, MdRemove, MdInfo, MdCalendarToday, MdHistory, MdAttachMoney } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
 import toast from 'react-hot-toast'
@@ -118,14 +118,30 @@ export default function SlotManagement() {
     })
   }
 
+  // R5 fix: all three slot mutations now run inside runTransaction so a
+  // concurrent endorsement decrement (admin/Requests EndorseModal does
+  // `slots.remaining -= 1` inside its own tx) can't be silently overwritten
+  // by an operator clicking +5 or -3 in this page. Lost-update race
+  // previously possible because the handlers read slots.remaining from
+  // React state and wrote that value back -- they have no idea another
+  // tx just landed.
+  //
+  // 2026-06-03 end-to-end review (R5).
+
   const handleAdd = async () => {
     if (slots.remaining + adjust > slots.total) {
       toast.error(`Cannot exceed total capacity (${slots.total}).`)
       return
     }
     try {
-      await updateDoc(doc(db, 'agencies', agency.id), {
-        'slots.remaining': slots.remaining + adjust,
+      const ref = doc(db, 'agencies', agency.id)
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists()) throw new Error('GONE')
+        const cur   = snap.data()?.slots?.remaining ?? 0
+        const total = snap.data()?.slots?.total    ?? 0
+        const next  = Math.min(cur + adjust, total)
+        tx.update(ref, { 'slots.remaining': next })
       })
       await recordAdjustment({ type: 'add', delta: adjust, reason: reason.trim() || null })
       setReason('')
@@ -139,8 +155,13 @@ export default function SlotManagement() {
       return
     }
     try {
-      await updateDoc(doc(db, 'agencies', agency.id), {
-        'slots.remaining': slots.remaining - adjust,
+      const ref = doc(db, 'agencies', agency.id)
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists()) throw new Error('GONE')
+        const cur  = snap.data()?.slots?.remaining ?? 0
+        const next = Math.max(0, cur - adjust)
+        tx.update(ref, { 'slots.remaining': next })
       })
       await recordAdjustment({ type: 'deduct', delta: adjust, reason: reason.trim() || null })
       setReason('')
@@ -154,15 +175,34 @@ export default function SlotManagement() {
     if (newTotal < used)         { toast.error(`Cannot set total below already-used slots (${used}).`); return }
     setSaving(true)
     try {
-      const oldTotal = slots.total ?? 0
-      await updateDoc(doc(db, 'agencies', agency.id), {
-        'slots.total':     newTotal,
-        'slots.remaining': Math.max(0, newTotal - used),
+      const ref = doc(db, 'agencies', agency.id)
+      let oldTotal = slots.total ?? 0
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref)
+        if (!snap.exists()) throw new Error('GONE')
+        const cur   = snap.data()?.slots ?? {}
+        oldTotal    = cur.total ?? oldTotal
+        const usedNow = (cur.total ?? 0) - (cur.remaining ?? 0)
+        // Re-check the post-transactional consumption budget. Between
+        // the UI guard above and now another tx could have consumed
+        // a slot, pushing usedNow past newTotal. In that case we
+        // refuse the change rather than silently set remaining<0.
+        if (newTotal < usedNow) throw new Error('USED_EXCEEDS_NEW_TOTAL')
+        tx.update(ref, {
+          'slots.total':     newTotal,
+          'slots.remaining': Math.max(0, newTotal - usedNow),
+        })
       })
       await recordAdjustment({ type: 'capacity', delta: newTotal, oldDelta: oldTotal, reason: 'Capacity edit' })
       setEditing(false)
       toast.success('Daily capacity updated.')
-    } catch { toast.error('Failed to update capacity.') }
+    } catch (err) {
+      if (String(err.message) === 'USED_EXCEEDS_NEW_TOTAL') {
+        toast.error('Another change just landed -- used slots now exceed the new capacity. Re-check the page and try again.')
+      } else {
+        toast.error('Failed to update capacity.')
+      }
+    }
     finally { setSaving(false) }
   }
 

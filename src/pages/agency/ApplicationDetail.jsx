@@ -790,6 +790,46 @@ export default function ApplicationDetail() {
   const handleReject = async (reason) => {
     const ok = await updateStatus('rejected', { rejectionReason: reason })
     if (!ok) return
+
+    // R4 fix: same family as R3 -- the rejection moves a slice out of
+    // OUTSTANDING_SLICE_STATUSES, which changes the request's derived
+    // financials. If this was the last outstanding slice, the parent
+    // should drop from 'endorsed' to 'submitted'. Without the re-sync,
+    // admin/Requests keeps showing the parent as 'Endorsing' forever
+    // even though no agency is processing.
+    //
+    // The rejection itself doesn't affect committed (slice was never
+    // approved), so agency.budget.committed stays untouched -- only the
+    // parent's status needs updating.
+    if (app.requestId) {
+      try {
+        await runTransaction(db, async (tx) => {
+          const reqRef = doc(db, 'requests', app.requestId)
+          const reqSnap = await tx.get(reqRef)
+          if (!reqSnap.exists()) return
+          const sibSnap = await getDocs(query(
+            collection(db, 'applications'),
+            where('requestId', '==', app.requestId),
+          ))
+          // Substitute the rejected status for THIS slice
+          const siblings = sibSnap.docs.map(d => {
+            const data = { id: d.id, ...d.data() }
+            if (d.id === app.id) return { ...data, status: 'rejected' }
+            return data
+          })
+          const need = reqSnap.data().amountNeeded ?? 0
+          const next = deriveRequestFinancials(siblings, need)
+          tx.update(reqRef, {
+            amountCommitted: next.amountCommitted,
+            status:          next.status,
+            updatedAt:       serverTimestamp(),
+          })
+        })
+      } catch (err) {
+        console.error('[ApplicationDetail] parent re-sync after reject failed:', err)
+      }
+    }
+
     const submittedDate = app.submittedAt?.toDate?.()
     const isToday = submittedDate &&
       submittedDate.toDateString() === new Date().toDateString()
