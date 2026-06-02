@@ -45,6 +45,19 @@ const ACTION_CONFIG = {
   announcement_created:   { label: 'Announcement Created',     badge: 'bg-brand-50 text-brand-700 border-brand-200' },
   announcement_updated:   { label: 'Announcement Updated',     badge: 'bg-amber-50 text-amber-700 border-amber-200' },
   announcement_deleted:   { label: 'Announcement Deleted',     badge: 'bg-red-50 text-red-700 border-red-200'       },
+  // R22: request + interview + GL lifecycle actions were being LOGGED in
+  // code but had no ACTION_CONFIG entry, so the audit log rendered them
+  // with raw action keys and unstyled badges. Added each with a label +
+  // matching badge color, and grouped under a new "Lifecycle" category.
+  request_endorsed:       { label: 'Request Endorsed',          badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  interview_scheduled:    { label: 'Interview Scheduled',       badge: 'bg-blue-50 text-blue-700 border-blue-200'       },
+  interview_completed:    { label: 'Interview Completed',       badge: 'bg-green-50 text-green-700 border-green-200'    },
+  intake_completed:       { label: 'Intake Completed',          badge: 'bg-teal-50 text-teal-700 border-teal-200'       },
+  gl_redeemed:            { label: 'GL Redeemed',               badge: 'bg-green-50 text-green-700 border-green-200'    },
+  gl_unmark_redeemed:     { label: 'GL Redemption Reversed',    badge: 'bg-amber-50 text-amber-700 border-amber-200'    },
+  gl_expired:             { label: 'GL Expired',                badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  gl_auto_expired:        { label: 'GL Auto-Expired',           badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  approval_reversed:      { label: 'Approval Reversed',         badge: 'bg-red-50 text-red-700 border-red-200'          },
 }
 
 const ACTION_CATEGORIES = [
@@ -57,6 +70,8 @@ const ACTION_CATEGORIES = [
   { key: 'config',      label: 'Config',       actions: ['doctype_added', 'doctype_updated', 'doctype_deleted', 'assistance_added', 'assistance_updated', 'assistance_deleted'] },
   { key: 'reports',       label: 'Reports',       actions: ['report_updated', 'report_deleted'] },
   { key: 'announcements', label: 'Announcements', actions: ['announcement_created', 'announcement_updated', 'announcement_deleted'] },
+  // R22: request + interview + GL lifecycle filter.
+  { key: 'lifecycle',     label: 'Lifecycle',     actions: ['request_endorsed', 'interview_scheduled', 'interview_completed', 'intake_completed', 'gl_redeemed', 'gl_unmark_redeemed', 'gl_expired', 'gl_auto_expired', 'approval_reversed'] },
 ]
 
 const DATE_FILTERS = [

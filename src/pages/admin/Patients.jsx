@@ -323,13 +323,35 @@ export default function Patients() {
     }
 
     try {
-      // Fetch all associated collections in parallel
-      const [docsSnap, contentsSnap, appsSnap, notifsSnap] = await Promise.all([
+      // R20: Fetch every collection that holds the patient's data so the
+      // cascade is complete. Previously this missed `requests` (parent
+      // of slices -- left orphaned with patient name/amount visible to
+      // admin/Requests forever), `certificates/{appId}`, and
+      // `conversations` the patient participated in. RA 10173 §16(e)
+      // right-to-erasure expects all PII removed when the admin commits
+      // to a delete; orphan parent docs were a real privacy gap.
+      //
+      // Note `conversations` and `certificates/{appId}` use document IDs
+      // we have to look up via separate queries (no patientId field on
+      // certificates -- the doc ID IS the appId, so we look up via the
+      // already-fetched applications list).
+      const [docsSnap, contentsSnap, appsSnap, requestsSnap, notifsSnap, convsSnap] = await Promise.all([
         getDocs(query(collection(db, 'documents'),        where('patientId', '==', uid))),
         getDocs(query(collection(db, 'documentContents'), where('patientId', '==', uid))),
         getDocs(query(collection(db, 'applications'),     where('patientId', '==', uid))),
+        getDocs(query(collection(db, 'requests'),         where('patientId', '==', uid))),
         getDocs(collection(db, 'notifications', uid, 'items')),
+        getDocs(query(collection(db, 'conversations'),    where('participants', 'array-contains', uid))),
       ])
+
+      // Certificates: keyed by appId, no patientId field to query on.
+      // Resolve via the application snapshots we just fetched.
+      const certSnaps = await Promise.all(
+        appsSnap.docs.map(a => getDocs(query(
+          collection(db, 'certificates'),
+          where('__name__', '==', a.id),
+        )).catch(() => null))
+      )
 
       // Delete Storage objects for any docs that have been migrated to
       // (or freshly uploaded into) Cloud Storage. deleteDocumentStorage
@@ -340,24 +362,41 @@ export default function Patients() {
         storagePath: d.data()?.storagePath,
       })))
 
-      // Delete associated records (user document last so the admin can retry on failure)
+      // Delete associated records. Conversation thread messages live
+      // under conversations/{id}/messages -- batch-delete those first,
+      // then the parent conversation docs.
+      const convMsgSnaps = await Promise.all(
+        convsSnap.docs.map(c => getDocs(collection(db, 'conversations', c.id, 'messages')))
+      )
+
       await Promise.all([
         batchDelete(docsSnap),
         batchDelete(contentsSnap),
         batchDelete(appsSnap),
+        batchDelete(requestsSnap),
         batchDelete(notifsSnap),
+        // Per-conversation: messages then the conversation doc itself.
+        ...convMsgSnaps.map(s => batchDelete(s)),
+        batchDelete(convsSnap),
+        // Certificates: each query above returned at most one doc.
+        ...certSnaps.filter(Boolean).map(s => batchDelete(s)),
       ])
       await deleteDoc(doc(db, 'notifications', uid)).catch(() => {})
+      // user doc last so the admin can retry the cascade on partial failure
       await deleteDoc(doc(db, 'users', uid))
 
       logAudit(adminUser, {
         action: 'account_deleted', targetType: 'patient',
         targetId: uid, targetName: patient.name,
-        details: `Permanently deleted: ${docsSnap.size} document(s), ${appsSnap.size} application(s), and all notifications`,
+        details: `Permanently deleted: ${docsSnap.size} document(s), ${appsSnap.size} application(s), ${requestsSnap.size} request(s), ${convsSnap.size} conversation(s), and all notifications`,
       })
       setConfirmDeletePatient(null)
       toast.success(`${patient.name}'s account and all associated data permanently deleted.`)
-    } catch {
+    } catch (err) {
+      // R20: the previous bare `catch {}` swallowed every error. Without
+      // a log the admin had no way to tell whether the cascade failed
+      // mid-flight (some data deleted, some left) or never started.
+      console.error('[Patients] cascade delete failed:', err)
       toast.error('Failed to delete account. Some data may not have been removed — please try again.')
     }
   }

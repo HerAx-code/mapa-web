@@ -107,6 +107,13 @@ function AccountModal({ account, onClose }) {
             contact:   form.contact.trim(),
             rank:      form.role === 'super_admin' ? 'high' : 'low',
             active:    true,
+            // R24: agency/Team.jsx and patient Register.jsx both stamp
+            // these fields on creation; this admin path was the only one
+            // omitting them. Without explicit defaults, future queries
+            // like where('deletion', '==', false) miss the doc because
+            // Firestore can't match a missing field via equality.
+            deletion:  false,
+            cooldown:  0,
             createdAt: serverTimestamp(),
           })
         } catch (setDocErr) {
