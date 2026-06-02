@@ -403,7 +403,37 @@ modal exposed both UX and a long-standing functional bug.
 | 20.5 | Defensive recipient name resolution | `displayName(r)` cascades `r.name → r.displayName → role label`. Same pattern as the L4 Layout fix — the super_admin demo doc has `displayName` but no `name`, which previously rendered a blank recipient row with "U" initials. Now reads as "CRMC Administrator". `initials(r)` reads from the resolved name | `f917bfb` |
 | 20.6 | Error messages tell the truth | Send-error catch now matches `err.code` and surfaces specific reasons ("Permission denied. The CRMC contact you picked may not be configured for messaging yet." / "Network problem." / "Server check failed." / the raw message). Console.error logs the full error for diagnostics. Toast duration 7 s so the patient has time to read | `f917bfb` |
 
-### B.21 — Closing summary
+### B.21 — Storage migration partial revert (Spark-plan constraint)
+
+The Tier-2 commit `cad84ff` migrated patient document content from
+`documentContents` (Firestore base64) to Cloud Storage. After the
+deploy, the operator confirmed they cannot afford the Firebase
+Blaze plan, and Cloud Storage on Firebase requires Blaze to enable
+new buckets on projects created after the recent policy change. The
+GL-scan path hit the same wall earlier in the project (commit
+`b888fa9` reverted that migration with the same note).
+
+**Net effect of the unreverted state**: every new patient document
+upload on the live site would fail (`uploadBytes` rejected for
+billing-not-enabled), and the metadata-doc rollback in
+`uploadPatientDocument` would silently leave the patient with no
+visible document. This was caught before any real patient
+exercised it.
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 21.1 | Revert `uploadPatientDocument` + `replacePatientDocument` to Spark-compatible base64 | New uploads write the content back to `documentContents/{docId}`, capped at ~700 KiB after image compression to fit Firestore's 1 MiB doc cap (same as pre-Tier-2). The rule constraint `!('storagePath' in request.resource.data)` on `documents.create` is kept in place as defence-in-depth (no harm; uploader simply doesn't set it any more) | (this batch) |
+| 21.2 | Keep `DocViewerModal` Storage-first fallback | Any doc that DID get a `storagePath` stamped during the Tier-2 window (likely zero, since the migration script was never run) continues to load via the Storage path. The legacy `documentContents` fallback remains the working path | (already in place) |
+| 21.3 | Keep Storage-related code paths as future work | `storage.rules` `/documents/{patientId}/{docId}/{file}` block stays in the file (dormant; no objects under it). `scripts/migrate-doc-content-to-storage.js` stays in `scripts/` as the v2 migration target for whenever the project moves to Blaze. The doc-comments at the top of `uploadDocument.js` explain the rollback rationale so a future maintainer doesn't re-trip on the same wall | (this batch) |
+
+`docs/threat-model.md` "Operational limits" row updated to reflect
+the actual file-content posture (base64 in Firestore, capped at
+~1 MiB per doc, advisory of the Storage v2 path).
+
+`docs/thesis-summary.md` data-model table updated to show the
+current state, not the Tier-2 aspirational state.
+
+### B.22 — Closing summary
 
 | Metric | Value |
 |---|---|

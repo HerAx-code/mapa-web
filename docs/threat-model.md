@@ -252,7 +252,7 @@ vs server-written entries.
 
 | Aspect | Status |
 |--------|--------|
-| Pilot runs on Spark (free) plan — Cloud Functions not deployed | Background jobs run via client-side lazy fallbacks in `agency/Dashboard.jsx`: slot reset + GL expiry sweep both fire on the first agency-user dashboard load each day. The `functions/` directory holds the equivalent scheduled functions (`resetAgencySlots`, `glExpirySweep`) ready for a future Blaze deploy; current operation does not depend on them |
+| Pilot runs on Spark (free) plan — Cloud Functions + Cloud Storage not active | Background jobs run via client-side lazy fallbacks in `agency/Dashboard.jsx` (slot reset + GL expiry sweep on agency-user dashboard load). Patient document content is base64-in-Firestore, ~700 KiB-after-compression cap per file. Both the Cloud Functions surface and the documentContents→Storage migration are implemented and remain in tree for a future Blaze deploy; the pilot operates without them |
 | No tamper-evident audit log | Admin SDK deletes are unrecorded; service-account key holders are trusted |
 | No staging environment | Dev work hits the same Firestore as the pilot |
 | No automated CI / no rule-deploy gate | Manual `firebase deploy --only firestore:rules`; tests must be run locally |

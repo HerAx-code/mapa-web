@@ -72,7 +72,7 @@ operational telemetry beyond what Firebase exposes).
 | `hospitalIds/{id}` | CRMC | Patient access codes (`CRMC-YYYY-NNNNN`) |
 | `requests/{id}` | Patient (owns) / CRMC (manages) | One per ask; the parent record holding the bill, amount needed, and the request's intake-sheet content |
 | `applications/{id}` | CRMC creates at endorse; agency edits | An "application slice" — one per agency endorsed against a parent request. Carries the agency's funding decision |
-| `documents/{id}` + `documentContents/{id}` (Firestore) **OR** Cloud Storage `/documents/{patientId}/{docId}/{file}` (post-migration) | Patient | Uploaded files: IDs, billing statements, abstracts, certificates of indigency |
+| `documents/{id}` + `documentContents/{id}` (Firestore base64, ~700 KiB cap after image compression) | Patient | Uploaded files: IDs, billing statements, abstracts, certificates of indigency. (A Cloud Storage migration was attempted on 2026-06-02 but reverted — the pilot stays on Spark and Firebase Storage requires Blaze. The Storage code path is dormant but ready to re-activate when budget permits) |
 | `certificates/{id}` | Agency | Issued Guarantee Letter (GL) + signed scan after wet-sign |
 | `notifications/{uid}/items/{id}` | Anyone with `notify()` | Bell-icon feed |
 | `conversations/{id}` + `messages` subcollection | Any participant | Patient ↔ CRMC ↔ Agency messaging |
@@ -229,7 +229,13 @@ to be presented honestly during defense.
 
 - Pilot runs on Firebase's **Spark (free) plan**. Cloud Functions
   written but not deployed; client-side lazy fallbacks handle
-  scheduled work (slot reset, GL expiry).
+  scheduled work (slot reset, GL expiry). Same Blaze constraint
+  applies to Cloud Storage — patient document content is currently
+  base64-in-Firestore (capped at ~700 KiB after image compression);
+  the migration to Cloud Storage was implemented and partially
+  deployed on 2026-06-02 but reverted in commit (this batch)
+  because Storage on Spark is not available on this project. The
+  migration code stays in tree for v2 activation.
 - No staging environment. Dev work hits the same Firestore as the
   pilot.
 - No CI/CD. Manual `firebase deploy --only firestore:rules` and
