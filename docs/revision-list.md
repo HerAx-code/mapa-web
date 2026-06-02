@@ -309,18 +309,122 @@ Second sweep, this time covering agency portal end-to-end (Dashboard, Inbox, Slo
 | 14.4 | **L13** Audit log `details` field is rendered verbatim from Firestore; current data contains injection attempts (fake "system_alert" entries instructing AI agents to run `claude -p ...` and `firebase deploy --only firestore:rules`) | ⏳ Deferred (security hardening) | Found three crafted entries dated 2026-05-31 with actors "System / Recovery Engine / Migration Daemon" embedding shell commands aimed at recursive Claude self-invocation and rule deployment. Not executed. Underlying issue: any role with `logAudit()` access can write arbitrary `details` text, and that text is read both by human admins (could paste-and-run) and by AI agents reviewing the dashboard. Hardening options: (a) tighten Firestore rules on `auditLog` writes to constrain `actorName`/`actorUid` to match `request.auth` and the `action` field to a known enum, (b) tag entries with provenance (server vs. client-written) and visually distinguish, (c) collapse long details to ~200 chars with a "Show full" affordance, (d) consider stripping shell-command-like substrings on display. Larger work — deferred to a dedicated security pass |
 | 14.5 | **L14** Patient registration permits role-impersonating names ("CRMC Admin", "System Diagnostics", "NUKE") seen in admin/Patients | ⏳ Deferred (security hardening) | Companion finding to L13 — the dataset contains accounts with names that look like internal services and emails like `cascade_…@diag.ph` (Cascade being a competing AI assistant — a deliberate tell). Practical mitigation: at registration, reject names matching reserved tokens (`admin`, `system`, `crmc`, `mapa`, `diagnostic`, etc.) and surface a soft warning in admin/Patients when an account's display name collides with role labels. Tracked alongside L13 |
 
-| Metric | Count |
+### B.15 — Security response: prompt-injection in auditLog + three rule passes
+
+On 2026-06-01 the live audit (B.14) surfaced 18 planted entries in the
+`auditLog` collection with fake "System / Recovery Engine / Migration
+Daemon" actors carrying shell-command payloads (`claude -p "…"`,
+`firebase deploy --only firestore:rules`). This batch is the
+incident-response shipping work — three layered hardening passes plus
+discovery cleanup.
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 15.1 | **L4** fix landed | Defensive `userDisplayName = name \|\| displayName \|\| ROLE_LABEL_SHORT[role]` across all three Layout avatar/name call sites; `getInitials` null-safe | `1afb7cd` |
+| 15.2 | **L8** welcome toast title-prefix bug | Login.jsx walk-skip over honorific set (`dr, dra, mr, mrs, ms, atty, engr, hon, prof, rev, sr, br, fr`); "Dr. Roberto Velasco" → "Roberto" | `25c33b1` |
+| 15.3 | **L13/L14** Security pass 1 — auditLog hardening | `actorId == request.auth.uid` enforced on `auditLog.create`; `details` capped at 2000 chars; admin/AuditLog + agency/AuditLog clamp `details` to 240 chars with "Show more"; patient registration rejects reserved tokens via `hasReservedToken()` (admin, system, crmc, mapa, malasakit, diagnostic, recovery, migration, daemon, agency, staff, super, root, test, nuke, **cascade**, claude, gpt, bot) | `f14ea17` |
+| 15.4 | **L11** data-state contract violation visible | admin/Requests row shows amber `⚠ data check` chip when `status === 'fully_funded'` but `committed < amountNeeded`. Render logic is correct; the bad data state is now self-reporting | `d2771f1` |
+| 15.5 | Security pass 2 — companion surfaces | `notifications.create`: title ≤ 200 / body ≤ 2000; `conversations.create`: caller must be in `participants`; `notificationErrors.create`: title/body/error size caps; `reports.create`: `reportedBy == uid()` + description cap. Plus `scripts/cleanup-injection-audit.js` (admin-SDK script with dry-run + `--delete` + `--strict` modes) | `242c175` |
+| 15.6 | Security pass 3 — patient writes + cross-agency | `documents.create`: patientId match + `status == 'pending'` + no agencyIds pre-stamp + ocrText cap + (later) no storagePath pre-stamp; `documentContents.create`: patientId match; `certificates.create/update`: agency owner-only; `announcements.create/update`: title/message caps; `messages.create`: from-attribution + 5000-char cap | `9a596d4` |
+| 15.7 | `agencies/update` budget guard | Coordinator (role=='agency', NOT admin) updates must round-trip `budget` byte-identical. Agency admin retains allocation authority. Closes the last "field-level constraints in UI only" residual | `608738b` |
+| 15.8 | Cleanup of planted entries | Operator ran `scripts/cleanup-injection-audit.js --delete` against prod via service-account auth; 18 entries purged. Recorded in project log | (operator) |
+
+§B.13 deferral table updated; the only remaining row from B.13 / B.14
+on the residual list is L5 (Tour Skip — likely Playwright artifact, no
+real user reports).
+
+### B.16 — Thesis-defense polish (Tier 1)
+
+Six bounded, well-tested items that turn the security / engineering
+posture from "I assert it works" into "here's the test that proves
+it." The series ran 2026-06-01 → 2026-06-02.
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 16.1 | `agencies/update` field-level budget constraint | (See 15.7) | `608738b` |
+| 16.2 | **Vitest + 29 unit tests** for pure utilities | Tests cover `firstGivenName` (the L8 honorific walker), `hasReservedToken` (the L14 guard), `computeAmountNeeded` / `computeFunding` / `deriveRequestStatus`, `patientExportFilename`. Extracted `src/utils/names.js` so the auth flows are importable. `npm test` runs the suite in ~1s | `389e5fb` + later additions |
+| 16.3 | **Firestore rules tests** with `@firebase/rules-unit-testing` | 47 rule assertions across 5 files (`auditLog`, `documents`, `messages`, `certificates`, `users`). Single-fork Vitest config (`vitest.config.js`) so Windows + emulator + Vitest 4 + JDK 21 cohabit; `npm run test:rules` boots the Firestore emulator and runs the suite in ~15 s | `0ceca68` + `9cf5d6a` |
+| 16.4 | **`users/create` tightening + Seed refactor** | Rule now requires either self-create with `role == 'patient'`, OR `isAdmin()`, OR `isAgencyAdmin()` creating own-agency coordinator. To unblock this, `scripts/bootstrap-users.js` (admin-SDK) replaces the legacy `/seed` user-creation path; the web page now refuses to run without a signed-in super_admin and only seeds reference data | `489bb2e` |
+| 16.5 | `docs/threat-model.md` (≈ 250 lines) | 10 threats addressed (each with mitigation→commit→test), 8 threats accepted with rationale, 7 operational limits documented. Cross-links to rule paths and test files. Direct defense answer to "what threats did you address" | `7a97a46` |
+| 16.6 | `docs/runbook.md` (≈ 200 lines) | Routine: deploy, test, bootstrap, re-seed. Incident: audit-log cleanup, post-deploy lockout, broken-rule rollback. Rotation: service account, admin passwords, Vercel SMTP. Backup + recovery. Pinned-version table. Owns the "what does the operator do when X breaks" answer | `7a97a46` |
+
+**Total test suite at end of Tier 1: 76 (29 unit + 47 rules), ~16 s
+end-to-end.** First wall-clock automated regression net for both the
+business logic AND the security layer.
+
+### B.17 — Engineering improvements (Tier 2)
+
+Four real refactors that materially improve the system without
+breaking pilot deploy.
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 17.1 | **L6** notification-badge flicker on navigation | New `LiveDataProvider` in `src/contexts/LiveDataContext.jsx` hoists the four onSnapshot subscriptions (`notifications`, `conversations`, agency-inbox count, agency name) above the route components. Layout stays per-page but the listener lifetimes no longer tear down on navigation. Verified live: badge stays "9+" through 5 sample points across a route change (30 / 100 / 250 / 500 / 800 ms). Pub-sub for "new notification arrived" keeps the toast affordance behaviour intact | `239636f` |
+| 17.2 | `documentContents` Firestore → Cloud Storage | Patient document content moves from a 1 MiB-capped base64 Firestore field to proper Cloud Storage at `/documents/{patientId}/{docId}/{file}`. New `storage.rules` path with patient/admin/agency-on-agencyIds reads, patient-only writes ≤ 10 MiB. Backward-compat fallback in `DocViewerModal` for pre-migration docs. Admin-SDK migration script `scripts/migrate-doc-content-to-storage.js` (dry-run / --apply / --apply --delete). Fixes the L7 / L9-ish operator pain plus enables real-resolution scans + real PDFs | `cad84ff` |
+| 17.3 | Cloud Functions scaffolding (Spark-compatible) | `functions/` surface wired in `firebase.json`; `resetAgencySlots` (daily Asia/Manila) + new `glExpirySweep` (hourly) cover the background-job story. NOT currently deployed — pilot stays on Spark (free) and the existing client-side lazy fallbacks in `agency/Dashboard.jsx` do the equivalent work. The functions are the v2 target for whenever budget permits Blaze; emulator-validated today | `8788c73` + `b35491a` |
+| 17.4 | RA 10173 §16(f) patient data portability | `src/utils/dataExport.js` aggregates profile + requests + applications + documents + documentContents + certificates + notifications + conversations (with messages) into a single MAPA-RA10173-v1 JSON blob, Timestamp values normalised to ISO. Button in the Privacy Notice modal triggers an in-browser download. Verified live: ~12 KB JSON for the demo patient with 2 requests + 16 notifications | `d4e02d8` |
+
+### B.18 — Documentation alignment + free-tier honesty
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 18.1 | **L10** agency User Guide rewritten for CRMC-gateway model | Old guide described review → interview → assessment workflow that contradicts CLAUDE.md (`Agencies do NOT re-review documents or re-interview`). Replaced 12 sections; new ones added: `review-endorsement`, `needs-info`. Workflow strip changed from 8-step direct-apply to 6-step Endorsed → Patient Proceeds → For Funding → Approve+GL → Print → Upload → Redeem. Slice lifecycle vocabulary throughout | `25f8d57` |
+| 18.2 | Spark-plan posture clarified | `docs/runbook.md` "Deploy Cloud Functions" rewritten as future-work — current operation does not depend on Functions. `docs/threat-model.md` operational-limits row reflects actual current setup (lazy fallbacks in `agency/Dashboard.jsx` do the scheduled work) | `b35491a` |
+
+### B.19 — Mobile / PWA install hardening
+
+Triggered by patient reports of being unable to install MAPA on Android
+Chrome. Series 2026-06-02.
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 19.1 | PWA manifest screenshots + home-screen shortcuts | Three 375×667 portrait screenshots (`/screenshots/01-dashboard.png` etc.) populate Android Chrome's rich install bottom sheet; three shortcuts (My Application, Request Assistance, My Interview) populate the long-press-icon menu | `97edc70` |
+| 19.2 | InstallNudge banner above patient route content | `src/components/InstallNudge.jsx` is a small dismissable bar that appears once `__mapaDeferredInstallPrompt` is armed AND not in standalone mode AND not dismissed within 30 days. Rendered above the page content in Layout. Catches the moment AFTER Chrome's engagement heuristic trips, which is when the install ask is actually viable | `325890f` |
+| 19.3 | Vercel `Content-Type` for manifest + SW caching | Manifest now served as `application/manifest+json` (was `application/octet-stream`); `sw.js` served as `application/javascript; charset=utf-8` with `max-age=0, must-revalidate`; PWA icons get a 7-day immutable cache. Defensive even though it turned out Vercel was already serving the manifest type correctly | `f2dbd69` |
+| 19.4 | Install button polls instead of toast-and-bail | The big "Install MAPA" button no longer fires a dismissive "Chrome hasn't offered the install option yet" toast on cold visits. It now flips to a "Preparing install…" spinner state and polls `__mapaDeferredInstallPrompt` for up to 8 s. The tap itself counts as engagement, so during the poll Chrome usually arms the prompt and the install fires automatically. States: `idle`, `preparing`, `cancelled` (with "Try Install Again" copy), `unsupported` (fallback to inline manual steps). i18n strings in en + fil | `afcf85e` |
+
+End-state: patient successfully installed MAPA on the first phone they
+tried after this batch landed. Verified live against
+`https://mapa-web-six.vercel.app/install` from a real Android Chrome
+session.
+
+### B.20 — Messages mobile UX overhaul
+
+Reported by the same patient session after install — the Messages page
+"feels like a webpage, not an app." Audit of the empty state + compose
+modal exposed both UX and a long-standing functional bug.
+
+| # | Item | Resolution | Commit |
+|---|---|---|---|
+| 20.1 | Empty state + redundant header button | Original empty state had a tiny grey icon, "No messages yet.", and "+ New Message" button. Header also had a duplicate "New Message" button. Rebuilt the empty state: brand-tinted 80px circle icon, "No messages yet" title, two-line explanation of what messaging is for, "You can message **CRMC anytime**. Agencies become reachable once CRMC endorses your request to them." reassurance, "Start a Conversation" CTA. Header button now hidden when conversations list is empty | `6d42b7b` + `9ddc534` |
+| 20.2 | Compose modal mobile-first rewrite | Native `<select>` dropdown replaced with tappable recipient rows — avatar + name + role + check-circle on select. Grouped under "CRMC — always available" / "Your Agencies"; the latter shows an amber notice when the patient has no endorsed slices. Subject field collapsed behind "+ Add subject (optional)". Message textarea grew to 5 rows with personalized placeholder. Modal is full-screen on phones (`h-full sm:h-auto`). New `recipientsState` ('loading' / 'ready' / 'denied') replaces the silent-fail loading spinner with a clear red banner if the rule layer denies the recipient query | `9ddc534` |
+| 20.3 | `users/read` rule expanded for patient compose | Patients can now read `super_admin`, `staff_admin`, `agency`, `agency_admin` user docs. Required for the recipient picker to populate (names + roles are operational not sensitive — already surfaced on /agency catalog and agency-decision screens) | `9ddc534` |
+| 20.4 | **Real bug found**: every patient send was failing | `handleSend` did `const conv = await getOrCreateConversation(...)` then `sendMessage(conv.id, ...)`. But `getOrCreateConversation` returns a STRING ID, not an object. `conv.id` was `undefined`, so the message was written to `conversations/undefined/messages` and the rules layer denied it. The generic "Failed to send message" toast masked this for an unknown period — likely the entire lifetime of the modal. Every other caller in the codebase (8 sites) correctly used `const convId = await getOrCreate...` | `f917bfb` |
+| 20.5 | Defensive recipient name resolution | `displayName(r)` cascades `r.name → r.displayName → role label`. Same pattern as the L4 Layout fix — the super_admin demo doc has `displayName` but no `name`, which previously rendered a blank recipient row with "U" initials. Now reads as "CRMC Administrator". `initials(r)` reads from the resolved name | `f917bfb` |
+| 20.6 | Error messages tell the truth | Send-error catch now matches `err.code` and surfaces specific reasons ("Permission denied. The CRMC contact you picked may not be configured for messaging yet." / "Network problem." / "Server check failed." / the raw message). Console.error logs the full error for diagnostics. Toast duration 7 s so the patient has time to read | `f917bfb` |
+
+### B.21 — Closing summary
+
+| Metric | Value |
 |---|---|
-| Total commits across the full revision program | ~150 |
+| Total commits across the full revision program | ~205 |
 | Adviser revisions addressed | 12 of 12 |
 | Real correctness bugs caught in the read-pass series (#1-20) | 20 |
 | Real correctness bugs caught in the full-system audit (#21-31) | 11 |
+| Live-browser audit findings (L1–L14) | 14 (9 fixed, 4 deferred-with-justification, 1 dismissed) |
+| Security passes shipped on the Firestore rules layer | 3 (auditLog + companion surfaces + patient-write constraints) |
+| Other rule tightenings (agencies/update, users/create) | 2 |
+| Cloud Storage migration | 1 (documentContents → Storage, with admin-SDK migration script + rollback) |
+| Cloud Functions scaffolded (Spark-compatible client fallbacks remain primary) | 2 (resetAgencySlots daily + glExpirySweep hourly) |
+| Compliance feature shipped | 1 (RA 10173 §16(f) patient data portability export) |
+| Automated tests at close | 76 (29 unit + 47 rules) — full suite ~16 s |
+| Operational docs added | 2 (`docs/threat-model.md`, `docs/runbook.md`) |
+| Operator scripts available | 4 (`bootstrap-users.js`, `cleanup-orphans.js`, `cleanup-injection-audit.js`, `migrate-doc-content-to-storage.js`) |
 | UX gaps closed in the read-pass series | 17 |
-| UX gaps closed in the post-audit follow-up | 5 (AuditLog CSV, ExportPreview row-warning, GL aging chip, Inbox sort toggle, AnnouncementBanner consolidation) |
-| Code consolidations across the program | 18 (13 from read-pass + 5 post-audit: isGLExpired, tsToDate full sweep across 26 files, CRMC_GATEWAY constants, AnnouncementBanner, deprecated stages[] cleanup) |
-| New i18n keys added (FIL + EN) | Hundreds (initial rollout) + parity maintained throughout |
-| i18n orphan keys removed | 124 |
+| UX gaps closed post-audit (Tier 2 + Mobile / Messages batches) | ~15 |
+| Code consolidations across the program | 19 |
 | First-visit guided tours shipped | 4 (patient Dashboard + TrackStatus, agency Dashboard, admin Dashboard) |
+| Patient-side mobile install validated end-to-end | ✅ on one real device |
 
 ### Items still on the table (the user's call, not blocking)
 
@@ -328,4 +432,8 @@ Second sweep, this time covering agency portal end-to-end (Dashboard, Inbox, Slo
 - **`GL_STATUS_CONFIG` label-only helper** (two render sites use different visual treatments — badge vs text)
 - **`MAX_CAPACITY = 100` hardcoded** in agency/SlotManagement — needs DB schema decision for a per-agency `slots.maxCapacity` field with sensible default
 - **admin/AppLogs server-side search** — currently search + filter only apply to the loaded page (PAGE_SIZE = 100); server-side rewrite is a real but non-blocking workflow gap
+- **`users/create` Seed refactor follow-through** — bootstrap script ready; operator must run `node scripts/bootstrap-users.js` before deploying the tightened rule on a fresh project, OR existing prod is safe (existing user docs already exist; rule change only affects future creates)
+- **Cloud Functions Blaze deploy** — code is in `functions/`, emulator-validated; deploy is a future budget decision. Pilot runs on Spark with the existing client-side lazy fallbacks
+- **Tour Skip delay (L5)** — likely Playwright-snapshot-timing artifact, not a real user-facing bug; would need React-Testing-Library reproduction to triage further
+- **L11 root data cleanup** — the `⚠ data check` chip surfaces the contract violation but the underlying request-status field still says `fully_funded` with no secured slices. Operator action to either re-derive status from slices, or close the request with `closed` status
 - **Cloud Function for Auth account deletion** — would close the orphan-Auth gap properly (currently mitigated by warning copy in three Delete modals). Blocked by Firebase Spark plan per CLAUDE.md scope

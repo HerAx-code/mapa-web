@@ -1,0 +1,299 @@
+# MAPA — Thesis project summary
+
+Last updated: 2026-06-02.
+
+This document distils the MAPA project for thesis defense. It is
+organised in the order a panel typically asks: what did you build,
+what was it for, what trade-offs did you make, how do you know it
+works, what doesn't it do, and what would v2 look like.
+
+For granular history of every decision and commit, see
+`docs/revision-list.md`. For threats and mitigations, see
+`docs/threat-model.md`. For operator procedures, see
+`docs/runbook.md`. This file is the panel-facing summary that
+cross-references the other three.
+
+## 1. What MAPA is
+
+MAPA (Medical Assistance Portal Access) is a web + mobile platform
+that digitises the medical financial assistance process at
+Cotabato Regional Medical Center (CRMC). Patients apply for
+hospital-bill / medicine / lab assistance through a single
+mobile-first portal; CRMC's Malasakit Center verifies the
+documents, conducts one assessment interview, and routes the
+request to one or more partner agencies (Malasakit Center,
+AMBaG, PCSO MAP, DSWD AICS) as funding "slices" toward zero
+balance.
+
+The defining design decision is the **CRMC-gateway co-funding
+model**: one patient submits one request, CRMC owns the
+verification + assessment + interview, and agencies make
+funding-only decisions on their share. This eliminates the
+pre-MAPA practice of indigent patients physically queueing at
+each agency, repeating their story, and handing over photocopies
+of the same documents to each.
+
+The pilot partner is CRMC's Malasakit Center in Cotabato City,
+Philippines. The system is a thesis project by a single student
+over nine months.
+
+## 2. Architecture and tech stack
+
+- **Frontend (web)**: React 18 + Vite + Tailwind CSS. Mobile-first,
+  installable as a Progressive Web App.
+- **Backend**: Firebase — Firestore (NoSQL), Authentication
+  (email/password), Hosting (production hosting via Vercel — Firebase
+  Hosting is the standard Firebase path but Vercel was used for
+  serverless function deploys, namely `/api/send-email` for SMTP).
+- **Auth model**: 5 roles (`patient`, `agency`, `agency_admin`,
+  `staff_admin`, `super_admin`). Role-based Firestore rules are the
+  single source of server-side authorisation.
+- **i18n**: react-i18next, English + Filipino, structured for future
+  expansion (Maguindanaon / Maranao / Tausug noted as future work).
+- **PWA**: vite-plugin-pwa, installable with maskable icons + screenshots
+  + Android home-screen shortcuts. Service worker auto-updates on
+  navigation.
+- **Background work**: Cloud Functions written but not deployed —
+  client-side lazy fallbacks in `agency/Dashboard.jsx` perform daily
+  slot reset + hourly GL expiry sweep when an agency coordinator
+  opens the page. The pilot operates entirely on the free Spark plan.
+
+The system has no traditional backend server. Firestore Security
+Rules carry the entire server-side authorisation surface. This is
+both an architectural choice (lower complexity for a solo nine-month
+build) and a major limitation (no Cloud Functions, no cron, no
+operational telemetry beyond what Firebase exposes).
+
+## 3. Data model — the co-funding flow
+
+| Collection | Owner | Purpose |
+|---|---|---|
+| `users/{uid}` | Self / admin | Profile + role + agency assignment |
+| `hospitalIds/{id}` | CRMC | Patient access codes (`CRMC-YYYY-NNNNN`) |
+| `requests/{id}` | Patient (owns) / CRMC (manages) | One per ask; the parent record holding the bill, amount needed, and the request's intake-sheet content |
+| `applications/{id}` | CRMC creates at endorse; agency edits | An "application slice" — one per agency endorsed against a parent request. Carries the agency's funding decision |
+| `documents/{id}` + `documentContents/{id}` (Firestore) **OR** Cloud Storage `/documents/{patientId}/{docId}/{file}` (post-migration) | Patient | Uploaded files: IDs, billing statements, abstracts, certificates of indigency |
+| `certificates/{id}` | Agency | Issued Guarantee Letter (GL) + signed scan after wet-sign |
+| `notifications/{uid}/items/{id}` | Anyone with `notify()` | Bell-icon feed |
+| `conversations/{id}` + `messages` subcollection | Any participant | Patient ↔ CRMC ↔ Agency messaging |
+| `auditLog/{id}` | Any admin action | Immutable append-only operational log |
+| `agencies/{id}` | Admin | Agency profile, slots, budget |
+
+Lifecycle of one request, end-to-end:
+
+1. Patient `submitted` → 2. CRMC `under_review` (docs verified) →
+3. `assessment` (interview + Unified Intake Sheet filled) →
+4. `endorsed` (one or more application slices created) →
+5. `partially_funded` / `fully_funded` (or `closed` / `rejected`)
+
+Each child slice has its own lifecycle: `endorsed` → patient Proceeds
+→ `reviewing` (For Funding) → `approved` (GL issued; budget committed)
+→ `certificate` (GL signed + uploaded) → `redeemed` (provider billed
+the agency).
+
+The interview lives on the **request**, not on each slice. CRMC
+interviews once; the result populates the intake sheet that all
+endorsed agencies read.
+
+## 4. Verification — automated tests + manual audit
+
+The system carries an automated regression net built in the final
+two days of the program.
+
+| Suite | Files | Count | Wall time |
+|---|---|---|---|
+| Unit tests (`npm test`) | `tests/utils/` | 29 | ~1 s |
+| Firestore rules tests (`npm run test:rules`) | `tests/rules/` | 47 | ~15 s incl. emulator boot |
+| **Total** | | **76** | ~16 s |
+
+Unit tests cover the pure utilities that drive the funding
+calculation (`computeAmountNeeded`, `computeFunding`,
+`deriveRequestStatus`), the name handling (the L8 honorific stripper,
+the L14 reserved-name guard), and the data-export filename helper.
+
+Rules tests exercise every write-side constraint shipped across the
+three security passes: actor attribution on `auditLog`, size caps on
+display-layer text, patient-write constraints on `documents`,
+cross-agency guard on `certificates`, coordinator budget-write block
+on `agencies`, conversation participant requirement, message
+attribution + size, recipient creation rules on `users`.
+
+Manual verification was done in three sweeps using Playwright at
+mobile (375×667) and desktop (1280×800) viewports, covering 41 unique
+routes. The full audit log of findings (L1–L14) lives in
+`docs/revision-list.md` §B.13 and §B.14.
+
+One real-world deploy check: the patient install flow was end-to-end
+verified by installing the PWA on a real Android phone from the live
+Vercel deployment (`mapa-web-six.vercel.app`).
+
+## 5. Security posture
+
+The thread of the security work is best understood as a single
+incident-response narrative, not a linear feature build.
+
+**Discovery (2026-06-01):** during a live Playwright audit of the
+admin Audit Log page, 18 planted entries were found in the
+`auditLog` collection with fake "System / Recovery Engine /
+Migration Daemon" actors carrying shell-command payloads aimed at
+human and AI agents reviewing the dashboard — `claude -p "…"`
+recursive invocations and `firebase deploy --only firestore:rules`
+attempts. The entries were *not* executed.
+
+**Root cause:** the previous `auditLog.create` rule was
+`allow create: if isAuth()` — any authenticated user could write
+arbitrary actor names and payloads. Any role with `logAudit()` access
+(every authenticated user) could plant prompts.
+
+**Response (three layered rule passes):**
+
+1. **Pass 1** (commit `f14ea17`): `auditLog.create` now requires
+   `actorId == request.auth.uid` and bounds `details` at 2000 chars.
+   Display layer in `admin/AuditLog` clamps `details` to 240 chars
+   with "Show more". Companion attack (registration with role-
+   impersonating names like "CRMC Admin", "System Diagnostics",
+   "cascade_…") closed by a reserved-token guard in `Register.jsx`.
+
+2. **Pass 2** (`242c175`): same hardening pattern applied to
+   `notifications`, `conversations`, `notificationErrors`, `reports`.
+   Plus `scripts/cleanup-injection-audit.js` — an admin-SDK script
+   that purges the planted entries from production.
+
+3. **Pass 3** (`9a596d4`): patient-write constraints on `documents`
+   (patientId match, status='pending', no pre-stamped agencyIds,
+   ocrText size cap, later no pre-stamped storagePath), agency
+   ownership guard on `certificates`, message-attribution + size cap
+   on conversation messages, banner-size caps on announcements.
+
+4. **Cleanup**: the operator ran `cleanup-injection-audit.js
+   --delete` against production; 18 entries purged.
+
+The complete threat-mitigation table — 10 threats addressed, 8
+accepted with rationale, 7 operational limits — is in
+`docs/threat-model.md`.
+
+## 6. Compliance — RA 10173 §16(f) data portability
+
+The patient can download a complete machine-readable copy of every
+record MAPA holds about them. The "Download my data" button in the
+Privacy Notice modal triggers
+`buildPatientDataExport(uid)`, which fans out across every
+patient-keyed collection and returns a single JSON blob (format
+`MAPA-RA10173-v1`) covering profile, requests, application slices,
+documents (metadata + content), certificates, notifications, and
+conversations with both sides' messages. Timestamps are normalised to
+ISO strings so the download round-trips back into `Date()` cleanly.
+
+This is a direct response to Republic Act 10173 §16(f) — the data
+subject's right to obtain a copy of personal data in an electronic
+structured format.
+
+## 7. Operational posture
+
+The system is operator-runnable today via four admin-SDK scripts:
+
+- `scripts/bootstrap-users.js` — one-shot creation of the seed
+  admin / agency / coordinator accounts (idempotent).
+- `scripts/cleanup-orphans.js` — periodic Firestore garbage
+  collection.
+- `scripts/cleanup-injection-audit.js` — the audit-log purge tool
+  used in the security response.
+- `scripts/migrate-doc-content-to-storage.js` — the migration
+  helper for moving patient document content from Firestore to
+  Cloud Storage.
+
+The full operational runbook — deploy procedures, incident
+response, credential rotation, backup, pinned versions — is in
+`docs/runbook.md`.
+
+## 8. Limitations and future work
+
+This is the "what the system intentionally does not do" inventory,
+to be presented honestly during defense.
+
+**Pilot scope (explicit in CLAUDE.md):**
+
+- Single hospital (CRMC). Multi-tenancy is v2 architecture, not a
+  config change.
+- No SMS notifications. Cost-prohibitive for the pilot —
+  in-app + email + future FCM push are the channels.
+- No PhilSys integration. Government API access requires an
+  approval process that does not fit a nine-month timeline.
+- No real money movement. MAPA records commitments; settlement
+  happens off-system between agency and provider.
+- OCR is advisory only. The social worker compares the live selfie
+  to the uploaded ID and makes the final call. By design, not by
+  oversight.
+
+**Engineering posture residuals:**
+
+- Pilot runs on Firebase's **Spark (free) plan**. Cloud Functions
+  written but not deployed; client-side lazy fallbacks handle
+  scheduled work (slot reset, GL expiry).
+- No staging environment. Dev work hits the same Firestore as the
+  pilot.
+- No CI/CD. Manual `firebase deploy --only firestore:rules` and
+  Vercel auto-deploy on `git push`. Rules tests must be run locally
+  before any rule change.
+- No 2FA, no session timeout. Firebase Auth defaults.
+- Bilingual (Filipino + English) only. Cotabato has significant
+  Maguindanaon, Maranao, and Tausug speakers; future i18n work is
+  translation-budget-bound, not engineering-bound.
+
+**Specific deferred items** (see §B.21 of `docs/revision-list.md`):
+
+- L5 Tour Skip "delay" — likely Playwright snapshot-timing artifact;
+  no real user reports.
+- L11 root-cause data cleanup — the `⚠ data check` chip surfaces the
+  contract violation; underlying request-status field still needs an
+  operator re-derive.
+- Admin AppLogs server-side search.
+- `MAX_CAPACITY = 100` hardcode in `agency/SlotManagement`.
+
+## 9. Defense-ready statements
+
+The following claims are defensible, with reference to test files /
+commits / docs:
+
+1. **"The security model is verified by 47 automated rules tests."**
+   `npm run test:rules` runs the Firestore emulator + exercises every
+   write-side constraint. See `tests/rules/`.
+
+2. **"The funding logic is verified by 29 automated unit tests."**
+   `npm test` covers the pure utilities that drive `computeFunding`,
+   `deriveRequestStatus`, and the input validation in the auth flows.
+
+3. **"The system survives an attempted prompt-injection attack."**
+   The 18-entry incident is documented in `docs/threat-model.md` T2;
+   the rule + display + registration layers that defang the attack
+   are commits `f14ea17`, `242c175`, `9a596d4`. The cleanup tool
+   `scripts/cleanup-injection-audit.js` purged the planted entries.
+
+4. **"The patient install flow is verified end-to-end on real
+   hardware."** Confirmed install of the PWA on a real Android phone
+   from `https://mapa-web-six.vercel.app`.
+
+5. **"The system is operator-runnable, not just demo-runnable."**
+   `docs/runbook.md` covers deploy, incident response, credential
+   rotation, backup, pinned versions.
+
+6. **"The system meets RA 10173 §16(f) data portability."**
+   `src/utils/dataExport.js` + "Download my data" button in the
+   Privacy Notice modal.
+
+7. **"Limitations are documented, not hidden."** §A1–A8 of
+   `docs/threat-model.md` is the formal accepted-residuals list with
+   rationale.
+
+## 10. Reading order for a panel
+
+For a panel that wants to drill in:
+
+1. Read `CLAUDE.md` first — frozen project context.
+2. Then this file (`docs/thesis-summary.md`) for the narrative.
+3. Then `docs/threat-model.md` for security depth.
+4. Then `docs/runbook.md` for operational depth.
+5. Then `docs/revision-list.md` for granular history — §B.21 closing
+   summary is the one-table view.
+6. Then `tests/` to verify any specific claim by reading or running
+   the assertion.
