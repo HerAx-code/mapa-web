@@ -28,6 +28,11 @@
     "cta": {
       "install": "I-install ang MAPA app",
       "installButton": "I-install ang MAPA",
+      "preparing": "Inihahanda ang install…",
+      "tryAgain": "Subukan Muli na I-install",
+      "preparingHint": "Inihahanda ng Chrome ang install dialog — ilang segundo lang.",
+      "cancelledHint": "Kinansela ang install. I-tap muli para subukan ulit.",
+      "androidUnsupportedHint": "Hindi nag-aalok ang Chrome ng install sa inyong device — sundin ang mga hakbang sa ibaba para maidagdag ang MAPA sa home screen.",
       "androidHint": "Magtatanong ang Chrome para sa kumpirmasyon. Pindutin ang Install sa dialog.",
       "androidHintReady": "Pindutin ang Install — magtatanong ang Chrome para sa kumpirmasyon.",
       "androidHintNotReady": "Pindutin ang Install upang makita ang mga hakbang para sa inyong telepono.",

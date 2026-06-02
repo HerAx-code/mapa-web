@@ -28,6 +28,11 @@
     "cta": {
       "install": "Install MAPA app",
       "installButton": "Install MAPA",
+      "preparing": "Preparing install…",
+      "tryAgain": "Try Install Again",
+      "preparingHint": "Chrome is preparing the install dialog — this takes a few seconds.",
+      "cancelledHint": "Install was cancelled. Tap again to retry.",
+      "androidUnsupportedHint": "Chrome isn't offering install on your device — the steps below will add MAPA to your home screen.",
       "androidHint": "Chrome will ask you to confirm. Tap Install in the dialog.",
       "androidHintReady": "Tap Install — Chrome will ask you to confirm.",
       "androidHintNotReady": "Tap Install to see the steps for your phone.",

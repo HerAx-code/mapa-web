@@ -35,6 +35,18 @@ export default function InstallApp() {
   const [deferredPrompt, setDeferredPrompt] = useState(() => window.__mapaDeferredInstallPrompt ?? null)
   const [platform,       setPlatform]       = useState('unknown')
   const [installed,      setInstalled]      = useState(false)
+  // Drives the button's visible state without changing its rendered shape:
+  //   - 'idle'        the default "Install MAPA" copy
+  //   - 'preparing'   "Preparing install…" while we poll for the Chrome
+  //                   prompt to arm (tap itself is engagement; this often
+  //                   tips Chrome over the threshold within a few seconds)
+  //   - 'cancelled'   user cancelled the Chrome dialog; reset to a "Try
+  //                   again" prompt that re-arms on next tap
+  //   - 'unsupported' the user is on a browser/platform without the
+  //                   beforeinstallprompt API; iOS Safari, Firefox, etc.
+  //                   Button click reveals the platform-specific manual
+  //                   steps inline so there's still a clear path.
+  const [buttonState,    setButtonState]    = useState('idle')
   const manualStepsRef = useRef(null)
 
   useEffect(() => {
@@ -72,32 +84,90 @@ export default function InstallApp() {
     }
   }, [])
 
-  // Smart install handler — the meat of the UX fix. Always succeeds at
-  // SOMETHING visible, never leaves the patient at a dead end.
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
+  // Install handler. The patient taps once and the button either installs
+  // immediately or polls for Chrome to arm the prompt while showing a
+  // "Preparing install…" state. The tap itself is engagement (Chrome's
+  // beforeinstallprompt heuristic counts user gestures), so during the
+  // poll window Chrome usually arms the prompt and the install proceeds
+  // without the patient needing to do anything else.
+  //
+  // For iOS / desktop / other-browser cases where there is no native
+  // install API at all, the button click reveals the platform-specific
+  // manual flow inline and the button state flips to 'unsupported' so
+  // the user sees clear instructions instead of a useless spinner.
+  const tryNativePrompt = async (promptObj) => {
+    try {
+      promptObj.prompt()
+      const { outcome } = await promptObj.userChoice
       if (outcome === 'accepted') {
         // appinstalled fires separately and flips `installed` state.
-        setDeferredPrompt(null)
-        window.__mapaDeferredInstallPrompt = null
+        setButtonState('idle')
+      } else {
+        setButtonState('cancelled')
       }
-      return
-    }
-    // No native prompt available — fall back to the platform-specific
-    // manual flow.
-    if (platform === 'ios') {
-      toast(t('installPage.fallback.ios'), { duration: 5000 })
-      manualStepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else if (platform === 'desktop') {
-      toast(t('installPage.fallback.desktop'), { duration: 5000 })
-    } else {
-      // Android Chrome — engagement heuristic hasn't fired yet.
-      toast(t('installPage.fallback.android'), { duration: 5000 })
-      manualStepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setDeferredPrompt(null)
+      window.__mapaDeferredInstallPrompt = null
+      return outcome
+    } catch (err) {
+      console.warn('[InstallApp] prompt() failed:', err)
+      setButtonState('idle')
+      return 'failed'
     }
   }
+
+  const handleInstallClick = async () => {
+    // iOS Safari has no install API at all -- the only path is the Share
+    // sheet. Reveal the manual steps inline and stop pretending the
+    // button can install.
+    if (platform === 'ios') {
+      setButtonState('unsupported')
+      manualStepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    // Desktop visitors should install on their phone. Same shape -- show
+    // the desktop guidance inline rather than toasting it.
+    if (platform === 'desktop') {
+      setButtonState('unsupported')
+      return
+    }
+
+    // Android Chrome path.
+    // Already armed? install immediately.
+    const armed = deferredPrompt ?? window.__mapaDeferredInstallPrompt
+    if (armed) {
+      setButtonState('preparing')
+      await tryNativePrompt(armed)
+      return
+    }
+
+    // Not armed yet. Poll for up to 8 seconds while the patient's tap
+    // accumulates as engagement for Chrome. Most cold-visit users see
+    // the prompt arm within this window.
+    setButtonState('preparing')
+    for (let i = 0; i < 32; i++) {
+      await new Promise(r => setTimeout(r, 250))
+      const p = window.__mapaDeferredInstallPrompt
+      if (p) {
+        await tryNativePrompt(p)
+        return
+      }
+    }
+
+    // 8 seconds and Chrome still hasn't armed it. Surface the manual
+    // steps inline so the patient has a clear next action; do NOT toast
+    // a fallback that fades away.
+    setButtonState('unsupported')
+    manualStepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // Reset to idle whenever Chrome arms the prompt while we're in a
+  // 'cancelled' or 'unsupported' state, so the next tap goes straight to
+  // a real install.
+  useEffect(() => {
+    if (deferredPrompt && (buttonState === 'cancelled' || buttonState === 'unsupported')) {
+      setButtonState('idle')
+    }
+  }, [deferredPrompt, buttonState])
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -145,12 +215,32 @@ export default function InstallApp() {
           ) : (
             <div className="mb-6">
               <button onClick={handleInstallClick}
-                className="w-full bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-2.5 text-base shadow-sm transition-colors">
-                <MdDownload size={22} />
-                {t('installPage.cta.installButton')}
+                disabled={buttonState === 'preparing'}
+                className="w-full bg-brand-500 hover:bg-brand-600 active:bg-brand-700 disabled:bg-brand-400 text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-2.5 text-base shadow-sm transition-colors">
+                {buttonState === 'preparing' ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    {t('installPage.cta.preparing')}
+                  </>
+                ) : buttonState === 'cancelled' ? (
+                  <>
+                    <MdDownload size={22} />
+                    {t('installPage.cta.tryAgain')}
+                  </>
+                ) : (
+                  <>
+                    <MdDownload size={22} />
+                    {t('installPage.cta.installButton')}
+                  </>
+                )}
               </button>
               <p className="text-xs text-gray-400 text-center mt-2.5">
-                {platform === 'ios'     ? t('installPage.cta.iosHint')
+                {buttonState === 'preparing' ? t('installPage.cta.preparingHint')
+                 : buttonState === 'cancelled' ? t('installPage.cta.cancelledHint')
+                 : buttonState === 'unsupported' && platform === 'ios' ? t('installPage.cta.iosHint')
+                 : buttonState === 'unsupported' && platform === 'desktop' ? t('installPage.cta.desktopHint')
+                 : buttonState === 'unsupported' ? t('installPage.cta.androidUnsupportedHint')
+                 : platform === 'ios'     ? t('installPage.cta.iosHint')
                  : platform === 'desktop' ? t('installPage.cta.desktopHint')
                  : deferredPrompt          ? t('installPage.cta.androidHintReady')
                  :                           t('installPage.cta.androidHintNotReady')}
