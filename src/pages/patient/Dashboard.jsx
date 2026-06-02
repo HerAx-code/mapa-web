@@ -20,7 +20,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
-import { REQUEST_STATUS_CONFIG } from '../../utils/constants'
+import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
+import { isSliceTerminal } from '../../utils/requests'
 
 // Parses "YYYY-MM-DD" + "2:00 PM" / "14:00" / "2:00 pm" into a Date.
 // Returns null if either part can't be parsed.
@@ -66,13 +67,19 @@ const STATUS_VISUAL = {
     subtext:  'text-blue-600',
     btnClass: 'bg-blue-500 hover:bg-blue-600 text-white',
   },
-  // Co-funding: an endorsed slice means CRMC matched agencies and the patient
-  // must review the coverage plan + Proceed. Points to the request, not the
-  // per-slice tracker.
+  // R19: endorsed / reviewing / awaiting_info CTAs now point at the
+  // patient's Status page, not the new-request wizard. The previous
+  // /patient/request target relied on RequestAssistance detecting an
+  // active request and rendering its proceed view -- the detection
+  // failed when the parent-request lookup didn't match (test data,
+  // legacy slices, parent in terminal state) and patients landed on
+  // Step 1 of the new-request wizard with no obvious way back.
+  // /patient/status is now self-contained for the proceed action
+  // (see R16 inline handler) and surfaces awaiting_info messages too.
   endorsed: {
     icon:     MdReceipt,
     iconBg:   'bg-purple-100 text-purple-600',
-    path:     '/patient/request',
+    path:     '/patient/status',
     border:   'border-purple-300',
     bg:       'bg-purple-50',
     text:     'text-purple-800',
@@ -82,7 +89,7 @@ const STATUS_VISUAL = {
   reviewing: {
     icon:     MdAssignment,
     iconBg:   'bg-amber-100 text-amber-600',
-    path:     '/patient/request',
+    path:     '/patient/status',
     border:   'border-amber-300',
     bg:       'bg-amber-50',
     text:     'text-amber-800',
@@ -92,7 +99,7 @@ const STATUS_VISUAL = {
   awaiting_info: {
     icon:     MdSchedule,
     iconBg:   'bg-orange-100 text-orange-600',
-    path:     '/patient/request',
+    path:     '/patient/status',
     border:   'border-orange-300',
     bg:       'bg-orange-50',
     text:     'text-orange-800',
@@ -190,7 +197,10 @@ export default function PatientDashboard() {
     const unsub = onSnapshot(q, snap => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       setAppCount(all.length)
-      setActiveApp(all.find(a => a.status !== 'rejected') ?? null)
+      // R18: a redeemed or lapsed certificate slice is NOT active; without
+      // this filter the Dashboard kept showing "Your application is in
+      // progress" for slices the patient already claimed weeks ago.
+      setActiveApp(all.find(a => !isSliceTerminal(a, { isGLExpired })) ?? null)
       setLoading(false)
     }, (err) => {
       setLoading(false)

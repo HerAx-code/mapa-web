@@ -99,3 +99,33 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
     status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded),
   }
 }
+
+// Is this slice DONE from the patient's perspective? Returns true when:
+//   - rejected (agency turned it down — terminal)
+//   - certificate + glStatus 'redeemed' (patient claimed at agency office)
+//   - certificate + glStatus 'expired' (lapsed past validity window)
+//   - certificate + past GL_VALIDITY_DAYS (sweep hasn't flipped glStatus yet)
+//
+// Use this to decide whether a slice belongs in the patient's "In Progress"
+// view (active, still has a downloadable GL / pending action) or the "Past
+// Applications" view (terminal record). Shared between TrackStatus and the
+// patient Dashboard so both surfaces agree on what "active" means.
+//
+// Reused inside the Dashboard activeApp picker — without this, a redeemed
+// or lapsed slice was still selected as the patient's "current" status card,
+// which was misleading once the slice was actually done.
+//
+// Imported lazily inline by callers to avoid circular imports through
+// utils/constants (which holds isGLExpired/GL_VALIDITY_DAYS). Pass the
+// caller-resolved isGLExpired in to keep this module dependency-free.
+// R17 (TrackStatus) introduced the predicate; R18 hoists it here.
+export function isSliceTerminal(app, { isGLExpired } = {}) {
+  if (!app) return false
+  if (app.status === 'rejected') return true
+  if (app.status === 'certificate') {
+    if (app.glStatus === 'redeemed') return true
+    if (app.glStatus === 'expired')  return true
+    if (typeof isGLExpired === 'function' && isGLExpired(app)) return true
+  }
+  return false
+}

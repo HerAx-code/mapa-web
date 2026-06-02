@@ -11,7 +11,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
-import { computeFunding } from '../../utils/requests'
+import { computeFunding, isSliceTerminal } from '../../utils/requests'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import Tour from '../../components/Tour'
 import { patientTrackStatusTour } from '../../utils/tours'
@@ -353,22 +353,10 @@ export default function TrackStatus() {
     return unsub
   }, [activeRequest?.id])
 
-  // R17: a slice with status='certificate' is still ACTIVE from the
-  // patient's perspective until they actually claim the GL (glStatus
-  // 'redeemed') or it lapses ('expired', or past the 30-day window).
-  // The previous filter swept ALL 'certificate' slices into Past, which
-  // hid live downloadable Guarantee Letters in the History tab -- the
-  // patient came here to grab their GL and found it filed under
-  // "Past Applications" with no obvious clue it still had a deliverable.
-  const isTerminal = (a) => {
-    if (a.status === 'rejected') return true
-    if (a.status === 'certificate') {
-      return a.glStatus === 'redeemed' || a.glStatus === 'expired' || isGLExpired(a)
-    }
-    return false
-  }
-  const activeApps = applications.filter(a => !isTerminal(a))
-  const pastApps   = applications.filter(a =>  isTerminal(a))
+  // R17/R18: shared isSliceTerminal lives in utils/requests so the
+  // Dashboard's activeApp picker uses the same definition of "done".
+  const activeApps = applications.filter(a => !isSliceTerminal(a, { isGLExpired }))
+  const pastApps   = applications.filter(a =>  isSliceTerminal(a, { isGLExpired }))
 
   // Fetch agency color/initials for agencies not stored on the application doc
   useEffect(() => {
