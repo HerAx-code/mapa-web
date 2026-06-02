@@ -102,6 +102,11 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       // is rare at this scale and resolved manually.
       const sliceAmount = Number(request.amountNeeded) || 0
 
+      // Captured inside the transaction, drained AFTER it commits via
+      // best-effort per-doc updates. See R8 fix below for why this can't
+      // live inside the runTransaction itself.
+      const attachedDocsToStamp = []
+
       await runTransaction(db, async (tx) => {
         const reqRef = doc(db, 'requests', request.id)
 
@@ -166,13 +171,40 @@ function EndorseModal({ request, slices, agencies, onClose }) {
           })
         }
 
-        for (const att of r.attachedDocuments ?? []) {
-          if (!att?.documentId) continue
-          tx.update(doc(db, 'documents', att.documentId), {
+        // R8 fix (2026-06-03): the document agencyIds stamps used to live
+        // INSIDE the transaction with tx.update(). Firestore's
+        // transactional update requires every targeted doc to exist, so
+        // a single stale `attachedDocuments` reference (patient deleted
+        // a doc since request submission, document never made it past
+        // upload retry, prod data cleanup, etc.) would fail the ENTIRE
+        // endorsement with "No document to update" -- no slice created,
+        // no slot decrement, nothing. The stamp is best-effort metadata
+        // for the agency read rule; the slice's own agencyId field is
+        // already authoritative for "this agency owns this slice." So
+        // move the stamps to a post-transaction step where we can
+        // tolerate missing docs.
+        attachedDocsToStamp.push(...(r.attachedDocuments ?? [])
+          .map(a => a?.documentId)
+          .filter(Boolean))
+      })
+
+      // Best-effort post-step: stamp agencyIds[] on each attached
+      // document. Per-doc try/catch so a missing reference (Firestore
+      // returns 'not-found') just logs + skips instead of breaking the
+      // run. The endorsement itself has already committed at this point.
+      for (const docId of attachedDocsToStamp) {
+        try {
+          await updateDoc(doc(db, 'documents', docId), {
             agencyIds: arrayUnion(...selectedIds),
           })
+        } catch (err) {
+          if (err?.code === 'not-found') {
+            console.warn('[endorse] document missing, skipping agencyIds stamp:', docId)
+          } else {
+            console.error('[endorse] document stamp failed:', docId, err)
+          }
         }
-      })
+      }
 
       // ── Post-transaction: audit + patient notification + UI ──
       const names = selectedIds
