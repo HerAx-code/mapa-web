@@ -451,7 +451,20 @@ function SettingsModal({ onClose }) {
     try {
       const data = await buildPatientDataExport(user.uid)
       downloadAsJSON(data, patientExportFilename(user.uid))
-      toast.success(t('profile.privacy.exportSuccess'))
+      // R6 (2026-06-03): the export now uses Promise.allSettled, so
+      // some collections may have failed while others succeeded. Toast
+      // differently when there are gaps so the patient knows the
+      // download isn't complete -- the JSON's top-level `errors` array
+      // has the specifics.
+      if (data.errors && data.errors.length > 0) {
+        toast(
+          `Downloaded with ${data.errors.length} section${data.errors.length === 1 ? '' : 's'} unavailable. ` +
+          'See the "errors" field in the file for details, or contact MSS.',
+          { icon: '⚠️', duration: 8000 },
+        )
+      } else {
+        toast.success(t('profile.privacy.exportSuccess'))
+      }
     } catch (err) {
       console.error('[dataExport] failed:', err)
       toast.error(t('profile.privacy.exportFailed'))

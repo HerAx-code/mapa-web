@@ -56,50 +56,90 @@ function shapeDoc(d) {
 export async function buildPatientDataExport(uid) {
   if (!uid) throw new Error('uid required')
 
-  // Profile + flat collections fan out in parallel.
-  const [
-    profileSnap,
-    requestsSnap,
-    applicationsSnap,
-    documentsSnap,
-    documentContentsSnap,
-    certificatesSnap,
-    notificationsSnap,
-    conversationsSnap,
-  ] = await Promise.all([
-    getDoc(doc(db, 'users', uid)),
-    getDocs(query(collection(db, 'requests'),         where('patientId',    '==',             uid))),
-    getDocs(query(collection(db, 'applications'),     where('patientId',    '==',             uid))),
-    getDocs(query(collection(db, 'documents'),        where('patientId',    '==',             uid))),
-    getDocs(query(collection(db, 'documentContents'), where('patientId',    '==',             uid))),
-    getDocs(query(collection(db, 'certificates'),     where('patientId',    '==',             uid))),
-    getDocs(collection(db, 'notifications', uid, 'items')),
-    getDocs(query(collection(db, 'conversations'),    where('participants', 'array-contains', uid))),
-  ])
+  // R6 fix (2026-06-03 review): the original implementation used
+  // Promise.all, so a permission-denied on a single collection (e.g.
+  // rules out of sync after a partial deploy) would reject the whole
+  // export and the patient would get nothing. For an RA 10173 right-
+  // to-portability flow that's the wrong failure mode -- a partial
+  // export with a clear "these sections were unreachable" note is
+  // strictly better than a generic "couldn't prepare your data"
+  // toast.
+  //
+  // Switched to Promise.allSettled. Each fulfilled fetch is normalised
+  // via shapeDoc; each rejected fetch goes into the export as
+  // `{ error: { code, message } }` so the patient (or their lawyer)
+  // can see exactly what was missing.
 
-  // For each conversation, fetch its messages subcollection. Done
-  // sequentially so a slow shard doesn't tank the others; in practice a
-  // patient has <10 conversations.
+  const queries = [
+    ['profile',          getDoc(doc(db, 'users', uid))],
+    ['requests',         getDocs(query(collection(db, 'requests'),         where('patientId',    '==',             uid)))],
+    ['applications',     getDocs(query(collection(db, 'applications'),     where('patientId',    '==',             uid)))],
+    ['documents',        getDocs(query(collection(db, 'documents'),        where('patientId',    '==',             uid)))],
+    ['documentContents', getDocs(query(collection(db, 'documentContents'), where('patientId',    '==',             uid)))],
+    ['certificates',     getDocs(query(collection(db, 'certificates'),     where('patientId',    '==',             uid)))],
+    ['notifications',    getDocs(collection(db, 'notifications', uid, 'items'))],
+    ['conversations',    getDocs(query(collection(db, 'conversations'),    where('participants', 'array-contains', uid)))],
+  ]
+  const settled = await Promise.allSettled(queries.map(([, p]) => p))
+
+  const sections = {}
+  const errors   = []
+  settled.forEach((res, i) => {
+    const [name] = queries[i]
+    if (res.status === 'fulfilled') {
+      sections[name] = res.value
+    } else {
+      const err = res.reason
+      errors.push({
+        section: name,
+        code:    err?.code    ?? null,
+        message: err?.message ?? String(err),
+      })
+      console.warn(`[dataExport] ${name} fetch failed:`, err)
+    }
+  })
+
+  // For each conversation that was fetched, also pull its messages
+  // subcollection. Sequential to keep concurrent connection count
+  // bounded on a patient with many threads; in practice patients have
+  // <10 conversations.
   const conversations = []
-  for (const convDoc of conversationsSnap.docs) {
-    const msgs = await getDocs(collection(db, 'conversations', convDoc.id, 'messages'))
-    conversations.push({
-      ...shapeDoc(convDoc),
-      messages: msgs.docs.map(shapeDoc),
-    })
+  if (sections.conversations) {
+    for (const convDoc of sections.conversations.docs) {
+      try {
+        const msgs = await getDocs(collection(db, 'conversations', convDoc.id, 'messages'))
+        conversations.push({
+          ...shapeDoc(convDoc),
+          messages: msgs.docs.map(shapeDoc),
+        })
+      } catch (err) {
+        errors.push({
+          section: `conversations/${convDoc.id}/messages`,
+          code:    err?.code    ?? null,
+          message: err?.message ?? String(err),
+        })
+        // Include the conversation header even if its messages couldn't
+        // be fetched. Otherwise the existence of the thread itself is
+        // erased from the export.
+        conversations.push({ ...shapeDoc(convDoc), messages: null })
+      }
+    }
   }
 
   return {
     exportedAt:    new Date().toISOString(),
     exportFormat:  'MAPA-RA10173-v1',
     subjectUid:    uid,
-    profile:       profileSnap.exists() ? shapeDoc(profileSnap) : null,
-    requests:         requestsSnap.docs.map(shapeDoc),
-    applications:     applicationsSnap.docs.map(shapeDoc),
-    documents:        documentsSnap.docs.map(shapeDoc),
-    documentContents: documentContentsSnap.docs.map(shapeDoc),
-    certificates:     certificatesSnap.docs.map(shapeDoc),
-    notifications:    notificationsSnap.docs.map(shapeDoc),
+    // `errors` is an array (may be empty). Surfaced at the top of the
+    // payload so anyone auditing the export sees the gaps immediately.
+    errors,
+    profile:          sections.profile?.exists?.() ? shapeDoc(sections.profile) : null,
+    requests:         sections.requests        ? sections.requests.docs.map(shapeDoc)        : null,
+    applications:     sections.applications    ? sections.applications.docs.map(shapeDoc)    : null,
+    documents:        sections.documents       ? sections.documents.docs.map(shapeDoc)       : null,
+    documentContents: sections.documentContents ? sections.documentContents.docs.map(shapeDoc) : null,
+    certificates:     sections.certificates    ? sections.certificates.docs.map(shapeDoc)    : null,
+    notifications:    sections.notifications   ? sections.notifications.docs.map(shapeDoc)   : null,
     conversations,
   }
 }
