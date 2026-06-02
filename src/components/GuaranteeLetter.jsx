@@ -110,6 +110,32 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
         .gl-doc .guarantee-intro { font-size: 12px; color: #444; margin-bottom: 6px; }
         .gl-doc .guarantee-amount { font-size: 24px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; margin: 6px 0; }
         .gl-doc .guarantee-detail { font-size: 11.5px; color: #444; margin-top: 4px; }
+        /* Payable To is the operational field for the receiving cashier
+           (hospital billing, pharmacy, etc.) so it gets dedicated
+           emphasis: ~14px bold inside a bordered box. Without this the
+           field reads as fine print and cashiers miss it. */
+        .gl-doc .payable-to-block {
+          margin: 10px auto 4px;
+          padding: 8px 16px;
+          border: 1.5px solid #1a3a5c;
+          background: #f4f7fb;
+          display: inline-block;
+          max-width: 480px;
+        }
+        .gl-doc .payable-to-label {
+          font-size: 9.5px;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          color: #1a3a5c;
+          margin-bottom: 2px;
+          font-weight: bold;
+        }
+        .gl-doc .payable-to-value {
+          font-size: 15px;
+          font-weight: bold;
+          color: #1a1a1a;
+          letter-spacing: 0.5px;
+        }
         .gl-doc .details-table {
           width: 100%;
           max-width: 420px;
@@ -200,9 +226,14 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
         <p className="guarantee-detail">
           <strong>For:</strong> {(app.purposeOfAssistance ?? []).join(', ') || 'Medical assistance'}
         </p>
-        <p className="guarantee-detail">
-          <strong>Payable to:</strong> {app.payableTo || '—'}
-        </p>
+        {/* Payable To rendered as a dedicated bordered block, larger
+            than the other detail lines. This is the field the receiving
+            cashier scans for; making it the second-most-prominent thing
+            on the document (after the amount) is the operational fix. */}
+        <div className="payable-to-block">
+          <p className="payable-to-label">Payable To</p>
+          <p className="payable-to-value">{app.payableTo || '—'}</p>
+        </div>
       </div>
 
       <hr className="divider-thin" />
@@ -222,8 +253,8 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
       <div className="validity-wrap">
         <span className="validity">
           This Guarantee Letter is valid for <strong>30 days</strong> from date of issuance.<br/>
-          The named provider may bill {app.agencyName} directly up to the guaranteed amount.
-          The patient shall not be liable for the guaranteed portion.
+          The named provider ({app.payableTo || '—'}) may bill {app.agencyName} directly up to
+          the guaranteed amount. The patient shall not be liable for the guaranteed portion.
         </span>
       </div>
 
