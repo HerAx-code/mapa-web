@@ -728,6 +728,10 @@ function AdminComposeModal({ user, onClose, onCreated }) {
 function ConversationThread({ conversation, user, text, setText }) {
   const [messages,    setMessages]    = useState([])
   const [loadingMsgs, setLoadingMsgs] = useState(true)
+  // Mirror of the R23 loadError pattern from ConversationModal so the
+  // admin/agency two-panel inline view doesn't render an empty-thread
+  // empty state when the load actually failed.
+  const [loadError,   setLoadError]   = useState(false)
   const [sending,     setSending]     = useState(false)
   const bottomRef                     = useRef(null)
 
@@ -737,6 +741,7 @@ function ConversationThread({ conversation, user, text, setText }) {
   useEffect(() => {
     if (!conversation?.id) return
     setLoadingMsgs(true)
+    setLoadError(false)
     const q = query(
       collection(db, 'conversations', conversation.id, 'messages'),
       orderBy('createdAt', 'asc')
@@ -744,25 +749,36 @@ function ConversationThread({ conversation, user, text, setText }) {
     const unsub = onSnapshot(q, snap => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setLoadingMsgs(false)
+      setLoadError(false)
     }, (err) => {
       setLoadingMsgs(false)
+      setLoadError(true)
       console.error('[Messages] thread snapshot error:', err)
     })
+    // R27 echo: was .catch(() => {}) -- swallowed rules denials silently.
     updateDoc(doc(db, 'conversations', conversation.id), {
       [`unread.${user.uid}`]: 0,
       [`seenBy.${user.uid}`]: serverTimestamp(),
-    }).catch(() => {})
+    }).catch(err => console.warn('[Messages] mark read failed:', err))
     return unsub
   }, [conversation?.id])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
+  // R21 echo: was missing try/catch -- a thrown sendMessage left `sending`
+  // stuck true forever in the inline thread too.
   const handleSend = async () => {
     if (!text.trim() || sending) return
     setSending(true)
-    await sendMessage(conversation.id, { from: user.uid, fromName: user.name, text: text.trim(), toUid: oUid })
-    setText('')
-    setSending(false)
+    try {
+      await sendMessage(conversation.id, { from: user.uid, fromName: user.name, text: text.trim(), toUid: oUid })
+      setText('')
+    } catch (err) {
+      console.error('[Messages] send failed:', err)
+      toast.error('Could not send your message. Please try again.')
+    } finally {
+      setSending(false)
+    }
   }
 
   const lastMsg   = messages[messages.length - 1]
@@ -803,7 +819,19 @@ function ConversationThread({ conversation, user, text, setText }) {
           </div>
         )}
 
-        {!loadingMsgs && messages.length === 0 && (
+        {!loadingMsgs && loadError && (
+          <div className="flex flex-col items-center py-10 gap-3 text-center">
+            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+              <MdMessage size={22} className="text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Couldn't load this thread</p>
+              <p className="text-xs text-gray-500 mt-0.5">Check your connection and try reopening the conversation.</p>
+            </div>
+          </div>
+        )}
+
+        {!loadingMsgs && !loadError && messages.length === 0 && (
           <div className="flex flex-col items-center py-10 gap-3 text-center">
             <div className="w-12 h-12 bg-brand-50 rounded-full flex items-center justify-center">
               <MdMessage size={22} className="text-brand-400" />
@@ -822,7 +850,7 @@ function ConversationThread({ conversation, user, text, setText }) {
           </div>
         )}
 
-        {!loadingMsgs && messages.map((m, idx) => {
+        {!loadingMsgs && !loadError && messages.map((m, idx) => {
           const isMe      = m.from === user.uid
           const dateLabel = fmtDateLabel(m.createdAt)
           const prevLabel = idx > 0 ? fmtDateLabel(messages[idx - 1].createdAt) : null
@@ -1159,9 +1187,20 @@ export default function Messages() {
   // Patient layout — narrow centered card with modal overlay
   // ──────────────────────────────────────────────────────────────────────
   if (isPatient) {
+    // R29: patient layout is now responsive. On md+ it renders the same
+    // two-panel split admin/agency get (left list, inline thread on the
+    // right) so desktop screens don't waste 60% of their width and the
+    // thread doesn't pop in a modal. On <md it falls back to the
+    // centered card + modal pattern that works well on phones.
+    //
+    // The conversation index (activeIndex) drives both branches so a
+    // patient who picked a conversation on mobile keeps the same one
+    // selected if they rotate to landscape / resize the window.
+    const activeConv = activeIndex !== null ? filtered[activeIndex] : null
     return (
       <Layout breadcrumb="Messages">
-        <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+        {/* ── Mobile (<md) — centered card + modal ── */}
+        <div className="p-4 sm:p-6 max-w-3xl mx-auto md:hidden">
           <div className="flex items-start justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
@@ -1208,8 +1247,16 @@ export default function Messages() {
             )}
             <div className="divide-y divide-gray-50">{convList}</div>
           </div>
-          {composeModal}
-          {activeIndex !== null && filtered[activeIndex] && (
+        </div>
+
+        {/* The compose flow is the same on both layouts -- the modal
+            renders itself when showCompose is true. */}
+        {composeModal}
+
+        {/* Mobile-only thread modal. md:hidden on the wrapper so the
+            fixed overlay inside doesn't escape onto desktop. */}
+        <div className="md:hidden">
+          {activeConv && (
             <ConversationModal
               conversations={filtered}
               activeIndex={activeIndex}
@@ -1218,6 +1265,66 @@ export default function Messages() {
               onNavigate={setActiveIndex}
             />
           )}
+        </div>
+
+        {/* ── Desktop (md+) — two-panel split ── */}
+        <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
+          {/* Left panel: header + search + list */}
+          <div className="w-80 flex-shrink-0 border-r border-gray-100 flex flex-col overflow-hidden bg-white">
+            <div className="px-4 py-3.5 border-b border-gray-100 flex-shrink-0 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Messages</p>
+                {unreadCount > 0 && <span className="badge badge-blue text-xs">{unreadCount} unread</span>}
+              </div>
+              <button className="btn-primary text-xs flex items-center gap-1 px-3 py-1.5"
+                onClick={() => setShowCompose(true)}>
+                <MdMessage size={13} /> New Message
+              </button>
+            </div>
+            {conversations.length > 0 && (
+              <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0 bg-gray-50">
+                <div className="relative">
+                  <MdSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                  <input className="input pl-8 py-1.5 text-sm w-full" placeholder="Search conversations..."
+                    value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
+                  {search && filtered.length !== conversations.length && (
+                    <span className="text-gray-400 font-normal"> of {conversations.length}</span>
+                  )}
+                </p>
+              </div>
+            )}
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-50">{convList}</div>
+          </div>
+
+          {/* Right panel: inline thread or empty state */}
+          <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/30">
+            {activeConv ? (
+              <ConversationThread
+                key={activeConv.id}
+                conversation={activeConv}
+                user={user}
+                text={threadText}
+                setText={setThreadText}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mb-4">
+                  <MdMessage size={28} className="text-brand-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  {conversations.length === 0 ? 'No conversations yet' : 'No conversation selected'}
+                </p>
+                <p className="text-xs text-gray-400 max-w-xs">
+                  {conversations.length === 0
+                    ? 'Start a new conversation with CRMC or your assigned agency using the New Message button.'
+                    : 'Pick a conversation on the left to read and reply.'}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </Layout>
     )
