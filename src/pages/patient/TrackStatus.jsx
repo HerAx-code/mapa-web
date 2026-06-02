@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   MdTimeline, MdHistory, MdDownload, MdMailOutline,
   MdCalendarMonth, MdAssignment, MdCelebration, MdCheckCircle,
-  MdInbox, MdCheck, MdWarning,
+  MdInbox, MdCheck, MdWarning, MdChevronRight,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import { useNavigate } from 'react-router-dom'
@@ -36,7 +36,25 @@ const buildRequestStages = (request, t) => {
   }
   const activeKey = activeMap[request.status] ?? 'submitted'
   const activeIdx = order.indexOf(activeKey)
-  return DEFS.map((s, i) => ({ ...s, done: i < activeIdx, active: i === activeIdx }))
+  return DEFS.map((s, i) => {
+    const active = i === activeIdx
+    const done   = i < activeIdx
+    // R14: per-row shortcuts. Stages where the patient has a real
+    // destination (interview details, coverage plan) become tap targets so
+    // they don't have to hunt for the right tab. Stages without a useful
+    // destination stay informational — clicking a "Request Submitted" or
+    // "CRMC Reviewing" row would land on a screen with nothing actionable.
+    let path = null
+    let cta  = null
+    if (active && s.key === 'assessment') {
+      path = '/patient/interviews'
+      cta  = t('patient.track.reqStages.assessmentCta')
+    } else if (active && s.key === 'endorsed') {
+      path = '/patient/request'
+      cta  = t('patient.track.reqStages.endorsedCta')
+    }
+    return { ...s, done, active, path, cta }
+  })
 }
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -433,21 +451,45 @@ export default function TrackStatus() {
               </div>
 
               {/* Lifecycle stepper */}
-              <div className="space-y-3 mb-4">
-                {stages.map((s, i) => (
-                  <div key={s.key} className="flex gap-3">
+              <div className="space-y-1 mb-4">
+                {stages.map((s, i) => {
+                  const dot = (
                     <div className="flex flex-col items-center">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-green-500 text-white' : s.active ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
                         {s.done ? <MdCheck size={15} /> : <span className="text-xs font-semibold">{i + 1}</span>}
                       </div>
                       {i < stages.length - 1 && <div className={`w-0.5 flex-1 min-h-4 ${s.done ? 'bg-green-300' : 'bg-gray-100'}`} />}
                     </div>
-                    <div className="pb-1 min-w-0">
+                  )
+                  const labelBlock = (
+                    <div className="pb-1 min-w-0 flex-1">
                       <p className={`text-sm ${s.active ? 'font-semibold text-gray-900' : s.done ? 'text-gray-700' : 'text-gray-400'}`}>{s.label}</p>
                       {(s.active || s.done) && <p className="text-xs text-gray-400 leading-snug">{s.note}</p>}
+                      {s.path && s.cta && (
+                        <p className="text-xs font-medium text-brand-600 mt-1">{s.cta} →</p>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                  if (s.path) {
+                    return (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => navigate(s.path)}
+                        className="w-full flex gap-3 items-start text-left rounded-lg -mx-2 px-2 py-2 min-h-[44px] hover:bg-brand-50/60 focus:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 transition-colors">
+                        {dot}
+                        {labelBlock}
+                        <MdChevronRight size={20} className="text-brand-500 flex-shrink-0 self-center" aria-hidden="true" />
+                      </button>
+                    )
+                  }
+                  return (
+                    <div key={s.key} className="flex gap-3 px-2 py-2">
+                      {dot}
+                      {labelBlock}
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Coverage */}
