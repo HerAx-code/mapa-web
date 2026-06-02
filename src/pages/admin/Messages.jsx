@@ -297,6 +297,24 @@ function PatientComposeModal({ user, onClose, onCreated }) {
   }, [])
 
   const isCRMC = (r) => r.role === 'super_admin' || r.role === 'staff_admin'
+  // Defensive name resolution. Same pattern as the L4 Layout fix: some
+  // legacy CRMC user docs (e.g. the super_admin demo `admin@crmc.gov.ph`)
+  // have displayName populated but no `name` field, which would otherwise
+  // render a blank recipient row with the "U" initials fallback. Cascade
+  // through name -> displayName -> role label so EVERY recipient renders
+  // with something meaningful.
+  const roleLabel = (r) => {
+    if (r.role === 'super_admin') return 'CRMC Administrator'
+    if (r.role === 'staff_admin')  return 'CRMC Staff'
+    if (r.role === 'agency_admin') return 'Agency Administrator'
+    if (r.role === 'agency')       return 'Agency Coordinator'
+    return 'CRMC'
+  }
+  const displayName = (r) => r.name || r.displayName || roleLabel(r)
+  const initials    = (r) => {
+    const tokens = displayName(r).split(/\s+/).map(s => s[0]).filter(Boolean)
+    return tokens.join('').slice(0, 2).toUpperCase() || 'U'
+  }
   // Filter to: any CRMC admin + agency staff for slices Maria currently has
   const visibleRecipients = recipients.filter(r =>
     isCRMC(r) ||
@@ -305,7 +323,6 @@ function PatientComposeModal({ user, onClose, onCreated }) {
   // Group: CRMC first (always available), then patient's reachable agencies
   const crmcGroup   = visibleRecipients.filter(isCRMC)
   const agencyGroup = visibleRecipients.filter(r => !isCRMC(r))
-  const initials = (name = '') => name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || 'U'
 
   const selectedRecipient = recipients.find(r => r.id === toUid)
 
@@ -313,15 +330,42 @@ function PatientComposeModal({ user, onClose, onCreated }) {
     if (!toUid || !text.trim()) return
     setSending(true)
     try {
-      const to   = recipients.find(r => r.id === toUid)
-      const conv = await getOrCreateConversation(user.uid, toUid, {
+      const to     = recipients.find(r => r.id === toUid)
+      // getOrCreateConversation returns the conversation ID as a STRING,
+      // not an object. Every other caller in the codebase consumes it as
+      // `const convId = await getOrCreate...` -- only this site previously
+      // did `conv.id`, which yielded `undefined` and made every patient
+      // message-send attempt write to conversations/undefined/messages
+      // (a rules denial that surfaced as the generic "Failed to send"
+      // toast). This was reported in the field on 2026-06-02.
+      const convId = await getOrCreateConversation(user.uid, toUid, {
         subject: subject.trim() || 'General Inquiry',
-        names: { [user.uid]: user.name ?? 'Patient', [toUid]: to?.name ?? 'Staff' },
+        names: {
+          [user.uid]: user.name ?? user.displayName ?? 'Patient',
+          [toUid]:    displayName(to ?? {}),
+        },
       })
-      await sendMessage(conv.id, { from: user.uid, fromName: user.name, text: text.trim(), toUid })
-      onCreated(conv.id)
-    } catch {
-      toast.error('Failed to send message. Please try again.')
+      await sendMessage(convId, {
+        from:     user.uid,
+        fromName: user.name ?? user.displayName ?? 'Patient',
+        text:     text.trim(),
+        toUid,
+      })
+      onCreated(convId)
+    } catch (err) {
+      // Surface the real reason instead of a generic toast. permission-denied
+      // means the rule layer rejected it (most often: conversations.create
+      // rule requires the caller to be in participants; the underlying
+      // getOrCreateConversation utility may not be passing the patient's uid
+      // correctly). Other codes are network / quota.
+      console.error('[PatientCompose] send failed:', err)
+      const code = err?.code ?? ''
+      const reason =
+        code === 'permission-denied' ? 'Permission denied. The CRMC contact you picked may not be configured for messaging yet.'
+        : code === 'unavailable'      ? 'Network problem. Check your connection and try again.'
+        : code === 'failed-precondition' ? 'The message could not be delivered (server check failed).'
+        : (err?.message ?? 'Unknown error.')
+      toast.error(`Couldn’t send: ${reason}`, { duration: 7000 })
     } finally { setSending(false) }
   }
 
@@ -341,10 +385,10 @@ function PatientComposeModal({ user, onClose, onCreated }) {
         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
           isCRMC(r) ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
         }`}>
-          {initials(r.name)}
+          {initials(r)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
+          <p className="text-sm font-medium text-gray-800 truncate">{displayName(r)}</p>
           <p className="text-xs text-gray-500 truncate">{sub}</p>
         </div>
         {selected && <MdCheckCircle size={20} className="text-brand-500 flex-shrink-0" />}
