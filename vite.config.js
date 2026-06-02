@@ -32,6 +32,40 @@ export default defineConfig({
           { src: '/pwa-512.png',          sizes: '512x512', type: 'image/png' },
           { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Screenshots populate Android Chrome's rich install bottom sheet
+        // (vs the basic install dialog). form_factor: 'narrow' = mobile;
+        // all three are 375x667 portrait so Chrome's same-dimensions
+        // requirement is satisfied.
+        screenshots: [
+          { src: '/screenshots/01-dashboard.png', sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'See your application status at a glance' },
+          { src: '/screenshots/02-status.png',    sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'Track your request through CRMC and partner agencies' },
+          { src: '/screenshots/03-request.png',   sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'Submit a medical assistance request in minutes' },
+        ],
+        // Long-press the installed icon to jump straight into the most
+        // common patient destinations without going through the dashboard.
+        shortcuts: [
+          {
+            name:       'My Application',
+            short_name: 'Status',
+            description: 'Track your assistance request',
+            url:        '/patient/status',
+            icons:      [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name:       'Request Assistance',
+            short_name: 'Request',
+            description: 'Submit a new medical assistance request',
+            url:        '/patient/request',
+            icons:      [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name:       'My Interview',
+            short_name: 'Interview',
+            description: 'View scheduled assessment interview',
+            url:        '/patient/interviews',
+            icons:      [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
       },
       workbox: {
         // App shell + assets precached. Firestore + Auth deliberately
