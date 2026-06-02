@@ -66,7 +66,27 @@ service cloud.firestore {
     // which uses the Admin SDK and bypasses Firestore rules entirely; the /seed
     // web page no longer self-creates users.
     match /users/{userId} {
-      allow read:   if isAuth() && (uid() == userId || isAdmin() || isAgency());
+      // Read rule additions for the patient compose-message flow:
+      //   - Patients can read CRMC admin (super_admin / staff_admin) user
+      //     docs so the New Message picker can list them. Without this
+      //     the picker silently fails (the original rule treated patients
+      //     the same as unauthenticated for cross-user reads, but the
+      //     messaging feature has always required the patient to know
+      //     who's on the other side).
+      //   - Patients can read agency staff (agency / agency_admin) user
+      //     docs. Their names + roles are operational, not sensitive --
+      //     the patient already sees the agency on their slice and on
+      //     /agency catalog pages.
+      // Field exposure is still limited to operational fields (name,
+      // role, agencyId, email, contact). No password, no PII beyond
+      // contact email/phone. Sensitive patient data lives in
+      // patients/{uid} which keeps its tighter rule.
+      allow read:   if isAuth() && (
+        uid() == userId
+        || isAdmin()
+        || isAgency()
+        || resource.data.role in ['super_admin', 'staff_admin', 'agency', 'agency_admin']
+      );
       allow create: if isAuth() && (
         (uid() == userId && request.resource.data.role == 'patient') ||
         isAdmin() ||

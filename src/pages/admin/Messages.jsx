@@ -261,15 +261,17 @@ function ConversationModal({ conversations, activeIndex, user, onClose, onNaviga
 // ── Patient Compose Modal ─────────────────────────────────────────────────
 
 function PatientComposeModal({ user, onClose, onCreated }) {
-  const [recipients,    setRecipients]    = useState([])
+  const [recipients,       setRecipients]       = useState([])
+  const [recipientsState,  setRecipientsState]  = useState('loading')  // 'loading' | 'ready' | 'denied'
   const [patientAgencyIds, setPatientAgencyIds] = useState(new Set())
-  const [toUid,         setToUid]         = useState('')
-  const [subject,       setSubject]       = useState('')
-  const [text,          setText]          = useState('')
-  const [sending,       setSending]       = useState(false)
-  const [confirmClose,  setConfirmClose]  = useState(false)
+  const [toUid,            setToUid]            = useState('')
+  const [subject,          setSubject]          = useState('')
+  const [text,             setText]             = useState('')
+  const [sending,          setSending]          = useState(false)
+  const [confirmClose,     setConfirmClose]     = useState(false)
+  const [showSubject,      setShowSubject]      = useState(false)
 
-  const hasUnsaved = !!text.trim()
+  const hasUnsaved = !!text.trim() || !!subject.trim()
   const charsLeft  = MAX_CHARS - text.length
   const handleClose = () => hasUnsaved ? setConfirmClose(true) : onClose()
 
@@ -279,22 +281,33 @@ function PatientComposeModal({ user, onClose, onCreated }) {
       .then(snap => {
         setPatientAgencyIds(new Set(snap.docs.map(d => d.data().agencyId).filter(Boolean)))
       })
+      .catch((err) => console.warn('[PatientCompose] applications query failed:', err))
   }, [user?.uid])
 
   useEffect(() => {
     getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin', 'agency'])))
-      .then(snap => setRecipients(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .then(snap => {
+        setRecipients(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        setRecipientsState('ready')
+      })
+      .catch((err) => {
+        console.warn('[PatientCompose] recipients query failed:', err)
+        setRecipientsState('denied')
+      })
   }, [])
 
-  const recipientLabel = (r) => {
-    if (r.role === 'super_admin' || r.role === 'staff_admin') return `${r.name} — Hospital Administration`
-    return `${r.name} — Agency`
-  }
-
-  const filteredRecipients = recipients.filter(r =>
-    r.role === 'super_admin' || r.role === 'staff_admin' ||
+  const isCRMC = (r) => r.role === 'super_admin' || r.role === 'staff_admin'
+  // Filter to: any CRMC admin + agency staff for slices Maria currently has
+  const visibleRecipients = recipients.filter(r =>
+    isCRMC(r) ||
     ((r.role === 'agency' || r.role === 'agency_admin') && patientAgencyIds.has(r.agencyId))
   )
+  // Group: CRMC first (always available), then patient's reachable agencies
+  const crmcGroup   = visibleRecipients.filter(isCRMC)
+  const agencyGroup = visibleRecipients.filter(r => !isCRMC(r))
+  const initials = (name = '') => name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() || 'U'
+
+  const selectedRecipient = recipients.find(r => r.id === toUid)
 
   const handleSend = async () => {
     if (!toUid || !text.trim()) return
@@ -312,13 +325,40 @@ function PatientComposeModal({ user, onClose, onCreated }) {
     } finally { setSending(false) }
   }
 
+  // Reusable tappable recipient row -- avatar + name + role + select indicator.
+  // Much friendlier on mobile than a native <select> dropdown.
+  const RecipientRow = ({ r, sub }) => {
+    const selected = r.id === toUid
+    return (
+      <button
+        type="button"
+        onClick={() => setToUid(r.id)}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors text-left ${
+          selected
+            ? 'border-brand-400 bg-brand-50 ring-1 ring-brand-200'
+            : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+        }`}>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+          isCRMC(r) ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+        }`}>
+          {initials(r.name)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
+          <p className="text-xs text-gray-500 truncate">{sub}</p>
+        </div>
+        {selected && <MdCheckCircle size={20} className="text-brand-500 flex-shrink-0" />}
+      </button>
+    )
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && handleClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
+      <div className="bg-white shadow-2xl w-full sm:max-w-md sm:rounded-2xl overflow-hidden relative h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
         {confirmClose && (
-          <div className="absolute inset-0 bg-white/90 z-10 flex items-center justify-center rounded-2xl p-6">
-            <div className="text-center space-y-3">
+          <div className="absolute inset-0 bg-white/95 z-10 flex items-center justify-center p-6">
+            <div className="text-center space-y-3 max-w-xs">
               <p className="text-sm font-semibold text-gray-800">Discard your message?</p>
               <p className="text-xs text-gray-500">Your message will be lost if you close now.</p>
               <div className="flex gap-2 justify-center pt-1">
@@ -328,33 +368,105 @@ function PatientComposeModal({ user, onClose, onCreated }) {
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">New Message</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 -m-2 p-2">
+            <MdClose size={20} />
+          </button>
         </div>
-        <div className="px-5 py-4 space-y-3">
+
+        <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+          {/* Recipient list -- tappable cards grouped by role. */}
+          {recipientsState === 'denied' ? (
+            <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-3">
+              <p className="text-xs font-semibold text-red-700 mb-1">Can&apos;t load recipients</p>
+              <p className="text-xs text-red-700/80 leading-relaxed">
+                The CRMC contact list couldn&apos;t be fetched. This usually
+                means the latest security rules haven&apos;t been deployed.
+                Please try again in a few minutes, or contact your
+                administrator.
+              </p>
+            </div>
+          ) : recipientsState === 'loading' ? (
+            <div className="flex items-center gap-2 px-3 py-4 text-gray-400">
+              <span className="w-4 h-4 border-2 border-gray-300 border-t-brand-500 rounded-full animate-spin" />
+              <p className="text-sm">Loading recipients…</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                  CRMC — always available
+                </p>
+                <div className="space-y-1.5">
+                  {crmcGroup.length > 0 ? (
+                    crmcGroup.map(r => (
+                      <RecipientRow key={r.id} r={r} sub="Medical Social Services" />
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic px-3 py-2">
+                      No CRMC contacts found.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {agencyGroup.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                    Your Agencies
+                  </p>
+                  <div className="space-y-1.5">
+                    {agencyGroup.map(r => (
+                      <RecipientRow key={r.id} r={r} sub="Reviewing your application" />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    <strong>Agencies aren&apos;t reachable yet.</strong> Once CRMC
+                    endorses your request to an agency, they&apos;ll appear here
+                    so you can message them directly.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Subject is collapsed by default -- most patients won't add one. */}
+          {showSubject ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subject <span className="text-xs font-normal text-gray-400">(optional)</span>
+              </label>
+              <input className="input text-sm" placeholder="What is this about?"
+                autoFocus value={subject} onChange={e => setSubject(e.target.value)} />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSubject(true)}
+              className="text-xs text-brand-500 hover:text-brand-600 font-medium">
+              + Add subject (optional)
+            </button>
+          )}
+
+          {/* Message body. Larger textarea, sticky-feeling on mobile. */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To <span className="text-red-400">*</span></label>
-            <select className="input" value={toUid} onChange={e => setToUid(e.target.value)}>
-              <option value="">Select recipient...</option>
-              {filteredRecipients.map(r => (
-                <option key={r.id} value={r.id}>{recipientLabel(r)}</option>
-              ))}
-            </select>
-            {filteredRecipients.length === 0 && patientAgencyIds.size === 0 && (
-              <p className="text-xs text-gray-400 mt-1">Submit an assistance request first — agencies become reachable once CRMC endorses your request to them.</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-            <input className="input text-sm" placeholder="What is this about? (optional)"
-              value={subject} onChange={e => setSubject(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message <span className="text-red-400">*</span></label>
-            <textarea className="input text-sm resize-none" rows={4}
-              placeholder="Write your message..."
-              value={text} onChange={e => setText(e.target.value)} maxLength={MAX_CHARS} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Message <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              className="input text-sm resize-none"
+              rows={5}
+              placeholder={selectedRecipient
+                ? `Write your message to ${selectedRecipient.name?.split(' ')[0] ?? 'them'}…`
+                : 'Write your message…'}
+              value={text}
+              onChange={e => setText(e.target.value)}
+              maxLength={MAX_CHARS} />
             {text.length > MAX_CHARS * 0.8 && (
               <p className={`text-xs mt-1 text-right ${charsLeft < 50 ? 'text-red-500' : 'text-gray-400'}`}>
                 {charsLeft} characters remaining
@@ -362,11 +474,12 @@ function PatientComposeModal({ user, onClose, onCreated }) {
             )}
           </div>
         </div>
-        <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
-          <button className="btn-secondary text-sm" onClick={handleClose}>Cancel</button>
-          <button className="btn-primary text-sm flex items-center gap-1.5"
+
+        <div className="px-5 py-3 flex gap-2 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+          <button className="btn-secondary text-sm flex-1 sm:flex-none" onClick={handleClose}>Cancel</button>
+          <button className="btn-primary text-sm flex-1 flex items-center justify-center gap-1.5"
             onClick={handleSend} disabled={sending || !toUid || !text.trim()}>
-            <MdSend size={14} /> {sending ? 'Sending...' : 'Send Message'}
+            <MdSend size={14} /> {sending ? 'Sending…' : 'Send'}
           </button>
         </div>
       </div>
@@ -904,23 +1017,52 @@ export default function Messages() {
         )
       })}
       {!loading && filtered.length === 0 && (
-        <div className="text-center py-14 px-6">
-          <MdMessage size={36} className="text-gray-200 mx-auto mb-2" />
-          <p className="text-sm text-gray-400 mb-1">
-            {search ? 'No conversations match your search.' : 'No messages yet.'}
-          </p>
+        <div className="text-center py-10 px-6">
+          {/* Larger, brand-tinted icon makes the empty state feel
+              intentional rather than missing. */}
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-brand-50 flex items-center justify-center">
+            <MdMessage size={36} className="text-brand-400" />
+          </div>
           {search ? (
-            <button
-              onClick={() => setSearch('')}
-              className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
-              Clear search
-            </button>
-          ) : isPatient && (
-            <button
-              onClick={() => setShowCompose(true)}
-              className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5">
-              <MdAdd size={15} /> New Message
-            </button>
+            <>
+              <p className="text-sm font-medium text-gray-600 mb-3">
+                No conversations match your search.
+              </p>
+              <button
+                onClick={() => setSearch('')}
+                className="text-sm font-medium text-brand-500 hover:text-brand-600">
+                Clear search
+              </button>
+            </>
+          ) : isPatient ? (
+            <>
+              <p className="text-base font-semibold text-gray-800 mb-2">
+                No messages yet
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed mb-3 max-w-xs mx-auto">
+                Have a question about your assistance request? Reach out to
+                CRMC or any agency that&apos;s reviewing your application.
+              </p>
+              <p className="text-xs text-gray-400 leading-relaxed mb-5 max-w-xs mx-auto">
+                You can message <strong className="text-gray-600">CRMC anytime</strong>.
+                Agencies become reachable once CRMC endorses your request to them.
+              </p>
+              <button
+                onClick={() => setShowCompose(true)}
+                className="btn-primary text-sm inline-flex items-center gap-1.5">
+                <MdAdd size={15} /> Start a Conversation
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-base font-semibold text-gray-800 mb-2">
+                No messages yet
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">
+                When a patient or another team member reaches out, the
+                conversation will appear here.
+              </p>
+            </>
           )}
         </div>
       )}
