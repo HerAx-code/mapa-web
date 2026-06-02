@@ -42,31 +42,48 @@ firebase deploy --only hosting
 The build output goes to `dist/`. Firebase Hosting takes ~30 seconds to
 roll over.
 
-### Deploy Cloud Functions
+### Deploy Cloud Functions (Blaze plan only — not required for the pilot)
+
+The pilot runs on the free **Spark plan**. The Cloud Functions in
+`functions/` are NOT deployed; they exist as future work for a
+production deploy on Blaze. The same scheduled work is currently done
+by client-side lazy fallbacks in `src/pages/agency/Dashboard.jsx`:
+
+- **Slot reset** — when an agency user opens the dashboard, the first
+  read of the day flips `slots.remaining = slots.total` if
+  `lastResetDate` doesn't match today's Manila date.
+- **GL expiry sweep** — same useEffect on dashboard load walks the
+  agency's `applications` where `glStatus='issued'`, expires any past
+  the 30-day window, releases committed budget, and audit-logs each.
+
+This means: an agency must open the dashboard at least once per day
+for the slot reset and expiry sweep to run. In practice this happens
+naturally (coordinators check their inbox every morning), but if no
+one logs in for a multi-day stretch, the resets back-fill on the next
+visit.
+
+**If you do upgrade to Blaze later:**
 
 ```powershell
 firebase deploy --only functions
 ```
 
-Deploys both scheduled functions:
-- `resetAgencySlots` — daily 00:00 Asia/Manila, region `asia-southeast1`
-- `glExpirySweep` — hourly, region `asia-southeast1`
+Deploys:
+- `resetAgencySlots` — daily 00:00 Asia/Manila, `asia-southeast1`
+- `glExpirySweep` — hourly, `asia-southeast1`
 
-**Blaze plan required.** Scheduled functions cannot deploy on the free
-Spark plan even with zero compute usage. Upgrade at
-https://console.firebase.google.com/project/mapa-crmc/usage/details
-before the first functions deploy. The two functions combined are well
-below the Blaze free tier (2M invocations/month).
+The client-side fallbacks remain (defense in depth). Both paths use
+the same end-state, so an overlap is a no-op (the function re-reads
+inside its transaction; the client sweep skips already-expired rows).
 
-**Local emulator** (no Blaze required, no billing):
+**Local emulator** (no Blaze, no billing):
 
 ```powershell
 firebase emulators:start --only firestore,functions
 ```
 
-Loads both function definitions; their scheduler triggers won't fire
-without the Pub/Sub emulator, which is fine for verifying the code
-loads. To exercise them manually:
+Loads both definitions; scheduler triggers won't fire without the
+Pub/Sub emulator, but you can exercise them manually:
 
 ```powershell
 firebase functions:shell

@@ -2,11 +2,13 @@
  * resetAgencySlots — daily midnight (Manila) Cloud Function that
  * resets every enabled agency's slots.remaining back to slots.total.
  *
- * The web client also has a lazy fallback in agency/Dashboard.jsx that
- * fires on the first agency-side dashboard load each day if this scheduler
- * hasn't run. Keep both — the scheduler is the primary mechanism so the
- * reset is independent of agency log-in cadence; the lazy path is the
- * safety net for the day the scheduler is misconfigured / failing.
+ * STATUS: not currently deployed. The pilot runs on the free Spark
+ * plan which does not allow scheduled functions. The same work is
+ * done by a client-side lazy fallback in agency/Dashboard.jsx that
+ * fires when an agency user opens the dashboard. This file stays in
+ * the repo as the v2 deployment target (Blaze plan); when budget
+ * permits, `firebase deploy --only functions` activates it and the
+ * client fallback becomes redundant defence-in-depth.
  *
  * admin.initializeApp() lives in functions/index.js so multiple function
  * modules can share one initialised Firebase app.

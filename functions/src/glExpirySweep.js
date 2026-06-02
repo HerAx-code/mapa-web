@@ -17,11 +17,13 @@ const GL_VALIDITY_DAYS = 30
 // (performExpireGL) so that operators and the sweep produce
 // identical end-state docs.
 //
-// The web client also still has a lazy fallback when an agency
-// coordinator opens an expired GL row in the inbox -- the comment in
-// utils/constants.js explicitly anticipates this Cloud Function path.
-// Keep both: the function is the primary mechanism, the manual
-// affordance is the safety net.
+// STATUS: not currently deployed. The pilot runs on Spark (free) and
+// this code is the v2 target. The same sweep is done by a client-side
+// useEffect in agency/Dashboard.jsx that fires on agency-user dashboard
+// load: it queries glStatus=='issued', filters by approvedAt < now-30d,
+// then writes the same end-state per app. When deployed on Blaze, this
+// scheduled function takes over as the primary mechanism and the
+// client sweep becomes defence-in-depth.
 //
 // Query shape:   glStatus == 'issued' AND approvedAt < (now - 30d)
 // Requires composite index: applications(glStatus ASC, approvedAt ASC)

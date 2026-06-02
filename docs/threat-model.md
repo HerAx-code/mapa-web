@@ -252,7 +252,7 @@ vs server-written entries.
 
 | Aspect | Status |
 |--------|--------|
-| Cloud Functions ready, Blaze required for prod deploy | `resetAgencySlots` (daily) + `glExpirySweep` (hourly) live in `functions/`; web-side lazy fallbacks remain as safety nets for the day the scheduler misfires |
+| Pilot runs on Spark (free) plan — Cloud Functions not deployed | Background jobs run via client-side lazy fallbacks in `agency/Dashboard.jsx`: slot reset + GL expiry sweep both fire on the first agency-user dashboard load each day. The `functions/` directory holds the equivalent scheduled functions (`resetAgencySlots`, `glExpirySweep`) ready for a future Blaze deploy; current operation does not depend on them |
 | No tamper-evident audit log | Admin SDK deletes are unrecorded; service-account key holders are trusted |
 | No staging environment | Dev work hits the same Firestore as the pilot |
 | No automated CI / no rule-deploy gate | Manual `firebase deploy --only firestore:rules`; tests must be run locally |
