@@ -955,9 +955,16 @@ export default function Messages() {
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && <span className="badge badge-blue">{unreadCount} unread</span>}
-              <button className="btn-primary flex items-center gap-1.5 text-sm" onClick={() => setShowCompose(true)}>
-                <MdMessage size={15} /> New Message
-              </button>
+              {/* Header compose button only renders when conversations
+                  exist. On the empty state the inline "+ New Message"
+                  card-centre button is the call-to-action, so showing
+                  both was reported as redundant by patients during the
+                  Tier-2 audit. */}
+              {conversations.length > 0 && (
+                <button className="btn-primary flex items-center gap-1.5 text-sm" onClick={() => setShowCompose(true)}>
+                  <MdMessage size={15} /> New Message
+                </button>
+              )}
             </div>
           </div>
           <div className="card overflow-hidden">
