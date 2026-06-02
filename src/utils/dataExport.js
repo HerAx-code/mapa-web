@@ -11,9 +11,12 @@ import { db } from '../firebase'
 //   profile           — users/{uid}
 //   requests          — requests where patientId == uid
 //   applications      — applications where patientId == uid (agency slices)
-//   documents         — documents where patientId == uid (file metadata)
-//   documentContents  — documentContents where patientId == uid (the actual
-//                       file content; can be several MB total)
+//   documents         — documents where patientId == uid (file metadata,
+//                       includes storagePath for Storage-backed docs)
+//   documentContents  — documentContents where patientId == uid; legacy
+//                       (pre-Storage-migration) base64 content. After
+//                       migration this collection is empty and the
+//                       Storage path is the source of truth.
 //   certificates      — certificates where patientId == uid (GL records)
 //   notifications     — notifications/{uid}/items
 //   conversations     — conversations the patient participates in, plus

@@ -88,13 +88,23 @@ human admins or AI agents reviewing the dashboard. Discovered live on
 
 **Threat.** A patient writes a `documents` or `documentContents` entry
 attributed to another patient, polluting their record or pre-stamping
-agencyIds to grant unintended agency read access.
+agencyIds / storagePath to grant unintended access.
 
-**Mitigation.** `documents.create` and `documentContents.create` rules
-(`9a596d4`):
-- `patientId == uid()` required on both.
-- `status == 'pending'` required on documents (no pre-stamping verified).
+**Mitigation.** `documents.create` rule (`9a596d4` + Tier-2 item 8):
+- `patientId == uid()` required.
+- `status == 'pending'` required (no pre-stamping verified).
 - `agencyIds` cannot appear at create time (admins stamp at endorse).
+- `storagePath` cannot appear at create time (uploader stamps via
+  update AFTER the Storage write succeeds). Without this, a malicious
+  patient could pre-stamp a path under another patient's tree and
+  have DocViewerModal load the wrong object.
+
+`documentContents.create`: `patientId == uid()` (legacy path; will
+be removed after the migration script has been run in prod).
+
+Storage path `documents/{patientId}/{docId}/{file}`: read gated by
+patient/admin/agency-on-agencyIds; write gated by `patientId ==
+auth.uid` with 10 MB cap and content-type whitelist.
 
 **Verification.** `tests/rules/documents.rules.test.js`.
 

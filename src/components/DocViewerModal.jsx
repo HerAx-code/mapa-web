@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { fetchDocumentContent } from '../utils/uploadDocument'
 import {
   MdClose, MdDownload, MdZoomIn, MdInsertDriveFile,
   MdOpenInNew, MdRefresh,
@@ -25,9 +26,11 @@ function ImageLightbox({ src, onClose }) {
 }
 
 // ── Shared document preview (body + open/download) ───────────────────────
-// Fetches documentContents/{docMeta.id} and renders the image/PDF inline,
-// with robust fallbacks. Used both inside DocViewerModal and inline in the
-// CRMC request detail's side-by-side review panel.
+// Fetches the document content from Storage (when docMeta.storagePath is
+// present; new uploads since Tier-2 item 8) or from documentContents
+// (legacy path). Renders the image/PDF inline with robust fallbacks.
+// Used both inside DocViewerModal and inline in the CRMC request
+// detail's side-by-side review panel.
 export function DocPreview({ docMeta, className = '' }) {
   const [content, setContent]     = useState(null)
   const [loading, setLoading]     = useState(true)
@@ -39,21 +42,29 @@ export function DocPreview({ docMeta, className = '' }) {
   useEffect(() => {
     if (!docMeta?.id) return
     setLoading(true); setError(null); setContent(null); setImgError(false)
-    getDoc(doc(db, 'documentContents', docMeta.id))
-      .then(snap => {
+    ;(async () => {
+      try {
+        // Prefer Storage when the doc has been migrated / freshly uploaded.
+        const fromStorage = await fetchDocumentContent(docMeta)
+        if (fromStorage) { setContent(fromStorage); return }
+
+        // Legacy fallback: pre-migration docs still have the base64
+        // content in documentContents/{docId}.
+        const snap = await getDoc(doc(db, 'documentContents', docMeta.id))
         const fetched = snap.exists() ? snap.data()?.content : null
         const resolved = fetched || docMeta?.content
         if (resolved) setContent(resolved)
         else setError(snap.exists()
           ? 'The file content is empty. Ask the patient to re-upload this document.'
           : 'The file content has not been uploaded yet, or was deleted. Ask the patient to (re-)upload it.')
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('DocPreview load failed:', err)
         setError(`Failed to load document: ${err?.code === 'permission-denied' ? 'permission denied' : (err?.message ?? 'unknown error')}.`)
-      })
-      .finally(() => setLoading(false))
-  }, [docMeta?.id])
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [docMeta?.id, docMeta?.storagePath])
 
   const isImage = content?.startsWith?.('data:image')
   const isPdf   = content?.startsWith?.('data:application/pdf')

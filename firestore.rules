@@ -189,14 +189,19 @@ service cloud.firestore {
       );
       // Patient creates own document. patientId must match auth (no creating
       // docs attributed to other patients), status must start at 'pending'
-      // (can't pre-stamp verified to bypass CRMC review), and agencyIds[]
+      // (can't pre-stamp verified to bypass CRMC review), agencyIds[]
       // can't be pre-stamped (admins set this at endorse time, granting
-      // agency read access). The OCR text from uploadDocument.js is already
-      // sliced to 2000 chars client-side; we bound it server-side too.
+      // agency read access), and storagePath cannot be present at create
+      // time (it's stamped via update AFTER the actual Storage upload
+      // succeeds -- pre-stamping a path that points elsewhere would let
+      // the viewer load attacker-chosen Storage objects under the docId).
+      // The OCR text from uploadDocument.js is already sliced to 2000 chars
+      // client-side; we bound it server-side too.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
                        request.resource.data.status == 'pending' &&
                        !('agencyIds' in request.resource.data) &&
+                       !('storagePath' in request.resource.data) &&
                        (!('ocrText' in request.resource.data) ||
                         (request.resource.data.ocrText is string &&
                          request.resource.data.ocrText.size() <= 4000));

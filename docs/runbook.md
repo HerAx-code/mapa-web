@@ -84,6 +84,48 @@ Add this alongside the rules deploy whenever a new index is added to
 `firestore.indexes.json`. Indexes can take several minutes to build on
 prod.
 
+### Deploy Storage rules
+
+```powershell
+firebase deploy --only storage
+```
+
+Use after editing `storage.rules`. Takes effect in ~30 seconds.
+
+### Migrate documentContents to Cloud Storage (one-shot)
+
+After Tier-2 item 8, NEW patient document uploads go to Cloud Storage
+at `/documents/{patientId}/{docId}/{file}`. Existing legacy documents
+keep their base64 content in the `documentContents` Firestore collection
+until this migration runs.
+
+```powershell
+# 1. Dry-run audit -- prints intended uploads, no writes
+$env:GOOGLE_APPLICATION_CREDENTIALS = "C:\path\to\service-account.json"
+node scripts/migrate-doc-content-to-storage.js
+
+# 2. Apply -- uploads each base64 to Storage + stamps storagePath on
+#    the corresponding documents/{docId} doc. Idempotent.
+node scripts/migrate-doc-content-to-storage.js --apply
+
+# 3. Apply + delete -- same as #2 but ALSO removes the legacy
+#    documentContents docs after the Storage upload + stamp succeeds.
+node scripts/migrate-doc-content-to-storage.js --apply --delete
+```
+
+Resumable: each iteration reads the current state of
+documents/{docId}.storagePath and skips already-migrated docs.
+Interrupting mid-run is safe.
+
+**Order on first deploy:**
+
+1. Deploy code (`firebase deploy --only hosting`)
+2. Deploy rules + indexes + Storage rules
+3. Run migration script with `--apply --delete`
+
+New uploads go to Storage from step 1 onward, so users uploading during
+the migration window aren't affected.
+
 ### Run unit tests
 
 ```powershell

@@ -53,5 +53,37 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
     }
+
+    // ── Patient documents ───────────────────────────────────────────────
+    // Tier-2 item 8: documentContents migrated from a Firestore base64
+    // string (capped at 1 MiB by Firestore's doc size limit) to proper
+    // Cloud Storage. Same security model as the documents collection:
+    //   - patients read their own
+    //   - admins read any
+    //   - agencies read only docs whose corresponding documents/{docId}
+    //     has the agency stamped on agencyIds[] (admin endorse path)
+    //
+    // Path layout: /documents/{patientId}/{docId}/{file}. patientId is
+    // pinned to the request.auth.uid for writes; docId mirrors the
+    // documents collection so the Storage object and the metadata doc
+    // are colocated by identifier.
+    function docMeta(docId) {
+      return firestore.get(/databases/(default)/documents/documents/$(docId));
+    }
+    match /documents/{patientId}/{docId}/{file} {
+      allow read: if
+        (isPatient() && request.auth.uid == patientId)
+        || isAdmin()
+        || (isAgency() && docMeta(docId).data.agencyIds is list
+            && userDoc().data.agencyId in docMeta(docId).data.agencyIds);
+
+      allow write: if
+        isPatient()
+        && request.auth.uid == patientId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
+
+      allow delete: if isAdmin() || (isPatient() && request.auth.uid == patientId);
+    }
   }
 }

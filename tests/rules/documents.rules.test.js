@@ -77,6 +77,15 @@ describe('documents.create — patient owns the write (rules-3)', () => {
     ))
   })
 
+  it('rejects storagePath pre-stamped on create (Storage uploader stamps it AFTER upload via update)', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(
+      collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { storagePath: 'documents/other-patient/secret/file.pdf' }),
+    ))
+  })
+
   it('rejects oversized ocrText payload (>4000 chars)', async () => {
     await seedUser('patient-1', 'patient')
     const ctx = testEnv.authenticatedContext('patient-1')

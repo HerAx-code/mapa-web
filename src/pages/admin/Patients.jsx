@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
+import { deleteDocumentStorage } from '../../utils/uploadDocument'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import toast from 'react-hot-toast'
 
@@ -329,6 +330,15 @@ export default function Patients() {
         getDocs(query(collection(db, 'applications'),     where('patientId', '==', uid))),
         getDocs(collection(db, 'notifications', uid, 'items')),
       ])
+
+      // Delete Storage objects for any docs that have been migrated to
+      // (or freshly uploaded into) Cloud Storage. deleteDocumentStorage
+      // is silent on already-missing objects so legacy docs whose content
+      // still lives in documentContents don't produce false-positive
+      // errors.
+      await Promise.all(docsSnap.docs.map(d => deleteDocumentStorage({
+        storagePath: d.data()?.storagePath,
+      })))
 
       // Delete associated records (user document last so the admin can retry on failure)
       await Promise.all([
