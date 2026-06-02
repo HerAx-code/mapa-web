@@ -373,14 +373,25 @@ export default function RequestAssistance() {
     setSubmitting(true)
     try {
       // Upload each attached required document before snapshotting. Replace a
-      // same-type doc in place so we never create duplicates.
+      // same-type doc in place so we never create duplicates on retry --
+      // when this loop fails partway, the patient's `myDocs` snapshot
+      // already includes whatever uploaded successfully, so the next
+      // attempt routes those through replacePatientDocument instead of
+      // creating fresh duplicates. R26: per-doc try/catch so a failure
+      // tells the patient WHICH document broke ("Failed to upload your
+      // Medical Certificate") instead of a generic "submission failed."
       for (const tp of reqDocTypes) {
         const file = pendingFiles[tp.name]
         if (!file) continue
         const existing = docForType(tp.name)
         const ocr      = ocrResults[tp.name] ?? null
-        if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, user })
-        else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, user })
+        try {
+          if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, user })
+          else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, user })
+        } catch (uploadErr) {
+          console.error('[request] doc upload failed:', tp.name, uploadErr)
+          throw new Error(`UPLOAD_FAILED:${tp.name}`)
+        }
       }
 
       // Representative identity documents (when filing on the patient's behalf).
@@ -447,7 +458,17 @@ export default function RequestAssistance() {
         .catch(err => console.error('[request] admin notify failed:', err))
     } catch (err) {
       console.error('[request] submit failed:', err?.code, err?.message, err)
-      toast.error(t('patient.request.errFailed'))
+      // R26: surface WHICH document failed so the patient knows what to
+      // retry. Without this, the toast just said "submission failed" and
+      // the patient retried the entire flow without knowing the network
+      // had dropped only their Medical Certificate upload.
+      const m = String(err?.message ?? '')
+      if (m.startsWith('UPLOAD_FAILED:')) {
+        const docName = m.slice('UPLOAD_FAILED:'.length)
+        toast.error(`Could not upload "${docName}". Check your connection and try again.`)
+      } else {
+        toast.error(t('patient.request.errFailed'))
+      }
       setSubmitting(false)
     }
   }

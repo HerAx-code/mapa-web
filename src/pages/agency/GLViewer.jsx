@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -30,15 +30,26 @@ export default function GLViewer() {
   const [markingIssued, setMarkingIssued] = useState(false)
   const [showConfirmIssued, setShowConfirmIssued] = useState(false)
 
-  // Load the application
+  // R28: only the FIRST snapshot's missing state counts as "not found";
+  // subsequent missing states (Firestore offline replay, a transient
+  // delete race, network blip) shouldn't yank the agency out of an open
+  // GL viewer mid-session. firstLoad ref flips after the first snapshot
+  // arrives so later misses get logged but don't navigate.
+  const firstLoad = useRef(true)
   useEffect(() => {
     if (!id) return
+    firstLoad.current = true
     const unsub = onSnapshot(doc(db, 'applications', id), snap => {
       if (!snap.exists()) {
-        toast.error('Application not found.')
-        navigate('/agency/inbox')
+        if (firstLoad.current) {
+          toast.error('Application not found.')
+          navigate('/agency/inbox')
+        } else {
+          console.warn('[GLViewer] application doc went missing mid-session; keeping last state on screen')
+        }
         return
       }
+      firstLoad.current = false
       setApp({ id: snap.id, ...snap.data() })
       setLoading(false)
     }, () => { setLoading(false); toast.error('Failed to load application.') })

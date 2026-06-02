@@ -39,8 +39,16 @@ export default function PatientMore() {
     i18n.changeLanguage(next)
   }
 
-  const handleLogout = () => {
-    logout()
+  // R25: await Firebase signOut before navigating. The old fire-and-forget
+  // version raced the navigate against the auth-state clear; PrivateRoute
+  // self-corrected in practice, but a fast back/forward could briefly
+  // surface authenticated content. Awaiting closes the race.
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (err) {
+      console.error('[PatientMore] logout failed:', err)
+    }
     navigate('/login')
     toast.success(t('shell.toast.loggedOut'))
   }
