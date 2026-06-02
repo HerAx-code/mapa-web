@@ -360,7 +360,12 @@ export default function PatientDashboard() {
     {
       num: 5, title: t('patient.dashboard.steps.s5Title'),
       desc:   t('patient.dashboard.steps.s5Desc'),
-      path:   null,
+      // R11 (2026-06-03): previously path=null meant the row had no tap
+      // target. Patient saw "Done" with no way to navigate to the GL,
+      // hitting "where is it?" /patient/status is where the
+      // 'Download GL' button lives and where the GL viewer can be
+      // opened, so route there for both done + not-done states.
+      path:   '/patient/status',
       done:   activeStatus === 'certificate',
     },
   ]
