@@ -1,7 +1,13 @@
 import { collection, addDoc, updateDoc, doc, serverTimestamp, increment, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 
-export const getOrCreateConversation = async (uid1, uid2, { names, roles, subject = '' }) => {
+// R7 (2026-06-03): defaults for `names` and `roles` are required because
+// Firestore rejects undefined field values on addDoc. Some call sites pass
+// roles, others don't (e.g. the patient compose modal only knows participant
+// names, not their roles). Without these defaults the addDoc fails with
+// "Unsupported field value: undefined (found in field roles in document
+// conversations/...)" and the entire conversation never gets created.
+export const getOrCreateConversation = async (uid1, uid2, { names = {}, roles = {}, subject = '' } = {}) => {
   const snap = await getDocs(
     query(collection(db, 'conversations'), where('participants', 'array-contains', uid1))
   )

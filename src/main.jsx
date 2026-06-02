@@ -17,7 +17,16 @@ registerSW({ immediate: true })
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter future={{
+        // Opt in to the v7 behaviours early -- silences the two future-flag
+        // warnings that appear in the browser console and prepares the app
+        // for the eventual react-router-dom v7 upgrade without surprise.
+        //   v7_startTransition  : state updates wrapped in React.startTransition
+        //   v7_relativeSplatPath: relative resolution within splat routes
+        // See https://reactrouter.com/v6/upgrading/future
+        v7_startTransition:   true,
+        v7_relativeSplatPath: true,
+      }}>
         <App />
         <Toaster
           position="bottom-right"
