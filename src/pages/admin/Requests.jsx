@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
 import {
-  collection, query, where, onSnapshot, doc, getDocs, updateDoc,
+  collection, query, where, onSnapshot, doc, getDoc, getDocs, updateDoc,
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -64,6 +64,47 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const [selected, setSelected] = useState(() => new Set())
   const [notes,    setNotes]    = useState('')
   const [saving,   setSaving]   = useState(false)
+
+  // R13: pre-endorse document existence check. The request snapshots
+  // `attachedDocuments` at submission, but those Firestore docs can disappear
+  // later (manual cleanup, account soft-delete, schema migrations). If we
+  // endorse with stale refs, R8 keeps the transaction healthy but the agency
+  // receives a slice with documents they can't actually open. Better to
+  // surface the bad state here so CRMC can ask the patient to re-upload
+  // before referring the case.
+  const attachedIds = (request.attachedDocuments ?? [])
+    .map(a => a?.documentId)
+    .filter(Boolean)
+  const [docCheck, setDocCheck] = useState({ loading: attachedIds.length > 0, missing: [] })
+
+  useEffect(() => {
+    let alive = true
+    if (attachedIds.length === 0) {
+      setDocCheck({ loading: false, missing: [] })
+      return
+    }
+    ;(async () => {
+      const results = await Promise.allSettled(
+        attachedIds.map(id => getDoc(doc(db, 'documents', id)))
+      )
+      if (!alive) return
+      const missing = []
+      results.forEach((r, i) => {
+        const id   = attachedIds[i]
+        const name = request.attachedDocuments?.[i]?.name || id
+        if (r.status === 'fulfilled' && !r.value.exists()) {
+          missing.push({ id, name })
+        }
+        // Rejected reads (permission, network) aren't counted as missing —
+        // we don't want to falsely accuse a doc that just wasn't readable.
+      })
+      setDocCheck({ loading: false, missing })
+    })()
+    return () => { alive = false }
+    // attachedIds is derived from request.attachedDocuments; re-run only if
+    // the request changes (modal re-opened on a different request).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request.id])
 
   // Agencies already holding a slice in this request can't be picked again;
   // sort matching-type agencies first, then alphabetically.
@@ -263,6 +304,41 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             <div><p className="text-xs text-gray-400">Secured</p><p className="text-sm font-semibold text-green-600">{peso(committed)}</p></div>
             <div><p className="text-xs text-gray-400">Endorsable</p><p className="text-sm font-semibold text-brand-600">{peso(headroom)}</p></div>
           </div>
+
+          {/* R13: missing-document warning. Banner color escalates with severity. */}
+          {!docCheck.loading && docCheck.missing.length > 0 && (
+            <div
+              role="alert"
+              className={`rounded-xl border p-3 text-sm flex items-start gap-2 ${
+                docCheck.missing.length === attachedIds.length
+                  ? 'bg-red-50 border-red-200 text-red-800'
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}
+            >
+              <MdWarning size={18} className="flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-medium">
+                  {docCheck.missing.length === attachedIds.length
+                    ? 'All attached documents are missing'
+                    : `${docCheck.missing.length} of ${attachedIds.length} attached document${attachedIds.length === 1 ? '' : 's'} missing`}
+                </p>
+                <p className="text-xs mt-1 leading-relaxed">
+                  The receiving agenc{docCheck.missing.length === 1 ? 'y' : 'ies'} won't be able to open {docCheck.missing.length === attachedIds.length ? 'any' : 'these'} document{docCheck.missing.length === 1 ? '' : 's'}.
+                  Consider asking the patient to re-upload before endorsing.
+                </p>
+                <details className="mt-1.5">
+                  <summary className="text-xs cursor-pointer underline-offset-2 hover:underline">
+                    Show missing ({docCheck.missing.length})
+                  </summary>
+                  <ul className="mt-1.5 ml-1 text-xs space-y-0.5 list-disc list-inside">
+                    {docCheck.missing.map(d => (
+                      <li key={d.id} className="break-words">{d.name}</li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            </div>
+          )}
 
           {headroom <= 0 ? (
             <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-700 flex items-start gap-2">
