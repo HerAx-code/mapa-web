@@ -19,7 +19,10 @@ export default function AgencyAllocation() {
   const [agency, setAgency]       = useState(null)
   const [loading, setLoading]     = useState(true)
   const [editing, setEditing]           = useState(false)
-  const [newAlloc, setNewAlloc]         = useState(0)
+  // R15: held as string so the input can be cleanly empty (placeholder
+  // visible) instead of pre-filled with "0". Save handlers coerce via
+  // Number() at the boundary.
+  const [newAlloc, setNewAlloc]         = useState('')
   const [newPeriod, setNewPeriod]       = useState('monthly')
   const [newFundSource, setNewFundSource]       = useState('')
   const [newFundSourceNotes, setNewFundSourceNotes] = useState('')
@@ -47,7 +50,9 @@ export default function AgencyAllocation() {
         if (snap.exists()) {
           const data = { id: snap.id, ...snap.data() }
           setAgency(data)
-          setNewAlloc(data.budget?.allocated ?? 0)
+          // R15: keep input string-typed; show empty when allocation isn't
+          // set yet so the placeholder ("e.g. 500000") is visible.
+          setNewAlloc(data.budget?.allocated > 0 ? String(data.budget.allocated) : '')
           setNewPeriod(data.budget?.period ?? 'monthly')
           setNewFundSource(data.budget?.fundSource ?? '')
           setNewFundSourceNotes(data.budget?.fundSourceNotes ?? '')
@@ -459,8 +464,17 @@ export default function AgencyAllocation() {
                   placeholder="e.g. 500000"
                   value={newAlloc}
                   onChange={e => {
-                    const n = Number(e.target.value)
-                    setNewAlloc(Number.isFinite(n) ? Math.max(0, n) : 0)
+                    // R15: hold the raw string so an empty field stays
+                    // empty (placeholder shows). Strip any leading zeros
+                    // a paste might bring in. Reject negatives at the
+                    // input layer; final coercion happens in the save
+                    // handler.
+                    const raw = e.target.value
+                    if (raw === '') { setNewAlloc(''); return }
+                    const cleaned = raw.replace(/^0+(?=\d)/, '')
+                    const n = Number(cleaned)
+                    if (!Number.isFinite(n) || n < 0) return
+                    setNewAlloc(cleaned)
                   }} />
               </div>
               <div>
@@ -512,7 +526,7 @@ export default function AgencyAllocation() {
                 <button
                   onClick={() => {
                     setEditing(false)
-                    setNewAlloc(allocated)
+                    setNewAlloc(allocated > 0 ? String(allocated) : '')
                     setNewPeriod(budget.period ?? 'monthly')
                     setNewFundSource(budget.fundSource ?? '')
                     setNewFundSourceNotes(budget.fundSourceNotes ?? '')
