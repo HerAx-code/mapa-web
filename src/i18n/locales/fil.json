@@ -11,6 +11,14 @@
       "message": "Wala kayong koneksyon sa internet. Ang pagsumite ng mga form ay gagana muli kapag bumalik na ang koneksyon."
     }
   },
+  "install": {
+    "nudge": {
+      "title": "I-install ang MAPA para sa mas mabilis na akses",
+      "desc": "Idagdag ang MAPA sa inyong home screen para mabuksan tulad ng isang app.",
+      "cta": "I-install",
+      "dismiss": "Isara"
+    }
+  },
   "installPage": {
     "backHome": "Bumalik sa home",
     "hero": {

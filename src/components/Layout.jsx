@@ -26,6 +26,7 @@ import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
 import OfflineBanner from './OfflineBanner'
 import AnnouncementBanner from './AnnouncementBanner'
+import InstallNudge from './InstallNudge'
 import { tsToDate } from '../utils/dates'
 import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
@@ -1204,6 +1205,15 @@ export default function Layout({ children, breadcrumb }) {
             Patients on flaky mobile connections need to know writes will
             fail BEFORE they tap submit. */}
         <div className="print:hidden"><OfflineBanner /></div>
+
+        {/* Patient-only install banner. Renders only when Chrome has
+            already fired beforeinstallprompt (engagement heuristic
+            tripped) AND the app isn't running standalone AND the
+            patient hasn't dismissed it in the past 30 days. By the
+            time a logged-in patient has seen this Layout, Chrome has
+            usually armed the prompt -- this is the moment to ask,
+            not on a cold /install page visit. */}
+        <div className="print:hidden"><InstallNudge /></div>
 
         {/* ── Announcement banners ───────────────────────────────────
             Uses the shared <AnnouncementBanner> so the live banner

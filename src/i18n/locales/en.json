@@ -11,6 +11,14 @@
       "message": "You're offline. Submitting forms will work again when you're back online."
     }
   },
+  "install": {
+    "nudge": {
+      "title": "Install MAPA for faster access",
+      "desc": "Add MAPA to your home screen so you can open it like an app.",
+      "cta": "Install",
+      "dismiss": "Dismiss"
+    }
+  },
   "installPage": {
     "backHome": "Back to home",
     "hero": {
