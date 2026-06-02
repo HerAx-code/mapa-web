@@ -13,7 +13,7 @@ import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
-import { computeFunding } from '../../utils/requests'
+import { computeFunding, deriveRequestFinancials } from '../../utils/requests'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
@@ -895,18 +895,63 @@ export default function ApplicationDetail() {
     setUpdating(true)
     try {
       const amount = Number(app.approvedAmount) || 0
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'applications', app.id), {
-        glStatus:    'expired',
-        glExpiredAt: serverTimestamp(),
-        updatedAt:   serverTimestamp(),
-      })
-      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
-        batch.update(doc(db, 'agencies', user.agencyId), {
-          'budget.committed': increment(-amount),
+
+      // R3 fix: the previous version was a writeBatch that only updated the
+      // slice + the agency budget. The parent request's `amountCommitted`
+      // and `status` fields went stale on every expiry (the L11 'data
+      // check' chip surfaced this). Promote to a runTransaction so we can
+      // safely re-read all sibling slices and re-derive parent financials.
+      await runTransaction(db, async (tx) => {
+        const appRef = doc(db, 'applications', app.id)
+        const appSnap = await tx.get(appRef)
+        if (!appSnap.exists()) throw new Error('GONE')
+
+        // If we have a parent request, read the request + all sibling slices.
+        let reqRef = null, reqSnap = null, siblings = []
+        if (app.requestId) {
+          reqRef  = doc(db, 'requests', app.requestId)
+          reqSnap = await tx.get(reqRef)
+          const sibSnap = await getDocs(query(
+            collection(db, 'applications'),
+            where('requestId', '==', app.requestId),
+          ))
+          // Substitute the post-transition state for THIS slice so the
+          // derivation reflects the about-to-commit world. Same slice
+          // status (`certificate`) but glStatus flips to 'expired', which
+          // computeFunding now excludes from committed.
+          siblings = sibSnap.docs.map(d => {
+            const data = { id: d.id, ...d.data() }
+            if (d.id === app.id) return { ...data, glStatus: 'expired' }
+            return data
+          })
+        }
+
+        // Slice write
+        tx.update(appRef, {
+          glStatus:    'expired',
+          glExpiredAt: serverTimestamp(),
+          updatedAt:   serverTimestamp(),
         })
-      }
-      await batch.commit()
+
+        // Agency budget release
+        if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
+          tx.update(doc(db, 'agencies', user.agencyId), {
+            'budget.committed': increment(-amount),
+          })
+        }
+
+        // Parent re-sync
+        if (reqRef && reqSnap?.exists()) {
+          const need = reqSnap.data().amountNeeded ?? 0
+          const next = deriveRequestFinancials(siblings, need)
+          tx.update(reqRef, {
+            amountCommitted: next.amountCommitted,
+            status:          next.status,
+            updatedAt:       serverTimestamp(),
+          })
+        }
+      })
+
       logAudit(user, { action: 'gl_expired', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released back to budget` })
       toast.success('GL marked as expired. Budget released.')
       setShowConfirmExpire(false)
@@ -931,43 +976,92 @@ export default function ApplicationDetail() {
         ? Timestamp.fromDate(new Date(original.getTime() + COOLDOWN_DAYS * 86400000))
         : null
 
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'applications', app.id), {
-        status:              'reviewing',
-        // Preserve approvedAmount and the other approval-context fields as
-        // historical record. The status='reviewing' + approvedAt=null pair
-        // is the authoritative "not currently approved" signal; every
-        // consumer of approvedAmount also checks status. Keeping these
-        // values populated lets the Funds history show real numbers and
-        // lets the cooldown banner reference the original amount.
-        approvedAt:          null,
-        glStatus:            null,
-        glRedeemedAt:        null,
-        cooldownUntilAt:     cooldownUntil,
-        reversedAt:          serverTimestamp(),
-        reversedBy:          user.name,
-        reversedByUid:       user.uid,
-        reversalReason:      `Reversed by ${user.name} on ${new Date().toLocaleDateString()}`,
-        updatedAt:           serverTimestamp(),
-      })
-      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
-        batch.update(doc(db, 'agencies', user.agencyId), {
-          'budget.committed': increment(-amount),
-        })
-      }
-      // #9 — Mirror cooldown to the patient's CRMC Hospital ID so the
-      // 30-day lock survives an account delete + re-register cycle.
+      // R3 fix (companion to performExpireGL): re-sync the parent
+      // request after a reversal. Promoted from writeBatch to
+      // runTransaction so we can read sibling slices + the request
+      // atomically and re-derive amountCommitted + status. Without
+      // this, the parent stays at 'fully_funded' with the old
+      // committed total long after the reversed slice has stopped
+      // counting.
+      //
+      // hospitalId resolution moved BEFORE the transaction because
+      // it does an extra read that's tangential to the parent re-sync.
+
       let reversalHospitalId = app.patientHospitalId ?? null
       if (!reversalHospitalId) {
         const userSnap = await getDoc(doc(db, 'users', app.patientId)).catch(() => null)
         reversalHospitalId = userSnap?.data?.()?.hospitalId ?? null
       }
-      if (reversalHospitalId && cooldownUntil) {
-        batch.update(doc(db, 'hospitalIds', reversalHospitalId), {
-          cooldownUntilAt: cooldownUntil,
+
+      await runTransaction(db, async (tx) => {
+        const appRef = doc(db, 'applications', app.id)
+        const appSnap = await tx.get(appRef)
+        if (!appSnap.exists()) throw new Error('GONE')
+
+        let reqRef = null, reqSnap = null, siblings = []
+        if (app.requestId) {
+          reqRef  = doc(db, 'requests', app.requestId)
+          reqSnap = await tx.get(reqRef)
+          const sibSnap = await getDocs(query(
+            collection(db, 'applications'),
+            where('requestId', '==', app.requestId),
+          ))
+          // Substitute the post-transition state for THIS slice. After
+          // reversal status flips from 'approved' / 'certificate' back
+          // to 'reviewing', which is in OUTSTANDING_SLICE_STATUSES (not
+          // committed).
+          siblings = sibSnap.docs.map(d => {
+            const data = { id: d.id, ...d.data() }
+            if (d.id === app.id) {
+              return { ...data, status: 'reviewing', glStatus: null }
+            }
+            return data
+          })
+        }
+
+        // Slice write -- preserves approvedAmount + the other approval-
+        // context fields as historical record (status=='reviewing' +
+        // approvedAt==null is the authoritative 'not currently approved'
+        // signal; every consumer of approvedAmount also checks status).
+        tx.update(appRef, {
+          status:              'reviewing',
+          approvedAt:          null,
+          glStatus:            null,
+          glRedeemedAt:        null,
+          cooldownUntilAt:     cooldownUntil,
+          reversedAt:          serverTimestamp(),
+          reversedBy:          user.name,
+          reversedByUid:       user.uid,
+          reversalReason:      `Reversed by ${user.name} on ${new Date().toLocaleDateString()}`,
+          updatedAt:           serverTimestamp(),
         })
-      }
-      await batch.commit()
+
+        // Agency budget release
+        if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
+          tx.update(doc(db, 'agencies', user.agencyId), {
+            'budget.committed': increment(-amount),
+          })
+        }
+
+        // Cooldown mirror on the patient's hospital ID (#9 — survives
+        // account delete + re-register)
+        if (reversalHospitalId && cooldownUntil) {
+          tx.update(doc(db, 'hospitalIds', reversalHospitalId), {
+            cooldownUntilAt: cooldownUntil,
+          })
+        }
+
+        // Parent re-sync
+        if (reqRef && reqSnap?.exists()) {
+          const need = reqSnap.data().amountNeeded ?? 0
+          const next = deriveRequestFinancials(siblings, need)
+          tx.update(reqRef, {
+            amountCommitted: next.amountCommitted,
+            status:          next.status,
+            updatedAt:       serverTimestamp(),
+          })
+        }
+      })
       await notify(app.patientId, {
         type:  'app_advanced',
         title: 'Approval reversed',

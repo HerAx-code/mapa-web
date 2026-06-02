@@ -41,10 +41,23 @@ export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'for_funding', 'needs_inf
 //                  endorse without breaching the balance cap)
 //   - pct:         committed / amountNeeded, 0–100
 //   - fullyFunded: committed has reached the target
+// A slice's `status` field is the headline state, but for slices that
+// reached `certificate` (GL issued) the `glStatus` field tells us
+// whether the money is still committed or has been released. Expired
+// GLs released their committed budget back to the agency's allocation
+// (performExpireGL fires `budget.committed -= amount`), so they MUST
+// NOT continue to count as committed on the parent request.
+// Discovered during the 2026-06-03 end-to-end review (R2).
+function isCommittedSlice(s) {
+  if (!COMMITTED_SLICE_STATUSES.includes(s.status)) return false
+  if (s.status === 'certificate' && s.glStatus === 'expired') return false
+  return true
+}
+
 export function computeFunding(amountNeeded = 0, slices = []) {
   const need = Number(amountNeeded) || 0
   const committed = slices
-    .filter(s => COMMITTED_SLICE_STATUSES.includes(s.status))
+    .filter(isCommittedSlice)
     .reduce((sum, s) => sum + (Number(s.amountApproved) || 0), 0)
   const outstanding = slices
     .filter(s => OUTSTANDING_SLICE_STATUSES.includes(s.status))
@@ -63,4 +76,26 @@ export function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0
   if (committed > 0)                 return 'partially_funded'
   if (outstanding > 0)               return 'endorsed'
   return 'submitted'
+}
+
+// When a slice transitions OUT of committed status (reversal, expiry),
+// the parent request's `amountCommitted` + `status` fields go stale
+// because they were stamped at approval time and never updated. The
+// L11 'data check' chip surfaces this contract violation, but the
+// fix is to also re-sync the parent on every release.
+//
+// Returns { amountCommitted, amountOutstanding, status } recomputed
+// from the slice array, assuming the slice that just transitioned
+// is ALREADY in its post-transition state inside `slices`.
+//
+// Use this inside the transaction that flipped the slice status, with
+// `slices` populated from sibling reads on the same transaction.
+//
+// R3 fix: 2026-06-03 end-to-end review.
+export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
+  const f = computeFunding(amountNeeded, slices)
+  return {
+    amountCommitted: f.committed,
+    status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded),
+  }
 }

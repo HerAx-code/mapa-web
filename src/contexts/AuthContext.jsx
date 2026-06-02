@@ -69,6 +69,15 @@ export function AuthProvider({ children }) {
       await signOut(auth)
       throw new Error('Your account has been deactivated. Please contact your administrator.')
     }
+    // Patient soft-deletion: admin/Patients flips this flag to start the
+    // holding period before a hard delete. Allowing login during that
+    // window defeats the purpose -- the patient could continue to use
+    // the system, submit new requests, etc. while flagged for removal.
+    // Discovered during the 2026-06-03 end-to-end review (R1).
+    if (data.deletion === true) {
+      await signOut(auth)
+      throw new Error('This account is marked for deletion. Contact CRMC Medical Social Services to restore it.')
+    }
     const userData = { uid: cred.user.uid, email, ...data }
     setUser(userData)
     return userData

@@ -97,6 +97,31 @@ describe('computeFunding', () => {
     expect(f.committed).toBe(0)
   })
 
+  it('EXCLUDES expired GLs from committed (R2 fix)', () => {
+    // Expiry releases budget back to the agency's allocation, so the
+    // expired slice must stop counting as committed on the parent
+    // request. status stays 'certificate' but glStatus flips to
+    // 'expired'.
+    const slices = [
+      { status: 'certificate', glStatus: 'issued',   amountApproved: 20_000 },  // counted
+      { status: 'certificate', glStatus: 'expired',  amountApproved: 15_000 },  // NOT counted
+      { status: 'certificate', glStatus: 'redeemed', amountApproved: 10_000 },  // counted (paid out)
+    ]
+    const f = computeFunding(50_000, slices)
+    expect(f.committed).toBe(30_000)  // 20 + 10, NOT 45
+    expect(f.fullyFunded).toBe(false)
+  })
+
+  it('still counts plain approved slices as committed', () => {
+    const slices = [
+      { status: 'approved',    amountApproved: 25_000 },                       // no glStatus yet
+      { status: 'certificate', glStatus: 'issued', amountApproved: 25_000 },
+    ]
+    const f = computeFunding(50_000, slices)
+    expect(f.committed).toBe(50_000)
+    expect(f.fullyFunded).toBe(true)
+  })
+
   it('exports the status sets so callers can stay consistent with the aggregator', () => {
     expect(COMMITTED_SLICE_STATUSES).toContain('approved')
     expect(COMMITTED_SLICE_STATUSES).toContain('certificate')

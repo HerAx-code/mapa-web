@@ -11,9 +11,11 @@ import { PERIOD_NOUN, PERIOD_ADJECTIVE, GL_VALIDITY_DAYS } from '../../utils/con
 import {
   collection, query, where, onSnapshot, doc, getDoc, getDocs,
   updateDoc, writeBatch, increment, serverTimestamp, addDoc,
+  runTransaction,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
+import { deriveRequestFinancials } from '../../utils/requests'
 import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
@@ -114,24 +116,59 @@ export default function AgencyDashboard() {
           })
         if (cancelled || expired.length === 0) return
 
-        // Run each as its own batch — failure on one shouldn't block others
+        // R3 fix: each expiry is now a runTransaction that re-syncs
+        // the parent request's amountCommitted + status alongside the
+        // slice flip + agency budget release. Mirrors performExpireGL
+        // in ApplicationDetail.jsx -- same end-state docs regardless
+        // of which path fired.
         for (const a of expired) {
           if (cancelled) break
           try {
             const amount = Number(a.approvedAmount) || 0
-            const batch = writeBatch(db)
-            batch.update(doc(db, 'applications', a.id), {
-              glStatus:    'expired',
-              glExpiredAt: serverTimestamp(),
-              expiredBy:   'auto-sweep',
-              updatedAt:   serverTimestamp(),
-            })
-            if (amount > 0) {
-              batch.update(doc(db, 'agencies', user.agencyId), {
-                'budget.committed': increment(-amount),
+            await runTransaction(db, async (tx) => {
+              const appRef = doc(db, 'applications', a.id)
+              const appSnap = await tx.get(appRef)
+              if (!appSnap.exists()) return
+              // Skip if a coordinator already marked it expired between
+              // the query and this transaction.
+              if (appSnap.data().glStatus !== 'issued') return
+
+              let reqRef = null, reqSnap = null, siblings = []
+              if (a.requestId) {
+                reqRef  = doc(db, 'requests', a.requestId)
+                reqSnap = await tx.get(reqRef)
+                const sibSnap = await getDocs(query(
+                  collection(db, 'applications'),
+                  where('requestId', '==', a.requestId),
+                ))
+                siblings = sibSnap.docs.map(d => {
+                  const data = { id: d.id, ...d.data() }
+                  if (d.id === a.id) return { ...data, glStatus: 'expired' }
+                  return data
+                })
+              }
+
+              tx.update(appRef, {
+                glStatus:    'expired',
+                glExpiredAt: serverTimestamp(),
+                expiredBy:   'auto-sweep',
+                updatedAt:   serverTimestamp(),
               })
-            }
-            await batch.commit()
+              if (amount > 0) {
+                tx.update(doc(db, 'agencies', user.agencyId), {
+                  'budget.committed': increment(-amount),
+                })
+              }
+              if (reqRef && reqSnap?.exists()) {
+                const need = reqSnap.data().amountNeeded ?? 0
+                const next = deriveRequestFinancials(siblings, need)
+                tx.update(reqRef, {
+                  amountCommitted: next.amountCommitted,
+                  status:          next.status,
+                  updatedAt:       serverTimestamp(),
+                })
+              }
+            })
             logAudit(user, {
               action:     'gl_auto_expired',
               targetType: 'application',
