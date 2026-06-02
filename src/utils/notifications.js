@@ -63,6 +63,14 @@ export const notify = async (uid, { type, title, body, ...extra } = {}) => {
       '</div>',
     ].join('')
 
+    // R10 (2026-06-03): skip the email POST entirely on the Vite dev
+    // server. /api/send-email is a Vercel serverless route -- Vite's
+    // dev server doesn't serve it, so every notify() call in dev
+    // logged a noisy 404 in the console. Production (Vercel) and any
+    // host that serves the /api/ surface continue to work normally.
+    const isViteDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV === true
+    if (isViteDev) return result
+
     // Fire-and-forget POST. We don't await it so a slow SMTP server
     // doesn't drag down the in-app notification UX. The serverless
     // route logs its own errors; we only log network-level failures.

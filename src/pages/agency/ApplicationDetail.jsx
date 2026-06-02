@@ -403,16 +403,36 @@ export default function ApplicationDetail() {
   }, [user?.agencyId, queueFilter])
 
   useEffect(() => {
-    if (!app?.patientId) return
+    if (!app?.patientId || !user?.agencyId) return
     // Live subscription so the agency sees patient re-uploads while the
-    // application is in 'awaiting_info' without a page reload. The query
-    // returns every patient doc; if the slice has a frozen attachedDocuments
-    // list, we project onto that list (preserving order + the per-doc
-    // updatedAfterSubmission flag).
+    // application is in 'awaiting_info' without a page reload.
+    //
+    // R9 fix (2026-06-03): the original query was
+    //   where('patientId', '==', app.patientId)
+    // but the documents.read rule only grants agency reads when
+    // `userAgencyId() in resource.data.agencyIds`. For a LIST query
+    // Firestore evaluates the rule against the query's constraints,
+    // not the individual matched docs -- if the query is broader than
+    // the rule allows, the whole snapshot fails with "permission
+    // denied" rather than returning a subset. Surfaced in the field
+    // when an agency opened a slice with documents that hadn't yet
+    // been stamped with their agencyId.
+    //
+    // The fix is to narrow the query to documents this agency can
+    // actually read -- by definition the ones with their agencyId
+    // stamped on agencyIds[] (which the endorse transaction does).
+    // We keep the patientId filter as a client-side narrow (the array-
+    // contains gate already restricts to slices endorsed to us, and
+    // the docs collection is small per agency).
     const unsub = onSnapshot(
-      query(collection(db, 'documents'), where('patientId', '==', app.patientId)),
+      query(
+        collection(db, 'documents'),
+        where('agencyIds', 'array-contains', user.agencyId),
+      ),
       (snap) => {
-        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const all = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(d => d.patientId === app.patientId)
         if (app.attachedDocuments?.length > 0) {
           const byId = Object.fromEntries(all.map(d => [d.id, d]))
           setPatientDocs(app.attachedDocuments.map(attached => {
@@ -432,7 +452,7 @@ export default function ApplicationDetail() {
       .then(snap => { if (snap.exists()) setPatientProfile(snap.data()) })
       .catch(() => {})
     return unsub
-  }, [app?.patientId, app?.attachedDocuments])
+  }, [app?.patientId, user?.agencyId, app?.attachedDocuments])
 
   useEffect(() => {
     if (!app?.id) return
