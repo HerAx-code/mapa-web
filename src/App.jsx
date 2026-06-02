@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
+import { LiveDataProvider } from './contexts/LiveDataContext'
 import PrivateRoute from './components/PrivateRoute'
 import { ROLES } from './utils/constants'
 
@@ -89,6 +90,7 @@ function RouteLoader() {
 export default function App() {
   return (
     <AuthProvider>
+      <LiveDataProvider>
       <Suspense fallback={<RouteLoader />}>
         <Routes>
           {/* Public */}
@@ -163,6 +165,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </LiveDataProvider>
     </AuthProvider>
   )
 }

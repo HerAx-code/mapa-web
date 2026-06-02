@@ -19,6 +19,7 @@ import { db } from '../firebase'
 import { getOrCreateConversation, sendMessage } from '../utils/messages'
 import { notify } from '../utils/notifications'
 import { useAuth } from '../contexts/AuthContext'
+import { useLiveData } from '../contexts/LiveDataContext'
 import { ROLES, ROLE_LABEL_SHORT } from '../utils/constants'
 import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
@@ -824,99 +825,58 @@ export default function Layout({ children, breadcrumb }) {
   const [showMessages, setShowMessages] = useState(false)
   const [showProfile, setShowProfile]   = useState(false)
   const [activeModal, setActiveModal]   = useState(null)
-  const [notifications, setNotifications]   = useState([])
-  const [conversations, setConversations]   = useState([])
   const [showCompose, setShowCompose]       = useState(false)
-  const [agencyInboxCount, setAgencyInboxCount] = useState(0)
-  const [liveAgencyName, setLiveAgencyName]     = useState(null)
-  const [banners, setBanners]                   = useState([])
-  const knownNotifIds  = useRef(null)   // null = initial load not yet done
+  const [banners, setBanners]               = useState([])
+
+  // Per Tier-2 item 7: notifications / conversations / agency inbox /
+  // agency name now come from LiveDataContext (which lives ABOVE the
+  // routes), not from per-Layout-instance subscriptions. Layout still
+  // remounts on navigation; the listener lifetimes do not. Closes L6.
+  const {
+    notifications,
+    conversations,
+    agencyInboxCount,
+    liveAgencyName,
+    totalUnreadMessages,
+    subscribeToNewNotifications,
+  } = useLiveData()
 
   const closeAll = () => { setShowApps(false); setShowNotifs(false); setShowMessages(false); setShowProfile(false) }
 
+  // Toast on the arrival of a notification that wasn't in the previous
+  // snapshot. The "new vs. previously-seen" judgment lives in the
+  // provider so it survives navigation; this layer is only the UI
+  // affordance (navigate + render the toast).
   useEffect(() => {
-    if (!user?.uid) return
-    const q = query(
-      collection(db, 'notifications', user.uid, 'items'),
-      orderBy('createdAt', 'desc'),
-      limit(30)
-    )
-    const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      setNotifications(items)
-
-      if (knownNotifIds.current === null) {
-        // First load — record existing IDs silently, don't toast
-        knownNotifIds.current = new Set(items.map(i => i.id))
-        return
-      }
-
-      // Find notifications that weren't in the previous snapshot
-      const newItems = items.filter(i => !knownNotifIds.current.has(i.id))
-      knownNotifIds.current = new Set(items.map(i => i.id))
-
-      for (const notif of newItems) {
-        const meta = NOTIF_ICONS[notif.type] ?? NOTIF_ICONS.app_submitted
-        const Icon = meta.icon
-        toast.custom((t) => (
-          <div
-            className={`flex items-start gap-3 px-4 py-3 bg-white rounded-xl shadow-lg border border-gray-100 max-w-sm w-full cursor-pointer transition-opacity ${t.visible ? 'opacity-100' : 'opacity-0'}`}
-            onClick={() => {
-              const route = getNotifRoute(notif.type, user?.role)
-              if (route) navigate(route)
-              toast.dismiss(t.id)
-            }}
-          >
-            <div className={`w-9 h-9 rounded-full ${meta.bg} flex items-center justify-center flex-shrink-0`}>
-              <Icon size={16} className={meta.color} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 leading-snug">{notif.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-snug">{notif.body}</p>
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); toast.dismiss(t.id) }}
-              className="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5"
-            >
-              <MdClose size={14} />
-            </button>
+    return subscribeToNewNotifications((notif) => {
+      const meta = NOTIF_ICONS[notif.type] ?? NOTIF_ICONS.app_submitted
+      const Icon = meta.icon
+      toast.custom((t) => (
+        <div
+          className={`flex items-start gap-3 px-4 py-3 bg-white rounded-xl shadow-lg border border-gray-100 max-w-sm w-full cursor-pointer transition-opacity ${t.visible ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => {
+            const route = getNotifRoute(notif.type, user?.role)
+            if (route) navigate(route)
+            toast.dismiss(t.id)
+          }}
+        >
+          <div className={`w-9 h-9 rounded-full ${meta.bg} flex items-center justify-center flex-shrink-0`}>
+            <Icon size={16} className={meta.color} />
           </div>
-        ), { duration: 5000, position: 'bottom-right' })
-      }
-    }, (err) => console.error('[Layout] notifications snapshot error:', err))
-    return unsub
-  }, [user?.uid])
-
-  useEffect(() => {
-    if (!user?.uid) return
-    const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid))
-    const unsub = onSnapshot(q, snap => {
-      setConversations(
-        snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => (b.lastAt?.seconds ?? 0) - (a.lastAt?.seconds ?? 0))
-      )
-    }, (err) => console.error('[Layout] conversations snapshot error:', err))
-    return unsub
-  }, [user?.uid])
-
-  const totalUnreadMessages = conversations.reduce((sum, c) => sum + (c.unread?.[user?.uid] ?? 0), 0)
-
-  // Agency-only: live Inbox pending count + live agency name
-  useEffect(() => {
-    if ((user?.role !== ROLES.AGENCY && user?.role !== ROLES.AGENCY_ADMIN) || !user?.agencyId) return
-    const inboxQ = query(
-      collection(db, 'applications'),
-      where('agencyId', '==', user.agencyId),
-      where('status', 'in', ['pending', 'reviewing'])
-    )
-    const u1 = onSnapshot(inboxQ, snap => setAgencyInboxCount(snap.size), () => setAgencyInboxCount(0))
-    const u2 = onSnapshot(doc(db, 'agencies', user.agencyId),
-      snap => snap.exists() && setLiveAgencyName(snap.data().name),
-      () => {}
-    )
-    return () => { u1(); u2() }
-  }, [user?.uid, user?.role, user?.agencyId])
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 leading-snug">{notif.title}</p>
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-snug">{notif.body}</p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); toast.dismiss(t.id) }}
+            className="text-gray-300 hover:text-gray-500 flex-shrink-0 mt-0.5"
+          >
+            <MdClose size={14} />
+          </button>
+        </div>
+      ), { duration: 5000, position: 'bottom-right' })
+    })
+  }, [subscribeToNewNotifications, navigate, user?.role])
 
   // ── Announcement banners ───────────────────────────────────────────────
   useEffect(() => {
