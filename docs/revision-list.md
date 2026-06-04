@@ -1,8 +1,8 @@
 # MAPA Revision List
 
 **Project:** Medical Assistance Portal Access (MAPA) — Cotabato Regional Medical Center
-**Status:** Updated 2026-06-02
-**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, and the full-system 46-page audit + sweep.
+**Status:** Updated 2026-06-04
+**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, and the post-pilot live-session audit round 2 (R13–R29).
 
 ---
 
@@ -433,28 +433,69 @@ the actual file-content posture (base64 in Firestore, capped at
 `docs/thesis-summary.md` data-model table updated to show the
 current state, not the Tier-2 aspirational state.
 
+### B.23 — Post-pilot live-session audit round 2 (R13–R29)
+
+A second end-to-end audit conducted 2026-06-03 → 2026-06-04 against a
+running pilot session on `localhost:5173`. The user demoed real
+patient / agency / admin flows; each surfaced issue was triaged,
+fixed, and recommitted with a clear "before" / "why this is wrong" /
+"how it now behaves" trail in the commit body. Findings span all
+three role surfaces and several shared concerns the earlier audits
+hadn't touched (UX dead-ends, missing affordances, data-cascade gaps,
+silent error swallowing).
+
+| # | Theme | Action Taken | Commit |
+|---|---|---|---|
+| 23.1 (R13) | Pre-endorse warning when attached documents are missing | The EndorseModal now pre-checks each `documentId` in the request's `attachedDocuments` snapshot via `getDoc()` before allowing the CRMC staff to commit. If any references are stale (test data cleanup, account soft-delete, schema migrations), a banner surfaces between the funding summary and the agency picker — amber when some are missing, red when all are missing — listing the missing names so the staff member can ask the patient to re-upload before referring the case. R8 already kept the transaction healthy in that state but the receiving agency still ended up with a slice they couldn't open. R13 catches the bad state where the staff can act on it | `f42ec44` |
+| 23.2 (R14) | Make actionable stepper rows tappable on patient status | The request-lifecycle stepper on `/patient/status` had no tap affordance. Two of its six stages now route the patient to their natural destination when active: "Assessment & Interview" → `/patient/interviews` (Google Meet link, prep panel), "Endorsed to Agencies" → `/patient/request` (coverage plan + slice approvals). Whole row becomes a 44px+ tappable button with a brand-tinted "View your interview details →" / "Review the coverage plan →" CTA and a chevron. Stages without a useful destination (Submitted, Under Review, Approved & Funded, Completed) stay informational so the chevron always means something | `a971431` |
+| 23.3 (R15) | Stop the Amount input from displaying a leading zero | Budget Allocation Amount input was initialised to the number `0`, which rendered as the literal text `"0"`. Users clicking in landed their cursor after the existing zero, so typing "10000" became "010000". The save handler coerced correctly so saved amounts were never wrong, but the display looked broken and the helpful placeholder ("e.g. 500000") never appeared. Now held as a string, initialised to `""` (placeholder visible), onChange strips leading zeros from pastes, save handlers coerce at the boundary | `ef9077f` |
+| 23.4 (R16) | Confirm & Proceed actually proceeds the slice | The "Confirm & Proceed" banner on `/patient/status` for an endorsed slice navigated to `/patient/request` and hoped RequestAssistance would detect the active request and render its proceed view. The detection failed when the parent-request was missing or in a terminal status — patients landed on Step 1 of the new-request wizard with no obvious way back. Banner button is now an inline action: flips the slice from `endorsed` → `reviewing`, notifies the agency's coordinators, shows toast feedback. No navigation, no fragile cross-page handoff | `ed9fdc4` |
+| 23.5 (R17) | Issued-GL slices stay in "In Progress", not "Past Applications" | The activeApps/pastApps filter on `/patient/status` lumped every `certificate`-status slice into the Past tab. But `certificate` means "agency has issued the GL" — the patient still has a downloadable file, a 30-day expiry clock, and a trip to the agency office to plan. The user found a live downloadable GL filed under "Past Applications" with a green Download button next to a "Past" tab title. New `isTerminal()` predicate: `certificate` slices are only terminal once `glStatus === 'redeemed'`, `glStatus === 'expired'`, or past the validity window via `isGLExpired()` | `a149d08` |
+| 23.6 (R18) | Patient Dashboard activeApp filter aligned with R17 | The Dashboard's status-card picker selected any slice that wasn't `rejected`, including redeemed or expired certificate slices — the card kept saying "Your application is in progress" for slices the patient had finished weeks ago. Extracted R17's `isSliceTerminal` predicate to `utils/requests.js`; Dashboard now uses the same definition of "done" as TrackStatus | `c75e733` |
+| 23.7 (R19) | Dashboard status-card CTAs route to /patient/status, not /patient/request | STATUS_VISUAL `endorsed` / `reviewing` / `awaiting_info` paths all pointed at `/patient/request` — the same dead-end R16 fixed for the banner. /patient/status is now self-contained for the proceed action and surfaces awaiting_info messages; all three CTAs route there | `c75e733` |
+| 23.8 (R20) | Complete patient delete cascade for RA 10173 §16(e) | `handleDeleteAccount` cascaded documents, documentContents, applications, and notifications, but missed `requests` (parent of slices — left orphaned forever with patient name / amount visible to admin/Requests), `conversations` the patient participated in, `certificates/{appId}`. Now fetches all six collections in parallel, batch-deletes message subcollections per conversation then conversation docs themselves, plus per-application certificates. The previous bare `catch {}` is now a logged catch so partial-failure diagnostics aren't silenced | `0032d96` |
+| 23.9 (R21) | Messages handleSend wrapped in try/catch/finally | A thrown `sendMessage` left `sending` stuck `true` forever — the send button stayed disabled, no toast surfaced, the user had to refresh to recover. Now wrapped: errors toast + log, `setSending(false)` always runs, typed text preserved so the user can retry without losing their draft. Same fix applied to `ConversationThread.handleSend` in the desktop two-panel layout | `a6b2998` + `986396b` |
+| 23.10 (R22) | Audit log ACTION_CONFIG completed | `ACTION_CONFIG` in `admin/AuditLog.jsx` was missing 9 entries that ARE written in code: `request_endorsed`, `interview_scheduled`, `interview_completed`, `intake_completed`, `gl_redeemed`, `gl_unmark_redeemed`, `gl_expired`, `gl_auto_expired`, `approval_reversed`. The audit log rendered these with raw action keys and unstyled badges. Added each with a label + matched badge color and a new "Lifecycle" category in the filter row | `0032d96` |
+| 23.11 (R23) | Messages thread-load error surfaces a real error UI | The `(err)` callback only set `loadingMsgs=false`; `messages` stayed `[]`, rendering the "No messages yet" empty state — indistinguishable from a brand-new conversation. New `loadError` state + a red error panel ("Couldn't load this thread"). Reset on every conv change so reopening a thread retries. Applied to both `ConversationModal` and `ConversationThread` | `a6b2998` + `986396b` |
+| 23.12 (R24) | admin/Accounts.jsx setDoc defaults aligned | New super_admin / staff_admin user docs were missing `deletion: false` and `cooldown: 0`. Every other creation path (`agency/Team.jsx`, `admin/AddAgency.jsx`, `patient/Register.jsx`) sets both. The R1 deletion gate still worked because undefined is falsy, but a future query like `where('deletion', '==', false)` would silently skip these docs. Now stamps both fields | `0032d96` |
+| 23.13 (R25) | Patient More handleLogout awaits Firebase signOut | The old fire-and-forget version called `logout()` and immediately navigated to `/login`; the promise raced the auth-state clear. PrivateRoute self-corrected, but a fast back/forward could briefly surface authenticated content. Now async with try/catch around the signOut so navigate runs after Firebase has actually cleared | `5d35c0a` |
+| 23.14 (R26) | Per-document upload error tells the patient WHICH doc broke | A partial document-upload failure during request submission collapsed into a generic "submission failed" toast — the patient had no idea which upload broke. Each per-doc upload now has its own try/catch that rethrows with `UPLOAD_FAILED:<typeName>`; the outer catch decodes that and toasts `Could not upload "Medical Certificate". Check your connection and try again.` Retry path is unchanged — `replacePatientDocument` already dedupes against `myDocs` | `5d35c0a` |
+| 23.15 (R27) | Messages read-receipt errors logged instead of silently swallowed | The unread-counter `updateDoc` was wrapped in `.catch(() => {})`. If rules denied the write or the network blipped, nothing surfaced in dev or production diagnostics. Bumped to `console.warn` so the failure is visible without alarming the user. Applied to both `ConversationModal` and `ConversationThread` | `a6b2998` + `986396b` |
+| 23.16 (R28) | GLViewer survives transient missing-doc states | The snapshot listener navigated to `/agency/inbox` on ANY `!snap.exists()` callback, including transient ones after the initial load. A Firestore offline replay, a delete race, or a brief permission flicker would yank the agency out of an open viewer. Added a `firstLoad` ref: only the first snapshot's missing state triggers the redirect; subsequent misses log a warning and keep the last-known state on screen | `5d35c0a` |
+| 23.17 (R29) | Patient Messages two-panel desktop layout | The patient layout was mobile-first and never adapted — on a wide desktop, `/patient/messages` showed a narrow centered card with 60%+ of the screen blank to the right, and clicking opened a fixed-position modal that floated over the list. Admin and agency users had a proper two-panel split for the same data; patient was the only role still stuck on the mobile pattern. Now responsive: `<md` keeps the existing card + modal (proven UX for phones), `md+` renders a 320px left list + inline `ConversationThread` on the right. Empty-right-pane copy adapts ("No conversations yet" vs "No conversation selected"). Drive-by: R21/R23/R27 echoes patched in `ConversationThread` since it had the same bugs as `ConversationModal` had before Group 2 | `986396b` |
+
+End-state of B.23: all 17 findings fixed, all changes build clean
+(`✓ built in ~10s`), all commits pushed to `main`. The work was
+delivered in five tagged groups (R13 standalone, R14 standalone, R15
+standalone, R16 + R17 patient-status sweep, R18+R19 / R20+R22+R24 /
+R21+R23+R27 / R25+R26+R28 / R29 — 4 grouped + 4 standalone commits).
+
 ### B.22 — Closing summary
 
 | Metric | Value |
 |---|---|
-| Total commits across the full revision program | ~205 |
+| Total commits across the full revision program | ~275 |
 | Adviser revisions addressed | 12 of 12 |
 | Real correctness bugs caught in the read-pass series (#1-20) | 20 |
 | Real correctness bugs caught in the full-system audit (#21-31) | 11 |
+| Real correctness + UX bugs caught in the audit round 2 (R1–R29) | 29 (12 in §B.20 reliability batch, 17 in §B.23) |
 | Live-browser audit findings (L1–L14) | 14 (9 fixed, 4 deferred-with-justification, 1 dismissed) |
 | Security passes shipped on the Firestore rules layer | 3 (auditLog + companion surfaces + patient-write constraints) |
-| Other rule tightenings (agencies/update, users/create) | 2 |
+| Other rule tightenings (agencies/update, users/create, documents.read split) | 3 |
 | Cloud Storage migration | 1 (documentContents → Storage, with admin-SDK migration script + rollback) |
 | Cloud Functions scaffolded (Spark-compatible client fallbacks remain primary) | 2 (resetAgencySlots daily + glExpirySweep hourly) |
-| Compliance feature shipped | 1 (RA 10173 §16(f) patient data portability export) |
+| Compliance features shipped | 2 (RA 10173 §16(f) patient data portability export + §16(e) right-to-erasure complete cascade — R20) |
 | Automated tests at close | 76 (29 unit + 47 rules) — full suite ~16 s |
 | Operational docs added | 2 (`docs/threat-model.md`, `docs/runbook.md`) |
 | Operator scripts available | 4 (`bootstrap-users.js`, `cleanup-orphans.js`, `cleanup-injection-audit.js`, `migrate-doc-content-to-storage.js`) |
 | UX gaps closed in the read-pass series | 17 |
-| UX gaps closed post-audit (Tier 2 + Mobile / Messages batches) | ~15 |
-| Code consolidations across the program | 19 |
+| UX gaps closed post-audit (Tier 2 + Mobile / Messages + R13–R29 batches) | ~32 |
+| Patient surface consistency fixes after live-session audit | 9 (R11, R12, R14, R16, R17, R18, R19, R25, R29) |
+| Cross-surface error-handling fixes after live-session audit | 6 (R21, R23, R26, R27, R6, R10) |
+| Code consolidations across the program | 20 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18) |
 | First-visit guided tours shipped | 4 (patient Dashboard + TrackStatus, agency Dashboard, admin Dashboard) |
 | Patient-side mobile install validated end-to-end | ✅ on one real device |
+| Responsive layouts (patient surface) | 2 (Status page + Messages — both phone-first AND desktop-two-panel) |
 
 ### Items still on the table (the user's call, not blocking)
 

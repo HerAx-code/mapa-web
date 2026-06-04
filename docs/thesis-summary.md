@@ -1,6 +1,6 @@
 # MAPA — Thesis project summary
 
-Last updated: 2026-06-02.
+Last updated: 2026-06-04.
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,
@@ -95,6 +95,16 @@ The interview lives on the **request**, not on each slice. CRMC
 interviews once; the result populates the intake sheet that all
 endorsed agencies read.
 
+A `certificate` slice is **not** the same as a "done" slice. A slice
+is only terminal once `glStatus === 'redeemed'` (patient claimed it),
+`glStatus === 'expired'` (passed the 30-day validity window), or
+`isGLExpired(app) === true` (window passed but the sweep hasn't
+flipped the flag yet). The `isSliceTerminal` predicate in
+`src/utils/requests.js` is the single source of truth for this
+across the patient Dashboard, the Status page tabs, and the active-app
+picker — preventing the live-downloadable-GL-but-filed-under-Past UX
+trap that R17/R18 closed.
+
 ## 4. Verification — automated tests + manual audit
 
 The system carries an automated regression net built in the final
@@ -122,6 +132,17 @@ Manual verification was done in three sweeps using Playwright at
 mobile (375×667) and desktop (1280×800) viewports, covering 41 unique
 routes. The full audit log of findings (L1–L14) lives in
 `docs/revision-list.md` §B.13 and §B.14.
+
+A fourth verification round — the live-session audit (`docs/revision-list.md`
+§B.20 and §B.23, R1–R29) — was driven by a real demo session against
+`localhost:5173` on 2026-06-02 → 2026-06-04. The user exercised the
+patient / agency / admin flows in a live browser; each UX dead-end,
+silent error, or data-cascade gap was triaged and fixed with a
+"before / why this is wrong / how it now behaves" commit body. 29
+findings closed across that window; the highlights — patient status
+page proceed action, certificate-slice tab classification, complete
+patient delete cascade, two-panel desktop Messages layout — are in
+§B.23 of the revision list.
 
 One real-world deploy check: the patient install flow was end-to-end
 verified by installing the PWA on a real Android phone from the live
@@ -172,11 +193,15 @@ The complete threat-mitigation table — 10 threats addressed, 8
 accepted with rationale, 7 operational limits — is in
 `docs/threat-model.md`.
 
-## 6. Compliance — RA 10173 §16(f) data portability
+## 6. Compliance — RA 10173 §16(e) right-to-erasure and §16(f) data portability
 
-The patient can download a complete machine-readable copy of every
-record MAPA holds about them. The "Download my data" button in the
-Privacy Notice modal triggers
+The patient can both **obtain a copy** of every record MAPA holds about
+them and **trigger their permanent erasure** through the admin
+workflow. Both flows are mapped to specific provisions of the
+Philippine Data Privacy Act.
+
+**§16(f) — right to data portability.** The "Download my data"
+button in the Privacy Notice modal triggers
 `buildPatientDataExport(uid)`, which fans out across every
 patient-keyed collection and returns a single JSON blob (format
 `MAPA-RA10173-v1`) covering profile, requests, application slices,
@@ -184,9 +209,24 @@ documents (metadata + content), certificates, notifications, and
 conversations with both sides' messages. Timestamps are normalised to
 ISO strings so the download round-trips back into `Date()` cleanly.
 
-This is a direct response to Republic Act 10173 §16(f) — the data
-subject's right to obtain a copy of personal data in an electronic
-structured format.
+**§16(e) — right to erasure.** Patients flag their account for
+deletion via the admin (the soft-delete flag gates login at
+`AuthContext` per R1, 2026-06-03); a super_admin then commits the
+permanent erasure from `admin/Patients`. The cascade fetches and
+removes every patient-keyed collection in parallel: documents,
+documentContents, applications, **requests** (the co-funding parent),
+**conversations** (both sides' messages + the conversation docs
+themselves), **certificates** keyed by application id, and the
+notifications subtree. Failure modes are now logged rather than
+silently swallowed so a partial cascade is visible to the operator.
+Closing this cascade was R20 of the audit-round-2 batch (§B.23 of
+the revision list); previously the cascade missed requests,
+conversations, and certificates — orphaning patient PII in those
+collections after a deletion. The Firebase Auth user is the one
+residual: the client SDK cannot delete other users' Auth accounts,
+so the email stays registered. This is mitigated by warning copy in
+the delete modal and is the v2 target for a Firebase Admin SDK
+deletion Cloud Function (Blaze plan).
 
 ## 7. Operational posture
 
@@ -285,11 +325,32 @@ commits / docs:
 
 6. **"The system meets RA 10173 §16(f) data portability."**
    `src/utils/dataExport.js` + "Download my data" button in the
-   Privacy Notice modal.
+   Privacy Notice modal. The export is a single
+   `MAPA-RA10173-v1` JSON blob covering every patient-keyed
+   collection.
 
-7. **"Limitations are documented, not hidden."** §A1–A8 of
+7. **"The system meets RA 10173 §16(e) right-to-erasure."**
+   `admin/Patients.handleDeleteAccount` cascades the deletion across
+   all six patient-keyed collections (documents, documentContents,
+   applications, requests, conversations + nested messages,
+   certificates, notifications subtree). Closed by R20 of audit
+   round 2 (§B.23). The residual — Firebase Auth user — is documented
+   and queued for the v2 Admin SDK Cloud Function.
+
+8. **"Limitations are documented, not hidden."** §A1–A8 of
    `docs/threat-model.md` is the formal accepted-residuals list with
    rationale.
+
+9. **"Patient surfaces are responsive — phone-first AND
+   desktop-aware."** `/patient/status` and `/patient/messages` both
+   adapt their layout: phone gets a mobile-optimised single column
+   with modal overlays; desktop gets a wider single column with
+   inline interactions (status) or a two-panel split with inline
+   thread rendering (messages). The agency / admin two-panel
+   pattern is reused on the patient Messages page on `md+`, so the
+   layout no longer suggests "this is just a webpage built for
+   phones" when viewed at desk-screen size. R29 of the audit-round-2
+   batch.
 
 ## 10. Reading order for a panel
 
