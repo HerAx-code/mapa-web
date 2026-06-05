@@ -4,3 +4,12 @@ dist
 
 .vercel
 .claude/settings.local.json
+
+# Firebase Admin SDK service-account keys.
+# Required by scripts/bootstrap-users.js + scripts/repair-demo-accounts.js,
+# but NEVER committed -- the file grants full read/write to every
+# Firestore document on the project.
+service-account.json
+service-account-*.json
+*-service-account.json
+firebase-adminsdk-*.json
