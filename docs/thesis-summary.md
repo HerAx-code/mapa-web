@@ -1,6 +1,6 @@
 # MAPA — Thesis project summary
 
-Last updated: 2026-06-04.
+Last updated: 2026-06-06.
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,
@@ -230,21 +230,58 @@ deletion Cloud Function (Blaze plan).
 
 ## 7. Operational posture
 
-The system is operator-runnable today via four admin-SDK scripts:
+The system is operator-runnable today via seven admin-SDK scripts,
+grouped by purpose:
 
+**Seed + maintenance (demo accounts):**
+- `scripts/demo-accounts.js` — canonical `USERS` array; single
+  source of truth for the 11 demo accounts (2 CRMC admins, 4
+  agency_admins, 4 coordinators, 1 patient). Imported by both
+  scripts below.
 - `scripts/bootstrap-users.js` — one-shot creation of the seed
-  admin / agency / coordinator accounts (idempotent).
+  accounts (idempotent: leaves existing Auth + Firestore alone).
+- `scripts/check-demo-accounts.js` — read-only health diagnostic.
+  Uses the Web SDK + `.env`, so it runs without a service-account
+  key. Verdict per account: ✅ OK / ⚠️ WRONG_ROLE / 🔑 BAD_PASSWORD /
+  🕳️ NO_PROFILE. Recommended as a pre-defense smoke test.
+- `scripts/repair-demo-accounts.js` — force-restore via Admin SDK.
+  Creates missing Auth users, force-resets drifted passwords,
+  merges canonical fields back into Firestore profiles (with
+  `{ merge: true }` so accumulated test data like patient address
+  / photoURL survives). Includes `--dry-run` mode.
+
+**Periodic + incident response:**
 - `scripts/cleanup-orphans.js` — periodic Firestore garbage
   collection.
 - `scripts/cleanup-injection-audit.js` — the audit-log purge tool
-  used in the security response.
+  used in the prompt-injection security response.
 - `scripts/migrate-doc-content-to-storage.js` — the migration
   helper for moving patient document content from Firestore to
-  Cloud Storage.
+  Cloud Storage (dormant under Spark, ready for v2 Blaze).
 
 The full operational runbook — deploy procedures, incident
 response, credential rotation, backup, pinned versions — is in
 `docs/runbook.md`.
+
+### A note on Spark plan write quotas (added 2026-06-06)
+
+The pilot runs on Firebase's free Spark plan, which caps Firestore
+at 20,000 document writes per day per project (resets at midnight
+Pacific Time). A live-session debugging run on 2026-06-05 surfaced
+that **the Firebase Admin SDK swallows `429 RESOURCE_EXHAUSTED`
+errors into infinite silent gRPC retries** — meaning writes don't
+just fail, they hang indefinitely with no error, no toast, no
+diagnostic. The Web SDK behaves similarly, queuing writes locally
+in the assumption they'll succeed later.
+
+This pattern is operationally indistinguishable from a network
+firewall hang. The reliable way to diagnose it is to bypass the
+SDK and call the Firestore REST API directly — `429` comes back
+in under a second instead of hanging. The full playbook lives in
+§B.24 of the revision list. This is worth presenting honestly
+during defense as a real-world Spark plan trade-off: the system
+silently degrades under sustained write load instead of failing
+loudly, which can mask the cause for hours.
 
 ## 8. Limitations and future work
 
@@ -276,6 +313,19 @@ to be presented honestly during defense.
   deployed on 2026-06-02 but reverted in commit (this batch)
   because Storage on Spark is not available on this project. The
   migration code stays in tree for v2 activation.
+- **Spark plan write quota (20K writes/day) is real, and it bites
+  silently.** Heavy dev + test sessions in a single 24-hour window
+  can exhaust the daily allowance, after which every Firestore
+  write across the entire project (patient registrations, admin
+  edits, notifications, audit log entries, even quota recovery
+  attempts) returns `429 RESOURCE_EXHAUSTED`. The Admin SDK
+  swallows this into silent retries; the Web SDK queues locally
+  with no user-facing feedback. Reset happens at midnight Pacific
+  Time. The §B.24 diagnostic playbook lets the operator confirm
+  this in under a minute via a direct REST call. v2 mitigation:
+  Blaze upgrade removes the cap. Current mitigation: stagger
+  high-write activity across days; document the playbook so the
+  next incident is diagnosed in minutes not hours.
 - No staging environment. Dev work hits the same Firestore as the
   pilot.
 - No CI/CD. Manual `firebase deploy --only firestore:rules` and
@@ -351,6 +401,30 @@ commits / docs:
    layout no longer suggests "this is just a webpage built for
    phones" when viewed at desk-screen size. R29 of the audit-round-2
    batch.
+
+10. **"The demo set is recoverable from drift in one command."**
+    `scripts/check-demo-accounts.js` is a Web-SDK diagnostic
+    runnable with no extra credentials; it reports each of the 11
+    demo accounts as ✅ OK / ⚠️ WRONG_ROLE / 🔑 BAD_PASSWORD /
+    🕳️ NO_PROFILE. `scripts/repair-demo-accounts.js` (Admin SDK)
+    aggressively restores all 11 to canonical state, idempotently,
+    with a `--dry-run` mode that prints the per-field diff before
+    writing. The two share `scripts/demo-accounts.js` as a single
+    source of truth. Designed so a pre-defense run takes 5 seconds
+    of check + (if needed) 30 seconds of repair, instead of an
+    hour of Firebase Console clicking.
+
+11. **"Real-world Spark plan failure modes are documented, not
+    hidden."** A live debugging session on 2026-06-05 surfaced
+    that the Firebase Admin SDK turns `429 RESOURCE_EXHAUSTED`
+    (daily write quota) into infinite silent gRPC retries — writes
+    just hang forever with no error. The diagnostic playbook (call
+    the Firestore REST API directly; if you get 429, you're over
+    quota) is documented in §B.24 of the revision list. This is the
+    kind of trade-off worth presenting honestly during defense:
+    the free tier silently degrades under load instead of failing
+    loudly. Blaze removes the cap; the playbook diagnoses the
+    cause in under a minute.
 
 ## 10. Reading order for a panel
 

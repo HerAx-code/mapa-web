@@ -1,8 +1,8 @@
 # MAPA Revision List
 
 **Project:** Medical Assistance Portal Access (MAPA) — Cotabato Regional Medical Center
-**Status:** Updated 2026-06-04
-**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, and the post-pilot live-session audit round 2 (R13–R29).
+**Status:** Updated 2026-06-06
+**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, the post-pilot live-session audit round 2 (R13–R29), and the demo-account maintenance trio + Spark plan write-quota investigation.
 
 ---
 
@@ -470,11 +470,43 @@ delivered in five tagged groups (R13 standalone, R14 standalone, R15
 standalone, R16 + R17 patient-status sweep, R18+R19 / R20+R22+R24 /
 R21+R23+R27 / R25+R26+R28 / R29 — 4 grouped + 4 standalone commits).
 
+### B.24 — Demo-account maintenance + the silent-write-hang investigation
+
+A live-session login test on 2026-06-05 surfaced that
+`admin@crmc.gov.ph` (the super_admin demo) signed in successfully but
+landed on `/patient/dashboard` — its Firestore profile said
+`role: 'patient'`. Earlier sessions had clearly drifted multiple demo
+accounts. `bootstrap-users.js` (the original seed script) is by design
+idempotent: if an Auth account already exists, it leaves Auth alone,
+and if a Firestore profile already exists, it leaves the profile
+alone. That's correct for first-time seeding but can't recover from
+drift.
+
+Three new operational scripts were added and one painful root cause
+diagnosed.
+
+| # | Theme | Action Taken | Commit |
+|---|---|---|---|
+| 24.1 (R30a) | Extract `USERS` array to a shared module | `scripts/demo-accounts.js` becomes the single source of truth for the 11 demo accounts (2 CRMC admins, 4 agency_admins, 4 coordinators, 1 patient). `scripts/bootstrap-users.js` refactored to import from there — behavior unchanged, but adding a new demo account now needs one edit instead of two | `6a41039` |
+| 24.2 (R30b) | `scripts/check-demo-accounts.js` — read-only health diagnostic | Uses the Firebase **Web SDK** + the project's existing `.env` config (same path the React app uses), so no service-account.json required to run. For each canonical demo account it attempts a sign-in, reads `users/{uid}`, and reports a verdict per account: ✅ OK, ⚠️ WRONG_ROLE, 🔑 BAD_PASSWORD, 🕳️ NO_PROFILE, 🛑 MARKED_FOR_DELETION, ⚠️ ON_HOLDING_PERIOD. First run flagged 7 of 11 demo accounts drifted (1 WRONG_ROLE, 1 BAD_PASSWORD, 5 NO_PROFILE) | `a2641b9` |
+| 24.3 (R30c) | `scripts/repair-demo-accounts.js` — force-restore via Admin SDK | For each entry: creates the Auth user if missing, force-resets the password to canonical, and writes the Firestore profile via `ref.set(canonical, { merge: true })`. The `{ merge: true }` is critical — was bug-fixed mid-run after the dry-run on the real patient profile flagged "would wipe `address: '2nd Street, Rosary Heights V…'`". Includes `--dry-run` mode that prints the per-field diff (`role: "patient" → "super_admin"`) without writing. Idempotent and safe to re-run | `6a41039` (initial) + `a5cfa57` (merge fix) |
+| 24.4 | `.gitignore` patterns for `service-account*.json` | Previously only `.env` was excluded. A service-account.json downloaded to the project root could have been one `git add .` away from public. Added blanket patterns: `service-account.json`, `service-account-*.json`, `*-service-account.json`, `firebase-adminsdk-*.json` | `a2641b9` |
+| 24.5 | **Discovery**: Spark plan write quota exhaustion presents as a silent gRPC hang in Admin SDK | The repair script ran cleanly in `--dry-run` (reads only) but hung at the first `ref.set()` in apply mode. Three layers of diagnostic peeled back the cause: (a) isolated `auth.updateUser()` worked → Auth wasn't the issue; (b) isolated `db.doc().get()` worked → Firestore reads were fine; (c) isolated `db.doc().set()` to a brand-new `_diagnostic/` collection hung identically → not a doc-specific issue. Two more transport tests narrowed it further: `preferRest: true` on the Firestore client didn't help (writes still hang because Admin SDK `preferRest` only switches reads). A direct **REST API call** to `firestore.googleapis.com/v1/.../documents` surfaced the real error in 614 ms: `429 RESOURCE_EXHAUSTED — Quota exceeded`. The Admin SDK swallows 429s into infinite gRPC retries with no error propagation — by design, but operationally indistinguishable from a network hang. Three consecutive REST writes spaced 2 s apart all returned 429 instantly, confirming the quota is the daily 20K writes/day Spark allowance (not a transient burst limit) and resets at midnight Pacific Time | (diagnostic; no commit) |
+| 24.6 | Documented playbook for "writes hang silently" | The diagnostic sequence is now the canonical way to distinguish a real network hang from a quota exhaustion: try direct REST → if you get 429, you're over quota and have to wait for reset (or upgrade to Blaze). If REST returns the same hang, the issue is actually network-layer. Saves hours of chasing the wrong cause | (documented inline in this section + in `docs/runbook.md`) |
+
+End-state of B.24: maintenance tooling in place for the demo set
+going forward (`check-demo-accounts.js` runs as a pre-defense smoke
+test in under 5 s; `repair-demo-accounts.js` is the one-command
+recovery). Quota-exhaustion playbook documented. Actual demo-account
+repair is queued for after the quota window resets — the script is
+verified correct via dry-run, only the project-level write quota
+stands between the current drift state and ✅ 11/11.
+
 ### B.22 — Closing summary
 
 | Metric | Value |
 |---|---|
-| Total commits across the full revision program | ~275 |
+| Total commits across the full revision program | ~280 |
 | Adviser revisions addressed | 12 of 12 |
 | Real correctness bugs caught in the read-pass series (#1-20) | 20 |
 | Real correctness bugs caught in the full-system audit (#21-31) | 11 |
@@ -487,12 +519,14 @@ R21+R23+R27 / R25+R26+R28 / R29 — 4 grouped + 4 standalone commits).
 | Compliance features shipped | 2 (RA 10173 §16(f) patient data portability export + §16(e) right-to-erasure complete cascade — R20) |
 | Automated tests at close | 76 (29 unit + 47 rules) — full suite ~16 s |
 | Operational docs added | 2 (`docs/threat-model.md`, `docs/runbook.md`) |
-| Operator scripts available | 4 (`bootstrap-users.js`, `cleanup-orphans.js`, `cleanup-injection-audit.js`, `migrate-doc-content-to-storage.js`) |
+| Operator scripts available | 7 (`bootstrap-users.js`, `cleanup-orphans.js`, `cleanup-injection-audit.js`, `migrate-doc-content-to-storage.js`, `demo-accounts.js`, `check-demo-accounts.js`, `repair-demo-accounts.js`) |
+| Demo-account maintenance loop | check → repair → verify, two-script trio with single shared `USERS` array (§B.24) |
+| Operational playbook for silent gRPC hangs | Documented in §B.24 — direct REST call surfaces real error (e.g. `429 RESOURCE_EXHAUSTED`) when Admin SDK retries forever |
 | UX gaps closed in the read-pass series | 17 |
 | UX gaps closed post-audit (Tier 2 + Mobile / Messages + R13–R29 batches) | ~32 |
 | Patient surface consistency fixes after live-session audit | 9 (R11, R12, R14, R16, R17, R18, R19, R25, R29) |
 | Cross-surface error-handling fixes after live-session audit | 6 (R21, R23, R26, R27, R6, R10) |
-| Code consolidations across the program | 20 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18) |
+| Code consolidations across the program | 21 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18 + `USERS` extracted to shared module per R30) |
 | First-visit guided tours shipped | 4 (patient Dashboard + TrackStatus, agency Dashboard, admin Dashboard) |
 | Patient-side mobile install validated end-to-end | ✅ on one real device |
 | Responsive layouts (patient surface) | 2 (Status page + Messages — both phone-first AND desktop-two-panel) |
