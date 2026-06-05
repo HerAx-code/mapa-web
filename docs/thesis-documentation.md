@@ -1,6 +1,6 @@
 # MAPA — Thesis Documentation
 
-**Last updated:** 2026-06-02 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, and the full-system 46-page audit — see `docs/revision-list.md` for the change log)
+**Last updated:** 2026-06-06 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), and the demo-account maintenance trio + Spark write-quota investigation — see `docs/revision-list.md` for the change log)
 
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.
 
@@ -1299,6 +1299,57 @@ A second, **full-system 46-page audit** followed, this time explicitly avoiding 
 | 30 | admin/Reports rendered a "Budget Request quick-facts callout" panel that was unreachable | The useEffect filtered Budget Requests out at the loader, so no Budget Request ever made it to the per-card render — but ~12 lines of UI tried to render their quick-facts anyway | Removed the dead branch |
 | 31 | admin/Accounts + admin/Patients + admin/AgencyDetail Delete modals never explained the orphan-Auth constraint | Operator clicked Delete, the Firestore profile vanished, but the email stayed registered with Firebase Auth. Recreating an account with the same email then hit "already in use" with no warning of why | Added an explicit warning to all three Delete confirm modals: "The Firebase Auth account can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console → Authentication." Proper fix (Cloud Function with admin SDK) is blocked by Spark plan |
 
+#### 11.4a — Audit Round 2 (R1–R29, live-session driven, 2026-06-02 → 2026-06-04)
+
+A second pass driven by real live-session demos against `localhost:5173`. Each finding was triaged in conversation with the operator (UX dead-ends caught visually, data-cascade gaps caught during real patient → CRMC → agency walkthroughs) then fixed with a "before / why this is wrong / how it now behaves" commit body. 29 findings total; 17 in §B.23 of the revision list.
+
+| # | Bug | Impact | Fix | Commit |
+|---|-----|--------|-----|--------|
+| R1 | AuthContext didn't check `deletion: true` flag on login | Soft-deleted patients could still sign in | Added deletion gate that signs the user out and throws a clear "account marked for deletion" error | `aa8e793` |
+| R2 | `computeFunding` counted expired GLs as committed | Parent request showed slices as "secured" after the GL had been auto-released back to the agency budget | `isCommittedSlice` helper excludes `glStatus === 'expired'` certificates | `aa8e793` |
+| R3 | Parent request `amountCommitted` + `status` went stale on slice transitions | Coordination board showed wrong funding totals after expiry / reversal | `deriveRequestFinancials` + `runTransaction` re-sync on every release path | `aa8e793` |
+| R4 | Slice rejection didn't re-derive parent request status | admin/Requests kept showing "Endorsing" forever even though no agency was processing | `runTransaction` re-derives parent after every reject | `703cfa6` |
+| R5 | agency/SlotManagement `handleAdd` / `handleDeduct` / `handleSaveTotal` raced concurrent writes | Daily slot counter could drift on simultaneous coordinator actions | All three wrapped in `runTransaction` | `703cfa6` |
+| R6 | `dataExport.js` failed wholesale on any single-section error | Patient's RA 10173 §16(f) export aborted entirely if one collection read denied | `Promise.allSettled`, per-section try/catch, top-level `errors[]` in the JSON output | `76ba87b` |
+| R7 | `getOrCreateConversation` rejected `roles: undefined` | Messages send threw a Firestore "undefined field" error masked behind generic toast | Defaults injected; React Router v7 future flags enabled simultaneously | `b7ceeaf` |
+| R8 | Endorsement rolled back entirely when ONE attached document had been deleted | Failed for the whole referral if any single `documentId` in `attachedDocuments` was stale; no slices created, no slot decremented | Moved per-doc `agencyIds` stamping OUT of the transaction; best-effort post-step with per-doc try/catch for `not-found` | `b01d303` |
+| R9 | Agency couldn't read patient documents via the rule analyzer's path | "Missing or insufficient permissions" when opening any endorsed slice | Two-part fix: query narrowed via `array-contains` + `firestore.rules` `documents.read` split into three separate `allow read` clauses so the rule analyzer can prove subset alignment | `9d0644b` + `bb3bcef` |
+| R10 | `/api/send-email` route 404 in dev | Console noise on every notify call during local development | Dev-only skip in `notifications.js` (no real email infrastructure in dev) | `9d0644b` |
+| R11 | patient Dashboard step 5 had no clickable path | "Receive your Guarantee Letter" tile looked clickable but did nothing | Set `path: '/patient/status'` | `014bb6b` |
+| R12 | TrackStatus showed empty space when GL issued but signed scan pending | Patient saw "Guarantee Letter Issued" status but no Download button; confusing | Amber "Awaiting signed scan from agency" pill fills the slot until `certificateUploaded` | `fee18a3` |
+| R13 | EndorseModal didn't warn when attached docs had been deleted | CRMC referred a request to agencies who saw no documents to verify | Pre-endorse `getDoc()` check; amber/red banner lists missing docs by name; non-blocking (informs CRMC's call) | `f42ec44` |
+| R14 | Patient TrackStatus stepper rows had no tap affordance | Patient on `assessment` stage couldn't jump to interview details from status page | Active "Assessment & Interview" and "Endorsed to Agencies" rows become tap targets with CTA + chevron | `a971431` |
+| R15 | Allocation Amount input rendered leading "0" | Typing "10000" became "010000"; placeholder "e.g. 500000" never showed | State held as string, init to `""`, onChange strips leading zeros from pastes | `ef9077f` |
+| R16 | "Confirm & Proceed" banner navigated to /patient/request | Patient hit Step 1 of the new-request wizard instead of confirming their endorsed slice | Inline `handleSliceProceed` flips slice `endorsed → reviewing` + notifies agency; no navigation | `ed9fdc4` |
+| R17 | Active GLs filed under "Past Applications" tab | Patient came to grab their downloadable GL and found it categorized as past | `isSliceTerminal` predicate: `certificate` is terminal only when `glStatus` is `redeemed`/`expired` or `isGLExpired(app)` | `a149d08` |
+| R18 | Dashboard `activeApp` filter matched any non-rejected slice | Status card said "Your application is in progress" for slices redeemed weeks ago | Reuse `isSliceTerminal` from R17; hoisted to `utils/requests.js` as single source of truth | `c75e733` |
+| R19 | Dashboard `endorsed`/`reviewing`/`awaiting_info` CTAs routed to /patient/request | Same dead-end as R16 from the Dashboard side | All three redirected to `/patient/status` where the R16 inline handler lives | `c75e733` |
+| R20 | `handleDeleteAccount` cascade missed requests, conversations, certificates | RA 10173 §16(e) right-to-erasure incomplete — orphan parent request + conversation threads kept patient PII visible | All six patient-keyed collections fetched in parallel; per-conversation message subcollection batch-delete; `catch (err)` instead of silent `catch {}` | `0032d96` |
+| R21 | Messages `handleSend` had no try/catch | A failed send locked the button forever (`setSending(false)` never ran); user had to refresh | try/catch/finally; toast on error; typed text preserved so user can retry without losing draft | `a6b2998` |
+| R22 | `admin/AuditLog ACTION_CONFIG` missing 9 actions logged in code | `request_endorsed`, `gl_redeemed`, etc. rendered with raw action key + unstyled badge | All 9 added with matching label + badge color + new "Lifecycle" category in the filter row | `0032d96` |
+| R23 | Failed thread load looked identical to empty conversation | Snapshot error → `messages=[]` → "No messages yet" empty state; user had no clue load failed | Separate `loadError` state + red error panel ("Couldn't load this thread") | `a6b2998` |
+| R24 | admin/Accounts setDoc omitted `deletion: false` / `cooldown: 0` | Future queries like `where('deletion', '==', false)` would silently miss these docs (Firestore can't match a missing field via equality) | Both fields stamped on creation, matching every other creation path | `0032d96` |
+| R25 | patient/More handleLogout fired signOut without awaiting | Navigate ran before auth-state cleared; fast back/forward could briefly show authenticated content | Async with try/catch; `await logout()` before navigate | `5d35c0a` |
+| R26 | Partial document-upload failure collapsed to generic "submission failed" toast | Patient had no idea which upload broke (network drop on doc 3 of 5 indistinguishable from rules denial on doc 1) | Per-doc try/catch rethrows `UPLOAD_FAILED:<typeName>` sentinel; outer catch decodes and names the doc | `5d35c0a` |
+| R27 | Messages read-receipt updateDoc had `.catch(() => {})` | Rules denials and network blips silently swallowed; no production diagnostics | Bumped to `console.warn` so the failure is visible without alarming the user | `a6b2998` |
+| R28 | GLViewer redirected to /agency/inbox on transient missing-doc states | Firestore offline replay / brief permission flicker yanked agency out of an open GL viewer mid-session | `firstLoad` ref: only the FIRST missing snapshot triggers redirect; subsequent misses log a warning and keep last state on screen | `5d35c0a` |
+| R29 | patient Messages was mobile-card + modal on every viewport | Wide desktop wasted 60%+ of screen; agency/admin already had two-panel split | Responsive layout: `<md` keeps the mobile card + modal; `md+` renders 320 px left list + inline `ConversationThread` on the right (reuses existing component). Drive-by R21/R23/R27 echoes patched in `ConversationThread` since it had the same bugs | `986396b` |
+
+#### 11.4b — Demo-Account Maintenance Trio (R30, 2026-06-05)
+
+A live-session login test exposed that demo accounts had drifted from canonical state — `admin@crmc.gov.ph` signed in but landed on /patient/dashboard (Firestore profile said `role: 'patient'`). `bootstrap-users.js` is idempotent by design (leaves existing Auth + Firestore alone) so it can't recover from drift. Three scripts shipped to close the gap.
+
+| # | Item | Resolution | Commit |
+|---|------|------------|--------|
+| R30a | Extract canonical `USERS` array to shared module | `scripts/demo-accounts.js` becomes the single source of truth for the 11 demo accounts. `scripts/bootstrap-users.js` refactored to import from it — same data, same behavior. Adding a new demo account now needs one edit | `6a41039` |
+| R30b | `scripts/check-demo-accounts.js` — read-only health diagnostic | Uses Web SDK + `.env`, runs without service-account.json. Verdict per account: ✅ OK / ⚠️ WRONG_ROLE / 🔑 BAD_PASSWORD / 🕳️ NO_PROFILE / 🛑 MARKED_FOR_DELETION / ⚠️ ON_HOLDING_PERIOD. First run flagged 7 of 11 demo accounts drifted | `a2641b9` |
+| R30c | `scripts/repair-demo-accounts.js` — force-restore via Admin SDK | Creates missing Auth users, force-resets passwords, writes Firestore profiles via `ref.set(canonical, { merge: true })` so extras (patient address etc.) survive. `--dry-run` mode prints per-field diff. Idempotent | `6a41039` + `a5cfa57` (merge fix) |
+| R30d | `.gitignore` patterns for `service-account*.json` | Blanket coverage: `service-account.json`, `service-account-*.json`, `*-service-account.json`, `firebase-adminsdk-*.json`. A service-account.json grants full read/write to every Firestore document; must never be committed | `a2641b9` |
+| R30e (diagnostic) | Spark plan 20K writes/day quota presents as silent gRPC hang in Admin SDK | Three layers of isolation tests narrowed the cause: `auth.updateUser()` works → Auth fine; `db.doc().get()` works → reads fine; `db.doc().set()` to a fresh `_diagnostic/` collection hangs → not doc-specific. Direct **Firestore REST API** call surfaced the real error in 614 ms: `429 RESOURCE_EXHAUSTED — Quota exceeded`. Three rapid REST writes all returned 429 instantly → daily quota, not burst. The Admin SDK swallows 429s into infinite gRPC retries (by design, operationally indistinguishable from a network hang). Resets at midnight Pacific Time | (diagnostic) |
+| R30f | Documented playbook: "what to do when writes hang silently" | Try the Firestore REST API directly with the service-account credential. If 429 RESOURCE_EXHAUSTED: you're over quota, wait for reset (or upgrade to Blaze). If REST hangs too: it's actually a network-layer issue (firewall, proxy, gRPC interference). Saves hours of chasing the wrong cause | (documented in §B.24 of revision-list + §11.5 below) |
+
+End-state: maintenance tooling permanent. Pre-defense run is `check-demo-accounts.js` (5 s) → if anything drifted, `repair-demo-accounts.js` (30 s after quota reset). Replaces what would otherwise be ~15 minutes of Firebase Console clicking per drifted account.
+
 ### 11.5 Known Issues and Limitations
 
 | Severity | Item | Status / Plan |
@@ -1315,6 +1366,7 @@ A second, **full-system 46-page audit** followed, this time explicitly avoiding 
 | Acknowledged | Account deletion in admin/Accounts, admin/Patients, admin/AgencyDetail removes only the Firestore profile — the Firebase Auth account stays orphaned | Client-side Firebase can't delete an Auth account without "recent sign-in" or admin SDK. The 2026-06-02 audit added explicit warnings to all three Delete confirm modals so operators know to also remove the email from Firebase Console → Authentication | Proper fix is a Cloud Function with admin SDK `deleteUser`; blocked by Spark plan per the Email Delivery section. Warning-text mitigation shipped (bug #31) |
 | Acknowledged | admin/AppLogs search and filter only apply to the loaded page (PAGE_SIZE = 100) | An operator searching for an old application has to click Load More repeatedly to bring it into the in-memory window before the filter can find it | Server-side query rewrite needed; deferred — non-blocking for pilot volume |
 | Acknowledged | admin/AddAgency Auth-account leakage on the rare step-2 failure | When the agency-doc creation fails AFTER the admin Auth + profile already succeeded, the rollback can clear the Firestore profile but can't `deleteUser` (signed out of the secondary auth session by then). The orphan email must be removed from Firebase Console manually. Logged loudly | Same Cloud Function path as #31 would close this; deferred |
+| Acknowledged | **Spark plan 20K writes/day Firestore quota** presents as a silent gRPC hang in the Admin SDK | Heavy dev + test activity in a single 24-hour window can exhaust the daily allowance. Once exhausted, every Firestore write across the project (patient registrations, admin edits, notification fan-outs, even quota-recovery scripts) returns `429 RESOURCE_EXHAUSTED`. The Admin SDK swallows the 429 into infinite silent gRPC retries; the Web SDK queues writes locally. Operationally **indistinguishable from a network firewall hang** until the operator either reads §B.24 of the revision list or runs the documented REST API diagnostic. Reset is at midnight Pacific Time | Diagnosis playbook in §B.24 + §12.1 below. Mitigation: stagger high-write activity across days. Permanent fix: Blaze plan upgrade removes the cap |
 
 ### 11.6 Performance Observations
 
@@ -1349,6 +1401,8 @@ A second, **full-system 46-page audit** followed, this time explicitly avoiding 
 8. **Interview reminder is best-effort, client-side.** The 24h + 1h reminders fire only when the patient opens the dashboard. A scheduled push (Firebase Cloud Messaging on Blaze) would deliver reliably regardless of patient device state.
 
 9. **Cooldown system is per-Hospital-ID + per-application.** It survives account churn (delete-and-re-register) but doesn't catch a determined attacker creating multiple Hospital IDs. The intended mitigation is operational (CRMC issues codes in person after social-work intake).
+
+10. **Spark plan write quota silently degrades under sustained load.** Firestore Spark caps the project at 20,000 document writes per day. The Firebase Admin SDK turns `429 RESOURCE_EXHAUSTED` into infinite silent gRPC retries — writes hang forever with no error, no toast, no diagnostic in the operator's terminal. The Web SDK queues writes locally with no user-facing feedback. The pattern is **operationally indistinguishable from a network firewall hang**, which can cost hours of debugging on the wrong cause. The §B.24 playbook (call the Firestore REST API directly; if you get 429, you're over quota) lets the operator confirm or rule out a quota issue in under a minute. Reset is at midnight Pacific Time. The permanent fix is Blaze plan upgrade (removes the daily cap); the operational mitigation is to stagger high-write activity across days during the pilot.
 
 ### 12.2 Future Work
 
@@ -1446,7 +1500,31 @@ For thesis demonstration / panel walkthrough:
 | DSWD Admin | admin@dswd.gov.ph | agency123 |
 | DSWD Coordinator | coordinator@dswd.gov.ph | agency123 |
 
-These are seeded by the `/seed` route (requires `VITE_ENABLE_SEED=true` environment variable) and visible in the Login page's development quick-access panel.
+These are visible in the Login page's development quick-access panel and are managed by three admin-SDK scripts that share `scripts/demo-accounts.js` as a single source of truth:
+
+| Script | Purpose | Needs service-account.json? |
+|--------|---------|-----------------------------|
+| `scripts/bootstrap-users.js` | First-time creation. Idempotent: if Auth exists it's left alone; if Firestore profile exists it's left alone. The right tool for a fresh project. | Yes |
+| `scripts/check-demo-accounts.js` | Read-only health diagnostic. For each account: tries the canonical sign-in, reads `users/{uid}`, reports ✅ OK / ⚠️ WRONG_ROLE / 🔑 BAD_PASSWORD / 🕳️ NO_PROFILE / 🛑 MARKED_FOR_DELETION. Recommended as a pre-defense smoke test. | No (uses Web SDK + `.env`) |
+| `scripts/repair-demo-accounts.js` | Force-restore. Creates missing Auth users, force-resets drifted passwords, merges canonical fields into Firestore profiles with `{ merge: true }` so accumulated test data (patient address, photoURL, etc.) survives. `--dry-run` mode prints per-field diff. | Yes |
+
+Pre-defense recommended workflow:
+
+```bash
+# Health check (5 seconds, no credentials)
+node scripts/check-demo-accounts.js
+
+# If anything is drifted, repair (after midnight Pacific if Spark plan quota is hit)
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  node scripts/repair-demo-accounts.js --dry-run    # preview
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  node scripts/repair-demo-accounts.js              # apply
+
+# Verify
+node scripts/check-demo-accounts.js
+```
+
+The legacy `/seed` route still exists (gated by `VITE_ENABLE_SEED=true`) but its user-creation portion was moved out to `scripts/bootstrap-users.js` per the 2026-06-01 tightening of `users/create` rule — the page only seeds reference data (Hospital IDs, agencies, document types) now and refuses to run unless the operator is signed in as a super_admin.
 
 ---
 
