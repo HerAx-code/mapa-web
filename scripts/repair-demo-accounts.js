@@ -12,11 +12,13 @@
  *     preserved so audit-log entries / conversations / requests that
  *     reference it keep working.
  *
- *   - Firestore: setDoc-replace (no merge) of users/{uid} with the
- *     canonical profile. Wipes any drifted role / rank / agencyId /
- *     cooldown / deletion flag. Preserves only the createdAt field
- *     if it already existed (so the audit story of "when was this
- *     account first seeded?" survives the repair).
+ *   - Firestore: setDoc with { merge: true } so canonical fields
+ *     overwrite drift but extra fields the profile accumulated
+ *     (address, photoURL, hospitalId on a patient, etc.) survive.
+ *     Without merge we'd wipe real test data on accounts that have
+ *     been exercised through the patient flow. Preserves createdAt
+ *     if already set so the audit story of "when was this account
+ *     first seeded?" survives the repair.
  *
  * USE WHEN:
  *   - A demo account's password drifted (manual reset, console
@@ -55,11 +57,13 @@ const auth = getAuth()
 const db   = getFirestore()
 
 // Pretty-print the diff between current and canonical so the operator
-// sees exactly what would change before --apply.
+// sees exactly what would change. Since we use { merge: true }, only
+// fields PRESENT in canonical are written -- extras in `current`
+// (address, photoURL, etc.) are preserved, not deleted, so the diff
+// should not flag them as changes.
 function profileDiff(current, canonical) {
   const changes = []
-  const keys = new Set([...Object.keys(current ?? {}), ...Object.keys(canonical)])
-  for (const k of keys) {
+  for (const k of Object.keys(canonical)) {
     if (k === 'createdAt' || k === 'email') continue
     const a = current?.[k]
     const b = canonical[k]
@@ -92,6 +96,7 @@ async function main() {
     } catch (e) {
       if (e.code === 'auth/user-not-found') {
         if (DRY_RUN) {
+          authCreated++
           console.log(`  ➕ ${u.email}: WOULD CREATE Auth user (was missing)`)
           continue
         }
@@ -119,6 +124,7 @@ async function main() {
     //    to guarantee the canonical value works)
     if (authExisted) {
       if (DRY_RUN) {
+        authReset++
         console.log(`  🔑 ${u.email}: WOULD RESET Auth password to "${u.password}"`)
       } else {
         try {
@@ -148,17 +154,21 @@ async function main() {
       }
 
       if (DRY_RUN) {
+        profileRewrote++
         console.log(`  🔧 ${u.email}: WOULD REWRITE profile`)
         for (const c of changes) console.log(`       ${c}`)
         continue
       }
 
       // Preserve createdAt if it was set; stamp it fresh if this is a
-      // new profile.
+      // new profile. Use { merge: true } so any extra profile fields
+      // the account has accumulated (address, photoURL, hospitalId,
+      // patientId, etc.) survive the repair -- we only want to fix
+      // drift on the canonical fields, not wipe real test data.
       const createdAt = current?.createdAt ?? new Date()
-      await ref.set({ ...canonical, createdAt })
+      await ref.set({ ...canonical, createdAt }, { merge: true })
       profileRewrote++
-      console.log(`  🔧 ${u.email}: profile rewritten (${changes.length} field${changes.length === 1 ? '' : 's'} changed)`)
+      console.log(`  🔧 ${u.email}: profile merged (${changes.length} field${changes.length === 1 ? '' : 's'} changed; extras preserved)`)
       for (const c of changes) console.log(`       ${c}`)
     } catch (e) {
       console.error(`  ❌ ${u.email}: Firestore write failed — ${e.message}`)
@@ -167,11 +177,12 @@ async function main() {
   }
 
   console.log(`\n[repair-demo-accounts] Summary:`)
-  console.log(`  Auth passwords reset:  ${authReset}`)
-  console.log(`  Auth users created:    ${authCreated}`)
-  console.log(`  Profiles rewritten:    ${profileRewrote}`)
-  console.log(`  Profiles already OK:   ${profileClean}`)
-  console.log(`  Failures:              ${failed}`)
+  const verb = DRY_RUN ? 'would' : 'did'
+  console.log(`  Auth password resets ${verb}:  ${authReset}`)
+  console.log(`  Auth users created ${verb}:    ${authCreated}`)
+  console.log(`  Profile merges ${verb}:        ${profileRewrote}`)
+  console.log(`  Profiles already OK:           ${profileClean}`)
+  console.log(`  Failures:                      ${failed}`)
   if (DRY_RUN) {
     console.log(`\n  This was a DRY RUN. Re-run without --dry-run to apply.`)
   }
