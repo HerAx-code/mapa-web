@@ -1,6 +1,6 @@
 # MAPA — Thesis Documentation
 
-**Last updated:** 2026-06-06 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), and the demo-account maintenance trio + Spark write-quota investigation — see `docs/revision-list.md` for the change log)
+**Last updated:** 2026-06-06 (late) (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, and the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32 — see `docs/revision-list.md` for the change log)
 
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.
 
@@ -1350,6 +1350,22 @@ A live-session login test exposed that demo accounts had drifted from canonical 
 
 End-state: maintenance tooling permanent. Pre-defense run is `check-demo-accounts.js` (5 s) → if anything drifted, `repair-demo-accounts.js` (30 s after quota reset). Replaces what would otherwise be ~15 minutes of Firebase Console clicking per drifted account.
 
+#### 11.4c — Post-Quota Recovery Push (Operational Tooling + Agency UX, 2026-06-06 late)
+
+After the daily write quota reset and the demo accounts were repaired to ✅ 11/11, the rest of the day shifted to closing the operational gaps the audit had surfaced. Six commits landed in one push window covering reference-data seeding, agency logo support, full-database backup, defense-demo scenario prep, a sidebar discoverability fix (R31), and BARMM-aware location dropdowns (R32).
+
+| # | Item | Resolution | Commit |
+|---|------|------------|--------|
+| 25.1 | `scripts/bootstrap-reference-data.js` admin-SDK seeder | Companion to `bootstrap-users.js`. Seeds 4 agencies + 8 documentTypes + 8 assistanceTypes + 20 hospitalIds with `setDoc({merge:true})`; idempotent. Per-agency budget initialised to zero so allocation pages don't render NaN. Replaces the old `/seed` web page's reference-data portion, which required super_admin login + `VITE_ENABLE_SEED=true` and didn't work during the same-day recovery (chicken-and-egg: no admin could log in until users were repaired). Verified live: 40 writes, all 4 agencies present | `04de563` |
+| 25.2 | Optional `logoUrl` per agency, fallback to colored initials | New `<AgencyAvatar />` component with onError swap (image if URL set and loads, fallback to colored initials otherwise). Logo URL input on the agency edit modal with HTTPS-only validation (Cloud Storage upload blocked by Spark plan; external HTTPS URLs are the only path today). `bootstrap-reference-data.js` carries `logoUrl: null` per seed agency; agency_admins paste their URL via `/admin/agencies` edit | `a8ddb6a` |
+| 25.3 | `scripts/export-firestore.js` full-database backup | Walks every top-level collection (16 of them) + 2 known subcollection paths (`notifications/{uid}/items`, `conversations/{id}/messages`), writes JSON files under `./backups/{ISO-timestamp}/`. Timestamps normalised to ISO-8601. Spark plan has no auto-backup; this is the operator's only rollback before any destructive op. Verified live: 19,538 docs in 142.8 s. `.gitignore` updated to exclude `backups/` so PII never reaches the repo | `3a81913` |
+| 25.4 | `scripts/seed-demo-scenario.js` defense-walkthrough scenario | One request from `patient@gmail.com` for ₱25,000 (Hospital Bills) describing a pneumonia case at CRMC ICU, three attached documents in 'pending' state with placeholder text-as-base64 content. Strictly additive (won't touch existing data). `--dry-run` mode + prints walkthrough hints. Pre-defense workflow: run 1-2 hours before the panel; fresh `submittedAt` timestamps; demonstrator drives the panel through verify → intake → interview → endorse → approve → GL issued live | `3a81913` |
+| 25.5 | `<AgencyAvatar />` sweep across 8 primary surfaces | Component was only adopted on `admin/Agencies` initially. This batch swapped inline `${agency.color}`+initials at 7 other sites where the full agency object is in scope: `patient/MedicalPrograms` (mobile+desktop), `auth/Landing`, `admin/AgencyDetail`, `admin/AddAgency` form preview, `agency/Dashboard`, `agency/Program` (preview+header). Slice-derived avatar sites (slice cards, EndorseModal rows, etc.) still render from denormalised `agencyColor`/`agencyInitials` on the slice doc; adding logo support there needs a runtime lookup or denormalisation, deferred | `3a81913` |
+| R31 | Team + Audit Log missing from desktop agency sidebar | `/agency/team` was reachable only by URL or mobile bottom tabs. Desktop sidebar config (`AGENCY_NAV` in `Layout.jsx`) never listed it. Same situation for `/agency/audit`. Both routes/pages/rules worked; only sidebar discovery was broken. Added both entries with `adminOnly: true` so regular agency coordinators don't see them. Sixteen-line fix | `8ea2882` |
+| R32 | BARMM cascading dropdowns for agency location | Free-text Location field replaced with the same BARMM Province → City/Municipality cascading dropdowns the patient registration form uses, plus an optional Office / Building Name free-text field. Save still writes a derived `location` string for backward compat with every render site that reads `agency.location`. On edit of a legacy agency, structured fields start empty and the previous flat value is shown as amber helper text. Validation rejects save without province + city. Applied to BOTH `AddAgency.jsx` and the `AgencyModal` in `admin/Agencies.jsx` (the latter shared with `admin/AgencyDetail`). `bootstrap-reference-data.js` updated to seed structured fields too | `da06bbf` |
+
+End-state of §11.4c: maintenance tooling now covers reference data, full-database backups, and demo-scenario prep alongside the demo-accounts trio. Agency UX picks up logo support, sidebar discoverability for Team management, and structured BARMM-aware locations.
+
 ### 11.5 Known Issues and Limitations
 
 | Severity | Item | Status / Plan |
@@ -1500,7 +1516,9 @@ For thesis demonstration / panel walkthrough:
 | DSWD Admin | admin@dswd.gov.ph | agency123 |
 | DSWD Coordinator | coordinator@dswd.gov.ph | agency123 |
 
-These are visible in the Login page's development quick-access panel and are managed by three admin-SDK scripts that share `scripts/demo-accounts.js` as a single source of truth:
+These are visible in the Login page's development quick-access panel and are managed by a suite of admin-SDK scripts. The three demo-account scripts share `scripts/demo-accounts.js` as a single source of truth.
+
+**Demo-account maintenance (three-script trio + shared module):**
 
 | Script | Purpose | Needs service-account.json? |
 |--------|---------|-----------------------------|
@@ -1508,23 +1526,41 @@ These are visible in the Login page's development quick-access panel and are man
 | `scripts/check-demo-accounts.js` | Read-only health diagnostic. For each account: tries the canonical sign-in, reads `users/{uid}`, reports ✅ OK / ⚠️ WRONG_ROLE / 🔑 BAD_PASSWORD / 🕳️ NO_PROFILE / 🛑 MARKED_FOR_DELETION. Recommended as a pre-defense smoke test. | No (uses Web SDK + `.env`) |
 | `scripts/repair-demo-accounts.js` | Force-restore. Creates missing Auth users, force-resets drifted passwords, merges canonical fields into Firestore profiles with `{ merge: true }` so accumulated test data (patient address, photoURL, etc.) survives. `--dry-run` mode prints per-field diff. | Yes |
 
+**Reference-data + demo-scenario + backup (added §B.25, 2026-06-06):**
+
+| Script | Purpose | Needs service-account.json? |
+|--------|---------|-----------------------------|
+| `scripts/bootstrap-reference-data.js` | Seeds the four non-user reference collections: 4 agencies + 8 documentTypes + 8 assistanceTypes + 20 hospitalIds. All writes use `{merge:true}` so re-running is a no-op. Per-agency budget initialised to zero. Replaces the user-creation portion of the old `/seed` web page. Verified live: 40 writes, all 4 agencies present. | Yes |
+| `scripts/seed-demo-scenario.js` | Creates one fresh in-flight assistance request for `patient@gmail.com` (₱25,000, Hospital Bills, three pending documents). Strictly additive. `--dry-run` mode + walkthrough hints on completion. Pre-defense pre-prep so the panel sees the system in motion, not empty. | Yes |
+| `scripts/export-firestore.js` | Full-database backup. Walks every top-level collection + 2 subcollection paths, writes JSON files under `./backups/{ISO-timestamp}/`. Spark plan has no auto-backup; this is the only rollback before destructive operations. Verified live: 19,538 docs in 142.8 s. `backups/` is gitignored. | Yes |
+
 Pre-defense recommended workflow:
 
 ```bash
-# Health check (5 seconds, no credentials)
+# Step 1 — Health check (5 seconds, no credentials)
 node scripts/check-demo-accounts.js
 
-# If anything is drifted, repair (after midnight Pacific if Spark plan quota is hit)
+# Step 2 — If drifted, repair (after midnight Pacific if Spark plan quota is hit)
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
   node scripts/repair-demo-accounts.js --dry-run    # preview
 GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
   node scripts/repair-demo-accounts.js              # apply
 
-# Verify
+# Step 3 — Safety net snapshot (5 minutes; produces ~60 MB of JSON)
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  node scripts/export-firestore.js
+
+# Step 4 — Pre-prep the defense scenario (≤30 seconds)
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  node scripts/seed-demo-scenario.js
+
+# Step 5 — Final verify
 node scripts/check-demo-accounts.js
 ```
 
-The legacy `/seed` route still exists (gated by `VITE_ENABLE_SEED=true`) but its user-creation portion was moved out to `scripts/bootstrap-users.js` per the 2026-06-01 tightening of `users/create` rule — the page only seeds reference data (Hospital IDs, agencies, document types) now and refuses to run unless the operator is signed in as a super_admin.
+Approximate total time: 5–10 minutes from a fresh-laptop start to defense-ready state.
+
+The legacy `/seed` route still exists (gated by `VITE_ENABLE_SEED=true`) but its user-creation portion was moved out to `scripts/bootstrap-users.js` per the 2026-06-01 tightening of `users/create` rule. After §B.25, the reference-data portion is also superseded by `scripts/bootstrap-reference-data.js`, which uses the Admin SDK and bypasses the rule layer entirely. The `/seed` page remains as a fallback but is no longer the primary recovery path.
 
 ---
 

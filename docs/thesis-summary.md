@@ -1,6 +1,6 @@
 # MAPA — Thesis project summary
 
-Last updated: 2026-06-06.
+Last updated: 2026-06-06 (late).
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,
@@ -230,7 +230,7 @@ deletion Cloud Function (Blaze plan).
 
 ## 7. Operational posture
 
-The system is operator-runnable today via seven admin-SDK scripts,
+The system is operator-runnable today via ten admin-SDK scripts,
 grouped by purpose:
 
 **Seed + maintenance (demo accounts):**
@@ -249,6 +249,26 @@ grouped by purpose:
   merges canonical fields back into Firestore profiles (with
   `{ merge: true }` so accumulated test data like patient address
   / photoURL survives). Includes `--dry-run` mode.
+
+**Seed + maintenance (reference data + defense prep, added §B.25):**
+- `scripts/bootstrap-reference-data.js` — admin-SDK companion to
+  `bootstrap-users.js`. Seeds the four non-user reference
+  collections (4 agencies + 8 documentTypes + 8 assistanceTypes +
+  20 hospitalIds) with `{merge:true}` so re-running is idempotent.
+  Replaces the user-creation portion of the legacy `/seed` web page.
+- `scripts/seed-demo-scenario.js` — pre-prep for the thesis-defense
+  walkthrough. Creates one in-flight request from the demo patient
+  (₱25,000 for Hospital Bills) plus three pending documents.
+  Strictly additive (won't touch existing data). The demonstrator
+  drives the panel through verify → endorse → approve → GL issued
+  live in 10 minutes during the actual defense.
+- `scripts/export-firestore.js` — full-database backup via Admin
+  SDK. Walks every top-level collection + the two known
+  subcollection paths (`notifications/{uid}/items`,
+  `conversations/{id}/messages`), writes one JSON file per
+  collection under `./backups/{ISO-timestamp}/`. Spark plan has no
+  auto-backup; this is the operator's only rollback before
+  destructive operations. Verified live: 19,538 docs in 142.8 s.
 
 **Periodic + incident response:**
 - `scripts/cleanup-orphans.js` — periodic Firestore garbage
@@ -425,6 +445,33 @@ commits / docs:
     the free tier silently degrades under load instead of failing
     loudly. Blaze removes the cap; the playbook diagnoses the
     cause in under a minute.
+
+12. **"The system is recoverable from a clean checkout in under
+    ten minutes."** Five admin-SDK scripts plus a fresh
+    `service-account.json` rebuild every layer of the data model
+    independently: `bootstrap-users.js` seeds the 11 demo accounts,
+    `bootstrap-reference-data.js` seeds the 4 partner agencies +
+    catalogs, `seed-demo-scenario.js` adds one in-flight request
+    for the panel walkthrough, `export-firestore.js` snapshots the
+    current state to disk before any destructive op, and
+    `check-demo-accounts.js` is the read-only smoke test the
+    operator runs immediately before defense. The pre-defense
+    workflow (§7 above) chains them. This is the difference
+    between "demo only runs in one specific environment" and
+    "system can be brought up reproducibly anywhere with the
+    service-account key" — the latter answers the "but what if
+    something breaks?" question during defense.
+
+13. **"Agency branding is operator-managed."** Each agency can
+    set a `logoUrl` via the admin edit modal (HTTPS only since
+    Cloud Storage is off the Spark table). The shared
+    `<AgencyAvatar />` component renders the image at every site
+    where the full agency object is in scope (admin/Agencies,
+    patient/MedicalPrograms, auth/Landing, agency/Dashboard,
+    agency/Program, admin/AgencyDetail, admin/AddAgency) and
+    falls back to the colored-initials block on broken-link or
+    unset URL. Agency_admins paste their official logo URL once
+    during onboarding; no Cloud Storage upload required.
 
 ## 10. Reading order for a panel
 

@@ -1,8 +1,8 @@
 # MAPA Revision List
 
 **Project:** Medical Assistance Portal Access (MAPA) — Cotabato Regional Medical Center
-**Status:** Updated 2026-06-06
-**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, the post-pilot live-session audit round 2 (R13–R29), and the demo-account maintenance trio + Spark plan write-quota investigation.
+**Status:** Updated 2026-06-06 (late)
+**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark plan write-quota investigation, and the post-quota recovery push (reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32).
 
 ---
 
@@ -502,15 +502,37 @@ repair is queued for after the quota window resets — the script is
 verified correct via dry-run, only the project-level write quota
 stands between the current drift state and ✅ 11/11.
 
+### B.25 — Post-quota recovery: operational tooling + agency UX upgrades
+
+Once the write quota reset (midnight Pacific = 3 PM PH on 2026-06-06)
+and the demo accounts were repaired to ✅ 11/11, the rest of the day
+shifted to closing the operational gaps the audit had surfaced. Six
+commits landed in one push window covering reference-data seeding,
+agency logo support, full-database backup, defense-demo scenario
+prep, a sidebar discoverability fix, and BARMM-aware location
+dropdowns on agency forms.
+
+| # | Theme | Action Taken | Commit |
+|---|---|---|---|
+| 25.1 | `scripts/bootstrap-reference-data.js` — admin-SDK companion to bootstrap-users.js | The original `/seed` web page seeded reference data (agencies, document types, assistance types, hospital IDs) but required super_admin login + `VITE_ENABLE_SEED=true`. After the 2026-06-01 `users/create` rule tightening it stayed compatible, but during the same-day account-drift recovery the operator hit a chicken-and-egg: agencies were empty AND no admin could log in until the demo-account repair landed. This script bypasses both gates (Admin SDK ignores rules). Seeds 4 agencies + 8 documentTypes + 8 assistanceTypes + 20 hospitalIds with `setDoc(..., {merge:true})` so re-running is a true no-op. Per-agency budget initialised to `{ allocated: 0, committed: 0, disbursed: 0, period: 'monthly' }` so the allocation pages don't render NaN on first paint. Verified live: 40 total writes, all 4 agencies present | `04de563` |
+| 25.2 | Optional `logoUrl` per agency, fallback to colored initials | The agency avatar across the system has always been a colored circle + 2-letter initials (`MC` on `bg-brand-500` for Malasakit). Operator asked "can agencies change their icon to their official logo?" on 2026-06-06. Three layers: (a) new `<AgencyAvatar />` component with onError swap (image renders if `logoUrl` is set and loads; falls back to colored initials otherwise — no broken-image icon), (b) Logo URL input on the agency edit modal with HTTPS-only validation (Cloud Storage upload is blocked by Spark plan; external HTTPS URLs are the only path), (c) `logoUrl: null` added to all 4 seed agencies in `bootstrap-reference-data.js`. Agency_admin can paste their official logo URL via `/admin/agencies` edit modal; a broken URL auto-reverts to initials | `a8ddb6a` |
+| 25.3 | `scripts/export-firestore.js` — full-database backup via Admin SDK | Spark plan has no automated Firestore backup; this is the operator's only rollback before any destructive operation. Walks every top-level collection (16 of them) plus the two known subcollection paths (`notifications/{uid}/items`, `conversations/{id}/messages`), writes each as a JSON file under `./backups/{ISO-timestamp}/`. Firestore Timestamps normalised to ISO-8601 strings so the JSON is grep-friendly. Verified live: 19,538 docs exported in 142.8 s. `.gitignore` updated to exclude `backups/` so PII never reaches the repo. Restore is intentionally manual (read the JSON, write a focused restore script for the affected collection) | `3a81913` |
+| 25.4 | `scripts/seed-demo-scenario.js` — fresh in-flight request for defense walkthrough | Creates one request from `patient@gmail.com` for ₱25,000 (Hospital Bills) describing a real-sounding pneumonia case at CRMC ICU, plus three attached document records (Valid ID, Barangay Certificate, Hospital Billing Statement) in 'pending' state with placeholder text-as-base64 content so the CRMC verifier sees something when they open the viewer. Strictly additive — won't touch existing patient data. Includes `--dry-run` mode and prints a 7-step walkthrough guide. Pre-defense workflow: run this script 1-2 hours before the panel to get fresh `submittedAt` timestamps; demonstrator drives the panel through verify -> intake -> interview -> endorse -> approve -> GL issued live | `3a81913` |
+| 25.5 | `<AgencyAvatar />` sweep across 8 primary surfaces | Component shipped in §25.2 was only adopted in `admin/Agencies` initially. This batch swapped the inline `${agency.color}` + initials blocks at the 7 other sites where the full agency object is in scope: `patient/MedicalPrograms` (mobile + desktop card), `auth/Landing`, `admin/AgencyDetail`, `admin/AddAgency` (form preview), `agency/Dashboard`, `agency/Program` (preview + header). Once an agency_admin sets a logoUrl, the logo now appears consistently across the public landing page, patient catalog, agency workspace, and admin detail. The slice-derived avatar sites (`TrackStatus`, `EndorseModal`, `ApplicationDetail`, `Interviews`) still render from denormalised `agencyColor` + `agencyInitials` on the slice doc; adding logos there needs a runtime lookup or denormalisation pass, deferred | `3a81913` |
+| 25.6 (R31) | Expose Team + Audit Log in desktop agency sidebar | The agency_admin route `/agency/team` (`Team.jsx` with `AddCoordModal`) was reachable only by typing the URL or via the mobile bottom-tab nav. Desktop sidebar config (`AGENCY_NAV` in `Layout.jsx`) never listed it. Same situation for `/agency/audit`. Surfaced live: operator signed in as `admin@malasakit.gov.ph` on desktop, expected to find "Team" to add a coordinator, didn't see one. The route + page + Firestore `users/create` rule for agency_admin all worked — only the sidebar discovery was broken. Both entries added with `adminOnly: true` so regular agency coordinators don't see them. Sixteen-line fix; no backend changes | `8ea2882` |
+| 25.7 (R32) | BARMM cascading dropdowns for agency location | The Location field on agency create + edit was free text ("CRMC Ground Floor, Cotabato City"). Operator's question on 2026-06-06: "make the location a dropdown." Replaced with the same BARMM Province → City/Municipality cascading dropdown pattern the patient registration form uses, plus an optional Office / Building Name free-text field. Save still writes a derived `location` string for backward compat with every render site that reads `agency.location`. On edit of a legacy agency, the structured fields start empty and the previous flat value is shown as amber helper text ("Previously: ...") so the operator sees the prior content while picking the structured version. Validation rejects save without province + city. Applied to BOTH `AddAgency.jsx` and the `AgencyModal` in `admin/Agencies.jsx` (the latter is shared with `admin/AgencyDetail`). `bootstrap-reference-data.js` updated to seed the structured fields too | `da06bbf` |
+
+End-state of B.25: maintenance tooling complete (`bootstrap-reference-data.js` + `export-firestore.js` + `seed-demo-scenario.js` join the existing demo-accounts trio). Agency surface supports logos AND structured BARMM locations. Both UX gaps the operator surfaced live (sidebar Team link + free-text location) closed in the same session. Total commits in this batch: 6 (one bundle commit covered two pieces of work).
+
 ### B.22 — Closing summary
 
 | Metric | Value |
 |---|---|
-| Total commits across the full revision program | ~280 |
+| Total commits across the full revision program | ~290 |
 | Adviser revisions addressed | 12 of 12 |
 | Real correctness bugs caught in the read-pass series (#1-20) | 20 |
 | Real correctness bugs caught in the full-system audit (#21-31) | 11 |
-| Real correctness + UX bugs caught in the audit round 2 (R1–R29) | 29 (12 in §B.20 reliability batch, 17 in §B.23) |
+| Real correctness + UX bugs caught in the audit round 2 (R1–R32) | 31 (12 in §B.20 reliability batch, 17 in §B.23, 2 in §B.25) |
 | Live-browser audit findings (L1–L14) | 14 (9 fixed, 4 deferred-with-justification, 1 dismissed) |
 | Security passes shipped on the Firestore rules layer | 3 (auditLog + companion surfaces + patient-write constraints) |
 | Other rule tightenings (agencies/update, users/create, documents.read split) | 3 |
@@ -519,14 +541,18 @@ stands between the current drift state and ✅ 11/11.
 | Compliance features shipped | 2 (RA 10173 §16(f) patient data portability export + §16(e) right-to-erasure complete cascade — R20) |
 | Automated tests at close | 76 (29 unit + 47 rules) — full suite ~16 s |
 | Operational docs added | 2 (`docs/threat-model.md`, `docs/runbook.md`) |
-| Operator scripts available | 7 (`bootstrap-users.js`, `cleanup-orphans.js`, `cleanup-injection-audit.js`, `migrate-doc-content-to-storage.js`, `demo-accounts.js`, `check-demo-accounts.js`, `repair-demo-accounts.js`) |
+| Operator scripts available | 10 (`bootstrap-users.js`, `cleanup-orphans.js`, `cleanup-injection-audit.js`, `migrate-doc-content-to-storage.js`, `demo-accounts.js`, `check-demo-accounts.js`, `repair-demo-accounts.js`, `bootstrap-reference-data.js`, `export-firestore.js`, `seed-demo-scenario.js`) |
 | Demo-account maintenance loop | check → repair → verify, two-script trio with single shared `USERS` array (§B.24) |
+| Reference-data seeding loop | `bootstrap-reference-data.js` covers agencies + documentTypes + assistanceTypes + hospitalIds (§B.25) |
 | Operational playbook for silent gRPC hangs | Documented in §B.24 — direct REST call surfaces real error (e.g. `429 RESOURCE_EXHAUSTED`) when Admin SDK retries forever |
+| Full-database backup tool | `scripts/export-firestore.js` — Admin SDK walks all 16 top-level collections + 2 subcollection paths, JSON output, verified live at 19,538 docs in 142.8 s (§B.25) |
+| Defense-demo scenario seeder | `scripts/seed-demo-scenario.js` — one in-flight request + 3 documents for the panel walkthrough, idempotent (§B.25) |
 | UX gaps closed in the read-pass series | 17 |
-| UX gaps closed post-audit (Tier 2 + Mobile / Messages + R13–R29 batches) | ~32 |
+| UX gaps closed post-audit (Tier 2 + Mobile / Messages + R13–R32 batches) | ~34 |
 | Patient surface consistency fixes after live-session audit | 9 (R11, R12, R14, R16, R17, R18, R19, R25, R29) |
 | Cross-surface error-handling fixes after live-session audit | 6 (R21, R23, R26, R27, R6, R10) |
-| Code consolidations across the program | 21 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18 + `USERS` extracted to shared module per R30) |
+| Agency surface upgrades after live-session audit | 3 (optional `logoUrl` + Team / Audit Log sidebar gap R31 + BARMM location dropdowns R32) |
+| Code consolidations across the program | 22 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18 + `USERS` extracted to shared module per R30 + `<AgencyAvatar />` single source of truth for 8 surfaces per §B.25.5) |
 | First-visit guided tours shipped | 4 (patient Dashboard + TrackStatus, agency Dashboard, admin Dashboard) |
 | Patient-side mobile install validated end-to-end | ✅ on one real device |
 | Responsive layouts (patient surface) | 2 (Status page + Messages — both phone-first AND desktop-two-panel) |
