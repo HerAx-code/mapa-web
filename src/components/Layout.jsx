@@ -69,8 +69,14 @@ const AGENCY_NAV = [
   { to: '/agency/generator',    icon: MdCardMembership, label: 'Guarantee Letters' },
   { to: '/agency/funds',        icon: MdAttachMoney,    label: 'Funds' },
   { to: '/agency/allocation',   icon: MdAttachMoney,    label: 'Budget Allocation', adminOnly: true },
+  // R31: Team + Audit Log were present in the mobile bottom-tab config
+  // but missing from this desktop sidebar config, so /agency/team was
+  // reachable only by typing the URL or via mobile. The route + page
+  // + Firestore rule all worked; only the sidebar discovery was broken.
+  { to: '/agency/team',         icon: MdGroup,          label: 'Team',              adminOnly: true },
   { to: '/agency/announcements',icon: MdCampaign,       label: 'Promotions',        adminOnly: true },
   { to: '/agency/logs',         icon: MdListAlt,        label: 'Application Logs' },
+  { to: '/agency/audit',        icon: MdHistory,        label: 'Audit Log',         adminOnly: true },
   { to: '/agency/guide',        icon: MdMenuBook,       label: 'User Guide' },
 ]
 
