@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import { generateTempPassword } from '../../utils/password'
+import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../../utils/barmm'
 import {
   MdArrowBack, MdLocationOn, MdPhone, MdVisibility, MdVisibilityOff,
   MdContentCopy, MdRefresh,
@@ -52,11 +53,24 @@ export default function AddAgency() {
     initials:       '',
     color:          'bg-brand-500',
     description:    '',
-    location:       '',
+    // R32: structured location replaces the single free-text field.
+    // `location` is still derived + saved for backward compat with
+    // every render site that reads agency.location today.
+    province:       '',
+    city:           '',
+    officeName:     '',
     phone:          '',
     processingTime: 'Same Day',
     slotsTotal:     25,
   })
+
+  // Derived location string -- "{officeName}, {city}" or just "{city}".
+  // Used in the live preview AND saved as agency.location so old code
+  // paths (patient/MedicalPrograms, agency cards, etc.) don't have to
+  // change to read the structured fields.
+  const derivedLocation = [agency.officeName?.trim(), agency.city]
+    .filter(Boolean)
+    .join(', ')
   const [selectedReqs,  setSelectedReqs]  = useState(new Set())
   const [selectedTypes, setSelectedTypes] = useState(new Set())
   const [docTypesList,  setDocTypesList]  = useState([])
@@ -97,6 +111,8 @@ export default function AddAgency() {
     // Validate agency
     if (!agency.name.trim())     { toast.error('Agency name is required.'); return }
     if (!agency.initials.trim()) { toast.error('Initials are required.'); return }
+    if (!agency.province)        { toast.error('Province is required.'); return }
+    if (!agency.city)            { toast.error('City / Municipality is required.'); return }
     if (Number(agency.slotsTotal) < 1) { toast.error('Daily slots must be at least 1.'); return }
 
     // The first Agency Administrator is mandatory: every agency needs at
@@ -166,7 +182,13 @@ export default function AddAgency() {
           initials:       agency.initials.trim().toUpperCase().slice(0, 3),
           color:          agency.color,
           description:    agency.description.trim(),
-          location:       agency.location.trim(),
+          // R32: save both structured + derived. Old readers use
+          // `location`; new code can prefer `city` + `province` if it
+          // wants geo-aware filtering.
+          province:       agency.province,
+          city:           agency.city,
+          officeName:     agency.officeName.trim(),
+          location:       derivedLocation,
           phone:          agency.phone.trim(),
           processingTime: agency.processingTime,
           requirements:   [...selectedReqs],
@@ -273,7 +295,7 @@ export default function AddAgency() {
             />
             <div>
               <p className="text-sm font-semibold text-gray-800">{agency.name || 'Agency Name'}</p>
-              <p className="text-xs text-gray-400">{agency.location || 'Location'}</p>
+              <p className="text-xs text-gray-400">{derivedLocation || 'Location'}</p>
             </div>
           </div>
 
@@ -311,13 +333,50 @@ export default function AddAgency() {
 
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest pt-1">Contact & Location</p>
 
+          {/* R32: Province + City are BARMM cascading dropdowns (same data
+              the patient registration form uses). Office / Building Name
+              is the agency-specific bit (e.g. "CRMC Ground Floor", "BARMM
+              Admin Building", "Social Services Department"). The combined
+              `location` string saved to Firestore looks like the previous
+              free-text format for backward compatibility. */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                <MdLocationOn size={12} className="text-gray-400" /> Location
+                <MdLocationOn size={12} className="text-gray-400" /> Province <span className="text-red-400">*</span>
               </label>
-              <input className="input" placeholder="CRMC Ground Floor, Cotabato City"
-                value={agency.location} onChange={setA('location')} />
+              <select
+                className={`input ${!agency.province ? 'text-gray-400' : ''}`}
+                value={agency.province}
+                onChange={e => setAgency(p => ({ ...p, province: e.target.value, city: '' }))}>
+                <option value="">Select province</option>
+                {BARMM_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <MdLocationOn size={12} className="text-gray-400" /> City / Municipality <span className="text-red-400">*</span>
+              </label>
+              <select
+                className={`input ${!agency.city ? 'text-gray-400' : ''}`}
+                value={agency.city}
+                onChange={setA('city')}
+                disabled={!agency.province}>
+                <option value="">{agency.province ? 'Select city' : 'Pick a province first'}</option>
+                {(BARMM_MUNICIPALITIES[agency.province] ?? []).map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <MdLocationOn size={12} className="text-gray-400" /> Office / Building Name <span className="text-gray-400 font-normal">— optional</span>
+              </label>
+              <input className="input" placeholder="CRMC Ground Floor"
+                value={agency.officeName} onChange={setA('officeName')} />
+              <p className="text-xs text-gray-400 mt-0.5">Specific office, floor, or department.</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">

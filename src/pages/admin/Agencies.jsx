@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
+import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../../utils/barmm'
 import {
   MdLocationOn, MdPhone, MdEdit, MdDelete, MdAdd,
   MdRefresh, MdClose, MdWarning, MdSearch, MdMessage, MdPerson,
@@ -50,9 +51,13 @@ export const COLORS = [
 
 const EMPTY_FORM = {
   name: '', initials: '', color: 'bg-brand-500',
-  description: '', location: '', phone: '', procedure: '',
+  description: '', phone: '', procedure: '',
   processingTime: 'Same Day', slotsTotal: 25,
   logoUrl: '',
+  // R32: structured location replaces the single free-text field.
+  // `location` is derived ("{officeName}, {city}") + saved on submit
+  // so old readers (agency cards, search filter, etc.) keep working.
+  province: '', city: '', officeName: '',
 }
 
 // ── Agency Modal ──────────────────────────────────────────────────────────
@@ -65,12 +70,18 @@ export function AgencyModal({ agency, onClose, onSave }) {
       initials:       agency.initials,
       color:          agency.color,
       description:    agency.description,
-      location:       agency.location,
       phone:          agency.phone,
       procedure:      agency.procedure ?? '',
       processingTime: agency.processingTime,
       slotsTotal:     agency.slots?.total ?? 25,
       logoUrl:        agency.logoUrl ?? '',
+      // R32: existing agencies were saved with a single legacy `location`
+      // string. On first edit, structured fields start empty and the
+      // operator picks them; the previous string is shown as helper
+      // text below so they have a reference.
+      province:       agency.province   ?? '',
+      city:           agency.city       ?? '',
+      officeName:     agency.officeName ?? '',
     } : { ...EMPTY_FORM }
   )
   const [selectedTypes, setSelectedTypes] = useState(new Set(agency?.assistanceTypes ?? []))
@@ -104,9 +115,16 @@ export function AgencyModal({ agency, onClose, onSave }) {
       return next
     })
 
+  // R32: derive the legacy `location` string from structured fields.
+  const derivedLocation = [form.officeName?.trim(), form.city]
+    .filter(Boolean)
+    .join(', ')
+
   const handleSave = async () => {
     if (!form.name.trim())     { toast.error('Agency name is required.'); return }
     if (!form.initials.trim()) { toast.error('Initials are required.'); return }
+    if (!form.province)        { toast.error('Province is required.'); return }
+    if (!form.city)            { toast.error('City / Municipality is required.'); return }
     if (form.slotsTotal < 1)   { toast.error('Daily slots must be at least 1.'); return }
     // Logo URL is optional but, if provided, must be HTTPS. Local file
     // uploads are blocked by the Spark plan (Cloud Storage not available);
@@ -123,7 +141,11 @@ export function AgencyModal({ agency, onClose, onSave }) {
         initials:        form.initials.trim().toUpperCase().slice(0, 3),
         color:           form.color,
         description:     form.description.trim(),
-        location:        form.location.trim(),
+        // R32: save both structured + derived.
+        province:        form.province,
+        city:            form.city,
+        officeName:      form.officeName.trim(),
+        location:        derivedLocation,
         phone:           form.phone.trim(),
         procedure:       form.procedure.trim(),
         processingTime:  form.processingTime.trim(),
@@ -168,7 +190,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
             />
             <div>
               <p className="text-sm font-semibold text-gray-800">{form.name || 'Agency Name'}</p>
-              <p className="text-xs text-gray-400">{form.location || 'Location'}</p>
+              <p className="text-xs text-gray-400">{derivedLocation || 'Location'}</p>
             </div>
           </div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Basic Info</p>
@@ -218,10 +240,44 @@ export function AgencyModal({ agency, onClose, onSave }) {
             </p>
           </div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Contact & Location</p>
+          {/* R32: same BARMM cascading dropdowns the patient registration
+              flow uses. The combined "{officeName}, {city}" string is
+              saved as agency.location for backward compatibility with
+              every render site that still reads the flat string. */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> Location</label>
-              <input className="input" placeholder="CRMC Ground Floor, Cotabato City" value={form.location} onChange={set('location')} />
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> Province <span className="text-red-400">*</span></label>
+              <select
+                className={`input ${!form.province ? 'text-gray-400' : ''}`}
+                value={form.province}
+                onChange={e => setForm(p => ({ ...p, province: e.target.value, city: '' }))}>
+                <option value="">Select province</option>
+                {BARMM_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> City / Municipality <span className="text-red-400">*</span></label>
+              <select
+                className={`input ${!form.city ? 'text-gray-400' : ''}`}
+                value={form.city}
+                onChange={set('city')}
+                disabled={!form.province}>
+                <option value="">{form.province ? 'Select city' : 'Pick a province first'}</option>
+                {(BARMM_MUNICIPALITIES[form.province] ?? []).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> Office / Building <span className="text-gray-400 font-normal">— optional</span></label>
+              <input className="input" placeholder="CRMC Ground Floor"
+                value={form.officeName} onChange={set('officeName')} />
+              {/* On edit, surface the legacy free-text location so the
+                  operator can see what was there before. Only relevant
+                  when migrating from the old single-field schema. */}
+              {isEdit && agency.location && !agency.city && (
+                <p className="text-xs text-amber-600 mt-0.5">Previously: {agency.location}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdPhone size={12} className="text-gray-400" /> Phone</label>
