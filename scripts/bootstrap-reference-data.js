@@ -50,12 +50,19 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 // but Seed.jsx is largely a fallback now that the admin-SDK path
 // exists.
 
+// `logoUrl` is intentionally null for the demo seed. Each agency_admin
+// can paste an HTTPS link to their official logo via /admin/agencies
+// edit modal -> "Logo URL" field; the AgencyAvatar component renders
+// the image with the colored-initials block as the fallback. Demos
+// without a logo set still look polished thanks to the canonical
+// `color` + `initials` pair below.
 const SEED_AGENCIES = [
   {
     id:              'malasakit',
     name:            'Malasakit Center',
     initials:        'MC',
     color:           'bg-brand-500',
+    logoUrl:         null,
     description:     'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.',
     location:        'CRMC Ground Floor, Cotabato City',
     phone:           '064-421-2500',
@@ -70,6 +77,7 @@ const SEED_AGENCIES = [
     name:            'AMBaG Program',
     initials:        'AM',
     color:           'bg-purple-600',
+    logoUrl:         null,
     description:     'Zero balance billing for marginalized patients at CRMC and partner hospitals under the BARMM government.',
     location:        'BARMM Admin Building, Cotabato City',
     phone:           '064-421-3000',
@@ -84,6 +92,7 @@ const SEED_AGENCIES = [
     name:            'PCSO MAP',
     initials:        'PC',
     color:           'bg-red-600',
+    logoUrl:         null,
     description:     'Issues guarantee letters covering chemotherapy, radiation therapy, and essential medicines.',
     location:        'Social Services Department, CRMC',
     phone:           '064-421-2600',
@@ -98,6 +107,7 @@ const SEED_AGENCIES = [
     name:            'DSWD AICS',
     initials:        'DS',
     color:           'bg-blue-600',
+    logoUrl:         null,
     description:     'Cash assistance and medicine vouchers for individuals in crisis situations through community social workers.',
     location:        'Social Welfare Office, CRMC',
     phone:           '064-421-2700',

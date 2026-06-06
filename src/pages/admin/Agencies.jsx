@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
@@ -51,6 +52,7 @@ const EMPTY_FORM = {
   name: '', initials: '', color: 'bg-brand-500',
   description: '', location: '', phone: '', procedure: '',
   processingTime: 'Same Day', slotsTotal: 25,
+  logoUrl: '',
 }
 
 // ── Agency Modal ──────────────────────────────────────────────────────────
@@ -68,6 +70,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
       procedure:      agency.procedure ?? '',
       processingTime: agency.processingTime,
       slotsTotal:     agency.slots?.total ?? 25,
+      logoUrl:        agency.logoUrl ?? '',
     } : { ...EMPTY_FORM }
   )
   const [selectedTypes, setSelectedTypes] = useState(new Set(agency?.assistanceTypes ?? []))
@@ -105,6 +108,14 @@ export function AgencyModal({ agency, onClose, onSave }) {
     if (!form.name.trim())     { toast.error('Agency name is required.'); return }
     if (!form.initials.trim()) { toast.error('Initials are required.'); return }
     if (form.slotsTotal < 1)   { toast.error('Daily slots must be at least 1.'); return }
+    // Logo URL is optional but, if provided, must be HTTPS. Local file
+    // uploads are blocked by the Spark plan (Cloud Storage not available);
+    // external HTTPS URLs are the only path today.
+    const logoUrl = form.logoUrl.trim()
+    if (logoUrl && !/^https:\/\//.test(logoUrl)) {
+      toast.error('Logo URL must start with https://')
+      return
+    }
     setSaving(true)
     try {
       await onSave({
@@ -118,6 +129,9 @@ export function AgencyModal({ agency, onClose, onSave }) {
         processingTime:  form.processingTime.trim(),
         requirements:    [...selectedReqs],
         assistanceTypes: [...selectedTypes],
+        // Empty string -> null so an unset logo doesn't accidentally
+        // match {merge:true} writes elsewhere.
+        logoUrl:         logoUrl || null,
         slots: {
           total:     Number(form.slotsTotal),
           remaining: isEdit ? agency.slots?.remaining ?? Number(form.slotsTotal) : Number(form.slotsTotal),
@@ -140,9 +154,18 @@ export function AgencyModal({ agency, onClose, onSave }) {
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <div className={`w-12 h-12 ${form.color} rounded-xl text-white font-bold text-sm flex items-center justify-center flex-shrink-0`}>
-              {form.initials || '??'}
-            </div>
+            {/* Preview reflects what the avatar will look like after save -
+                including the live logo URL so the operator catches a typo
+                / broken image before committing. */}
+            <AgencyAvatar
+              agency={{
+                name:     form.name || 'Agency Name',
+                initials: form.initials || '??',
+                color:    form.color,
+                logoUrl:  form.logoUrl.trim() || null,
+              }}
+              className="w-12 h-12 rounded-xl text-sm"
+            />
             <div>
               <p className="text-sm font-semibold text-gray-800">{form.name || 'Agency Name'}</p>
               <p className="text-xs text-gray-400">{form.location || 'Location'}</p>
@@ -181,6 +204,18 @@ export function AgencyModal({ agency, onClose, onSave }) {
                   title={c.label} />
               ))}
             </div>
+            <p className="text-xs text-gray-400 mt-1">Used as the avatar background when no logo is set.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Logo URL <span className="text-gray-400 font-normal">— optional</span></label>
+            <input className="input" type="url" inputMode="url"
+              placeholder="https://your-agency.gov.ph/logo.png"
+              value={form.logoUrl} onChange={set('logoUrl')} />
+            <p className="text-xs text-gray-400 mt-1">
+              HTTPS link to your official logo (PNG / SVG / JPG). Replaces the
+              colored initials avatar everywhere. Leave blank to keep using
+              initials. A broken URL automatically falls back to initials.
+            </p>
           </div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Contact & Location</p>
           <div className="grid grid-cols-2 gap-3">
@@ -554,9 +589,7 @@ export default function Agencies() {
                 <div className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors select-none"
                   onClick={() => navigate(`/admin/agencies/${agency.id}`)}>
 
-                  <div className={`w-10 h-10 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center flex-shrink-0`}>
-                    {agency.initials}
-                  </div>
+                  <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
