@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { MdShield, MdArrowForward, MdDownload, MdClose } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import LanguageToggle from '../../components/LanguageToggle'
 
 // Per-role landing destination when a signed-in user hits Landing or
@@ -259,9 +260,7 @@ export default function Landing() {
                 return (
                   <div key={agency.id} className="card p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-10 h-10 ${agency.color ?? 'bg-gray-400'} rounded-xl text-white text-sm font-bold flex items-center justify-center flex-shrink-0`}>
-                        {agency.initials}
-                      </div>
+                      <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
                         <p className="text-xs text-gray-400 truncate">{agency.location}</p>

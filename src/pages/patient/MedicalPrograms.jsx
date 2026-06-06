@@ -4,6 +4,7 @@ import {
   MdSearch, MdLocationOn, MdSchedule, MdClose, MdLocalHospital, MdFavorite, MdCampaign,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useTranslation } from 'react-i18next'
@@ -158,7 +159,7 @@ export default function MedicalPrograms() {
                   {/* Mobile compact */}
                   <div className="sm:hidden p-4 w-full min-w-0">
                     <div className="flex items-start gap-3 mb-2 w-full min-w-0">
-                      <div className={`flex-shrink-0 w-10 h-10 ${agency.color} rounded-xl text-white font-bold text-xs flex items-center justify-center`}>{agency.initials}</div>
+                      <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-xs" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-gray-800 truncate">{agency.name}</h3>
                         <p className="text-xs text-gray-400 mt-0.5 truncate flex items-center gap-1"><MdLocationOn size={11} className="flex-shrink-0" />{agency.location}</p>
@@ -179,7 +180,7 @@ export default function MedicalPrograms() {
                   {/* Desktop / tablet */}
                   <div className="hidden sm:flex sm:flex-col p-5">
                     <div className="flex items-start gap-3 mb-3">
-                      <div className={`flex-shrink-0 w-11 h-11 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center`}>{agency.initials}</div>
+                      <AgencyAvatar agency={agency} className="w-11 h-11 rounded-xl text-sm" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
                         <div className="flex items-center gap-1 mt-0.5"><MdLocationOn size={12} className="text-gray-400 flex-shrink-0" /><p className="text-xs text-gray-400 truncate">{agency.location}</p></div>

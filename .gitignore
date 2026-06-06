@@ -13,3 +13,9 @@ service-account.json
 service-account-*.json
 *-service-account.json
 firebase-adminsdk-*.json
+
+# Firestore backups from scripts/export-firestore.js.
+# Each run writes ./backups/{ISO-timestamp}/ with one JSON file per
+# collection. These contain real patient PII and must never be
+# committed to the repo.
+backups/

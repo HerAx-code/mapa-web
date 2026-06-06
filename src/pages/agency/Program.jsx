@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -125,9 +126,7 @@ function PatientPreview({ agency }) {
       {/* Mock patient-side program card */}
       <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-white">
         <div className="flex items-start gap-3">
-          <div className={`w-12 h-12 ${agency.color ?? 'bg-gray-400'} rounded-xl text-white text-base font-bold flex items-center justify-center flex-shrink-0`}>
-            {agency.initials ?? agency.name?.[0]?.toUpperCase() ?? '?'}
-          </div>
+          <AgencyAvatar agency={agency} className="w-12 h-12 rounded-xl text-base" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
               <h3 className="text-base font-bold text-gray-900">{agency.name}</h3>
@@ -300,9 +299,7 @@ export default function AgencyProfile() {
             <span className="text-xs text-gray-400">— set by system administrator</span>
           </div>
           <div className="flex items-center gap-4 mb-4">
-            <div className={`w-14 h-14 ${agency.color ?? 'bg-gray-400'} rounded-2xl text-white text-lg font-bold flex items-center justify-center flex-shrink-0`}>
-              {agency.initials ?? agency.name?.[0]?.toUpperCase() ?? '?'}
-            </div>
+            <AgencyAvatar agency={agency} className="w-14 h-14 rounded-2xl text-lg" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-gray-900">{agency.name}</h2>

@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
@@ -269,9 +270,7 @@ export default function AgencyDashboard() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className={`w-10 h-10 ${agency.color} rounded-xl text-white text-sm font-bold flex items-center justify-center`}>
-            {agency.initials}
-          </div>
+          <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
           <div>
             <h1 className="page-title">{agency.name} Workspace</h1>
             <p className="page-sub">Manage medical assistance applications for {agency.name}.</p>

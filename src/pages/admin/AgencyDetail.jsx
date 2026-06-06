@@ -12,6 +12,7 @@ import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import { getOrCreateConversation } from '../../utils/messages'
 import { AgencyModal } from './Agencies'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
@@ -451,9 +452,7 @@ export default function AgencyDetail() {
         {/* ── Agency header ── */}
         <div className="card p-5 mb-4">
           <div className="flex items-start gap-4">
-            <div className={`w-14 h-14 ${agency.color ?? 'bg-gray-400'} rounded-2xl text-white font-bold text-lg flex items-center justify-center flex-shrink-0`}>
-              {agency.initials}
-            </div>
+            <AgencyAvatar agency={agency} className="w-14 h-14 rounded-2xl text-lg" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="text-lg font-bold text-gray-900">{agency.name}</h1>

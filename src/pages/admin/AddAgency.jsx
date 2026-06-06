@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import AgencyAvatar from '../../components/AgencyAvatar'
 import {
   collection, addDoc, setDoc, deleteDoc, doc, serverTimestamp, query, orderBy, where, getDocs,
 } from 'firebase/firestore'
@@ -266,9 +267,10 @@ export default function AddAgency() {
 
           {/* Live preview */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <div className={`w-12 h-12 ${agency.color} rounded-xl text-white font-bold text-sm flex items-center justify-center flex-shrink-0`}>
-              {agency.initials || '??'}
-            </div>
+            <AgencyAvatar
+              agency={{ ...agency, initials: agency.initials || '??' }}
+              className="w-12 h-12 rounded-xl text-sm"
+            />
             <div>
               <p className="text-sm font-semibold text-gray-800">{agency.name || 'Agency Name'}</p>
               <p className="text-xs text-gray-400">{agency.location || 'Location'}</p>
