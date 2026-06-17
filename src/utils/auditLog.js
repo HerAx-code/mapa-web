@@ -8,10 +8,21 @@ import { db } from '../firebase'
  * agency's slice without being able to see other agencies' entries. CRMC
  * admin entries have actorAgencyId = null.
  *
+ * `requestId` and `patientId` are optional denormalised fields added
+ * for the Activity Timeline pattern (§B.26): a co-funding agency can
+ * subscribe to every audit entry on the parent request its slice
+ * belongs to, and the patient can subscribe to every entry where their
+ * own data was accessed (Estonia X-Road citizen-visible audit pattern).
+ * Rules use these fields directly; entries without them are admin-only
+ * as before.
+ *
  * @param {object} actor - { uid, name, role, agencyId } of the user performing the action
- * @param {object} entry - { action, targetType, targetId, targetName, details }
+ * @param {object} entry - { action, targetType, targetId, targetName, details, requestId?, patientId? }
  */
-export const logAudit = (actor, { action, targetType = '', targetId = '', targetName = '', details = '' }) => {
+export const logAudit = (actor, {
+  action, targetType = '', targetId = '', targetName = '', details = '',
+  requestId = null, patientId = null,
+}) => {
   addDoc(collection(db, 'auditLog'), {
     action,
     actorId:        actor?.uid      ?? 'system',
@@ -22,6 +33,8 @@ export const logAudit = (actor, { action, targetType = '', targetId = '', target
     targetId,
     targetName,
     details,
+    requestId,
+    patientId,
     createdAt:  serverTimestamp(),
   }).catch(e => console.error('auditLog write failed:', e))
 }

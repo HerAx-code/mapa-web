@@ -396,8 +396,21 @@ service cloud.firestore {
     // field is bounded at 2000 chars to defang multi-paragraph payloads.
     // Entries are immutable — no updates or deletes ever.
     match /auditLog/{logId} {
+      // R33 (§B.26): Activity Timeline reads. Any co-funding agency
+      // can read auditLog entries scoped to a request it holds a slice
+      // in (entry.requestId matches a request whose agencyIds includes
+      // this user's agency). This powers the case timeline on
+      // agency/ApplicationDetail. The `requestId` denormalization makes
+      // this a single-field check; no expensive multi-doc get() walk.
+      //
+      // Patient self-read (planned for §B.26 follow-up): a patient can
+      // read entries where their uid matches entry.patientId. Surfaces
+      // the X-Road citizen-visible audit pattern for RA 10173 §16(c).
       allow read:   if isSuperAdmin() ||
-                       (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId());
+                       (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId()) ||
+                       (isAgency() && resource.data.requestId != null &&
+                        userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||
+                       (isAuth() && resource.data.patientId == uid());
       allow create: if isAuth() &&
                        request.resource.data.actorId == uid() &&
                        request.resource.data.details is string &&

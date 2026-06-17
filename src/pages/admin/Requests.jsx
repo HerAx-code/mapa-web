@@ -257,6 +257,10 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         targetName: request.requestId,
         details: `Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}: ${names}`
           + (notesValue ? ` · note: ${notesValue}` : ''),
+        // Timeline plumbing (§B.26): every cross-agency event on this case
+        // is queryable by participating agencies via `where('requestId', ...)`.
+        requestId: request.id,
+        patientId: request.patientId,
       })
 
       notify(request.patientId, {
@@ -633,6 +637,8 @@ function RequestDetail({ request, agencies, onClose }) {
           action: 'doc_verified',
           targetType: 'document', targetId: d.id, targetName: d.name,
           details: `Request ${request.requestId} · bulk verify`,
+          requestId: request.id,
+          patientId: request.patientId,
         })
       })
       toast.success(`Verified ${pendingDocs.length} document${pendingDocs.length === 1 ? '' : 's'}.`)
@@ -656,7 +662,7 @@ function RequestDetail({ request, agencies, onClose }) {
         status:        'assessment',
         updatedAt:     serverTimestamp(),
       })
-      logAudit(user, { action: 'interview_scheduled', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `${form.date} ${form.time}` })
+      logAudit(user, { action: 'interview_scheduled', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `${form.date} ${form.time}`, requestId: request.id, patientId: request.patientId })
       await notify(request.patientId, {
         type:  'interview_sched',
         title: 'Assessment interview scheduled',
@@ -676,7 +682,7 @@ function RequestDetail({ request, agencies, onClose }) {
         interviewNotes:   outcomeNotes.trim() || null,
         updatedAt:        serverTimestamp(),
       })
-      logAudit(user, { action: 'interview_completed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `Outcome: ${outcome}` })
+      logAudit(user, { action: 'interview_completed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `Outcome: ${outcome}`, requestId: request.id, patientId: request.patientId })
       toast.success('Interview outcome recorded.')
     } catch (err) { console.error(err); toast.error('Failed to record outcome.') }
     finally { setBusy(false) }

@@ -176,6 +176,8 @@ export default function AgencyDashboard() {
               targetId:   a.id,
               targetName: a.patientName,
               details:    `Auto-expired by Dashboard sweep — ₱${amount.toLocaleString()} released to budget`,
+              requestId:  a.requestId ?? null,
+              patientId:  a.patientId,
             })
           } catch (err) {
             console.error(`Failed to auto-expire ${a.id}:`, err)

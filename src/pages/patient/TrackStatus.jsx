@@ -10,6 +10,7 @@ import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, up
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
+import { logAudit } from '../../utils/auditLog'
 import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { computeFunding, isSliceTerminal } from '../../utils/requests'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
@@ -216,6 +217,20 @@ export default function TrackStatus() {
         status:    'reviewing',
         updatedAt: serverTimestamp(),
       })
+      // Activity Timeline (§B.26): patient's proceed is the handoff from
+      // CRMC's endorsement to the agency's funding queue -- a key event
+      // every co-funding agency on this case should see in chronological
+      // context. Best-effort: a failed audit doesn't undo the proceed.
+      logAudit(user, {
+        action:     'patient_proceeded',
+        targetType: 'application',
+        targetId:   app.id,
+        targetName: app.patientName ?? user.name,
+        details:    `Patient confirmed coverage plan; slice handed off to ${app.agencyName ?? 'agency'} for funding review`,
+        requestId:  app.requestId ?? null,
+        patientId:  user.uid,
+      })
+
       toast.success(t('patient.track.proceedOk'))
 
       // Notify the receiving agency's coordinators. Wrapped in its own

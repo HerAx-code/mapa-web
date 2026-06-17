@@ -29,6 +29,7 @@ import GLDocumentPanel from '../../components/GLDocumentPanel'
 import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
+import CaseTimeline from '../../components/CaseTimeline'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 // Application status badge + label rendering is delegated to <StatusBadge />
@@ -334,6 +335,10 @@ export default function ApplicationDetail() {
   const [appLoading, setAppLoading]         = useState(true)
   const [request, setRequest]               = useState(null)
   const [siblings, setSiblings]             = useState([])
+  // Activity Timeline events (§B.26) — auditLog entries scoped to this
+  // slice's parent request. Visible to every co-funding agency.
+  const [timeline, setTimeline]             = useState([])
+  const [timelineLoading, setTimelineLoading] = useState(true)
   const [agency, setAgency]                 = useState(null)
   const [queueIds, setQueueIds]             = useState([])
   const [patientDocs, setPatientDocs]       = useState([])
@@ -488,6 +493,37 @@ export default function ApplicationDetail() {
     return unsub
   }, [app?.requestId])
 
+  // Activity Timeline (§B.26): subscribe to every auditLog entry on this
+  // case so the coordinator sees a chronological cross-agency feed. The
+  // R33 rule allows any co-funding agency to read entries where
+  // entry.requestId matches a request whose agencyIds includes this user.
+  // For legacy slices that pre-date co-funding (no requestId), skip the
+  // query -- there's nothing meaningful to render without a parent
+  // request scope.
+  useEffect(() => {
+    if (!app?.requestId) { setTimeline([]); setTimelineLoading(false); return }
+    setTimelineLoading(true)
+    const unsub = onSnapshot(
+      query(
+        collection(db, 'auditLog'),
+        where('requestId', '==', app.requestId),
+        orderBy('createdAt', 'asc'),
+      ),
+      snap => {
+        setTimeline(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        setTimelineLoading(false)
+      },
+      (err) => {
+        // Permission denials here mean the agency's slice isn't tied to a
+        // request whose agencyIds includes them -- shouldn't happen in
+        // normal operation but is logged so the rule layer is debuggable.
+        console.error('[ApplicationDetail] timeline snapshot error:', err)
+        setTimelineLoading(false)
+      },
+    )
+    return unsub
+  }, [app?.requestId])
+
   const queueIndex = useMemo(() => queueIds.indexOf(id), [queueIds, id])
   const prevId = queueIndex > 0 ? queueIds[queueIndex - 1] : null
   const nextId = queueIndex >= 0 && queueIndex < queueIds.length - 1 ? queueIds[queueIndex + 1] : null
@@ -498,12 +534,27 @@ export default function ApplicationDetail() {
   const updateStatus = async (newStatus, extra = {}) => {
     if (!app) return false
     setUpdating(true)
+    const prevStatus = app.status
     try {
       await updateDoc(doc(db, 'applications', app.id), {
         status:    newStatus,
         updatedAt: serverTimestamp(),
         ...extra,
       })
+      // Activity Timeline (§B.26): capture every slice transition so the
+      // co-funding case shows a chronological cross-agency feed. Best-effort
+      // -- a failed audit write doesn't undo the slice update.
+      if (prevStatus !== newStatus) {
+        logAudit(user, {
+          action:     'slice_advanced',
+          targetType: 'application',
+          targetId:   app.id,
+          targetName: app.patientName,
+          details:    `${app.agencyName ?? 'Agency'}: ${prevStatus} → ${newStatus}`,
+          requestId:  app.requestId ?? null,
+          patientId:  app.patientId,
+        })
+      }
       return true
     } catch (err) {
       console.error(err)
@@ -764,6 +815,18 @@ export default function ApplicationDetail() {
         }
       })
 
+      // Activity Timeline (§B.26): approval is a major case event; every
+      // sibling agency should see this in the Case Timeline.
+      logAudit(user, {
+        action:     'app_approved',
+        targetType: 'application',
+        targetId:   app.id,
+        targetName: app.patientName,
+        details:    `${app.agencyName ?? 'Agency'} approved ₱${approvedAmount.toLocaleString()}${purposeOfAssistance?.length ? ` (${purposeOfAssistance.join(', ')})` : ''}`,
+        requestId:  app.requestId ?? null,
+        patientId:  app.patientId,
+      })
+
       await notify(app.patientId, {
         type:  'interview_approved',
         title: 'Application approved! 🎉',
@@ -915,7 +978,7 @@ export default function ApplicationDetail() {
         })
       }
       await batch.commit()
-      logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} redeemed by ${app.payableTo}` })
+      logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} redeemed by ${app.payableTo}`, requestId: app.requestId ?? null, patientId: app.patientId })
       toast.success('GL marked as redeemed.')
       setShowConfirmRedeem(false)
     } catch (err) { console.error(err); toast.error('Failed to mark GL redeemed.') }
@@ -943,7 +1006,7 @@ export default function ApplicationDetail() {
         })
       }
       await batch.commit()
-      logAudit(user, { action: 'gl_unmark_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} returned to committed (redemption reversed)` })
+      logAudit(user, { action: 'gl_unmark_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} returned to committed (redemption reversed)`, requestId: app.requestId ?? null, patientId: app.patientId })
       toast.success('Redemption reversed. Amount returned to committed.')
       setShowConfirmUnmark(false)
     } catch (err) { console.error(err); toast.error('Failed to reverse redemption.') }
@@ -1012,7 +1075,7 @@ export default function ApplicationDetail() {
         }
       })
 
-      logAudit(user, { action: 'gl_expired', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released back to budget` })
+      logAudit(user, { action: 'gl_expired', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released back to budget`, requestId: app.requestId ?? null, patientId: app.patientId })
       toast.success('GL marked as expired. Budget released.')
       setShowConfirmExpire(false)
     } catch (err) { console.error(err); toast.error('Failed to mark GL expired.') }
@@ -1134,7 +1197,7 @@ export default function ApplicationDetail() {
           body:  `${app.patientName}'s slice is back to review. The previously-secured amount is no longer guaranteed.`,
         }).catch(() => {})
       }
-      logAudit(user, { action: 'approval_reversed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released. Cooldown preserved until ${cooldownUntil?.toDate?.()?.toLocaleDateString?.() ?? 'n/a'}.` })
+      logAudit(user, { action: 'approval_reversed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released. Cooldown preserved until ${cooldownUntil?.toDate?.()?.toLocaleDateString?.() ?? 'n/a'}.`, requestId: app.requestId ?? null, patientId: app.patientId })
       toast.success('Approval reversed. Budget released. Cooldown preserved.')
       setShowConfirmReverse(false)
     } catch (err) { console.error(err); toast.error('Failed to reverse approval.') }
@@ -1428,6 +1491,14 @@ export default function ApplicationDetail() {
             {/* OVERVIEW */}
             {section === 'overview' && (
               <>
+                {/* Activity Timeline (§B.26) — chronological cross-agency
+                    event feed for this case. Only rendered for co-funding
+                    slices (have a requestId); legacy direct-apply slices
+                    don't share a case context across agencies. */}
+                {app.requestId && (
+                  <CaseTimeline events={timeline} loading={timelineLoading} />
+                )}
+
                 {app.requestId && request && siblings.length > 0 && (() => {
                   const need = Number(request.amountNeeded) || 0
                   const { committed, outstanding, headroom, pct } = computeFunding(need, siblings)
