@@ -148,6 +148,26 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       // live inside the runTransaction itself.
       const attachedDocsToStamp = []
 
+      // R34 (§B.26 Item 1.2): watcher subscriptions. Look up every
+      // agency_admin + coordinator of the agencies we're endorsing to,
+      // and seed them into request.watchers via arrayUnion inside the
+      // transaction. Subsequent slice events (approve, reject, patient
+      // proceed) fan notifications out to these watchers so each agency
+      // learns when siblings act -- ServiceNow Public Sector watcher
+      // pattern. Best-effort: a failed lookup just means fewer watchers,
+      // not a failed endorsement.
+      let watcherUids = []
+      try {
+        const staffSnap = await getDocs(query(
+          collection(db, 'users'),
+          where('agencyId', 'in', selectedIds),
+          where('role', 'in', ['agency', 'agency_admin']),
+        ))
+        watcherUids = staffSnap.docs.map(d => d.id)
+      } catch (lookupErr) {
+        console.warn('[endorse] watcher lookup failed:', lookupErr)
+      }
+
       await runTransaction(db, async (tx) => {
         const reqRef = doc(db, 'requests', request.id)
 
@@ -167,11 +187,17 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         const r = rSnap.data()
 
         // ── Writes ──
-        tx.update(reqRef, {
+        const reqUpdate = {
           agencyIds: arrayUnion(...selectedIds),
           status:    'endorsed',
           updatedAt: serverTimestamp(),
-        })
+        }
+        // R34: only add the field when we actually have UIDs to add.
+        // arrayUnion(...[]) is a no-op but cleaner to skip entirely.
+        if (watcherUids.length > 0) {
+          reqUpdate.watchers = arrayUnion(...watcherUids)
+        }
+        tx.update(reqRef, reqUpdate)
 
         for (let i = 0; i < selectedIds.length; i++) {
           const id        = selectedIds[i]

@@ -842,6 +842,23 @@ export default function ApplicationDetail() {
             : `Approved the full endorsed ₱${approvedAmount.toLocaleString()}. Guarantee Letter pending issuance.`,
         }).catch(() => {})
       }
+
+      // R34 (§B.26 Item 1.2): fan out to sibling-agency watchers so they
+      // learn about the approval in real time. Excludes the actor (own
+      // approver, who already saw the success toast) and excludes the
+      // endorsedById admin (already notified above). Best-effort -- a
+      // failed fan-out doesn't undo the approval.
+      const watchers = request?.watchers ?? []
+      const watcherTargets = watchers.filter(uid =>
+        uid !== user.uid && uid !== app.endorsedById)
+      if (watcherTargets.length > 0) {
+        Promise.allSettled(watcherTargets.map(uid => notify(uid, {
+          type:  'app_advanced',
+          title: `Sibling agency approved on a shared case`,
+          body:  `${app.agencyName ?? 'An agency'} approved ₱${approvedAmount.toLocaleString()} for ${app.patientName ?? 'patient'}. Open the case to see updated coverage.`,
+        }))).catch(() => {})
+      }
+
       setShowApprove(false)
       toast.success('Application approved. Guarantee Letter pending issuance.')
     } catch (err) {
@@ -943,6 +960,21 @@ export default function ApplicationDetail() {
         body:  `Reason: ${reason}. Re-endorse to another agency to cover the balance.`,
       }).catch(() => {})
     }
+
+    // R34: watcher fan-out -- rejection on a co-funded case means the
+    // remaining agencies might need to step up (or expect CRMC to add
+    // a new sibling). Higher signal than a pure status flip.
+    const rejWatchers = request?.watchers ?? []
+    const rejTargets = rejWatchers.filter(uid =>
+      uid !== user.uid && uid !== app.endorsedById)
+    if (rejTargets.length > 0) {
+      Promise.allSettled(rejTargets.map(uid => notify(uid, {
+        type:  'app_advanced',
+        title: `Sibling agency rejected on a shared case`,
+        body:  `${app.agencyName ?? 'An agency'} rejected ${app.patientName ?? 'patient'}'s slice. CRMC may re-endorse to another agency or this case may need additional coverage.`,
+      }))).catch(() => {})
+    }
+
     setShowReject(false)
     toast.error('Application rejected. Patient has been notified.')
   }
