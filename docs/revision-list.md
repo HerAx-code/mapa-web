@@ -1,8 +1,8 @@
 # MAPA Revision List
 
 **Project:** Medical Assistance Portal Access (MAPA) — Cotabato Regional Medical Center
-**Status:** Updated 2026-06-06 (late)
-**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark plan write-quota investigation, and the post-quota recovery push (reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32).
+**Status:** Updated 2026-06-07
+**Scope:** All revisions from the bilingual rollout through the CRMC-gateway redesign through the read-pass review series, the operator-throughput follow-up, the first-visit guided tour batch, the full-system 46-page audit + sweep, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark plan write-quota investigation, the post-quota recovery push (reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32), and **the Inter-Agency Coordination Plan Phase 1 (R33 Activity Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard)**.
 
 ---
 
@@ -524,15 +524,33 @@ dropdowns on agency forms.
 
 End-state of B.25: maintenance tooling complete (`bootstrap-reference-data.js` + `export-firestore.js` + `seed-demo-scenario.js` join the existing demo-accounts trio). Agency surface supports logos AND structured BARMM locations. Both UX gaps the operator surfaced live (sidebar Team link + free-text location) closed in the same session. Total commits in this batch: 6 (one bundle commit covered two pieces of work).
 
+### B.26 — Inter-Agency Coordination Plan, Phase 1 (R33 + R34 + R35)
+
+Triggered by the question "lets research inter-agency coordination" on 2026-06-06 late. Surveyed how comparable systems handle multi-stakeholder coordination — NHS England Integrated Care Systems, Salesforce Public Sector, ServiceNow Public Sector Digital Services, Bonterra Apricot, UNHCR proGres, Estonia X-Road, Open Referral / HSDS — and drafted a four-phase plan (`docs/coordination-research.md` is summarised in this revision list, not yet a standalone file). Phase 1 is the pre-defense polish layer; Phases 2–4 are documented as future work in `docs/thesis-documentation.md §11.4d` and §12.2.
+
+| # | Theme | Action Taken | Commit |
+|---|---|---|---|
+| 26.1 (R33) | Case Timeline — chronological cross-agency event feed on every co-funded case | `<CaseTimeline />` component (115 lines) renders above the existing "Co-funding picture" panel on `agency/ApplicationDetail`. Source: Salesforce Public Sector Activity Timeline + NHS England Shared Care Records chronological view. Each agency sees the case from the network's perspective in time order — Bardach (1998) calls this "frame reflection" and identifies it as essential to collaborative public management. Plumbing: `logAudit()` gained optional `requestId` + `patientId` parameters; 9 existing call sites updated to pass them through; 3 NEW audit event types added (`slice_advanced` emitted inside `updateStatus()` so every status transition is captured; `app_approved` emitted at end of approve transaction; `patient_proceeded` emitted from `patient/TrackStatus.jsx` so agencies see the patient's handoff to funding review). `firestore.rules` `auditLog.read` extended with two clauses: any co-funding agency can read entries scoped to a request it holds a slice in; any patient can read entries where `entry.patientId == uid()` (set up for §B.27 patient-visible audit view) | `0744760` |
+| 26.2 (R34) | Watcher subscriptions on requests — sibling-agency notifications | When CRMC endorses a request, every `agency_admin` + `agency` (coordinator) UID of the endorsed agencies is `arrayUnion`-ed into `request.watchers[]` inside the same transaction. On `app_approved` and slice rejection, notifications fan out to every watcher except the actor (and except the `endorsedById` admin, already notified). Source: ServiceNow Public Sector watcher/subscriber model. Klijn & Koppenjan (2016) call this "network awareness" — each node sees the network's activity in real time without polling. Scope deliberately limited to approve + reject events (high-signal cross-agency moments); minor transitions stay in the Case Timeline only, to avoid notification noise. No new firestore.rules required — the existing `isAdmin()` permission on `requests.update` already covers the watcher-write path, and the existing co-funding agency `requests.read` clause covers the read | `7607637` |
+| 26.3 (R35) | Live over-commitment guard in ApproveModal | Soft warning that updates as the coordinator types AND as sibling agencies independently approve. Three states: gray (partial), green (would fully fund), amber (would over-commit). Amber shows the over-commit amount and offers "Coordinate via CRMC, or lower your amount." Doesn't block submit — MAPA's existing design explicitly allows controlled over-commitment (CRMC sometimes intentionally over-endorses to give the patient a buffer if any agency rejects). Source: industry-standard optimistic concurrency UX, with MAPA's preserved-human-judgment twist. Reuses the already-subscribed `siblings` array from the parent page; no new reads. Demonstrates Bardach's (1998) "collaborative craftsmanship" principle: the platform informs, the operator decides | `cec9960` |
+
+End-state of B.26: Phase 1 of the four-phase coordination plan ships. Each co-funding agency now sees (a) a chronological feed of every cross-agency event, (b) real-time push notifications when siblings approve or reject, (c) a live coordination signal in the approval flow that shows the running network total. Pattern sourcing connects to NHS, Salesforce, ServiceNow, and the public-administration literature on collaborative governance.
+
+Pending coordination work (Phases 2–4) documented in `docs/thesis-documentation.md §11.4d` for honest future-work framing:
+- Phase 2 (post-defense, half-day each): Structured referral system (Bonterra warm-handoff), outcome reconciliation (previousRejections carry-forward), patient-visible audit view (Estonia X-Road)
+- Phase 3 (Blaze-dependent v2): In-case comment threads (Salesforce Chatter), joint Meet scheduling, Open Referral / HSDS adapter
+- Phase 4 (production / multi-hospital): Multi-hospital sharding, real outcome tracking, donor analytics, PhilSys integration
+
 ### B.22 — Closing summary
 
 | Metric | Value |
 |---|---|
-| Total commits across the full revision program | ~290 |
+| Total commits across the full revision program | ~295 |
 | Adviser revisions addressed | 12 of 12 |
 | Real correctness bugs caught in the read-pass series (#1-20) | 20 |
 | Real correctness bugs caught in the full-system audit (#21-31) | 11 |
 | Real correctness + UX bugs caught in the audit round 2 (R1–R32) | 31 (12 in §B.20 reliability batch, 17 in §B.23, 2 in §B.25) |
+| Inter-Agency Coordination features shipped (R33–R35, §B.26) | 3 (Case Timeline, Watcher Subscriptions, Live Over-Commitment Guard) |
 | Live-browser audit findings (L1–L14) | 14 (9 fixed, 4 deferred-with-justification, 1 dismissed) |
 | Security passes shipped on the Firestore rules layer | 3 (auditLog + companion surfaces + patient-write constraints) |
 | Other rule tightenings (agencies/update, users/create, documents.read split) | 3 |
@@ -552,7 +570,7 @@ End-state of B.25: maintenance tooling complete (`bootstrap-reference-data.js` +
 | Patient surface consistency fixes after live-session audit | 9 (R11, R12, R14, R16, R17, R18, R19, R25, R29) |
 | Cross-surface error-handling fixes after live-session audit | 6 (R21, R23, R26, R27, R6, R10) |
 | Agency surface upgrades after live-session audit | 3 (optional `logoUrl` + Team / Audit Log sidebar gap R31 + BARMM location dropdowns R32) |
-| Code consolidations across the program | 22 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18 + `USERS` extracted to shared module per R30 + `<AgencyAvatar />` single source of truth for 8 surfaces per §B.25.5) |
+| Code consolidations across the program | 23 (incl. `isSliceTerminal` hoisted to `utils/requests` per R18 + `USERS` extracted to shared module per R30 + `<AgencyAvatar />` single source of truth for 8 surfaces per §B.25.5 + `<CaseTimeline />` reusable cross-agency event feed component per R33) |
 | First-visit guided tours shipped | 4 (patient Dashboard + TrackStatus, agency Dashboard, admin Dashboard) |
 | Patient-side mobile install validated end-to-end | ✅ on one real device |
 | Responsive layouts (patient surface) | 2 (Status page + Messages — both phone-first AND desktop-two-panel) |

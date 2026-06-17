@@ -1,6 +1,6 @@
 # MAPA — Thesis project summary
 
-Last updated: 2026-06-06 (late).
+Last updated: 2026-06-07.
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,
@@ -472,6 +472,34 @@ commits / docs:
     falls back to the colored-initials block on broken-link or
     unset URL. Agency_admins paste their official logo URL once
     during onboarding; no Cloud Storage upload required.
+
+14. **"Inter-agency coordination is implemented as three
+    sourced enterprise patterns, not ad-hoc UX."** MAPA's
+    Phase 1 coordination layer (§B.26, R33–R35) ships three
+    mechanisms each drawn from a documented production system:
+    (a) the **Case Timeline** on every agency's view of a
+    co-funded case renders a chronological cross-agency event
+    feed — Salesforce Public Sector Activity Timeline + NHS
+    England Integrated Care Systems shared care record event
+    view; (b) **watcher subscriptions** push real-time
+    notifications to all participating agency staff when
+    siblings approve or reject — ServiceNow Public Sector
+    watcher / subscriber model; (c) a **live over-commitment
+    guard** in the approve flow shows the running co-funding
+    total as the coordinator types, with three colour-coded
+    states — industry-standard optimistic concurrency UX,
+    preserved-human-judgment variant. All three operate within
+    the deliberately constrained CRMC-gateway model: agencies
+    remain independent decision-makers; CRMC remains the
+    network broker. The platform supports structural
+    coordination — Bardach (1998) "frame reflection",
+    Klijn & Koppenjan (2016) "network awareness" — while the
+    social workers do the relational work. Three coordination
+    features pending in Phases 2–4 (structured referrals,
+    outcome reconciliation, patient-visible audit trail,
+    in-case comment threads, joint Meet scheduling, HSDS
+    interop adapter) are documented as honest future work in
+    `docs/thesis-documentation.md §11.4d` and §12.2.
 
 ## 10. Reading order for a panel
 
