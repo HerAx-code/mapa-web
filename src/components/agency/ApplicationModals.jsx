@@ -91,7 +91,7 @@ export function RejectModal({ app, onConfirm, onClose }) {
 
 // ── Approve / Issue GL Modal ─────────────────────────────────────────────
 
-export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
+export function ApproveModal({ app, agency, currentUser, request = null, siblings = [], onConfirm, onClose }) {
   // Don't prefill the amount. Under the pure-selection endorsement model
   // amountRequested = the full bill, so prefilling it would tee up an
   // auto-approve-the-whole-thing — the opposite of the case-assessment
@@ -168,6 +168,22 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
   const exceedsBudget    = hasBudget && amountNum > remaining
   const exceedsRequested = isSlice && sliceCap > 0 && amountNum > sliceCap
   const exceedsPerCap    = perApplicantCap > 0 && amountNum > perApplicantCap
+
+  // R35 (§B.26 Item 1.3): live over-commitment guard. Sibling agencies on
+  // the same request may have committed since this modal opened (the
+  // siblings array updates via onSnapshot). Surface the running total so
+  // the coordinator sees what their proposed amount adds to the network's
+  // running total. Soft warning -- doesn't block submit -- because the
+  // existing design explicitly allows controlled over-commitment (CRMC
+  // sometimes intentionally over-endorses to give the patient a buffer).
+  const needAmount = Number(request?.amountNeeded) || 0
+  const siblingsCommitted = (siblings ?? [])
+    .filter(s => s.id !== app?.id && ['approved', 'certificate'].includes(s.status) && s.glStatus !== 'expired')
+    .reduce((sum, s) => sum + (Number(s.amountApproved) || 0), 0)
+  const projectedTotal = siblingsCommitted + amountNum
+  const overCommit     = needAmount > 0 && projectedTotal > needAmount
+  const fullFunded     = needAmount > 0 && projectedTotal === needAmount
+  const pctOfBill      = needAmount > 0 ? Math.min(100, Math.round((projectedTotal / needAmount) * 100)) : 0
 
   const handleSubmit = () => {
     if (amountNum <= 0)      { toast.error('Enter a valid amount greater than 0.'); return }
@@ -254,6 +270,51 @@ export function ApproveModal({ app, agency, currentUser, onConfirm, onClose }) {
           ) : (
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
               <strong>No budget allocated yet.</strong> The administrator can set an allocation on the Agency Detail page. Approvals can proceed but won't be tracked against a budget.
+            </div>
+          )}
+
+          {/* R35: live coordination signal. As the coordinator types an
+              amount, show the projected total across the request. Updates
+              live as sibling agencies approve/expire (siblings subscription
+              is upstream in ApplicationDetail). Soft warning on
+              over-commitment; positive cue on perfect fill. */}
+          {isSlice && needAmount > 0 && (
+            <div className={`rounded-xl p-3 border ${
+              overCommit  ? 'bg-amber-50 border-amber-200'
+              : fullFunded ? 'bg-green-50 border-green-200'
+                           : 'bg-gray-50 border-gray-100'
+            }`}>
+              <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                <p className={`text-xs font-semibold ${
+                  overCommit  ? 'text-amber-800'
+                  : fullFunded ? 'text-green-800'
+                               : 'text-gray-600'
+                }`}>
+                  {overCommit  ? '⚠ Over-commitment warning'
+                   : fullFunded ? '✓ Would fully fund this case'
+                                 : 'Co-funding running total'}
+                </p>
+                <span className="text-xs text-gray-500">{pctOfBill}% of bill</span>
+              </div>
+              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-1.5">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    overCommit  ? 'bg-amber-400'
+                    : fullFunded ? 'bg-green-400'
+                                 : 'bg-brand-400'
+                  }`}
+                  style={{ width: `${pctOfBill}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Sibling agencies committed <strong>₱{siblingsCommitted.toLocaleString()}</strong>;
+                your proposed <strong>₱{amountNum.toLocaleString()}</strong> would bring
+                the total to <strong>₱{projectedTotal.toLocaleString()}</strong> of
+                ₱{needAmount.toLocaleString()} needed.
+                {overCommit && (
+                  <> That's <strong>₱{(projectedTotal - needAmount).toLocaleString()} over</strong> the bill — another agency may have already covered this. Coordinate via CRMC, or lower your amount.</>
+                )}
+              </p>
             </div>
           )}
 

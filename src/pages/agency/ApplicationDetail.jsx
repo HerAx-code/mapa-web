@@ -1898,6 +1898,8 @@ export default function ApplicationDetail() {
         )}
         {showApprove && (
           <ApproveModal app={app} agency={agency} currentUser={user}
+            request={request}
+            siblings={siblings}
             onConfirm={handleApprove}
             onClose={() => setShowApprove(false)} />
         )}
