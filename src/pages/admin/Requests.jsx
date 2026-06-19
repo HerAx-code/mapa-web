@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
 import {
-  collection, query, where, onSnapshot, doc, getDoc, getDocs, updateDoc,
+  collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc,
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -22,6 +22,7 @@ import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle, MdVisibility, MdDescription,
   MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch, MdRefresh,
+  MdGroups, MdThumbDown,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -1164,6 +1165,7 @@ function RequestDetail({ request, agencies, onClose }) {
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function Requests() {
+  const { user } = useAuth()
   const [requests, setRequests] = useState([])
   const [agencies, setAgencies] = useState([])
   const [allSlices, setAllSlices] = useState([])
@@ -1171,6 +1173,11 @@ export default function Requests() {
   const [selected, setSelected] = useState(null)
   const [search,   setSearch]   = useState('')
   const [filter,   setFilter]   = useState('all')
+  // R36 (§B.27): live pending referral suggestions from agencies. Surfaced
+  // as an amber banner above the requests table so CRMC sees the
+  // bottom-up coordination signal without leaving this page.
+  const [pendingSuggestions, setPendingSuggestions] = useState([])
+  const [actingOn, setActingOn] = useState(null)
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db, 'requests'), snap => {
@@ -1194,8 +1201,70 @@ export default function Requests() {
       snap => setAllSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => setAllSlices([]),
     )
-    return () => { u1(); u2(); u3() }
+    // R36: pending referral suggestions. Bonterra-style closed-loop --
+    // CRMC sees agency-side bottom-up signals here, decides accept/decline.
+    const u4 = onSnapshot(
+      query(collection(db, 'referralSuggestions'),
+            where('status', '==', 'pending'),
+            orderBy('createdAt', 'desc')),
+      snap => setPendingSuggestions(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => { console.error('[Requests] suggestions snapshot error:', err) },
+    )
+    return () => { u1(); u2(); u3(); u4() }
   }, [])
+
+  // R36: respond to a referral suggestion. Accept -> opens the request's
+  // EndorseModal for the operator to actually do the endorsement; doesn't
+  // auto-endorse (CRMC retains final judgment). Decline -> writes a
+  // decline reason that the suggesting agency can see.
+  const handleAcceptSuggestion = async (s) => {
+    if (actingOn) return
+    setActingOn(s.id)
+    try {
+      await updateDoc(doc(db, 'referralSuggestions', s.id), {
+        status:      'accepted',
+        respondedAt: serverTimestamp(),
+        respondedBy: user.uid,
+      })
+      // Navigate to the request and open it so CRMC can endorse.
+      const req = requests.find(r => r.id === s.requestId)
+      if (req) {
+        setSelected(req)
+        toast.success(`Suggestion accepted. Endorse the case to ${s.toAgencyName} from the modal.`)
+      } else {
+        toast.success('Suggestion accepted. Find the request to endorse.')
+      }
+    } catch (err) {
+      console.error('[Requests] accept suggestion failed:', err)
+      toast.error('Could not accept suggestion. Try again.')
+    } finally {
+      setActingOn(null)
+    }
+  }
+
+  const handleDeclineSuggestion = async (s) => {
+    if (actingOn) return
+    const reason = window.prompt(
+      `Decline reason (visible to ${s.fromUserName} at ${s.fromAgencyId}):`,
+      ''
+    )
+    if (!reason || !reason.trim()) return
+    setActingOn(s.id)
+    try {
+      await updateDoc(doc(db, 'referralSuggestions', s.id), {
+        status:        'declined',
+        declineReason: reason.trim(),
+        respondedAt:   serverTimestamp(),
+        respondedBy:   user.uid,
+      })
+      toast.success('Suggestion declined. Suggesting agency will see your reason.')
+    } catch (err) {
+      console.error('[Requests] decline suggestion failed:', err)
+      toast.error('Could not decline suggestion. Try again.')
+    } finally {
+      setActingOn(null)
+    }
+  }
 
   // Mirror trigger for the daily slot reset. The primary mechanism in the
   // pilot is the lazy check on agency/Dashboard.jsx, but if a CRMC operator
@@ -1326,6 +1395,71 @@ export default function Requests() {
           <h1 className="page-title flex items-center gap-2"><MdReceiptLong className="text-brand-500" size={22} /> Assistance Requests</h1>
           <p className="page-sub">Review patient requests, verify the bill, and endorse them to agencies toward zero balance.</p>
         </div>
+
+        {/* R36: agency suggestions queue. Amber banner surfaces bottom-up
+            referral signals from agency staff. Each suggestion is an
+            information channel into the network broker (CRMC) -- accepting
+            does NOT auto-endorse, only acknowledges; CRMC still decides
+            and endorses through the normal flow. */}
+        {pendingSuggestions.length > 0 && (
+          <div className="mb-4 border border-amber-200 bg-amber-50/60 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MdGroups className="text-amber-600" size={18} />
+              <h2 className="text-sm font-semibold text-amber-900">
+                Agency suggestions ({pendingSuggestions.length})
+              </h2>
+              <span className="text-xs text-amber-700/70">
+                — agencies recommending another partner be brought onto a case
+              </span>
+            </div>
+            <div className="space-y-2">
+              {pendingSuggestions.map(s => (
+                <div key={s.id} className="bg-white rounded-lg border border-amber-100 p-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900">
+                        <span className="font-medium">{s.fromUserName}</span>
+                        <span className="text-gray-500"> at </span>
+                        <span className="font-medium">{agencies.find(a => a.id === s.fromAgencyId)?.name ?? s.fromAgencyId}</span>
+                        <span className="text-gray-500"> suggests endorsing </span>
+                        <span className="font-medium">{s.patientName}</span>
+                        <span className="text-gray-500"> to </span>
+                        <span className="font-medium">{s.toAgencyName}</span>
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1 italic">"{s.reason}"</p>
+                      <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1.5">
+                        {s.recommendedAmount && (
+                          <span>Recommended ₱{Number(s.recommendedAmount).toLocaleString()}</span>
+                        )}
+                        <span className={`px-1.5 py-0.5 rounded font-medium ${
+                          s.urgency === 'high' ? 'bg-red-50 text-red-700' :
+                          s.urgency === 'medium' ? 'bg-amber-50 text-amber-700' :
+                          'bg-gray-50 text-gray-600'
+                        }`}>{s.urgency} urgency</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleAcceptSuggestion(s)}
+                        disabled={actingOn === s.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white flex items-center gap-1"
+                      >
+                        <MdCheck size={14} /> Accept
+                      </button>
+                      <button
+                        onClick={() => handleDeclineSuggestion(s)}
+                        disabled={actingOn === s.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 text-gray-700 flex items-center gap-1"
+                      >
+                        <MdThumbDown size={12} /> Decline
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Toolbar: search + status filter */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">

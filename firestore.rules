@@ -555,5 +555,44 @@ service cloud.firestore {
                         resource.data.source == 'agency' &&
                         resource.data.agencyId == userAgencyId());
     }
+
+    // ── referralSuggestions ──
+    // R36 (§B.27): Bonterra warm-handoff pattern. An agency_admin or
+    // coordinator at an agency that already holds a slice on a case may
+    // suggest that CRMC endorses a SIBLING agency for the same request.
+    // CRMC reviews each suggestion -- accept (pre-fills EndorseModal for
+    // the target agency) or decline (logs a reason visible to the
+    // originating agency). The suggestion does not commit any agency to
+    // action; it is an information channel from the ground (agencies)
+    // to the network broker (CRMC).
+    //
+    // Reads:
+    //   - admins always
+    //   - the originating agency to track their own suggestions
+    //   - the target agency to see suggestions directed at them
+    // Creates:
+    //   - any agency staff for THEIR OWN agency (forgery-resistant)
+    //   - status must be 'pending' on create
+    //   - reason capped at 1000 chars
+    // Updates:
+    //   - admins only, status must transition to 'accepted' or 'declined'
+    // Deletes:
+    //   - never (suggestions are part of the audit trail)
+    match /referralSuggestions/{suggestionId} {
+      allow read:   if isAuth() && (
+                       isAdmin() ||
+                       (isAgency() && resource.data.fromAgencyId == userAgencyId()) ||
+                       (isAgency() && resource.data.toAgencyId   == userAgencyId())
+                     );
+      allow create: if isAuth() && isAgency() &&
+                       request.resource.data.fromAgencyId == userAgencyId() &&
+                       request.resource.data.fromUserId   == uid() &&
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.reason is string &&
+                       request.resource.data.reason.size() <= 1000;
+      allow update: if isAdmin() &&
+                       request.resource.data.status in ['accepted', 'declined'];
+      allow delete: if false;
+    }
   }
 }

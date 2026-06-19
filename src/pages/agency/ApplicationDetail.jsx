@@ -20,7 +20,7 @@ import {
   MdDescription, MdAssignment, MdAttachMoney, MdVideoCall,
   MdNote, MdAdd, MdWarning,
   MdPrint, MdUpload, MdInfo, MdReceipt, MdHistory,
-  MdHourglassEmpty, MdPlayArrow,
+  MdHourglassEmpty, MdPlayArrow, MdGroups,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { isIntakeComplete, requiredFieldsStatus } from '../../utils/intakeSheet'
@@ -30,6 +30,7 @@ import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
 import CaseTimeline from '../../components/CaseTimeline'
+import SuggestEndorsementModal from '../../components/agency/SuggestEndorsementModal'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 // Application status badge + label rendering is delegated to <StatusBadge />
@@ -350,6 +351,9 @@ export default function ApplicationDetail() {
   const [showApprove, setShowApprove]         = useState(false)
   const [showUpload, setShowUpload]           = useState(false)
   const [showRequestInfo, setShowRequestInfo] = useState(false)
+  // R36: agency-side "Suggest another agency" modal (Bonterra warm-handoff
+  // pattern). Only opened on co-funded slices; gated by role check in render.
+  const [showSuggest, setShowSuggest]         = useState(false)
   // Confirm-modal flags for the four GL-lifecycle actions that used to
   // fire window.confirm. The actual action runs from the modal's onConfirm.
   const [showConfirmRedeem, setShowConfirmRedeem]       = useState(false)
@@ -1538,9 +1542,24 @@ export default function ApplicationDetail() {
                     (a.id === app.id ? -1 : 0) - (b.id === app.id ? -1 : 0))
                   return (
                     <div className="card p-5">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <MdAttachMoney size={13} /> Co-funding picture
-                      </p>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                          <MdAttachMoney size={13} /> Co-funding picture
+                        </p>
+                        {/* R36: "Suggest another agency" button — Bonterra
+                            warm-handoff pattern. Visible only to agency_admin
+                            on co-funded slices where there's still headroom
+                            (no point suggesting more help if fully funded). */}
+                        {user.role === 'agency_admin' && headroom > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowSuggest(true)}
+                            className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
+                          >
+                            <MdGroups size={14} /> Suggest another agency
+                          </button>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-xs text-gray-400 mb-0.5">Total bill</p>
@@ -1902,6 +1921,13 @@ export default function ApplicationDetail() {
             siblings={siblings}
             onConfirm={handleApprove}
             onClose={() => setShowApprove(false)} />
+        )}
+        {showSuggest && (
+          <SuggestEndorsementModal
+            app={app}
+            request={request}
+            siblings={siblings}
+            onClose={() => setShowSuggest(false)} />
         )}
         {showUpload && (
           <SignedGLUploadModal app={app} existing={signedScan} onClose={() => setShowUpload(false)} />

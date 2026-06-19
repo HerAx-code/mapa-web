@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   MdSearch, MdVideoCall, MdMenuBook,
   MdPerson, MdLock, MdShield, MdHelp, MdFlag,
-  MdLogout, MdChevronRight, MdLanguage, MdTour,
+  MdLogout, MdChevronRight, MdLanguage, MdTour, MdSecurity,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
@@ -77,8 +77,11 @@ export default function PatientMore() {
     {
       heading: t('patient.more.account'),
       items: [
-        { icon: MdPerson, label: t('shell.profile.accountSettings'), modal: 'account'  },
-        { icon: MdLock,   label: t('shell.profile.changePassword'),  modal: 'password' },
+        { icon: MdPerson,   label: t('shell.profile.accountSettings'),       modal: 'account'  },
+        { icon: MdLock,     label: t('shell.profile.changePassword'),        modal: 'password' },
+        // R37: citizen-visible audit trail (RA 10173 §16c). Route lives at
+        // /patient/access-log -- handled by item.to in handleRowClick.
+        { icon: MdSecurity, label: 'Who has accessed your record',           to: '/patient/access-log' },
       ],
     },
     {
