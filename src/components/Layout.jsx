@@ -26,6 +26,7 @@ import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
 import OfflineBanner from './OfflineBanner'
 import AnnouncementBanner from './AnnouncementBanner'
+import { computeSurface } from '../utils/announcements'
 import InstallNudge from './InstallNudge'
 import { tsToDate } from '../utils/dates'
 import BottomTabBar from './BottomTabBar'
@@ -900,12 +901,16 @@ export default function Layout({ children, breadcrumb }) {
           const start = ann.startAt?.toDate?.()?.getTime() ?? 0
           const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
 
-          // The alert banner is for CRMC system notices only. Agency promotions
-          // are surfaced on the Find Programs catalog, not here.
-          const audienceOk = ann.source !== 'agency'
+          // R38: this top strip renders only when the announcement opts
+          // into 'banner' or 'both'. Existing CRMC announcements default
+          // to 'banner' via computeSurface, so pre-R38 behavior is
+          // preserved; agency promotions default to 'feed' and stay off
+          // the banner the way they always did.
+          const surface = computeSurface(ann)
+          const surfaceOk = surface === 'banner' || surface === 'both'
 
           // Show banner if audience matches, within the window, not dismissed
-          if (audienceOk && now >= start && now <= end && !dismissed.includes(ann.id)) {
+          if (surfaceOk && now >= start && now <= end && !dismissed.includes(ann.id)) {
             live.push(ann)
           }
 
