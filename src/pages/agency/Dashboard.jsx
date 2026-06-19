@@ -1,5 +1,7 @@
 import Layout from '../../components/Layout'
 import AgencyAvatar from '../../components/AgencyAvatar'
+import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
+import { useFeedAnnouncements } from '../../utils/announcements'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
@@ -46,6 +48,13 @@ export default function AgencyDashboard() {
   const [applications, setApplications] = useState([])
   const [loading, setLoading]           = useState(true)
   const [showTopUp, setShowTopUp]       = useState(false)
+
+  // R38: dashboard "What's new" feed. Coordinators see CRMC notices
+  // targeted at their role plus their own agency's posted promos
+  // (so they can verify what patients see).
+  const feedAnnouncements = useFeedAnnouncements({
+    role: user?.role, agencyId: user?.agencyId, uid: user?.uid,
+  })
 
   // Load agency data + auto-reset slots at start of each new day
   useEffect(() => {
@@ -302,6 +311,13 @@ export default function AgencyDashboard() {
             <div className="text-xs text-gray-500 mb-1">Total Approved</div>
             <p className="text-2xl font-semibold text-gray-800">{approvedCount}</p>
           </div>
+        </div>
+
+        {/* R38: "What's new" feed — CRMC notices + own agency's promos.
+            Renders null when empty so the dashboard stays clean for
+            agencies that have no active announcements. */}
+        <div className="mb-5">
+          <AnnouncementFeedCard items={feedAnnouncements} />
         </div>
 
         {/* Slot bar */}

@@ -22,6 +22,8 @@ import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
 import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { isSliceTerminal } from '../../utils/requests'
+import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
+import { useFeedAnnouncements } from '../../utils/announcements'
 
 // Parses "YYYY-MM-DD" + "2:00 PM" / "14:00" / "2:00 pm" into a Date.
 // Returns null if either part can't be parsed.
@@ -160,6 +162,12 @@ export default function PatientDashboard() {
     if (!raw) return 'Patient'
     return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
   })()
+
+  // R38: dashboard "What's new" feed — CRMC notices opted into 'feed'
+  // or 'both', plus all active agency promotions (audience: patients).
+  const feedAnnouncements = useFeedAnnouncements({
+    role: user?.role, agencyId: user?.agencyId, uid: user?.uid,
+  })
 
   const [activeApp,  setActiveApp]  = useState(null)
   const [activeRequest, setActiveRequest] = useState(null)
@@ -423,6 +431,10 @@ export default function PatientDashboard() {
             <p className="hidden sm:block text-sm text-gray-500 mt-1 leading-snug">{greetingStatus}</p>
           )}
         </div>
+
+        {/* R38: "What's new" feed — renders null when empty so it stays
+            out of the way on a clean dashboard. */}
+        <AnnouncementFeedCard items={feedAnnouncements} />
 
         {/* Main status card — wrapped so the tour can spotlight whichever
             of the conditional branches is currently rendered (welcome

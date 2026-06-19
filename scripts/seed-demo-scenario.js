@@ -95,11 +95,86 @@ async function findPatient() {
   }
 }
 
+// R38: demo announcements so the dashboard "What's new" card is non-empty
+// during a defense walkthrough. The component hides itself on an empty
+// items list, so without seeded content the panel sees nothing.
+//
+// Two seeded:
+//   1. CRMC info-level on surface 'both' -- visible on dashboard card AND
+//      top strip; targets every non-admin role
+//   2. Malasakit promotion on surface 'feed' -- patient-only dashboard
+//      card, no top strip
+//
+// Both expire 14 days out. Re-running this script adds new copies; the
+// hook dedupes by id at render time so the card stays clean.
+async function seedAnnouncements() {
+  const now = Date.now()
+  const startAt = new Date(now)
+  const endAt   = new Date(now + 14 * 24 * 60 * 60 * 1000)
+
+  const crmc = {
+    type:        'info',
+    title:       'Office hours updated for the holidays',
+    message:     'CRMC Malasakit Center will be open 9am-12nn on December 24 and December 31. Regular hours resume January 2.',
+    startAt,
+    endAt,
+    surface:     'both',
+    targetRoles: ['patient', 'agency', 'agency_admin'],
+    source:      'crmc',
+    active:      true,
+    reminderSent: true,
+    createdAt:   FieldValue.serverTimestamp(),
+    createdBy:   'Demo Seed',
+    createdById: 'seed-script',
+  }
+
+  let malasakitId = null
+  try {
+    const malasakitSnap = await db.collection('agencies')
+      .where('name', '==', 'Malasakit Center').limit(1).get()
+    if (!malasakitSnap.empty) malasakitId = malasakitSnap.docs[0].id
+  } catch { /* tolerate */ }
+
+  const malasakit = malasakitId ? {
+    type:        'info',
+    title:       'New: Bilirubin therapy assistance available this month',
+    message:     'Malasakit Center is now covering bilirubin lights and phototherapy supplies for indigent newborns. Walk in or apply through MAPA -- ask your social worker.',
+    startAt,
+    endAt,
+    surface:     'feed',
+    audience:    'patients',
+    targetRoles: ['patient'],
+    source:      'agency',
+    agencyId:    malasakitId,
+    agencyName:  'Malasakit Center',
+    active:      true,
+    reminderSent: true,
+    createdAt:   FieldValue.serverTimestamp(),
+    createdBy:   'Demo Seed',
+    createdById: 'seed-script',
+  } : null
+
+  console.log(`\n[seed-demo-scenario] Announcements:`)
+  if (!DRY_RUN) {
+    await db.collection('announcements').add(crmc)
+  }
+  console.log(`  ${DRY_RUN ? '➕ WOULD CREATE' : '✅'} CRMC info: "${crmc.title}" (surface: both)`)
+
+  if (malasakit) {
+    if (!DRY_RUN) await db.collection('announcements').add(malasakit)
+    console.log(`  ${DRY_RUN ? '➕ WOULD CREATE' : '✅'} Malasakit promo: "${malasakit.title}" (surface: feed)`)
+  } else {
+    console.log(`  ⚠️  Skipped Malasakit promo -- no agency named "Malasakit Center" found. Run scripts/bootstrap-reference-data.js first.`)
+  }
+}
+
 async function main() {
   console.log(`[seed-demo-scenario] ${DRY_RUN ? 'DRY RUN -- no writes' : 'APPLYING seed'}`)
 
   const patient = await findPatient()
   console.log(`[seed-demo-scenario] Target patient: ${patient.name} (${PATIENT_EMAIL}, uid ${patient.uid.slice(0,8)}...)`)
+
+  await seedAnnouncements()
 
   const reqId = requestId()
   const reqRefId = DRY_RUN ? '<not-written>' : (db.collection('requests').doc()).id
