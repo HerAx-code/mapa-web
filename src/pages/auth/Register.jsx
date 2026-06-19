@@ -10,8 +10,7 @@ import { auth, db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
-import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../../utils/barmm'
-import { BARANGAYS } from '../../utils/barmm-barangays'
+import AddressPicker from '../../components/AddressPicker'
 import { hasReservedToken } from '../../utils/names'
 import toast from 'react-hot-toast'
 
@@ -163,27 +162,6 @@ export default function Register() {
     password: '', confirmPassword: '',
   })
 
-  // BARMM address is a cascading Province -> City/Municipality dropdown
-  // (barangay stays free text). "Other (not listed)" reveals a free-text
-  // field so a value outside the BARMM list (Special Geographic Area,
-  // Region XII origin, etc.) is still enterable. These flags track whether
-  // the user is in free-text mode; they're derived from any restored draft.
-  const draftProvince = draft?.form?.province ?? ''
-  const draftCity     = draft?.form?.city ?? ''
-  const [provinceOther, setProvinceOther] = useState(
-    !!draftProvince && !BARMM_PROVINCES.includes(draftProvince)
-  )
-  const [cityOther, setCityOther] = useState(
-    !!draftCity && !(BARMM_MUNICIPALITIES[draftProvince] ?? []).includes(draftCity)
-  )
-  // Barangay is a dropdown only for covered municipalities (Cotabato City +
-  // Maguindanao); everywhere else it stays free text. This flag tracks the
-  // "Other" free-text mode within a covered municipality.
-  const [barangayOther, setBarangayOther] = useState(() => {
-    const list = BARANGAYS[draftProvince]?.[draftCity]
-    return !!(draft?.form?.barangay) && !!list && !list.includes(draft.form.barangay)
-  })
-
   // Persist non-sensitive form fields + current step on every change.
   useEffect(() => {
     const { password, confirmPassword, ...safe } = form
@@ -210,47 +188,13 @@ export default function Register() {
     if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }))
   }
 
-  // Province select: picking a province resets the dependent city. "Other"
-  // switches both province and city to free-text entry.
-  const onProvinceSelect = (e) => {
-    const v = e.target.value
-    setBarangayOther(false)
-    if (v === '__other__') {
-      setProvinceOther(true); setCityOther(true)
-      setForm(prev => ({ ...prev, province: '', city: '', barangay: '' }))
-    } else {
-      setProvinceOther(false); setCityOther(false)
-      setForm(prev => ({ ...prev, province: v, city: '', barangay: '' }))
-    }
+  // AddressPicker emits {province, city, barangay} as one update; mirror
+  // that into form state and clear any field-level error for the three
+  // address fields so the user sees the validation banners disappear as
+  // they correct their entry.
+  const onAddressChange = ({ province, city, barangay }) => {
+    setForm(prev => ({ ...prev, province, city, barangay }))
     setErrors(prev => ({ ...prev, province: '', city: '', barangay: '' }))
-  }
-
-  // City/municipality select within a chosen BARMM province. Changing it
-  // resets the dependent barangay.
-  const onCitySelect = (e) => {
-    const v = e.target.value
-    setBarangayOther(false)
-    if (v === '__other__') {
-      setCityOther(true)
-      setForm(prev => ({ ...prev, city: '', barangay: '' }))
-    } else {
-      setCityOther(false)
-      setForm(prev => ({ ...prev, city: v, barangay: '' }))
-    }
-    setErrors(prev => ({ ...prev, city: '', barangay: '' }))
-  }
-
-  // Barangay select — only rendered for covered municipalities.
-  const onBarangaySelect = (e) => {
-    const v = e.target.value
-    if (v === '__other__') {
-      setBarangayOther(true)
-      setForm(prev => ({ ...prev, barangay: '' }))
-    } else {
-      setBarangayOther(false)
-      setForm(prev => ({ ...prev, barangay: v }))
-    }
-    if (errors.barangay) setErrors(prev => ({ ...prev, barangay: '' }))
   }
 
   // Email availability pre-check — fires on blur of the email field so the
@@ -622,98 +566,29 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Address — cascading BARMM Province -> City/Municipality.
-                  Barangay stays free text (BARMM has ~2,600 barangays). The
-                  "Other (not listed)" option reveals a free-text fallback so
-                  origins outside the BARMM list stay enterable. */}
+              {/* Address — cascading BARMM Province → City → Barangay
+                  picker. "Other (not listed)" reveals free-text inputs
+                  for origins outside the BARMM list (Region XII, NCR,
+                  etc.). Implementation lives in <AddressPicker>. */}
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">{t('register.step1.addressLabel')} <span className="text-red-400">*</span></p>
                 <p className="text-xs text-gray-400 mb-2">{t('register.step1.addressHint')}</p>
-                <div className="space-y-2">
-                  {/* Province */}
-                  <div>
-                    <select
-                      data-field="province"
-                      className={`${inputCls('province')} ${(!provinceOther && !form.province) ? 'text-gray-400' : ''}`}
-                      value={provinceOther ? '__other__' : form.province}
-                      onChange={onProvinceSelect}>
-                      <option value="">{t('register.step1.selectProvince')}</option>
-                      {BARMM_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-                      <option value="__other__">{t('register.step1.otherNotListed')}</option>
-                    </select>
-                    {provinceOther && (
-                      <input className={`${inputCls('province')} mt-2`} placeholder={t('register.step1.otherProvince')}
-                        value={form.province} onChange={set('province')}
-                        autoCapitalize="words" maxLength={60} />
-                    )}
-                    <FieldError msg={errors.province} />
-                  </div>
-
-                  {/* City / Municipality */}
-                  <div>
-                    {provinceOther ? (
-                      <input data-field="city" className={inputCls('city')} placeholder={t('register.step1.otherCity')}
-                        value={form.city} onChange={set('city')}
-                        autoCapitalize="words" maxLength={60} />
-                    ) : (
-                      <>
-                        <select
-                          data-field="city"
-                          className={`${inputCls('city')} ${(!cityOther && !form.city) ? 'text-gray-400' : ''}`}
-                          value={cityOther ? '__other__' : form.city}
-                          onChange={onCitySelect}
-                          disabled={!form.province && !cityOther}>
-                          <option value="">{t('register.step1.selectCity')}</option>
-                          {(BARMM_MUNICIPALITIES[form.province] ?? []).map(c => <option key={c} value={c}>{c}</option>)}
-                          <option value="__other__">{t('register.step1.otherNotListed')}</option>
-                        </select>
-                        {cityOther && (
-                          <input className={`${inputCls('city')} mt-2`} placeholder={t('register.step1.otherCity')}
-                            value={form.city} onChange={set('city')}
-                            autoCapitalize="words" maxLength={60} />
-                        )}
-                      </>
-                    )}
-                    <FieldError msg={errors.city} />
-                  </div>
-
-                  {/* Barangay — dropdown for covered municipalities
-                      (Cotabato City + Maguindanao); free text elsewhere.
-                      "Other (not listed)" reveals a free-text fallback. */}
-                  <div>
-                    {(() => {
-                      const bgyList = (!provinceOther && !cityOther)
-                        ? BARANGAYS[form.province]?.[form.city]
-                        : null
-                      if (!bgyList) {
-                        return (
-                          <input data-field="barangay" className={inputCls('barangay')} placeholder={t('register.step1.barangay')}
-                            value={form.barangay} onChange={set('barangay')}
-                            autoComplete="address-line1" autoCapitalize="words" maxLength={80} />
-                        )
-                      }
-                      return (
-                        <>
-                          <select
-                            data-field="barangay"
-                            className={`${inputCls('barangay')} ${(!barangayOther && !form.barangay) ? 'text-gray-400' : ''}`}
-                            value={barangayOther ? '__other__' : form.barangay}
-                            onChange={onBarangaySelect}>
-                            <option value="">{t('register.step1.barangay')}</option>
-                            {bgyList.map(b => <option key={b} value={b}>{b}</option>)}
-                            <option value="__other__">{t('register.step1.otherNotListed')}</option>
-                          </select>
-                          {barangayOther && (
-                            <input className={`${inputCls('barangay')} mt-2`} placeholder={t('register.step1.barangay')}
-                              value={form.barangay} onChange={set('barangay')}
-                              autoCapitalize="words" maxLength={80} />
-                          )}
-                        </>
-                      )
-                    })()}
-                    <FieldError msg={errors.barangay} />
-                  </div>
-                </div>
+                <AddressPicker
+                  value={{ province: form.province, city: form.city, barangay: form.barangay }}
+                  onChange={onAddressChange}
+                  errors={{ province: errors.province, city: errors.city, barangay: errors.barangay }}
+                  hideLabels
+                  labels={{
+                    selectProvince:    t('register.step1.selectProvince'),
+                    selectCity:        t('register.step1.selectCity'),
+                    selectBarangay:    t('register.step1.barangay'),
+                    pickProvinceFirst: t('register.step1.selectCity'),
+                    otherNotListed:    t('register.step1.otherNotListed'),
+                    otherProvince:     t('register.step1.otherProvince'),
+                    otherCity:         t('register.step1.otherCity'),
+                    otherBarangay:     t('register.step1.barangay'),
+                  }}
+                />
               </div>
             </div>
           )}

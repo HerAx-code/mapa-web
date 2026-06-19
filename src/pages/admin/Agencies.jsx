@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
-import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../../utils/barmm'
+import AddressPicker from '../../components/AddressPicker'
 import {
   MdLocationOn, MdPhone, MdEdit, MdDelete, MdAdd,
   MdRefresh, MdClose, MdWarning, MdSearch, MdMessage, MdPerson,
@@ -240,32 +240,20 @@ export function AgencyModal({ agency, onClose, onSave }) {
             </p>
           </div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Contact & Location</p>
-          {/* R32: same BARMM cascading dropdowns the patient registration
-              flow uses. The combined "{officeName}, {city}" string is
-              saved as agency.location for backward compatibility with
-              every render site that still reads the flat string. */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> Province <span className="text-red-400">*</span></label>
-              <select
-                className={`input ${!form.province ? 'text-gray-400' : ''}`}
-                value={form.province}
-                onChange={e => setForm(p => ({ ...p, province: e.target.value, city: '' }))}>
-                <option value="">Select province</option>
-                {BARMM_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> City / Municipality <span className="text-red-400">*</span></label>
-              <select
-                className={`input ${!form.city ? 'text-gray-400' : ''}`}
-                value={form.city}
-                onChange={set('city')}
-                disabled={!form.province}>
-                <option value="">{form.province ? 'Select city' : 'Pick a province first'}</option>
-                {(BARMM_MUNICIPALITIES[form.province] ?? []).map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+          {/* R32 (refactored R39): shared AddressPicker -- same component
+              the patient registration, Account Settings, and AddAgency
+              forms now use. Barangay is intentionally hidden; the office's
+              fine-grained location is the "Office / Building" field. */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+              <MdLocationOn size={12} className="text-gray-400" /> Office Location <span className="text-red-400">*</span>
+            </label>
+            <AddressPicker
+              showBarangay={false}
+              value={{ province: form.province, city: form.city, barangay: '' }}
+              onChange={({ province, city }) =>
+                setForm(p => ({ ...p, province, city }))}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

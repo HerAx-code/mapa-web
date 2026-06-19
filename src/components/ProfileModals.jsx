@@ -32,6 +32,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ROLE_LABEL } from '../utils/constants'
 import { buildPatientDataExport, downloadAsJSON, patientExportFilename } from '../utils/dataExport'
 import { useTranslation, Trans } from 'react-i18next'
+import AddressPicker, { joinAddress } from './AddressPicker'
 import {
   MdClose, MdVisibility, MdVisibilityOff, MdCameraAlt,
   MdPerson, MdLock, MdPhone, MdHome, MdEmail,
@@ -72,10 +73,18 @@ function AccountSettingsModal({ onClose }) {
   const { t }                = useTranslation()
   const fileRef = useRef(null)
 
+  // Address is structured: barangay/city/province come from registration
+  // (R39 patient flow). For pre-R39 users or staff who never had structured
+  // address fields, they default to empty -- the picker just starts fresh.
+  // The flat `address` string is rederived on save via joinAddress() so the
+  // existing display surfaces (GL, intake sheet) keep working without
+  // changes.
   const [form, setForm] = useState({
-    name:    user?.name    ?? '',
-    contact: user?.contact ?? '',
-    address: user?.address ?? '',
+    name:     user?.name     ?? '',
+    contact:  user?.contact  ?? '',
+    barangay: user?.barangay ?? '',
+    city:     user?.city     ?? '',
+    province: user?.province ?? '',
   })
   const [photoFile, setPhotoFile]     = useState(null)
   const [photoPreview, setPhotoPreview] = useState(user?.photoURL ?? null)
@@ -98,8 +107,11 @@ function AccountSettingsModal({ onClose }) {
   const isAgency  = user?.role === 'agency' || user?.role === 'agency_admin'
   const isAdmin   = user?.role === 'super_admin' || user?.role === 'staff_admin'
   // Only patients need a complete address (it appears on their GL); the
-  // banner is irrelevant for admin/agency.
-  const isIncomplete = isPatient && !form.address.trim()
+  // banner is irrelevant for admin/agency. After R39 the address is
+  // structured, so completeness means barangay/city/province all set.
+  const isIncomplete = isPatient && !(
+    form.barangay.trim() && form.city.trim() && form.province.trim()
+  )
 
   // For agency coordinators, fetch the linked agency name to display in Account Info
   useEffect(() => {
@@ -140,8 +152,18 @@ function AccountSettingsModal({ onClose }) {
       }
 
       const updates = {
-        contact: form.contact.trim(),
-        address: form.address.trim(),
+        contact:  form.contact.trim(),
+        // R39: persist both the structured fields AND a derived flat
+        // string so existing display surfaces (GL, intake sheet,
+        // patient list) keep reading from `address` without changes.
+        barangay: form.barangay.trim(),
+        city:     form.city.trim(),
+        province: form.province.trim(),
+        address:  joinAddress({
+          barangay: form.barangay,
+          city:     form.city,
+          province: form.province,
+        }),
         photoURL,
       }
       if (!isPatient) updates.name = form.name.trim()
@@ -262,10 +284,17 @@ function AccountSettingsModal({ onClose }) {
             {isPatient ? t('profile.account.homeAddress') : t('profile.account.officeAddress')}
             {!isPatient && <span className="text-xs text-gray-400 font-normal ml-1">{t('profile.account.addressOptional')}</span>}
           </label>
-          <input className="input" value={form.address} onChange={set('address')}
-            placeholder={isPatient ? t('profile.account.addressPatientPlaceholder') : t('profile.account.addressStaffPlaceholder')} />
+          {/* R39: cascading Province → City → Barangay dropdown with an
+              "Other (not listed)" free-text fallback for addresses outside
+              BARMM. Staff with offices outside the region (e.g. NCR) hit
+              the fallback once and continue typing. */}
+          <AddressPicker
+            value={{ province: form.province, city: form.city, barangay: form.barangay }}
+            onChange={({ province, city, barangay }) =>
+              setForm(prev => ({ ...prev, province, city, barangay }))}
+          />
           {isPatient && (
-            <p className="text-xs text-gray-400 mt-0.5">{t('profile.account.addressGLHint')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('profile.account.addressGLHint')}</p>
           )}
         </div>
       </div>
