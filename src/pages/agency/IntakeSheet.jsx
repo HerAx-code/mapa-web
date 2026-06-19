@@ -545,9 +545,13 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     <input className="input col-span-3 sm:col-span-2 text-sm"
                       placeholder="e.g. Driver" aria-label={`Family member ${i + 1} occupation`}
                       value={m.occupation} onChange={e => setMember(i, 'occupation', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-10 sm:col-span-2 text-sm" type="number"
-                      placeholder="0" aria-label={`Family member ${i + 1} monthly contribution`}
-                      value={m.monthlyContribution} onChange={e => setMember(i, 'monthlyContribution', e.target.value)} disabled={!canEdit} />
+                    <PesoInput
+                      wrapperClassName="col-span-10 sm:col-span-2"
+                      className="text-sm"
+                      ariaLabel={`Family member ${i + 1} monthly contribution`}
+                      value={m.monthlyContribution}
+                      onChange={e => setMember(i, 'monthlyContribution', e.target.value)}
+                      disabled={!canEdit} />
                     <button
                       className="col-span-2 sm:col-span-1 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30 flex items-center justify-center"
                       onClick={() => removeMember(i)}
@@ -584,9 +588,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <h2 className="text-sm font-semibold text-gray-800">Income & Employment</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Monthly Household Income (₱)" required>
-                  <input type="number" className="input" min={0}
-                    value={sheet.monthlyIncome} onChange={set('monthlyIncome')} disabled={!canEdit} />
+                <Field label="Monthly Household Income" required>
+                  <PesoInput
+                    value={sheet.monthlyIncome}
+                    onChange={set('monthlyIncome')}
+                    disabled={!canEdit} />
                 </Field>
                 <Field label="Employment Type">
                   <select className="input" value={sheet.employmentType} onChange={set('employmentType')} disabled={!canEdit}>
@@ -619,8 +625,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {['food','utilities','rent','education','medicine','other'].map(k => (
                   <Field key={k} label={k.charAt(0).toUpperCase() + k.slice(1)}>
-                    <input type="number" className="input" min={0}
-                      value={sheet.expenses?.[k] ?? ''} onChange={setExp(k)} disabled={!canEdit} />
+                    <PesoInput
+                      value={sheet.expenses?.[k] ?? ''}
+                      onChange={setExp(k)}
+                      disabled={!canEdit} />
                   </Field>
                 ))}
               </div>
@@ -649,9 +657,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     <input type="date" className="input" value={sheet.dateOfAdmission}
                       onChange={set('dateOfAdmission')} disabled={!canEdit} />
                   </Field>
-                  <Field label="Estimated Total Cost (₱)">
-                    <input type="number" className="input" min={0}
-                      value={sheet.estimatedTotalCost} onChange={set('estimatedTotalCost')} disabled={!canEdit} />
+                  <Field label="Estimated Total Cost">
+                    <PesoInput
+                      value={sheet.estimatedTotalCost}
+                      onChange={set('estimatedTotalCost')}
+                      disabled={!canEdit} />
                   </Field>
                 </div>
               </div>
@@ -722,6 +732,33 @@ function Field({ label, required, children, hint, colSpan }) {
       </label>
       {children}
       {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+    </div>
+  )
+}
+
+// Money input with a persistent ₱ prefix glyph. Mirrors the pattern
+// already used by patient/IntakeWizard so the agency intake sheet
+// reads the same way to operators who switch between the two surfaces.
+// wrapperClassName is for grid contexts (family-member rows) where the
+// outer column-span needs to live on the relative wrapper, not the input.
+function PesoInput({
+  value, onChange, disabled, placeholder, min = 0,
+  ariaLabel, className = '', wrapperClassName = '',
+}) {
+  return (
+    <div className={`relative ${wrapperClassName}`}>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none select-none">₱</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        className={`input pl-7 ${className}`}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+      />
     </div>
   )
 }
