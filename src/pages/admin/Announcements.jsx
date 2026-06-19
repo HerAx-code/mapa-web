@@ -109,6 +109,26 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
   const [message,   setMessage]   = useState(announcement?.message ?? '')
   const [saving,    setSaving]    = useState(false)
 
+  // R38: surface + targetRoles. Promos are locked at 'feed' / ['patient']
+  // (agency promotions never go in the top strip and only target patients).
+  // For admin announcements, defaults respect the migration rule -- when
+  // editing an existing pre-R38 doc that has no surface field, initialize
+  // to 'banner' so the operator sees the surface that actually matches
+  // the current behavior, not a silent switch to "Both".
+  const [surface, setSurface] = useState(
+    promo ? 'feed' : (announcement?.surface ?? (isEdit ? 'banner' : 'both'))
+  )
+  const [targetRoles, setTargetRoles] = useState(
+    promo
+      ? ['patient']
+      : (Array.isArray(announcement?.targetRoles) && announcement.targetRoles.length > 0
+          ? announcement.targetRoles
+          : ['patient', 'agency', 'agency_admin'])
+  )
+  const toggleRole = (role) => setTargetRoles(prev =>
+    prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+  )
+
   const startInputs = tsToInputs(announcement?.startAt)
   const endInputs   = tsToInputs(announcement?.endAt)
   const [startDate, setStartDate] = useState(startInputs.date)
@@ -124,6 +144,10 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
     if (!message.trim()) { toast.error('Message is required.'); return }
     if (!startDate || !startTime) { toast.error('Start date and time are required.'); return }
     if (!endDate || !endTime)     { toast.error('End date and time are required.'); return }
+    if (!promo && targetRoles.length === 0) {
+      toast.error('Pick at least one audience.')
+      return
+    }
     const startTs = inputsToTs(startDate, startTime)
     const endTs   = inputsToTs(endDate,   endTime)
     if (endTs.toDate() <= startTs.toDate()) {
@@ -132,7 +156,11 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
     }
     setSaving(true)
     try {
-      await onSave({ type, title: title.trim(), message: message.trim(), startAt: startTs, endAt: endTs })
+      await onSave({
+        type, title: title.trim(), message: message.trim(),
+        startAt: startTs, endAt: endTs,
+        surface, targetRoles,
+      })
     } finally {
       setSaving(false)
     }
@@ -195,6 +223,75 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
               placeholder={promo ? 'Describe the program or offer patients should know about…' : 'Describe what users should expect during this period…'}
               value={message} onChange={e => setMessage(e.target.value.slice(0, 300))} />
           </div>
+
+          {/* R38: surface + audience. Hidden for promotions -- agency
+              promos are always feed-only / patients-only. */}
+          {!promo && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Where it appears
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'banner', label: 'Top banner only', hint: 'Thin strip on every page' },
+                    { value: 'feed',   label: 'Dashboard card',   hint: 'In "What’s new"' },
+                    { value: 'both',   label: 'Both',             hint: 'Banner + card' },
+                  ].map(opt => {
+                    const active = surface === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setSurface(opt.value)}
+                        className={`text-left px-3 py-2 rounded-lg border text-xs transition-colors ${
+                          active
+                            ? 'bg-brand-50 border-brand-300 text-brand-700'
+                            : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <p className={`font-medium ${active ? 'text-brand-700' : 'text-gray-700'}`}>{opt.label}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{opt.hint}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Audience <span className="text-red-400">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'patient',       label: 'Patients'        },
+                    { value: 'agency',        label: 'Coordinators'    },
+                    { value: 'agency_admin',  label: 'Agency admins'   },
+                    { value: 'admin',         label: 'CRMC staff'      },
+                  ].map(opt => {
+                    const active = targetRoles.includes(opt.value)
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => toggleRole(opt.value)}
+                        className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                          active
+                            ? 'bg-brand-500 text-white border-brand-500'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Audience is a UX filter on who sees this. It does not restrict who can read the document.
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Date/time range */}
           <div className="grid grid-cols-2 gap-3">
@@ -266,9 +363,10 @@ export default function Announcements() {
 
   const handleSave = async (data) => {
     try {
+      const detailSuffix = `Type: ${data.type} · Surface: ${data.surface ?? 'banner'} · Audience: ${(data.targetRoles ?? []).join('+') || 'none'}`
       if (editing) {
         await updateDoc(doc(db, 'announcements', editing.id), { ...data, updatedAt: serverTimestamp() })
-        logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: data.title, details: `Type: ${data.type}` })
+        logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: data.title, details: detailSuffix })
         toast.success('Announcement updated.')
       } else {
         const ref = await addDoc(collection(db, 'announcements'), {
@@ -280,7 +378,7 @@ export default function Announcements() {
           createdById:  user.uid,
         })
 
-        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `Type: ${data.type} · ${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}` })
+        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `${detailSuffix} · ${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}` })
 
         // Notify all users — fire-and-forget
         const cfg = TYPE_CONFIG[data.type] ?? TYPE_CONFIG.info

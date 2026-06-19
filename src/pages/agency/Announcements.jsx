@@ -57,9 +57,14 @@ export default function AgencyAnnouncements() {
 
   const handleSave = async (data) => {
     try {
+      // The shared AnnouncementForm in promo mode locks surface='feed'
+      // and targetRoles=['patient'] -- agency promotions never join the
+      // top alert strip and only target patients. We accept those fields
+      // from `data` rather than re-setting them so the form remains the
+      // source of truth.
       if (editing) {
         await updateDoc(doc(db, 'announcements', editing.id), { ...data, updatedAt: serverTimestamp() })
-        logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetId: editing.id, targetName: data.title, details: `Agency announcement · ${data.type}` })
+        logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetId: editing.id, targetName: data.title, details: `Agency promotion · ${data.type}` })
         toast.success('Announcement updated.')
       } else {
         const ref = await addDoc(collection(db, 'announcements'), {
@@ -69,18 +74,18 @@ export default function AgencyAnnouncements() {
           agencyName:   agencyName || 'Your agency',
           audience:     'patients',
           active:       true,
-          // Promotions are pull-only: they surface on the Find Programs
-          // catalog, not the alert banner, and don't push a notification to
-          // every patient. reminderSent stays true so the banner reminder
-          // path never picks them up.
+          // Promotions surface on the patient dashboard "What's new" card
+          // (R38) and on the Find Programs catalog, NOT on the top alert
+          // banner. reminderSent stays true so the banner reminder path
+          // never picks them up.
           reminderSent: true,
           createdAt:    serverTimestamp(),
           createdBy:    user.name ?? 'Agency',
           createdById:  user.uid,
         })
-        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `Agency promotion to patients · ${data.type}` })
+        logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `Agency promotion to patients · ${data.type} · Surface: feed` })
 
-        toast.success('Promotion posted. Patients will see it on Find Programs.')
+        toast.success('Promotion posted. Patients will see it on their dashboard and on Find Programs.')
       }
       setShowForm(false); setEditing(null); load()
     } catch { toast.error('Failed to save announcement.') }
