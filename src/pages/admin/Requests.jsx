@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
 import {
-  collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc,
+  collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, updateDoc,
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -1195,9 +1195,17 @@ export default function Requests() {
     // Terminal slices that no longer contribute are filtered out so the
     // listener cost stays bounded as the dataset grows. Admin rule on
     // /applications/{id} allows isAdmin() -- see firestore.rules.
+    //
+    // Phase 0.5 (post-review hardening): hard cap at 500 docs. At pilot
+    // scale this is invisible; at production scale it caps the read
+    // damage if the dataset grows. If the table ever shows exactly 500
+    // rows in production, that's the signal to add real pagination
+    // (Phase 3.4 in docs/recovery-and-hardening-plan.md).
     const u3 = onSnapshot(
-      query(collection(db, 'applications'), where('status', 'in',
-        ['endorsed', 'reviewing', 'awaiting_info', 'approved', 'certificate', 'rejected'])),
+      query(collection(db, 'applications'),
+        where('status', 'in',
+          ['endorsed', 'reviewing', 'awaiting_info', 'approved', 'certificate', 'rejected']),
+        limit(500)),
       snap => setAllSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => setAllSlices([]),
     )
