@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+} from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
@@ -13,8 +15,25 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
-export const auth    = getAuth(app)
-export const db      = getFirestore(app)
+export const auth = getAuth(app)
+
+// Phase 1.5: persistent local cache. Patients on slow Mindanao
+// connections lose signal mid-form; without persistence they see an
+// empty dashboard and assume the app is broken. With it, the most
+// recent reads stay available offline and the next online window
+// flushes any queued writes. persistentMultipleTabManager lets us share
+// a single IndexedDB cache across multiple tabs on the same device
+// (otherwise opening a second tab fails the cache init).
+//
+// Falls back gracefully if the browser blocks IndexedDB (private mode,
+// Safari Lockdown, etc.) -- the Firestore client just runs in
+// memory-only mode for that session and online ops keep working.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+})
+
 // Cloud Storage — used to host signed Guarantee Letter scans so they
 // aren't constrained by Firestore's 1 MiB doc cap. See storage.rules.
 export const storage = getStorage(app)

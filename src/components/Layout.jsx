@@ -836,6 +836,25 @@ export default function Layout({ children, breadcrumb }) {
   const [showCompose, setShowCompose]       = useState(false)
   const [banners, setBanners]               = useState([])
 
+  // Phase 1.4 (post-review hardening): if an admin changes this user's
+  // role while they're signed in (rare but real -- patient promoted to
+  // coordinator, coordinator promoted to agency_admin), the new role
+  // updates in AuthContext but cached lazy chunks for the old role
+  // stay in memory until refresh. PrivateRoute correctly blocks routes
+  // they no longer have access to, but they might briefly see UI from
+  // the old role on the page they're already on. A non-dismissable toast
+  // tells them to refresh so the new role takes full effect.
+  const lastRoleRef = useRef(user?.role)
+  useEffect(() => {
+    if (lastRoleRef.current && user?.role && lastRoleRef.current !== user.role) {
+      toast(
+        'Your account role changed. Please refresh the page so it takes effect.',
+        { duration: Infinity, icon: '🔄', id: 'role-change' },
+      )
+    }
+    lastRoleRef.current = user?.role
+  }, [user?.role])
+
   // Per Tier-2 item 7: notifications / conversations / agency inbox /
   // agency name now come from LiveDataContext (which lives ABOVE the
   // routes), not from per-Layout-instance subscriptions. Layout still

@@ -102,4 +102,15 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react-pdf'],
   },
+  // Phase 1.3 (post-review hardening): strip debug-only console calls
+  // from production builds. ~200 console.log/debug statements ship today
+  // -- noise in prod, useful in dev. Keeping console.error + console.warn
+  // means real failures still surface to operator devtools and Vercel
+  // Analytics, but the routine "[Foo] loading X" chatter goes away.
+  //
+  // No code changes needed; esbuild drops these at build time.
+  esbuild: {
+    drop: ['debugger'],
+    pure: ['console.log', 'console.debug', 'console.info'],
+  },
 })

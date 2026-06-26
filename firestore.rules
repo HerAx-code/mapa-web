@@ -551,8 +551,22 @@ service cloud.firestore {
       // attributed to another patient. The actual file content goes in a
       // single 'content' string (a base64 data URL); we trust the
       // ~1MB Firestore doc cap to bound size rather than enforce it here.
-      allow create: if isPatient() && request.resource.data.patientId == uid();
-      allow update: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+      // Phase 1.2: cap content size at 1MB on create + update. The 10MiB
+      // Storage rule guards the actual file; the Firestore content blob
+      // (base64) was bounded only by Firestore's 1MiB doc limit. A
+      // malicious admin or patient could push 999 KB blobs repeatedly
+      // and inflate read costs. Enforce explicitly so the limit is
+      // visible in audit + doesn't depend on Firestore catching it.
+      allow create: if isPatient() &&
+                       request.resource.data.patientId == uid() &&
+                       (!('content' in request.resource.data) ||
+                        (request.resource.data.content is string &&
+                         request.resource.data.content.size() <= 1000000));
+      allow update: if (isAdmin() ||
+                        (isPatient() && resource.data.patientId == uid())) &&
+                       (!('content' in request.resource.data) ||
+                        (request.resource.data.content is string &&
+                         request.resource.data.content.size() <= 1000000));
       allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
     }
 
