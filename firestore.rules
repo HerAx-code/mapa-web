@@ -466,12 +466,25 @@ service cloud.firestore {
       );
       // Agencies can only write certs scoped to their own agency. Admins
       // can write any (e.g. moving a cert between agencies during a
-      // remediation). Without the agencyId match, one agency could upload
-      // a Guarantee Letter attributed to another -- not currently exploited
-      // in the UI but the read rule already trusts agencyId to gate access.
-      allow create, update: if isAdmin() ||
-                               (isAgency() && request.resource.data.agencyId == userAgencyId());
-      allow delete:         if isAdmin();
+      // remediation).
+      //
+      // Phase 0.4 hardening: forge-protection. Without the appId cross-check,
+      // an agency could create a certificate for a different agency's
+      // application by setting request.resource.data.agencyId to their own
+      // but pointing certId at someone else's appId. We now require:
+      //   1. request.resource.data.agencyId == userAgencyId() (existing),
+      //   2. the underlying application's agencyId also matches (new).
+      // certId is the appId (see comment in src/pages/admin/Patients.jsx:334)
+      // so the get() chain resolves cleanly.
+      allow create: if isAdmin() ||
+                       (isAgency() &&
+                        request.resource.data.agencyId == userAgencyId() &&
+                        get(/databases/$(database)/documents/applications/$(certId)).data.agencyId == userAgencyId());
+      allow update: if isAdmin() ||
+                       (isAgency() &&
+                        request.resource.data.agencyId == userAgencyId() &&
+                        resource.data.agencyId == userAgencyId());
+      allow delete: if isAdmin();
     }
 
     // ── docReviewPresence ─────────────────────────────────────────────────────
@@ -483,9 +496,23 @@ service cloud.firestore {
     // ── documentContents ──────────────────────────────────────────────────────
     // Stores file content separately from metadata for query performance.
     // Document ID matches the corresponding documents/{docId}.
+    //
+    // Phase 0.2 hardening (post-review): the previous rule let ANY agency
+    // (role agency or agency_admin) read EVERY patient's document content,
+    // not just contents belonging to documents on cases endorsed to them.
+    // Coordinators from Agency A could pull medical PDFs of patients only
+    // ever endorsed to Agency B -- Data Privacy Act §16(b) violation.
+    //
+    // Fix mirrors the documents/{docId} read rule (line 219): cross-check
+    // the parent documents metadata's agencyIds[] via a get() chain.
+    // Adds one rules-eval get() per content read; acceptable at pilot scale
+    // (same pattern used by auditLog at lines 399-404).
     match /documentContents/{docId} {
       allow read:   if isAuth() && (
-        resource.data.patientId == uid() || isAdmin() || isAgency()
+        resource.data.patientId == uid() ||
+        isAdmin() ||
+        (isAgency() && userAgencyId() in
+          get(/databases/$(database)/documents/documents/$(docId)).data.agencyIds)
       );
       // patientId must match auth so a patient can't write content
       // attributed to another patient. The actual file content goes in a
