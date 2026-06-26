@@ -408,6 +408,15 @@ export default function Register() {
       // transaction and abort if another patient won the race between
       // the patient's Verify click and Submit. Prevents a second patient's
       // claim from silently overwriting the first patient's record.
+      //
+      // Phase 0.3 hardening: the patient NAME is written to a dedicated
+      // sub-doc (hospitalIds/{id}/privateInfo/details) instead of the
+      // parent. The parent allows unauthenticated GET during registration
+      // and previously leaked `usedBy: name` on every claimed code. Now
+      // the parent only carries the uid (`patId`) and status; the name
+      // sits behind the auth-gated sub-collection rule. All three writes
+      // (users, parent hospitalIds, privateInfo) commit atomically in the
+      // same transaction.
       try {
         await runTransaction(db, async (tx) => {
           const hidRef  = doc(db, 'hospitalIds', form.hospitalId)
@@ -416,9 +425,14 @@ export default function Register() {
           if (hidSnap.data().status !== 'available') throw new Error('CODE_USED')
           tx.set(doc(db, 'users', uid), userData)
           tx.update(hidRef, {
-            status: 'used', usedBy: name, patId: uid,
+            status: 'used', patId: uid,
             date: new Date().toLocaleDateString(),
             time: new Date().toLocaleTimeString(),
+          })
+          tx.set(doc(db, 'hospitalIds', form.hospitalId, 'privateInfo', 'details'), {
+            usedBy:    name,
+            usedById:  uid,
+            createdAt: serverTimestamp(),
           })
         })
       } catch (txErr) {

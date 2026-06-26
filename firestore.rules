@@ -327,6 +327,39 @@ service cloud.firestore {
                        (isAgency() &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt']));
       allow delete: if isSuperAdmin();
+
+      // Phase 0.3 hardening (post-review): the patient NAME used to live on
+      // the parent hospitalIds doc as `usedBy`, but the parent allows
+      // unauthenticated GET (needed during registration verification --
+      // patient is not yet logged in). That made every claimed code's
+      // patient name publicly enumerable. Names + access codes are a
+      // ready-made phishing kit.
+      //
+      // Fix: move the name to this sub-collection. By convention the
+      // single doc per parent is keyed `details`, so admin code does one
+      // get() per row instead of a query. The parent retains `patId`
+      // (a uid — 28 random chars, doesn't enumerate, doesn't phish) so
+      // the existing claim-transaction rule (line 320) keeps working.
+      match /privateInfo/{infoId} {
+        // Admins read all; the claimant patient reads their own (parent
+        // doc's patId must equal the requesting uid). Agencies do NOT
+        // need patient names from this collection -- they get them from
+        // the users/{uid} doc via the application's patientId.
+        allow read:   if isAdmin() ||
+                         (isAuth() &&
+                          get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.patId == uid());
+        // Create runs inside the registration claim transaction. Patient
+        // user doc doesn't yet exist at that moment (same-transaction
+        // limitation; see parent-update comment above for why isPatient()
+        // fails here). isAuth() + self-attribution via usedById carries
+        // the security.
+        allow create: if isAuth() &&
+                         request.resource.data.usedById == uid() &&
+                         request.resource.data.usedBy is string &&
+                         request.resource.data.usedBy.size() <= 120;
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
     }
 
     // ── notifications ─────────────────────────────────────────────────────────

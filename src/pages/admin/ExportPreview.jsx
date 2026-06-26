@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
-  collection, query, where, getDocs, Timestamp,
+  collection, query, where, getDocs, getDoc, doc, Timestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -215,6 +215,20 @@ export default function ExportPreview() {
       }
       if (hasDateRange && hasStatusFilter) {
         data = data.filter(d => d[config.statusField] === selected)
+      }
+      // Phase 0.3: the `usedBy` patient-name field moved off the parent
+      // hospitalIds doc into /privateInfo/details. For the hospitalids
+      // export, fan out one getDoc per claimed code to fetch the sub-doc
+      // and merge `usedBy` back into the row so the CSV column still
+      // works. Bounded read count -- only 'used' codes have a sub-doc.
+      if (config.collection === 'hospitalIds') {
+        const usedRows = data.filter(d => d.status === 'used')
+        const infoSnaps = await Promise.all(
+          usedRows.map(d => getDoc(doc(db, 'hospitalIds', d.id, 'privateInfo', 'details')))
+        )
+        const infoMap = {}
+        infoSnaps.forEach((s, i) => { if (s.exists()) infoMap[usedRows[i].id] = s.data() })
+        data = data.map(d => ({ ...d, usedBy: infoMap[d.id]?.usedBy ?? d.usedBy ?? null }))
       }
       data.sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
       setDocs(data)

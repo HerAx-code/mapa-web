@@ -3,7 +3,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { tsToDate } from '../../utils/dates'
 import toast from 'react-hot-toast'
@@ -42,8 +42,9 @@ function BulkAddModal({ nextNum, onClose }) {
         const num   = String(startNum + i).padStart(5, '0')
         const newId = `CRMC-${year}-${num}`
         batch.set(doc(db, 'hospitalIds', newId), {
+          // Phase 0.3: parent doc no longer carries usedBy (PII moved
+          // to /privateInfo/details on claim).
           status:    'available',
-          usedBy:    null,
           patId:     null,
           date:      new Date().toLocaleDateString(),
           time:      '',
@@ -127,12 +128,32 @@ export default function HospitalIDs() {
   const isSuperAdmin  = user?.role === 'super_admin'
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'hospitalIds'), (snap) => {
-      setHospitalIds(
-        snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => b.id.localeCompare(a.id))
-      )
+    // Phase 0.3: patient name (`usedBy`) moved off the parent hospitalIds
+    // doc to /privateInfo/details to stop public enumeration. The admin
+    // table still needs the name, so on each parent snapshot we fan out
+    // one getDoc per claimed code to fetch its sub-doc and merge the
+    // `usedBy` field back into the row for display. Only 'used' codes
+    // have a sub-doc; available codes skip the read. Read count is
+    // bounded by the active claim set (a few hundred at pilot scale).
+    const unsub = onSnapshot(collection(db, 'hospitalIds'), async (snap) => {
+      const docs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => b.id.localeCompare(a.id))
+      try {
+        const usedIds = docs.filter(d => d.status === 'used').map(d => d.id)
+        const infoSnaps = await Promise.all(
+          usedIds.map(id => getDoc(doc(db, 'hospitalIds', id, 'privateInfo', 'details')))
+        )
+        const infoMap = {}
+        infoSnaps.forEach((s, i) => { if (s.exists()) infoMap[usedIds[i]] = s.data() })
+        // Merge so the rest of the component keeps reading `h.usedBy` as
+        // before. Falls back to the row's own value for any legacy doc
+        // still pre-migration.
+        setHospitalIds(docs.map(d => ({ ...d, usedBy: infoMap[d.id]?.usedBy ?? d.usedBy ?? null })))
+      } catch (err) {
+        console.error('[HospitalIDs] privateInfo fetch failed:', err)
+        setHospitalIds(docs)
+      }
       setLoading(false)
     }, () => {
       setLoading(false)
@@ -160,8 +181,10 @@ export default function HospitalIDs() {
       const num   = String(nextNum).padStart(5, '0')
       const newId = `CRMC-${year}-${num}`
       await setDoc(doc(db, 'hospitalIds', newId), {
+        // Phase 0.3: usedBy no longer lives on the parent doc; it's
+        // created in /privateInfo/details by the claim transaction in
+        // Register.jsx. Available codes have no sub-doc.
         status:    'available',
-        usedBy:    null,
         patId:     null,
         date:      new Date().toLocaleDateString(),
         time:      '',
@@ -178,15 +201,18 @@ export default function HospitalIDs() {
       // field together. If either fails, neither happens -- so we never
       // end up with the code reset but the user's profile still pointing
       // at it (or vice-versa).
+      // Phase 0.3: reset the parent + clear the PII sub-doc together so
+      // a revoked code carries no leftover name. Also clear the user's
+      // hospitalId field; all three writes commit atomically.
       const batch = writeBatch(db)
       batch.update(doc(db, 'hospitalIds', h.id), {
         status:    'available',
-        usedBy:    null,
         patId:     null,
         date:      '',
         time:      '',
         revokedAt: serverTimestamp(),
       })
+      batch.delete(doc(db, 'hospitalIds', h.id, 'privateInfo', 'details'))
       if (h.patId) batch.update(doc(db, 'users', h.patId), { hospitalId: null })
       await batch.commit()
       logAudit(user, { action: 'hospitalid_revoked', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: `Previously used by ${h.usedBy ?? '—'}` })
@@ -290,8 +316,12 @@ export default function HospitalIDs() {
       // field together. Previously these were two sequential updateDocs --
       // if deleteDoc failed after the user update, the patient was orphaned
       // from a code that still existed.
+      // Phase 0.3: also delete the PII sub-doc. Firestore doesn't cascade
+      // sub-collections on parent delete; without this explicit delete
+      // the privateInfo/details doc would orphan as an unreachable record.
       const batch = writeBatch(db)
       if (h.patId) batch.update(doc(db, 'users', h.patId), { hospitalId: null })
+      batch.delete(doc(db, 'hospitalIds', h.id, 'privateInfo', 'details'))
       batch.delete(doc(db, 'hospitalIds', h.id))
       await batch.commit()
       logAudit(user, { action: 'hospitalid_deleted', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: h.usedBy ? `Was used by ${h.usedBy}` : 'Was available' })
