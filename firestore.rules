@@ -271,10 +271,26 @@ service cloud.firestore {
       //     directly to inflate budget.allocated past whatever the UI
       //     gate enforces -- the previous version trusted the client
       //     for that.
+      // Coordinator update rule (hotfix from prod):
+      //   - The original rule required the entire budget object to be
+      //     byte-identical, which blocked the GL-expiry sweep on the
+      //     agency dashboard (it mutates `budget.committed` to release
+      //     funds when a coordinator-issued GL lapses). Symptom in prod:
+      //     "GL expiry sweep failed: Missing or insufficient permissions"
+      //     on every coordinator dashboard load with at least one
+      //     expired GL.
+      //   - The threat the original rule guards is "coordinator inflates
+      //     budget.allocated past the UI limit." That threat is
+      //     preserved by pinning `allocated` and `fundSource` only.
+      //     Usage-tracking fields (committed, disbursed, totalSpent)
+      //     are allowed to change so automated transaction flows
+      //     (GL expire, approval, redeem) work for non-admin agency
+      //     coordinators.
       allow update: if isAdmin() ||
                        (isAgencyAdmin() && userAgencyId() == agencyId) ||
                        (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
-                        request.resource.data.budget == resource.data.budget);
+                        request.resource.data.budget.allocated == resource.data.budget.allocated &&
+                        request.resource.data.budget.fundSource == resource.data.budget.fundSource);
       allow delete: if isSuperAdmin();
     }
 
