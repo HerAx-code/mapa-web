@@ -31,12 +31,18 @@ export default defineConfig({
   test: {
     fileParallelism: false,
     // Default to jsdom so component tests don't need a per-file
-    // // @vitest-environment header. Pure-JS tests still pass under
-    // jsdom -- they just pay a tiny cold-start cost for the DOM globals.
+    // // @vitest-environment header. Utils tests opt out below
+    // because jsdom env-load was the bottleneck (~7s) on the
+    // pre-commit hook.
     environment: 'jsdom',
+    // Per-folder environment overrides. tests/utils/ runs in pure
+    // node -- no DOM, no jsdom boot cost. Cuts pre-commit hook from
+    // ~15s to ~3s.
+    environmentMatchGlobs: [
+      ['tests/utils/**', 'node'],
+      ['tests/rules/**', 'node'],
+    ],
     setupFiles: ['./tests/setup.js'],
-    // Ignore the dist/ folder so component-test discovery doesn't
-    // pick up minified bundles.
     exclude: ['node_modules', 'dist', '.idea', '.git'],
   },
 })

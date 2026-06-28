@@ -15,7 +15,12 @@
     "test:components:watch": "vitest tests/components",
     "test:all": "npm run test && npm run test:components && npm run test:rules",
     "lint:i18n": "eslint --no-error-on-unmatched-pattern \"src/pages/patient/**/*.{js,jsx}\" \"src/components/patient/**/*.{js,jsx}\" \"src/components/Layout.jsx\" \"src/components/InstallNudge.jsx\" \"src/components/InstallPrompt.jsx\" \"src/components/AnnouncementBanner.jsx\" \"src/components/AnnouncementFeedCard.jsx\" \"src/components/OfflineBanner.jsx\"",
-    "lint:i18n:count": "npm run lint:i18n -- --format json 2>nul | node -e \"let s=''; process.stdin.on('data',c=>s+=c); process.stdin.on('end',()=>{try{const j=JSON.parse(s);const t=j.reduce((a,f)=>a+f.warningCount+f.errorCount,0);console.log('Hardcoded strings: '+t);}catch(e){console.log('parse failed');}})\""
+    "lint:i18n:count": "npm run lint:i18n -- --format json 2>nul | node -e \"let s=''; process.stdin.on('data',c=>s+=c); process.stdin.on('end',()=>{try{const j=JSON.parse(s);const t=j.reduce((a,f)=>a+f.warningCount+f.errorCount,0);console.log('Hardcoded strings: '+t);}catch(e){console.log('parse failed');}})\"",
+    "precommit": "npm test",
+    "postinstall": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npm run precommit"
   },
   "dependencies": {
     "firebase": "^12.13.0",
@@ -51,6 +56,7 @@
     "jsdom": "^29.1.1",
     "postcss": "^8.4.35",
     "sharp": "^0.34.5",
+    "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^3.4.1",
     "vite": "^5.1.4",
     "vite-plugin-pwa": "^1.3.0",
