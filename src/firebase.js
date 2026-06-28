@@ -1,9 +1,10 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
 } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -37,4 +38,15 @@ export const db = initializeFirestore(app, {
 // Cloud Storage — used to host signed Guarantee Letter scans so they
 // aren't constrained by Firestore's 1 MiB doc cap. See storage.rules.
 export const storage = getStorage(app)
+
+// Phase 3.5: Cloud Functions client. Co-located with Firestore in
+// asia-southeast1 so the callable round-trip is short. Currently
+// powers verifyAccessCode (server-side rate-limited access-code
+// verification); future callables (e.g. reCAPTCHA-protected mutations)
+// would register here.
+export const functions = getFunctions(app, 'asia-southeast1')
+
+// Convenience for callers that need to do a one-shot anonymous sign-in
+// before invoking a callable function (Register.jsx access-code check).
+export { signInAnonymously, httpsCallable }
 export { firebaseConfig }

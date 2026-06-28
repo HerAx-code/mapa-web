@@ -12,6 +12,8 @@ admin.initializeApp()
 
 const { resetAgencySlots } = require('./src/resetAgencySlots')
 const { glExpirySweep }    = require('./src/glExpirySweep')
+const { verifyAccessCode } = require('./src/verifyAccessCode')
 
 exports.resetAgencySlots = resetAgencySlots
 exports.glExpirySweep    = glExpirySweep
+exports.verifyAccessCode = verifyAccessCode

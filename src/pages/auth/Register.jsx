@@ -6,7 +6,7 @@ import {
 } from 'react-icons/md'
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
-import { auth, db } from '../../firebase'
+import { auth, db, functions, signInAnonymously, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
@@ -348,15 +348,43 @@ export default function Register() {
     recordVerifyAttempt()
     setVerifying(true)
     try {
-      const snap = await getDoc(doc(db, 'hospitalIds', form.hospitalId))
-      if (!snap.exists()) {
+      // Phase 3.5: prefer the rate-limited Cloud Function path. If the
+      // function is unreachable (cold-start error, network blip), fall
+      // back to the direct Firestore read so registration still works
+      // -- the parent doc post-Phase-0.3 leaks nothing PII-sensitive
+      // and the client-side throttle (countRecentVerifyAttempts above)
+      // is still in place.
+      let available = null, exists = null, usedFallback = false
+      try {
+        if (!auth.currentUser) await signInAnonymously(auth)
+        const call = httpsCallable(functions, 'verifyAccessCode')
+        const result = await call({ code: form.hospitalId })
+        available = result.data.available
+        exists    = result.data.exists
+      } catch (err) {
+        // resource-exhausted = real throttle hit, surface it directly.
+        if (err?.code === 'functions/resource-exhausted') {
+          setErrors(prev => ({ ...prev, hospitalId: err.message ?? t('register.errors.verifyRateLimit') }))
+          return
+        }
+        console.warn('[Register] verifyAccessCode function failed; falling back to direct read:', err)
+        usedFallback = true
+        const snap = await getDoc(doc(db, 'hospitalIds', form.hospitalId))
+        exists    = snap.exists()
+        available = exists && snap.data().status === 'available'
+      }
+
+      if (!exists) {
         setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeNotFound') }))
-      } else if (snap.data().status !== 'available') {
+      } else if (!available) {
         setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeUsed') }))
       } else {
         setHospitalVerified(true)
         setErrors(prev => ({ ...prev, hospitalId: '' }))
         toast.success(t('register.toast.codeVerified'))
+        if (usedFallback) {
+          console.warn('[Register] verified via Firestore fallback path -- function may need attention')
+        }
       }
     } catch {
       toast.error(t('register.errors.verifyFailed'))
