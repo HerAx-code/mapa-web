@@ -37,7 +37,8 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.
-- Patient-facing UI must be bilingual (Filipino + English). Use inline bilingual labels where possible.
+- Patient-facing UI must be bilingual (Filipino + English). Use inline bilingual labels where possible. **Enforced** by `npm run lint:i18n` across `src/pages/patient/**`, `src/components/patient/**`, and the shared shell components patients see (Layout, AnnouncementBanner, AnnouncementFeedCard, OfflineBanner, InstallNudge, InstallPrompt).
+- **Staff surfaces (agency/admin pages) are English-only by design.** CRMC + partner-agency operators are professionals expected to work in English (clinical / government default language for record-keeping in the Philippines). The eslint linter does NOT enforce i18n on `src/pages/agency/**` or `src/pages/admin/**`. If a future stakeholder reports that staff need bilingual UI, that becomes a scoped epic — adding it to the linter scope requires committing to translating ~30+ staff pages. Not a v1 shortcut.
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match CRMC's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the CRMC social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.

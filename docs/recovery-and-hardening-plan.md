@@ -617,7 +617,8 @@ ended after this session.
 | 2.1 partial | `d2726a8` | ApplicationDetail.jsx helpers extracted: 1,991 → 1,715 lines (-13%). Stepper + primaryActions + buildTimelineStages moved to `applicationDetail/`. Handler extraction explicitly deferred -- too risky under time pressure |
 | 2.2 | `d183535` | Messages.jsx split: 1,460 → 561 lines (-62%). 4 sub-components + helpers to `messages/`. Fixed a latent `conv.id` bug during extraction |
 | 3.2 | `e389a24` | i18n linter (eslint-plugin-i18next) + bulk fix: 41 → 0 warnings on patient-facing surfaces. IntakeWizard exempted (inline-bilingual pattern) |
-| 3.5 | `44f926f` + `<this commit>` | Cloud Function `verifyAccessCode` for server-side rate limiting (10 attempts/hour per uid). Register.jsx wired with fallback to direct Firestore read. **16 unit tests** for the pure handler |
+| 3.5 (initial) | `44f926f` + `73901d0` | Cloud Function `verifyAccessCode` deployed with per-uid throttle (10/hour). Register.jsx wired. **16 unit tests** pin handler logic. **Initial framing was overconfident** — uid throttle alone is bypassable by re-calling `signInAnonymously()` to rotate uids. |
+| 3.5 (hardening) | `<this commit>` | Added per-IP throttle (60/hour) layered ON TOP of the per-uid throttle. Both must pass. Closes the anon-uid-loop bypass that a strict reviewer correctly flagged after the initial deploy. IPs are SHA-256 hashed before storage. **+5 IP-specific tests** (34 total in this suite). Function redeployed live. |
 | 4.9 + extras | `defb991` `62f7f93` `bc83dfe` `<this>` | Component test scaffold + 52 tests across 7 files (AddressPicker, PatientAccessLog, AnnouncementFeedCard, CaseTimeline, PesoInput, SuggestEndorsementModal, ConversationModal) |
 | Bonus: CI | `62f7f93` | GitHub Actions workflow: build + utils + components + rules in parallel on every push to main |
 | Bonus: pre-commit hook | `033c045` | `simple-git-hooks` runs utils tests before every commit; bypass via `SKIP_SIMPLE_GIT_HOOKS=1` |

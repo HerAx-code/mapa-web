@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useId } from 'react'
 import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../utils/barmm'
 import { BARANGAYS } from '../utils/barmm-barangays'
 
@@ -62,6 +62,15 @@ export default function AddressPicker({
   hideLabels = false,
 }) {
   const labels = { ...defaultAddressLabels, ...(labelsProp ?? {}) }
+  // A11y: useId() gives us a stable, render-collision-free prefix so
+  // <label htmlFor> binds to its <select> even when the picker mounts
+  // multiple times on the same page (Register has it; another form
+  // might too). Before this, the labels weren't bound at all -- screen
+  // readers couldn't announce "Province" for the province dropdown.
+  const idPrefix    = useId()
+  const provinceId  = `${idPrefix}-province`
+  const cityId      = `${idPrefix}-city`
+  const barangayId  = `${idPrefix}-barangay`
 
   // Resolve "Other" mode from incoming value: any string that isn't in
   // the BARMM list at its level is implicitly an Other-mode entry. This
@@ -146,10 +155,12 @@ export default function AddressPicker({
       {/* Province */}
       <div>
         {!hideLabels && (
-          <label className="block text-xs font-medium text-gray-700 mb-1">{labels.province}</label>
+          <label htmlFor={provinceId} className="block text-xs font-medium text-gray-700 mb-1">{labels.province}</label>
         )}
         <select
+          id={provinceId}
           data-field="province"
+          aria-label={hideLabels ? labels.province : undefined}
           className={`${inputCls('province')} ${(!provinceOther && !value.province) ? 'text-gray-400' : ''}`}
           value={provinceOther ? '__other__' : value.province}
           onChange={onProvinceSelect}
@@ -162,6 +173,7 @@ export default function AddressPicker({
           <input
             className={`${inputCls('province')} mt-2`}
             placeholder={labels.otherProvince}
+            aria-label={labels.otherProvince}
             value={value.province ?? ''}
             onChange={setProvinceText}
             disabled={disabled}
@@ -174,11 +186,13 @@ export default function AddressPicker({
       {/* City / Municipality */}
       <div>
         {!hideLabels && (
-          <label className="block text-xs font-medium text-gray-700 mb-1">{labels.city}</label>
+          <label htmlFor={cityId} className="block text-xs font-medium text-gray-700 mb-1">{labels.city}</label>
         )}
         {provinceOther ? (
           <input
+            id={cityId}
             data-field="city"
+            aria-label={hideLabels ? labels.city : undefined}
             className={inputCls('city')}
             placeholder={labels.otherCity}
             value={value.city ?? ''}
@@ -189,7 +203,9 @@ export default function AddressPicker({
         ) : (
           <>
             <select
+              id={cityId}
               data-field="city"
+              aria-label={hideLabels ? labels.city : undefined}
               className={`${inputCls('city')} ${(!cityOther && !value.city) ? 'text-gray-400' : ''}`}
               value={cityOther ? '__other__' : value.city}
               onChange={onCitySelect}
@@ -202,6 +218,7 @@ export default function AddressPicker({
               <input
                 className={`${inputCls('city')} mt-2`}
                 placeholder={labels.otherCity}
+                aria-label={labels.otherCity}
                 value={value.city ?? ''}
                 onChange={setCityText}
                 disabled={disabled}
@@ -217,11 +234,13 @@ export default function AddressPicker({
       {showBarangay && (
         <div>
           {!hideLabels && (
-            <label className="block text-xs font-medium text-gray-700 mb-1">{labels.barangay}</label>
+            <label htmlFor={barangayId} className="block text-xs font-medium text-gray-700 mb-1">{labels.barangay}</label>
           )}
           {!bgyList ? (
             <input
+              id={barangayId}
               data-field="barangay"
+              aria-label={hideLabels ? labels.barangay : undefined}
               className={inputCls('barangay')}
               placeholder={labels.selectBarangay}
               value={value.barangay ?? ''}
@@ -233,7 +252,9 @@ export default function AddressPicker({
           ) : (
             <>
               <select
+                id={barangayId}
                 data-field="barangay"
+                aria-label={hideLabels ? labels.barangay : undefined}
                 className={`${inputCls('barangay')} ${(!barangayOther && !value.barangay) ? 'text-gray-400' : ''}`}
                 value={barangayOther ? '__other__' : value.barangay}
                 onChange={onBarangaySelect}
@@ -246,6 +267,7 @@ export default function AddressPicker({
                 <input
                   className={`${inputCls('barangay')} mt-2`}
                   placeholder={labels.otherBarangay}
+                  aria-label={labels.otherBarangay}
                   value={value.barangay ?? ''}
                   onChange={setBarangayText}
                   disabled={disabled}

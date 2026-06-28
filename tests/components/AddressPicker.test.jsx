@@ -16,12 +16,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AddressPicker, { joinAddress } from '../../src/components/AddressPicker'
 
-// AddressPicker labels aren't bound to their <select>s via htmlFor, so
-// queries-by-accessible-name don't work. We query by the data-field
-// attribute the production code already uses for error-focus scroll
-// (Register.jsx scrolls to [data-field=...] on validation failure).
-const provinceSelect = () => document.querySelector('select[data-field="province"]')
-const citySelect     = () => document.querySelector('select[data-field="city"]')
+// Labels are now properly bound to their controls via useId() +
+// htmlFor (fixed alongside this test refactor). Tests use accessible
+// queries -- if a future change breaks the binding, the test fails
+// immediately, which is the right signal.
+const provinceSelect = () => screen.getByRole('combobox', { name: /province/i })
+const citySelect     = () => screen.getByRole('combobox', { name: /city/i })
 
 describe('AddressPicker', () => {
   it('renders the province + city selects (no barangay until selection)', () => {
