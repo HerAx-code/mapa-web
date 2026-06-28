@@ -72,7 +72,12 @@ export default function AgencyAnnouncements() {
           source:       'agency',
           agencyId:     user.agencyId,
           agencyName:   agencyName || 'Your agency',
-          audience:     'patients',
+          // Phase 2.5: dropped `audience: 'patients'`. R38 introduced
+          // `targetRoles` (set to ['patient'] by the form in promo mode)
+          // as the canonical audience filter; `audience` was vestigial --
+          // nothing in the codebase or rules read it. Existing docs
+          // retain the field harmlessly; the schema is documented in
+          // CLAUDE.md as targetRoles-only going forward.
           active:       true,
           // Promotions surface on the patient dashboard "What's new" card
           // (R38) and on the Find Programs catalog, NOT on the top alert

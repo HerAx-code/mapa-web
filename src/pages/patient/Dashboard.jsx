@@ -164,7 +164,10 @@ export default function PatientDashboard() {
   })()
 
   // R38: dashboard "What's new" feed — CRMC notices opted into 'feed'
-  // or 'both', plus all active agency promotions (audience: patients).
+  // or 'both', plus all active agency promotions (targetRoles includes
+  // 'patient'). The hook handles the source-aware default in
+  // computeTargetRoles so agency promos surface here even on legacy
+  // docs that pre-date the targetRoles field.
   const feedAnnouncements = useFeedAnnouncements({
     role: user?.role, agencyId: user?.agencyId, uid: user?.uid,
   })
