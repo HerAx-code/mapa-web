@@ -8,14 +8,17 @@ Exercises `firestore.rules` against a local Firebase emulator using
 
 | File | Surfaces tested |
 |------|-----------------|
-| `auditLog.rules.test.js`     | `actorId == auth.uid` enforcement, `details` size cap, immutability, role-scoped reads (super_admin vs agency_admin vs patient) |
-| `documents.rules.test.js`    | `documents.create`: patientId match, `status == 'pending'`, no agencyIds pre-stamp, ocrText size cap; `documentContents.create`: patientId match |
-| `messages.rules.test.js`     | `conversations.create` participant requirement; `messages.create` from-attribution + size cap; notifications title/body caps |
-| `certificates.rules.test.js` | Cross-agency certificate guard; `agencies.update` coordinator budget-write block |
+| `auditLog.rules.test.js`         | `actorId == auth.uid` enforcement, `details` size cap, immutability, role-scoped reads (super_admin vs agency_admin vs patient) |
+| `documents.rules.test.js`        | `documents.create`: patientId match, `status == 'pending'`, no agencyIds pre-stamp, ocrText size cap; `documentContents.create`: patientId match |
+| `documentContents.rules.test.js` | **Phase 0.2** cross-agency read leak — agency can read only docs where userAgencyId() in parent's `agencyIds[]`; **Phase 1.2** 1MB size cap on update |
+| `hospitalIds.rules.test.js`      | **Phase 0.3** parent retains unauth GET (registration path); `privateInfo/{id}` sub-doc gates name read to claimant + admin; create requires self-attribution + 120-char cap on `usedBy` |
+| `messages.rules.test.js`         | `conversations.create` participant requirement; `messages.create` from-attribution + size cap; notifications title/body caps |
+| `certificates.rules.test.js`     | Cross-agency certificate guard; **Phase 0.4** appId↔application.agencyId cross-check (forge protection); `agencies.update` coordinator budget-write rules including post-review hotfix (coordinator may mutate `committed`/`disbursed` but not `allocated`/`fundSource`) |
 
-Total: ~30 assertions across the four files. They cover every
-write-side rule constraint added in the security passes
-(`f14ea17`, `242c175`, `9a596d4`, `608738b`).
+Total: ~55 assertions across the six files. They cover every
+write-side rule constraint added across security passes
+(`f14ea17`, `242c175`, `9a596d4`, `608738b`) and the post-review
+hardening (`77e959f`, `b37043c`, `c939815`, `79f51e3`).
 
 ## Running the tests
 

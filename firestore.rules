@@ -290,7 +290,12 @@ service cloud.firestore {
                        (isAgencyAdmin() && userAgencyId() == agencyId) ||
                        (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
                         request.resource.data.budget.allocated == resource.data.budget.allocated &&
-                        request.resource.data.budget.fundSource == resource.data.budget.fundSource);
+                        // .get(field, default) lets the rule tolerate
+                        // budgets where fundSource hasn't been set yet
+                        // (default null on both sides means equality holds);
+                        // without it, the rule errors on the undefined-property
+                        // access and denies the write.
+                        request.resource.data.budget.get('fundSource', null) == resource.data.budget.get('fundSource', null));
       allow delete: if isSuperAdmin();
     }
 
