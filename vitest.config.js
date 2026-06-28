@@ -41,6 +41,7 @@ export default defineConfig({
     environmentMatchGlobs: [
       ['tests/utils/**', 'node'],
       ['tests/rules/**', 'node'],
+      ['tests/functions/**', 'node'],
     ],
     setupFiles: ['./tests/setup.js'],
     exclude: ['node_modules', 'dist', '.idea', '.git'],

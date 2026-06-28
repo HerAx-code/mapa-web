@@ -2,8 +2,6 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 
-const db = admin.firestore()
-
 /**
  * verifyAccessCode — Phase 3.5 server-side rate-limited access-code check.
  *
@@ -35,50 +33,32 @@ const db = admin.firestore()
  *   - Throttle state in /_rateLimit/verifyAccessCode_{uid} with
  *     { count, windowStart } fields
  *   - Windowed: when (now - windowStart) > 1h, the counter resets
- *   - Throttle docs are write-side-only; tightening them via TTL
- *     policy is a deploy-time admin task (separate from code)
  *
- * Threat model:
- *   - Bot iterating CRMC-YYYY-00000 → CRMC-YYYY-99999 to find claimable
- *     codes: blocked at 10 attempts/hour. To enumerate the full ~30k
- *     2026 range would take 3000 hours.
- *   - Same actor opens many tabs to bypass: each tab has a fresh uid
- *     only if they explicitly call signInAnonymously per tab. With
- *     persistent auth they share the same uid → throttled together.
- *   - Determined attacker re-signing in to get fresh uids: possible
- *     but slow (each anon sign-in is a network round-trip). Combined
- *     with the structural Phase 0.3 fix (no usedBy on parent doc),
- *     the worst they can learn is "is this code claimed".
+ * Architecture:
+ *   - The onCall wrapper at the bottom is what deploys. It pulls auth +
+ *     data off the request and calls handleVerifyAccessCode().
+ *   - handleVerifyAccessCode(deps) is the pure handler. Takes uid, code,
+ *     db, and (optionally) a now-ish clock. Returns the same shape the
+ *     callable returns. Throws HttpsError on auth / throttle / input /
+ *     internal failures. Pure means it's testable with a mocked db.
  */
 
 const CODE_RE = /^CRMC-\d{4}-\d{5}$/
-const WINDOW_MS  = 60 * 60 * 1000  // 1 hour
+const WINDOW_MS    = 60 * 60 * 1000  // 1 hour
 const MAX_ATTEMPTS = 10
 
-exports.verifyAccessCode = onCall({
-  // Co-located with Firestore (asia-southeast1) so the get() chain
-  // stays in-region; cuts ~50ms off cold-start round-trip vs us-central.
-  region: 'asia-southeast1',
-  // 60-second timeout is plenty; the work is two reads + maybe one
-  // write. Saves $$ vs the default 540s budget.
-  timeoutSeconds: 60,
-  // memory: '256MiB' is the minimum onCall offers and is fine for
-  // this workload.
-  memory: '256MiB',
-}, async (request) => {
-
+async function handleVerifyAccessCode({ uid, code, db, now = () => Date.now(), serverTimestamp }) {
   // 1. Auth gate (anonymous is acceptable, but unauth is not).
-  if (!request.auth?.uid) {
+  if (!uid) {
     throw new HttpsError(
       'unauthenticated',
       'Sign in (anonymously is fine) before verifying an access code.',
     )
   }
-  const uid = request.auth.uid
 
   // 2. Input validation.
-  const code = String(request.data?.code ?? '').trim().toUpperCase()
-  if (!CODE_RE.test(code)) {
+  const normalizedCode = String(code ?? '').trim().toUpperCase()
+  if (!CODE_RE.test(normalizedCode)) {
     throw new HttpsError(
       'invalid-argument',
       'Code must be in the format CRMC-YYYY-NNNNN.',
@@ -91,23 +71,22 @@ exports.verifyAccessCode = onCall({
   try {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(throttleRef)
-      const now  = Date.now()
+      const nowMs = now()
       let count = 0
-      let windowStart = now
+      let windowStart = nowMs
       if (snap.exists) {
         const data = snap.data()
-        const elapsed = now - (data.windowStart ?? 0)
+        const elapsed = nowMs - (data.windowStart ?? 0)
         if (elapsed > WINDOW_MS) {
-          // Window expired — start fresh.
           count = 0
-          windowStart = now
+          windowStart = nowMs
         } else {
           count       = data.count ?? 0
-          windowStart = data.windowStart ?? now
+          windowStart = data.windowStart ?? nowMs
         }
       }
       if (count >= MAX_ATTEMPTS) {
-        const minutesLeft = Math.ceil((WINDOW_MS - (now - windowStart)) / 60000)
+        const minutesLeft = Math.ceil((WINDOW_MS - (nowMs - windowStart)) / 60000)
         throw new HttpsError(
           'resource-exhausted',
           `Too many verification attempts. Try again in about ${minutesLeft} minutes.`,
@@ -116,7 +95,7 @@ exports.verifyAccessCode = onCall({
       tx.set(throttleRef, {
         count: count + 1,
         windowStart,
-        lastAttemptAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastAttemptAt: serverTimestamp(),
       })
     })
   } catch (err) {
@@ -128,7 +107,7 @@ exports.verifyAccessCode = onCall({
   // 4. Resolve the code. Server-side reads bypass the parent doc's
   //    public-get exposure, and we only return the minimum signal.
   try {
-    const codeSnap = await db.doc(`hospitalIds/${code}`).get()
+    const codeSnap = await db.doc(`hospitalIds/${normalizedCode}`).get()
     if (!codeSnap.exists) {
       return { available: false, exists: false }
     }
@@ -138,7 +117,22 @@ exports.verifyAccessCode = onCall({
       exists: true,
     }
   } catch (err) {
-    logger.error('[verifyAccessCode] read failed', { uid, code, err: err.message })
+    logger.error('[verifyAccessCode] read failed', { uid, code: normalizedCode, err: err.message })
     throw new HttpsError('internal', 'Could not look up the access code. Try again.')
   }
-})
+}
+
+exports.handleVerifyAccessCode = handleVerifyAccessCode
+
+exports.verifyAccessCode = onCall({
+  // Co-located with Firestore (asia-southeast1) so the get() chain
+  // stays in-region; cuts ~50ms off cold-start round-trip vs us-central.
+  region: 'asia-southeast1',
+  timeoutSeconds: 60,
+  memory: '256MiB',
+}, async (request) => handleVerifyAccessCode({
+  uid:  request.auth?.uid,
+  code: request.data?.code,
+  db:   admin.firestore(),
+  serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+}))

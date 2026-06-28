@@ -605,18 +605,30 @@ have to re-derive them.
 | GL expiry sweep permission denied | `79f51e3` | Agencies update rule blocked all coordinator budget writes; sweep needs `budget.committed` mutation. Hotfix: pin only `allocated` + `fundSource` |
 | `fundSource is undefined on object` | `371a6c4` | Above hotfix had a brittle equality check on a potentially-missing field. **Caught by the rules tests we wrote in 2.6.** Replaced with `.get('fundSource', null)` |
 
-### Still pending (post-defense)
+### Phase 2 of execution (2026-06-28 night session)
+
+After the initial Phase 0 + 1 + most of 2 + most of 3/4 shipped, a
+second session closed the remaining high-leverage items that AI
+assistance is best suited for. The user's Claude Code subscription
+ended after this session.
+
+| Item | Commit | Note |
+|---|---|---|
+| 2.1 partial | `d2726a8` | ApplicationDetail.jsx helpers extracted: 1,991 → 1,715 lines (-13%). Stepper + primaryActions + buildTimelineStages moved to `applicationDetail/`. Handler extraction explicitly deferred -- too risky under time pressure |
+| 2.2 | `d183535` | Messages.jsx split: 1,460 → 561 lines (-62%). 4 sub-components + helpers to `messages/`. Fixed a latent `conv.id` bug during extraction |
+| 3.2 | `e389a24` | i18n linter (eslint-plugin-i18next) + bulk fix: 41 → 0 warnings on patient-facing surfaces. IntakeWizard exempted (inline-bilingual pattern) |
+| 3.5 | `44f926f` + `<this commit>` | Cloud Function `verifyAccessCode` for server-side rate limiting (10 attempts/hour per uid). Register.jsx wired with fallback to direct Firestore read. **16 unit tests** for the pure handler |
+| 4.9 + extras | `defb991` `62f7f93` `bc83dfe` `<this>` | Component test scaffold + 52 tests across 7 files (AddressPicker, PatientAccessLog, AnnouncementFeedCard, CaseTimeline, PesoInput, SuggestEndorsementModal, ConversationModal) |
+| Bonus: CI | `62f7f93` | GitHub Actions workflow: build + utils + components + rules in parallel on every push to main |
+| Bonus: pre-commit hook | `033c045` | `simple-git-hooks` runs utils tests before every commit; bypass via `SKIP_SIMPLE_GIT_HOOKS=1` |
+
+### Still pending (genuinely post-defense)
 
 | Phase | Item | Why not now |
 |---|---|---|
-| 2.1 | Split ApplicationDetail.jsx (1,991 lines) | High regression risk; explicitly "post-defense" in original plan |
-| 2.2 | Split Messages.jsx (1,460 lines) | Same |
-| 3.2 | i18n linter | Tooling cleanup; doesn't change runtime |
-| 3.4 | Real pagination on admin/Requests | `limit(500)` cap from 0.5 buys 100× headroom; revisit at scale |
-| 3.5 | Server-side rate limit on access codes | Now possible on Blaze; not yet built |
-| 4.1 | ProfileModalContext | Depends on a broader Layout refactor |
-| 4.2 | Address structured vs flat decision | Settled via 3.6 helper; doc explicitly resolves it |
-| 4.9 | Open-ended component tests | Time-unbounded; add as bugs surface |
+| 2.1 cont. | Extract ApplicationDetail handlers as hooks | ~400 lines of transaction logic; high regression risk under time pressure. Helpers already extracted in `d2726a8` |
+| 3.4 | Real pagination on admin/Requests | `limit(500)` cap from 0.5 is sufficient for years of pilot scale |
+| 4.1 | ProfileModalContext | Depends on broader Layout refactor (Layout.jsx is 1,285 lines) |
 
 ### Manual step required for 2.4
 
