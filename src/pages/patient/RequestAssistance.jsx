@@ -864,7 +864,7 @@ export default function RequestAssistance() {
                           {!ocrBusy && ocr && ocr.match == null && !ocr.text && (
                             <button type="button" onClick={() => retryOcr(tp.name)}
                               className="text-xs text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
-                              Try again
+                              {t('shell.common.tryAgain')}
                             </button>
                           )}
                         </div>
@@ -944,7 +944,7 @@ export default function RequestAssistance() {
                         {!busy && ocr && ocr.match == null && !ocr.text && (
                           <button type="button" onClick={() => retryOcr(REP_ID)}
                             className="text-xs text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
-                            Try again
+                            {t('shell.common.tryAgain')}
                           </button>
                         )}
                       </div>

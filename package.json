@@ -11,7 +11,9 @@
     "test:watch": "vitest tests/utils",
     "test:ui": "vitest --ui",
     "test:rules": "firebase emulators:exec --only firestore --project mapa-rules-test \"vitest run tests/rules\"",
-    "test:all": "npm run test && npm run test:rules"
+    "test:all": "npm run test && npm run test:rules",
+    "lint:i18n": "eslint --no-error-on-unmatched-pattern \"src/pages/patient/**/*.{js,jsx}\" \"src/components/patient/**/*.{js,jsx}\" \"src/components/Layout.jsx\" \"src/components/InstallNudge.jsx\" \"src/components/InstallPrompt.jsx\" \"src/components/AnnouncementBanner.jsx\" \"src/components/AnnouncementFeedCard.jsx\" \"src/components/OfflineBanner.jsx\"",
+    "lint:i18n:count": "npm run lint:i18n -- --format json 2>nul | node -e \"let s=''; process.stdin.on('data',c=>s+=c); process.stdin.on('end',()=>{try{const j=JSON.parse(s);const t=j.reduce((a,f)=>a+f.warningCount+f.errorCount,0);console.log('Hardcoded strings: '+t);}catch(e){console.log('parse failed');}})\""
   },
   "dependencies": {
     "firebase": "^12.13.0",
@@ -27,13 +29,19 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@firebase/rules-unit-testing": "^5.0.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/ui": "^4.1.8",
     "autoprefixer": "^10.4.18",
+    "eslint": "^9.39.4",
+    "eslint-plugin-i18next": "^6.1.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "firebase-admin": "^13.10.0",
+    "globals": "^17.7.0",
     "postcss": "^8.4.35",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import Layout from '../../components/Layout'
 import PatientAccessLog from '../../components/patient/PatientAccessLog'
 
@@ -9,14 +10,14 @@ import PatientAccessLog from '../../components/patient/PatientAccessLog'
  * "Who has accessed your record" reinforces the data-privacy framing.
  */
 export default function PatientAccessLogPage() {
+  const { t } = useTranslation()
   return (
-    <Layout breadcrumb="Who has accessed your record">
+    <Layout breadcrumb={t('shell.accessLog.title')}>
       <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-3xl">
         <div className="mb-5">
-          <h1 className="page-title">Who has accessed your record</h1>
+          <h1 className="page-title">{t('shell.accessLog.title')}</h1>
           <p className="page-sub">
-            Your rights under RA 10173 — the Data Privacy Act. Every action
-            CRMC or a partner agency takes on your case appears here.
+            {t('shell.accessLog.subtitle')}
           </p>
         </div>
 

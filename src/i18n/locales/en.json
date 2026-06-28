@@ -283,6 +283,27 @@
       "logout": "Log out",
       "afterLogout": "After logging out, open the URL above on your laptop browser to sign back in.",
       "roleChanged": "Your account role changed. Please refresh the page so it takes effect."
+    },
+    "announcement": {
+      "enterTitle": "Enter a title…",
+      "enterMessage": "Enter a message…",
+      "whatsNew": "What's new",
+      "from": "from {{agency}}",
+      "showLess": "Show less",
+      "showMore": "Show {{count}} more"
+    },
+    "accessLog": {
+      "title": "Who has accessed your record",
+      "subtitle": "Your rights under RA 10173 — the Data Privacy Act. Every action CRMC or a partner agency takes on your case appears here.",
+      "componentDescription": "Every action by CRMC and partner agencies on your case is recorded. Under RA 10173 (Data Privacy Act §16c), you have the right to see it.",
+      "unavailable": "Access log temporarily unavailable. Try refreshing in a moment.",
+      "empty": "No activity on your record yet."
+    },
+    "notifs": {
+      "markAllRead": "Mark all read"
+    },
+    "common": {
+      "tryAgain": "Try again"
     }
   },
   "profile": {

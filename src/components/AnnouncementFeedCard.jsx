@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MdClose, MdCampaign, MdExpandMore, MdExpandLess } from 'react-icons/md'
+import { useTranslation } from 'react-i18next'
 import { TYPE_CONFIG, dismissAnnouncement } from '../utils/announcements'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -36,6 +37,7 @@ const VISIBLE_LIMIT = 3
 
 export default function AnnouncementFeedCard({ items }) {
   const { user } = useAuth()
+  const { t }    = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const [hiddenIds, setHiddenIds] = useState(new Set())
 
@@ -60,10 +62,10 @@ export default function AnnouncementFeedCard({ items }) {
   }
 
   return (
-    <div className="card p-4 sm:p-5" role="region" aria-label="What's new">
+    <div className="card p-4 sm:p-5" role="region" aria-label={t('shell.announcement.whatsNew')}>
       <div className="flex items-center gap-2 mb-3">
         <MdCampaign className="text-brand-500" size={18} />
-        <h2 className="text-sm font-semibold text-gray-900">What&apos;s new</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t('shell.announcement.whatsNew')}</h2>
         <span className="text-xs text-gray-400">({visible.length})</span>
       </div>
 
@@ -85,7 +87,7 @@ export default function AnnouncementFeedCard({ items }) {
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <p className="text-sm font-semibold text-gray-900">{ann.title}</p>
                   {ann.source === 'agency' && ann.agencyName && (
-                    <span className="text-xs text-gray-500">from {ann.agencyName}</span>
+                    <span className="text-xs text-gray-500">{t('shell.announcement.from', { agency: ann.agencyName })}</span>
                   )}
                 </div>
                 <p className="text-xs text-gray-700 mt-0.5 leading-relaxed whitespace-pre-line">
@@ -117,9 +119,9 @@ export default function AnnouncementFeedCard({ items }) {
           className="mt-3 w-full flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-gray-500 hover:text-brand-600 transition-colors"
         >
           {expanded ? (
-            <>Show less <MdExpandLess size={16} /></>
+            <>{t('shell.announcement.showLess')} <MdExpandLess size={16} /></>
           ) : (
-            <>Show {overflow} more <MdExpandMore size={16} /></>
+            <>{t('shell.announcement.showMore', { count: overflow })} <MdExpandMore size={16} /></>
           )}
         </button>
       )}

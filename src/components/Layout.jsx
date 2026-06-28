@@ -241,8 +241,8 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
         </button>
         <div className="flex items-center gap-3">
           {unreadCount > 0 && (
-            <button onClick={onMarkAllRead} className="text-xs text-gray-500 hover:text-gray-700 font-medium">
-              ✓ {t('shell.notifs.markAllRead')}
+            <button onClick={onMarkAllRead} className="text-xs text-gray-500 hover:text-gray-700 font-medium inline-flex items-center gap-1">
+              <MdCheckCircle size={12} /> {t('shell.notifs.markAllRead')}
             </button>
           )}
         </div>
@@ -440,6 +440,7 @@ function ComposeModal({ user, onClose }) {
         {/* Footer */}
         <div className="px-5 pb-4 flex items-center justify-between">
           <p className={`text-xs ${body.length > 900 ? 'text-red-500' : 'text-gray-400'}`}>
+            {/* eslint-disable-next-line i18next/no-literal-string -- numeric counter, not copy */}
             {body.length} / 1000
           </p>
           <button className="btn-primary flex items-center gap-1.5 text-sm"
@@ -1105,6 +1106,7 @@ export default function Layout({ children, breadcrumb }) {
             <div className={`text-xs sm:text-sm text-gray-500 truncate ${
               user?.role === ROLES.PATIENT ? 'hidden lg:block' : ''
             }`}>
+              {/* eslint-disable-next-line i18next/no-literal-string -- product brand, untranslated by design */}
               <span className="hidden sm:inline">MAPA / </span>
               <span className="text-gray-800 font-medium">{breadcrumb}</span>
             </div>

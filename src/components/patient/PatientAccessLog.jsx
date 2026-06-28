@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTranslation } from 'react-i18next'
 import {
   MdSecurity, MdVisibility, MdEdit, MdCheckCircle, MdCancel,
   MdSchedule, MdHistory, MdShield,
@@ -57,6 +58,7 @@ const formatWhen = (ts) => {
 
 export default function PatientAccessLog() {
   const { user } = useAuth()
+  const { t }    = useTranslation()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
@@ -90,11 +92,10 @@ export default function PatientAccessLog() {
     <div className="card p-5">
       <div className="flex items-center gap-2 mb-2">
         <MdSecurity className="text-brand-500" size={18} />
-        <h2 className="text-sm font-semibold text-gray-900">Who has accessed your record</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t('shell.accessLog.title')}</h2>
       </div>
       <p className="text-xs text-gray-500 mb-4">
-        Every action by CRMC and partner agencies on your case is recorded.
-        Under RA 10173 (Data Privacy Act §16c), you have the right to see it.
+        {t('shell.accessLog.componentDescription')}
       </p>
 
       {loading ? (
@@ -105,12 +106,12 @@ export default function PatientAccessLog() {
         </div>
       ) : error ? (
         <p className="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg">
-          Access log temporarily unavailable. Try refreshing in a moment.
+          {t('shell.accessLog.unavailable')}
         </p>
       ) : entries.length === 0 ? (
         <div className="text-center py-6">
           <MdHistory size={28} className="text-gray-300 mx-auto mb-1" />
-          <p className="text-xs text-gray-400">No activity on your record yet.</p>
+          <p className="text-xs text-gray-400">{t('shell.accessLog.empty')}</p>
         </div>
       ) : (
         <ul className="space-y-0">

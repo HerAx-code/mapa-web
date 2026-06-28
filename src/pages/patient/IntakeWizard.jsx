@@ -1,3 +1,9 @@
+/* eslint-disable i18next/no-literal-string -- IntakeWizard uses the
+   inline-bilingual pattern documented in CLAUDE.md ("Use inline
+   bilingual labels where possible"). Every English string here is
+   followed by " · <Filipino>", which the linter can't recognize as
+   already-translated. Per-string exemption would be noisier than
+   file-level. */
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'

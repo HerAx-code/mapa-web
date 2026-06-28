@@ -1,4 +1,5 @@
 import { MdClose } from 'react-icons/md'
+import { useTranslation } from 'react-i18next'
 import { TYPE_CONFIG } from '../utils/announcements'
 
 // Single source of truth for how a system announcement renders.
@@ -35,19 +36,20 @@ export default function AnnouncementBanner({
   placeholder = false,
   dismissAriaLabel = 'Dismiss',
 }) {
+  const { t } = useTranslation()
   const cfg  = TYPE_CONFIG[type] ?? TYPE_CONFIG.info
   const Icon = cfg.icon
 
   const titleNode = title
     ? <span className="text-sm font-semibold text-gray-900 mr-2">{title}</span>
     : placeholder
-      ? <span className="text-sm font-semibold text-gray-400 italic mr-2">Enter a title…</span>
+      ? <span className="text-sm font-semibold text-gray-400 italic mr-2">{t('shell.announcement.enterTitle')}</span>
       : null
 
   const messageNode = message
     ? <span className="text-sm text-gray-600">{message}</span>
     : placeholder
-      ? <span className="text-sm text-gray-400 italic">Enter a message…</span>
+      ? <span className="text-sm text-gray-400 italic">{t('shell.announcement.enterMessage')}</span>
       : null
 
   return (

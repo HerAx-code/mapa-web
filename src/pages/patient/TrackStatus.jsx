@@ -783,6 +783,7 @@ export default function TrackStatus() {
                               figure is the headline of the patient's journey. */}
                           <div className="bg-white/70 rounded-lg px-4 py-3 mb-2">
                             <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.amountLabel')}</p>
+                            {/* eslint-disable-next-line i18next/no-literal-string -- ₱ is currency, not copy */}
                             <p className="text-2xl sm:text-3xl font-bold text-green-700 leading-tight">
                               ₱{Number(app.approvedAmount).toLocaleString()}
                             </p>

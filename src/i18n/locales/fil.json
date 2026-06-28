@@ -283,6 +283,27 @@
       "logout": "Mag-logout",
       "afterLogout": "Pagkatapos mag-logout, buksan ang URL sa itaas sa iyong laptop browser para mag-sign in muli.",
       "roleChanged": "Nagbago ang iyong role. Mangyaring i-refresh ang pahina."
+    },
+    "announcement": {
+      "enterTitle": "Maglagay ng pamagat…",
+      "enterMessage": "Maglagay ng mensahe…",
+      "whatsNew": "Bago ngayon",
+      "from": "mula sa {{agency}}",
+      "showLess": "Magpakita ng kaunti",
+      "showMore": "Magpakita pa ng {{count}}"
+    },
+    "accessLog": {
+      "title": "Sino ang nakakita sa iyong rekord",
+      "subtitle": "Karapatan mo sa ilalim ng RA 10173 — ang Data Privacy Act. Lalabas dito ang bawat aksyong gagawin ng CRMC o ng kasosyong ahensiya sa iyong kaso.",
+      "componentDescription": "Naitatala ang bawat aksyon ng CRMC at mga kasosyong ahensiya sa iyong kaso. Sa ilalim ng RA 10173 (Data Privacy Act §16c), may karapatan kang makita ito.",
+      "unavailable": "Pansamantalang hindi makuha ang access log. Subukang i-refresh sa ilang sandali.",
+      "empty": "Wala pang aksyon sa iyong rekord."
+    },
+    "notifs": {
+      "markAllRead": "Markahan lahat na nabasa"
+    },
+    "common": {
+      "tryAgain": "Subukang muli"
     }
   },
   "profile": {
