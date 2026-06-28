@@ -275,6 +275,14 @@
     },
     "toast": {
       "loggedOut": "Na-logout na."
+    },
+    "staffInPWA": {
+      "title": "Ang naka-install na app ay para sa mga pasyente",
+      "signedInAs": "Naka-sign in ka bilang <strong>{{role}}</strong>. Ang MAPA installed app ay para sa mga pasyente na gumagamit ng kanilang cellphone.",
+      "useWebPortal": "Ang trabaho ng ahensiya at admin ay sa web portal sa laptop browser, kung saan may sapat na pwesto para sa inbox, document review, at reports.",
+      "logout": "Mag-logout",
+      "afterLogout": "Pagkatapos mag-logout, buksan ang URL sa itaas sa iyong laptop browser para mag-sign in muli.",
+      "roleChanged": "Nagbago ang iyong role. Mangyaring i-refresh ang pahina."
     }
   },
   "profile": {

@@ -275,6 +275,14 @@
     },
     "toast": {
       "loggedOut": "Logged out."
+    },
+    "staffInPWA": {
+      "title": "Installed app is for patients",
+      "signedInAs": "You're signed in as <strong>{{role}}</strong>. The MAPA installed app is designed for patients on their phones.",
+      "useWebPortal": "Agency and admin work happens on the web portal in a laptop browser, where the inbox, document review, and reports have enough screen space to read properly.",
+      "logout": "Log out",
+      "afterLogout": "After logging out, open the URL above on your laptop browser to sign back in.",
+      "roleChanged": "Your account role changed. Please refresh the page so it takes effect."
     }
   },
   "profile": {
