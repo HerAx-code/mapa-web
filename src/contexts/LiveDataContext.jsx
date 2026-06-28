@@ -25,6 +25,12 @@ const LiveDataContext = createContext({
   agencyInboxCount:     0,
   liveAgencyName:       null,
   totalUnreadMessages:  0,
+  // Phase 3.3: agencyMap is a { id -> agency } cache, populated by a
+  // single onSnapshot here so individual pages don't fire N getDoc
+  // calls when they need an agency name / color / initials. Killed the
+  // N+1 in TrackStatus and unblocks any future page that needs cheap
+  // agency lookups.
+  agencyMap:            {},
   // Pub-sub for "a notification arrived that wasn't in the previous
   // snapshot." Layout subscribes to this to fire the toast affordance
   // without owning the underlying onSnapshot.
@@ -38,6 +44,9 @@ export function LiveDataProvider({ children }) {
   const [conversations,    setConversations]    = useState([])
   const [agencyInboxCount, setAgencyInboxCount] = useState(0)
   const [liveAgencyName,   setLiveAgencyName]   = useState(null)
+  // Phase 3.3: agencyMap shared across pages. Anyone signed in can
+  // read the agencies collection (rule: allow read: if true).
+  const [agencyMap,        setAgencyMap]        = useState({})
 
   // null = initial load not yet completed -- the first onSnapshot
   // payload populates this set silently rather than firing a toast for
@@ -129,6 +138,30 @@ export function LiveDataProvider({ children }) {
     return () => { u1(); u2() }
   }, [user?.uid, user?.role, user?.agencyId])
 
+  // ── agencyMap (Phase 3.3) ──────────────────────────────────────────
+  // Single live snapshot on the agencies collection populates a
+  // { id -> agency } map that any page can lookup synchronously.
+  // Kills the N+1 pattern in patient/TrackStatus where each app row
+  // fired its own getDoc(agencies/{id}). Agencies are publicly
+  // readable per the parent collection rule, so this works for any
+  // signed-in role. Bounded set (~10 agencies even at scale).
+  useEffect(() => {
+    if (!user?.uid) {
+      setAgencyMap({})
+      return
+    }
+    const unsub = onSnapshot(
+      collection(db, 'agencies'),
+      snap => {
+        const m = {}
+        snap.docs.forEach(d => { m[d.id] = { id: d.id, ...d.data() } })
+        setAgencyMap(m)
+      },
+      (err) => console.error('[LiveData] agencies snapshot error:', err),
+    )
+    return unsub
+  }, [user?.uid])
+
   const subscribeToNewNotifications = (callback) => {
     newNotifSubscribers.current.add(callback)
     return () => { newNotifSubscribers.current.delete(callback) }
@@ -141,6 +174,7 @@ export function LiveDataProvider({ children }) {
       agencyInboxCount,
       liveAgencyName,
       totalUnreadMessages,
+      agencyMap,
       subscribeToNewNotifications,
     }}>
       {children}

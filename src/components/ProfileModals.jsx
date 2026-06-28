@@ -1,11 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
 import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, getDocs, query, where } from 'firebase/firestore'
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
-import { db, auth } from '../firebase'
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { db, auth, storage } from '../firebase'
 import { notify } from '../utils/notifications'
 
-// Resize + crop image to 200×200 and return a Base64 JPEG string
-const resizeToBase64 = (file) => new Promise((resolve, reject) => {
+// Phase 2.4: profile photos now live in Cloud Storage at
+//   /profilePhotos/{uid}/avatar.jpg
+// instead of inline base64 strings in users/{uid}.photoURL. Removes
+// the 13%-of-1MiB doc bloat per user and lets us treat photos like
+// real files (cache headers, CDN, etc.) for free.
+//
+// Resize to 200x200 client-side (same as the old base64 path) so
+// upload bandwidth stays tiny on indigent-patient phones, then push
+// the JPEG Blob to Storage and return the public download URL. The
+// downloadURL goes into users/{uid}.photoURL exactly as before --
+// every consumer of `user.photoURL` is shape-compatible.
+const resizeToJpegBlob = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader()
   reader.onerror = reject
   reader.onload = (e) => {
@@ -17,17 +28,34 @@ const resizeToBase64 = (file) => new Promise((resolve, reject) => {
       canvas.width  = SIZE
       canvas.height = SIZE
       const ctx = canvas.getContext('2d')
-      // center-crop to square
       const min = Math.min(img.width, img.height)
       const sx  = (img.width  - min) / 2
       const sy  = (img.height - min) / 2
       ctx.drawImage(img, sx, sy, min, min, 0, 0, SIZE, SIZE)
-      resolve(canvas.toDataURL('image/jpeg', 0.75))
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob returned null')), 'image/jpeg', 0.75)
     }
     img.src = e.target.result
   }
   reader.readAsDataURL(file)
 })
+
+const uploadProfilePhoto = async (uid, file) => {
+  const blob = await resizeToJpegBlob(file)
+  const path = `profilePhotos/${uid}/avatar.jpg`
+  const ref  = storageRef(storage, path)
+  await uploadBytes(ref, blob, { contentType: 'image/jpeg' })
+  return await getDownloadURL(ref)
+}
+
+const deleteProfilePhoto = async (uid) => {
+  try {
+    await deleteObject(storageRef(storage, `profilePhotos/${uid}/avatar.jpg`))
+  } catch (e) {
+    // Object-not-found is fine -- means the user never uploaded one,
+    // or the existing photoURL was still in the legacy base64 form.
+    if (e?.code !== 'storage/object-not-found') throw e
+  }
+}
 import { useAuth } from '../contexts/AuthContext'
 import { ROLE_LABEL } from '../utils/constants'
 import { buildPatientDataExport, downloadAsJSON, patientExportFilename } from '../utils/dataExport'
@@ -147,8 +175,14 @@ function AccountSettingsModal({ onClose }) {
       let photoURL = user?.photoURL ?? null
 
       if (!isPatient) {
-        if (photoFile)    photoURL = await resizeToBase64(photoFile)
-        if (removePhoto)  photoURL = null
+        // Phase 2.4: upload to Storage instead of base64. Returns the
+        // https download URL; existing readers of user.photoURL work
+        // unchanged since both data: and https: render in <img>.
+        if (photoFile)    photoURL = await uploadProfilePhoto(user.uid, photoFile)
+        if (removePhoto) {
+          await deleteProfilePhoto(user.uid)
+          photoURL = null
+        }
       }
 
       const updates = {

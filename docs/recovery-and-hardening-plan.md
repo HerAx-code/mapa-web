@@ -1,9 +1,15 @@
 # MAPA Recovery & Hardening Plan
 
 > Sourced from the senior-engineer onboarding review on 2026-06-19. Findings
-> were prioritized by defense-blocking impact, not by category. Phase 0 must
-> ship before the next defense rehearsal; everything else has a longer
-> runway. Hard total: ~20 engineer-days, mostly post-defense.
+> were prioritized by defense-blocking impact, not by category.
+>
+> **Status as of 2026-06-27: substantially complete.** All of Phase 0,
+> all of Phase 1, most of Phase 2 (excluding the big page splits), most
+> of Phase 3, and 9 of 10 Phase 4 questions are shipped + deployed.
+> The remaining items are the two architectural page splits (2.1/2.2),
+> the i18n linter (3.2), pagination (3.4), and a server-side rate
+> limit (3.5). See the "Execution log" section at the bottom for the
+> commit-by-commit ledger.
 
 ---
 
@@ -556,3 +562,90 @@ have to re-derive them.
 > a 2026-06-19 review. Re-read the review (in conversation history or
 > as a separate doc) for the "why" behind each item. If a finding here
 > looks too aggressive or too lax, the conversation has the reasoning.
+
+---
+
+## Execution log (2026-06-19 → 2026-06-27)
+
+### Closed in production
+
+| Item | Commit | Note |
+|---|---|---|
+| 0.1 Service account key rotated | (manual) | Jun 27 key active; Jun 1 + Jun 5 keys deleted in GCP console |
+| 0.2 documentContents cross-agency leak | `77e959f` | Rule live; **rules test pinning** added in `371a6c4` |
+| 0.3 hospitalIds privateInfo sub-doc | `b37043c` | Chose Option A (strip-`usedBy`); 1 record migrated; tests added in `371a6c4` |
+| 0.4 Certificate forge-protection | `77e959f` | get() chain on parent application; tests in `371a6c4` |
+| 0.5 Admin listener limit(500) | `224a6df` | One-line cap; pagination (3.4) deferred |
+| 1.1 ErrorBoundary | (pre-existing) | Already wired in `main.jsx` since May; review missed it |
+| 1.2 documentContents size cap | `c939815` | + dedicated test |
+| 1.3 Dev-gate console noise | `c939815` | One-line Vite esbuild config (drops console.log/debug/info from prod builds) |
+| 1.4 Role-change refresh banner | `c939815` | `useRef`-tracked role transition in Layout |
+| 1.5 Firestore offline persistence | `c939815` | `persistentLocalCache` + multi-tab manager |
+| 2.3 useModal + Field/PesoInput → ui/ | `e2905cf` | Three new files; IntakeSheet updated; future modal sites use the hook |
+| 2.4 Profile photos → Cloud Storage | (this commit) | Code shipped + storage rules updated; **awaiting one-time Firebase Storage initialization** (Console "Get Started" click) |
+| 2.5 Deprecate `audience` field | `f93e748` | Simpler than planned — nothing read it |
+| 2.6 Rules unit tests for Phase 0/1 | `371a6c4` | **75/75 pass**; +21 assertions across 3 files; caught a fundSource bug in our own hotfix that we shipped earlier the same night |
+| 3.1 Lazy-load tesseract.js | (pre-existing) | Already a dynamic import; verified |
+| 3.3 Agency cache in LiveDataContext | (this commit) | Kills N+1 in TrackStatus; available to any future page |
+| 3.6 Sunset legacy `address` field | (this commit) | `formatUserAddress` helper + GL render switched; structured fields canonical |
+| 4.3 `resultingApplicationId` removed | (this commit) | Was dead field; wiring would have been ~2h on a critical path for marginal value |
+| 4.4 R34 watcher reads | (closed) | Already wired -- notifications fan out on approve/reject in agency/ApplicationDetail |
+| 4.5 audience vs targetRoles | duplicate of 2.5 | |
+| 4.6 OCR lazy-loaded | duplicate of 3.1 | |
+| 4.7 Super-admin Seed demo button | (this commit) | Reseeds the 14-day-expiry announcements without CLI dependency |
+| 4.8 Access code revoke confirm | (this commit) | Inline-row amber confirmation; revoke already existed but was a one-click destructive action |
+| 4.10 PWA staff-blocker bilingual | `625428d` | New `shell.staffInPWA` i18n namespace |
+
+### Production hotfixes that surfaced during execution
+
+| Issue | Commit | Cause |
+|---|---|---|
+| `ReferenceError: orderBy is not defined` in ApplicationDetail | `61a1350` | Latent missing import from R33 (May); dev silently resolved it; today's chunk churn forced a re-download |
+| Missing composite indexes | `79f51e3` | Two indexes (auditLog requestId+createdAt, referralSuggestions status+createdAt) added at the same time as the queries but never written to firestore.indexes.json |
+| GL expiry sweep permission denied | `79f51e3` | Agencies update rule blocked all coordinator budget writes; sweep needs `budget.committed` mutation. Hotfix: pin only `allocated` + `fundSource` |
+| `fundSource is undefined on object` | `371a6c4` | Above hotfix had a brittle equality check on a potentially-missing field. **Caught by the rules tests we wrote in 2.6.** Replaced with `.get('fundSource', null)` |
+
+### Still pending (post-defense)
+
+| Phase | Item | Why not now |
+|---|---|---|
+| 2.1 | Split ApplicationDetail.jsx (1,991 lines) | High regression risk; explicitly "post-defense" in original plan |
+| 2.2 | Split Messages.jsx (1,460 lines) | Same |
+| 3.2 | i18n linter | Tooling cleanup; doesn't change runtime |
+| 3.4 | Real pagination on admin/Requests | `limit(500)` cap from 0.5 buys 100× headroom; revisit at scale |
+| 3.5 | Server-side rate limit on access codes | Now possible on Blaze; not yet built |
+| 4.1 | ProfileModalContext | Depends on a broader Layout refactor |
+| 4.2 | Address structured vs flat decision | Settled via 3.6 helper; doc explicitly resolves it |
+| 4.9 | Open-ended component tests | Time-unbounded; add as bugs surface |
+
+### Manual step required for 2.4
+
+Profile photo migration is **code-complete** but won't activate until
+Firebase Storage is initialized on the project:
+
+  1. Open https://console.firebase.google.com/project/mapa-crmc/storage
+  2. Click **Get Started**
+  3. Accept the default location (asia-southeast1 — same region as Firestore)
+  4. From terminal: `firebase deploy --only storage`
+
+Until then:
+  - Existing base64-stored profile photos render fine (data: URLs work)
+  - New uploads will throw on the `uploadBytes()` call -- toast surfaces the error
+  - The user can keep their existing photo or remove it
+
+After the Storage init + deploy, new uploads write to
+`/profilePhotos/{uid}/avatar.jpg` and the download URL goes into
+`users/{uid}.photoURL`. Old base64 photos coexist seamlessly.
+
+### Key learnings worth carrying forward
+
+1. **Build chunk churn surfaces latent bugs.** Three of the four
+   hotfixes above only surfaced because a different commit invalidated
+   the chunk hash. Re-deployment is its own test.
+2. **The rules tests added in 2.6 paid for themselves the same night**
+   by catching the `fundSource` issue.
+3. **`firebase firestore:indexes` shows the registered list** but not
+   build state -- always confirm via Firebase Console after a deploy.
+4. **Every new Firestore query needs three things**: a matching import,
+   a composite index if it filters+orders on multiple fields, and a
+   rule path that permits every transaction step.

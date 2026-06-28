@@ -90,7 +90,11 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
         respondedAt:  null,
         respondedBy:  null,
         declineReason: null,
-        resultingApplicationId: null,
+        // Phase 4.3: `resultingApplicationId` was a speculative field
+        // for "track which slice resulted from this suggestion." Wiring
+        // it requires threading suggestionId through the EndorseModal
+        // flow which we judged not worth the added complexity. Dropped.
+        // Existing docs with the field retain it harmlessly.
       })
       toast.success('Suggestion sent to CRMC. They will decide whether to endorse.')
       onClose()

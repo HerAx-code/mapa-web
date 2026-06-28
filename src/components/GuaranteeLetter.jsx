@@ -5,6 +5,7 @@
 // "Save as PDF" as the print destination.
 
 import { tsToDate } from '../utils/dates'
+import { formatUserAddress } from '../utils/address'
 
 const fmtDate = (ts) => {
   const d = tsToDate(ts)
@@ -203,7 +204,13 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
       <p className="certify-text">This is to certify that</p>
       <div className="patient-block">
         <div><span className="patient-name">{app.patientName}</span></div>
-        {patient.address && <p className="patient-detail">Address: {patient.address}</p>}
+        {(() => {
+          // Phase 3.6: structured fields canonical, flat string fallback.
+          // formatUserAddress handles both cases so this surface is the
+          // one place GL render needs to know about the schema decision.
+          const addr = formatUserAddress(patient)
+          return addr ? <p className="patient-detail">Address: {addr}</p> : null
+        })()}
         <p className="patient-detail">Contact No.: {app.patientContact || patient.contact || '—'}</p>
         <p className="patient-detail">Hospital ID: {patient.hospitalId || '—'}</p>
       </div>

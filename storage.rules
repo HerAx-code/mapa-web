@@ -85,5 +85,29 @@ service firebase.storage {
 
       allow delete: if isAdmin() || (isPatient() && request.auth.uid == patientId);
     }
+
+    // ── Profile photos (Phase 2.4) ─────────────────────────────────────
+    // Used to live as base64 strings in users/{uid}.photoURL -- a 200x200
+    // JPEG (~10-25KB) inflated 33% by base64 ate up to 13% of the user
+    // doc's 1MiB cap. Migrated to Cloud Storage so photos don't compete
+    // with profile fields for the doc size budget.
+    //
+    // Path: /profilePhotos/{uid}/{file}. The {file} segment is usually
+    // the literal string "avatar.jpg" so re-uploads overwrite the same
+    // object (no orphaned old photos).
+    //
+    // Read: any signed-in user (photos appear on shared surfaces:
+    // notification list, conversation threads, audit-log entries).
+    // Write: only the user themselves. Size capped at 200KB (raw JPEG;
+    // the client resizes to 200x200 well below this). Content type
+    // strictly image/jpeg because that's what canvas.toDataURL emits.
+    match /profilePhotos/{uid}/{file} {
+      allow read:  if isAuth();
+      allow write: if isAuth()
+                    && request.auth.uid == uid
+                    && request.resource.size < 200 * 1024
+                    && request.resource.contentType == 'image/jpeg';
+      allow delete: if isAuth() && request.auth.uid == uid;
+    }
   }
 }

@@ -124,6 +124,12 @@ export default function HospitalIDs() {
   const [search,         setSearch]         = useState('')
   const [showBulkAdd,    setShowBulkAdd]    = useState(false)
   const [confirmDelete,  setConfirmDelete]  = useState(null)
+  // Phase 4.8: confirmation gate for revoke. Previously the icon click
+  // committed immediately -- too easy to misclick on a destructive,
+  // patient-affecting action (it clears the patient's hospitalId field
+  // and the PII sub-doc atomically). Modal shows the patient name +
+  // what will happen before commit.
+  const [confirmRevoke,  setConfirmRevoke]  = useState(null)
   const { user }      = useAuth()
   const isSuperAdmin  = user?.role === 'super_admin'
 
@@ -458,6 +464,7 @@ export default function HospitalIDs() {
 
               {!loading && filtered.map(h => {
                 const isDeleting = confirmDelete?.id === h.id
+                const isRevoking = confirmRevoke?.id === h.id
                 const isUsed     = h.status === 'used'
 
                 return (
@@ -477,9 +484,9 @@ export default function HospitalIDs() {
                           <div className="flex items-center gap-1">
                             {isUsed && (
                               <button
-                                title="Reset to Available"
+                                title="Reset to Available (revoke from current patient)"
                                 className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-                                onClick={() => handleRevoke(h)}>
+                                onClick={() => setConfirmRevoke(h)}>
                                 <MdRefresh size={15} />
                               </button>
                             )}
@@ -495,6 +502,31 @@ export default function HospitalIDs() {
                         )}
                       </td>
                     </tr>
+
+                    {/* Phase 4.8: Revoke confirmation row (amber) */}
+                    {isRevoking && (
+                      <tr className="bg-amber-50">
+                        <td colSpan={6} className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <MdWarning size={16} className="text-amber-500 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-amber-800">
+                                Reset <strong className="font-mono">{h.id}</strong> to Available?
+                                <span className="ml-1 font-normal">
+                                  Currently linked to <strong>{h.usedBy ?? '—'}</strong>. They will lose access; the code returns to the pool and a new patient can claim it via registration. Their patient profile remains; only the hospitalId link is cleared.
+                                </span>
+                              </p>
+                            </div>
+                            <button
+                              className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
+                              onClick={() => setConfirmRevoke(null)}>Cancel</button>
+                            <button
+                              className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600 flex-shrink-0"
+                              onClick={async () => { await handleRevoke(h); setConfirmRevoke(null) }}>Reset to Available</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
 
                     {/* Delete confirmation row */}
                     {isDeleting && (

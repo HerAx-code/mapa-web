@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
+import { collection, query, where, orderBy, limit, onSnapshot, addDoc, getDocs, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
   MdListAlt, MdGroup, MdMessage, MdDescription, MdFavorite,
   MdHistory, MdFlag, MdDownload, MdCampaign,
-  MdWarning, MdSpeed, MdCheckCircle, MdTimer, MdTour,
+  MdWarning, MdSpeed, MdCheckCircle, MdTimer, MdTour, MdAutoFixHigh,
 } from 'react-icons/md'
+import toast from 'react-hot-toast'
+import { logAudit } from '../../utils/auditLog'
 import Tour from '../../components/Tour'
 import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
@@ -46,6 +48,76 @@ export default function AdminDashboard() {
   const navigate          = useNavigate()
   const { user }          = useAuth()
   const isSuperAdmin      = user?.role === ROLES.SUPER_ADMIN
+
+  // Phase 4.7: Seed demo announcements from the dashboard. The original
+  // scripts/seed-demo-scenario.js seeds requests + documents + announcements
+  // via the admin SDK (bypasses rules). From the client, super_admin can
+  // create announcements but NOT requests/documents (those are patient-
+  // create-only by rule -- on purpose). So this button reseeds the
+  // demo announcements that expire after 14 days, removing the
+  // CLI-with-service-account dependency for defense walkthroughs.
+  // Requests + documents persist in Firestore and don't need re-seeding.
+  const [seeding, setSeeding] = useState(false)
+  const handleSeedAnnouncements = async () => {
+    if (seeding) return
+    setSeeding(true)
+    try {
+      const now   = Date.now()
+      const start = new Date(now)
+      const end   = new Date(now + 14 * 24 * 60 * 60 * 1000)
+      // 1. CRMC info: visible on dashboard card + top banner, all roles
+      await addDoc(collection(db, 'announcements'), {
+        type: 'info',
+        title: 'Office hours updated for the holidays',
+        message: 'CRMC Malasakit Center will be open 9am-12nn on December 24 and December 31. Regular hours resume January 2.',
+        startAt: start, endAt: end,
+        surface: 'both',
+        targetRoles: ['patient', 'agency', 'agency_admin'],
+        source: 'crmc',
+        active: true,
+        reminderSent: true,
+        createdAt: serverTimestamp(),
+        createdBy: user?.name ?? 'Admin (Seed)',
+        createdById: user?.uid ?? 'seed-button',
+      })
+      // 2. Malasakit promo (best-effort -- skip if reference data missing)
+      let malasakitId = null
+      try {
+        const malSnap = await getDocs(query(collection(db, 'agencies'), where('name', '==', 'Malasakit Center'), limit(1)))
+        if (!malSnap.empty) malasakitId = malSnap.docs[0].id
+      } catch { /* tolerate */ }
+      if (malasakitId) {
+        await addDoc(collection(db, 'announcements'), {
+          type: 'info',
+          title: 'New: Bilirubin therapy assistance available this month',
+          message: 'Malasakit Center is now covering bilirubin lights and phototherapy supplies for indigent newborns. Walk in or apply through MAPA -- ask your social worker.',
+          startAt: start, endAt: end,
+          surface: 'feed',
+          targetRoles: ['patient'],
+          source: 'agency',
+          agencyId: malasakitId,
+          agencyName: 'Malasakit Center',
+          active: true,
+          reminderSent: true,
+          createdAt: serverTimestamp(),
+          createdBy: user?.name ?? 'Admin (Seed)',
+          createdById: user?.uid ?? 'seed-button',
+        })
+      }
+      logAudit(user, {
+        action: 'demo_announcements_seeded',
+        targetType: 'announcement',
+        targetName: `Demo seed (${malasakitId ? 2 : 1} announcements)`,
+        details: `Reseeded for defense walkthrough`,
+      })
+      toast.success(`Seeded ${malasakitId ? 2 : 1} demo announcement${malasakitId ? 's' : ''}.`)
+    } catch (err) {
+      console.error('[Dashboard] demo seed failed:', err)
+      toast.error('Failed to seed demo announcements. Check console.')
+    } finally {
+      setSeeding(false)
+    }
+  }
 
   const [patientCount,   setPatientCount]   = useState('—')
   const [agencyCount,    setAgencyCount]    = useState('—')
@@ -301,15 +373,30 @@ export default function AdminDashboard() {
       <div className="p-4 sm:p-6">
 
         {/* Page header */}
-        <div className="mb-6">
-          <h1 className="page-title">
-            {isSuperAdmin ? 'System Administration' : 'Operations Dashboard'}
-          </h1>
-          <p className="page-sub">
-            {isSuperAdmin
-              ? 'Global overview of MAPA metrics, alerts, and processing health.'
-              : 'Daily operations — review documents, manage applications, and respond to patient needs.'}
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="page-title">
+              {isSuperAdmin ? 'System Administration' : 'Operations Dashboard'}
+            </h1>
+            <p className="page-sub">
+              {isSuperAdmin
+                ? 'Global overview of MAPA metrics, alerts, and processing health.'
+                : 'Daily operations — review documents, manage applications, and respond to patient needs.'}
+            </p>
+          </div>
+          {/* Phase 4.7: defense reliability button. Reseeds the demo
+              announcements (which expire after 14 days) without needing
+              to drop to CLI + service-account.json. Super-admin only --
+              the announcements rule requires admin write. */}
+          {isSuperAdmin && (
+            <button
+              onClick={handleSeedAnnouncements}
+              disabled={seeding}
+              className="btn-secondary text-xs flex items-center gap-1.5 flex-shrink-0 disabled:opacity-60"
+              title="Reseed the two demo announcements (14-day expiry)">
+              <MdAutoFixHigh size={14} /> {seeding ? 'Seeding…' : 'Seed demo'}
+            </button>
+          )}
         </div>
 
         {/* ── Metric cards ── */}

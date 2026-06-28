@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useLiveData } from '../../contexts/LiveDataContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
@@ -186,10 +187,13 @@ export default function TrackStatus() {
   const { user }                        = useAuth()
   const navigate                        = useNavigate()
   const { t }                           = useTranslation()
+  // Phase 3.3: agencyMap from LiveDataContext (single shared snapshot)
+  // instead of a per-page fan-out of N getDocs against /agencies. Same
+  // shape ({id->agency}), zero call-site changes elsewhere in this file.
+  const { agencyMap }                   = useLiveData()
   const [applications, setApplications] = useState([])
   const [requests,     setRequests]     = useState([])
   const [reqSlices,    setReqSlices]    = useState([])
-  const [agencyMap,    setAgencyMap]    = useState({})
   const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('active')
   const [downloading,      setDownloading]      = useState(null)
@@ -373,17 +377,10 @@ export default function TrackStatus() {
   const activeApps = applications.filter(a => !isSliceTerminal(a, { isGLExpired }))
   const pastApps   = applications.filter(a =>  isSliceTerminal(a, { isGLExpired }))
 
-  // Fetch agency color/initials for agencies not stored on the application doc
-  useEffect(() => {
-    const uniqueIds = [...new Set(applications.map(a => a.agencyId).filter(Boolean))]
-    if (uniqueIds.length === 0) return
-    Promise.all(uniqueIds.map(id => getDoc(doc(db, 'agencies', id))))
-      .then(snaps => {
-        const map = {}
-        snaps.forEach(s => { if (s.exists()) map[s.id] = s.data() })
-        setAgencyMap(map)
-      })
-  }, [applications])
+  // Phase 3.3: removed local agencyMap fetch effect -- the cache is
+  // now in LiveDataContext (single onSnapshot above the routes), which
+  // means the agency name/color/initials are available synchronously
+  // here without an N-call getDocs fan-out on every applications change.
 
   const agencyColor    = (app) =>
     app.agencyColor ?? agencyMap[app.agencyId]?.color ?? FALLBACK_COLOR
