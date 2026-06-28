@@ -1,5 +1,12 @@
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
+// Three test suites share this config:
+//
+//   tests/utils/      pure utils (no I/O, no DOM)             -> npm test
+//   tests/rules/      Firestore rules unit tests via emulator -> npm run test:rules
+//   tests/components/ React component smoke tests (jsdom)     -> npm run test:components
+//
 // Rules tests connect to the Firestore emulator over gRPC. Each Vitest
 // worker that touches initializeTestEnvironment() starts its own gRPC
 // channel. Running 5 test files in parallel ends up spawning 5 worker
@@ -8,11 +15,13 @@ import { defineConfig } from 'vitest/config'
 // sequentially in one worker process, which is plenty fast for this
 // suite (~25 seconds end-to-end including emulator boot).
 //
-// The utils tests under tests/utils/ don't touch any emulator and
-// don't suffer the same constraint -- they ignore this config when
-// invoked via `vitest run tests/utils` from a different working set.
+// The component tests under tests/components/ need jsdom + the React
+// plugin to compile JSX. They're configured per-file with `// @vitest-
+// environment jsdom` headers OR can rely on the workspace default below.
+// The utils tests don't need either; they pay no cost from a top-level
+// jsdom default thanks to Vitest's per-file environment isolation.
 export default defineConfig({
-  // Vitest 4 moved pool and poolOptions to top-level (out of test.*).
+  plugins: [react()],
   pool: 'forks',
   poolOptions: {
     forks: {
@@ -21,5 +30,13 @@ export default defineConfig({
   },
   test: {
     fileParallelism: false,
+    // Default to jsdom so component tests don't need a per-file
+    // // @vitest-environment header. Pure-JS tests still pass under
+    // jsdom -- they just pay a tiny cold-start cost for the DOM globals.
+    environment: 'jsdom',
+    setupFiles: ['./tests/setup.js'],
+    // Ignore the dist/ folder so component-test discovery doesn't
+    // pick up minified bundles.
+    exclude: ['node_modules', 'dist', '.idea', '.git'],
   },
 })
