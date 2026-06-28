@@ -16,6 +16,10 @@ import {
 } from '../../utils/intakeSheet'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
 import { isCrmcAdminRole } from '../../utils/constants'
+// Phase 2.3: Field + PesoInput live in components/ui/ now so other
+// intake-style forms can share them without re-declaring the helpers.
+import Field from '../../components/ui/Field'
+import PesoInput from '../../components/ui/PesoInput'
 
 const AUTOSAVE_MS = 1500
 
@@ -722,43 +726,6 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   )
 }
 
-// ── Small field wrapper ───────────────────────────────────────────────────
-
-function Field({ label, required, children, hint, colSpan }) {
-  return (
-    <div className={colSpan === 2 ? 'sm:col-span-2' : ''}>
-      <label className="block text-xs font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      {children}
-      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
-    </div>
-  )
-}
-
-// Money input with a persistent ₱ prefix glyph. Mirrors the pattern
-// already used by patient/IntakeWizard so the agency intake sheet
-// reads the same way to operators who switch between the two surfaces.
-// wrapperClassName is for grid contexts (family-member rows) where the
-// outer column-span needs to live on the relative wrapper, not the input.
-function PesoInput({
-  value, onChange, disabled, placeholder, min = 0,
-  ariaLabel, className = '', wrapperClassName = '',
-}) {
-  return (
-    <div className={`relative ${wrapperClassName}`}>
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none select-none">₱</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={min}
-        className={`input pl-7 ${className}`}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-      />
-    </div>
-  )
-}
+// Phase 2.3: Field + PesoInput were inlined here originally; promoted
+// to src/components/ui/ so the patient IntakeWizard, future budget
+// forms, etc. can share the same components.
