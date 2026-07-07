@@ -112,16 +112,18 @@ npm run build
 
 ## Testing & quality gates
 
-| Suite | Command | What it does | Speed |
-|---|---|---|---|
-| **Utils** | `npm test` | Pure helper functions (no I/O) | ~15s |
-| **Components** | `npm run test:components` | React component smoke tests (jsdom) | ~30s |
-| **Functions** | `npm run test:functions` | Cloud Function pure handlers (mocked Firestore) | ~5s |
-| **Rules** | `npm run test:rules` | Firestore security rules (boots emulator; needs Java 21+) | ~30s |
-| **All** | `npm run test:all` | Chains all four | ~80s |
+| Suite | Command | What it does | Tests | Speed |
+|---|---|---|---|---|
+| **Utils** | `npm test` | Pure helper functions (no I/O) | 35 | ~15s |
+| **Components** | `npm run test:components` | React component smoke tests (jsdom) | 64 | ~30s |
+| **Functions** | `npm run test:functions` | Cloud Function pure handlers (mocked Firestore) | 34 | ~5s |
+| **Rules** | `npm run test:rules` | Firestore security rules (boots emulator; needs Java 21+) | 75 | ~30s |
+| **All** | `npm run test:all` | Chains all four | **208** | ~80s |
 
-**178 tests** total. Pre-commit hook runs utils tests automatically;
-CI runs the full suite on every push to main.
+Pre-commit hook runs utils tests automatically (~15s); CI runs the
+full suite on every push to main. The component tests use accessible
+queries (`getByRole({ name: ... })`) so a regression in label
+binding fails CI rather than silently breaking screen reader users.
 
 ### Other quality checks
 
@@ -193,9 +195,21 @@ See [firestore.rules](firestore.rules) for the full ruleset and
 [tests/rules/README.md](tests/rules/README.md) for the test coverage.
 
 ### Cloud Function gates (server-side, supplementary)
-`verifyAccessCode` enforces a 10-attempts-per-hour-per-uid throttle on
-the Patient Access Code verification flow, preventing enumeration
-attacks. Code at [functions/src/verifyAccessCode.js](functions/src/verifyAccessCode.js).
+`verifyAccessCode` enforces a **dual-layer throttle** on Patient Access
+Code verification:
+- **Per-uid:** 10 attempts/hour per authenticated uid (catches a single
+  legitimate account spamming).
+- **Per-IP:** 60 attempts/hour per hashed client IP (catches the bot
+  bypass where an attacker rotates uids via `signInAnonymously()` in
+  a loop — the IP layer still rejects).
+
+Both must pass. IPs are SHA-256 hashed (16 hex chars) before storage so
+rate-limit docs don't leak actual IPs to admins. Full enumeration of
+the 30k 2026 code range would take ~500 hours per IP.
+
+Code at [functions/src/verifyAccessCode.js](functions/src/verifyAccessCode.js).
+Tests at [tests/functions/verifyAccessCode.test.js](tests/functions/verifyAccessCode.test.js)
+include an explicit REGRESSION GUARD for the anon-uid-loop bypass attack.
 
 ### Client-side guards (UX only)
 `PrivateRoute` checks roles for route access; `useAuth()` exposes user

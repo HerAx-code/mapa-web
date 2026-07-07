@@ -167,17 +167,44 @@ notification body into another user's bell.
 have been claimed (and by side effect, leak names of registered
 patients via the `usedBy` field).
 
-**Mitigation, partial.**
-- Per-session soft rate limit at registration: 10 verify attempts per
-  hour per session (bypassable by clearing storage).
-- Hospital ID `get` is public, but `list` requires auth.
-- `usedBy` is the registered name, not the email or other identifier;
-  the most an attacker learns is a name<->code mapping.
+**Mitigation, closed 2026-06-28 (Phase 0.3 + Phase 3.5 + Phase 3.5 hardening).**
 
-**Not closed.** A determined attacker can clear sessionStorage or open
-many tabs. A proper fix would be a Cloud Function with per-IP throttle
-+ reCAPTCHA v3. Deferred until pilot abuse signals appear. See
-`Register.jsx` for the soft layer.
+Three layers stacked:
+
+1. **PII moved off the public-readable parent doc** (Phase 0.3, commit
+   `b37043c`). The `usedBy` (patient name) field now lives in an
+   auth-gated sub-collection `hospitalIds/{id}/privateInfo/details`.
+   The parent doc retains only `{ status, patId }` — `patId` is a
+   28-char random uid that doesn't enumerate. Even if an attacker
+   iterates the code range, they cannot pair codes with patient names.
+
+2. **Server-side per-uid throttle** (Phase 3.5, commit `44f926f`).
+   `verifyAccessCode` Cloud Function limits verification to
+   10 attempts/hour per authenticated uid. Client must
+   `signInAnonymously()` before calling, ensuring every attempt is
+   gate-authenticated.
+
+3. **Server-side per-IP throttle** (Phase 3.5 hardening, commit
+   `7c4850d`). Layered ON TOP of the per-uid throttle after a strict
+   review caught that an attacker could bypass the uid layer by
+   looping `signInAnonymously()` to rotate uids. The IP layer caps
+   at 60 attempts/hour per hashed client IP; the attack no longer
+   works because the IP stays constant across the anon-sign-in loop.
+   IPs are SHA-256 hashed (16 hex chars) before storage so the rate
+   limit docs don't leak actual IPs to admins.
+
+**Residual risk.** A determined attacker with access to residential
+proxies can rotate IPs, but the cost of a proxy pool that avoids the
+per-IP cap far exceeds the value of learning "which codes are
+claimed" (which alone reveals nothing — no names, no emails).
+
+**Verification.**
+- `tests/rules/hospitalIds.rules.test.js` — 10 assertions covering the
+  `privateInfo` sub-collection: only admin + the claimant uid can read,
+  create requires self-attribution + 120-char name cap.
+- `tests/functions/verifyAccessCode.test.js` — 34 assertions covering
+  auth gate, input validation, per-uid throttle, per-IP throttle, and
+  the anon-uid-loop bypass regression guard.
 
 ### T10. Role-impersonating patient names
 

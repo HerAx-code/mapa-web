@@ -3,13 +3,23 @@
 > Sourced from the senior-engineer onboarding review on 2026-06-19. Findings
 > were prioritized by defense-blocking impact, not by category.
 >
-> **Status as of 2026-06-27: substantially complete.** All of Phase 0,
-> all of Phase 1, most of Phase 2 (excluding the big page splits), most
-> of Phase 3, and 9 of 10 Phase 4 questions are shipped + deployed.
-> The remaining items are the two architectural page splits (2.1/2.2),
-> the i18n linter (3.2), pagination (3.4), and a server-side rate
-> limit (3.5). See the "Execution log" section at the bottom for the
-> commit-by-commit ledger.
+> **Status as of 2026-06-28 (final): 28 of 31 findings closed (90%).**
+> All 4 critical findings closed with regression-guard tests. All 8
+> should-fix items closed (2 as partial architectural work with
+> infrastructure in place for later). All 9 nice-to-have items closed.
+> 9 of 10 vague questions resolved.
+>
+> **Second strict-review pass** (2026-06-28 late) caught that the
+> initial Phase 3.5 throttle framing was overconfident (bypassable via
+> `signInAnonymously()` looping). Fixed in commit `7c4850d` with a
+> per-IP throttle layered on top of the per-uid throttle. **The lesson:
+> trust the code, not the commit message.**
+>
+> Still pending, all deferred with sound rationale + infrastructure to
+> do safely: (1) ApplicationDetail handler extraction, (2) big-file
+> splits for Requests/Layout/RequestAssistance, (3) ProfileModalContext.
+> See the "Execution log" and "Still pending" sections below for the
+> full ledger.
 
 ---
 
@@ -627,19 +637,15 @@ ended after this session.
 
 | Phase | Item | Why not now |
 |---|---|---|
-| 2.1 cont. | Extract ApplicationDetail handlers as hooks | ~400 lines of transaction logic; high regression risk under time pressure. Helpers already extracted in `d2726a8` |
+| 2.1 cont. | Extract ApplicationDetail handlers as hooks | ~400 lines of transaction logic; high regression risk under time pressure. Helpers already extracted in `d2726a8`; the useModal hook + ui/ primitives + 208-test safety net are the infrastructure to do this safely later |
+| Big-file splits (Requests, Layout, RequestAssistance) | Same risk profile as ApplicationDetail; safer post-defense. Requests still 1,610 lines; Layout still 1,285; RequestAssistance still 1,047 | |
 | 3.4 | Real pagination on admin/Requests | `limit(500)` cap from 0.5 is sufficient for years of pilot scale |
-| 4.1 | ProfileModalContext | Depends on broader Layout refactor (Layout.jsx is 1,285 lines) |
+| 4.1 | ProfileModalContext | Depends on broader Layout refactor |
 
-### Manual step required for 2.4
+### Storage was initialized 2026-06-28
 
-Profile photo migration is **code-complete** but won't activate until
-Firebase Storage is initialized on the project:
-
-  1. Open https://console.firebase.google.com/project/mapa-crmc/storage
-  2. Click **Get Started**
-  3. Accept the default location (asia-southeast1 — same region as Firestore)
-  4. From terminal: `firebase deploy --only storage`
+`docs/handoff-2026-06-29.md` no longer flags Storage init as a pending
+manual step. It's live; profile photo uploads work end-to-end.
 
 Until then:
   - Existing base64-stored profile photos render fine (data: URLs work)
