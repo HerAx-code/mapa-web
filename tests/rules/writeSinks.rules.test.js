@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, addDoc, updateDoc, deleteDoc, collection, serverTimestamp } from 'firebase/firestore'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -201,6 +201,98 @@ describe('notificationErrors.create — Phase 1.4 anonymous write sink', () => {
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertFails(addDoc(collection(ctx.firestore(), 'notificationErrors'),
       errDoc({ error: '' })))
+  })
+})
+
+// ── Phase 1.5 — documents.update / delete ───────────────────────────────
+// documents.create pins status 'pending' and blocklists agencyIds +
+// storagePath, but update had NO field constraints, so all three guards
+// were bypassable with a follow-up write: self-verify, self-endorse, or
+// point storagePath at an attacker-chosen Storage object.
+describe('documents.update — Phase 1.5 create-guard bypass', () => {
+  async function seedDoc(docId, patientId, over = {}) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'documents', docId), {
+        patientId, name: 'Valid ID', fileName: 'id.jpg', type: 'image/jpeg',
+        size: '50 KB', date: '2026-07-23', status: 'pending', ...over,
+      })
+    })
+  }
+
+  it('allows the real re-upload path (replacePatientDocument)', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1', { status: 'rejected' })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', fileName: 'id2.jpg', type: 'image/jpeg',
+      size: '48 KB', date: '2026-07-23', reviewedBy: null, reviewedAt: null,
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects a patient self-verifying their own document', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'verified',
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects a patient stamping storagePath', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', storagePath: 'documents/other-patient/secret/file.jpg',
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects a patient self-endorsing via agencyIds', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', agencyIds: ['malasakit'],
+    }))
+  })
+
+  it('still lets an admin verify a document', async () => {
+    await seedUser('admin-1', 'staff_admin')
+    await seedDoc('doc-1', 'patient-1')
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'verified', reviewedBy: 'CRMC', reviewedAt: serverTimestamp(),
+    }))
+  })
+
+  it("rejects a patient updating another patient's document", async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-2')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', fileName: 'x.jpg',
+    }))
+  })
+
+  it('allows the rollback delete of a fresh pending document', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(deleteDoc(doc(ctx.firestore(), 'documents', 'doc-1')))
+  })
+
+  it('REGRESSION GUARD: rejects deleting an already-verified document', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1', { status: 'verified' })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(deleteDoc(doc(ctx.firestore(), 'documents', 'doc-1')))
+  })
+
+  it('REGRESSION GUARD: rejects deleting an endorsed document', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDoc('doc-1', 'patient-1', { agencyIds: ['malasakit'] })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(deleteDoc(doc(ctx.firestore(), 'documents', 'doc-1')))
   })
 })
 
