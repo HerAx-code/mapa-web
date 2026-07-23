@@ -83,13 +83,24 @@ jobs:
       - name: Run component tests
         run: npm run test:components
 
+      - name: Install functions dependencies
+        # functions/ is a separate npm package with its own lockfile, and
+        # the root `npm ci` does not touch it. The tests load the handlers
+        # through createRequire, so the real firebase-functions/v2/*
+        # entry points must resolve on disk -- vi.mock does not intercept
+        # a CJS require of a module that cannot be found at all.
+        # Without this every tests/functions file dies with
+        # "Cannot find module 'firebase-functions/v2/scheduler'".
+        run: npm ci --prefix functions
+
       - name: Run functions tests
         # tests/functions/ covers the Cloud Functions pure handlers
         # (verifyAccessCode, resetAgencySlots, glExpirySweep,
         # syncRequestFinancials). These existed but were never wired into
         # CI, so a regression in the functions bundle could reach main
         # unnoticed -- syncRequestFinancials writes the request funding
-        # tally, so that gap mattered.
+        # tally, so that gap mattered. They passed locally only because
+        # functions/node_modules already existed on the dev machine.
         run: npm run test:functions
 
       - name: Lint i18n (patient surfaces)
