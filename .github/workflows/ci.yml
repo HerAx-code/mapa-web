@@ -39,6 +39,23 @@ jobs:
   build-and-test:
     name: Build + unit/component tests + i18n lint
     runs-on: ubuntu-latest
+
+    # Dummy Firebase config. src/firebase.js calls initializeApp() +
+    # getAuth() at module load, so ANY test that transitively imports a
+    # src/utils/* module (e.g. tests/utils/dataExport.test.js ->
+    # src/utils/dataExport.js -> src/firebase) throws
+    # `auth/invalid-api-key` when these are undefined. No network call is
+    # ever made -- the SDK only needs syntactically present values to
+    # construct the client. These are NOT real credentials and must stay
+    # fake: the real ones live in Vercel's env, never in the repo.
+    env:
+      VITE_FIREBASE_API_KEY: AIzaSyCI-not-a-real-key-000000000000000
+      VITE_FIREBASE_AUTH_DOMAIN: mapa-ci.firebaseapp.com
+      VITE_FIREBASE_PROJECT_ID: mapa-ci
+      VITE_FIREBASE_STORAGE_BUCKET: mapa-ci.firebasestorage.app
+      VITE_FIREBASE_MESSAGING_SENDER_ID: '000000000000'
+      VITE_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000'
+
     steps:
       - uses: actions/checkout@v4
 

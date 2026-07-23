@@ -14,6 +14,23 @@ service-account-*.json
 *-service-account.json
 firebase-adminsdk-*.json
 
+# Local scratch: QA screenshots, emulator/JVM crash dumps, Playwright MCP
+# traces, one-off audit notes. Archived here instead of the repo root so
+# `git status` stays readable. Safe to delete the whole folder any time.
+.local-artifacts/
+
+# Debug + crash logs that tooling drops in the repo root.
+*.log
+.playwright-mcp/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+hs_err_pid*.log
+replay_pid*.log
+
+# Editor-local settings (keep .vscode/settings.json out of the shared repo).
+.vscode/
+
 # Firestore backups from scripts/export-firestore.js.
 # Each run writes ./backups/{ISO-timestamp}/ with one JSON file per
 # collection. These contain real patient PII and must never be

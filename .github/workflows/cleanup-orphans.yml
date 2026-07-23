@@ -5,19 +5,30 @@ name: Cleanup Firestore orphans
 # (usually leftovers from failed delete races — each is ~900KB of
 # permanent Firestore garbage).
 #
-# Setup required (one-time, done by the project owner):
-#   1. Generate a Firebase service account key at:
-#      Firebase Console → Project Settings → Service accounts → Generate new private key
-#   2. Paste the entire JSON content into a GitHub repo secret named
-#      FIREBASE_SERVICE_ACCOUNT (Settings → Secrets and variables → Actions → New)
-#   3. The first scheduled run is DRY-RUN (audit only — no deletes).
-#      To enable deletes, dispatch manually with `delete=true` or change the
-#      `--delete` flag on the schedule step.
+# HOW THIS RUNS (decided 2026-07-23): locally, on demand. NOT on a schedule.
+#
+# From the repo root (PowerShell):
+#   $env:GOOGLE_APPLICATION_CREDENTIALS=".\service-account.json"
+#   node scripts/cleanup-orphans.js            # audit only (dry-run default)
+#   node scripts/cleanup-orphans.js --delete   # actually delete
+#
+# The script calls applicationDefault(), so GOOGLE_APPLICATION_CREDENTIALS must
+# be set explicitly — it does NOT auto-discover ./service-account.json.
+#
+# The weekly cron was REMOVED because this repo is public and the job needs
+# FIREBASE_SERVICE_ACCOUNT — a full Firebase Admin key with read/write access
+# to every Firestore document, i.e. all patient PII. Rather than park that
+# credential in a public repo's Actions secrets, the cleanup runs from the
+# operator's machine, where the key already lives. The cron had never once
+# succeeded anyway (every scheduled run since setup failed on the missing
+# secret), so nothing is lost by dropping it.
+#
+# The workflow_dispatch trigger is kept so the job CAN be run from the Actions
+# tab in a pinch — but that still requires setting the FIREBASE_SERVICE_ACCOUNT
+# secret first (Settings → Secrets and variables → Actions → New), and the step
+# below will fail with a clear message until you do. Prefer running locally.
 
 on:
-  schedule:
-    # Every Sunday at 03:00 UTC (11:00 AM Manila). Audit-only.
-    - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
       delete:
