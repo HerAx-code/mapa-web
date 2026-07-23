@@ -296,6 +296,138 @@ describe('documents.update — Phase 1.5 create-guard bypass', () => {
   })
 })
 
+// ── Phase 1.5 — requests.update value constraints ───────────────────────
+describe('requests.update — Phase 1.5 agency value constraints', () => {
+  async function seedRequest(id, over = {}) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'requests', id), {
+        patientId: 'patient-1', amountNeeded: 25000, amountCommitted: 0,
+        agencyIds: ['malasakit'], status: 'endorsed', ...over,
+      })
+    })
+  }
+
+  it('allows the real approval write (committed + derived status)', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedRequest('req-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
+      amountCommitted: 10000, status: 'partially_funded', updatedAt: serverTimestamp(),
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects an agency writing a CRMC-only status', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedRequest('req-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
+      amountCommitted: 0, status: 'closed', updatedAt: serverTimestamp(),
+    }))
+  })
+
+  it('rejects a negative amountCommitted', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedRequest('req-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
+      amountCommitted: -5000, status: 'partially_funded', updatedAt: serverTimestamp(),
+    }))
+  })
+
+  it('rejects a non-numeric amountCommitted', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedRequest('req-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
+      amountCommitted: 'lots', status: 'partially_funded', updatedAt: serverTimestamp(),
+    }))
+  })
+
+  it('still rejects an agency touching patient data', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedRequest('req-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
+      amountCommitted: 10000, status: 'partially_funded', amountNeeded: 1,
+    }))
+  })
+})
+
+// ── Phase 1.5 — conversations.update participant tampering ──────────────
+describe('conversations.update — Phase 1.5 participant tampering', () => {
+  async function seedConv(id, participants) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'conversations', id), {
+        participants, lastMessage: 'hi', unread: {},
+      })
+    })
+  }
+
+  it('allows the real unread/last-message denormalisation write', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedConv('conv-1', ['patient-1', 'admin-1'])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'conversations', 'conv-1'), {
+      lastMessage: 'hello', lastFrom: 'patient-1', lastAt: serverTimestamp(),
+      'unread.admin-1': 1,
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects adding a third party to the thread', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedConv('conv-1', ['patient-1', 'admin-1'])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'conversations', 'conv-1'), {
+      participants: ['patient-1', 'admin-1', 'outsider-1'],
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects removing the other participant', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedConv('conv-1', ['patient-1', 'admin-1'])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'conversations', 'conv-1'), {
+      participants: ['patient-1'],
+    }))
+  })
+})
+
+// ── Phase 1.5 — hospitalIds claim scope ─────────────────────────────────
+describe('hospitalIds.update — Phase 1.5 claim write scope', () => {
+  async function seedCode(id, over = {}) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'hospitalIds', id), {
+        status: 'available', patId: null, note: 'issued at MSS window', ...over,
+      })
+    })
+  }
+
+  it('allows the real registration claim', async () => {
+    await seedCode('CRMC-2026-00001')
+    const ctx = testEnv.authenticatedContext('new-patient')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001'), {
+      status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects rewriting unrelated fields while claiming', async () => {
+    await seedCode('CRMC-2026-00001')
+    const ctx = testEnv.authenticatedContext('new-patient')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001'), {
+      status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
+      note: 'tampered',
+    }))
+  })
+
+  it('still rejects claiming an already-used code', async () => {
+    await seedCode('CRMC-2026-00001', { status: 'used', patId: 'someone-else' })
+    const ctx = testEnv.authenticatedContext('new-patient')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001'), {
+      status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
+    }))
+  })
+})
+
 // ── Phase 1.4 — conversations/messages.create ───────────────────────────
 describe('messages.create — Phase 1.4 optional sender', () => {
   async function seedConversation(convId, participants) {
