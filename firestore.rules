@@ -210,9 +210,25 @@ service cloud.firestore {
         (isPatient() && resource.data.patientId == uid() &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['intakeSheet', 'updatedAt'])) ||
+        // Phase 1.5: hasOnly limited WHICH fields an agency may touch but not
+        // WHAT it may write, so an agency holding one slice could set status
+        // to any string -- including CRMC-only states like 'under_review',
+        // 'assessment' or 'closed' -- and amountCommitted to a non-number or
+        // a negative. Constrain both to what the real path can produce:
+        // deriveRequestStatus() in src/utils/requests.js returns exactly this
+        // four-value set, and amountCommitted is always a non-negative sum of
+        // approved slices.
+        //
+        // LIMITATION: this does NOT stop an agency writing an inflated but
+        // well-formed amountCommitted. Rules cannot re-derive the sum over
+        // sibling slices, so verifying that figure needs a Cloud Function.
         (isAgency() && userAgencyId() in resource.data.agencyIds &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['amountCommitted', 'status', 'updatedAt']));
+            .hasOnly(['amountCommitted', 'status', 'updatedAt']) &&
+          request.resource.data.amountCommitted is number &&
+          request.resource.data.amountCommitted >= 0 &&
+          request.resource.data.status in
+            ['submitted', 'endorsed', 'partially_funded', 'fully_funded']);
       allow delete: if isAdmin();
     }
 
@@ -395,10 +411,19 @@ service cloud.firestore {
       allow list:   if isAuth();
       allow create: if isSuperAdmin();
       allow update: if isAdmin() ||
+                       // Phase 1.5: the claim branch pinned status and patId
+                       // but left every OTHER field on the doc writable in
+                       // the same operation -- a registering user could
+                       // rewrite arbitrary fields on a hospitalIds doc while
+                       // legitimately claiming it. Restricted to the four
+                       // keys the registration transaction actually writes
+                       // (src/pages/auth/Register.jsx).
                        (isAuth() &&
                         resource.data.status == 'available' &&
                         request.resource.data.status == 'used' &&
-                        request.resource.data.patId == uid()) ||
+                        request.resource.data.patId == uid() &&
+                        request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['status', 'patId', 'date', 'time'])) ||
                        // #9 — Agencies (and agency admins) may stamp the
                        // cooldown fields when approving or reversing an
                        // approval, but cannot touch status / usedBy / patId.
@@ -497,7 +522,20 @@ service cloud.firestore {
       allow create: if isAuth() &&
                        request.resource.data.participants is list &&
                        uid() in request.resource.data.participants;
-      allow update: if isAuth() && uid() in resource.data.participants;
+      // Phase 1.5: participants is now immutable via this path. The rule
+      // let any participant rewrite the array, so one party could silently
+      // add a third uid to a thread -- and the messages read rule grants
+      // access purely on membership, so the newcomer could read the entire
+      // back history, which in this system routinely contains medical and
+      // financial detail (Data Privacy Act §16(b) exposure). They could
+      // equally remove the other party.
+      //
+      // Verified safe: no caller anywhere in src/ writes participants on
+      // update. The only conversation updates are the unread counters and
+      // last-message denormalisation in src/utils/messages.js and the
+      // read-receipt writes in the two admin message components.
+      allow update: if isAuth() && uid() in resource.data.participants &&
+                       request.resource.data.participants == resource.data.participants;
       allow delete: if isAdmin() || (isAuth() && uid() in resource.data.participants);
 
       match /messages/{msgId} {
