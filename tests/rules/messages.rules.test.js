@@ -100,12 +100,16 @@ describe('messages.create — sender attribution + size cap', () => {
 // notifications/{userId}/items/{notifId} create from security pass 2:
 // title <= 200, body <= 2000.
 describe('notifications.create — title/body size caps', () => {
+  // Phase 1.4: cross-role notification writes still work, but now require
+  // a fromUid matching the caller. The unattributed variant this test used
+  // to send is covered as a regression guard in writeSinks.rules.test.js.
   it('allows a small notification to a different user', async () => {
     await seedUser('user-alice', 'agency')
     const ctx = testEnv.authenticatedContext('user-alice')
     await assertSucceeds(addDoc(
       collection(ctx.firestore(), 'notifications', 'user-bob', 'items'),
-      { title: 'Hi', body: 'Hello', type: 'info', read: false, createdAt: serverTimestamp() },
+      { title: 'Hi', body: 'Hello', type: 'info', read: false,
+        fromUid: 'user-alice', createdAt: serverTimestamp() },
     ))
   })
 

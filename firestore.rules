@@ -135,10 +135,21 @@ service cloud.firestore {
           userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||
         isAdmin()
       );
-      // isPatient: the legacy direct apply flow (still active during the
-      // co-funding transition). isAdmin: CRMC creates application "slices"
-      // when endorsing a request to an agency.
-      allow create: if isPatient() || isAdmin();
+      // Phase 1.4: admin-only. The rule was `isPatient() || isAdmin()` with
+      // NO field validation of any kind, so a signed-in patient could write
+      // a slice carrying another patient's patientId, an arbitrary agencyId
+      // and amount, and status 'approved' -- forging an approved funding
+      // slice that corrupts every agency/admin tally computed off this
+      // collection.
+      //
+      // The isPatient() branch was dead. It was left for "the legacy direct
+      // apply flow (still active during the co-funding transition)", but
+      // that flow no longer exists: the ONLY write to applications anywhere
+      // in src/ is the CRMC endorsement transaction in
+      // src/pages/admin/Requests.jsx (tx.set on a new slice, status
+      // 'endorsed'), which runs as an admin. Every other reference is a
+      // read. Patients reach slices through requests, never by creating one.
+      allow create: if isAdmin();
       allow update: if isAuth() && (
         // Patient can make exactly two transitions on their own application:
         //  1. pending → rejected (self-withdrawal)
@@ -176,7 +187,19 @@ service cloud.firestore {
         isAdmin() ||
         (isAgency() && userAgencyId() in resource.data.agencyIds)
       );
-      allow create: if isPatient() && request.resource.data.patientId == uid();
+      // Phase 1.4: pin the entry state. Ownership was already enforced, but
+      // nothing stopped a patient creating their own request pre-advanced to
+      // 'fully_funded'/'endorsed', or pre-loaded with agencyIds -- i.e.
+      // self-endorsing past CRMC verification, which is the whole point of
+      // the gateway. Mirrors documents.create, which already pins status and
+      // blocklists agencyIds. Verified against the only create site,
+      // src/pages/patient/RequestAssistance.jsx, which sends exactly
+      // status:'submitted', agencyIds:[], amountCommitted:0.
+      allow create: if isPatient() &&
+                       request.resource.data.patientId == uid() &&
+                       request.resource.data.status == 'submitted' &&
+                       request.resource.data.agencyIds == [] &&
+                       request.resource.data.amountCommitted == 0;
       allow update: if isAdmin() ||
         (isPatient() && resource.data.patientId == uid() &&
           resource.data.status == 'submitted' &&
@@ -392,7 +415,28 @@ service cloud.firestore {
     // into another user's notification panel.
     match /notifications/{userId}/items/{notifId} {
       allow read:   if isAuth() && uid() == userId;
+      // Phase 1.4: require sender attribution. read/update/delete all check
+      // uid() == userId, but create checked ONLY isAuth() -- the {userId}
+      // path segment was never compared to the caller, so any patient could
+      // drop a notification into a super_admin's feed, with no sender field
+      // required. That is a spoofing primitive aimed at the highest-privilege
+      // users, and it is the same surface the 2026-06-01 injection used
+      // (planted records written to manipulate whoever reads the dashboard).
+      // The size caps this rule already had bound the payload but do nothing
+      // about forgery.
+      //
+      // Cross-role creation must stay open (agency -> patient, admin ->
+      // agency, patient -> admin on request submit), so uid() == userId is
+      // NOT the fix. Mandatory fromUid makes every notification traceable to
+      // the account that wrote it.
+      //
+      // LIMITATION, stated plainly: this makes forgery attributable, not
+      // impossible. A patient can still write a truthful-looking fromUid of
+      // their own and phish an admin. Closing it completely means moving
+      // notification writes into a Cloud Function so clients never touch
+      // this collection -- the functions codebase already exists.
       allow create: if isAuth() &&
+                       request.resource.data.fromUid == uid() &&
                        (!('title' in request.resource.data) ||
                         (request.resource.data.title is string &&
                          request.resource.data.title.size() <= 200)) &&
@@ -427,7 +471,15 @@ service cloud.firestore {
         // thread (the UI textarea is already capped; the rule is the gate).
         allow create: if isAuth() && uid() in
           get(/databases/$(database)/documents/conversations/$(convId)).data.participants &&
-          (!('from' in request.resource.data) || request.resource.data.from == uid()) &&
+          // Phase 1.4: `from` is REQUIRED. It was optional
+          // (`!('from' in data) || from == uid()`), so omitting the field
+          // skipped attribution entirely and let a participant post an
+          // unattributed message into a patient/social-worker thread. Same
+          // optional-field pattern removed from reports in Phase 1.3.
+          // sendMessage() in src/utils/messages.js always sends `from`
+          // (it is a required destructured arg and is reused for the
+          // conversation's lastFrom / unread counters), so no client change.
+          request.resource.data.from == uid() &&
           (!('text' in request.resource.data) ||
            (request.resource.data.text is string && request.resource.data.text.size() <= 5000));
         allow delete: if isAdmin();
@@ -487,16 +539,25 @@ service cloud.firestore {
     //   Immutable.
     match /notificationErrors/{errorId} {
       allow read:           if isAdmin();
+      // Phase 1.4: attributed + `error` required. This was `isAuth()` with
+      // every field optional -- structurally the same unbounded write sink
+      // that absorbed 18,630 forged records across documentContents and
+      // reports during the 2026-06-01 incident. Lower blast radius (it is an
+      // ops log, admin-read only) but the same denial-of-wallet vector.
+      // notify() populates reportedByUid; if the writer is somehow
+      // unauthenticated the log write fails and notify() falls through to its
+      // existing console.warn, which is the documented best-effort behaviour.
       allow create:         if isAuth() &&
+                               request.resource.data.reportedByUid == uid() &&
+                               request.resource.data.error is string &&
+                               request.resource.data.error.size() > 0 &&
+                               request.resource.data.error.size() <= 2000 &&
                                (!('title' in request.resource.data) ||
                                 (request.resource.data.title is string &&
                                  request.resource.data.title.size() <= 200)) &&
                                (!('body' in request.resource.data) ||
                                 (request.resource.data.body is string &&
-                                 request.resource.data.body.size() <= 2000)) &&
-                               (!('error' in request.resource.data) ||
-                                (request.resource.data.error is string &&
-                                 request.resource.data.error.size() <= 2000));
+                                 request.resource.data.body.size() <= 2000));
       allow update, delete: if false;
     }
 

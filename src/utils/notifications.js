@@ -1,5 +1,5 @@
 import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db, auth } from '../firebase'
 
 // #10 — Notification failures should never break a user-facing action
 // (an app submission, a status change, a doc upload). We catch the write
@@ -21,6 +21,12 @@ export const notify = async (uid, { type, title, body, ...extra } = {}) => {
   try {
     result = await addDoc(collection(db, 'notifications', uid, 'items'), {
       type, title, body, read: false, createdAt: serverTimestamp(),
+      // Phase 1.4: sender attribution, required by the notifications
+      // create rule. Cross-role notification writes stay allowed (a
+      // patient's submit notifies every CRMC admin), so the rule cannot
+      // check uid() == recipient — instead every notification names the
+      // account that wrote it, making a forged one traceable.
+      fromUid: auth.currentUser?.uid ?? null,
       ...extra,
     })
   } catch (err) {
@@ -29,13 +35,18 @@ export const notify = async (uid, { type, title, body, ...extra } = {}) => {
     // throwing and breaking the caller's success path.
     try {
       await addDoc(collection(db, 'notificationErrors'), {
-        recipientUid: uid ?? null,
-        type:         type ?? null,
-        title:        title ?? null,
-        body:         body  ?? null,
-        error:        String(err?.message ?? err),
-        errorCode:    err?.code ?? null,
-        at:           serverTimestamp(),
+        recipientUid:  uid ?? null,
+        // Phase 1.4: attribution, required by the notificationErrors
+        // create rule so the log can't be used as an anonymous write sink.
+        reportedByUid: auth.currentUser?.uid ?? null,
+        type:          type ?? null,
+        title:         title ?? null,
+        body:          body  ?? null,
+        // Always a non-empty string — the rule requires size() > 0, and
+        // String(undefined) would still be 'undefined' rather than ''.
+        error:         String(err?.message ?? err ?? 'unknown error'),
+        errorCode:     err?.code ?? null,
+        at:            serverTimestamp(),
       })
     } catch (logErr) {
       console.warn('[notify] both delivery and error-log failed:', err, logErr)
