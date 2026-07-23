@@ -10,10 +10,12 @@ const admin = require('firebase-admin')
 // imports admin and reads admin.firestore() / .auth() off the singleton.
 admin.initializeApp()
 
-const { resetAgencySlots } = require('./src/resetAgencySlots')
-const { glExpirySweep }    = require('./src/glExpirySweep')
-const { verifyAccessCode } = require('./src/verifyAccessCode')
+const { resetAgencySlots }       = require('./src/resetAgencySlots')
+const { glExpirySweep }          = require('./src/glExpirySweep')
+const { verifyAccessCode }       = require('./src/verifyAccessCode')
+const { syncRequestFinancials }  = require('./src/syncRequestFinancials')
 
-exports.resetAgencySlots = resetAgencySlots
-exports.glExpirySweep    = glExpirySweep
-exports.verifyAccessCode = verifyAccessCode
+exports.resetAgencySlots      = resetAgencySlots
+exports.glExpirySweep         = glExpirySweep
+exports.verifyAccessCode      = verifyAccessCode
+exports.syncRequestFinancials = syncRequestFinancials

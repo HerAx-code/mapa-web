@@ -83,6 +83,15 @@ jobs:
       - name: Run component tests
         run: npm run test:components
 
+      - name: Run functions tests
+        # tests/functions/ covers the Cloud Functions pure handlers
+        # (verifyAccessCode, resetAgencySlots, glExpirySweep,
+        # syncRequestFinancials). These existed but were never wired into
+        # CI, so a regression in the functions bundle could reach main
+        # unnoticed -- syncRequestFinancials writes the request funding
+        # tally, so that gap mattered.
+        run: npm run test:functions
+
       - name: Lint i18n (patient surfaces)
         # `warn`-level rule, so this never fails the build by design --
         # it surfaces a count of hardcoded strings the operator should
