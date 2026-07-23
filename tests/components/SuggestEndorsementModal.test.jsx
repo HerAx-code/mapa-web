@@ -62,6 +62,23 @@ const defaultProps = {
   onClose: vi.fn(),
 }
 
+// Waiting on `mockGetDocs` having been CALLED only proves the fetch
+// started. The promise may not have resolved and React may not have
+// re-rendered yet, so the picker can still be showing its 'Loading…'
+// placeholder -- which is exactly how this suite flaked in CI
+// ("expected [ 'Loading…' ] to include 'PCSO'") while passing locally.
+// Wait on the rendered option list instead, and return the picker so
+// callers don't re-query it.
+async function waitForAgencyPicker() {
+  let select
+  await waitFor(() => {
+    select = screen.getAllByRole('combobox')[0]
+    const options = Array.from(select.options).map(o => o.textContent)
+    expect(options).toContain('PCSO')
+  })
+  return select
+}
+
 describe('SuggestEndorsementModal', () => {
   it('renders header with patient name and app ID', async () => {
     render(<SuggestEndorsementModal {...defaultProps} />)
@@ -72,11 +89,7 @@ describe('SuggestEndorsementModal', () => {
   it('REGRESSION GUARD: excludes own agency (sibling) from the picker', async () => {
     render(<SuggestEndorsementModal {...defaultProps} />)
     // Wait for agencies to load
-    await waitFor(() => expect(mockGetDocs).toHaveBeenCalled())
-    // The picker is a <select>; check its option list
-    // Two comboboxes: the agency picker (first) + the urgency picker
-    // (second). We want the first.
-    const select = screen.getAllByRole('combobox')[0]
+    const select = await waitForAgencyPicker()
     const optionText = Array.from(select.options).map(o => o.textContent)
     // Malasakit (own) should not appear
     expect(optionText).not.toContain('Malasakit Center')
@@ -87,10 +100,7 @@ describe('SuggestEndorsementModal', () => {
 
   it('REGRESSION GUARD: excludes disabled agencies from the picker', async () => {
     render(<SuggestEndorsementModal {...defaultProps} />)
-    await waitFor(() => expect(mockGetDocs).toHaveBeenCalled())
-    // Two comboboxes: the agency picker (first) + the urgency picker
-    // (second). We want the first.
-    const select = screen.getAllByRole('combobox')[0]
+    const select = await waitForAgencyPicker()
     const optionText = Array.from(select.options).map(o => o.textContent)
     expect(optionText).not.toContain('Disabled Org')
   })
@@ -98,7 +108,7 @@ describe('SuggestEndorsementModal', () => {
   it('disables Send until both agency picked AND reason >= 10 chars', async () => {
     const user = userEvent.setup()
     render(<SuggestEndorsementModal {...defaultProps} />)
-    await waitFor(() => expect(mockGetDocs).toHaveBeenCalled())
+    await waitForAgencyPicker()
 
     const sendBtn = screen.getByRole('button', { name: /Send suggestion/i })
     expect(sendBtn).toBeDisabled()
@@ -120,7 +130,7 @@ describe('SuggestEndorsementModal', () => {
   it('REGRESSION GUARD: addDoc payload self-attributes via fromAgencyId/fromUserId', async () => {
     const user = userEvent.setup()
     render(<SuggestEndorsementModal {...defaultProps} />)
-    await waitFor(() => expect(mockGetDocs).toHaveBeenCalled())
+    await waitForAgencyPicker()
 
     await user.selectOptions(screen.getAllByRole('combobox')[0], 'pcso')
     await user.type(
@@ -152,7 +162,9 @@ describe('SuggestEndorsementModal', () => {
         { agencyId: 'dswd' },
       ]}
     />)
-    await waitFor(() => expect(mockGetDocs).toHaveBeenCalled())
+    // NOT waitForAgencyPicker() here: every agency is a sibling, so the
+    // picker is never populated and waiting for 'PCSO' would time out.
+    // findByText already retries until the load settles.
     expect(await screen.findByText(/All eligible agencies are already on this case/i))
       .toBeInTheDocument()
   })
