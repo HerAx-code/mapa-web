@@ -113,8 +113,21 @@ describe('documents.create — patient owns the write (rules-3)', () => {
 
 // documentContents/create from rules-3
 describe('documentContents.create — patient owns the content', () => {
+  // Phase 1.3: creating content now also requires the parent
+  // documents/{docId} to exist and belong to the same patient, so these
+  // tests seed it first. That mirrors uploadPatientDocument, which does
+  // addDoc(documents) BEFORE setDoc(documentContents). The orphan case
+  // this used to allow is now covered as a regression guard in
+  // tests/rules/documentContents.rules.test.js.
+  async function seedParent(docId, patientId) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'documents', docId), docPayload(patientId))
+    })
+  }
+
   it('allows a patient to write content attributed to themselves', async () => {
     await seedUser('patient-1', 'patient')
+    await seedParent('doc-1', 'patient-1')
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-1'), {
       patientId: 'patient-1',
@@ -125,6 +138,7 @@ describe('documentContents.create — patient owns the content', () => {
 
   it('rejects content attributed to a different patient', async () => {
     await seedUser('patient-1', 'patient')
+    await seedParent('doc-1', 'patient-1')
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertFails(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-1'), {
       patientId: 'patient-2',

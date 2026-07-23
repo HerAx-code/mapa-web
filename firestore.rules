@@ -578,8 +578,27 @@ service cloud.firestore {
       // malicious admin or patient could push 999 KB blobs repeatedly
       // and inflate read costs. Enforce explicitly so the limit is
       // visible in audit + doesn't depend on Firestore catching it.
+      // Phase 1.3: a content blob must have a parent documents/{docId}
+      // owned by the SAME patient. Before this, the only create condition
+      // was "patientId == my uid", so any authenticated patient could
+      // write unlimited documentContents at arbitrary ids with no parent
+      // — up to 1MB each, forever. The 2026-06-01 injection incident did
+      // exactly that: 12,149 orphan blobs (~236MB) under a single uid,
+      // none of which had a documents/{docId} parent. Reads were never
+      // exposed (the get() chain below scopes them), but the write side
+      // was an unbounded storage/cost sink.
+      //
+      // Safe for both real write paths, which create the parent FIRST:
+      //   uploadPatientDocument  — addDoc(documents) then setDoc(contents)
+      //   replacePatientDocument — targets an already-existing docId
+      // Admin SDK scripts (seed/migrate) bypass rules entirely.
+      //
+      // Costs one rules-eval get() per upload, same pattern as the read
+      // rule above and auditLog at lines 399-404.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
+                       exists(/databases/$(database)/documents/documents/$(docId)) &&
+                       get(/databases/$(database)/documents/documents/$(docId)).data.patientId == uid() &&
                        (!('content' in request.resource.data) ||
                         (request.resource.data.content is string &&
                          request.resource.data.content.size() <= 1000000));
@@ -602,12 +621,29 @@ service cloud.firestore {
       // Caller must self-attribute (reportedBy == uid()) and the
       // description is bounded — defends the same admin-visible surface
       // from multi-KB or impersonated submissions.
+      // Phase 1.3: every guarded field is now REQUIRED, not optional.
+      // The previous rule made each check `!('x' in data) || <valid>`, so
+      // simply omitting a field skipped its validation — a forged report
+      // needed only {category, reportedBy, description} to pass. The
+      // 2026-06-01 injection incident wrote 6,481 such docs under one
+      // uid. They stayed invisible because the admin Reports view filters
+      // on status, which they omitted entirely.
+      //
+      // Requiring status == 'open' and createdAt == request.time forces
+      // creates through the real UI paths (ProfileModals report modal and
+      // the agency budget-request modal), both of which always send
+      // status:'open' + serverTimestamp(). Pinning createdAt to
+      // request.time also stops backdated entries.
       allow create: if isAuth() &&
-                       (!('reportedBy' in request.resource.data) ||
-                        request.resource.data.reportedBy == uid()) &&
-                       (!('description' in request.resource.data) ||
-                        (request.resource.data.description is string &&
-                         request.resource.data.description.size() <= 5000));
+                       request.resource.data.reportedBy == uid() &&
+                       request.resource.data.status == 'open' &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.category is string &&
+                       request.resource.data.category.size() > 0 &&
+                       request.resource.data.category.size() <= 100 &&
+                       request.resource.data.description is string &&
+                       request.resource.data.description.size() > 0 &&
+                       request.resource.data.description.size() <= 5000;
       allow update: if isAdmin() ||
                        (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
       allow delete: if isAdmin();
