@@ -163,3 +163,71 @@ describe('documentContents.update — Phase 1.2 size cap', () => {
     }))
   })
 })
+
+// ── Phase 1.3 — orphan-blob write sink ──────────────────────────────────
+// Original bug: create only checked `patientId == uid()`, so any signed-in
+// patient could write unlimited documentContents at arbitrary ids with no
+// parent documents/{docId}. The 2026-06-01 injection incident used this to
+// plant 12,149 orphan blobs (~236MB) under one uid. Fix: the parent must
+// exist AND belong to the same patient.
+describe('documentContents.create — Phase 1.3 orphan-blob fix', () => {
+  const CONTENT = 'data:text/plain;base64,SGVsbG8='
+
+  it('allows the real upload path: parent metadata exists and is the patient own', async () => {
+    // Mirrors uploadPatientDocument -- addDoc(documents) happens first,
+    // so by the time the content write lands the parent is present.
+    await seedUser('patient-1', 'patient')
+    await seedDocumentMeta('doc-1', 'patient-1', [])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-1'), {
+      content: CONTENT, documentId: 'doc-1', patientId: 'patient-1',
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects an orphan blob with no parent document', async () => {
+    // This is the exact shape of all 12,149 incident records:
+    // {id, patientId, content} at an id with no documents/{docId}.
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'documentContents', 'no-such-parent'), {
+      content: CONTENT, patientId: 'patient-1',
+    }))
+  })
+
+  it("REGRESSION GUARD: rejects a blob whose parent belongs to another patient", async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDocumentMeta('doc-2', 'patient-2', [])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-2'), {
+      content: CONTENT, patientId: 'patient-1',
+    }))
+  })
+
+  it('rejects content attributed to a different patient even with a valid parent', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDocumentMeta('doc-1', 'patient-1', [])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-1'), {
+      content: CONTENT, patientId: 'patient-2',
+    }))
+  })
+
+  it('rejects oversize content on create even with a valid parent', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedDocumentMeta('doc-1', 'patient-1', [])
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-1'), {
+      content: 'data:text/plain;base64,' + 'A'.repeat(1_020_000),
+      patientId: 'patient-1',
+    }))
+  })
+
+  it('rejects an agency user creating content even for a document endorsed to them', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedDocumentMeta('doc-1', 'patient-1', ['malasakit'])
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'documentContents', 'doc-1'), {
+      content: CONTENT, patientId: 'patient-1',
+    }))
+  })
+})
