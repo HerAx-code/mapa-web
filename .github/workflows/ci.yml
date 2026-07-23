@@ -84,14 +84,20 @@ jobs:
         run: npm run test:components
 
       - name: Install functions dependencies
-        # functions/ is a separate npm package with its own lockfile, and
-        # the root `npm ci` does not touch it. The tests load the handlers
-        # through createRequire, so the real firebase-functions/v2/*
-        # entry points must resolve on disk -- vi.mock does not intercept
-        # a CJS require of a module that cannot be found at all.
-        # Without this every tests/functions file dies with
-        # "Cannot find module 'firebase-functions/v2/scheduler'".
-        run: npm ci --prefix functions
+        working-directory: functions
+        # functions/ is a separate npm package and the root `npm ci` does
+        # not touch it. The tests load the handlers through createRequire,
+        # so the real firebase-functions/v2/* entry points must resolve on
+        # disk -- vi.mock cannot intercept a CJS require of a module that
+        # isn't installed at all. Without this every tests/functions file
+        # dies with "Cannot find module 'firebase-functions/v2/scheduler'".
+        #
+        # `npm install`, not `npm ci`: functions/package-lock.json is
+        # gitignored (see functions/.gitignore), so there is no lockfile on
+        # the runner for ci to read. Committing that lockfile would make
+        # both CI and deploys reproducible and is worth doing separately --
+        # it's a policy change for the functions package, not a CI fix.
+        run: npm install
 
       - name: Run functions tests
         # tests/functions/ covers the Cloud Functions pure handlers
