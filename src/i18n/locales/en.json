@@ -299,9 +299,6 @@
       "unavailable": "Access log temporarily unavailable. Try refreshing in a moment.",
       "empty": "No activity on your record yet."
     },
-    "notifs": {
-      "markAllRead": "Mark all read"
-    },
     "common": {
       "tryAgain": "Try again"
     }
