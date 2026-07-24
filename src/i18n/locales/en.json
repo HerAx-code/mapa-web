@@ -23,7 +23,7 @@
     "backHome": "Back to home",
     "hero": {
       "title": "Install MAPA on your phone",
-      "desc": "Apply for medical assistance from your home screen — no need to remember the website URL."
+      "desc": "Apply for medical assistance from your home screen — no need to remember the website URL. It installs straight from your browser: no app-store account, no file to download, and no security warning."
     },
     "cta": {
       "install": "Install MAPA app",
@@ -121,7 +121,7 @@
   },
   "landing": {
     "header": {
-      "downloadApp": "Download App",
+      "downloadApp": "Install App",
       "mobileToast": "The MAPA mobile app is coming soon. Follow CRMC for updates.",
       "register": "Register",
       "login": "Log In →",
