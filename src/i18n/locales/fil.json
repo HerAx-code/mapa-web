@@ -23,7 +23,7 @@
     "backHome": "Bumalik sa home",
     "hero": {
       "title": "I-install ang MAPA sa inyong telepono",
-      "desc": "Mag-apply para sa tulong medikal mula sa inyong home screen — hindi na kailangan tandaan ang URL ng website."
+      "desc": "Mag-apply para sa tulong medikal mula sa inyong home screen — hindi na kailangan tandaan ang URL ng website. Direktang nagi-install mula sa inyong browser: walang app-store account, walang file na ida-download, at walang security warning."
     },
     "cta": {
       "install": "I-install ang MAPA app",
@@ -121,7 +121,7 @@
   },
   "landing": {
     "header": {
-      "downloadApp": "I-download ang App",
+      "downloadApp": "I-install ang App",
       "mobileToast": "Malapit nang ilunsad ang MAPA mobile app. Sundan ang CRMC para sa updates.",
       "register": "Mag-register",
       "login": "Mag-login →",
