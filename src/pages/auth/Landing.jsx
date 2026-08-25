@@ -5,7 +5,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { MdShield, MdArrowForward, MdDownload, MdClose } from 'react-icons/md'
+import {
+  MdShield, MdArrowForward, MdDownload, MdClose,
+  // Professional line icons replacing the emoji (a govt/medical portal
+  // reads as amateur with emoji — matches CLAUDE.md "civic, professional").
+  MdBadge, MdMailOutline, MdSmartphone, MdLocationOn,
+  MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
+  MdPhone, MdSchedule,
+} from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import LanguageToggle from '../../components/LanguageToggle'
@@ -114,8 +121,8 @@ export default function Landing() {
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-brand-900 leading-[1.1] mb-4 max-w-xl">
               {t('landing.hero.headline')}
             </h1>
-            <p className="text-gray-500 text-sm mb-3 flex items-center gap-2">
-              <span>📍</span> {t('landing.hero.location')}
+            <p className="text-gray-500 text-sm mb-3 flex items-center gap-1.5">
+              <MdLocationOn size={16} className="text-brand-500" /> {t('landing.hero.location')}
             </p>
             <p className="text-gray-600 text-lg mb-8 max-w-xl leading-relaxed">
               {t('landing.hero.tagline')}
@@ -189,13 +196,15 @@ export default function Landing() {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { emoji: '🪪', title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc')    },
-              { emoji: '📧', title: t('landing.prepare.emailTitle'),   desc: t('landing.prepare.emailDesc')   },
-              { emoji: '📱', title: t('landing.prepare.mobileTitle'),  desc: t('landing.prepare.mobileDesc')  },
-              { emoji: '📍', title: t('landing.prepare.addressTitle'), desc: t('landing.prepare.addressDesc') },
+              { Icon: MdBadge,        title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc')    },
+              { Icon: MdMailOutline,  title: t('landing.prepare.emailTitle'),   desc: t('landing.prepare.emailDesc')   },
+              { Icon: MdSmartphone,   title: t('landing.prepare.mobileTitle'),  desc: t('landing.prepare.mobileDesc')  },
+              { Icon: MdLocationOn,   title: t('landing.prepare.addressTitle'), desc: t('landing.prepare.addressDesc') },
             ].map((item, i) => (
               <div key={i} className="bg-white/10 rounded-xl p-4 text-center">
-                <p className="text-2xl mb-2">{item.emoji}</p>
+                <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center mx-auto mb-3">
+                  <item.Icon size={20} className="text-white" />
+                </div>
                 <p className="text-white text-xs font-semibold mb-1">{item.title}</p>
                 <p className="text-white/70 text-xs leading-relaxed">{item.desc}</p>
               </div>
@@ -224,12 +233,12 @@ export default function Landing() {
           {/* Steps grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { step: 1, emoji: '🪪', title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
-              { step: 2, emoji: '📝', title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
-              { step: 3, emoji: '📄', title: t('landing.steps.s3Title'), desc: t('landing.steps.s3Desc') },
-              { step: 4, emoji: '🏥', title: t('landing.steps.s4Title'), desc: t('landing.steps.s4Desc') },
-              { step: 5, emoji: '🎥', title: t('landing.steps.s5Title'), desc: t('landing.steps.s5Desc') },
-              { step: 6, emoji: '🏆', title: t('landing.steps.s6Title'), desc: t('landing.steps.s6Desc') },
+              { step: 1, Icon: MdBadge,         title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
+              { step: 2, Icon: MdHowToReg,      title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
+              { step: 3, Icon: MdUploadFile,    title: t('landing.steps.s3Title'), desc: t('landing.steps.s3Desc') },
+              { step: 4, Icon: MdLocalHospital, title: t('landing.steps.s4Title'), desc: t('landing.steps.s4Desc') },
+              { step: 5, Icon: MdVideocam,      title: t('landing.steps.s5Title'), desc: t('landing.steps.s5Desc') },
+              { step: 6, Icon: MdVerified,      title: t('landing.steps.s6Title'), desc: t('landing.steps.s6Desc') },
             ].map((s, i, arr) => (
               <div key={s.step} className="relative flex gap-4">
                 {/* Step number */}
@@ -245,7 +254,7 @@ export default function Landing() {
                 {/* Content */}
                 <div className="pb-6 sm:pb-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">{s.emoji}</span>
+                    <s.Icon className="text-brand-500 flex-shrink-0" size={18} />
                     <p className="text-sm font-semibold text-gray-800">{s.title}</p>
                   </div>
                   <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
@@ -398,19 +407,19 @@ export default function Landing() {
               <p className="text-xs font-semibold text-gray-300 uppercase tracking-widest mb-3">{t('landing.footer.contact')}</p>
               <ul className="space-y-2 text-xs text-gray-400">
                 <li className="flex items-start gap-2">
-                  <span className="mt-0.5">📍</span>
+                  <MdLocationOn size={15} className="mt-0.5 flex-shrink-0 text-gray-500" />
                   <span>{t('landing.footer.addressLine1')}<br />{t('landing.footer.addressLine2')}</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span>📞</span>
+                  <MdPhone size={15} className="flex-shrink-0 text-gray-500" />
                   <span>(064) 421-2500</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span>✉️</span>
+                  <MdMailOutline size={15} className="flex-shrink-0 text-gray-500" />
                   <span>records@crmc.gov.ph</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span>🕐</span>
+                  <MdSchedule size={15} className="flex-shrink-0 text-gray-500" />
                   <span>{t('landing.footer.hours')}</span>
                 </li>
               </ul>
