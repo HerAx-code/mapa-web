@@ -4,37 +4,44 @@ import { useTranslation } from 'react-i18next'
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { tsToDate } from '../utils/dates'
-import { MdClose, MdChevronLeft, MdChevronRight, MdDelete, MdArrowForward } from 'react-icons/md'
+import {
+  MdClose, MdChevronLeft, MdChevronRight, MdDelete, MdArrowForward,
+  // Per-type notification icons (replaced the emoji set for a professional look)
+  MdWorkspacePremium, MdCheckCircle, MdFactCheck, MdCancel, MdEvent, MdInfo,
+  MdAssignment, MdNotificationsOff, MdSettings, MdLocalHospital, MdFavorite,
+  MdEdit, MdDescription, MdPersonAdd, MdLock, MdLockOpen, MdVpnKey,
+  MdChatBubble, MdFlag, MdNotifications,
+} from 'react-icons/md'
 
 // ── Notification visual config ────────────────────────────────────────────
 
 const NOTIF_CONFIG = {
-  certificate_ready:   { emoji: '🏆', bg: 'bg-green-100'  },
-  interview_approved:  { emoji: '✅', bg: 'bg-blue-100'   },
-  doc_verified:        { emoji: '📁', bg: 'bg-brand-100'  },
-  doc_rejected:        { emoji: '❌', bg: 'bg-red-100'    },
-  interview_sched:     { emoji: '📅', bg: 'bg-purple-100' },
-  app_advanced:        { emoji: 'ℹ️', bg: 'bg-amber-100'  },
-  app_submitted:       { emoji: '📋', bg: 'bg-gray-100'   },
-  agency_disabled:     { emoji: '🔕', bg: 'bg-red-100'    },
-  agency_enabled:      { emoji: '✅', bg: 'bg-green-100'  },
-  agency_updated:      { emoji: '⚙️', bg: 'bg-blue-100'   },
-  agency_deleted:      { emoji: '🗑️', bg: 'bg-red-100'    },
-  new_agency:          { emoji: '🏥', bg: 'bg-teal-100'   },
-  assistance_added:    { emoji: '❤️', bg: 'bg-pink-100'   },
-  assistance_updated:  { emoji: '✏️', bg: 'bg-amber-100'  },
-  assistance_deleted:  { emoji: '🗑️', bg: 'bg-red-100'    },
-  doctype_added:       { emoji: '📄', bg: 'bg-blue-100'   },
-  doctype_updated:     { emoji: '✏️', bg: 'bg-amber-100'  },
-  doctype_deleted:     { emoji: '🗑️', bg: 'bg-red-100'    },
-  new_account:         { emoji: '👤', bg: 'bg-purple-100' },
-  account_deactivated: { emoji: '🔒', bg: 'bg-orange-100' },
-  account_activated:   { emoji: '🔓', bg: 'bg-green-100'  },
-  account_deleted:     { emoji: '🗑️', bg: 'bg-red-100'    },
-  role_changed:        { emoji: '⚙️', bg: 'bg-blue-100'   },
-  password_reset_sent: { emoji: '🔑', bg: 'bg-amber-100'  },
-  new_message:         { emoji: '💬', bg: 'bg-cyan-100'   },
-  report_submitted:    { emoji: '🚩', bg: 'bg-orange-100' },
+  certificate_ready:   { Icon: MdWorkspacePremium, bg: 'bg-green-100',  color: 'text-green-600'  },
+  interview_approved:  { Icon: MdCheckCircle,      bg: 'bg-blue-100',   color: 'text-blue-600'   },
+  doc_verified:        { Icon: MdFactCheck,        bg: 'bg-brand-100',  color: 'text-brand-600'  },
+  doc_rejected:        { Icon: MdCancel,           bg: 'bg-red-100',    color: 'text-red-600'    },
+  interview_sched:     { Icon: MdEvent,            bg: 'bg-purple-100', color: 'text-purple-600' },
+  app_advanced:        { Icon: MdInfo,             bg: 'bg-amber-100',  color: 'text-amber-600'  },
+  app_submitted:       { Icon: MdAssignment,       bg: 'bg-gray-100',   color: 'text-gray-600'   },
+  agency_disabled:     { Icon: MdNotificationsOff, bg: 'bg-red-100',    color: 'text-red-600'    },
+  agency_enabled:      { Icon: MdCheckCircle,      bg: 'bg-green-100',  color: 'text-green-600'  },
+  agency_updated:      { Icon: MdSettings,         bg: 'bg-blue-100',   color: 'text-blue-600'   },
+  agency_deleted:      { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
+  new_agency:          { Icon: MdLocalHospital,    bg: 'bg-teal-100',   color: 'text-teal-600'   },
+  assistance_added:    { Icon: MdFavorite,         bg: 'bg-pink-100',   color: 'text-pink-600'   },
+  assistance_updated:  { Icon: MdEdit,             bg: 'bg-amber-100',  color: 'text-amber-600'  },
+  assistance_deleted:  { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
+  doctype_added:       { Icon: MdDescription,      bg: 'bg-blue-100',   color: 'text-blue-600'   },
+  doctype_updated:     { Icon: MdEdit,             bg: 'bg-amber-100',  color: 'text-amber-600'  },
+  doctype_deleted:     { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
+  new_account:         { Icon: MdPersonAdd,        bg: 'bg-purple-100', color: 'text-purple-600' },
+  account_deactivated: { Icon: MdLock,             bg: 'bg-orange-100', color: 'text-orange-600' },
+  account_activated:   { Icon: MdLockOpen,         bg: 'bg-green-100',  color: 'text-green-600'  },
+  account_deleted:     { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
+  role_changed:        { Icon: MdSettings,         bg: 'bg-blue-100',   color: 'text-blue-600'   },
+  password_reset_sent: { Icon: MdVpnKey,           bg: 'bg-amber-100',  color: 'text-amber-600'  },
+  new_message:         { Icon: MdChatBubble,       bg: 'bg-cyan-100',   color: 'text-cyan-600'   },
+  report_submitted:    { Icon: MdFlag,             bg: 'bg-orange-100', color: 'text-orange-600' },
 }
 
 // ── Role-aware route mapping ──────────────────────────────────────────────
@@ -118,7 +125,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
 
   if (!notif) return null
 
-  const meta    = NOTIF_CONFIG[notif.type] ?? { emoji: '🔔', bg: 'bg-gray-100' }
+  const meta    = NOTIF_CONFIG[notif.type] ?? { Icon: MdNotifications, bg: 'bg-gray-100', color: 'text-gray-600' }
   const route   = getNotifRoute(notif.type, userRole)
   const hasPrev = currentIndex > 0
   const hasNext = currentIndex < notifications.length - 1
@@ -160,8 +167,8 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
         {/* Sender meta */}
         <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className={`w-11 h-11 rounded-full ${meta.bg} flex items-center justify-center text-xl flex-shrink-0`}>
-              {meta.emoji}
+            <div className={`w-11 h-11 rounded-full ${meta.bg} flex items-center justify-center flex-shrink-0`}>
+              <meta.Icon className={meta.color} size={22} />
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">{t('notif.sender')}</p>
