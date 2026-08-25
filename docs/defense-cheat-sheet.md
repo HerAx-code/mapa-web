@@ -84,9 +84,11 @@ work by the social workers.
 ## Compliance (RA 10173)
 
 - **§16(f) portability** — "Download my data" → one `MAPA-RA10173-v1` JSON.
-- **§16(e) erasure** — admin soft-delete gates login; super_admin cascade.
-  Residual: Firebase Auth user (needs an Admin SDK function — now possible
-  on Blaze).
+- **§16(e) erasure** — admin soft-delete gates login; super_admin cascade
+  removes all Firestore data **and** now the Firebase Auth account, via the
+  `deleteAuthUser` Cloud Function (deployed 2026-08-25). The old "Auth
+  account can't be removed from the browser" residual is **closed** (the
+  function falls back to a manual-removal prompt only if it errors).
 - **§16(c) access** — the patient access-log (coordination layer 6).
 
 ## The public UI (redesigned 2026-08-25)
