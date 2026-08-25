@@ -1,6 +1,52 @@
 # MAPA — Thesis project summary
 
-Last updated: 2026-06-07.
+Last updated: 2026-06-07. **Current-state refresh: 2026-08-25.**
+
+> ## ⚠ Current state as of 2026-08-25 (read this first)
+> This summary's body predates a large batch of work. Corrections that
+> supersede statements below, all live in production:
+>
+> **Platform & infrastructure**
+> - **Blaze plan, not Spark.** Firebase Storage + Cloud Functions are
+>   available. Two functions are **deployed** in `asia-southeast1`:
+>   `verifyAccessCode` (access-code throttle) and `syncRequestFinancials`
+>   (Firestore trigger that recomputes a request's funding tally from its
+>   slices — server-authoritative integrity the rules alone can't give).
+>   Any "Spark plan / Cloud Functions not deployed / Storage unavailable"
+>   text below is historical. (`documentContents` is still base64-in-
+>   Firestore until the written Storage migration is run.)
+> - **CI + tests:** GitHub Actions runs build + all four suites on every
+>   push/PR, plus a pre-commit hook. Current: utils 35 / components 64 /
+>   functions 49 / rules 138 = **286 tests** (the §4 "76" and §9 counts
+>   are stale).
+>
+> **Agency model (RA 11463 reconciliation)** — live in the production DB
+> - Funders are now **five**: DOH-MAIP, PhilHealth, PCSO MAP, DSWD AICS,
+>   AMBaG — plus **Malasakit reframed as a disabled coordination hub**
+>   (it is legally a one-stop shop, not a funder). Demo accounts are now
+>   **15** (Malasakit's two deactivated). Any "four agencies (Malasakit,
+>   AMBaG, PCSO, DSWD) / 11 demo accounts" text is superseded.
+> - NOTE: this is applied to the production database and its seed/migration
+>   scripts live on the `feat/agencies-ra11463` branch; if reading `main`'s
+>   `scripts/bootstrap-reference-data.js` it may still list the old four
+>   until that branch is merged.
+>
+> **Security** — a 2026-07-24 sweep closed a further set of permissive
+> create/update rules (documentContents, reports, documents, notifications,
+> requests, conversations, hospitalIds) beyond the 2026-06 passes, each
+> with a rules test. See the reconciled rule set (138 rules tests).
+>
+> **Public UI redesign (2026-08-25)** — live
+> - Landing hero rebuilt as a **two-column editorial layout** with an
+>   illustrative application-journey card.
+> - **All colorful emoji replaced with Material Design line icons** across
+>   patient and staff surfaces (civic/professional tone; `react-icons/md`,
+>   no new deps). Monochrome UI marks (✓ ⚠ ▲▼) kept.
+> - A subtle **CSS animated "aurora" background** on the landing hero and
+>   the **Login + Register** pages (reduced-motion-safe, no image/video).
+> - Auth pages elevated to match the landing. PWA install CTA relabelled
+>   "Install App" (was "Download App") with honest, safe-install copy;
+>   `docs/mobile-app-apk.md` documents the PWA-vs-APK path.
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,
