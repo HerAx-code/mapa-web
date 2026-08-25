@@ -73,8 +73,16 @@ async function main() {
     console.log('\n(Orphan metadata is not auto-deleted by this script — review manually.)')
   }
 
-  const wasteKB = orphanContent.length * 900   // rough estimate
-  console.log(`\nEstimated reclaimable storage: ~${(wasteKB / 1024).toFixed(1)} MB`)
+  // NOTE: this scan reads document IDs only (.select() above), so it does
+  // NOT measure byte size. A previous version multiplied the count by a
+  // hard-coded 900 KB/doc and printed it as "Estimated reclaimable
+  // storage" — that was a ~45x overestimate (real orphans on 2026-07-23
+  // averaged ~20 KB/doc: 12,149 docs ≈ 236 MB, not the ~10.7 GB it
+  // claimed). Report the reliable figure (the count) and don't fabricate
+  // a size the cheap scan can't know.
+  console.log(`\n${orphanContent.length} orphan content doc(s) would be reclaimed.`)
+  console.log(`(Byte size not measured — this scan reads IDs only. Fetch the`)
+  console.log(`\`content\` field if you need an exact reclaimable-storage figure.)`)
 }
 
 main().then(() => process.exit(0)).catch(err => {

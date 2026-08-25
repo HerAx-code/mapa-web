@@ -164,7 +164,22 @@ service cloud.firestore {
           // endorsed slice into the agency's review queue.
           (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing')
         )) ||
-        (isAgency() && resource.data.agencyId == userAgencyId()) ||
+        // Phase 1.6: an agency may write its own slice, but the identity +
+        // endorsement fields are LOCKED — they can't reassign the slice to
+        // another patient/agency/request or inflate the CRMC-endorsed cap.
+        // Everything else (the funding decision: status, amountApproved,
+        // glStatus, approvedBy, cooldown, purposeOfAssistance, payableTo,
+        // signedScan pointer, timestamps, …) stays writable, so no legitimate
+        // approve / reverse / GL / redeem flow is affected. This is a locked-
+        // immutables guard rather than a field allowlist precisely so it can't
+        // silently break one of those multi-field transitions.
+        // amountApproved (the agency's decision) stays free; amountRequested
+        // (CRMC's endorsed cap) is locked.
+        (isAgency() && resource.data.agencyId == userAgencyId() &&
+          request.resource.data.patientId      == resource.data.patientId &&
+          request.resource.data.agencyId       == resource.data.agencyId &&
+          request.resource.data.requestId      == resource.data.requestId &&
+          request.resource.data.amountRequested == resource.data.amountRequested) ||
         isAdmin()
       );
       allow delete: if isAdmin();
