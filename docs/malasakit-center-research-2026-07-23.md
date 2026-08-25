@@ -210,9 +210,12 @@ Disabling removes it from endorsement pickers while preserving history.
   updating to match: `docs/thesis-documentation.md` (lines ~13, ~27) and
   `docs/thesis-summary.md` (line ~25). Left for the author — that is
   thesis prose, not code.
-- The only completed demo GL is Malasakit-funded, which now contradicts
-  the model. Consider re-seeding the demo scenario against a real funder
-  before the defence.
+- ~~The only completed demo GL is Malasakit-funded, which now contradicts
+  the model.~~ **RESOLVED 2026-08-25:** the completed demo application
+  (L9Q9Gd4K9ufRCjEvg7hn) was reassigned Malasakit → PCSO (an active funder)
+  consistently — agencyId/name/color/initials + approver (Dr. Carmen
+  Reyes) + the parent request's agencyIds. Zero Malasakit-funded
+  applications remain. (Demo data only; full backup taken first.)
 
 ---
 
