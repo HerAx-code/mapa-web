@@ -72,6 +72,76 @@ describe('applications.create — Phase 1.4 forged funding slice', () => {
   })
 })
 
+// ── Phase 1.6 — applications.update identity/endorsement lock ────────────
+// An agency may write its own slice, but must not reassign it to another
+// patient/agency/request or inflate the CRMC-endorsed cap (amountRequested).
+// The funding-decision fields stay free.
+describe('applications.update — Phase 1.6 identity lock', () => {
+  async function seedSlice(id, over = {}) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'applications', id), {
+        requestId: 'req-1', patientId: 'patient-1', agencyId: 'malasakit',
+        amountRequested: 25000, amountApproved: 0, status: 'reviewing', ...over,
+      })
+    })
+  }
+
+  it('allows the agency approval write (funding fields, identity unchanged)', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedSlice('app-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      status: 'approved', amountApproved: 20000, glStatus: 'issued',
+      approvedBy: 'Dr. X', approvedAt: serverTimestamp(),
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects reassigning the slice to another patient', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedSlice('app-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      patientId: 'patient-2',
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects reassigning the slice to another agency', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedSlice('app-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      agencyId: 'pcso',
+    }))
+  })
+
+  it('REGRESSION GUARD: rejects inflating the endorsed cap (amountRequested)', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedSlice('app-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      amountRequested: 999999,
+    }))
+  })
+
+  it('rejects repointing the slice to another request', async () => {
+    await seedUser('agency-1', 'agency', 'malasakit')
+    await seedSlice('app-1')
+    const ctx = testEnv.authenticatedContext('agency-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      requestId: 'req-2',
+    }))
+  })
+
+  it('still lets an admin change anything (e.g. re-endorse)', async () => {
+    await seedUser('admin-1', 'staff_admin')
+    await seedSlice('app-1')
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      agencyId: 'pcso', amountRequested: 30000,
+    }))
+  })
+})
+
 // ── Phase 1.4 — requests.create ─────────────────────────────────────────
 // Ownership was enforced, entry state was not: a patient could submit a
 // request pre-advanced past CRMC verification, or pre-loaded with agencies.
