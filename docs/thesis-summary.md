@@ -34,7 +34,14 @@ Last updated: 2026-06-07. **Current-state refresh: 2026-08-25.**
 > **Security** — a 2026-07-24 sweep closed a further set of permissive
 > create/update rules (documentContents, reports, documents, notifications,
 > requests, conversations, hospitalIds) beyond the 2026-06 passes, each
-> with a rules test. See the reconciled rule set (138 rules tests).
+> with a rules test. See the reconciled rule set (138 rules tests). A
+> further `applications.update` identity-lock landed 2026-08-25.
+>
+> **RA 10173 §16(e) erasure — residual CLOSED (2026-08-25).** Patient
+> deletion now removes the Firebase **Auth** account too, via the deployed
+> `deleteAuthUser` Cloud Function (super_admin-only, idempotent,
+> best-effort with a manual-removal fallback). §6 below still describes the
+> Auth account as the "one residual" — that is now historical.
 >
 > **Public UI redesign (2026-08-25)** — live
 > - Landing hero rebuilt as a **two-column editorial layout** with an

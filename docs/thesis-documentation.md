@@ -19,7 +19,13 @@
 >   branch; `main`'s seed may still list four until merged.)
 > - **Security §7** — a 2026-07-24 hardening sweep closed a further set of
 >   permissive create/update rules; the "four acknowledged broad-write
->   tradeoffs" are now three-closed / one-open (applications.update).
+>   tradeoffs" are now ALL addressed — the last, `applications.update`, got
+>   an identity/endorsement-field lock 2026-08-25 (agencies can't reassign a
+>   slice or inflate the endorsed cap).
+> - **RA 10173 §16(e) erasure — residual CLOSED (2026-08-25).** Patient
+>   deletion now also removes the Firebase Auth account via the deployed
+>   `deleteAuthUser` Cloud Function. Where the body describes the Auth
+>   account as an unremovable residual, that is historical.
 > - **Public UI redesign (2026-08-25)** — two-column landing hero;
 >   app-wide emoji → Material Design line icons (no new deps); a subtle
 >   CSS animated "aurora" background on the landing hero + Login + Register
