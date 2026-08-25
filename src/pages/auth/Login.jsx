@@ -163,10 +163,13 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-50/50 to-white flex items-center justify-center px-4 py-8">
+      {/* Same subtle animated aurora as the landing hero — visual
+          continuity from Landing → Login. Reduced-motion-safe (index.css). */}
+      <div className="hero-aurora" aria-hidden="true" />
       {/* Match Register's responsive width so the card doesn't jump in size
           when patients toggle between Login and Register. */}
-      <div className="w-full max-w-md sm:max-w-lg">
+      <div className="relative w-full max-w-md sm:max-w-lg">
 
         {/* Language toggle */}
         <div className="flex justify-end mb-2">
@@ -205,7 +208,7 @@ export default function Login() {
         })()}
 
         {/* Login form */}
-        <div className="card p-6">
+        <div className="card p-6 rounded-2xl shadow-lg border-gray-100/80">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('auth.email')}</label>
