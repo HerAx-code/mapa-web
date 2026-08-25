@@ -126,6 +126,31 @@ Use after editing `storage.rules`. Takes effect in ~30 seconds.
 
 ### Migrate documentContents to Cloud Storage (one-shot)
 
+> **STATUS 2026-08-25: NOT RUN — deliberately deferred.** A dry-run
+> attempt showed this is not a one-shot script today; treat it as a
+> scoped, reviewed task before running against production patient data:
+> 1. **Blocker:** `scripts/migrate-doc-content-to-storage.js` calls
+>    `initializeApp({ credential: applicationDefault() })` with **no
+>    `storageBucket`**, so it errors "Bucket name not specified." Fix:
+>    pass `storageBucket: 'mapa-crmc.firebasestorage.app'`.
+> 2. **New uploads still write base64.** `src/utils/uploadDocument.js`
+>    writes content to `documentContents` (the Spark-era revert). Migrating
+>    only the existing docs doesn't stop new base64 from accumulating —
+>    uploadDocument must be switched to Storage too.
+> 3. **Compliance:** `src/utils/dataExport.js` (RA 10173 §16(f) export)
+>    reads document content from `documentContents`. Running with
+>    `--delete` before dataExport is updated to read from Storage would
+>    drop document content from the patient data export — a regression.
+> 4. Needs a live upload → view smoke test (DocViewerModal reads
+>    storagePath-first with a base64 fallback, so a non-destructive
+>    `--apply` is safe; `--delete` is the irreversible step).
+>
+> Deferred because production currently holds only ~11 small documents —
+> low payoff, real PII/compliance risk. Revisit before scaling the pilot.
+> Correct order when doing it: fix (1)+(2)+(3) → `--apply` (no delete) →
+> verify reads + export → then `--apply --delete`. Storage rules already
+> cover `/documents/**` (see storage.rules).
+
 After Tier-2 item 8, NEW patient document uploads go to Cloud Storage
 at `/documents/{patientId}/{docId}/{file}`. Existing legacy documents
 keep their base64 content in the `documentContents` Firestore collection
