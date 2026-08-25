@@ -520,15 +520,18 @@ export default function Register() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md sm:max-w-lg">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-50/50 to-white flex items-center justify-center px-4 py-8">
+      {/* Matches the Login + landing aurora for visual continuity.
+          Reduced-motion-safe (index.css). */}
+      <div className="hero-aurora" aria-hidden="true" />
+      <div className="relative w-full max-w-md sm:max-w-lg">
         {!isStandalone && (
           <div className="flex items-center gap-2 mb-6">
             <Link to="/" className="text-sm text-gray-400 hover:text-gray-600">← {t('register.backHome')}</Link>
           </div>
         )}
 
-        <div className="card p-6">
+        <div className="card p-6 rounded-2xl shadow-lg border-gray-100/80">
           {/* Header */}
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 bg-brand-500 rounded-lg flex items-center justify-center">
