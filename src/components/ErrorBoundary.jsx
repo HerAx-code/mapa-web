@@ -1,4 +1,5 @@
 import React from 'react'
+import { MdWarningAmber } from 'react-icons/md'
 
 // Top-level error boundary so an unhandled render error in one page doesn't
 // blank out the entire app. Shows a friendly fallback and a Reload button.
@@ -35,7 +36,7 @@ export default class ErrorBoundary extends React.Component {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-6 text-center">
           <div className="w-14 h-14 rounded-full bg-red-50 mx-auto mb-4 flex items-center justify-center">
-            <span className="text-3xl">⚠️</span>
+            <MdWarningAmber className="text-red-500" size={30} />
           </div>
           <h1 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h1>
           <p className="text-sm text-gray-600 leading-relaxed mb-4">

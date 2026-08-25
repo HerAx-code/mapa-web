@@ -10,6 +10,9 @@ import {
   MdListAlt, MdGroup, MdMessage, MdDescription, MdFavorite,
   MdHistory, MdFlag, MdDownload, MdCampaign,
   MdWarning, MdSpeed, MdCheckCircle, MdTimer, MdTour, MdAutoFixHigh,
+  // De-emoji sweep: activity feed, metrics, alerts, empty state
+  MdLocalHospital, MdPersonAdd, MdCancel, MdAssignment, MdCelebration,
+  MdBlock, MdWorkspacePremium, MdInbox, MdAccessTime,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { logAudit } from '../../utils/auditLog'
@@ -34,14 +37,14 @@ const daysSince = (ts) => {
 }
 
 const ACTIVITY_CONFIG = {
-  registration:  { emoji: '👤', label: 'New patient registered',   bg: 'bg-blue-50',   path: (it) => `/admin/patients?openId=${it.targetId}` },
-  doc_upload:    { emoji: '📄', label: 'Document uploaded',        bg: 'bg-gray-100',  path: () => `/admin/patients` },
-  doc_verified:  { emoji: '✅', label: 'Document verified',        bg: 'bg-green-50',  path: () => `/admin/patients` },
-  doc_rejected:  { emoji: '❌', label: 'Document rejected',        bg: 'bg-red-50',    path: () => `/admin/patients` },
-  app_submitted: { emoji: '📋', label: 'Application submitted',    bg: 'bg-brand-50',  path: () => `/admin/logs` },
-  app_approved:  { emoji: '🎉', label: 'Application approved',     bg: 'bg-green-50',  path: () => `/admin/logs?status=approved` },
-  app_rejected:  { emoji: '🚫', label: 'Application rejected',     bg: 'bg-red-50',    path: () => `/admin/logs?status=rejected` },
-  cert_issued:   { emoji: '🏆', label: 'Guarantee Letter issued',  bg: 'bg-purple-50', path: () => `/admin/logs?status=certificate` },
+  registration:  { Icon: MdPersonAdd, label: 'New patient registered',   bg: 'bg-blue-50', path: (it) => `/admin/patients?openId=${it.targetId}` },
+  doc_upload:    { Icon: MdDescription,      label: 'Document uploaded',        bg: 'bg-gray-100',  path: () => `/admin/patients` },
+  doc_verified:  { Icon: MdCheckCircle,      label: 'Document verified',        bg: 'bg-green-50',  path: () => `/admin/patients` },
+  doc_rejected:  { Icon: MdCancel,           label: 'Document rejected',        bg: 'bg-red-50',    path: () => `/admin/patients` },
+  app_submitted: { Icon: MdAssignment,       label: 'Application submitted',    bg: 'bg-brand-50',  path: () => `/admin/logs` },
+  app_approved:  { Icon: MdCelebration,      label: 'Application approved',     bg: 'bg-green-50',  path: () => `/admin/logs?status=approved` },
+  app_rejected:  { Icon: MdBlock,            label: 'Application rejected',     bg: 'bg-red-50',    path: () => `/admin/logs?status=rejected` },
+  cert_issued:   { Icon: MdWorkspacePremium, label: 'Guarantee Letter issued',  bg: 'bg-purple-50', path: () => `/admin/logs?status=certificate` },
 }
 
 export default function AdminDashboard() {
@@ -295,19 +298,19 @@ export default function AdminDashboard() {
   const METRICS = [
     {
       label: 'Total Patients',  value: patientCount,
-      emoji: '👥', valueCls: 'text-gray-900', bg: 'bg-blue-50', path: '/admin/patients',
+      Icon: MdGroup, valueCls: 'text-gray-900', bg: 'bg-blue-50', iconCls: 'text-blue-600', path: '/admin/patients',
     },
     {
       label: 'Active Agencies', value: agencyCount,
-      emoji: '🏥', valueCls: 'text-green-600', bg: 'bg-green-50', path: '/admin/agencies',
+      Icon: MdLocalHospital, valueCls: 'text-green-600', bg: 'bg-green-50', iconCls: 'text-green-600', path: '/admin/agencies',
     },
     {
       label: 'Open Requests',   value: openRequests,
-      emoji: '📋', valueCls: 'text-brand-600', bg: 'bg-brand-50', path: '/admin/requests',
+      Icon: MdListAlt, valueCls: 'text-brand-600', bg: 'bg-brand-50', iconCls: 'text-brand-600', path: '/admin/requests',
     },
     {
       label: 'Pending Docs',    value: pendingDocs,
-      emoji: '📄', valueCls: 'text-amber-600', bg: 'bg-amber-50', path: '/admin/requests',
+      Icon: MdDescription, valueCls: 'text-amber-600', bg: 'bg-amber-50', iconCls: 'text-amber-600', path: '/admin/requests',
     },
   ]
 
@@ -337,7 +340,7 @@ export default function AdminDashboard() {
   const alerts = [
     staleApps.length > 0 && {
       key: 'stale',
-      icon: '⏰',
+      Icon: MdAccessTime,
       label: `${staleApps.length} stale application${staleApps.length === 1 ? '' : 's'}`,
       detail: 'No agency response in 7+ days',
       tone: 'red',
@@ -345,7 +348,7 @@ export default function AdminDashboard() {
     },
     lowSlotAgencies.length > 0 && {
       key: 'lowslots',
-      icon: '⚠️',
+      Icon: MdWarning,
       label: `${lowSlotAgencies.length} ${lowSlotAgencies.length === 1 ? 'agency' : 'agencies'} low on slots`,
       detail: lowSlotAgencies.map(a => a.name).slice(0, 3).join(', '),
       tone: 'amber',
@@ -353,7 +356,7 @@ export default function AdminDashboard() {
     },
     openReports > 0 && {
       key: 'reports',
-      icon: '🚩',
+      Icon: MdFlag,
       label: `${openReports} open report${openReports === 1 ? '' : 's'}`,
       detail: 'Awaiting review or resolution',
       tone: 'orange',
@@ -405,8 +408,8 @@ export default function AdminDashboard() {
             <button key={i} onClick={() => navigate(m.path)}
               className="card p-4 text-left hover:shadow-md transition-all">
               <div className="flex items-center justify-between mb-2">
-                <div className={`w-9 h-9 ${m.bg} rounded-xl flex items-center justify-center text-lg`}>
-                  {m.emoji}
+                <div className={`w-9 h-9 ${m.bg} rounded-xl flex items-center justify-center`}>
+                  <m.Icon className={m.iconCls} size={20} />
                 </div>
                 <p className={`text-2xl font-bold ${m.valueCls}`}>{m.value}</p>
               </div>
@@ -474,7 +477,7 @@ export default function AdminDashboard() {
               {alerts.map(a => (
                 <button key={a.key} onClick={() => navigate(a.path)}
                   className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all hover:shadow-sm ${TONE_CLS[a.tone]}`}>
-                  <span className="text-lg leading-none mt-0.5">{a.icon}</span>
+                  <a.Icon size={18} className="mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{a.label}</p>
                     <p className="text-xs opacity-80 truncate">{a.detail}</p>
@@ -500,7 +503,7 @@ export default function AdminDashboard() {
             <div className="card overflow-hidden divide-y divide-gray-50">
               {activityFeed.length === 0 && (
                 <div className="py-12 text-center">
-                  <p className="text-3xl mb-2">📭</p>
+                  <MdInbox className="mx-auto mb-2 text-gray-300" size={36} />
                   <p className="text-sm text-gray-400">No recent activity yet</p>
                   <p className="text-xs text-gray-300 mt-1">Activity will appear as patients register and upload documents</p>
                 </div>
@@ -511,8 +514,8 @@ export default function AdminDashboard() {
                   <button key={item.id + item.type}
                     onClick={() => handleActivityClick(item)}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-                    <div className={`w-8 h-8 ${cfg.bg} rounded-lg flex items-center justify-center text-base flex-shrink-0`}>
-                      {cfg.emoji}
+                    <div className={`w-8 h-8 ${cfg.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <cfg.Icon className="text-gray-600" size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-700">{cfg.label}</p>

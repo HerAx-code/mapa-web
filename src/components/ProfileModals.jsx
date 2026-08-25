@@ -64,7 +64,7 @@ import AddressPicker, { joinAddress } from './AddressPicker'
 import {
   MdClose, MdVisibility, MdVisibilityOff, MdCameraAlt,
   MdPerson, MdLock, MdPhone, MdHome, MdEmail,
-  MdCheckCircle, MdDelete, MdWarning,
+  MdCheckCircle, MdDelete, MdWarning, MdFlag,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -523,7 +523,7 @@ function SettingsModal({ onClose }) {
         toast(
           `Downloaded with ${data.errors.length} section${data.errors.length === 1 ? '' : 's'} unavailable. ` +
           'See the "errors" field in the file for details, or contact MSS.',
-          { icon: '⚠️', duration: 8000 },
+          { icon: <MdWarning className="text-amber-500" />, duration: 8000 },
         )
       } else {
         toast.success(t('profile.privacy.exportSuccess'))
@@ -702,8 +702,8 @@ function HelpModal({ onClose, onOpenReport }) {
           onClick={handleEmailSupport}
           className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left mb-2"
         >
-          <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 text-base">
-            📧
+          <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <MdEmail className="text-blue-500" size={18} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800">{t('profile.help.emailSupport')}</p>
@@ -717,8 +717,8 @@ function HelpModal({ onClose, onOpenReport }) {
           onClick={() => { onClose(); onOpenReport() }}
           className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left"
         >
-          <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0 text-base">
-            🚩
+          <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <MdFlag className="text-amber-500" size={18} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800">{t('profile.help.submitTicket')}</p>
