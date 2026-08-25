@@ -557,7 +557,7 @@ export default function ApplicationDetail() {
 
       await notify(app.patientId, {
         type:  'interview_approved',
-        title: 'Application approved! 🎉',
+        title: 'Application approved',
         body:  `Your application to ${app.agencyName} is approved for ₱${approvedAmount.toLocaleString()} (${purposeOfAssistance.join(', ')}). A Guarantee Letter will be issued shortly.`,
       })
       if (app.endorsedById) {
@@ -1486,7 +1486,7 @@ export default function ApplicationDetail() {
                               ? 'bg-amber-50 border border-amber-100 hover:bg-amber-100'
                               : 'bg-gray-50 hover:bg-gray-100'
                         }`}>
-                        <span className="text-lg">📄</span>
+                        <MdDescription className="text-brand-500" size={18} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{d.documentTypeName || d.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">

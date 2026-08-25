@@ -194,7 +194,6 @@ export default function AgencyDashboard() {
         }
         if (!cancelled && expired.length > 0) {
           toast(`${expired.length} expired Guarantee Letter${expired.length === 1 ? '' : 's'} were swept and committed budget released.`, {
-            icon: '🧹',
             duration: 5000,
           })
         }

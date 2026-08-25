@@ -103,8 +103,8 @@ export const openPrintTab = (data, label, cols, generatedBy = 'Admin') => {
   </div>
   <div class="meta"><div><strong>${data.length}</strong> total records &nbsp;·&nbsp; ${statusSummary}</div></div>
   <div class="actions">
-    <button class="btn btn-secondary" onclick="downloadCSV()">⬇️ Download CSV</button>
-    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print again</button>
+    <button class="btn btn-secondary" onclick="downloadCSV()">Download CSV</button>
+    <button class="btn btn-secondary" onclick="window.print()">Print again</button>
   </div>
   <table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>
   <div class="footer"><p><strong>Data Privacy Notice:</strong> This report contains personal data protected under Republic Act No. 10173 (Data Privacy Act of 2012). Intended solely for authorized CRMC personnel. Do not share or distribute without proper authorization.</p></div>

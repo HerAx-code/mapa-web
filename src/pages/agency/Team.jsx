@@ -467,7 +467,7 @@ export default function AgencyTeam() {
                         )}
                       </div>
                       <p className="text-xs text-gray-400">{coord.email}</p>
-                      {coord.contact && <p className="text-xs text-gray-400">📞 {coord.contact}</p>}
+                      {coord.contact && <p className="text-xs text-gray-400">{coord.contact}</p>}
                       <p className="text-xs text-gray-300 mt-0.5">Added {formatDate(coord.createdAt)}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">

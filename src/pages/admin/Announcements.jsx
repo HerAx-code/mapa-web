@@ -387,7 +387,7 @@ export default function Announcements() {
           Promise.all(snap.docs.map(d =>
             notify(d.id, {
               type:  'system_announcement',
-              title: `${cfg.emoji} ${data.title}`,
+              title: data.title,
               body:  `${data.message} · ${window}`,
             }).catch(() => {})
           ))

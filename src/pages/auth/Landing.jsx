@@ -5,7 +5,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { MdShield, MdArrowForward, MdDownload, MdClose } from 'react-icons/md'
+import {
+  MdShield, MdArrowForward, MdDownload, MdClose,
+  // Professional line icons replacing the emoji (a govt/medical portal
+  // reads as amateur with emoji — matches CLAUDE.md "civic, professional").
+  MdBadge, MdMailOutline, MdSmartphone, MdLocationOn,
+  MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
+  MdPhone, MdSchedule,
+} from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import LanguageToggle from '../../components/LanguageToggle'
@@ -96,37 +103,87 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-brand-50 to-white py-20 px-6 text-center">
-        <div className="max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-600 font-medium mb-6 shadow-sm">
-            <MdShield size={14} />
-            {t('landing.hero.badge')}
+      {/* Hero — two-column editorial layout (ported from the redesign):
+          benefit-led copy + proof points on the left, an illustrative
+          "application journey" card on the right. The journey card is
+          deliberately static/illustrative, NOT a live status lookup —
+          MAPA has no anonymous status-by-reference feature (that would be
+          an enumeration risk), so the card teaches the flow rather than
+          pretending to query it. */}
+      <section className="border-b border-gray-100 bg-gradient-to-b from-brand-50/50 to-white">
+        <div className="max-w-6xl mx-auto grid gap-12 px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-20">
+          {/* Left: copy + CTAs + proof points */}
+          <div>
+            <div className="inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-600 font-medium mb-6 shadow-sm">
+              <MdShield size={14} />
+              {t('landing.hero.badge')}
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-brand-900 leading-[1.1] mb-4 max-w-xl">
+              {t('landing.hero.headline')}
+            </h1>
+            <p className="text-gray-500 text-sm mb-3 flex items-center gap-1.5">
+              <MdLocationOn size={16} className="text-brand-500" /> {t('landing.hero.location')}
+            </p>
+            <p className="text-gray-600 text-lg mb-8 max-w-xl leading-relaxed">
+              {t('landing.hero.tagline')}
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                className="btn-primary flex items-center justify-center gap-2 px-6 py-2.5 text-base w-full sm:w-auto"
+                onClick={handleMainCTA}>
+                {user ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaPatient')}
+                <MdArrowForward size={18} />
+              </button>
+              <button
+                className="btn-secondary px-6 py-2.5 text-base w-full sm:w-auto"
+                onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}>
+                {t('landing.hero.learnMore')}
+              </button>
+            </div>
+            {/* Proof points — honest value props, no fabricated stats */}
+            <dl className="mt-12 grid grid-cols-3 gap-x-6 gap-y-6 border-t border-gray-100 pt-8 max-w-xl">
+              {[
+                { value: t('landing.hero.proof1Value'), label: t('landing.hero.proof1Label') },
+                { value: t('landing.hero.proof2Value'), label: t('landing.hero.proof2Label') },
+                { value: t('landing.hero.proof3Value'), label: t('landing.hero.proof3Label') },
+              ].map((p, i) => (
+                <div key={i}>
+                  <dd className="text-2xl font-bold tracking-tight text-brand-900">{p.value}</dd>
+                  <dt className="mt-1 text-sm text-gray-500 leading-snug">{p.label}</dt>
+                </div>
+              ))}
+            </dl>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-            <span className="text-brand-500">M</span>edical{' '}
-            <span className="text-brand-500">A</span>ssistance{' '}
-            <span className="text-brand-500">P</span>ortal{' '}
-            <span className="text-brand-500">A</span>ccess
-          </h1>
-          <p className="text-gray-500 text-base mb-2 flex items-center justify-center gap-2">
-            <span>📍</span> {t('landing.hero.location')}
-          </p>
-          <p className="text-gray-600 text-lg mb-8 max-w-xl mx-auto">
-            {t('landing.hero.tagline')}
-          </p>
-          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button
-              className="btn-primary flex items-center justify-center gap-2 px-6 py-2.5 text-base w-full sm:w-auto"
-              onClick={handleMainCTA}>
-              {user ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaPatient')}
-              <MdArrowForward size={18} />
-            </button>
-            <button
-              className="btn-secondary px-6 py-2.5 text-base w-full sm:w-auto"
-              onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-              {t('landing.hero.learnMore')}
-            </button>
+
+          {/* Right: illustrative application-journey card */}
+          <div className="card p-6 sm:p-7 lg:justify-self-end w-full max-w-md">
+            <h2 className="text-lg font-bold tracking-tight text-brand-900">
+              {t('landing.hero.journeyTitle')}
+            </h2>
+            <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">
+              {t('landing.hero.journeyDesc')}
+            </p>
+            <ol className="mt-6">
+              {[
+                { label: t('landing.hero.stage1Label'), detail: t('landing.hero.stage1Detail') },
+                { label: t('landing.hero.stage2Label'), detail: t('landing.hero.stage2Detail') },
+                { label: t('landing.hero.stage3Label'), detail: t('landing.hero.stage3Detail') },
+                { label: t('landing.hero.stage4Label'), detail: t('landing.hero.stage4Detail') },
+              ].map((s, i, arr) => (
+                <li key={i} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold">
+                      {i + 1}
+                    </span>
+                    {i < arr.length - 1 && <span className="w-px flex-1 bg-brand-100 my-1 min-h-[20px]" />}
+                  </div>
+                  <div className={i < arr.length - 1 ? 'pb-5' : ''}>
+                    <p className="text-sm font-semibold text-gray-800">{s.label}</p>
+                    <p className="mt-0.5 text-sm text-gray-500 leading-snug">{s.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>
@@ -139,13 +196,15 @@ export default function Landing() {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { emoji: '🪪', title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc')    },
-              { emoji: '📧', title: t('landing.prepare.emailTitle'),   desc: t('landing.prepare.emailDesc')   },
-              { emoji: '📱', title: t('landing.prepare.mobileTitle'),  desc: t('landing.prepare.mobileDesc')  },
-              { emoji: '📍', title: t('landing.prepare.addressTitle'), desc: t('landing.prepare.addressDesc') },
+              { Icon: MdBadge,        title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc')    },
+              { Icon: MdMailOutline,  title: t('landing.prepare.emailTitle'),   desc: t('landing.prepare.emailDesc')   },
+              { Icon: MdSmartphone,   title: t('landing.prepare.mobileTitle'),  desc: t('landing.prepare.mobileDesc')  },
+              { Icon: MdLocationOn,   title: t('landing.prepare.addressTitle'), desc: t('landing.prepare.addressDesc') },
             ].map((item, i) => (
               <div key={i} className="bg-white/10 rounded-xl p-4 text-center">
-                <p className="text-2xl mb-2">{item.emoji}</p>
+                <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center mx-auto mb-3">
+                  <item.Icon size={20} className="text-white" />
+                </div>
                 <p className="text-white text-xs font-semibold mb-1">{item.title}</p>
                 <p className="text-white/70 text-xs leading-relaxed">{item.desc}</p>
               </div>
@@ -174,12 +233,12 @@ export default function Landing() {
           {/* Steps grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { step: 1, emoji: '🪪', title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
-              { step: 2, emoji: '📝', title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
-              { step: 3, emoji: '📄', title: t('landing.steps.s3Title'), desc: t('landing.steps.s3Desc') },
-              { step: 4, emoji: '🏥', title: t('landing.steps.s4Title'), desc: t('landing.steps.s4Desc') },
-              { step: 5, emoji: '🎥', title: t('landing.steps.s5Title'), desc: t('landing.steps.s5Desc') },
-              { step: 6, emoji: '🏆', title: t('landing.steps.s6Title'), desc: t('landing.steps.s6Desc') },
+              { step: 1, Icon: MdBadge,         title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
+              { step: 2, Icon: MdHowToReg,      title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
+              { step: 3, Icon: MdUploadFile,    title: t('landing.steps.s3Title'), desc: t('landing.steps.s3Desc') },
+              { step: 4, Icon: MdLocalHospital, title: t('landing.steps.s4Title'), desc: t('landing.steps.s4Desc') },
+              { step: 5, Icon: MdVideocam,      title: t('landing.steps.s5Title'), desc: t('landing.steps.s5Desc') },
+              { step: 6, Icon: MdVerified,      title: t('landing.steps.s6Title'), desc: t('landing.steps.s6Desc') },
             ].map((s, i, arr) => (
               <div key={s.step} className="relative flex gap-4">
                 {/* Step number */}
@@ -195,7 +254,7 @@ export default function Landing() {
                 {/* Content */}
                 <div className="pb-6 sm:pb-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">{s.emoji}</span>
+                    <s.Icon className="text-brand-500 flex-shrink-0" size={18} />
                     <p className="text-sm font-semibold text-gray-800">{s.title}</p>
                   </div>
                   <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
@@ -348,19 +407,19 @@ export default function Landing() {
               <p className="text-xs font-semibold text-gray-300 uppercase tracking-widest mb-3">{t('landing.footer.contact')}</p>
               <ul className="space-y-2 text-xs text-gray-400">
                 <li className="flex items-start gap-2">
-                  <span className="mt-0.5">📍</span>
+                  <MdLocationOn size={15} className="mt-0.5 flex-shrink-0 text-gray-500" />
                   <span>{t('landing.footer.addressLine1')}<br />{t('landing.footer.addressLine2')}</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span>📞</span>
+                  <MdPhone size={15} className="flex-shrink-0 text-gray-500" />
                   <span>(064) 421-2500</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span>✉️</span>
+                  <MdMailOutline size={15} className="flex-shrink-0 text-gray-500" />
                   <span>records@crmc.gov.ph</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span>🕐</span>
+                  <MdSchedule size={15} className="flex-shrink-0 text-gray-500" />
                   <span>{t('landing.footer.hours')}</span>
                 </li>
               </ul>

@@ -17,7 +17,6 @@ export const TYPE_CONFIG = {
   maintenance: {
     label:      'Maintenance',
     icon:       MdBuildCircle,
-    emoji:      '⚙️',
     bg:         'bg-amber-50',
     border:     'border-amber-200',
     badge:      'bg-amber-100 text-amber-700',
@@ -28,7 +27,6 @@ export const TYPE_CONFIG = {
   warning: {
     label:      'Warning',
     icon:       MdWarning,
-    emoji:      '⚠️',
     bg:         'bg-red-50',
     border:     'border-red-200',
     badge:      'bg-red-100 text-red-700',
@@ -39,7 +37,6 @@ export const TYPE_CONFIG = {
   info: {
     label:      'Info',
     icon:       MdInfo,
-    emoji:      'ℹ️',
     bg:         'bg-blue-50',
     border:     'border-blue-200',
     badge:      'bg-blue-100 text-blue-700',

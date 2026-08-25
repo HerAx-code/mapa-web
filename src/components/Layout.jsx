@@ -13,6 +13,7 @@ import {
   MdSettings, MdHelp, MdFlag, MdChevronRight, MdLock, MdPerson,
   MdCancel, MdNotificationsNone, MdHistory, MdDownload,
   MdCampaign, MdBuildCircle, MdWarning, MdAttachMoney, MdReceiptLong,
+  MdSync,
 } from 'react-icons/md'
 import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -850,7 +851,7 @@ export default function Layout({ children, breadcrumb }) {
     if (lastRoleRef.current && user?.role && lastRoleRef.current !== user.role) {
       toast(
         'Your account role changed. Please refresh the page so it takes effect.',
-        { duration: Infinity, icon: '🔄', id: 'role-change' },
+        { duration: Infinity, icon: <MdSync className="text-brand-500" />, id: 'role-change' },
       )
     }
     lastRoleRef.current = user?.role
@@ -941,11 +942,10 @@ export default function Layout({ children, breadcrumb }) {
             updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
               .then(async () => {
                 const allUsers = await getDocs(collection(db, 'users'))
-                const cfg = { maintenance: '⚙️', warning: '⚠️', info: 'ℹ️' }[ann.type] ?? 'ℹ️'
                 await Promise.all(allUsers.docs.map(u =>
                   notify(u.id, {
                     type:  'system_announcement',
-                    title: `${cfg} Reminder: ${ann.title}`,
+                    title: `Reminder: ${ann.title}`,
                     body:  `Scheduled in less than 24 hours. ${ann.message}`,
                   }).catch(() => {})
                 ))

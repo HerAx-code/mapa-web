@@ -319,7 +319,7 @@ export default function ExportPreview() {
     return (
       <Layout breadcrumb="Export">
         <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
-          <p className="text-3xl mb-3">🔍</p>
+          <MdSearch className="mx-auto mb-3 text-gray-300" size={32} />
           <p className="text-sm font-medium text-gray-700 mb-1">Unknown export type</p>
           <p className="text-xs text-gray-400 mb-5">The export type "{type}" does not exist.</p>
           <button className="btn-secondary text-sm" onClick={() => navigate('/admin/export')}>
@@ -459,7 +459,7 @@ export default function ExportPreview() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-              <p className="text-3xl mb-3">🔍</p>
+              <MdSearch className="mx-auto mb-3 text-gray-300" size={32} />
               <p className="text-sm font-medium text-gray-600 mb-1">No records found</p>
               <p className="text-xs text-gray-400">
                 {search
@@ -550,7 +550,7 @@ export default function ExportPreview() {
             <button className="btn-primary text-sm flex items-center gap-1.5"
               disabled={filtered.length === 0}
               onClick={selectedCount > 0 ? printSelected : printAll}>
-              🖨️ {selectedCount > 0 ? `Print Selected (${selectedCount})` : 'Print Report'}
+              {selectedCount > 0 ? `Print Selected (${selectedCount})` : 'Print Report'}
             </button>
           </div>
         </div>

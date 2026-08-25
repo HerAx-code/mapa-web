@@ -510,7 +510,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
             {/* Section: Family */}
             <section ref={el => sectionRefs.current.family = el} id="family" className="card p-5 scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg">👪</span>
+                <MdGroups className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Family Composition</h2>
               </div>
 
@@ -588,7 +588,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
             {/* Section: Income */}
             <section ref={el => sectionRefs.current.income = el} id="income" className="card p-5 scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg">💼</span>
+                <MdWork className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Income & Employment</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -621,7 +621,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
             <section ref={el => sectionRefs.current.expenses = el} id="expenses" className="card p-5 scroll-mt-24">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">🧾</span>
+                  <MdReceipt className="text-brand-500" size={18} />
                   <h2 className="text-sm font-semibold text-gray-800">Monthly Expenses</h2>
                 </div>
                 <span className="text-xs text-gray-500">Total: <strong>₱{totalExpenses.toLocaleString()}</strong></span>
@@ -641,7 +641,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
             {/* Section: Medical */}
             <section ref={el => sectionRefs.current.medical = el} id="medical" className="card p-5 scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg">🩺</span>
+                <MdMedicalServices className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Medical Information</h2>
               </div>
               <div className="space-y-3">
@@ -676,7 +676,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
             {!patientFacts && (
             <section ref={el => sectionRefs.current.assess = el} id="assess" className="card p-5 scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-lg">📝</span>
+                <MdAssignment className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Social Worker Assessment</h2>
               </div>
               <div className="space-y-3">
