@@ -8,7 +8,7 @@ import {
 } from 'react-icons/md'
 import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
-import { db } from '../../firebase'
+import { db, functions, httpsCallable } from '../../firebase'
 import { tsToDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
@@ -385,13 +385,30 @@ export default function Patients() {
       // user doc last so the admin can retry the cascade on partial failure
       await deleteDoc(doc(db, 'users', uid))
 
+      // Delete the Firebase Auth account via the deleteAuthUser Cloud
+      // Function (the client SDK can't delete another user). Best-effort:
+      // the Firestore erasure has already succeeded, so an Auth-deletion
+      // failure must not fail the whole flow — it just leaves the email
+      // registered, the old pre-function behaviour, which the modal's
+      // fallback note still covers. RA 10173 §16(e).
+      let authDeleted = false
+      try {
+        const res = await httpsCallable(functions, 'deleteAuthUser')({ uid })
+        authDeleted = res?.data?.deleted === true || res?.data?.reason === 'not-found'
+      } catch (authErr) {
+        console.warn('[Patients] Auth account deletion failed; remove manually in Firebase Console:', authErr)
+      }
+
       logAudit(adminUser, {
         action: 'account_deleted', targetType: 'patient',
         targetId: uid, targetName: patient.name,
         details: `Permanently deleted: ${docsSnap.size} document(s), ${appsSnap.size} application(s), ${requestsSnap.size} request(s), ${convsSnap.size} conversation(s), and all notifications`,
       })
       setConfirmDeletePatient(null)
-      toast.success(`${patient.name}'s account and all associated data permanently deleted.`)
+      toast.success(
+        `${patient.name}'s account and all associated data permanently deleted.` +
+        (authDeleted ? '' : ' Their sign-in account could not be removed automatically — remove the email in Firebase Console → Authentication.')
+      )
     } catch (err) {
       // R20: the previous bare `catch {}` swallowed every error. Without
       // a log the admin had no way to tell whether the cascade failed
@@ -655,7 +672,7 @@ export default function Patients() {
                 This cannot be undone and satisfies the patient's right to erasure under RA 10173.
               </p>
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5 leading-relaxed">
-                <strong>Note:</strong> Their Firebase Auth account can't be deleted from the browser. The email stays registered until you also remove it from Firebase Console → Authentication. Required for full RA 10173 erasure.
+                <strong>Note:</strong> Their Firebase sign-in account is now removed automatically as part of this deletion (RA 10173 §16(e) full erasure). In the rare case that step fails, the confirmation message will tell you to remove the email from Firebase Console → Authentication.
               </p>
               <div className="flex gap-2 justify-end">
                 <button className="btn-secondary text-sm" onClick={() => setConfirmDeletePatient(null)}>Cancel</button>
