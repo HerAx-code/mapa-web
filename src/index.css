@@ -121,6 +121,17 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Landing hero "aurora": a slow drift of soft brand-teal light over a
+   near-white base. CSS-only (no image, no JS, GPU-cheap background-position
+   animation) so it stays light on slow connections + low-end phones. The
+   motion is deliberately subtle to keep the civic/professional tone.
+   Disabled entirely under prefers-reduced-motion (a static gradient stays). */
+@keyframes mapaAurora {
+  0%   { transform: translate3d(-3%, -2%, 0) scale(1.12); }
+  50%  { transform: translate3d(3%,  2%, 0) scale(1.18); }
+  100% { transform: translate3d(-3%, -2%, 0) scale(1.12); }
+}
+
 /* ── Responsive utilities ── */
 @layer utilities {
   /* Subtle fade-in on mount — applied to the routed page wrapper
@@ -129,6 +140,25 @@
      motion-reduce: variants on the consumer side. */
   .animate-fade-in {
     animation: fadeIn 180ms ease-out;
+  }
+
+  /* Soft drifting brand-teal light for the landing hero. Oversized and
+     inset negatively so the slow translate never reveals an edge. Uses
+     transform (compositor-only) — no image, no paint churn. */
+  .hero-aurora {
+    position: absolute;
+    inset: -15%;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 50% at 18% 22%, rgba(29, 175, 119, 0.16), transparent 62%),
+      radial-gradient(34% 46% at 82% 14%, rgba(15, 110, 86, 0.14),  transparent 62%),
+      radial-gradient(44% 56% at 72% 88%, rgba(75, 195, 153, 0.14), transparent 62%),
+      linear-gradient(180deg, rgba(225, 245, 238, 0.5), #ffffff);
+    animation: mapaAurora 22s ease-in-out infinite;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-aurora { animation: none; }
   }
 
   .page-container {

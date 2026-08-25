@@ -110,8 +110,11 @@ export default function Landing() {
           MAPA has no anonymous status-by-reference feature (that would be
           an enumeration risk), so the card teaches the flow rather than
           pretending to query it. */}
-      <section className="border-b border-gray-100 bg-gradient-to-b from-brand-50/50 to-white">
-        <div className="max-w-6xl mx-auto grid gap-12 px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-20">
+      <section className="relative overflow-hidden border-b border-gray-100 bg-gradient-to-b from-brand-50/50 to-white">
+        {/* Animated brand-teal "aurora" backdrop — CSS-only, subtle, and
+            auto-disabled under prefers-reduced-motion (see index.css). */}
+        <div className="hero-aurora" aria-hidden="true" />
+        <div className="relative max-w-6xl mx-auto grid gap-12 px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-20">
           {/* Left: copy + CTAs + proof points */}
           <div>
             <div className="inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-600 font-medium mb-6 shadow-sm">
