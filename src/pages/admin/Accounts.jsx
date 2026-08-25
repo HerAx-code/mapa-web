@@ -438,7 +438,7 @@ export default function Accounts() {
                               {a.name} {isSelf && <span className="text-xs text-gray-400">(you)</span>}
                             </p>
                             <p className="text-xs text-gray-400">{a.email}</p>
-                            {a.contact && <p className="text-xs text-gray-400">📞 {a.contact}</p>}
+                            {a.contact && <p className="text-xs text-gray-400">{a.contact}</p>}
                           </div>
                         </div>
                       </td>

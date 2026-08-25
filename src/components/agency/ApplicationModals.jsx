@@ -218,7 +218,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           {priorApproval && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <p className="text-xs font-semibold text-red-800 mb-1">⛔ Approval will be blocked — cooldown active</p>
+              <p className="text-xs font-semibold text-red-800 mb-1">Approval will be blocked — cooldown active</p>
               {priorApproval._reversed ? (
                 <p className="text-xs text-red-700 leading-relaxed">
                   This patient has an <strong>active cooldown from a reversed approval</strong> at <strong>{priorApproval.agencyName}</strong>

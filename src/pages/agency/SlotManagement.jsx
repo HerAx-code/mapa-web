@@ -1,6 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect } from 'react'
-import { MdEdit, MdAdd, MdRemove, MdInfo, MdCalendarToday, MdHistory, MdAttachMoney } from 'react-icons/md'
+import { MdEdit, MdAdd, MdRemove, MdInfo, MdCalendarToday, MdHistory, MdAttachMoney, MdConfirmationNumber } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore'
@@ -221,7 +221,7 @@ export default function SlotManagement() {
           <div className="card p-5 border-l-4 border-brand-500">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center text-xl">🎫</div>
+                <div className="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center"><MdConfirmationNumber className="text-brand-500" size={20} /></div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">Default Slot Capacity</p>
                   <p className="text-xs text-gray-400">Max 100 per day</p>

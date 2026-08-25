@@ -166,7 +166,7 @@ export default function ConversationModal({ conversations, activeIndex, user, on
               </div>
               {conv.subject && (
                 <span className="text-xs text-brand-500 bg-brand-50 px-3 py-1 rounded-full font-medium">
-                  📎 {conv.subject}
+                  {conv.subject}
                 </span>
               )}
             </div>

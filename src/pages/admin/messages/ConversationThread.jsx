@@ -135,7 +135,7 @@ export default function ConversationThread({ conversation, user, text, setText }
             </div>
             {conversation.subject && (
               <span className="text-xs text-brand-500 bg-brand-50 px-3 py-1 rounded-full font-medium">
-                📎 {conversation.subject}
+                {conversation.subject}
               </span>
             )}
           </div>

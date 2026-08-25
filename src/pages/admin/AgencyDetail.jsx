@@ -737,7 +737,7 @@ export default function AgencyDetail() {
                           )}
                         </div>
                         <p className="text-xs text-gray-400">{coord.email}</p>
-                        {coord.contact && <p className="text-xs text-gray-400">📞 {coord.contact}</p>}
+                        {coord.contact && <p className="text-xs text-gray-400">{coord.contact}</p>}
                         <p className="text-xs text-gray-300 mt-0.5">Added {fmtDate(coord.createdAt)}</p>
                       </div>
                       {isSuperAdmin && (

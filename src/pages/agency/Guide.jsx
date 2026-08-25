@@ -5,6 +5,10 @@ import {
   MdExpandMore, MdExpandLess, MdSearch, MdMenuBook,
   MdInbox, MdCardMembership, MdBarChart,
   MdListAlt, MdMessage, MdUnfoldMore, MdUnfoldLess,
+  // Section icons (replaced the emoji set)
+  MdSync, MdImportContacts, MdPlayCircle, MdHelpOutline, MdCheckCircle,
+  MdBlock, MdPrint, MdAutorenew, MdConfirmationNumber, MdAttachMoney,
+  MdEditNote, MdContactSupport,
 } from 'react-icons/md'
 
 const LAST_UPDATED = '2026-06-01'
@@ -16,7 +20,7 @@ const SECTIONS = [
   {
     id: 'overview',
     group: 'Orientation',
-    icon: '📘',
+    Icon: MdMenuBook,
     title: 'How MAPA works for your agency',
     content:
       `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for CRMC. ` +
@@ -32,7 +36,7 @@ const SECTIONS = [
   {
     id: 'lifecycle',
     group: 'Orientation',
-    icon: '🔄',
+    Icon: MdSync,
     title: 'Slice lifecycle',
     items: [
       { label: 'Endorsed',     desc: 'CRMC routed a slice of the patient\'s request to your agency. Waiting on the patient to confirm they want to proceed with your share.' },
@@ -46,7 +50,7 @@ const SECTIONS = [
   {
     id: 'glossary',
     group: 'Orientation',
-    icon: '📖',
+    Icon: MdImportContacts,
     title: 'Glossary — key terms',
     items: [
       { label: 'Patient Access Code',   desc: 'CRMC-YYYY-NNNNN code issued by Medical Social Services. Patients must enter it to register.' },
@@ -67,7 +71,7 @@ const SECTIONS = [
   {
     id: 'inbox',
     group: 'Daily Processing',
-    icon: '📥',
+    Icon: MdInbox,
     title: 'Working the Inbox',
     steps: [
       'Open Application Inbox from the sidebar. The badge shows slices waiting on you (For Funding + Needs Info).',
@@ -81,7 +85,7 @@ const SECTIONS = [
   {
     id: 'review-endorsement',
     group: 'Daily Processing',
-    icon: '▶️',
+    Icon: MdPlayCircle,
     title: 'Reviewing an endorsed slice',
     content:
       `When a slice reaches "For Funding," CRMC has already verified the patient's documents, conducted the assessment ` +
@@ -98,7 +102,7 @@ const SECTIONS = [
   {
     id: 'needs-info',
     group: 'Daily Processing',
-    icon: '❔',
+    Icon: MdHelpOutline,
     title: 'Requesting more info from the patient',
     content:
       `If CRMC\'s assessment is missing something your agency specifically needs — proof of address for a province-locked ` +
@@ -118,7 +122,7 @@ const SECTIONS = [
   {
     id: 'approve',
     group: 'Approval & Guarantee Letter',
-    icon: '✅',
+    Icon: MdCheckCircle,
     title: 'Approving and issuing a Guarantee Letter',
     content:
       `The Approve & Issue GL action captures three pieces of information: the guaranteed amount, the purpose, ` +
@@ -139,7 +143,7 @@ const SECTIONS = [
   {
     id: 'reject',
     group: 'Approval & Guarantee Letter',
-    icon: '⛔',
+    Icon: MdBlock,
     title: 'Rejecting a slice',
     steps: [
       'Open the slice → click Reject in the action footer.',
@@ -152,7 +156,7 @@ const SECTIONS = [
   {
     id: 'print-upload',
     group: 'Approval & Guarantee Letter',
-    icon: '🖨️',
+    Icon: MdPrint,
     title: 'Printing and uploading the Guarantee Letter',
     content:
       `After approval, the Guarantee Letter has its own dedicated viewer page. From there you can print to a physical printer for wet-signing, or save as a true vector PDF using the browser's "Save as PDF" option.`,
@@ -174,7 +178,7 @@ const SECTIONS = [
   {
     id: 'gl-lifecycle',
     group: 'Approval & Guarantee Letter',
-    icon: '♻️',
+    Icon: MdAutorenew,
     title: 'GL lifecycle: redemption, expiry, reversal',
     content: `A Guarantee Letter is "Issued" when approved, valid for 30 days. Three things can happen next:`,
     items: [
@@ -189,7 +193,7 @@ const SECTIONS = [
   {
     id: 'slots',
     group: 'Operations',
-    icon: '🎫',
+    Icon: MdConfirmationNumber,
     title: 'Daily slot management',
     content:
       `Slots represent your agency's daily processing capacity. Under the co-funding redesign, slots are consumed when ` +
@@ -209,7 +213,7 @@ const SECTIONS = [
   {
     id: 'budget',
     group: 'Operations',
-    icon: '💰',
+    Icon: MdAttachMoney,
     title: 'Budget, cooldown, and fiscal control',
     content:
       `Your agency has a budget allocation set by your Agency Administrator. The Approve modal validates each ` +
@@ -227,7 +231,7 @@ const SECTIONS = [
   {
     id: 'message',
     group: 'Operations',
-    icon: '💬',
+    Icon: MdMessage,
     title: 'Messaging a patient',
     steps: [
       'From the Inbox, click the chat icon next to a row to open a conversation directly.',
@@ -240,7 +244,7 @@ const SECTIONS = [
   {
     id: 'notes',
     group: 'Operations',
-    icon: '📝',
+    Icon: MdEditNote,
     title: 'Adding case notes',
     content:
       `Case notes are an append-only log on the slice. Use them for your own ongoing observations: ` +
@@ -256,7 +260,7 @@ const SECTIONS = [
   {
     id: 'logs',
     group: 'Operations',
-    icon: '📑',
+    Icon: MdListAlt,
     title: 'Application Logs and history',
     steps: [
       'Open Application Logs from the sidebar.',
@@ -271,7 +275,7 @@ const SECTIONS = [
   {
     id: 'faq',
     group: 'FAQ',
-    icon: '❓',
+    Icon: MdHelpOutline,
     title: 'Common problems',
     items: [
       { label: 'The Approve button is disabled',     desc: 'Slice is not yet at "For Funding" — the patient may not have confirmed they want to proceed with your share, or CRMC hasn\'t finalized the endorsement. Check the status chip on the slice.' },
@@ -288,7 +292,7 @@ const SECTIONS = [
   {
     id: 'support',
     group: 'FAQ',
-    icon: '🆘',
+    Icon: MdContactSupport,
     title: 'Getting help',
     content:
       `For technical issues with the portal (broken page, error message), use the Report a Problem option ` +
@@ -315,13 +319,13 @@ const WORKFLOW = [
 // ── Reusable section card ─────────────────────────────────────────────────
 
 function SectionCard({ section, open, onToggle }) {
-  const { icon, title, content, steps, items, note } = section
+  const { Icon, title, content, steps, items, note } = section
   return (
     <div className="card overflow-hidden">
       <button
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
         onClick={onToggle}>
-        <span className="text-lg flex-shrink-0" aria-hidden="true">{icon}</span>
+        <Icon className="text-brand-500 flex-shrink-0" size={20} aria-hidden="true" />
         <span className="text-sm font-semibold text-gray-800 flex-1">{title}</span>
         {open
           ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0" />

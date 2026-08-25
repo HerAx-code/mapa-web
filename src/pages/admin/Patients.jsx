@@ -522,7 +522,7 @@ export default function Patients() {
                       </div>
                     </div>
                   </td>
-                  <td className="text-xs text-gray-500">{p.contact ? `📞 ${p.contact}` : '—'}</td>
+                  <td className="text-xs text-gray-500">{p.contact ? p.contact : '—'}</td>
                   <td className="text-xs text-gray-400">{formatDate(p.createdAt)}</td>
                   <td>
                     {p.cooldown > 0

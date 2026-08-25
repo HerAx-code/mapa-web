@@ -723,7 +723,9 @@ export default function Agencies() {
 
           {!loading && filtered.length === 0 && (
             <div className="card p-10 text-center">
-              <p className="text-3xl mb-3">{search || statusFilter !== 'all' ? '🔍' : '🏥'}</p>
+              {search || statusFilter !== 'all'
+            ? <MdSearch className="mx-auto mb-3 text-gray-300" size={32} />
+            : <MdLocationOn className="mx-auto mb-3 text-gray-300" size={32} />}
               <p className="text-sm font-medium text-gray-600 mb-1">
                 {search || statusFilter !== 'all' ? 'No agencies match your filter' : 'No agencies yet'}
               </p>
