@@ -288,8 +288,13 @@ export default function Login() {
                 { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
                 { label: 'Super Admin',            email: 'admin@crmc.gov.ph',            password: 'admin123',   note: null     },
                 { label: 'Staff Admin',            email: 'staff@crmc.gov.ph',            password: 'staff123',   note: null     },
-                { label: 'Malasakit · Admin',      email: 'admin@malasakit.gov.ph',       password: 'agency123',  note: 'Admin'  },
-                { label: 'Malasakit · Coordinator',email: 'coordinator@malasakit.gov.ph', password: 'agency123',  note: 'Active' },
+                // Malasakit is a coordination hub, not a funder (RA 11463);
+                // its logins are deactivated and cannot sign in, so they are
+                // not shown here. DOH-MAIP + PhilHealth are the RA 11463 funders.
+                { label: 'DOH · Admin',            email: 'admin@doh.gov.ph',             password: 'agency123',  note: 'Admin'  },
+                { label: 'DOH · Coordinator',      email: 'coordinator@doh.gov.ph',       password: 'agency123',  note: 'Active' },
+                { label: 'PhilHealth · Admin',     email: 'admin@philhealth.gov.ph',      password: 'agency123',  note: 'Admin'  },
+                { label: 'PhilHealth · Coordinator',email:'coordinator@philhealth.gov.ph', password: 'agency123',  note: 'Active' },
                 { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           password: 'agency123',  note: 'Admin'  },
                 { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     password: 'agency123',  note: 'Active' },
                 { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            password: 'agency123',  note: 'Admin'  },

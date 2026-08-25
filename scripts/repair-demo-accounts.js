@@ -143,7 +143,10 @@ async function main() {
       const ref = db.doc(`users/${uid}`)
       const snap = await ref.get()
       const current = snap.exists ? snap.data() : null
-      const canonical = { ...u.profile, email: u.email, active: true }
+      // active comes from the canonical profile so a repair does not
+      // silently re-enable a deliberately deactivated demo account (the
+      // reframed malasakit hub logins are active:false). Default true.
+      const canonical = { ...u.profile, email: u.email, active: u.profile.active ?? true }
 
       const changes = profileDiff(current, canonical)
 
