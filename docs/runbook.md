@@ -1,6 +1,21 @@
 # MAPA operational runbook
 
-Last updated: 2026-06-01.
+Last updated: 2026-06-01. **Current-state note: 2026-08-25.**
+
+> ## ⚠ What changed since 2026-06-01
+> - **Blaze plan.** The "Deploy Cloud Functions (Blaze only)" section is
+>   now live: `verifyAccessCode` and `syncRequestFinancials` are deployed
+>   in `asia-southeast1`. `resetAgencySlots` / `glExpirySweep` remain
+>   undeployed (client-side fallbacks still run). **Deploy functions
+>   targeted** — `firebase deploy --only functions:<name>` — never a bare
+>   `--only functions` (it would activate the two dormant scheduled jobs).
+> - **CI exists** (GitHub Actions: build + all four test suites). The
+>   `functions/` package is installed separately in CI (`npm install` in
+>   `functions/`; its lockfile is gitignored).
+> - **Agencies:** production has 5 funders + the disabled Malasakit hub;
+>   seed/migration scripts are on `feat/agencies-ra11463` (unmerged).
+> - `documentContents` → Storage migration still not run (base64 in
+>   Firestore); `scripts/migrate-doc-content-to-storage.js` when ready.
 
 What to do when something breaks. Organised by scenario; each entry
 links to the underlying scripts / files / rule paths.

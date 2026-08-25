@@ -1,5 +1,31 @@
 # MAPA — Thesis Documentation
 
+> ## ⚠ Current-state banner — 2026-08-25
+> The body below predates several batches of work. All of the following is
+> **live in production** and supersedes older statements in the text:
+> - **Blaze plan** (not Spark). Cloud Functions deployed: `verifyAccessCode`
+>   + `syncRequestFinancials` (Firestore trigger for server-derived request
+>   funding integrity). Storage available; `documentContents` still base64
+>   until the written migration runs. Any "Spark / no Cloud Functions /
+>   Storage blocked" text is historical.
+> - **Automated tests: 286** (utils 35 / components 64 / functions 49 /
+>   rules 138) + GitHub Actions CI + pre-commit hook. Any "no automated
+>   tests / no CI" statement is obsolete.
+> - **Five funders** — DOH-MAIP, PhilHealth, PCSO MAP, DSWD AICS, AMBaG —
+>   plus **Malasakit as a disabled coordination hub** (RA 11463
+>   reconciliation, applied to the production DB). Demo accounts: **15**.
+>   "Four agencies (Malasakit, AMBaG, PCSO, DSWD) / 11 demo accounts" is
+>   superseded. (Seed/migration code is on the `feat/agencies-ra11463`
+>   branch; `main`'s seed may still list four until merged.)
+> - **Security §7** — a 2026-07-24 hardening sweep closed a further set of
+>   permissive create/update rules; the "four acknowledged broad-write
+>   tradeoffs" are now three-closed / one-open (applications.update).
+> - **Public UI redesign (2026-08-25)** — two-column landing hero;
+>   app-wide emoji → Material Design line icons (no new deps); a subtle
+>   CSS animated "aurora" background on the landing hero + Login + Register
+>   (reduced-motion-safe); elevated auth cards; PWA CTA relabelled
+>   "Install App." See `docs/mobile-app-apk.md`.
+
 **Last updated:** 2026-06-07 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32, and **the Inter-Agency Coordination Plan Phase 1 (R33 Case Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard)** — see `docs/revision-list.md` for the change log)
 
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.

@@ -1,6 +1,24 @@
 # MAPA threat model
 
-Last updated: 2026-06-01.
+Last updated: 2026-06-01. **Current-state note: 2026-08-25.**
+
+> ## ⚠ Posture updates since 2026-06-01
+> The threats/mitigations below remain valid; these operational facts changed:
+> - **Cloud Functions now exist** (Blaze): `verifyAccessCode` (access-code
+>   throttle) + `syncRequestFinancials` (server-derived request funding
+>   tally). The rule layer is still the primary gate but no longer the only
+>   server-side logic. "There are no Cloud Functions" (Trust boundaries) is
+>   obsolete.
+> - **2026-07-24 hardening sweep** closed further permissive create/update
+>   rules — `documentContents` (parent-owner required; T3's "legacy
+>   unguarded path" no longer applies), `reports`, `documents` update/delete
+>   field-scoping, `notifications`/`messages`/`notificationErrors` sender
+>   attribution, `requests.update` value bounds, `conversations.update`
+>   participant freeze, `hospitalIds` claim scope — each with a rules test.
+> - **CI now exists** (all four suites); the "no automated CI" operational
+>   limit is obsolete. "Pilot runs on Spark" → now Blaze.
+> - The 2026-08-25 UI redesign is presentational and does not change the
+>   threat surface.
 
 This document records what threats MAPA addresses, what threats it
 deliberately accepts (and why), and the mitigations in place for each.
