@@ -5,7 +5,7 @@
  * Admin-SDK companion to bootstrap-users.js. Seeds (or repairs) the
  * non-user reference collections:
  *
- *   - agencies          (4 partner agencies the slices route to)
+ *   - agencies          (6: 5 funders + Malasakit as a disabled hub)
  *   - documentTypes     (8 patient-uploadable document categories)
  *   - assistanceTypes   (8 categories of medical assistance)
  *   - hospitalIds       (20 demo CRMC Access Codes)
@@ -57,13 +57,21 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 // without a logo set still look polished thanks to the canonical
 // `color` + `initials` pair below.
 const SEED_AGENCIES = [
+  // RA 11463 reconciliation (2026-07-23). A Malasakit Center is legally a
+  // COORDINATION HUB, not a funding source: a co-located one-stop shop
+  // where DOH, DSWD, PCSO and PhilHealth receive and process requests. It
+  // holds no appropriation for direct patient assistance -- its budget
+  // line is personnel + facilities only. In MAPA that hub function is
+  // performed by the CRMC gateway role itself, so this entry is seeded
+  // DISABLED and exists for historical records, not new endorsements.
+  // Citation trail: docs/malasakit-center-research-2026-07-23.md.
   {
     id:              'malasakit',
     name:            'Malasakit Center',
     initials:        'MC',
     color:           'bg-brand-500',
     logoUrl:         null,
-    description:     'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.',
+    description:     'Coordination hub, not a funding source. Under RA 11463 and JAO 2020-0001 the Malasakit Center is a co-located one-stop shop where DOH, DSWD, PCSO and PhilHealth receive and process requests; it holds no appropriation for direct patient assistance. In MAPA this function is performed by the CRMC gateway role itself, so the Center is retained here for historical records only and is not available for new endorsements.',
     // R32: structured location (BARMM cascading dropdowns).
     province:        'Cotabato City',
     city:            'Cotabato City',
@@ -73,6 +81,49 @@ const SEED_AGENCIES = [
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID','Medical Abstract'],
     assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'],
+    processingTime:  'Same Day',
+    // Seeded disabled -- see the RA 11463 note above. Not a funder.
+    enabled:         false,
+  },
+  // DOH MAIP -- an RA 11463 participating agency that had no
+  // representation in MAPA at all before the 2026-07-23 reconciliation.
+  {
+    id:              'doh',
+    name:            'DOH MAIP',
+    initials:        'DH',
+    color:           'bg-emerald-600',
+    logoUrl:         null,
+    description:     'Medical Assistance for Indigent and Financially-Incapacitated Patients (MAIP), charged to the Department of Health under RA 11463.',
+    province:        'Cotabato City',
+    city:            'Cotabato City',
+    officeName:      'DOH Desk, CRMC Ground Floor',
+    location:        'DOH Desk, CRMC Ground Floor, Cotabato City',
+    phone:           '064-421-2800',
+    slots:           { total: 25, remaining: 25 },
+    requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID'],
+    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'],
+    processingTime:  'Same Day',
+    enabled:         true,
+  },
+  // PhilHealth NHIF -- RA 11463 funder, #1 in the Order of Charging.
+  // Caveat: NHIF operationally REDUCES the bill rather than issuing a GL;
+  // modelled as an agency per stakeholder decision (2026-07-24) for
+  // Order-of-Charging visibility. Disable to revert (same as malasakit).
+  {
+    id:              'philhealth',
+    name:            'PhilHealth',
+    initials:        'PH',
+    color:           'bg-teal-600',
+    logoUrl:         null,
+    description:     'National Health Insurance Fund (NHIF). Under RA 11463 Order of Charging, PhilHealth coverage is applied FIRST to reduce the bill before other agencies fund the balance.',
+    province:        'Cotabato City',
+    city:            'Cotabato City',
+    officeName:      'PhilHealth Desk, CRMC Ground Floor',
+    location:        'PhilHealth Desk, CRMC Ground Floor, Cotabato City',
+    phone:           '064-421-2900',
+    slots:           { total: 25, remaining: 25 },
+    requirements:    ['PhilHealth ID','Valid ID'],
+    assistanceTypes: ['Hospital Bills / Hospitalization'],
     processingTime:  'Same Day',
     enabled:         true,
   },

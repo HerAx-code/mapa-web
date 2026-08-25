@@ -77,7 +77,10 @@ async function main() {
     try {
       const ref = db.doc(`users/${uid}`)
       const snap = await ref.get()
-      const data = { ...u.profile, email: u.email, active: true, createdAt: new Date() }
+      // active comes from the canonical profile (deactivated demo
+      // accounts, e.g. the reframed malasakit hub logins, must stay
+      // active:false). Default true for older entries that omit it.
+      const data = { ...u.profile, email: u.email, active: u.profile.active ?? true, createdAt: new Date() }
       if (snap.exists) {
         if (!authExisted) {
           await ref.set(data, { merge: true })
