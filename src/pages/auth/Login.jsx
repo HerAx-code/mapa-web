@@ -179,13 +179,15 @@ export default function Login() {
         {/* Dark-panel aurora — visual continuity with the Landing hero. */}
         <div className="brand-aurora" aria-hidden="true" />
 
-        {/* Light logo lockup (the shared Logo wordmark is dark, so the brand
-            column uses its own white lockup). */}
+        {/* Real MAPA logo mark + a white wordmark (the shared Logo component's
+            wordmark is dark-on-light, so the dark brand column pairs the mark
+            with its own white "MAPA" text). */}
         <div className="relative px-12 pt-12">
           <span className="inline-flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/95">
-              <MdShield size={20} className="text-brand-700" />
-            </span>
+            <img
+              src="/mapa-logo.png"
+              alt="MAPA"
+              className="h-10 w-10 rounded-[11px] object-contain ring-1 ring-white/15" />
             <span className="text-[17px] font-semibold tracking-tight text-white">MAPA</span>
           </span>
         </div>
