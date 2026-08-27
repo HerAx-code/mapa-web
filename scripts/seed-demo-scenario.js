@@ -223,6 +223,12 @@ async function main() {
     patientHospitalId: patient.hospitalId ?? 'CRMC-2026-00014',
     assistanceType:    'Hospital Bills / Hospitalization',
     description:       'Father admitted at CRMC ICU for severe pneumonia (Day 5 of admission). Requesting assistance to cover the outstanding balance after PhilHealth deduction. Family has exhausted personal savings; community fundraising covered the first 4 days. Doctor advises 3-5 more days of inpatient care including continued IV antibiotics.',
+    // PhilHealth-first bill model (Order of Charging): a ₱40k bill reduced by
+    // PhilHealth first, leaving a ₱25k residual the agencies co-fund. See
+    // docs/philhealth-first-plan.md.
+    totalBill:         40000,
+    philhealthCovered: 15000,
+    otherCovered:      0,
     amountNeeded:      25000,
     amountCommitted:   0,
     agencyIds:         [],
@@ -240,6 +246,8 @@ async function main() {
   console.log(`  ${DRY_RUN ? '➕ WOULD CREATE' : '✅'} requests/${reqRefId} -- ${reqId}`)
   console.log(`       patient:        ${requestData.patientName}`)
   console.log(`       type:           ${requestData.assistanceType}`)
+  console.log(`       total bill:     ₱${requestData.totalBill.toLocaleString()}`)
+  console.log(`       PhilHealth:     ₱${requestData.philhealthCovered.toLocaleString()}`)
   console.log(`       amount needed:  ₱${requestData.amountNeeded.toLocaleString()}`)
   console.log(`       status:         ${requestData.status}`)
   console.log(`       documents:      ${attachedDocuments.length}`)

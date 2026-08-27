@@ -8,7 +8,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { computeFunding } from '../../utils/requests'
+import { computeFunding, computeAmountNeeded } from '../../utils/requests'
 import { isIdType } from '../../utils/idOcr'
 import { isIntakeComplete } from '../../utils/intakeSheet'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -507,6 +507,10 @@ function RequestDetail({ request, agencies, onClose }) {
   // routine flow.
   const [unverifyingDoc, setUnverifyingDoc]   = useState(null)
   const [outcomeNotes, setOutcomeNotes] = useState('')
+  // PhilHealth-first coverage inputs (Order of Charging). Seeded from the
+  // request and re-seeded when a different request is opened; local edits stay
+  // until saved. See docs/philhealth-first-plan.md.
+  const [coverage, setCoverage] = useState({ ph: '', other: '' })
   const [busy, setBusy] = useState(false)
   // Per-doc OCR-text expander state. When a doc's OCR verdict is "no match"
   // or "could not auto-read", the verifier needs to see WHAT OCR actually
@@ -549,6 +553,14 @@ function RequestDetail({ request, agencies, onClose }) {
     return unsub
   }, [request.id])
 
+  // Re-seed the coverage inputs whenever a different request is opened.
+  useEffect(() => {
+    setCoverage({
+      ph:    request.philhealthCovered != null ? String(request.philhealthCovered) : '',
+      other: request.otherCovered      != null ? String(request.otherCovered)      : '',
+    })
+  }, [request.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Live patient documents — drives the verification panel's current status.
   useEffect(() => {
     if (!request.patientId) return
@@ -562,6 +574,16 @@ function RequestDetail({ request, agencies, onClose }) {
 
   const funding = computeFunding(request.amountNeeded, slices)
   const terminal = ['fully_funded', 'closed', 'rejected'].includes(request.status)
+  // PhilHealth-first coverage: the bill base falls back to amountNeeded for
+  // legacy requests with no totalBill. Coverage is editable only before
+  // endorsement (slices freeze amountRequested at endorse time).
+  const billBase       = Number(request.totalBill ?? request.amountNeeded) || 0
+  const previewNeeded  = computeAmountNeeded({
+    totalBill:         billBase,
+    philhealthCovered: Number(coverage.ph)    || 0,
+    otherCovered:      Number(coverage.other) || 0,
+  })
+  const coverageEditable = ['submitted', 'under_review', 'assessment'].includes(request.status)
 
   // The documents attached to this request, with their live status/OCR merged
   // in (falls back to the request snapshot if a live doc isn't found).
@@ -712,6 +734,33 @@ function RequestDetail({ request, agencies, onClose }) {
       logAudit(user, { action: 'interview_completed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `Outcome: ${outcome}`, requestId: request.id, patientId: request.patientId })
       toast.success('Interview outcome recorded.')
     } catch (err) { console.error(err); toast.error('Failed to record outcome.') }
+    finally { setBusy(false) }
+  }
+
+  // PhilHealth-first: record the coverage applied before endorsement and
+  // recompute the residual (amountNeeded) the agencies co-fund. Gated to
+  // pre-endorsement in the UI because the endorse transaction freezes
+  // amountRequested = amountNeeded onto each slice (see EndorseModal); editing
+  // it afterwards would desync the slices. See docs/philhealth-first-plan.md.
+  const saveCoverage = async () => {
+    setBusy(true)
+    try {
+      const philhealthCovered = Number(coverage.ph)    || 0
+      const otherCovered      = Number(coverage.other) || 0
+      const totalBill         = Number(request.totalBill ?? request.amountNeeded) || 0
+      const amountNeeded      = computeAmountNeeded({ totalBill, philhealthCovered, otherCovered })
+      await updateDoc(doc(db, 'requests', request.id), {
+        totalBill, philhealthCovered, otherCovered, amountNeeded,
+        updatedAt: serverTimestamp(),
+      })
+      logAudit(user, {
+        action: 'coverage_updated', targetType: 'request', targetId: request.id,
+        targetName: request.requestId,
+        details: `PhilHealth ${peso(philhealthCovered)} + other ${peso(otherCovered)} on bill ${peso(totalBill)} → needed ${peso(amountNeeded)}`,
+        requestId: request.id, patientId: request.patientId,
+      })
+      toast.success('Coverage saved.')
+    } catch (err) { console.error(err); toast.error('Failed to save coverage.') }
     finally { setBusy(false) }
   }
 
@@ -944,6 +993,36 @@ function RequestDetail({ request, agencies, onClose }) {
                 className="text-xs font-medium text-brand-600 hover:text-brand-700 flex-shrink-0">
                 Open
               </Link>
+            </div>
+            {/* Coverage applied first (Order of Charging, JAO 2020-0001):
+                PhilHealth reduces the bill, then any other prior aid; the
+                remaining balance is what CRMC endorses to funding agencies. */}
+            <div className="p-3 rounded-lg border border-gray-100 mb-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-700">Coverage applied first</p>
+                <span className="text-xs text-gray-400">Bill {peso(billBase)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-xs text-gray-500">PhilHealth (₱)</span>
+                  <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
+                    disabled={!coverageEditable || busy}
+                    value={coverage.ph} onChange={e => setCoverage(c => ({ ...c, ph: e.target.value }))} />
+                </label>
+                <label className="block">
+                  <span className="text-xs text-gray-500">Other aid (₱)</span>
+                  <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
+                    disabled={!coverageEditable || busy}
+                    value={coverage.other} onChange={e => setCoverage(c => ({ ...c, other: e.target.value }))} />
+                </label>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-500">Remaining to agencies:{' '}
+                  <span className="font-semibold text-gray-800">{peso(previewNeeded)}</span></p>
+                {coverageEditable
+                  ? <button className="btn-secondary text-xs py-1.5" disabled={busy} onClick={saveCoverage}>Save coverage</button>
+                  : <span className="text-xs text-gray-400 italic">Locked after endorsement</span>}
+              </div>
             </div>
             {!request.interviewDate ? (
               <div className="p-3 rounded-lg border border-gray-100">

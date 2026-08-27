@@ -54,13 +54,20 @@ work by the social workers.
   (RA 11463 + JAO 2020-0001): a co-located one-stop shop where DOH, DSWD,
   PCSO, PhilHealth receive/process requests via the **Order of Charging**
   (PhilHealth → PCSO → DSWD → DOH → hospital/LGU).
-- MAPA models the hub as the **CRMC gateway role itself**, and the funders
-  as agencies: **DOH-MAIP, PhilHealth, PCSO MAP, DSWD AICS** + **AMBaG**
+- MAPA models the hub as the **CRMC gateway role itself**. The **GL-issuing
+  funders** are agencies: **DOH-MAIP, PCSO MAP, DSWD AICS** + **AMBaG**
   (BARMM peer). Malasakit is retained but **disabled**.
+- **PhilHealth is NOT an agency** — it is modelled as the **first-charge
+  coverage that reduces the bill** (Order of Charging, JAO 2020-0001).
+  Captured on the request as `philhealthCovered`; CRMC applies it at
+  assessment, and only the **residual** (`amountNeeded`) is endorsed to the
+  funders. Implemented 2026-08-27 (`docs/philhealth-first-plan.md`).
 - **Defensible line:** "MAPA's data model matches the statute — the
-  Malasakit Center is the intake gateway, not a funding source."
-- **Stated caveat:** PhilHealth's NHIF is drawn *first and reduces the
-  bill*; its slice is a coverage figure, not a GL. Full trail:
+  Malasakit Center is the intake gateway; PhilHealth is the first charge that
+  reduces the bill, not a Guarantee-Letter funder."
+- **Where to point:** `computeAmountNeeded()` in `src/utils/requests.js`
+  (`bill − PhilHealth − other`), the CRMC coverage panel on the request, and
+  the disabled `philhealth` agency. Full trail:
   `docs/malasakit-center-research-2026-07-23.md`.
 
 ## Security — the incident-response narrative
@@ -124,7 +131,7 @@ Pre-defense: `node scripts/check-demo-accounts.js` (5s health check).
 | Thing | Value |
 |---|---|
 | Roles | 5 |
-| Funding agencies | 5 (+ 1 disabled hub) |
+| GL-issuing funders | 4 (DOH, PCSO, DSWD, AMBaG) + PhilHealth as first-charge coverage + 1 disabled hub |
 | Firestore collections | ~16 |
 | `firestore.rules` | ~865 lines |
 | Automated tests | 286 (utils 35 / components 64 / functions 49 / rules 138) |

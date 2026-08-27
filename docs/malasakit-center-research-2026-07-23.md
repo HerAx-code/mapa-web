@@ -219,6 +219,43 @@ Disabling removes it from endorsement pickers while preserving history.
 
 ---
 
+## ADDENDUM 2 — PhilHealth-first implemented, 2026-08-27
+
+The 2026-07-24 decision to **add PhilHealth as an endorsable agency** (recorded
+above, with its stated caveat) has been **reversed and superseded**. PhilHealth
+is now modelled the way this memo's legal analysis said it should be: the
+**first charge that reduces the bill**, not a Guarantee-Letter funder.
+
+**Why the reversal was safe.** A read-only audit (2026-08-27) found PhilHealth
+had **0 funded slices** and **₱0 allocated** — it was added as an agency but
+never actually used as one. Disabling it stranded no money and orphaned nothing.
+Separately, the codebase already contained the correct helper
+(`computeAmountNeeded`, `bill − PhilHealth − other`) as **dead code**, and the
+i18n layer already had the `billLabel`/`philhealthLabel`/`neededLabel` keys —
+the feature had been scaffolded and abandoned. This change wired it up.
+
+**What was done** (see `docs/philhealth-first-plan.md` for the full plan +
+`scripts/migrate-philhealth-first.js` for the migration; backup taken first):
+
+| Change | Detail |
+|---|---|
+| `requests` schema | + `totalBill`, `philhealthCovered`, `otherCovered`; `amountNeeded` is now the derived residual |
+| Patient submission | Patient declares the **total bill**; coverage is 0 at submit |
+| CRMC assessment | New coverage panel — CRMC enters PhilHealth (+ other) coverage; residual recomputed; **locked after endorsement** |
+| `philhealth` agency | `enabled: false` (same mechanism as `malasakit`) |
+| `philhealth` logins | 2 Auth accounts deactivated |
+| Existing 6 requests | Backfilled `totalBill = amountNeeded` (non-destructive; no figure moved) |
+
+**Still flat (honest scope):** only PhilHealth-first is enforced. The remaining
+PCSO → DSWD → DOH residual **sequencing stays parallel** (matches operational
+reality; strict full Order-of-Charging is Option 2, deferred).
+
+**Reverting** is still a one-liner in the other direction: re-enable the
+`philhealth` agency + accounts from the backup. But the current state is the
+one this memo's legal analysis endorses.
+
+---
+
 ## Sources verified (top primary/secondary only)
 
 | # | Quality | Source |

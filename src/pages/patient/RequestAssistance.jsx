@@ -61,7 +61,7 @@ export default function RequestAssistance() {
   const [withdrawing,     setWithdrawing]     = useState(false)
 
   const [form, setForm] = useState({
-    assistanceType: '', amountNeeded: '', description: '',
+    assistanceType: '', totalBill: '', description: '',
   })
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
@@ -357,7 +357,12 @@ export default function RequestAssistance() {
     !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
   const missingDocs = reqDocTypes.filter(tp => !isSatisfied(tp))
 
-  const amountNeeded = Number(form.amountNeeded) || 0
+  // The patient declares their total hospital bill. Coverage (PhilHealth first,
+  // then any other prior coverage) is unknown at submission — it is computed by
+  // CRMC at assessment — so the residual `amountNeeded` starts equal to the full
+  // bill and is reduced later. See docs/philhealth-first-plan.md.
+  const totalBill    = Number(form.totalBill) || 0
+  const amountNeeded = totalBill
 
   const handleSubmit = async () => {
     if (submitting) return
@@ -432,6 +437,13 @@ export default function RequestAssistance() {
         patientHospitalId: user.hospitalId ?? null,
         assistanceType:    form.assistanceType,
         description:       form.description.trim(),
+        // PhilHealth-first bill model: the patient declares the full bill;
+        // CRMC fills the coverage fields at assessment, which reduces
+        // amountNeeded to the residual the agencies co-fund. Coverage is 0 at
+        // submission. See docs/philhealth-first-plan.md.
+        totalBill,
+        philhealthCovered: 0,
+        otherCovered:      0,
         amountNeeded,
         amountCommitted:   0,
         agencyIds:         [],
@@ -453,7 +465,7 @@ export default function RequestAssistance() {
         .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
           type:  'app_submitted',
           title: 'New assistance request',
-          body:  `${user.name} submitted a ${form.assistanceType} request for ${peso(amountNeeded)} (net). ID: ${requestId}.`,
+          body:  `${user.name} submitted a ${form.assistanceType} request — total bill ${peso(totalBill)}. ID: ${requestId}.`,
         }))))
         .catch(err => console.error('[request] admin notify failed:', err))
     } catch (err) {
@@ -777,14 +789,14 @@ export default function RequestAssistance() {
             </select>
           </div>
 
-          {/* Amount needed — what the patient needs help with. CRMC verifies
-              it against the uploaded Statement of Account; agencies (not the
-              patient) decide how much each one covers. */}
+          {/* Total hospital bill — the full amount on the patient's Statement
+              of Account. CRMC applies PhilHealth (and any other coverage) first
+              at assessment, then endorses the remaining balance to agencies. */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.amountLabel')} <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>
             <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
-              value={form.amountNeeded} onChange={set('amountNeeded')} />
-            <p className="text-xs text-gray-400 mt-1">{t('patient.request.amountHint')}</p>
+              value={form.totalBill} onChange={set('totalBill')} />
+            <p className="text-xs text-gray-400 mt-1">{t('patient.request.billHint')}</p>
           </div>
 
           {/* Description */}
@@ -990,8 +1002,8 @@ export default function RequestAssistance() {
               <span className="font-medium text-gray-800 text-right">{form.assistanceType || '—'}</span>
             </div>
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
-              <span className="text-gray-400">{t('patient.request.amountLabel')}</span>
-              <span className="font-medium text-gray-800 text-right">{peso(amountNeeded)}</span>
+              <span className="text-gray-400">{t('patient.request.billLabel')}</span>
+              <span className="font-medium text-gray-800 text-right">{peso(totalBill)}</span>
             </div>
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
               <span className="text-gray-400">{t('patient.request.documentsTitle')}</span>
