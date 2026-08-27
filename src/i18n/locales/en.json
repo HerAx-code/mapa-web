@@ -565,6 +565,7 @@
     },
     "request": {
       "navLabel": "Request Assistance",
+      "eyebrow": "New request",
       "title": "Request Medical Assistance",
       "subtitle": "Tell us what you need. CRMC will review your request and endorse it to the agencies that can help.",
       "activeTitle": "You have an active request",
