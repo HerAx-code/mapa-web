@@ -725,6 +725,23 @@
         "title": "Mga mensahe",
         "viewAll": "Lahat"
       },
+      "hero": {
+        "eyebrow": "Kahilingan ng tulong",
+        "remainingLabel": "Natitirang tustusan sa inyong bill sa CRMC",
+        "fromTotal": "Mula sa {{total}} kailangan · {{approved}} ang naaprubahan",
+        "approved": "Naaprubahan",
+        "inReview": "Sinusuri",
+        "unfunded": "Hindi pa natutustusan"
+      },
+      "nextAction": {
+        "eyebrow": "Kailangan ng aksyon",
+        "fixDoc": "Mag-upload muli ng dokumento",
+        "upload": "Mag-upload",
+        "respond": "Tumugon sa ahensya",
+        "view": "Tingnan",
+        "interview": "Sumali sa inyong panayam",
+        "join": "Buksan"
+      },
       "greeting": {
         "uploadDocs": "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
         "findProgram": "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",
