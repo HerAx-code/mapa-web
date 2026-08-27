@@ -161,6 +161,25 @@
     .hero-aurora { animation: none; }
   }
 
+  /* Dark-panel variant of the aurora for the Login brand column. Same drift
+     (reuses @keyframes mapaAurora) but translucent brand-green blobs over a
+     dark gradient instead of the white-based hero version — the white base of
+     .hero-aurora would wash out the dark panel. */
+  .brand-aurora {
+    position: absolute;
+    inset: -15%;
+    pointer-events: none;
+    background:
+      radial-gradient(40% 50% at 20% 20%, rgba(75, 195, 153, 0.22), transparent 60%),
+      radial-gradient(36% 46% at 84% 24%, rgba(29, 175, 119, 0.18), transparent 60%),
+      radial-gradient(46% 56% at 70% 90%, rgba(15, 110, 86, 0.34), transparent 60%);
+    animation: mapaAurora 24s ease-in-out infinite;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .brand-aurora { animation: none; }
+  }
+
   .page-container {
     @apply p-4 sm:p-6;
   }
