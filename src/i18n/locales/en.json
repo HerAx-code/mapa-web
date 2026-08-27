@@ -688,6 +688,43 @@
       "subtitle": "Welcome back, {{name}}.",
       "activeRequestTitle": "Your assistance request",
       "activeRequestDesc": "CRMC is processing your request. Track its progress and coverage under My Application.",
+      "coverage": {
+        "title": "Coverage & balance",
+        "bill": "Total hospital bill",
+        "philhealth": "PhilHealth (applied first)",
+        "other": "Other coverage",
+        "needed": "Amount needed",
+        "approved": "Approved so far",
+        "funded": "{{pct}}% funded",
+        "remaining": "Remaining"
+      },
+      "timeline": {
+        "title": "Your application",
+        "completedOf": "{{done}} of {{total}} done",
+        "current": "Current",
+        "s1": "Request submitted",
+        "s2": "Document verification",
+        "s2metaReviewing": "Being reviewed by CRMC",
+        "s2metaDone": "{{verified}} document(s) verified",
+        "s3": "CRMC assessment interview",
+        "s3metaTBD": "To be scheduled",
+        "s4": "Endorsed to funding agencies",
+        "s4meta": "CRMC forwards your request to the agencies",
+        "s5": "Assistance released",
+        "s5metaDone": "Deducted from your hospital bill",
+        "s5metaAfter": "After agency approval"
+      },
+      "docsCard": {
+        "title": "Documents",
+        "verified": "Verified",
+        "pending": "Under review",
+        "rejected": "Needs fixing",
+        "manage": "Manage documents"
+      },
+      "messagesCard": {
+        "title": "Messages",
+        "viewAll": "View all"
+      },
       "greeting": {
         "uploadDocs": "Get started by submitting your assistance request.",
         "findProgram": "Your documents are ready — submit your assistance request.",

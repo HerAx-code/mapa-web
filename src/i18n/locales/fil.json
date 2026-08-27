@@ -688,6 +688,43 @@
       "subtitle": "Maligayang pagbabalik, {{name}}.",
       "activeRequestTitle": "Ang inyong kahilingan ng tulong",
       "activeRequestDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
+      "coverage": {
+        "title": "Coverage at balanse",
+        "bill": "Kabuuang bayarin sa ospital",
+        "philhealth": "PhilHealth (nauuna)",
+        "other": "Iba pang coverage",
+        "needed": "Halagang kailangan",
+        "approved": "Naaprubahan hanggang ngayon",
+        "funded": "{{pct}}% natustusan",
+        "remaining": "Natitira"
+      },
+      "timeline": {
+        "title": "Ang inyong aplikasyon",
+        "completedOf": "{{done}} sa {{total}} tapos",
+        "current": "Kasalukuyan",
+        "s1": "Naisumite ang kahilingan",
+        "s2": "Beripikasyon ng dokumento",
+        "s2metaReviewing": "Sinusuri ng CRMC",
+        "s2metaDone": "{{verified}} dokumento ang na-verify",
+        "s3": "Panayam sa pagtatasa ng CRMC",
+        "s3metaTBD": "Nakatakdang itakda",
+        "s4": "Na-endorso sa mga ahensya",
+        "s4meta": "Ipinapasa ng CRMC ang inyong kahilingan sa mga ahensya",
+        "s5": "Nailabas ang tulong",
+        "s5metaDone": "Ibinawas sa inyong bayarin sa ospital",
+        "s5metaAfter": "Pagkatapos ng aprubahan ng ahensya"
+      },
+      "docsCard": {
+        "title": "Mga dokumento",
+        "verified": "Na-verify",
+        "pending": "Sinusuri",
+        "rejected": "Kailangang ayusin",
+        "manage": "Pamahalaan ang mga dokumento"
+      },
+      "messagesCard": {
+        "title": "Mga mensahe",
+        "viewAll": "Lahat"
+      },
       "greeting": {
         "uploadDocs": "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
         "findProgram": "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",

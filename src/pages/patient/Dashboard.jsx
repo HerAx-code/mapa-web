@@ -6,7 +6,7 @@ import {
   MdArrowForward, MdExpandMore, MdExpandLess,
   MdHourglassEmpty, MdAssignment, MdSchedule, MdVideoCall,
   MdReceipt, MdCancel, MdLocalHospital, MdCalendarMonth, MdAccessTime,
-  MdOpenInNew, MdCheck, MdClose, MdMenuBook,
+  MdOpenInNew, MdCheck, MdClose, MdMenuBook, MdChatBubbleOutline,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import InstallPrompt from '../../components/InstallPrompt'
@@ -145,6 +145,211 @@ const formatDate = (ts) => {
   return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
 }
 
+// Local peso formatter — matches the per-page pattern used across the app
+// (RequestAssistance, TrackStatus, admin/Requests all define their own).
+const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
+
+// Short "when" for the messages preview.
+const formatWhen = (ts) => {
+  const d = tsToDate(ts)
+  if (!d) return ''
+  const diff = Date.now() - d.getTime()
+  const hrs  = Math.floor(diff / 3_600_000)
+  if (hrs < 1)  return 'now'
+  if (hrs < 24) return `${hrs}h`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days}d`
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+// ── Coverage / balance breakdown ────────────────────────────────────────────
+// Wholly derived from the request doc (totalBill / philhealthCovered /
+// otherCovered / amountNeeded + the server-derived amountCommitted) — no extra
+// query, no touch to the funding path. Surfaces the PhilHealth-first model:
+// bill → PhilHealth first charge → residual the agencies co-fund → approved →
+// remaining. Legacy requests with no totalBill fall back to amountNeeded.
+function CoverageCard({ request, t }) {
+  const bill     = Number(request.totalBill ?? request.amountNeeded) || 0
+  const ph       = Number(request.philhealthCovered) || 0
+  const other    = Number(request.otherCovered) || 0
+  const needed   = Number(request.amountNeeded) || 0
+  const approved = Number(request.amountCommitted) || 0
+  const balance  = Math.max(0, needed - approved)
+  const pct      = needed > 0 ? Math.min(100, Math.round((approved / needed) * 100)) : 0
+  if (needed <= 0 && bill <= 0) return null
+
+  const rows = [
+    { label: t('patient.dashboard.coverage.bill'), value: peso(bill) },
+    ...(ph > 0    ? [{ label: t('patient.dashboard.coverage.philhealth'), value: `− ${peso(ph)}`,    muted: true }] : []),
+    ...(other > 0 ? [{ label: t('patient.dashboard.coverage.other'),      value: `− ${peso(other)}`, muted: true }] : []),
+    { label: t('patient.dashboard.coverage.needed'), value: peso(needed), strong: true },
+  ]
+
+  return (
+    <div className="card p-5">
+      <h3 className="text-sm font-semibold text-gray-800 mb-3">{t('patient.dashboard.coverage.title')}</h3>
+      <dl className="space-y-2">
+        {rows.map((r, i) => (
+          <div key={i} className={`flex items-center justify-between text-sm ${r.strong ? 'pt-2 mt-1 border-t border-gray-100' : ''}`}>
+            <dt className={r.muted ? 'text-gray-500' : r.strong ? 'font-semibold text-gray-800' : 'text-gray-600'}>{r.label}</dt>
+            <dd className={`tabular-nums ${r.muted ? 'text-brand-600' : r.strong ? 'font-semibold text-gray-900' : 'text-gray-800'}`}>{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between text-sm mb-1.5">
+          <span className="text-gray-600">{t('patient.dashboard.coverage.approved')}</span>
+          <span className="font-semibold text-gray-900 tabular-nums">{peso(approved)} <span className="text-gray-400 font-normal">/ {peso(needed)}</span></span>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-gray-400">{t('patient.dashboard.coverage.funded', { pct })}</span>
+          <span className="text-sm font-semibold text-gray-800">
+            {t('patient.dashboard.coverage.remaining')}: <span className="tabular-nums">{peso(balance)}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Application timeline ─────────────────────────────────────────────────────
+// A real event timeline driven by the request's own lifecycle rank, with dates
+// where they exist. Degrades gracefully: future steps read "upcoming".
+const REQ_RANK = { submitted: 0, under_review: 1, assessment: 2, endorsed: 3, partially_funded: 4, fully_funded: 5 }
+function TimelineCard({ request, docStats, t }) {
+  const rank = REQ_RANK[request.status] ?? 0
+  const interviewWhen = request.interviewDate
+    ? `${new Date(`${request.interviewDate}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}${request.interviewTime ? ` · ${request.interviewTime}` : ''}`
+    : t('patient.dashboard.timeline.s3metaTBD')
+
+  const steps = [
+    { entry: 0, label: t('patient.dashboard.timeline.s1'), meta: formatDate(request.submittedAt) },
+    { entry: 1, label: t('patient.dashboard.timeline.s2'), meta: rank > 1 ? t('patient.dashboard.timeline.s2metaDone', { verified: docStats.verified }) : t('patient.dashboard.timeline.s2metaReviewing') },
+    { entry: 2, label: t('patient.dashboard.timeline.s3'), meta: interviewWhen },
+    { entry: 3, label: t('patient.dashboard.timeline.s4'), meta: t('patient.dashboard.timeline.s4meta') },
+    { entry: 4, label: t('patient.dashboard.timeline.s5'), meta: rank >= 5 ? t('patient.dashboard.timeline.s5metaDone') : t('patient.dashboard.timeline.s5metaAfter') },
+  ]
+  const doneCount = steps.filter(s => rank > s.entry).length
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-800">{t('patient.dashboard.timeline.title')}</h3>
+        <span className="text-xs text-gray-400">{t('patient.dashboard.timeline.completedOf', { done: doneCount, total: steps.length })}</span>
+      </div>
+      <ol>
+        {steps.map((s, i) => {
+          const status = rank > s.entry ? 'done' : rank === s.entry ? 'current' : 'upcoming'
+          const isLast = i === steps.length - 1
+          return (
+            <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
+              {!isLast && (
+                <span aria-hidden="true"
+                  className={`absolute left-[13px] top-7 bottom-0 w-px ${status === 'done' ? 'bg-brand-300' : 'bg-gray-200'}`} />
+              )}
+              <span aria-hidden="true"
+                className={`relative z-10 mt-0.5 flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                  status === 'done'    ? 'bg-brand-500 text-white'
+                  : status === 'current' ? 'bg-white text-brand-600 ring-2 ring-brand-500'
+                  : 'bg-white text-gray-400 ring-1 ring-gray-200'
+                }`}>
+                {status === 'done' ? <MdCheck size={15} /> : i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className={`text-sm ${status === 'upcoming' ? 'font-medium text-gray-400' : 'font-semibold text-gray-800'}`}>{s.label}</p>
+                  {status === 'current' && (
+                    <span className="badge badge-blue text-xs">{t('patient.dashboard.timeline.current')}</span>
+                  )}
+                </div>
+                <p className={`text-xs mt-0.5 ${status === 'upcoming' ? 'text-gray-400' : 'text-gray-500'}`}>{s.meta}</p>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+// ── Itemized documents ──────────────────────────────────────────────────────
+function DocumentsList({ docs, t, navigate }) {
+  const verified = docs.filter(d => d.status === 'verified').length
+  const meta = {
+    verified: { icon: MdCheckCircle, cls: 'text-green-600', bg: 'bg-green-50', label: t('patient.dashboard.docsCard.verified') },
+    pending:  { icon: MdPending,     cls: 'text-amber-600', bg: 'bg-amber-50', label: t('patient.dashboard.docsCard.pending')  },
+    rejected: { icon: MdCancel,      cls: 'text-red-500',   bg: 'bg-red-50',   label: t('patient.dashboard.docsCard.rejected') },
+  }
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-baseline justify-between px-4 pt-4">
+        <h3 className="text-sm font-semibold text-gray-800">{t('patient.dashboard.docsCard.title')}</h3>
+        <span className="text-xs text-gray-400 tabular-nums">{verified}/{docs.length}</span>
+      </div>
+      <ul className="mt-2 divide-y divide-gray-50">
+        {docs.map(d => {
+          const m = meta[d.status] ?? meta.pending
+          const Icon = m.icon
+          return (
+            <li key={d.id} className="flex items-center gap-3 px-4 py-2.5">
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${m.bg} ${m.cls}`}>
+                <Icon size={14} />
+              </span>
+              <span className="flex-1 min-w-0 text-sm text-gray-800 truncate">{d.documentTypeName ?? d.name ?? 'Document'}</span>
+              <span className={`text-xs flex-shrink-0 font-medium ${m.cls}`}>{m.label}</span>
+            </li>
+          )
+        })}
+      </ul>
+      <button onClick={() => navigate('/patient/request')}
+        className="w-full border-t border-gray-100 px-4 py-2.5 text-left text-sm font-medium text-brand-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+        <MdUpload size={16} /> {t('patient.dashboard.docsCard.manage')}
+      </button>
+    </div>
+  )
+}
+
+// ── Messages preview ────────────────────────────────────────────────────────
+function MessagesPreview({ convos, uid, t, navigate }) {
+  if (!convos.length) return null
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-baseline justify-between px-4 pt-4">
+        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+          <MdChatBubbleOutline size={15} className="text-gray-400" /> {t('patient.dashboard.messagesCard.title')}
+        </h3>
+        <button onClick={() => navigate('/patient/messages')}
+          className="text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
+          {t('patient.dashboard.messagesCard.viewAll')} <MdArrowForward size={14} />
+        </button>
+      </div>
+      <ul className="mt-2 divide-y divide-gray-50">
+        {convos.slice(0, 3).map(c => {
+          const otherUid = (c.participants ?? []).find(p => p !== uid)
+          const sender   = c.names?.[otherUid] ?? 'CRMC'
+          const unread   = (c.unread?.[uid] ?? 0) > 0
+          return (
+            <li key={c.id}>
+              <button onClick={() => navigate('/patient/messages')}
+                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-2">
+                  {unread && <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0" aria-hidden="true" />}
+                  <span className={`text-sm truncate ${unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>{sender}</span>
+                  <span className="ml-auto text-xs text-gray-400 flex-shrink-0">{formatWhen(c.lastAt)}</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{c.lastMessage || '—'}</p>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────
 
 export default function PatientDashboard() {
@@ -176,6 +381,8 @@ export default function PatientDashboard() {
   const [activeRequest, setActiveRequest] = useState(null)
   const [appCount,   setAppCount]   = useState(0)
   const [docStats,   setDocStats]   = useState({ verified: 0, pending: 0 })
+  const [docList,    setDocList]    = useState([])
+  const [convos,     setConvos]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [docLoading, setDocLoading] = useState(true)
   // Default the steps guide OPEN for new patients (no application yet) —
@@ -328,7 +535,8 @@ export default function PatientDashboard() {
     const unsub = onSnapshot(
       query(collection(db, 'documents'), where('patientId', '==', user.uid)),
       snap => {
-        const all = snap.docs.map(d => d.data())
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        setDocList(all)
         setDocStats({
           verified: all.filter(d => d.status === 'verified').length,
           pending:  all.filter(d => d.status === 'pending').length,
@@ -339,6 +547,22 @@ export default function PatientDashboard() {
         setDocLoading(false)
         console.error('[PatientDashboard] documents snapshot error:', err)
       },
+    )
+    return unsub
+  }, [user?.uid])
+
+  // Conversations for the dashboard messages preview. Sorted client-side by
+  // lastAt so no composite index is needed (single array-contains filter).
+  useEffect(() => {
+    if (!user?.uid) return
+    const unsub = onSnapshot(
+      query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid)),
+      snap => {
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        all.sort((a, b) => (b.lastAt?.seconds ?? 0) - (a.lastAt?.seconds ?? 0))
+        setConvos(all)
+      },
+      (err) => console.error('[PatientDashboard] conversations snapshot error:', err),
     )
     return unsub
   }, [user?.uid])
@@ -420,7 +644,7 @@ export default function PatientDashboard() {
       {/* Hard viewport cap so no descendant (long agency name, awaiting-
           info message with a URL, etc.) can push the page wider than the
           phone screen. overflow-x-clip is the strict version of -hidden. */}
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip space-y-4">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl lg:max-w-5xl overflow-x-clip space-y-4">
 
         {/* Compact greeting — banking-app pattern: the GREETING is a
             small line at the top, the STATUS card below is the hero.
@@ -438,6 +662,12 @@ export default function PatientDashboard() {
         {/* R38: "What's new" feed — renders null when empty so it stays
             out of the way on a clean dashboard. */}
         <AnnouncementFeedCard items={feedAnnouncements} />
+
+        {/* Two-column on desktop: the journey column (hero → coverage →
+            timeline → steps) beside an aside (documents + messages). Single
+            column on phone, where the aside stacks after the main column. */}
+        <div className="grid gap-4 items-start lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-4 min-w-0">
 
         {/* Main status card — wrapped so the tour can spotlight whichever
             of the conditional branches is currently rendered (welcome
@@ -613,49 +843,11 @@ export default function PatientDashboard() {
         )}
         </div>{/* /patient-hero wrapper */}
 
-        {/* Document status — always a clickable card, shows both verified
-            and pending counts so the patient sees their full picture. */}
-        {showDocSection && (() => {
-          const { verified, pending } = docStats
-          const hasAny = verified > 0 || pending > 0
-          // Pick the dominant tone: pending wins (active concern), then
-          // verified (good news), then empty (call to action).
-          const tone = pending > 0
-            ? { iconBg: 'bg-amber-50',  icon: MdPending,     iconColor: 'text-amber-500' }
-            : verified > 0
-              ? { iconBg: 'bg-green-50', icon: MdCheckCircle, iconColor: 'text-green-500' }
-              : { iconBg: 'bg-gray-100', icon: MdUpload,      iconColor: 'text-gray-400'  }
-          const Icon = tone.icon
-
-          const headline = !hasAny
-            ? t('patient.dashboard.docs.noneYet')
-            : pending > 0 && verified > 0
-              ? t('patient.dashboard.docs.bothCounts', { verified, pending })
-              : pending > 0
-                ? t(pending === 1 ? 'patient.dashboard.docs.pendingOne' : 'patient.dashboard.docs.pendingMany', { count: pending })
-                : t(verified === 1 ? 'patient.dashboard.docs.verifiedOne' : 'patient.dashboard.docs.verifiedMany', { count: verified })
-          const subline = !hasAny
-            ? t('patient.dashboard.docs.tapToUpload')
-            : pending > 0
-              ? t('patient.dashboard.docs.tapToManage')
-              : t('patient.dashboard.docs.allUpToDate')
-
-          return (
-            <button
-              data-tour-id="patient-docs"
-              className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
-              onClick={() => navigate('/patient/request')}>
-              <div className={`w-10 h-10 rounded-xl ${tone.iconBg} flex items-center justify-center flex-shrink-0`}>
-                <Icon size={20} className={tone.iconColor} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800">{headline}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{subline}</p>
-              </div>
-              <MdArrowForward size={16} className="text-gray-300 flex-shrink-0" />
-            </button>
-          )
-        })()}
+        {/* Coverage / balance breakdown + real event timeline — only shown
+            when there's an active request to describe. The itemized document
+            list moved to the aside (right column on desktop). */}
+        {activeRequest && <CoverageCard request={activeRequest} t={t} />}
+        {activeRequest && <TimelineCard request={activeRequest} docStats={docStats} t={t} />}
 
         {/* Step guide — collapsible */}
         <div data-tour-id="patient-steps" className="card overflow-hidden">
@@ -724,6 +916,19 @@ export default function PatientDashboard() {
             </div>
           )}
         </div>
+          </div>{/* /main column */}
+
+          {/* Aside — itemized documents + messages preview. Stacks after the
+              main column on phone; sits beside it on desktop. */}
+          <div className="space-y-4 min-w-0">
+            {showDocSection && docList.length > 0 && (
+              <div data-tour-id="patient-docs">
+                <DocumentsList docs={docList} t={t} navigate={navigate} />
+              </div>
+            )}
+            <MessagesPreview convos={convos} uid={user?.uid} t={t} navigate={navigate} />
+          </div>
+        </div>{/* /grid */}
 
         {/* PWA install prompt — bottom of dashboard. The component
             handles its own visibility (only fires when the browser
