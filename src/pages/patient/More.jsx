@@ -119,8 +119,9 @@ export default function PatientMore() {
 
         {/* Header */}
         <div className="mb-5">
-          <h1 className="page-title">{t('patient.more.title')}</h1>
-          <p className="page-sub">{t('patient.more.subtitle')}</p>
+          <p className="eyebrow">{t('patient.more.eyebrow')}</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.more.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('patient.more.subtitle')}</p>
         </div>
 
         {/* Profile card — name + role, tap to open account settings */}

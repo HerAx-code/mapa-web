@@ -680,6 +680,7 @@
       "messages": "Messages"
     },
     "more": {
+      "eyebrow": "Menu",
       "title": "More",
       "subtitle": "Account, settings, and other options.",
       "navigation": "Navigation",
@@ -995,6 +996,7 @@
       "clearFilter": "Clear filter"
     },
     "interviews": {
+      "eyebrow": "Assessment",
       "title": "My Interview",
       "subtitle": "Join your scheduled assessment interview with CRMC.",
       "loadError": "Could not load interview details. Please refresh.",
@@ -1035,6 +1037,7 @@
       }
     },
     "guide": {
+      "eyebrow": "Help",
       "title": "User Guide",
       "subtitle": "Everything you need to know about using MAPA.",
       "tapHint": "Tap any question below to read the answer.",

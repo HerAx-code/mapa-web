@@ -251,8 +251,9 @@ export default function UserGuide() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="page-title">{t('patient.guide.title')}</h1>
-          <p className="page-sub">{t('patient.guide.subtitle')}</p>
+          <p className="eyebrow">{t('patient.guide.eyebrow')}</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.guide.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('patient.guide.subtitle')}</p>
         </div>
 
         {/* Search box -- patients searching 'interview' or 'withdraw'

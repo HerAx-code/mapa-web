@@ -132,8 +132,9 @@ export default function Interviews() {
       <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
 
         <div className="w-full mb-5">
-          <h1 className="page-title">{t('patient.interviews.title')}</h1>
-          <p className="page-sub">{t('patient.interviews.subtitle')}</p>
+          <p className="eyebrow">{t('patient.interviews.eyebrow')}</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.interviews.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('patient.interviews.subtitle')}</p>
         </div>
 
         {/* Skeleton loading */}

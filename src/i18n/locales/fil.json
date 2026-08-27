@@ -680,6 +680,7 @@
       "messages": "Mensahe"
     },
     "more": {
+      "eyebrow": "Menu",
       "title": "Iba pa",
       "subtitle": "Account, settings, at iba pang opsyon.",
       "navigation": "Nabigasyon",
@@ -995,6 +996,7 @@
       "clearFilter": "Alisin ang filter"
     },
     "interviews": {
+      "eyebrow": "Pagtatasa",
       "title": "Aking Panayam",
       "subtitle": "Sumali sa inyong naka-iskedyul na assessment interview kasama ang CRMC.",
       "loadError": "Hindi ma-load ang mga detalye ng panayam. Pakirefresh.",
@@ -1035,6 +1037,7 @@
       }
     },
     "guide": {
+      "eyebrow": "Tulong",
       "title": "Gabay sa Paggamit",
       "subtitle": "Lahat ng kailangan ninyong malaman tungkol sa paggamit ng MAPA.",
       "tapHint": "I-tap ang anumang tanong sa ibaba para basahin ang sagot.",
