@@ -851,6 +851,8 @@
       }
     },
     "track": {
+      "eyebrow": "Your request",
+      "assistanceType": "Assistance type",
       "title": "My Application",
       "subtitle": "Track the status of your application.",
       "tabInProgress": "In Progress",

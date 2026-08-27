@@ -5,6 +5,7 @@ import {
   MdInbox, MdCheck, MdWarning, MdChevronRight,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
+import BalanceHero from '../../components/patient/BalanceHero'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -426,8 +427,9 @@ export default function TrackStatus() {
         <div className="w-full min-w-0">
 
         <div className="mb-5">
-          <h1 className="page-title">{t('patient.track.title')}</h1>
-          <p className="page-sub">{t('patient.track.subtitle')}</p>
+          <p className="eyebrow">{t('patient.track.eyebrow')}</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.track.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('patient.track.subtitle')}</p>
         </div>
 
         {/* Tabs — flex-wrap allows the second tab to drop to its own
@@ -490,21 +492,17 @@ export default function TrackStatus() {
 
         {/* ── Active co-funding request ── */}
         {!loading && tab === 'active' && activeRequest && (() => {
-          const cfg     = REQUEST_STATUS_CONFIG[activeRequest.status] ?? REQUEST_STATUS_CONFIG.submitted
           const stages  = buildRequestStages(activeRequest, t)
-          const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, reqSlices)
+          const funding = computeFunding(activeRequest.amountNeeded, reqSlices)
+          const { committed, balance, pct } = funding
           return (
-            <div data-tour-id="track-request" className="card p-5 mb-5">
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
-                <div className="w-10 h-10 bg-brand-500 rounded-xl text-white flex items-center justify-center flex-shrink-0">
-                  <MdAssignment size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm font-semibold text-gray-800 truncate">{activeRequest.requestId}</h2>
-                  <p className="text-sm text-gray-500 truncate">{activeRequest.assistanceType} · {peso(activeRequest.amountNeeded)}</p>
-                </div>
-                <span className={`badge ${cfg.badge} ml-auto flex-shrink-0`}>{cfg.label}</span>
-              </div>
+            <div data-tour-id="track-request" className="space-y-5 mb-5">
+              {/* Shared balance hero — same signature centrepiece as the
+                  Dashboard, so the two surfaces read as one flow. */}
+              <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
+
+              <div className="card p-5">
+              <p className="eyebrow mb-3">{t('patient.track.assistanceType')} · {activeRequest.assistanceType}</p>
 
               {/* Lifecycle stepper */}
               <div className="space-y-1 mb-4">
@@ -581,6 +579,7 @@ export default function TrackStatus() {
                   {t('patient.track.reviewCoverage')} →
                 </button>
               )}
+              </div>{/* /stepper+coverage card */}
             </div>
           )
         })()}
