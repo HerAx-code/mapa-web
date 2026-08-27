@@ -999,6 +999,7 @@
     },
     "interviews": {
       "eyebrow": "Assessment",
+      "heroEyebrow": "Your assessment interview",
       "title": "My Interview",
       "subtitle": "Join your scheduled assessment interview with CRMC.",
       "loadError": "Could not load interview details. Please refresh.",

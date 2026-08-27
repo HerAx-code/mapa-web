@@ -165,54 +165,28 @@ export default function Interviews() {
               const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
               const isToday  = app.interviewDate === todayStr
               return (
-              <div key={app.id} className={`card p-5 ${isToday ? 'border-2 border-brand-400' : ''}`}>
-                {/* Agency header — on mobile the icon + name occupy row 1
-                    and the badges drop to row 2 so we don't try to fit
-                    four pills next to a long agency name. On sm+ both
-                    sections live on the same row as before. */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-4 border-b border-gray-50">
-                  <div className="flex items-center gap-3 min-w-0">
+              isPast ? (
+                /* ── Past interview — plain card ── */
+                <div key={app.id} className="card p-5">
+                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
                     <div className={`w-10 h-10 ${app.agencyColor ?? 'bg-gray-400'} rounded-xl text-white text-xs font-bold flex items-center justify-center flex-shrink-0`}>
                       {app.agencyInitials ?? app.agencyName?.slice(0, 2).toUpperCase()}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h2 className="text-sm font-semibold text-gray-800 truncate">{app.agencyName}</h2>
                       <p className="text-xs text-gray-400 truncate">{app.appId}</p>
                     </div>
+                    <span className="badge badge-red flex-shrink-0">{t('patient.interviews.datePassedBadge')}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap sm:ml-auto sm:justify-end">
-                    {/* Countdown chip — only for upcoming interviews within
-                        a week. "Today!" supersedes the day count. */}
-                    {!isPast && !isToday && (() => {
-                      const d = daysUntil(app.interviewDate)
-                      if (d == null || d <= 0 || d > 7) return null
-                      return (
-                        <span className="badge badge-blue text-xs">
-                          {d === 1 ? t('patient.interviews.tomorrow') : t('patient.interviews.inDays', { count: d })}
-                        </span>
-                      )
-                    })()}
-                    {isToday && (
-                      <span className="badge badge-amber text-xs font-bold">{t('patient.interviews.todayBadge')}</span>
-                    )}
-                    <span className={`badge ${isPast ? 'badge-red' : 'badge-purple'}`}>
-                      {isPast ? t('patient.interviews.datePassedBadge') : t('patient.interviews.scheduledBadge')}
-                    </span>
+                  <div className="flex items-center gap-2 mb-4 text-sm flex-wrap">
+                    <MdCalendarToday size={16} className="text-red-400" />
+                    <strong className="text-red-500">{fmtDate(app.interviewDate)}</strong>
+                    {app.interviewTime && <span className="text-gray-600">{t('patient.interviews.atTime', { time: app.interviewTime })}</span>}
                   </div>
-                </div>
-
-                {/* Past interview warning — routes the patient to Messages
-                    so they can reach CRMC about the missed/passed interview.
-                    Previously highlighted an "agency" conversation that
-                    doesn't exist under the co-funding model (the assessment
-                    interview is CRMC-conducted, not agency-conducted). */}
-                {isPast && (
-                  <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                     <div className="flex items-start gap-2 mb-2">
                       <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-amber-700">
-                        {t('patient.interviews.pastWarning')}
-                      </p>
+                      <p className="text-sm text-amber-700">{t('patient.interviews.pastWarning')}</p>
                     </div>
                     <button
                       className="w-full sm:w-auto inline-flex items-center justify-center min-h-[44px] text-sm bg-amber-500 hover:bg-amber-600 text-white px-4 rounded-lg font-medium transition-colors"
@@ -220,39 +194,49 @@ export default function Interviews() {
                       {t('patient.interviews.messageCrmc')} →
                     </button>
                   </div>
-                )}
-
-                {/* Date & time */}
-                <div className="flex items-center gap-2 mb-1 text-sm text-gray-700 flex-wrap">
-                  <MdCalendarToday size={16} className={isPast ? 'text-red-400' : isToday ? 'text-brand-500' : 'text-brand-500'} />
-                  <strong className={isPast ? 'text-red-500' : isToday ? 'text-brand-600' : ''}>
-                    {fmtDate(app.interviewDate)}
-                  </strong>
-                  {app.interviewTime && <span>{t('patient.interviews.atTime', { time: app.interviewTime })}</span>}
                 </div>
-                {/* Conducting social worker — reassures the patient about who
-                    they'll meet (single CRMC point of contact under the
-                    co-funding model). Shown only when CRMC has assigned one. */}
-                {app.conductedBy && (
-                  <p className="text-xs text-gray-500 mb-1 ml-6">
-                    {t('patient.interviews.conductedBy', { name: app.conductedBy })}
-                  </p>
-                )}
-                {/* Add-to-Calendar link — opens a pre-filled Google Calendar
-                    event in a new tab. Patient won't forget the interview
-                    even if they're offline when the in-app reminder fires. */}
-                {!isPast && (
-                  <a href={buildGcalUrl(app)} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 min-h-[44px] text-sm text-brand-500 hover:text-brand-600 font-medium mt-1">
-                    <MdEvent size={14} /> {t('patient.interviews.addToCalendar')}
-                  </a>
-                )}
+              ) : (
+                /* ── Upcoming interview — dark event hero + a light "what to
+                    expect" card. The interview is the single most time-
+                    sensitive event in the journey, so it gets the hero. ── */
+                <div key={app.id} className="space-y-4">
+                  <div className={`card-hero ${isToday ? 'ring-2 ring-brand-300' : ''}`}>
+                    <div className="p-5 sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-brand-200">{t('patient.interviews.heroEyebrow')}</p>
+                          <p className="mt-2 text-2xl sm:text-[28px] font-bold tracking-tight text-white">{fmtDate(app.interviewDate)}</p>
+                          {app.interviewTime && <p className="mt-0.5 text-sm text-brand-100">{t('patient.interviews.atTime', { time: app.interviewTime })}</p>}
+                          {app.conductedBy && <p className="mt-1 text-sm text-brand-200">{t('patient.interviews.conductedBy', { name: app.conductedBy })}</p>}
+                        </div>
+                        {isToday
+                          ? <span className="badge badge-amber text-xs font-bold flex-shrink-0">{t('patient.interviews.todayBadge')}</span>
+                          : (() => {
+                              const d = daysUntil(app.interviewDate)
+                              if (d == null || d <= 0 || d > 7) return null
+                              return <span className="flex-shrink-0 rounded-full bg-white/15 text-white text-xs font-semibold px-2.5 py-1">{d === 1 ? t('patient.interviews.tomorrow') : t('patient.interviews.inDays', { count: d })}</span>
+                            })()}
+                      </div>
 
-                {!isPast && (
-                  <>
-                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                      {t('patient.interviews.joinIntro')}
-                    </p>
+                      {app.meetLink ? (
+                        <a href={app.meetLink} target="_blank" rel="noopener noreferrer"
+                          className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50 transition-colors">
+                          <MdVideoCall size={18} /> {t('patient.interviews.joinBtn')} <MdOpenInNew size={13} />
+                        </a>
+                      ) : (
+                        <div className="mt-5 inline-block rounded-lg bg-white/10 px-4 py-2.5 text-sm text-brand-100">{t('patient.interviews.noLink')}</div>
+                      )}
+                      <a href={buildGcalUrl(app)} target="_blank" rel="noopener noreferrer"
+                        className="mt-3 flex w-fit items-center gap-1 text-sm text-brand-200 hover:text-white transition-colors">
+                        <MdEvent size={14} /> {t('patient.interviews.addToCalendar')}
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* What to expect */}
+                  <div className="card p-5">
+                    <p className="text-xs text-gray-400 mb-2">{app.agencyName} · {app.appId}</p>
+                    <p className="text-sm text-gray-500 leading-relaxed">{t('patient.interviews.joinIntro')}</p>
                     <button
                       className="mt-2 inline-flex items-center min-h-[44px] text-sm text-brand-500 hover:text-brand-600 font-medium gap-1"
                       onClick={() => togglePrep(app.id)}>
@@ -276,31 +260,10 @@ export default function Interviews() {
                         ))}
                       </div>
                     )}
-                  </>
-                )}
-
-                {!isPast && (app.meetLink ? (
-                  <a
-                    href={app.meetLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-sm mt-4">
-                    <MdVideoCall size={18} />
-                    {t('patient.interviews.joinBtn')}
-                    <MdOpenInNew size={14} />
-                  </a>
-                ) : (
-                  <div className="w-full py-3 rounded-xl bg-gray-100 text-center text-sm text-gray-400 mt-4">
-                    {t('patient.interviews.noLink')}
+                    <p className="text-xs text-gray-400 mt-3">{t('patient.interviews.meetHint')}</p>
                   </div>
-                ))}
-
-                {!isPast && (
-                  <p className="text-xs text-gray-400 text-center mt-3">
-                    {t('patient.interviews.meetHint')}
-                  </p>
-                )}
-              </div>
+                </div>
+              )
             )})}
           </div>
         )}
