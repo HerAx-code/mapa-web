@@ -962,8 +962,12 @@
     },
     "programs": {
       "breadcrumb": "Find Programs",
+      "eyebrow": "Medical assistance",
       "title": "Find Programs",
       "subtitle": "Browse the medical assistance programs available at CRMC.",
+      "viewRequirements": "Requirements & how it works",
+      "requiredDocs": "Typically required",
+      "howItWorks": "How it works",
       "ctaTitle": "Need medical assistance?",
       "ctaDesc": "Submit one request — CRMC will review it and route it to the agencies that can help cover your bill.",
       "ctaBtn": "Request Assistance",
