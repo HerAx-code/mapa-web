@@ -1106,6 +1106,17 @@
     "backHome": "Back to Home",
     "title": "Apply for Patient Account",
     "subtitle": "Create an account to apply for medical assistance.",
+    "brand": {
+      "headline": "Apply for your patient account.",
+      "sub": "One account, then submit your medical assistance requests online — less time queuing at the office.",
+      "readyTitle": "Have these ready",
+      "ready1": "Your name and address as they appear on a valid government ID",
+      "ready2": "Your Patient Access Code (CRMC-YYYY-NNNNN) from the Malasakit Center",
+      "ready3": "A working email address for approval updates",
+      "trustTime": "Takes about 3 minutes",
+      "trustPrivacy": "Protected under the Data Privacy Act (RA 10173)",
+      "trustHelp": "Need a code? Visit Medical Social Services at CRMC"
+    },
     "stepPersonal": "Personal Info",
     "stepAccount": "Account Setup",
     "stepCode": "Access Code",
