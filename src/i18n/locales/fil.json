@@ -962,8 +962,12 @@
     },
     "programs": {
       "breadcrumb": "Maghanap ng Programa",
+      "eyebrow": "Tulong medikal",
       "title": "Maghanap ng Programa",
       "subtitle": "Tingnan ang mga programang tulong medikal na available sa CRMC.",
+      "viewRequirements": "Mga kailangan at paano ito gumagana",
+      "requiredDocs": "Karaniwang kailangan",
+      "howItWorks": "Paano ito gumagana",
       "ctaTitle": "Nangangailangan ng tulong medikal?",
       "ctaDesc": "Magsumite ng isang kahilingan — susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong sa inyong bayarin.",
       "ctaBtn": "Humiling ng Tulong",
