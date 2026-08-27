@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeAmountNeeded,
+  deriveAmountNeeded,
   computeFunding,
   deriveRequestStatus,
   COMMITTED_SLICE_STATUSES,
@@ -31,6 +32,30 @@ describe('computeAmountNeeded', () => {
   it('handles non-finite input safely', () => {
     expect(computeAmountNeeded({ totalBill: NaN })).toBe(0)
     expect(computeAmountNeeded({ totalBill: 'abc' })).toBe(0)
+  })
+})
+
+// deriveAmountNeeded is the legacy-safe entry point: it derives the residual
+// from a request's captured bill + coverage, but falls back to the stored
+// amountNeeded for requests that predate the totalBill/coverage fields.
+describe('deriveAmountNeeded', () => {
+  it('derives the residual from a request with bill + coverage', () => {
+    expect(deriveAmountNeeded({ totalBill: 100_000, philhealthCovered: 20_000, otherCovered: 5_000 })).toBe(75_000)
+  })
+
+  it('falls back to stored amountNeeded for legacy requests (no totalBill)', () => {
+    expect(deriveAmountNeeded({ amountNeeded: 40_000 })).toBe(40_000)
+    expect(deriveAmountNeeded({ amountNeeded: 40_000, totalBill: null })).toBe(40_000)
+  })
+
+  it('treats a present totalBill as authoritative even with no coverage', () => {
+    expect(deriveAmountNeeded({ totalBill: 60_000, amountNeeded: 999 })).toBe(60_000)
+  })
+
+  it('is safe on empty / nullish input', () => {
+    expect(deriveAmountNeeded()).toBe(0)
+    expect(deriveAmountNeeded({})).toBe(0)
+    expect(deriveAmountNeeded(null)).toBe(0)
   })
 })
 

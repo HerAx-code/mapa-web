@@ -26,6 +26,22 @@ export function computeAmountNeeded({ totalBill = 0, philhealthCovered = 0, othe
   return Number.isFinite(net) ? Math.max(0, net) : 0
 }
 
+// Derive a request's residual (amountNeeded) from its captured bill + coverage.
+// Legacy-safe: requests created before the totalBill/coverage fields existed
+// have no `totalBill`, so fall back to their stored `amountNeeded` — display
+// and derivation code then never produce NaN or a spurious 0. This is the one
+// entry point callers should use; it wraps computeAmountNeeded with that guard.
+export function deriveAmountNeeded(req = {}) {
+  if (req == null || req.totalBill === undefined || req.totalBill === null) {
+    return Number(req?.amountNeeded) || 0
+  }
+  return computeAmountNeeded({
+    totalBill:         req.totalBill,
+    philhealthCovered: req.philhealthCovered,
+    otherCovered:      req.otherCovered,
+  })
+}
+
 // Slice statuses that count as money already secured vs. still in flight.
 // 'for_funding'/'needs_info' are the redesign's agency-decision states;
 // 'reviewing'/'interview' are kept for back-compat until their writers move.

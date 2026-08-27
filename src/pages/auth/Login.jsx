@@ -288,13 +288,13 @@ export default function Login() {
                 { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
                 { label: 'Super Admin',            email: 'admin@crmc.gov.ph',            password: 'admin123',   note: null     },
                 { label: 'Staff Admin',            email: 'staff@crmc.gov.ph',            password: 'staff123',   note: null     },
-                // Malasakit is a coordination hub, not a funder (RA 11463);
-                // its logins are deactivated and cannot sign in, so they are
-                // not shown here. DOH-MAIP + PhilHealth are the RA 11463 funders.
+                // Malasakit (coordination hub) and PhilHealth (modelled as the
+                // first-charge coverage that REDUCES the bill, not an endorsable
+                // GL-issuing funder — see docs/philhealth-first-plan.md) are
+                // both deactivated as agencies, so their logins are not shown.
+                // The GL-issuing funders are DOH-MAIP, PCSO, DSWD and AMBaG.
                 { label: 'DOH · Admin',            email: 'admin@doh.gov.ph',             password: 'agency123',  note: 'Admin'  },
                 { label: 'DOH · Coordinator',      email: 'coordinator@doh.gov.ph',       password: 'agency123',  note: 'Active' },
-                { label: 'PhilHealth · Admin',     email: 'admin@philhealth.gov.ph',      password: 'agency123',  note: 'Admin'  },
-                { label: 'PhilHealth · Coordinator',email:'coordinator@philhealth.gov.ph', password: 'agency123',  note: 'Active' },
                 { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           password: 'agency123',  note: 'Admin'  },
                 { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     password: 'agency123',  note: 'Active' },
                 { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            password: 'agency123',  note: 'Admin'  },
