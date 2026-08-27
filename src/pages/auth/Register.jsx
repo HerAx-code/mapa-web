@@ -67,19 +67,32 @@ function FieldError({ msg }) {
 
 function StepIndicator({ current, steps, onJump }) {
   return (
-    <div className="flex items-center justify-center mb-6">
+    // Each step is an equal-width (flex-1) column with the circle centered and
+    // the connector absolutely positioned across the gap. This keeps the
+    // circles evenly spaced no matter how long a (translated) label is —
+    // whitespace-nowrap + in-flow connectors previously let a long Filipino
+    // label widen one column and skew the whole row.
+    <div className="flex items-start mb-6 max-w-md mx-auto">
       {steps.map((s, i) => {
         // Past steps are clickable for in-place edits; current and future
         // steps are not (future steps would skip validation).
         const canJump = s.num < current
         const CircleWrap = canJump ? 'button' : 'div'
         return (
-          <div key={s.num} className="flex items-center">
-            {/* Circle */}
+          <div key={s.num} className="relative flex flex-1 flex-col items-center">
+            {/* Connector into this step — spans from the previous circle's
+                centre to this one's, pinned to the circle's vertical centre
+                (top-4 = half of the h-8 circle) so label height/width never
+                moves it. */}
+            {i > 0 && (
+              <div className={`absolute top-4 -left-1/2 w-full h-0.5 -translate-y-1/2 transition-colors ${
+                s.num <= current ? 'bg-brand-500' : 'bg-gray-200'
+              }`} />
+            )}
             <CircleWrap
               type={canJump ? 'button' : undefined}
               onClick={canJump ? () => onJump?.(s.num) : undefined}
-              className={`flex flex-col items-center ${canJump ? 'cursor-pointer group' : ''}`}>
+              className={`relative z-10 flex flex-col items-center ${canJump ? 'cursor-pointer group' : ''}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                 s.num < current  ? 'bg-brand-500 text-white group-hover:bg-brand-600'
                 : s.num === current ? 'bg-brand-500 text-white ring-4 ring-brand-100'
@@ -87,19 +100,12 @@ function StepIndicator({ current, steps, onJump }) {
               }`}>
                 {s.num < current ? <MdCheckCircle size={16} /> : s.num}
               </div>
-              <span className={`hidden sm:block text-xs mt-1 font-medium whitespace-nowrap ${
+              <span className={`hidden sm:block text-xs mt-1.5 font-medium text-center leading-tight px-1 ${
                 s.num === current ? 'text-brand-600'
                 : canJump        ? 'text-gray-500 group-hover:text-brand-600'
                 : 'text-gray-400'
               }`}>{s.label}</span>
             </CircleWrap>
-            {/* Connector — mb-4 compensates for label height on sm+ so the line
-                aligns with circle centers. On mobile (label hidden) no offset. */}
-            {i < steps.length - 1 && (
-              <div className={`h-0.5 w-12 sm:w-16 mx-1 mb-0 sm:mb-4 transition-all ${
-                s.num < current ? 'bg-brand-500' : 'bg-gray-200'
-              }`} />
-            )}
           </div>
         )
       })}
