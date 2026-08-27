@@ -16,6 +16,7 @@ import { runIdOcr, isIdType } from '../../utils/idOcr'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
+import BalanceHero from '../../components/patient/BalanceHero'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import {
@@ -529,54 +530,16 @@ export default function RequestAssistance() {
 
   // ── Active request — block new submission, show its state ─────────────────
   if (!loading && activeRequest) {
-    const { committed, balance, pct } = computeFunding(activeRequest.amountNeeded, slices)
+    const funding = computeFunding(activeRequest.amountNeeded, slices)
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
-        <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto">
-          <div className="card p-5 sm:p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <MdHourglassTop size={20} className="text-amber-500" />
-              <h2 className="text-base font-semibold text-gray-900">{t('patient.request.activeTitle')}</h2>
-              <StatusBadge status={activeRequest.status} kind="request" className="ml-auto flex-shrink-0" />
-            </div>
-            <p className="text-sm text-gray-500 mb-4">{t('patient.request.activeDesc')}</p>
+        <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto space-y-4">
+          {/* Shared balance hero — same centrepiece as the Dashboard + My
+              Application, so a returning patient sees one consistent view. */}
+          <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
 
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-              <div className="flex justify-between items-center text-sm gap-2">
-                <span className="text-gray-400">{t('patient.request.successIdLabel')}</span>
-                <span className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-semibold text-gray-800 truncate">{activeRequest.requestId}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(activeRequest.requestId)
-                        .then(() => toast.success('Request ID copied'))
-                        .catch(err => console.error('[request] clipboard write failed:', err))
-                    }}
-                    className="text-brand-500 hover:text-brand-600 p-1 rounded hover:bg-brand-50 flex-shrink-0"
-                    title="Copy Request ID">
-                    <MdContentCopy size={13} />
-                  </button>
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">{t('patient.request.typeLabel')}</span>
-                <span className="font-medium text-gray-700">{activeRequest.assistanceType}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">{t('patient.request.neededLabel')}</span>
-                <span className="font-semibold text-gray-800">{peso(activeRequest.amountNeeded)}</span>
-              </div>
-              <div className="pt-2">
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
-                  <span>{peso(committed)} {t('patient.request.secured')}</span>
-                  <span>{peso(balance)} {t('patient.request.remaining')}</span>
-                </div>
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            </div>
+          <div className="card p-5 sm:p-6">
+            <p className="text-sm text-gray-500 mb-4">{t('patient.request.activeDesc')}</p>
 
             {/* Household Information Sheet — the patient fills the factual
                 portion (family, income, expenses, medical); CRMC completes the
@@ -765,9 +728,10 @@ export default function RequestAssistance() {
   return (
     <Layout breadcrumb={t('patient.request.navLabel')}>
       <div className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
-        <div className="mb-3">
-          <h1 className="page-title flex items-center gap-2"><MdFavorite className="text-brand-500" size={22} /> {t('patient.request.title')}</h1>
-          <p className="page-sub">{t('patient.request.subtitle')}</p>
+        <div className="mb-4">
+          <p className="eyebrow">{t('patient.request.eyebrow')}</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.request.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('patient.request.subtitle')}</p>
         </div>
 
         {/* Progress */}
