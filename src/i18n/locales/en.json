@@ -725,6 +725,23 @@
         "title": "Messages",
         "viewAll": "View all"
       },
+      "hero": {
+        "eyebrow": "Assistance request",
+        "remainingLabel": "Still to be funded on your CRMC bill",
+        "fromTotal": "Of {{total}} needed · {{approved}} approved",
+        "approved": "Approved",
+        "inReview": "In review",
+        "unfunded": "Unfunded"
+      },
+      "nextAction": {
+        "eyebrow": "Action needed",
+        "fixDoc": "Re-upload a document",
+        "upload": "Upload",
+        "respond": "Respond to the agency",
+        "view": "View",
+        "interview": "Join your assessment interview",
+        "join": "Open"
+      },
       "greeting": {
         "uploadDocs": "Get started by submitting your assistance request.",
         "findProgram": "Your documents are ready — submit your assistance request.",

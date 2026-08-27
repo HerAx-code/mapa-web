@@ -21,7 +21,7 @@ import {
 import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
 import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
-import { isSliceTerminal } from '../../utils/requests'
+import { isSliceTerminal, computeFunding } from '../../utils/requests'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 
@@ -350,6 +350,88 @@ function MessagesPreview({ convos, uid, t, navigate }) {
   )
 }
 
+// ── Balance hero ─────────────────────────────────────────────────────────────
+// The dark centrepiece for an active request: the amount still to be funded,
+// broken into an approved / in-review / unfunded segmented bar. All figures
+// come from computeFunding over the request's own slices (committed +
+// outstanding) + amountNeeded — no touch to the funding path.
+function HeroLegend({ swatch, label, value }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-2.5 w-2.5 rounded-full ${swatch}`} aria-hidden="true" />
+      <dt className="text-brand-200">{label}</dt>
+      <dd className="font-semibold tabular-nums text-white">{value}</dd>
+    </div>
+  )
+}
+
+function BalanceHero({ request, funding, t, navigate }) {
+  const need = Number(request.amountNeeded) || 0
+  const { committed, outstanding, headroom, balance } = funding
+  const pctOf = (v) => (need > 0 ? `${Math.min(100, (v / need) * 100)}%` : '0%')
+  return (
+    <div className="rounded-2xl bg-brand-800 text-white shadow-lg overflow-hidden">
+      <div className="p-6 sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-200">{t('patient.dashboard.hero.eyebrow')}</p>
+            <h2 className="mt-2 text-sm font-medium text-brand-100">{t('patient.dashboard.hero.remainingLabel')}</h2>
+            <p className="mt-1 text-4xl sm:text-5xl font-bold tracking-tight tabular-nums">{peso(balance)}</p>
+            <p className="mt-2 text-sm text-brand-200">
+              {t('patient.dashboard.hero.fromTotal', { total: peso(need), approved: peso(committed) })}
+            </p>
+          </div>
+          <div className="flex flex-col items-start gap-2 sm:items-end flex-shrink-0">
+            <StatusBadge status={request.status} kind="request" />
+            <span className="font-mono text-xs text-brand-200">{request.requestId}</span>
+          </div>
+        </div>
+
+        {/* Segmented funding bar: approved (solid) + in-review (faded); the
+            remaining track is the unfunded headroom. */}
+        <div className="mt-6">
+          <div className="flex h-3 w-full gap-1 overflow-hidden rounded-full bg-white/10">
+            {committed   > 0 && <div className="bg-brand-300 rounded-full"    style={{ width: pctOf(committed) }} />}
+            {outstanding > 0 && <div className="bg-brand-300/50 rounded-full" style={{ width: pctOf(outstanding) }} />}
+          </div>
+          <dl className="mt-3.5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <HeroLegend swatch="bg-brand-300"    label={t('patient.dashboard.hero.approved')} value={peso(committed)} />
+            <HeroLegend swatch="bg-brand-300/50" label={t('patient.dashboard.hero.inReview')} value={peso(outstanding)} />
+            <HeroLegend swatch="bg-white/25"     label={t('patient.dashboard.hero.unfunded')} value={peso(headroom)} />
+          </dl>
+        </div>
+
+        <button onClick={() => navigate('/patient/status')}
+          className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50 transition-colors">
+          {t('patient.nav.myApplication')} <MdArrowForward size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Next-action card ─────────────────────────────────────────────────────────
+// Surfaces the single most pressing real action (fix a rejected doc / respond
+// to an agency / join a scheduled interview). Renders nothing when the ball is
+// in CRMC's court.
+function NextActionCard({ action }) {
+  const Icon = action.icon
+  return (
+    <button onClick={action.onClick}
+      className="w-full text-left rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5 flex items-start gap-3 hover:bg-amber-100/60 transition-colors">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 border border-amber-200">
+        <Icon size={18} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{action.eyebrow}</p>
+        <p className="text-sm font-semibold text-gray-900 mt-0.5">{action.title}</p>
+        {action.detail && <p className="text-xs text-gray-500 mt-0.5">{action.detail}</p>}
+      </div>
+      <span className="text-sm font-semibold text-amber-700 flex-shrink-0 self-center">{action.cta} →</span>
+    </button>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────
 
 export default function PatientDashboard() {
@@ -378,6 +460,7 @@ export default function PatientDashboard() {
   })
 
   const [activeApp,  setActiveApp]  = useState(null)
+  const [apps,       setApps]       = useState([])
   const [activeRequest, setActiveRequest] = useState(null)
   const [appCount,   setAppCount]   = useState(0)
   const [docStats,   setDocStats]   = useState({ verified: 0, pending: 0 })
@@ -414,6 +497,7 @@ export default function PatientDashboard() {
     )
     const unsub = onSnapshot(q, snap => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      setApps(all)
       setAppCount(all.length)
       // R18: a redeemed or lapsed certificate slice is NOT active; without
       // this filter the Dashboard kept showing "Your application is in
@@ -631,6 +715,44 @@ export default function PatientDashboard() {
     return t('patient.dashboard.greeting.findProgram')
   })()
 
+  // Funding figures for the balance hero — computed over the active request's
+  // own slices (committed + outstanding) against amountNeeded.
+  const reqSlices = activeRequest ? apps.filter(a => a.requestId === activeRequest.id) : []
+  const funding   = activeRequest ? computeFunding(activeRequest.amountNeeded, reqSlices) : null
+
+  // The single most pressing next action (or null when the ball is with CRMC).
+  const nextAction = (() => {
+    const rejected = docList.find(d => d.status === 'rejected')
+    if (rejected) return {
+      icon: MdUpload, eyebrow: t('patient.dashboard.nextAction.eyebrow'),
+      title: t('patient.dashboard.nextAction.fixDoc'),
+      detail: rejected.documentTypeName ?? rejected.name ?? '',
+      cta: t('patient.dashboard.nextAction.upload'),
+      onClick: () => navigate('/patient/request'),
+    }
+    if (activeApp?.status === 'awaiting_info') return {
+      icon: MdAssignment, eyebrow: t('patient.dashboard.nextAction.eyebrow'),
+      title: t('patient.dashboard.nextAction.respond'),
+      detail: activeApp.agencyName ?? '',
+      cta: t('patient.dashboard.nextAction.view'),
+      onClick: () => navigate('/patient/status'),
+    }
+    const interviewActive = activeApp?.status === 'interview'
+      || (activeRequest?.interviewDate && !['completed', 'no_show'].includes(activeRequest?.interviewOutcome))
+    if (interviewActive) {
+      const d    = activeRequest?.interviewDate ?? activeApp?.interviewDate
+      const time = activeRequest?.interviewTime ?? activeApp?.interviewTime
+      return {
+        icon: MdVideoCall, eyebrow: t('patient.dashboard.nextAction.eyebrow'),
+        title: t('patient.dashboard.nextAction.interview'),
+        detail: d ? `${new Date(`${d}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}${time ? ` · ${time}` : ''}` : '',
+        cta: t('patient.dashboard.nextAction.join'),
+        onClick: () => navigate('/patient/interviews'),
+      }
+    }
+    return null
+  })()
+
   // Only show doc section once they have docs or an active application.
   // Hide once their GL has been issued — by then the doc-workflow phase
   // is complete and the card is just visual noise.
@@ -644,7 +766,7 @@ export default function PatientDashboard() {
       {/* Hard viewport cap so no descendant (long agency name, awaiting-
           info message with a URL, etc.) can push the page wider than the
           phone screen. overflow-x-clip is the strict version of -hidden. */}
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl lg:max-w-5xl overflow-x-clip space-y-4">
+      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl lg:max-w-6xl overflow-x-clip space-y-4">
 
         {/* Compact greeting — banking-app pattern: the GREETING is a
             small line at the top, the STATUS card below is the hero.
@@ -666,8 +788,8 @@ export default function PatientDashboard() {
         {/* Two-column on desktop: the journey column (hero → coverage →
             timeline → steps) beside an aside (documents + messages). Single
             column on phone, where the aside stacks after the main column. */}
-        <div className="grid gap-4 items-start lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4 min-w-0">
+        <div className="grid gap-5 items-start lg:grid-cols-12">
+          <div className="space-y-4 min-w-0 lg:col-span-8">
 
         {/* Main status card — wrapped so the tour can spotlight whichever
             of the conditional branches is currently rendered (welcome
@@ -680,18 +802,8 @@ export default function PatientDashboard() {
             <div className="h-4 bg-gray-100 rounded w-3/4 mb-5" />
             <div className="h-12 bg-gray-100 rounded-xl" />
           </div>
-        ) : activeRequest ? (
-            <div className="card p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-lg font-semibold text-gray-900">{t('patient.dashboard.activeRequestTitle')}</h2>
-                <StatusBadge status={activeRequest.status} kind="request" className="ml-auto flex-shrink-0" />
-              </div>
-              <p className="text-sm text-gray-500 mb-1">{activeRequest.requestId} · {activeRequest.assistanceType}</p>
-              <p className="text-sm text-gray-500 mb-4">{t('patient.dashboard.activeRequestDesc')}</p>
-              <button className="btn-primary w-full text-sm" onClick={() => navigate('/patient/status')}>
-                {t('patient.nav.myApplication')} →
-              </button>
-            </div>
+        ) : activeRequest && funding ? (
+            <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
         ) : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
           const vis = STATUS_VISUAL[activeApp.status]
           const txt = `patient.dashboard.statusCard.${activeApp.status}`
@@ -843,10 +955,9 @@ export default function PatientDashboard() {
         )}
         </div>{/* /patient-hero wrapper */}
 
-        {/* Coverage / balance breakdown + real event timeline — only shown
-            when there's an active request to describe. The itemized document
-            list moved to the aside (right column on desktop). */}
-        {activeRequest && <CoverageCard request={activeRequest} t={t} />}
+        {/* Next action (when the ball is with the patient) + the real event
+            timeline. Coverage breakdown lives in the aside now. */}
+        {nextAction && <NextActionCard action={nextAction} />}
         {activeRequest && <TimelineCard request={activeRequest} docStats={docStats} t={t} />}
 
         {/* Step guide — collapsible */}
@@ -918,9 +1029,10 @@ export default function PatientDashboard() {
         </div>
           </div>{/* /main column */}
 
-          {/* Aside — itemized documents + messages preview. Stacks after the
-              main column on phone; sits beside it on desktop. */}
-          <div className="space-y-4 min-w-0">
+          {/* Aside — coverage breakdown + itemized documents + messages. Stacks
+              after the main column on phone; sits beside it on desktop. */}
+          <div className="space-y-4 min-w-0 lg:col-span-4">
+            {activeRequest && <CoverageCard request={activeRequest} t={t} />}
             {showDocSection && docList.length > 0 && (
               <div data-tour-id="patient-docs">
                 <DocumentsList docs={docList} t={t} navigate={navigate} />
