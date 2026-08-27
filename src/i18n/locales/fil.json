@@ -851,6 +851,8 @@
       }
     },
     "track": {
+      "eyebrow": "Ang inyong kahilingan",
+      "assistanceType": "Uri ng tulong",
       "title": "Aking Aplikasyon",
       "subtitle": "Subaybayan ang status ng inyong aplikasyon.",
       "tabInProgress": "Kasalukuyan",
