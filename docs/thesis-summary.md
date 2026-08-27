@@ -21,11 +21,17 @@ Last updated: 2026-06-07. **Current-state refresh: 2026-08-25.**
 >   are stale).
 >
 > **Agency model (RA 11463 reconciliation)** — live in the production DB
-> - Funders are now **five**: DOH-MAIP, PhilHealth, PCSO MAP, DSWD AICS,
->   AMBaG — plus **Malasakit reframed as a disabled coordination hub**
->   (it is legally a one-stop shop, not a funder). Demo accounts are now
->   **15** (Malasakit's two deactivated). Any "four agencies (Malasakit,
->   AMBaG, PCSO, DSWD) / 11 demo accounts" text is superseded.
+> - **GL-issuing funders are four**: DOH-MAIP, PCSO MAP, DSWD AICS, AMBaG —
+>   plus **Malasakit reframed as a disabled coordination hub** (it is legally
+>   a one-stop shop, not a funder). Any "four agencies (Malasakit, AMBaG,
+>   PCSO, DSWD) / 11 demo accounts" text is superseded.
+> - **PhilHealth-first (2026-08-27):** PhilHealth is **NOT** an agency — it is
+>   the **first-charge coverage that reduces the bill** (Order of Charging,
+>   JAO 2020-0001), captured as `philhealthCovered` on the request; CRMC
+>   applies it at assessment and only the **residual** is endorsed to the four
+>   funders. The `philhealth` agency + its two logins are disabled. Any "five
+>   funders including PhilHealth" text is superseded.
+>   See `docs/philhealth-first-plan.md`.
 > - NOTE: this is applied to the production database and its seed/migration
 >   scripts live on the `feat/agencies-ra11463` branch; if reading `main`'s
 >   `scripts/bootstrap-reference-data.js` it may still list the old four
