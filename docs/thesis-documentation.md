@@ -11,12 +11,18 @@
 > - **Automated tests: 286** (utils 35 / components 64 / functions 49 /
 >   rules 138) + GitHub Actions CI + pre-commit hook. Any "no automated
 >   tests / no CI" statement is obsolete.
-> - **Five funders** — DOH-MAIP, PhilHealth, PCSO MAP, DSWD AICS, AMBaG —
->   plus **Malasakit as a disabled coordination hub** (RA 11463
->   reconciliation, applied to the production DB). Demo accounts: **15**.
->   "Four agencies (Malasakit, AMBaG, PCSO, DSWD) / 11 demo accounts" is
->   superseded. (Seed/migration code is on the `feat/agencies-ra11463`
->   branch; `main`'s seed may still list four until merged.)
+> - **Four GL-issuing funders** — DOH-MAIP, PCSO MAP, DSWD AICS, AMBaG — plus
+>   **Malasakit as a disabled coordination hub** (RA 11463 reconciliation,
+>   applied to the production DB). "Four agencies (Malasakit, AMBaG, PCSO,
+>   DSWD) / 11 demo accounts" is superseded.
+> - **PhilHealth-first (2026-08-27):** PhilHealth is **NOT** modelled as a
+>   funder/agency — it is the **first-charge coverage that reduces the bill**
+>   (Order of Charging, JAO 2020-0001), captured as `philhealthCovered` on the
+>   request. CRMC applies it at assessment; only the **residual**
+>   (`amountNeeded`) is endorsed to the four funders. The `philhealth` agency +
+>   its two logins are disabled. Anywhere the body calls PhilHealth a funding
+>   partner or lists "five funders", that is superseded — see
+>   `docs/philhealth-first-plan.md`.
 > - **Security §7** — a 2026-07-24 hardening sweep closed a further set of
 >   permissive create/update rules; the "four acknowledged broad-write
 >   tradeoffs" are now ALL addressed — the last, `applications.update`, got
@@ -483,7 +489,11 @@ The install page detects whether the app is already installed and presents eithe
   patientHospitalId: string | null,     // snapshot for cooldown survival
   assistanceType:    string,            // e.g. 'Hospital Bills'
   description:       string,
-  amountNeeded:      number,            // the bill total
+  // PhilHealth-first bill model (Order of Charging, JAO 2020-0001):
+  totalBill:         number,            // full Statement-of-Account total (patient-declared)
+  philhealthCovered: number,            // NHIF first charge — reduces the bill (CRMC-filled at assessment)
+  otherCovered:      number,            // any other prior coverage
+  amountNeeded:      number,            // DERIVED residual = totalBill − philhealthCovered − otherCovered
   amountCommitted:   number,            // sum of approved slice amounts
   agencyIds:         string[],          // agencies CRMC endorsed to
   status:            'submitted' | 'under_review' | 'assessment'
