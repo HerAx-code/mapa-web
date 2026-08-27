@@ -999,6 +999,7 @@
     },
     "interviews": {
       "eyebrow": "Pagtatasa",
+      "heroEyebrow": "Ang inyong panayam sa pagtatasa",
       "title": "Aking Panayam",
       "subtitle": "Sumali sa inyong naka-iskedyul na assessment interview kasama ang CRMC.",
       "loadError": "Hindi ma-load ang mga detalye ng panayam. Pakirefresh.",
