@@ -248,6 +248,11 @@
     "more": "Higit pa",
     "systemAdmin": "System Admin",
     "operations": "Operations",
+    "help": {
+      "title": "Kailangan ng tulong?",
+      "body": "Pumunta sa CRMC Medical Social Services, o basahin ang hakbang-hakbang na gabay.",
+      "cta": "Buksan ang gabay"
+    },
     "notifs": {
       "heading": "Mga Abiso",
       "unreadSuffix": "({{count}} hindi pa nababasa)",
