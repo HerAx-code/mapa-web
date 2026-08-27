@@ -248,6 +248,11 @@
     "more": "More",
     "systemAdmin": "System Admin",
     "operations": "Operations",
+    "help": {
+      "title": "Need help?",
+      "body": "Visit CRMC Medical Social Services, or read the step-by-step guide.",
+      "cta": "Open the guide"
+    },
     "notifs": {
       "heading": "Notifications",
       "unreadSuffix": "({{count}} unread)",

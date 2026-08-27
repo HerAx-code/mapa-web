@@ -609,13 +609,13 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
       <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {role === ROLES.PATIENT && (
           <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">{t('shell.menu')}</p>
+            <p className="eyebrow px-3 mb-2">{t('shell.menu')}</p>
             <NavItems items={PATIENT_NAV} onClose={onClose} badgeOverrides={msgOverride} />
           </>
         )}
         {(role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN) && (
           <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2 truncate">{agencyName}</p>
+            <p className="eyebrow px-3 mb-2 truncate">{agencyName}</p>
             <NavItems
               items={AGENCY_NAV.filter(item => !item.adminOnly || role === ROLES.AGENCY_ADMIN)}
               onClose={onClose}
@@ -625,7 +625,7 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
         )}
         {(role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN) && (
           <>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2">{t('shell.systemAdmin')}</p>
+            <p className="eyebrow px-3 mb-2">{t('shell.systemAdmin')}</p>
             <NavItems
               items={ADMIN_NAV.management.filter(item =>
                 role === ROLES.SUPER_ADMIN || (!item.superOnly && item.to !== '/admin/accounts')
@@ -633,7 +633,7 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
               onClose={onClose}
               badgeOverrides={msgOverride}
             />
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-widest px-3 mb-2 mt-4">{t('shell.operations')}</p>
+            <p className="eyebrow px-3 mb-2 mt-4">{t('shell.operations')}</p>
             <NavItems
               items={ADMIN_NAV.operations.filter(item =>
                 role === ROLES.SUPER_ADMIN || item.to !== '/admin/auditlog'
@@ -643,6 +643,22 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
           </>
         )}
       </nav>
+
+      {/* Bottom help card — a calm, always-there way to reach CRMC. Patient
+          side only (staff know their way around). No phone number promised;
+          points to the in-app guide. */}
+      {role === ROLES.PATIENT && (
+        <div className="p-3 flex-shrink-0">
+          <div className="rounded-xl border border-gray-100 bg-gray-50 p-3.5">
+            <p className="text-sm font-semibold text-gray-800">{t('shell.help.title')}</p>
+            <p className="mt-1 text-xs leading-relaxed text-gray-500">{t('shell.help.body')}</p>
+            <NavLink to="/patient/guide" onClick={onClose}
+              className="mt-2.5 inline-block text-xs font-semibold text-brand-600 hover:text-brand-700">
+              {t('shell.help.cta')} →
+            </NavLink>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
