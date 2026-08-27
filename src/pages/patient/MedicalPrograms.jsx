@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  MdSearch, MdLocationOn, MdSchedule, MdClose, MdLocalHospital, MdFavorite, MdCampaign,
-  MdExpandMore, MdExpandLess, MdCheckCircle,
+  MdSearch, MdLocationOn, MdSchedule, MdClose, MdLocalHospital, MdCampaign,
+  MdExpandMore, MdExpandLess, MdCheckCircle, MdArrowForward,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import AgencyAvatar from '../../components/AgencyAvatar'
@@ -87,17 +87,21 @@ export default function MedicalPrograms() {
           <p className="text-sm text-gray-500 mt-1 break-words max-w-2xl">{t('patient.programs.subtitle')}</p>
         </div>
 
-        {/* Request Assistance CTA — the single patient action. CRMC routes the
-            request to the right agencies, so there's no per-agency apply. */}
-        <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 mb-5 flex items-start gap-3">
-          <div className="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <MdFavorite size={20} className="text-brand-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-brand-800">{t('patient.programs.ctaTitle')}</p>
-            <p className="text-xs text-brand-700/80 mb-2 break-words">{t('patient.programs.ctaDesc')}</p>
-            <button className="btn-primary text-sm" onClick={() => navigate('/patient/request')}>
-              {t('patient.programs.ctaBtn')} →
+        {/* Brand hero band — on-model intro to the co-funding model + the one
+            real patient action. NOT a funding tracker or a self-service cart:
+            this page is a browse-and-learn catalog, and CRMC endorses the
+            request to agencies — patients don't apply to each one. */}
+        <div className="card-hero mb-6">
+          <div className="p-6 sm:p-7">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white text-balance max-w-xl">
+              {t('patient.programs.heroTitle')}
+            </h2>
+            <p className="mt-2.5 text-sm text-brand-100 leading-relaxed max-w-xl">
+              {t('patient.programs.heroDesc')}
+            </p>
+            <button onClick={() => navigate('/patient/request')}
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50 transition-colors">
+              {t('patient.programs.ctaBtn')} <MdArrowForward size={16} />
             </button>
           </div>
         </div>
