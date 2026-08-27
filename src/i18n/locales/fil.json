@@ -1106,6 +1106,17 @@
     "backHome": "Bumalik sa Home",
     "title": "Mag-apply para sa Patient Account",
     "subtitle": "Gumawa ng account upang mag-apply para sa tulong medikal.",
+    "brand": {
+      "headline": "Mag-apply para sa inyong patient account.",
+      "sub": "Isang account, pagkatapos ay isumite ang inyong mga kahilingan para sa tulong medikal online — mas kaunting oras sa pila sa opisina.",
+      "readyTitle": "Ihanda ang mga ito",
+      "ready1": "Ang inyong pangalan at address ayon sa nakasaad sa balidong government ID",
+      "ready2": "Ang inyong Patient Access Code (CRMC-YYYY-NNNNN) mula sa Malasakit Center",
+      "ready3": "Isang gumaganang email address para sa mga update sa aprubahan",
+      "trustTime": "Umaabot ng mga 3 minuto",
+      "trustPrivacy": "Protektado sa ilalim ng Data Privacy Act (RA 10173)",
+      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa CRMC"
+    },
     "stepPersonal": "Personal na Impormasyon",
     "stepAccount": "Pag-setup ng Account",
     "stepCode": "Access Code",

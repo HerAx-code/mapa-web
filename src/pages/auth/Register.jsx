@@ -3,7 +3,10 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   MdShield, MdVerified, MdVisibility, MdVisibilityOff,
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
+  MdSchedule, MdPlace,
 } from 'react-icons/md'
+import Logo from '../../components/ui/Logo'
+import LanguageToggle from '../../components/LanguageToggle'
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { auth, db, functions, signInAnonymously, httpsCallable } from '../../firebase'
@@ -520,31 +523,63 @@ export default function Register() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-50/50 to-white flex items-center justify-center px-4 py-8">
-      {/* Matches the Login + landing aurora for visual continuity.
-          Reduced-motion-safe (index.css). */}
-      <div className="hero-aurora" aria-hidden="true" />
-      <div className="relative w-full max-w-md sm:max-w-lg">
-        {!isStandalone && (
-          <div className="flex items-center gap-2 mb-6">
-            <Link to="/" className="text-sm text-gray-400 hover:text-gray-600">← {t('register.backHome')}</Link>
-          </div>
-        )}
+    <div className="relative min-h-screen w-full bg-white lg:grid lg:grid-cols-[24rem_1fr]">
 
-        <div className="card p-6 rounded-2xl shadow-lg border-gray-100/80">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 bg-brand-500 rounded-lg flex items-center justify-center">
-              <MdShield size={18} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">{t('register.title')}</h1>
-              <p className="text-xs text-gray-500">{t('register.subtitle')}</p>
-            </div>
+      {/* ── Left: "apply" brand panel (desktop only) — matches the Login
+          brand column. Sticky so it stays put while the long form scrolls. */}
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 lg:flex lg:flex-col lg:justify-between lg:sticky lg:top-0 lg:h-screen">
+        <div className="brand-aurora" aria-hidden="true" />
+        <div className="relative px-10 pt-12">
+          <span className="inline-flex items-center gap-2.5">
+            <img src="/mapa-logo.png" alt="MAPA" className="h-10 w-10 rounded-[11px] object-contain ring-1 ring-white/15" />
+            <span className="text-[17px] font-semibold tracking-tight text-white">MAPA</span>
+          </span>
+          <h2 className="mt-10 text-[28px] font-semibold leading-[1.15] tracking-tight text-white text-balance">
+            {t('register.brand.headline')}
+          </h2>
+          <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-brand-100/85">
+            {t('register.brand.sub')}
+          </p>
+          <div className="mt-8 border-t border-white/15 pt-6">
+            <h3 className="text-[13px] font-semibold text-white">{t('register.brand.readyTitle')}</h3>
+            <ul className="mt-3.5 space-y-3">
+              {[1, 2, 3].map(i => (
+                <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-brand-100/85">
+                  <MdCheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-300" aria-hidden="true" />
+                  {t(`register.brand.ready${i}`)}
+                </li>
+              ))}
+            </ul>
           </div>
+        </div>
+        <div className="relative space-y-2.5 px-10 py-8 text-[13px] text-brand-100/80">
+          <p className="flex items-center gap-2"><MdSchedule size={16} className="flex-shrink-0 text-brand-300" aria-hidden="true" /> {t('register.brand.trustTime')}</p>
+          <p className="flex items-center gap-2"><MdShield size={16} className="flex-shrink-0 text-brand-300" aria-hidden="true" /> {t('register.brand.trustPrivacy')}</p>
+          <p className="flex items-center gap-2"><MdPlace size={16} className="flex-shrink-0 text-brand-300" aria-hidden="true" /> {t('register.brand.trustHelp')}</p>
+        </div>
+      </aside>
 
-          {/* Step indicator — past steps are clickable so the patient can
-              edit a typo without manually clicking Back N times. */}
+      {/* ── Right: form column ── */}
+      <main className="flex min-h-screen flex-col bg-white">
+        <header className="flex items-center justify-between gap-4 px-6 py-6 sm:px-10">
+          {/* Logo on mobile (the brand panel carries it on desktop). */}
+          <Logo size={36} withWordmark className="lg:invisible" />
+          <LanguageToggle />
+        </header>
+
+        <div className="flex flex-1 justify-center px-6 pb-12 sm:px-10">
+          <div className="w-full max-w-xl">
+            {!isStandalone && (
+              <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-6">← {t('register.backHome')}</Link>
+            )}
+
+            <div className="mb-6">
+              <h1 className="text-[26px] font-bold tracking-tight text-gray-900">{t('register.title')}</h1>
+              <p className="text-sm text-gray-500 mt-1">{t('register.subtitle')}</p>
+            </div>
+
+            {/* Step indicator — past steps are clickable so the patient can
+                edit a typo without manually clicking Back N times. */}
           <StepIndicator current={step} steps={STEPS} onJump={(n) => { setErrors({}); setStep(n) }} />
 
           {/* All step content + nav buttons live inside one <form> so the
@@ -858,12 +893,13 @@ export default function Register() {
 
           </form>
 
-          <p className="text-center text-xs text-gray-500 mt-4">
-            {t('register.haveAccount')}{' '}
-            <Link to="/login" className="text-brand-500 hover:text-brand-600 font-medium">{t('register.signIn')}</Link>
-          </p>
+            <p className="text-center text-xs text-gray-500 mt-6">
+              {t('register.haveAccount')}{' '}
+              <Link to="/login" className="text-brand-500 hover:text-brand-600 font-medium">{t('register.signIn')}</Link>
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
 
       {/* Privacy Notice modal — reuses ProfileModals' SettingsModal which
           renders the full RA 10173 privacy notice. */}
