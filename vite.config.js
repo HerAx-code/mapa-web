@@ -113,4 +113,37 @@ export default defineConfig({
     drop: ['debugger'],
     pure: ['console.log', 'console.debug', 'console.info'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the big, stable vendor libraries into their own chunks so
+        // an app-code deploy (which happens constantly) no longer busts the
+        // ~800KB Firebase code the browser already cached. First-paint bytes
+        // are similar, but repeat visits after a deploy re-download only the
+        // small app chunks.
+        //
+        // IMPORTANT: only NAME libraries that are already eagerly imported at
+        // boot (firebase for AuthContext, React core). Everything else returns
+        // undefined so Rollup keeps its default splitting — that's what keeps
+        // the dynamically-imported deps (tesseract.js via utils/idOcr, react-pdf
+        // via the lazy GLViewer route) in their own on-demand chunks. A broad
+        // node_modules catch-all here would pull those INTO an eager chunk and
+        // make the bundle worse.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('/@firebase/') || id.includes('/firebase/')) return 'vendor-firebase'
+          if (
+            id.includes('/react-dom/') ||
+            id.includes('/react-router') ||
+            id.includes('/scheduler/') ||
+            /\/react\//.test(id)
+          ) return 'vendor-react'
+          // Everything else (tesseract.js, react-pdf/pdfjs, icons, …) → default.
+        },
+      },
+    },
+    // Firebase is irreducible and inherently large; raise the advisory limit
+    // so the split vendor-firebase chunk doesn't trip a noisy build warning.
+    chunkSizeWarningLimit: 900,
+  },
 })
