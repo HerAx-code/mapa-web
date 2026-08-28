@@ -247,7 +247,7 @@ patients.
 - [ ] Firebase project owned by CRMC, with a budget alert set *(Phase 0 — **Blaze already active**; ownership transfer + budget alert still pending)*
 - [x] Cloud Functions deployed — funding tallies and GL expiry are server-authoritative *(Phase 1 — done 2026-08-28)*
 - [x] Email endpoint authenticated; CORS locked to the app origin *(Phase 1 — done 2026-08-28)*
-- [ ] Daily backups running, and a restore has been tested successfully *(Phase 1 + 5)*
+- [~] Backups running *(Phase 1 — native Firestore scheduled backup enabled 2026-08-28: **weekly (Sunday), 7-day retention**)*. **Follow-ups:** consider **daily** recurrence for a tighter recovery window (weekly + 7-day keeps only ~1 restore point); and **test a restore** to prove recoverability *(Phase 5)*.
 - [ ] Error tracking + uptime monitoring live *(Phase 2)*
 - [ ] DPO sign-off, retention policy, and reviewed consent in place *(Phase 3)*
 - [ ] Bundle trimmed and patient flow tested on a low-end phone *(Phase 4)*
