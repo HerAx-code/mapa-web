@@ -19,9 +19,24 @@
 > - The **email endpoint is authenticated** in production (`FIREBASE_PROJECT_ID`
 >   set in Vercel, verified 401 on invalid token).
 >
-> Items below are struck through as they complete; the remaining real gaps are
-> **backups**, **observability**, **RA 10173 sign-off**, **project ownership /
-> handover**, and the **accessibility pass**.
+> **Progress log — 2026-08-28** (all merged to `main`, CI green):
+> - ✅ Deployed the two remaining scheduled functions (`glExpirySweep`,
+>   `resetAgencySlots`) → **all Cloud Functions live**.
+> - ✅ **Email endpoint authenticated** in production (verified).
+> - ✅ **Backups** enabled — native Firestore scheduled backup, weekly
+>   (Sunday) / 7-day retention. *(Follow-ups: consider daily; test a restore.)*
+> - ✅ **Sentry error tracking** wired in, DSN-gated — code merged; activate by
+>   setting `VITE_SENTRY_DSN` in Vercel and redeploying.
+> - ✅ **Bundle chunking** — split firebase/react into cacheable vendor chunks
+>   (index 1,269 KB → 461 KB); confirmed OCR was already lazy.
+> - ✅ **Accessibility** — associated all labels in the three core patient forms
+>   (RequestAssistance, IntakeWizard, Register) with their controls.
+>
+> **What's genuinely left is no longer code — it's institutional / owner-side:**
+> **project ownership + handover + budget alert** (Phase 0), **RA 10173 / DPO
+> sign-off + retention policy** (Phase 3), plus activation/verification
+> follow-ups (Sentry DSN, backups→daily + restore test, a live screen-reader &
+> contrast pass).
 
 **At a glance**
 
@@ -248,9 +263,9 @@ patients.
 - [x] Cloud Functions deployed — funding tallies and GL expiry are server-authoritative *(Phase 1 — done 2026-08-28)*
 - [x] Email endpoint authenticated; CORS locked to the app origin *(Phase 1 — done 2026-08-28)*
 - [~] Backups running *(Phase 1 — native Firestore scheduled backup enabled 2026-08-28: **weekly (Sunday), 7-day retention**)*. **Follow-ups:** consider **daily** recurrence for a tighter recovery window (weekly + 7-day keeps only ~1 restore point); and **test a restore** to prove recoverability *(Phase 5)*.
-- [ ] Error tracking + uptime monitoring live *(Phase 2)*
+- [~] Error tracking + uptime monitoring live *(Phase 2 — Sentry wired in 2026-08-28, DSN-gated; **activate** by setting `VITE_SENTRY_DSN` in Vercel. Uptime monitoring still to add.)*
 - [ ] DPO sign-off, retention policy, and reviewed consent in place *(Phase 3)*
-- [ ] Bundle trimmed and patient flow tested on a low-end phone *(Phase 4)*
+- [~] Bundle trimmed *(Phase 4 — vendor chunking done 2026-08-28, OCR already lazy)*; patient forms now have associated labels *(a11y)*. **Still to do:** test the patient flow on a low-end phone + a live screen-reader/contrast pass.
 - [ ] Staff trained; rolling out in stages, not all at once *(Phase 5)*
 
 ---
