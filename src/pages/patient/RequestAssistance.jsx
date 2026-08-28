@@ -746,8 +746,8 @@ export default function RequestAssistance() {
           {step === 0 && (<>
           {/* Assistance type */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
-            <select className={`input ${!form.assistanceType ? 'text-gray-400' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
+            <label htmlFor="req-type" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
+            <select id="req-type" className={`input ${!form.assistanceType ? 'text-gray-400' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
               <option value="">{t('patient.request.typePlaceholder')}</option>
               {types.map(tp => <option key={tp} value={tp}>{tp}</option>)}
             </select>
@@ -757,16 +757,16 @@ export default function RequestAssistance() {
               of Account. CRMC applies PhilHealth (and any other coverage) first
               at assessment, then endorses the remaining balance to agencies. */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>
-            <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
+            <label htmlFor="req-bill" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>
+            <input id="req-bill" type="number" min="0" inputMode="numeric" className="input" placeholder="0"
               value={form.totalBill} onChange={set('totalBill')} />
             <p className="text-xs text-gray-400 mt-1">{t('patient.request.billHint')}</p>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.descLabel')}</label>
-            <textarea className="input resize-none" rows={2} placeholder={t('patient.request.descPlaceholder')}
+            <label htmlFor="req-desc" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.descLabel')}</label>
+            <textarea id="req-desc" className="input resize-none" rows={2} placeholder={t('patient.request.descPlaceholder')}
               value={form.description} onChange={set('description')} maxLength={300} />
           </div>
           </>)}
@@ -867,12 +867,12 @@ export default function RequestAssistance() {
             {filedByRep && (
               <div className="mt-3 space-y-2.5 pl-6">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repName')} <span className="text-red-400">*</span></label>
-                  <input className="input" value={repForm.name} onChange={setRep('name')} placeholder={t('patient.request.repNamePlaceholder')} />
+                  <label htmlFor="req-rep-name" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repName')} <span className="text-red-400">*</span></label>
+                  <input id="req-rep-name" className="input" value={repForm.name} onChange={setRep('name')} placeholder={t('patient.request.repNamePlaceholder')} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repRelationship')} <span className="text-red-400">*</span></label>
-                  <input className="input" value={repForm.relationship} onChange={setRep('relationship')} placeholder={t('patient.request.repRelationshipPlaceholder')} />
+                  <label htmlFor="req-rep-relationship" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repRelationship')} <span className="text-red-400">*</span></label>
+                  <input id="req-rep-relationship" className="input" value={repForm.relationship} onChange={setRep('relationship')} placeholder={t('patient.request.repRelationshipPlaceholder')} />
                 </div>
                 {/* Representative ID */}
                 <div className="p-3 rounded-lg border border-gray-100">

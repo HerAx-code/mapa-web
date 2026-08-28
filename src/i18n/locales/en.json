@@ -1221,7 +1221,9 @@
       "password": "Password",
       "passwordPlaceholder": "Min. 8 characters, letters + numbers",
       "confirmPassword": "Confirm Password",
-      "confirmPlaceholder": "Repeat your password"
+      "confirmPlaceholder": "Repeat your password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     },
     "step3": {
       "sectionTitle": "Patient Access Code",
