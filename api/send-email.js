@@ -16,26 +16,72 @@
 //   SMTP_PASS  — the 16-character Gmail App Password (no spaces)
 //   SMTP_FROM  — display 'From' address, e.g. 'MAPA CRMC <user@gmail.com>'
 //
-// Security note for thesis pilot:
-//   This route accepts unauthenticated POSTs. Volume is gated by
-//   Gmail's own SMTP limits (500/day for App Passwords). Before
-//   production, add Firebase ID-token verification — the client
-//   already has user.uid in scope and can attach the token via the
-//   Authorization header.
+// Authentication (added for production):
+//   Every request must carry a valid Firebase ID token minted by THIS
+//   project, as `Authorization: Bearer <idToken>`. The token is verified
+//   against Google's public keys (signature + issuer + audience + expiry)
+//   via `jose` — no service-account secret needed, only the public
+//   project id. This closes the open-relay hole: without a valid token an
+//   internet caller can no longer send mail as CRMC.
+//
+//   Required Vercel env var (in addition to the SMTP ones below):
+//     FIREBASE_PROJECT_ID — the project id (public, non-secret).
+//   If it is unset the route fails closed (401) — email is a secondary
+//   channel, so failing closed is safe; the in-app notification still
+//   delivers.
+//
+//   Follow-up: anonymous sign-in is enabled for registration, so an
+//   anonymous token currently passes. notify() only ever runs under a
+//   real signed-in user, so rejecting `firebase.sign_in_provider ===
+//   'anonymous'` is a safe future tightening.
 
 import nodemailer from 'nodemailer'
+import { jwtVerify, createRemoteJWKSet } from 'jose'
 
 const MAX_SUBJECT_LEN = 200
 const MAX_TEXT_LEN    = 5000
 const MAX_HTML_LEN    = 50000
 
+// Firebase ID tokens (RS256) are verified against the Secure Token
+// service's rotating public keys. createRemoteJWKSet caches + refreshes
+// them across warm invocations, so this is one fetch per key rotation,
+// not per request.
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID
+const JWKS = createRemoteJWKSet(new URL(
+  'https://www.googleapis.com/service_accounts/v1/jwks/securetoken@system.gserviceaccount.com'
+))
+
+async function verifyCaller(req) {
+  const m = /^Bearer (.+)$/.exec(req.headers.authorization || '')
+  if (!m) return null
+  if (!PROJECT_ID) {
+    console.error('[send-email] FIREBASE_PROJECT_ID env var is not set — rejecting.')
+    return null
+  }
+  try {
+    const { payload } = await jwtVerify(m[1], JWKS, {
+      issuer:   `https://securetoken.google.com/${PROJECT_ID}`,
+      audience: PROJECT_ID,
+    })
+    return payload
+  } catch (err) {
+    console.warn('[send-email] token verification failed:', err?.code || err?.message)
+    return null
+  }
+}
+
 export default async function handler(req, res) {
-  // CORS — Vercel routes share the deployment's origin so same-origin
-  // requests from the PWA don't need a preflight; this allow-list
-  // covers a desktop tab pointed at the deployed URL.
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // CORS — the route is called same-origin from the PWA, so reflect the
+  // caller's origin only when it belongs to this deployment. Dropping the
+  // previous `*` means a cross-origin browser gets no read permission;
+  // the real authorization is the Firebase token below.
+  const origin = req.headers.origin
+  if (origin && req.headers.host && origin.endsWith(req.headers.host)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end()
@@ -43,6 +89,12 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // Gate: require a valid Firebase ID token from this project.
+  const caller = await verifyCaller(req)
+  if (!caller) {
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   const { to, subject, text, html } = req.body ?? {}

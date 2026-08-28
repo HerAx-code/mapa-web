@@ -82,12 +82,21 @@ export const notify = async (uid, { type, title, body, ...extra } = {}) => {
     const isViteDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV === true
     if (isViteDev) return result
 
+    // The /api/send-email route now requires a valid Firebase ID token
+    // (it verifies it server-side). Attach the current user's token; if
+    // there's no signed-in user we can't authenticate the send, so skip
+    // it — the in-app notification above already delivered.
+    const token = auth.currentUser
+      ? await auth.currentUser.getIdToken().catch(() => null)
+      : null
+    if (!token) return result
+
     // Fire-and-forget POST. We don't await it so a slow SMTP server
     // doesn't drag down the in-app notification UX. The serverless
     // route logs its own errors; we only log network-level failures.
     fetch('/api/send-email', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body:    JSON.stringify({
         to:      email,
         subject: title || 'MAPA notification',
