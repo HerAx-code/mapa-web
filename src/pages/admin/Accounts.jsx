@@ -334,8 +334,9 @@ export default function Accounts() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Admin Accounts</h1>
-            <p className="page-sub">Manage CRMC system administrator accounts. Agency staff are managed under each agency.</p>
+            <p className="eyebrow">Access</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Admin Accounts</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage CRMC system administrator accounts. Agency staff are managed under each agency.</p>
           </div>
           <button className="btn-primary flex items-center gap-1.5" onClick={() => setModal('add')}>
             <MdAdd size={16} /> Add Account

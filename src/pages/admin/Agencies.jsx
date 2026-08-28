@@ -539,8 +539,9 @@ export default function Agencies() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Agencies</h1>
-            <p className="page-sub">Manage and monitor all registered medical assistance agencies.</p>
+            <p className="eyebrow">Directory</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agencies</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered medical assistance agencies.</p>
           </div>
           {isSuperAdmin && (
             <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate('/admin/agencies/new')}>

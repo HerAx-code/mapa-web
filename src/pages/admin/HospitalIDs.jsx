@@ -343,8 +343,9 @@ export default function HospitalIDs() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Patient Access Codes</h1>
-            <p className="page-sub">Generate and issue access codes for patients to register on the portal.</p>
+            <p className="eyebrow">Access</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Patient Access Codes</h1>
+            <p className="text-sm text-gray-500 mt-1">Generate and issue access codes for patients to register on the portal.</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             {isSuperAdmin && (
