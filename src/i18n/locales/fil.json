@@ -21,6 +21,23 @@
   },
   "installPage": {
     "backHome": "Bumalik sa home",
+    "org": "Cotabato Regional Medical Center",
+    "trustLine": "Ini-install ng inyong browser, hindi mula sa app store. Mga sampung segundo lang.",
+    "phonePreviewCaption": "Ang MAPA katabi ng inyong mga app",
+    "steps": {
+      "title": "Tatlong hakbang sa inyong telepono",
+      "choosePhone": "Piliin ang inyong telepono",
+      "androidTab": "Android",
+      "iosTab": "iPhone",
+      "usingAndroid": "Gamit ang Chrome sa Android.",
+      "usingIos": "Gamit ang Safari sa iPhone."
+    },
+    "continueOnPhone": {
+      "title": "Ituloy sa inyong telepono",
+      "desc": "I-type ang address na ito sa browser ng inyong telepono, o kopyahin at ipadala sa sarili.",
+      "copy": "Kopyahin ang link",
+      "copied": "Nakopya na"
+    },
     "hero": {
       "title": "I-install ang MAPA sa inyong telepono",
       "desc": "Mag-apply para sa tulong medikal mula sa inyong home screen — hindi na kailangan tandaan ang URL ng website. Direktang nagi-install mula sa inyong browser: walang app-store account, walang file na ida-download, at walang security warning."

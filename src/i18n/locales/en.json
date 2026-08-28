@@ -21,6 +21,23 @@
   },
   "installPage": {
     "backHome": "Back to home",
+    "org": "Cotabato Regional Medical Center",
+    "trustLine": "Installed by your browser, not an app store. Takes about ten seconds.",
+    "phonePreviewCaption": "MAPA next to your everyday apps",
+    "steps": {
+      "title": "Three steps on your phone",
+      "choosePhone": "Choose your phone",
+      "androidTab": "Android",
+      "iosTab": "iPhone",
+      "usingAndroid": "Using Chrome on Android.",
+      "usingIos": "Using Safari on iPhone."
+    },
+    "continueOnPhone": {
+      "title": "Continue on your phone",
+      "desc": "Type this address into your phone's browser, or copy it and send it to yourself.",
+      "copy": "Copy link",
+      "copied": "Copied"
+    },
     "hero": {
       "title": "Install MAPA on your phone",
       "desc": "Apply for medical assistance from your home screen — no need to remember the website URL. It installs straight from your browser: no app-store account, no file to download, and no security warning."
