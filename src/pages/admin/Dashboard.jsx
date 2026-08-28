@@ -378,10 +378,11 @@ export default function AdminDashboard() {
         {/* Page header */}
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
-            <h1 className="page-title">
+            <p className="eyebrow">Console</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">
               {isSuperAdmin ? 'System Administration' : 'Operations Dashboard'}
             </h1>
-            <p className="page-sub">
+            <p className="text-sm text-gray-500 mt-1">
               {isSuperAdmin
                 ? 'Global overview of MAPA metrics, alerts, and processing health.'
                 : 'Daily operations — review documents, manage applications, and respond to patient needs.'}
@@ -406,14 +407,14 @@ export default function AdminDashboard() {
         <div data-tour-id="admin-metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           {METRICS.map((m, i) => (
             <button key={i} onClick={() => navigate(m.path)}
-              className="card p-4 text-left hover:shadow-md transition-all">
+              className="stat-tile text-left hover:shadow-md transition-all">
               <div className="flex items-center justify-between mb-2">
                 <div className={`w-9 h-9 ${m.bg} rounded-xl flex items-center justify-center`}>
                   <m.Icon className={m.iconCls} size={20} />
                 </div>
-                <p className={`text-2xl font-bold ${m.valueCls}`}>{m.value}</p>
+                <p className={`stat-num ${m.valueCls}`}>{m.value}</p>
               </div>
-              <p className="text-xs font-medium text-gray-500">{m.label}</p>
+              <p className="stat-label mt-0">{m.label}</p>
             </button>
           ))}
         </div>
@@ -534,7 +535,7 @@ export default function AdminDashboard() {
           <div data-tour-id="admin-actions" className="xl:col-span-2 flex flex-col gap-4">
             {/* Manage */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Manage</p>
+              <p className="eyebrow mb-2">Manage</p>
               <div className="grid grid-cols-3 gap-2">
                 {MANAGE_ACTIONS.map((qa, i) => (
                   <button key={i} onClick={() => navigate(qa.path)}
@@ -549,7 +550,7 @@ export default function AdminDashboard() {
             </div>
             {/* Review */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Review</p>
+              <p className="eyebrow mb-2">Review</p>
               <div className="grid grid-cols-3 gap-2">
                 {REVIEW_ACTIONS.map((qa, i) => (
                   <button key={i} onClick={() => navigate(qa.path)}
