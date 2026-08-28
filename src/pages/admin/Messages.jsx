@@ -313,8 +313,9 @@ export default function Messages() {
                 <MdMessage size={22} className="text-brand-500" />
               </div>
               <div>
-                <h1 className="page-title">Messages</h1>
-                <p className="page-sub">All your conversations in one place.</p>
+                <p className="eyebrow">Inbox</p>
+                <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Messages</h1>
+                <p className="text-sm text-gray-500 mt-1">All your conversations in one place.</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

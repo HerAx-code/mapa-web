@@ -78,8 +78,9 @@ export default function AppLogs() {
       <div className="p-4 sm:p-6">
 
         <div className="mb-5">
-          <h1 className="page-title">Application Logs</h1>
-          <p className="page-sub">View all patient application submissions across all agencies.</p>
+          <p className="eyebrow">Records</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Application Logs</h1>
+          <p className="text-sm text-gray-500 mt-1">View all patient application submissions across all agencies.</p>
         </div>
 
         {/* Summary — server-accurate counts. The "In progress" tile rolls

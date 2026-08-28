@@ -324,8 +324,9 @@ export default function DocTypes() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Document Types</h1>
-            <p className="page-sub">Manage accepted document types for patient submissions.</p>
+            <p className="eyebrow">Configuration</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Document Types</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage accepted document types for patient submissions.</p>
           </div>
           {isSuperAdmin && (
             <button className="btn-primary flex items-center gap-1.5"

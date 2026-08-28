@@ -562,8 +562,9 @@ export default function Announcements() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Announcements</h1>
-            <p className="page-sub">
+            <p className="eyebrow">Broadcasts</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Announcements</h1>
+            <p className="text-sm text-gray-500 mt-1">
               Manage system-wide banners for scheduled maintenance and important notices.
             </p>
           </div>

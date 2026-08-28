@@ -219,8 +219,9 @@ export default function AuditLog() {
             when there's nothing to export. */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="page-title">Audit Log</h1>
-            <p className="page-sub">Complete record of all administrative actions across the portal.</p>
+            <p className="eyebrow">Accountability</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Audit Log</h1>
+            <p className="text-sm text-gray-500 mt-1">Complete record of all administrative actions across the portal.</p>
           </div>
           <button
             type="button"

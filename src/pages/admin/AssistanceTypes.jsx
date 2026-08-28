@@ -320,8 +320,9 @@ export default function AssistanceTypes() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Assistance Types</h1>
-            <p className="page-sub">Manage medical assistance categories and monitor agency coverage.</p>
+            <p className="eyebrow">Configuration</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Assistance Types</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage medical assistance categories and monitor agency coverage.</p>
           </div>
           {isSuperAdmin && (
             <button className="btn-primary flex items-center gap-1.5"

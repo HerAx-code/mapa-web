@@ -77,8 +77,9 @@ export default function ExportPage() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="page-title">Export Data</h1>
-          <p className="page-sub">
+          <p className="eyebrow">Data</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Export Data</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Select a data type to open the full export view where you can filter, search, and download.
           </p>
         </div>
