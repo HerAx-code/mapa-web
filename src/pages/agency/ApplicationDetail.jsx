@@ -1267,7 +1267,7 @@ export default function ApplicationDetail() {
                   return (
                     <div className="card p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <p className="eyebrow flex items-center gap-2">
                           <MdAttachMoney size={13} /> Co-funding picture
                         </p>
                         {/* R36: "Suggest another agency" button — Bonterra
@@ -1334,7 +1334,7 @@ export default function ApplicationDetail() {
                 })()}
 
                 <div className="card p-5">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Patient</p>
+                  <p className="eyebrow mb-3">Patient</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
                       { label: 'Name',        value: app.patientName },
@@ -1359,7 +1359,7 @@ export default function ApplicationDetail() {
 
                 {isApproved && app.approvedAmount != null && (
                   <div className="card p-5">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <p className="eyebrow mb-3 flex items-center gap-2">
                       <MdAttachMoney size={13} /> Approved Assistance
                     </p>
                     <p className="text-2xl font-bold text-gray-900 mb-2">₱{Number(app.approvedAmount).toLocaleString()}</p>
@@ -1382,7 +1382,7 @@ export default function ApplicationDetail() {
             {/* INTAKE */}
             {section === 'intake' && (
               <div className="card p-5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Case Assessment <span className="text-gray-300 normal-case font-normal">· owned by CRMC</span></p>
+                <p className="eyebrow mb-3">Case Assessment <span className="text-gray-300 normal-case font-normal">· owned by CRMC</span></p>
                 <div className="flex items-start gap-3 mb-4">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     intakeReady ? 'bg-green-50' : effectiveIntake ? 'bg-amber-50' : 'bg-gray-100'
@@ -1464,7 +1464,7 @@ export default function ApplicationDetail() {
             {/* DOCUMENTS */}
             {section === 'documents' && (
               <div className="card p-5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                <p className="eyebrow mb-3">
                   Submitted Documents ({patientDocs.length})
                 </p>
                 {patientDocs.length === 0 ? (
@@ -1577,7 +1577,7 @@ export default function ApplicationDetail() {
             {section === 'timeline' && (
               <>
                 <div className="card p-5">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Application Timeline</p>
+                  <p className="eyebrow mb-3">Application Timeline</p>
                   <div className="space-y-2">
                     {buildTimelineStages(app).map((s, i) => (
                       <div key={s.key} className="flex items-start gap-3">
@@ -1598,7 +1598,7 @@ export default function ApplicationDetail() {
                 </div>
 
                 <div className="card p-5">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <p className="eyebrow mb-3 flex items-center gap-2">
                     <MdNote size={13} /> Case Notes ({(app.caseNotes ?? []).length})
                   </p>
                   {(app.caseNotes ?? []).length === 0 ? (
