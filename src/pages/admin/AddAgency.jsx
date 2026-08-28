@@ -277,8 +277,9 @@ export default function AddAgency() {
           <MdArrowBack size={16} /> Back to Agencies
         </button>
 
-        <h1 className="page-title mb-1">Add New Agency</h1>
-        <p className="page-sub mb-6">
+        <p className="eyebrow">Directory</p>
+        <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1 mb-1">Add New Agency</h1>
+        <p className="text-sm text-gray-500 mb-6">
           Set up the agency profile and its first Agency Administrator account in one step.
         </p>
 
