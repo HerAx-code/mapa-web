@@ -1221,7 +1221,9 @@
       "password": "Password",
       "passwordPlaceholder": "Hindi bababa sa 8 character, mga titik + numero",
       "confirmPassword": "Kumpirmahin ang Password",
-      "confirmPlaceholder": "Ulitin ang inyong password"
+      "confirmPlaceholder": "Ulitin ang inyong password",
+      "showPassword": "Ipakita ang password",
+      "hidePassword": "Itago ang password"
     },
     "step3": {
       "sectionTitle": "Patient Access Code",

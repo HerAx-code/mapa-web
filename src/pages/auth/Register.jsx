@@ -610,15 +610,15 @@ export default function Register() {
               {/* Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.firstName')} <span className="text-red-400">*</span></label>
-                  <input data-field="firstName" className={inputCls('firstName')} placeholder="Juan"
+                  <label htmlFor="reg-firstName" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.firstName')} <span className="text-red-400">*</span></label>
+                  <input id="reg-firstName" data-field="firstName" className={inputCls('firstName')} placeholder="Juan"
                     value={form.firstName} onChange={setName('firstName')}
                     autoComplete="given-name" autoCapitalize="words" maxLength={50} />
                   <FieldError msg={errors.firstName} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.lastName')} <span className="text-red-400">*</span></label>
-                  <input data-field="lastName" className={inputCls('lastName')} placeholder="Dela Cruz"
+                  <label htmlFor="reg-lastName" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.lastName')} <span className="text-red-400">*</span></label>
+                  <input id="reg-lastName" data-field="lastName" className={inputCls('lastName')} placeholder="Dela Cruz"
                     value={form.lastName} onChange={setName('lastName')}
                     autoComplete="family-name" autoCapitalize="words" maxLength={50} />
                   <FieldError msg={errors.lastName} />
@@ -626,15 +626,15 @@ export default function Register() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.middleName')} <span className="text-gray-400 font-normal">{t('register.step1.optional')}</span></label>
-                  <input data-field="middleName" className={inputCls('middleName')} placeholder="Santos"
+                  <label htmlFor="reg-middleName" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.middleName')} <span className="text-gray-400 font-normal">{t('register.step1.optional')}</span></label>
+                  <input id="reg-middleName" data-field="middleName" className={inputCls('middleName')} placeholder="Santos"
                     value={form.middleName} onChange={setName('middleName')}
                     autoComplete="additional-name" autoCapitalize="words" maxLength={50} />
                   <FieldError msg={errors.middleName} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.suffix')}</label>
-                  <select className="input" value={form.suffix} onChange={set('suffix')}>
+                  <label htmlFor="reg-suffix" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.suffix')}</label>
+                  <select id="reg-suffix" className="input" value={form.suffix} onChange={set('suffix')}>
                     {SUFFIXES.map(s => <option key={s} value={s}>{s || `— ${t('register.step1.suffixNone')} —`}</option>)}
                   </select>
                 </div>
@@ -642,8 +642,8 @@ export default function Register() {
 
               {/* Contact */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.contactNumber')} <span className="text-red-400">*</span></label>
-                <input data-field="contactNumber" className={inputCls('contactNumber')} placeholder="09171234567"
+                <label htmlFor="reg-contactNumber" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.contactNumber')} <span className="text-red-400">*</span></label>
+                <input id="reg-contactNumber" data-field="contactNumber" className={inputCls('contactNumber')} placeholder="09171234567"
                   inputMode="numeric" autoComplete="tel" maxLength={11}
                   value={form.contactNumber} onChange={setPhone} />
                 <FieldError msg={errors.contactNumber} />
@@ -688,21 +688,22 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.email')} <span className="text-red-400">*</span></label>
-                <input type="email" data-field="email" className={inputCls('email')} placeholder="juan@gmail.com"
+                <label htmlFor="reg-email" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.email')} <span className="text-red-400">*</span></label>
+                <input id="reg-email" type="email" data-field="email" className={inputCls('email')} placeholder="juan@gmail.com"
                   inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false}
                   value={form.email} onChange={set('email')} onBlur={checkEmailAvailable} />
                 <FieldError msg={errors.email} />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.password')} <span className="text-red-400">*</span></label>
+                <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.password')} <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} data-field="password" className={`${inputCls('password')} pr-10`}
+                  <input id="reg-password" type={showPw ? 'text' : 'password'} data-field="password" className={`${inputCls('password')} pr-10`}
                     placeholder={t('register.step2.passwordPlaceholder')}
                     autoComplete="new-password"
                     value={form.password} onChange={set('password')} />
                   <button type="button"
+                    aria-label={showPw ? t('register.step2.hidePassword') : t('register.step2.showPassword')}
                     className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowPw(p => !p)}>
                     {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
@@ -722,9 +723,9 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.confirmPassword')} <span className="text-red-400">*</span></label>
+                <label htmlFor="reg-confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.confirmPassword')} <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <input type={showConfirmPw ? 'text' : 'password'} data-field="confirmPassword" className={`${inputCls('confirmPassword')} pr-16`}
+                  <input id="reg-confirmPassword" type={showConfirmPw ? 'text' : 'password'} data-field="confirmPassword" className={`${inputCls('confirmPassword')} pr-16`}
                     placeholder={t('register.step2.confirmPlaceholder')}
                     autoComplete="new-password"
                     value={form.confirmPassword} onChange={set('confirmPassword')} />
@@ -740,6 +741,7 @@ export default function Register() {
                     </span>
                   )}
                   <button type="button"
+                    aria-label={showConfirmPw ? t('register.step2.hidePassword') : t('register.step2.showPassword')}
                     className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowConfirmPw(p => !p)}>
                     {showConfirmPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
@@ -759,13 +761,14 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
+                <label htmlFor="reg-accessCode" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
                 {/* Stack vertically on mobile so the input has room to show
                     "CRMC-YYYY-NNNNN" without truncation. Verify uses the
                     secondary button style — it's a sub-action, not the page
                     goal (Create Account is). */}
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
+                    id="reg-accessCode"
                     data-field="hospitalId"
                     className={`${inputCls('hospitalId')} flex-1 font-mono ${hospitalVerified ? 'border-green-400 bg-green-50' : ''}`}
                     placeholder={`CRMC-${CURRENT_YEAR}-00001`}

@@ -23,13 +23,21 @@ import toast from 'react-hot-toast'
 // patient's request; the CRMC social worker adds the assessment separately.
 
 // Inline-bilingual question label (English + Filipino, always both).
-function Q({ en, fil, required }) {
-  return (
-    <div className="mb-2">
-      <p className="text-lg font-semibold text-gray-900 leading-snug">{en} {required && <span className="text-red-400">*</span>}</p>
-      <p className="text-sm text-gray-500 leading-snug">{fil}</p>
-    </div>
+// When `htmlFor` is given, Q renders as a real <label> tied to that input id
+// so the bilingual question text becomes the field's accessible name (a11y:
+// WCAG 1.3.1 / 4.1.2). Section-heading uses (no associated control) omit
+// htmlFor and stay a <div>. Inner text uses block <span> so the <label> holds
+// only phrasing content (valid markup).
+function Q({ en, fil, required, htmlFor }) {
+  const content = (
+    <>
+      <span className="block text-lg font-semibold text-gray-900 leading-snug">{en} {required && <span className="text-red-400">*</span>}</span>
+      <span className="block text-sm text-gray-500 leading-snug">{fil}</span>
+    </>
   )
+  return htmlFor
+    ? <label htmlFor={htmlFor} className="mb-2 block">{content}</label>
+    : <div className="mb-2">{content}</div>
 }
 
 const EMPLOYMENT = [
@@ -256,8 +264,8 @@ export default function IntakeWizard() {
           {cur.key === 'family' && (
             <>
               <div>
-                <Q en="How many people live in your home, including you?" fil="Ilang tao ang nakatira sa inyong tahanan, kasama kayo?" required />
-                <input type="number" min="1" inputMode="numeric"
+                <Q en="How many people live in your home, including you?" fil="Ilang tao ang nakatira sa inyong tahanan, kasama kayo?" required htmlFor="iw-household" />
+                <input id="iw-household" type="number" min="1" inputMode="numeric"
                   ref={errorField === 'householdSize' ? errorRef : null}
                   className={`${inputCls} ${errorField === 'householdSize' ? inputErrCls : ''}`}
                   value={sheet.householdSize} onChange={set('householdSize')} placeholder="0" />
@@ -267,8 +275,8 @@ export default function IntakeWizard() {
                 <div className="space-y-2">
                   {members.map((m, i) => (
                     <div key={i} className="flex gap-2">
-                      <input className={inputCls} placeholder="Name · Pangalan" value={m.name} onChange={e => setMember(i, 'name', e.target.value)} />
-                      <input className={inputCls} placeholder="Relationship · Kaugnayan" value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} />
+                      <input className={inputCls} aria-label="Family member name · Pangalan" placeholder="Name · Pangalan" value={m.name} onChange={e => setMember(i, 'name', e.target.value)} />
+                      <input className={inputCls} aria-label="Relationship · Kaugnayan" placeholder="Relationship · Kaugnayan" value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} />
                       <button onClick={() => removeMember(i)}
                         aria-label="Remove family member"
                         className="text-gray-300 hover:text-red-500 flex-shrink-0 min-w-[44px] min-h-[44px] inline-flex items-center justify-center">
@@ -288,24 +296,24 @@ export default function IntakeWizard() {
           {cur.key === 'income' && (
             <>
               <div>
-                <Q en="About how much does your household earn each month?" fil="Halos magkano ang kinikita ng inyong sambahayan kada buwan?" required />
+                <Q en="About how much does your household earn each month?" fil="Halos magkano ang kinikita ng inyong sambahayan kada buwan?" required htmlFor="iw-income" />
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
-                  <input type="number" min="0" inputMode="numeric"
+                  <input id="iw-income" type="number" min="0" inputMode="numeric"
                     ref={errorField === 'monthlyIncome' ? errorRef : null}
                     className={`${inputCls} pl-8 ${errorField === 'monthlyIncome' ? inputErrCls : ''}`}
                     value={sheet.monthlyIncome} onChange={set('monthlyIncome')} placeholder="0" />
                 </div>
               </div>
               <div>
-                <Q en="Work situation (optional)" fil="Kalagayan sa trabaho (opsyonal)" />
-                <select className={inputCls} value={sheet.employmentType} onChange={set('employmentType')}>
+                <Q en="Work situation (optional)" fil="Kalagayan sa trabaho (opsyonal)" htmlFor="iw-employment" />
+                <select id="iw-employment" className={inputCls} value={sheet.employmentType} onChange={set('employmentType')}>
                   {EMPLOYMENT.map(o => <option key={o.value} value={o.value}>{o.en}{o.value ? ` · ${o.fil}` : ''}</option>)}
                 </select>
               </div>
               <div>
-                <Q en="Where does the money come from? (optional)" fil="Saan nanggagaling ang pera? (opsyonal)" />
-                <input className={inputCls} value={sheet.incomeSource} onChange={set('incomeSource')} placeholder="e.g. Sweldo, negosyo, pension, padala" />
+                <Q en="Where does the money come from? (optional)" fil="Saan nanggagaling ang pera? (opsyonal)" htmlFor="iw-income-source" />
+                <input id="iw-income-source" className={inputCls} value={sheet.incomeSource} onChange={set('incomeSource')} placeholder="e.g. Sweldo, negosyo, pension, padala" />
               </div>
             </>
           )}
@@ -321,10 +329,10 @@ export default function IntakeWizard() {
                 { k: 'medicine',  en: 'Medicine',      fil: 'Gamot' },
               ].map(row => (
                 <div key={row.k}>
-                  <p className="text-base font-medium text-gray-800">{row.en} <span className="text-gray-400 font-normal">· {row.fil}</span></p>
+                  <label htmlFor={`iw-expense-${row.k}`} className="block text-base font-medium text-gray-800">{row.en} <span className="text-gray-400 font-normal">· {row.fil}</span></label>
                   <div className="relative mt-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
-                    <input type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.expenses?.[row.k] ?? ''} onChange={setExp(row.k)} placeholder="0" />
+                    <input id={`iw-expense-${row.k}`} type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.expenses?.[row.k] ?? ''} onChange={setExp(row.k)} placeholder="0" />
                   </div>
                 </div>
               ))}
@@ -335,21 +343,21 @@ export default function IntakeWizard() {
           {cur.key === 'medical' && (
             <>
               <div>
-                <Q en="What illness or condition needs help?" fil="Anong sakit o kondisyon ang kailangang tulungan?" required />
-                <input
+                <Q en="What illness or condition needs help?" fil="Anong sakit o kondisyon ang kailangang tulungan?" required htmlFor="iw-diagnosis" />
+                <input id="iw-diagnosis"
                   ref={errorField === 'diagnosis' ? errorRef : null}
                   className={`${inputCls} ${errorField === 'diagnosis' ? inputErrCls : ''}`}
                   value={sheet.diagnosis} onChange={set('diagnosis')} placeholder="e.g. Pneumonia, kidney disease" />
               </div>
               <div>
-                <Q en="When were you admitted? (optional)" fil="Kailan kayo na-admit? (opsyonal)" />
-                <input type="date" className={inputCls} value={sheet.dateOfAdmission} onChange={set('dateOfAdmission')} />
+                <Q en="When were you admitted? (optional)" fil="Kailan kayo na-admit? (opsyonal)" htmlFor="iw-admission" />
+                <input id="iw-admission" type="date" className={inputCls} value={sheet.dateOfAdmission} onChange={set('dateOfAdmission')} />
               </div>
               <div>
-                <Q en="Estimated total cost, if known (optional)" fil="Tinatayang kabuuang gastos, kung alam (opsyonal)" />
+                <Q en="Estimated total cost, if known (optional)" fil="Tinatayang kabuuang gastos, kung alam (opsyonal)" htmlFor="iw-cost" />
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
-                  <input type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.estimatedTotalCost} onChange={set('estimatedTotalCost')} placeholder="0" />
+                  <input id="iw-cost" type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.estimatedTotalCost} onChange={set('estimatedTotalCost')} placeholder="0" />
                 </div>
               </div>
             </>
