@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -16,6 +17,37 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
+
+// App Check — bot / abuse protection for self-registration and the public
+// callables/endpoints. Initialised ONLY when an App Check site key is
+// configured (VITE_APPCHECK_SITE_KEY); with no key this is a complete no-op,
+// so local dev and any un-provisioned environment are unaffected. Registered
+// right after the app — before Auth/Firestore/Storage/Functions — so its
+// token attaches to their requests.
+//
+// Rollout (owner): in Firebase Console → App Check, register a reCAPTCHA v3
+// provider (gives a site key), set VITE_APPCHECK_SITE_KEY in the deploy env
+// (read at build time), start in "monitoring" mode, then enable enforcement
+// per service once traffic looks clean. For local dev against an enforcing
+// project, set VITE_APPCHECK_DEBUG='true' and register the debug token the
+// console prints.
+const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY
+if (appCheckSiteKey) {
+  if (import.meta.env.VITE_APPCHECK_DEBUG === 'true' && typeof self !== 'undefined') {
+    // eslint-disable-next-line no-undef
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
+  }
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+  } catch (err) {
+    // App Check setup must never block the app from loading.
+    console.warn('[appcheck] init failed:', err?.message)
+  }
+}
+
 export const auth = getAuth(app)
 
 // Phase 1.5: persistent local cache. Patients on slow Mindanao
