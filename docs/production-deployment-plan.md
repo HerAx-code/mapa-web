@@ -2,12 +2,26 @@
 
 > **The code is ready. The deployment isn't yet.**
 >
-> MAPA is genuinely well-built for a thesis, but it runs on Firebase's free
-> **Spark** plan with its correctness-critical server pieces *written and
-> switched off*. This is the plan to cross the specific gates between a pilot
-> and a system CRMC can actually run for real patients.
+> This is the plan to cross the specific gates between a pilot and a system
+> CRMC can actually run for real patients.
 >
 > Shareable version (defense-ready): the "Clearance to Deploy" artifact.
+
+> **⚠️ Live-state correction (2026-08-28).** This plan was first written from the
+> repo docs, which were stale. Verified against the live project since:
+> - The Firebase project is **already on the Blaze plan** (it uses Cloud
+>   Storage, which requires Blaze) — so Phase 0's "upgrade to Blaze" is **done**.
+> - **All five Cloud Functions are deployed** (`asia-southeast1`):
+>   `syncRequestFinancials`, `deleteAuthUser`, `verifyAccessCode` were already
+>   live; `glExpirySweep` + `resetAgencySlots` deployed 2026-08-28. So Phase 1's
+>   "deploy the Cloud Functions" is **done**, and the money-truth enforcement is
+>   authoritative in production.
+> - The **email endpoint is authenticated** in production (`FIREBASE_PROJECT_ID`
+>   set in Vercel, verified 401 on invalid token).
+>
+> Items below are struck through as they complete; the remaining real gaps are
+> **backups**, **observability**, **RA 10173 sign-off**, **project ownership /
+> handover**, and the **accessibility pass**.
 
 **At a glance**
 
@@ -56,10 +70,10 @@ suggests.
 
 ### Not switched on yet ▲
 
-- **Money-truth enforcement is dormant** — `syncRequestFinancials` is
-  undeployed; funding tallies self-heal only when a user loads a page.
-- **Email endpoint is unauthenticated** with open CORS — anyone can send mail
-  as CRMC.
+- ~~Money-truth enforcement is dormant~~ — **corrected: `syncRequestFinancials`
+  is deployed and authoritative** (see the live-state note above).
+- ~~Email endpoint is unauthenticated~~ — **corrected: authenticated in
+  production** (Firebase ID token required, verified).
 - **No backups** of the system of record, and **no error/uptime monitoring**.
 - **No Data Privacy Act sign-off** for handling real patient PII (RA 10173).
 - **Project lives on a personal account** — CRMC doesn't own it, and there's no
@@ -230,9 +244,9 @@ pilot scale — the real cost is ownership and time, not infrastructure.
 When every box is true, MAPA is a system CRMC can responsibly run for real
 patients.
 
-- [ ] Firebase project owned by CRMC, on Blaze, with a budget alert set *(Phase 0)*
-- [ ] Cloud Functions deployed — funding tallies and GL expiry are server-authoritative *(Phase 1)*
-- [ ] Email endpoint authenticated; CORS locked to the app origin *(Phase 1)*
+- [ ] Firebase project owned by CRMC, with a budget alert set *(Phase 0 — **Blaze already active**; ownership transfer + budget alert still pending)*
+- [x] Cloud Functions deployed — funding tallies and GL expiry are server-authoritative *(Phase 1 — done 2026-08-28)*
+- [x] Email endpoint authenticated; CORS locked to the app origin *(Phase 1 — done 2026-08-28)*
 - [ ] Daily backups running, and a restore has been tested successfully *(Phase 1 + 5)*
 - [ ] Error tracking + uptime monitoring live *(Phase 2)*
 - [ ] DPO sign-off, retention policy, and reviewed consent in place *(Phase 3)*
