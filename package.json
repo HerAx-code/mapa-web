@@ -24,6 +24,7 @@
     "pre-commit": "npm run precommit"
   },
   "dependencies": {
+    "@sentry/react": "^10.71.0",
     "firebase": "^12.13.0",
     "i18next": "^26.2.0",
     "jose": "^6.2.10",

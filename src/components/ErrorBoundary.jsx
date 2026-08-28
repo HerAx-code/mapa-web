@@ -1,5 +1,6 @@
 import React from 'react'
 import { MdWarningAmber } from 'react-icons/md'
+import { captureError } from '../sentry'
 
 // Top-level error boundary so an unhandled render error in one page doesn't
 // blank out the entire app. Shows a friendly fallback and a Reload button.
@@ -16,6 +17,8 @@ export default class ErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     // Log to console so the dev/operator can inspect the stack.
     console.error('Unhandled React error:', error, info)
+    // Report to Sentry when error tracking is active (no-op otherwise).
+    captureError(error, { componentStack: info?.componentStack })
     this.setState({ info })
   }
 

@@ -5,8 +5,13 @@ import { Toaster } from 'react-hot-toast'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { initSentry } from './sentry'
 import './index.css'
 import './i18n'   // initialize i18next
+
+// Error tracking — no-op unless VITE_SENTRY_DSN is configured. Fire-and-
+// forget: it lazy-loads the SDK and installs global error handlers.
+initSentry()
 
 // PWA service worker — `autoUpdate` mode means a new deploy is picked up
 // silently on the next navigation. No "reload to update?" prompt; the
