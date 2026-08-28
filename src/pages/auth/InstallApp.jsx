@@ -27,7 +27,7 @@ function PhonePreview() {
           <div className="grid grid-cols-4 gap-x-3 gap-y-4">
             <div className="flex flex-col items-center gap-1">
               <img src="/pwa-192.png" alt=""
-                className="h-11 w-11 rounded-[0.85rem] shadow-sm ring-2 ring-brand-400/50" />
+                className="h-11 w-11 max-w-none object-contain rounded-[0.85rem] shadow-sm ring-2 ring-brand-400/50" />
               <span className="text-[8px] font-semibold text-gray-700">MAPA</span>
             </div>
             {Array.from({ length: 15 }).map((_, i) => (
