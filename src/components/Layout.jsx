@@ -1303,7 +1303,7 @@ export default function Layout({ children, breadcrumb }) {
               and re-triggers the fade-in animation. Subtle motion
               conveys 'this is a new screen' instead of the instant
               teleport that makes the app feel webby. */}
-          <div key={location.pathname} className="animate-fade-in flex-1 flex flex-col motion-reduce:animate-none">
+          <div key={location.pathname} className="animate-fade-in flex-1 flex flex-col min-h-0 motion-reduce:animate-none">
             {children}
           </div>
         </main>
