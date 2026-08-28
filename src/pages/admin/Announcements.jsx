@@ -224,6 +224,19 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
               value={message} onChange={e => setMessage(e.target.value.slice(0, 300))} />
           </div>
 
+          {/* Live preview — placed high so operators see the banner update
+              as they type the title and message, rather than below the fold. */}
+          <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Preview</p>
+            <BannerPreview
+              type={type} title={title} message={message}
+              startAt={previewStartAt} endAt={previewEndAt}
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              This is how the banner will appear to {audienceNote ?? 'all users'}.
+            </p>
+          </div>
+
           {/* R38: surface + audience. Hidden for promotions -- agency
               promos are always feed-only / patients-only. */}
           {!promo && (
@@ -311,18 +324,6 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
               <label className="block text-sm font-medium text-gray-700 mb-1">End time <span className="text-red-400">*</span></label>
               <input type="time" className="input text-sm" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </div>
-          </div>
-
-          {/* Live preview */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Preview</p>
-            <BannerPreview
-              type={type} title={title} message={message}
-              startAt={previewStartAt} endAt={previewEndAt}
-            />
-            <p className="text-xs text-gray-400 mt-1.5">
-              This is how the banner will appear to {audienceNote ?? 'all users'}.
-            </p>
           </div>
         </div>
 
@@ -548,7 +549,10 @@ export default function Announcements() {
         )}
       </p>
       {items.length === 0 ? (
-        <p className="text-sm text-gray-400 italic py-3">{emptyText}</p>
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-4 py-6 flex items-center gap-3 text-gray-400">
+          <MdCampaign size={18} className="flex-shrink-0" />
+          <p className="text-sm">{emptyText}</p>
+        </div>
       ) : (
         <div className="space-y-3">{items.map(renderCard)}</div>
       )}
@@ -581,9 +585,9 @@ export default function Announcements() {
             { label: 'Upcoming',    value: totalUpcoming,            color: totalUpcoming > 0 ? 'text-blue-600' : 'text-gray-400' },
             { label: 'Total',       value: announcements.length,     color: 'text-gray-800' },
           ].map((m, i) => (
-            <div key={i} className="card p-4">
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-3xl font-semibold ${m.color}`}>{loading ? '—' : m.value}</p>
+            <div key={i} className="stat-tile">
+              <p className="stat-label mt-0">{m.label}</p>
+              <p className={`stat-num mt-1 ${m.color}`}>{loading ? '—' : m.value}</p>
             </div>
           ))}
         </div>
