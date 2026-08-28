@@ -354,8 +354,9 @@ export default function CertificateGenerator() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Guarantee Letters</h1>
-            <p className="page-sub">Print, sign, and upload Guarantee Letters for approved applications.</p>
+            <p className="eyebrow">Documents</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Guarantee Letters</h1>
+            <p className="text-sm text-gray-500 mt-1">Print, sign, and upload Guarantee Letters for approved applications.</p>
           </div>
           <div className="card px-4 py-2 text-center">
             <p className="text-2xl font-bold text-green-600">{loading ? '—' : apps.length}</p>

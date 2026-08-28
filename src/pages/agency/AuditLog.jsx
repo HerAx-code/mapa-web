@@ -197,8 +197,9 @@ export default function AgencyAuditLog() {
             nothing to export. */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="page-title">Audit Log</h1>
-            <p className="page-sub">
+            <p className="eyebrow">Accountability</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Audit Log</h1>
+            <p className="text-sm text-gray-500 mt-1">
               Every action taken by your agency's staff. Use this to satisfy COA-style accountability for fund movements and role changes.
             </p>
           </div>

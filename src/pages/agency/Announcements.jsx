@@ -227,8 +227,9 @@ export default function AgencyAnnouncements() {
 
         <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
           <div>
-            <h1 className="page-title">Promote Your Programs</h1>
-            <p className="page-sub">Post promotions patients see on the Find Programs page (e.g. new assistance offerings, open slots, requirements updates).</p>
+            <p className="eyebrow">Promotions</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Promote Your Programs</h1>
+            <p className="text-sm text-gray-500 mt-1">Post promotions patients see on the Find Programs page (e.g. new assistance offerings, open slots, requirements updates).</p>
           </div>
           <button className="btn-primary flex items-center gap-1.5 text-sm"
             onClick={() => { setEditing(null); setShowForm(true) }}>
