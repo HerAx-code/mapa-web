@@ -1479,8 +1479,9 @@ export default function Requests() {
     <Layout breadcrumb="Assistance Requests">
       <div className="p-4 sm:p-6 max-w-5xl mx-auto">
         <div className="mb-5">
-          <h1 className="page-title flex items-center gap-2"><MdReceiptLong className="text-brand-500" size={22} /> Assistance Requests</h1>
-          <p className="page-sub">Review patient requests, verify the bill, and endorse them to agencies toward zero balance.</p>
+          <p className="eyebrow">CRMC gateway</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Assistance Requests</h1>
+          <p className="text-sm text-gray-500 mt-1">Review patient requests, verify the bill, and endorse them to agencies toward zero balance.</p>
         </div>
 
         {/* R36: agency suggestions queue. Amber banner surfaces bottom-up
