@@ -152,8 +152,9 @@ export default function Inbox() {
 
         {/* Header */}
         <div className="mb-5">
-          <h1 className="page-title">Application Inbox</h1>
-          <p className="page-sub">Click any row to open the full case record.</p>
+          <p className="eyebrow">Funding queue</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Application Inbox</h1>
+          <p className="text-sm text-gray-500 mt-1">Click any row to open the full case record.</p>
         </div>
 
         {/* Summary cards (clickable filters). Under the co-funding model,
@@ -172,9 +173,9 @@ export default function Inbox() {
             return (
               <button key={m.key}
                 onClick={() => setStatusFilter(active && m.key !== 'all' ? 'all' : m.key)}
-                className={`card p-4 text-left transition-all hover:shadow-md ${active ? 'ring-2 ring-brand-300' : ''}`}>
-                <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-                <p className={`text-2xl font-semibold ${m.color}`}>{loading ? '—' : m.value}</p>
+                className={`stat-tile text-left transition-all hover:shadow-md ${active ? 'ring-2 ring-brand-400' : ''}`}>
+                <p className="stat-label mt-0">{m.label}</p>
+                <p className={`stat-num mt-1 ${m.color}`}>{loading ? '—' : m.value}</p>
               </button>
             )
           })}
