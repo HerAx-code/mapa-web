@@ -268,8 +268,9 @@ export default function AgencyProfile() {
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="page-title">Agency Profile</h1>
-            <p className="page-sub">Manage the information patients see about your agency.</p>
+            <p className="eyebrow">Public profile</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agency Profile</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage the information patients see about your agency.</p>
           </div>
           <button
             className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border transition-colors ${

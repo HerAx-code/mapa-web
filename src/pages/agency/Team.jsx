@@ -406,8 +406,9 @@ export default function AgencyTeam() {
         {/* Header */}
         <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
           <div>
-            <h1 className="page-title">Team</h1>
-            <p className="page-sub">Manage coordinators and other administrators at {agency?.name ?? 'your agency'}.</p>
+            <p className="eyebrow">People</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Team</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage coordinators and other administrators at {agency?.name ?? 'your agency'}.</p>
           </div>
           <button className="btn-primary flex items-center gap-1.5" onClick={() => setShowAdd(true)}>
             <MdAdd size={16} /> Add Coordinator

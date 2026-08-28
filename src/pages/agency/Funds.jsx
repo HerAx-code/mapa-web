@@ -219,8 +219,9 @@ export default function AgencyFunds() {
 
         {/* Header */}
         <div className="mb-5">
-          <h1 className="page-title">Funds</h1>
-          <p className="page-sub">Budget breakdown and history of every event that touched your agency's allocation.</p>
+          <p className="eyebrow">Budget</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Funds</h1>
+          <p className="text-sm text-gray-500 mt-1">Budget breakdown and history of every event that touched your agency's allocation.</p>
         </div>
 
         {/* Budget summary card */}
