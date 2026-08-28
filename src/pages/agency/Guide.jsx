@@ -413,11 +413,9 @@ export default function AgencyGuide() {
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="page-title flex items-center gap-2">
-              <MdMenuBook size={22} className="text-brand-500" />
-              Agency User Guide
-            </h1>
-            <p className="page-sub">Step-by-step instructions for funding endorsed application slices under the CRMC-gateway model.</p>
+            <p className="eyebrow">Help</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agency User Guide</h1>
+            <p className="text-sm text-gray-500 mt-1">Step-by-step instructions for funding endorsed application slices under the CRMC-gateway model.</p>
           </div>
           <span className="text-xs text-gray-400">Last updated {LAST_UPDATED}</span>
         </div>

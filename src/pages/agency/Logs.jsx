@@ -68,8 +68,9 @@ export default function AgencyLogs() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="page-title">Application Logs</h1>
-            <p className="page-sub">Complete history of all applications for your agency.</p>
+            <p className="eyebrow">Records</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Application Logs</h1>
+            <p className="text-sm text-gray-500 mt-1">Complete history of all applications for your agency.</p>
           </div>
           <button className="btn-secondary flex items-center gap-1.5 text-sm"
             onClick={() => exportToCSV(`agency-logs-${dateStamp()}.csv`, [
