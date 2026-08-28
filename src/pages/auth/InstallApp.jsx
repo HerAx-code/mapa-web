@@ -11,24 +11,36 @@ import Logo from '../../components/ui/Logo'
 import LanguageToggle from '../../components/LanguageToggle'
 
 // ── Decorative home-screen mockup (aria-hidden — purely illustrative) ──────
+// A portrait phone: dark bezel, notch, a full home screen of app icons with
+// MAPA highlighted, and a home indicator — so it reads as a phone, not a card.
 function PhonePreview() {
   return (
-    <div aria-hidden="true"
-      className="mx-auto w-[200px] rounded-[2rem] border-4 border-gray-200 bg-white shadow-lg p-3">
-      <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-200" />
-      <div className="rounded-2xl bg-gradient-to-b from-brand-50 to-gray-50 p-3.5">
-        <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
-          {/* MAPA icon highlighted first, then muted placeholder apps */}
-          <div className="flex flex-col items-center gap-1">
-            <img src="/pwa-192.png" alt="" className="h-11 w-11 rounded-xl shadow-sm" />
-            <span className="text-[8px] font-semibold text-gray-600">MAPA</span>
-          </div>
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <div className="h-11 w-11 rounded-xl bg-gray-200/70" />
-              <span className="h-1.5 w-6 rounded bg-gray-200/60" />
+    <div aria-hidden="true" className="mx-auto w-[212px] rounded-[2.4rem] bg-gray-900 p-2 shadow-xl">
+      {/* Screen */}
+      <div className="relative overflow-hidden rounded-[1.9rem] bg-gradient-to-b from-brand-50 via-white to-gray-50">
+        {/* Notch / status pill */}
+        <div className="flex h-7 items-center justify-center">
+          <div className="h-1.5 w-14 rounded-full bg-gray-900/15" />
+        </div>
+        {/* App grid — MAPA highlighted, then muted placeholder apps (4 rows) */}
+        <div className="px-4 pb-2 pt-1">
+          <div className="grid grid-cols-4 gap-x-3 gap-y-4">
+            <div className="flex flex-col items-center gap-1">
+              <img src="/pwa-192.png" alt=""
+                className="h-11 w-11 rounded-[0.85rem] shadow-sm ring-2 ring-brand-400/50" />
+              <span className="text-[8px] font-semibold text-gray-700">MAPA</span>
             </div>
-          ))}
+            {Array.from({ length: 15 }).map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <div className="h-11 w-11 rounded-[0.85rem] bg-gray-200/70" />
+                <span className="h-1.5 w-6 rounded bg-gray-200/60" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Home indicator */}
+        <div className="flex justify-center pb-2.5 pt-1.5">
+          <div className="h-1 w-16 rounded-full bg-gray-900/20" />
         </div>
       </div>
     </div>
