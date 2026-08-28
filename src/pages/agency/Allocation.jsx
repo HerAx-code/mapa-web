@@ -340,8 +340,9 @@ export default function AgencyAllocation() {
       <div className="p-4 sm:p-6 max-w-3xl">
 
         <div className="mb-5">
-          <h1 className="page-title">Budget Allocation</h1>
-          <p className="page-sub">
+          <p className="eyebrow">Budget</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Budget Allocation</h1>
+          <p className="text-sm text-gray-500 mt-1">
             Set and manage your agency's budget for {agency.name}. Only agency administrators can make changes here.
           </p>
         </div>

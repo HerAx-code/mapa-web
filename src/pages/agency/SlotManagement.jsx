@@ -211,8 +211,9 @@ export default function SlotManagement() {
       <div className="p-4 sm:p-6">
 
         <div className="mb-5">
-          <h1 className="page-title">Slot Management</h1>
-          <p className="page-sub">Manage daily patient slots for {agency.name}.</p>
+          <p className="eyebrow">Capacity</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Slot Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage daily patient slots for {agency.name}.</p>
         </div>
 
         <div className="max-w-xl space-y-4">
