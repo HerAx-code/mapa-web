@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import AgencyAvatar from '../../components/AgencyAvatar'
+import BudgetHero from '../../components/agency/BudgetHero'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 import { useNavigate } from 'react-router-dom'
@@ -279,36 +280,39 @@ export default function AgencyDashboard() {
       <div className="p-4 sm:p-6">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
-          <div>
-            <h1 className="page-title">{agency.name} Workspace</h1>
-            <p className="page-sub">Manage medical assistance applications for {agency.name}.</p>
+        <div className="flex items-center gap-3 mb-5">
+          <AgencyAvatar agency={agency} className="w-11 h-11 rounded-xl text-sm flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="eyebrow">Agency workspace</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 leading-tight truncate">{agency.name}</h1>
           </div>
         </div>
 
+        {/* Funding-capacity hero — the budget summary as the centrepiece. */}
+        <BudgetHero agency={agency} />
+
         {/* Metrics */}
         <div data-tour-id="agency-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-          <div className="card p-4">
+          <div className="stat-tile">
             <div className="flex items-center gap-2 mb-1">
               <MdWarning size={16} className="text-amber-500" />
-              <span className="text-xs text-gray-500">Awaiting Funding Decision</span>
+              <span className="stat-label mt-0">Awaiting funding decision</span>
             </div>
-            <p className="text-2xl font-semibold text-amber-600">{pendingApps.length}</p>
-            <p className="text-xs text-gray-400">endorsed to you</p>
+            <p className="stat-num text-amber-600">{pendingApps.length}</p>
+            <p className="text-xs text-gray-400 mt-1">endorsed to you</p>
           </div>
-          <div className="card p-4">
+          <div className="stat-tile">
             <div className="flex items-center gap-2 mb-1">
               <MdCalendarToday size={16} className="text-brand-500" />
-              <span className="text-xs text-gray-500">Available Slots Today</span>
+              <span className="stat-label mt-0">Available slots today</span>
             </div>
-            <p className="text-2xl font-semibold text-brand-600">
-              {slots.remaining} <span className="text-sm font-normal text-gray-400">/ {slots.total}</span>
+            <p className="stat-num text-brand-600">
+              {slots.remaining} <span className="text-base font-normal text-gray-400">/ {slots.total}</span>
             </p>
           </div>
-          <div className="card p-4">
-            <div className="text-xs text-gray-500 mb-1">Total Approved</div>
-            <p className="text-2xl font-semibold text-gray-800">{approvedCount}</p>
+          <div className="stat-tile">
+            <span className="stat-label mt-0">Total approved</span>
+            <p className="stat-num text-gray-900">{approvedCount}</p>
           </div>
         </div>
 
@@ -333,22 +337,17 @@ export default function AgencyDashboard() {
           </p>
         </div>
 
-        {/* Budget bar (read-only for agency) */}
+        {/* Budget alerts — the budget summary now lives in the hero above;
+            this block only surfaces when there's something to act on (a stale
+            period or nearing the limit). Reads budget.* only. */}
         {(() => {
-          const budget    = agency.budget ?? { period: 'monthly', allocated: 0, committed: 0, disbursed: 0 }
+          const budget    = agency.budget ?? { period: 'monthly', allocated: 0, committed: 0 }
           const allocated = budget.allocated ?? 0
           if (allocated === 0) return null
           const committed = budget.committed ?? 0
-          const disbursed = budget.disbursed ?? 0
-          const remaining = Math.max(0, allocated - committed)
           const utilization = Math.round((committed / allocated) * 100)
-          const bar = utilization >= 90 ? 'bg-red-400' : utilization >= 70 ? 'bg-amber-400' : 'bg-green-400'
           const warn = utilization >= 80
 
-          // Stale-period detection: only meaningful for monthly periods (the
-          // only configured option today). If periodStart is older than
-          // STALE_PERIOD_DAYS, surface a banner so the agency knows to ask
-          // their administrator for a period reset.
           const periodStart = budget.periodStart?.toDate
             ? budget.periodStart.toDate()
             : (budget.periodStart ? new Date(budget.periodStart) : null)
@@ -357,37 +356,22 @@ export default function AgencyDashboard() {
             : null
           const isStale = budget.period === 'monthly' && periodDays != null && periodDays > STALE_PERIOD_DAYS
 
+          if (!isStale && !warn) return null
+
           return (
-            <div data-tour-id="agency-budget" className={`card p-4 mb-5 ${warn ? 'border-amber-200 bg-amber-50/30' : ''}`}>
+            <div data-tour-id="agency-budget" className="card p-4 mb-5 border-amber-200 bg-amber-50/40 space-y-2">
               {isStale && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-700">
+                <p className="text-xs text-amber-700">
                   <MdWarning size={13} className="inline mr-1" />
                   This {PERIOD_NOUN[budget.period] ?? 'period'} started <strong>{periodDays} days ago</strong>. Ask your administrator if it's time to start a new {PERIOD_NOUN[budget.period] ?? 'period'}.
-                </div>
-              )}
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">{PERIOD_ADJECTIVE[budget.period] ?? 'Period'} Budget</span>
-                <span className={`text-xs font-medium ${warn ? 'text-amber-600' : 'text-gray-400'}`}>
-                  ₱{remaining.toLocaleString()} remaining
-                </span>
-              </div>
-              <div className="w-full h-2.5 bg-gray-100 rounded-full mb-1">
-                <div className={`h-2.5 ${bar} rounded-full transition-all`} style={{ width: `${Math.min(100, utilization)}%` }} />
-              </div>
-              <p className="text-xs text-gray-400">
-                ₱{committed.toLocaleString()} committed · ₱{disbursed.toLocaleString()} disbursed · ₱{allocated.toLocaleString()} allocated
-                {warn && <span className="ml-2 text-amber-600 font-medium">⚠ Approaching limit</span>}
-              </p>
-              {budget.fundSource && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Source: <span className="font-medium text-gray-600">{budget.fundSource}</span>
                 </p>
               )}
               {warn && (
-                <div className="mt-3 flex justify-end">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium text-amber-700">⚠ Budget approaching limit — {utilization}% used.</p>
                   <button
                     onClick={() => setShowTopUp(true)}
-                    className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-1">
+                    className="flex-shrink-0 text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-1">
                     <MdArrowForward size={13} /> Request Budget Top-Up
                   </button>
                 </div>
@@ -398,7 +382,7 @@ export default function AgencyDashboard() {
 
         {/* Quick Actions */}
         <div data-tour-id="agency-actions" className="mb-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Quick Actions</p>
+          <p className="eyebrow mb-2">Quick Actions</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
               { label: 'Inbox',          icon: MdInbox,          path: '/agency/inbox',       badge: pendingApps.length, color: 'bg-amber-50  text-amber-600'  },
