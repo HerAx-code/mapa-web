@@ -10,6 +10,9 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
 import { deriveRequestStage } from '../../utils/requestStage'
+import { bucketOf, bucketCounts } from '../../utils/queueBuckets'
+import QueueTabs from '../../components/admin/requests/QueueTabs'
+import RequestsTable from '../../components/admin/requests/RequestsTable'
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -29,8 +32,6 @@ import toast from 'react-hot-toast'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
-const initials = (name) =>
-  (name ?? '').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '—'
 
 const fmtDate = (ts) => {
   const d = tsToDate(ts)
@@ -1167,6 +1168,7 @@ export default function Requests() {
   const [selected, setSelected] = useState(null)
   const [search,   setSearch]   = useState('')
   const [filter,   setFilter]   = useState('all')
+  const [sort,     setSort]     = useState('waiting')
   // R36 (§B.27): live pending referral suggestions from agencies. Surfaced
   // as an amber banner above the requests table so CRMC sees the
   // bottom-up coordination signal without leaving this page.
@@ -1349,38 +1351,30 @@ export default function Requests() {
   // Keep the open detail in sync with live request updates
   const selectedLive = selected ? requests.find(r => r.id === selected.id) ?? selected : null
 
-  const GROUP = {
-    needs:    ['submitted', 'under_review', 'assessment', 'verifying'],
-    progress: ['endorsed', 'partially_funded', 'endorsing'],
-    done:     ['fully_funded', 'closed', 'rejected'],
-  }
-  const counts = {
-    all:      requests.length,
-    needs:    requests.filter(r => GROUP.needs.includes(r.status)).length,
-    progress: requests.filter(r => GROUP.progress.includes(r.status)).length,
-    done:     requests.filter(r => GROUP.done.includes(r.status)).length,
-  }
-  const filtered = requests.filter(r => {
-    if (filter !== 'all' && !GROUP[filter].includes(r.status)) return false
-    if (!search) return true
-    const q = search.toLowerCase()
-    return (r.patientName ?? '').toLowerCase().includes(q)
-      || (r.requestId ?? '').toLowerCase().includes(q)
-      || (r.assistanceType ?? '').toLowerCase().includes(q)
-  })
+  // Categorize by the CRMC processing stage each request is waiting on
+  // (queueBuckets → the shared requestStage model), so the tabs, the row chip,
+  // and the detail's endorse blockers stay in lock-step.
+  const counts = useMemo(() => bucketCounts(requests), [requests])
 
-  // Coarse pipeline stage for an at-a-glance chip (distinct from the status badge).
-  const stageChip = (r) => {
-    if (r.status === 'fully_funded')                          return { label: 'Funded',     cls: 'bg-green-100 text-green-700' }
-    if (['closed', 'rejected'].includes(r.status))            return { label: 'Closed',     cls: 'bg-gray-100 text-gray-500' }
-    if (GROUP.progress.includes(r.status))                    return { label: 'Endorsing',  cls: 'bg-purple-100 text-purple-700' }
-    if (r.status === 'assessment')                            return { label: 'Assessment', cls: 'bg-amber-100 text-amber-700' }
-    return { label: 'Verify docs', cls: 'bg-blue-100 text-blue-700' }
-  }
-
-  const FILTERS = [
-    ['all', 'All'], ['needs', 'Needs action'], ['progress', 'In progress'], ['done', 'Completed'],
-  ]
+  // Filter by the active stage bucket + search, then sort. Sort keys mirror the
+  // table's sortable headers: 'waiting' (oldest first — most urgent), 'balance'
+  // (largest unfunded first), 'coverage' (least-covered first).
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const list = requests.filter(r => {
+      if (filter !== 'all' && bucketOf(r) !== filter) return false
+      if (!q) return true
+      return (r.patientName ?? '').toLowerCase().includes(q)
+        || (r.requestId ?? '').toLowerCase().includes(q)
+        || (r.assistanceType ?? '').toLowerCase().includes(q)
+    })
+    const fundOf = (r) => computeFunding(Number(r.amountNeeded) || 0, slicesByRequest.get(r.id) ?? [])
+    const arr = [...list]
+    if (sort === 'balance')       arr.sort((a, b) => fundOf(b).balance - fundOf(a).balance)
+    else if (sort === 'coverage') arr.sort((a, b) => fundOf(a).pct - fundOf(b).pct)
+    else /* waiting */            arr.sort((a, b) => (a.submittedAt?.seconds ?? 0) - (b.submittedAt?.seconds ?? 0))
+    return arr
+  }, [requests, filter, search, sort, slicesByRequest])
 
   if (selectedLive) {
     return (
@@ -1464,23 +1458,14 @@ export default function Requests() {
           </div>
         )}
 
-        {/* Toolbar: search + status filter */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="relative flex-1">
+        {/* Toolbar: search + stage-bucket categorization */}
+        <div className="mb-4 space-y-3">
+          <div className="relative">
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input className="input pl-9" placeholder="Search patient, request ID, or type…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="flex gap-1 overflow-x-auto">
-            {FILTERS.map(([key, label]) => (
-              <button key={key} onClick={() => setFilter(key)}
-                className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  filter === key ? 'bg-brand-500 text-white border-brand-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {label} <span className={filter === key ? 'text-white/70' : 'text-gray-300'}>({counts[key]})</span>
-              </button>
-            ))}
-          </div>
+          <QueueTabs active={filter} counts={counts} onChange={setFilter} />
         </div>
 
         {loading ? (
@@ -1503,109 +1488,14 @@ export default function Requests() {
             </button>
           </div>
         ) : (
-          <>
-            {/* Desktop table */}
-            <div className="card overflow-x-auto hidden sm:block">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Patient</th><th>Funding</th><th>Stage</th><th>Submitted</th><th className="text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(r => {
-                    const st          = stageChip(r)
-                    const needsAction = GROUP.needs.includes(r.status)
-                    const needed      = Number(r.amountNeeded) || 0
-                    const funding     = computeFunding(needed, slicesByRequest.get(r.id) ?? [])
-                    const warning     = coverageWarning(r)
-                    // Invariant: status='fully_funded' should imply committed >= needed.
-                    // A break in this contract is a data-state symptom (legacy seed
-                    // data, manual write, a slice approval rolled back without
-                    // adjusting the request status) and worth flagging for an
-                    // operator to investigate -- the row otherwise looks like a
-                    // successful funding.
-                    const dataMismatch = r.status === 'fully_funded' && needed > 0 && funding.committed < needed
-                    return (
-                      <tr key={r.id} className="cursor-pointer group" onClick={() => setSelected(r)}>
-                        <td className={needsAction || warning ? 'border-l-2 border-brand-400' : 'border-l-2 border-transparent'}>
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-brand-50 text-brand-600 border-2 border-brand-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                              {initials(r.patientName)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-gray-800 truncate">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</p>
-                              <p className="text-xs text-gray-400 truncate">{r.requestId} · {r.assistanceType}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <p className="font-medium text-gray-800 whitespace-nowrap">{peso(needed)}</p>
-                          <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden my-1">
-                            <div className="h-full bg-green-400 rounded-full" style={{ width: `${funding.pct}%` }} />
-                          </div>
-                          <p className="text-xs text-gray-400 whitespace-nowrap">{peso(funding.committed)} secured</p>
-                        </td>
-                        <td>
-                          <div className="flex flex-col items-start gap-1">
-                            <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                            {warning && (
-                              <span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>
-                            )}
-                            {dataMismatch && (
-                              <span
-                                className="inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
-                                title={`Funded status but only ${peso(funding.committed)} of ${peso(needed)} is actually secured. Likely legacy data — investigate or re-derive.`}>
-                                ⚠ data check
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.submittedAt)}</td>
-                        <td className="text-right"><span className="text-xs font-medium text-brand-600 group-hover:text-brand-700 whitespace-nowrap">Review →</span></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile cards */}
-            <div className="grid grid-cols-1 gap-3 sm:hidden">
-              {filtered.map(r => {
-                const st           = stageChip(r)
-                const warning      = coverageWarning(r)
-                const needed       = Number(r.amountNeeded) || 0
-                const funding      = computeFunding(needed, slicesByRequest.get(r.id) ?? [])
-                const dataMismatch = r.status === 'fully_funded' && needed > 0 && funding.committed < needed
-                return (
-                  <button key={r.id} onClick={() => setSelected(r)} className="card p-4 text-left hover:shadow-md transition-all w-full">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</p>
-                      <StatusBadge status={r.status} kind="request" className="flex-shrink-0" />
-                    </div>
-                    <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">Needs <span className="font-semibold text-gray-700">{peso(needed)}</span> · Secured <span className="font-semibold text-green-600">{peso(funding.committed)}</span></span>
-                      <span className={`inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                    </div>
-                    {warning && (
-                      <div className="mt-2">
-                        <span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>
-                      </div>
-                    )}
-                    {dataMismatch && (
-                      <div className="mt-2">
-                        <span className="inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                          ⚠ data check — only {peso(funding.committed)} secured
-                        </span>
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </>
+          <RequestsTable
+            requests={filtered}
+            slicesByRequest={slicesByRequest}
+            sort={sort}
+            onSort={setSort}
+            onOpen={setSelected}
+            coverageWarning={coverageWarning}
+          />
         )}
       </div>
     </Layout>
