@@ -108,12 +108,12 @@ export default function MedicalPrograms() {
 
         {/* Search */}
         <div className="relative mb-3">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input className="input pl-9 pr-10" placeholder={t('patient.programs.searchPlaceholder')}
             value={search} onChange={e => setSearch(e.target.value)} />
           {search && (
             <button onClick={() => setSearch('')} aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
               <MdClose size={14} />
             </button>
           )}
@@ -172,7 +172,7 @@ export default function MedicalPrograms() {
                       <AgencyAvatar agency={agency} className="w-11 h-11 rounded-xl text-sm flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-[15px] font-semibold text-gray-900 truncate">{agency.name}</h3>
-                        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-400 min-w-0">
+                        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500 min-w-0">
                           <MdLocationOn size={12} className="flex-shrink-0" /><span className="truncate">{agency.location}</span>
                         </div>
                       </div>
@@ -246,9 +246,9 @@ export default function MedicalPrograms() {
 
             {filtered.length === 0 && (
               <div className="lg:col-span-2 card p-10 text-center">
-                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><MdLocalHospital size={28} className="text-gray-400" /></div>
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><MdLocalHospital size={28} className="text-gray-500" /></div>
                 <p className="text-sm font-medium text-gray-600 mb-1">{search || selectedType ? t('patient.programs.noneMatchTitle') : t('patient.programs.noneAvailableTitle')}</p>
-                <p className="text-xs text-gray-400">{search || selectedType ? t('patient.programs.noneMatchDesc') : t('patient.programs.noneAvailableDesc')}</p>
+                <p className="text-xs text-gray-500">{search || selectedType ? t('patient.programs.noneMatchDesc') : t('patient.programs.noneAvailableDesc')}</p>
                 {selectedType && <button className="mt-3 text-sm text-brand-500 font-medium hover:underline" onClick={() => setSelectedType('')}>{t('patient.programs.clearFilter')}</button>}
               </div>
             )}

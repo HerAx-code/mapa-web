@@ -200,13 +200,13 @@ function CoverageCard({ request, t }) {
       <div className="mt-4">
         <div className="flex items-baseline justify-between text-sm mb-1.5">
           <span className="text-gray-600">{t('patient.dashboard.coverage.approved')}</span>
-          <span className="font-semibold text-gray-900 tabular-nums">{peso(approved)} <span className="text-gray-400 font-normal">/ {peso(needed)}</span></span>
+          <span className="font-semibold text-gray-900 tabular-nums">{peso(approved)} <span className="text-gray-500 font-normal">/ {peso(needed)}</span></span>
         </div>
         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <div className="h-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
         </div>
         <div className="flex items-center justify-between mt-2">
-          <span className="text-xs text-gray-400">{t('patient.dashboard.coverage.funded', { pct })}</span>
+          <span className="text-xs text-gray-500">{t('patient.dashboard.coverage.funded', { pct })}</span>
           <span className="text-sm font-semibold text-gray-800">
             {t('patient.dashboard.coverage.remaining')}: <span className="tabular-nums">{peso(balance)}</span>
           </span>
@@ -239,7 +239,7 @@ function TimelineCard({ request, docStats, t }) {
     <div className="card p-5">
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-800">{t('patient.dashboard.timeline.title')}</h3>
-        <span className="text-xs text-gray-400">{t('patient.dashboard.timeline.completedOf', { done: doneCount, total: steps.length })}</span>
+        <span className="text-xs text-gray-500">{t('patient.dashboard.timeline.completedOf', { done: doneCount, total: steps.length })}</span>
       </div>
       <ol>
         {steps.map((s, i) => {
@@ -255,18 +255,18 @@ function TimelineCard({ request, docStats, t }) {
                 className={`relative z-10 mt-0.5 flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
                   status === 'done'    ? 'bg-brand-500 text-white'
                   : status === 'current' ? 'bg-white text-brand-600 ring-2 ring-brand-500'
-                  : 'bg-white text-gray-400 ring-1 ring-gray-200'
+                  : 'bg-white text-gray-500 ring-1 ring-gray-200'
                 }`}>
                 {status === 'done' ? <MdCheck size={15} /> : i + 1}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className={`text-sm ${status === 'upcoming' ? 'font-medium text-gray-400' : 'font-semibold text-gray-800'}`}>{s.label}</p>
+                  <p className={`text-sm ${status === 'upcoming' ? 'font-medium text-gray-500' : 'font-semibold text-gray-800'}`}>{s.label}</p>
                   {status === 'current' && (
                     <span className="badge badge-blue text-xs">{t('patient.dashboard.timeline.current')}</span>
                   )}
                 </div>
-                <p className={`text-xs mt-0.5 ${status === 'upcoming' ? 'text-gray-400' : 'text-gray-500'}`}>{s.meta}</p>
+                <p className={`text-xs mt-0.5 ${status === 'upcoming' ? 'text-gray-500' : 'text-gray-500'}`}>{s.meta}</p>
               </div>
             </li>
           )
@@ -288,7 +288,7 @@ function DocumentsList({ docs, t, navigate }) {
     <div className="card overflow-hidden">
       <div className="flex items-baseline justify-between px-4 pt-4">
         <h3 className="text-sm font-semibold text-gray-800">{t('patient.dashboard.docsCard.title')}</h3>
-        <span className="text-xs text-gray-400 tabular-nums">{verified}/{docs.length}</span>
+        <span className="text-xs text-gray-500 tabular-nums">{verified}/{docs.length}</span>
       </div>
       <ul className="mt-2 divide-y divide-gray-50">
         {docs.map(d => {
@@ -320,7 +320,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
     <div className="card overflow-hidden">
       <div className="flex items-baseline justify-between px-4 pt-4">
         <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-          <MdChatBubbleOutline size={15} className="text-gray-400" /> {t('patient.dashboard.messagesCard.title')}
+          <MdChatBubbleOutline size={15} className="text-gray-500" /> {t('patient.dashboard.messagesCard.title')}
         </h3>
         <button onClick={() => navigate('/patient/messages')}
           className="text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
@@ -339,7 +339,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
                 <div className="flex items-center gap-2">
                   {unread && <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0" aria-hidden="true" />}
                   <span className={`text-sm truncate ${unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>{sender}</span>
-                  <span className="ml-auto text-xs text-gray-400 flex-shrink-0">{formatWhen(c.lastAt)}</span>
+                  <span className="ml-auto text-xs text-gray-500 flex-shrink-0">{formatWhen(c.lastAt)}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{c.lastMessage || '—'}</p>
               </button>
@@ -811,7 +811,7 @@ export default function PatientDashboard() {
                 onClick={() => navigate(vis.path)}>
                 {t(`${txt}.btn`)} →
               </button>
-              <p className="text-xs text-center mt-2 text-gray-400">
+              <p className="text-xs text-center mt-2 text-gray-500">
                 {activeApp.appId} · {activeApp.agencyName} · {t('patient.dashboard.metadata.submittedOn', { date: formatDate(activeApp.submittedAt) })}
               </p>
             </div>
@@ -848,7 +848,7 @@ export default function PatientDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.welcomeCard.newToMapa')}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t('patient.dashboard.welcomeCard.compactSub')}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t('patient.dashboard.welcomeCard.compactSub')}</p>
             </div>
             <MdArrowForward size={16} className="text-gray-300 flex-shrink-0" />
           </button>
@@ -882,7 +882,7 @@ export default function PatientDashboard() {
                 <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.labTests')}</li>
                 <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.chemotherapy')}</li>
               </ul>
-              <p className="text-xs text-gray-400 mt-2">{t('patient.dashboard.welcomeCard.fromAgencies')}</p>
+              <p className="text-xs text-gray-500 mt-2">{t('patient.dashboard.welcomeCard.fromAgencies')}</p>
             </div>
 
             <button
@@ -911,7 +911,7 @@ export default function PatientDashboard() {
             onClick={() => setStepsOpen(!stepsOpenEffective)}>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.steps.title')}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t('patient.dashboard.steps.completedOf', { done: doneCount, total: STEPS.length })}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t('patient.dashboard.steps.completedOf', { done: doneCount, total: STEPS.length })}</p>
               {/* Visual progress bar — gives an at-a-glance read of journey
                   progress without needing to expand the accordion. */}
               <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-xs">
@@ -919,8 +919,8 @@ export default function PatientDashboard() {
               </div>
             </div>
             {stepsOpenEffective
-              ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0 ml-3" />
-              : <MdExpandMore size={20} className="text-gray-400 flex-shrink-0 ml-3" />
+              ? <MdExpandLess size={20} className="text-gray-500 flex-shrink-0 ml-3" />
+              : <MdExpandMore size={20} className="text-gray-500 flex-shrink-0 ml-3" />
             }
           </button>
 
@@ -943,19 +943,19 @@ export default function PatientDashboard() {
                         ? 'bg-brand-500 text-white'
                         : isActive
                           ? 'border-2 border-brand-500 text-brand-500 bg-white'
-                          : 'border-2 border-gray-200 text-gray-400'}`}>
+                          : 'border-2 border-gray-200 text-gray-500'}`}>
                       {step.done ? <MdCheck size={14} /> : step.num}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${
                         step.done ? 'text-gray-800'
                         : isActive ? 'text-brand-700'
-                        : 'text-gray-400'}`}>
+                        : 'text-gray-500'}`}>
                         {step.title}
                         {step.done   && <span className="ml-1.5 badge badge-green text-xs">{t('patient.dashboard.steps.done')}</span>}
                         {isActive    && <span className="ml-1.5 badge badge-blue text-xs">{t('patient.dashboard.steps.current')}</span>}
                       </p>
-                      <p className={`text-xs mt-0.5 leading-relaxed ${isActive ? 'text-brand-600' : 'text-gray-400'}`}>
+                      <p className={`text-xs mt-0.5 leading-relaxed ${isActive ? 'text-brand-600' : 'text-gray-500'}`}>
                         {step.desc}
                       </p>
                     </div>

@@ -134,7 +134,7 @@ export default function PatientMore() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-base font-semibold text-gray-900 truncate">{user.name}</p>
-              <p className="text-xs text-gray-400 truncate">{user.email}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
             <MdChevronRight size={20} className="text-gray-300 flex-shrink-0" />
           </button>
@@ -143,7 +143,7 @@ export default function PatientMore() {
         {/* Sections */}
         {sections.map(section => (
           <div key={section.heading} className="mb-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1 mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest px-1 mb-2">
               {section.heading}
             </p>
             <div className="card overflow-hidden divide-y divide-gray-50">
@@ -157,7 +157,7 @@ export default function PatientMore() {
                   </div>
                   <span className="flex-1 text-sm font-medium text-gray-800">{item.label}</span>
                   {item.trailing && (
-                    <span className="text-xs text-gray-400">{item.trailing}</span>
+                    <span className="text-xs text-gray-500">{item.trailing}</span>
                   )}
                   <MdChevronRight size={18} className="text-gray-300 flex-shrink-0" />
                 </button>
@@ -175,7 +175,7 @@ export default function PatientMore() {
         </button>
 
         {/* Footer */}
-        <p className="text-center text-xs text-gray-400 mt-5">
+        <p className="text-center text-xs text-gray-500 mt-5">
           {t('shell.profile.footer')}
         </p>
       </div>

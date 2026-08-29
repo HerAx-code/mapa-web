@@ -111,7 +111,7 @@ export default function PatientAccessLog() {
       ) : entries.length === 0 ? (
         <div className="text-center py-6">
           <MdHistory size={28} className="text-gray-300 mx-auto mb-1" />
-          <p className="text-xs text-gray-400">{t('shell.accessLog.empty')}</p>
+          <p className="text-xs text-gray-500">{t('shell.accessLog.empty')}</p>
         </div>
       ) : (
         <ul className="space-y-0">
@@ -136,7 +136,7 @@ export default function PatientAccessLog() {
                     <span className="font-medium">{e.actorName || 'A staff member'}</span>
                     {' '}{meta.label}.
                   </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
+                  <p className="text-[11px] text-gray-500 mt-0.5">
                     {formatWhen(e.createdAt)}
                   </p>
                 </div>
