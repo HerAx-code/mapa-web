@@ -46,6 +46,7 @@ const AgencyProgram         = lazy(() => import('./pages/agency/Program'))
 const UploadCertificates    = lazy(() => import('./pages/agency/UploadCertificates'))
 const AgencyLogs            = lazy(() => import('./pages/agency/Logs'))
 const AgencyFunds           = lazy(() => import('./pages/agency/Funds'))
+const AgencyImpact          = lazy(() => import('./pages/agency/Impact'))
 const AgencyAllocation      = lazy(() => import('./pages/agency/Allocation'))
 const AgencyAuditLog        = lazy(() => import('./pages/agency/AuditLog'))
 const AgencyTeam            = lazy(() => import('./pages/agency/Team'))
@@ -54,6 +55,7 @@ const AgencyGuide           = lazy(() => import('./pages/agency/Guide'))
 
 // Admin
 const AdminDashboard   = lazy(() => import('./pages/admin/Dashboard'))
+const AdminAnalytics   = lazy(() => import('./pages/admin/Analytics'))
 const Requests         = lazy(() => import('./pages/admin/Requests'))
 const Patients         = lazy(() => import('./pages/admin/Patients'))
 const HospitalIDs      = lazy(() => import('./pages/admin/HospitalIDs'))
@@ -133,6 +135,7 @@ export default function App() {
           <Route path="/agency/certificates"   element={<PrivateRoute allowedRoles={AGENCY_ROLES}><UploadCertificates /></PrivateRoute>} />
           <Route path="/agency/logs"            element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyLogs /></PrivateRoute>} />
           <Route path="/agency/funds"           element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyFunds /></PrivateRoute>} />
+          <Route path="/agency/impact"          element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyImpact /></PrivateRoute>} />
           <Route path="/agency/allocation"      element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAllocation /></PrivateRoute>} />
           <Route path="/agency/audit"           element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAuditLog /></PrivateRoute>} />
           <Route path="/agency/team"            element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyTeam /></PrivateRoute>} />
@@ -141,6 +144,7 @@ export default function App() {
 
           {/* Admin */}
           <Route path="/admin/dashboard"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminDashboard /></PrivateRoute>} />
+          <Route path="/admin/analytics"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminAnalytics /></PrivateRoute>} />
           <Route path="/admin/requests"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Requests /></PrivateRoute>} />
           <Route path="/admin/requests/:id/intake" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><IntakeSheet collectionName="requests" /></PrivateRoute>} />
           <Route path="/admin/patients"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Patients /></PrivateRoute>} />
