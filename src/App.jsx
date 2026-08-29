@@ -46,6 +46,7 @@ const AgencyProgram         = lazy(() => import('./pages/agency/Program'))
 const UploadCertificates    = lazy(() => import('./pages/agency/UploadCertificates'))
 const AgencyLogs            = lazy(() => import('./pages/agency/Logs'))
 const AgencyFunds           = lazy(() => import('./pages/agency/Funds'))
+const AgencyImpact          = lazy(() => import('./pages/agency/Impact'))
 const AgencyAllocation      = lazy(() => import('./pages/agency/Allocation'))
 const AgencyAuditLog        = lazy(() => import('./pages/agency/AuditLog'))
 const AgencyTeam            = lazy(() => import('./pages/agency/Team'))
@@ -134,6 +135,7 @@ export default function App() {
           <Route path="/agency/certificates"   element={<PrivateRoute allowedRoles={AGENCY_ROLES}><UploadCertificates /></PrivateRoute>} />
           <Route path="/agency/logs"            element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyLogs /></PrivateRoute>} />
           <Route path="/agency/funds"           element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyFunds /></PrivateRoute>} />
+          <Route path="/agency/impact"          element={<PrivateRoute allowedRoles={AGENCY_ROLES}><AgencyImpact /></PrivateRoute>} />
           <Route path="/agency/allocation"      element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAllocation /></PrivateRoute>} />
           <Route path="/agency/audit"           element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyAuditLog /></PrivateRoute>} />
           <Route path="/agency/team"            element={<PrivateRoute allowedRoles={[ROLES.AGENCY_ADMIN]}><AgencyTeam /></PrivateRoute>} />

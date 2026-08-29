@@ -70,6 +70,7 @@ const AGENCY_NAV = [
   { to: '/agency/slots',        icon: MdBarChart,       label: 'Slot Management' },
   { to: '/agency/generator',    icon: MdCardMembership, label: 'Guarantee Letters' },
   { to: '/agency/funds',        icon: MdAttachMoney,    label: 'Funds' },
+  { to: '/agency/impact',       icon: MdInsights,       label: 'Impact' },
   { to: '/agency/allocation',   icon: MdAttachMoney,    label: 'Budget Allocation', adminOnly: true },
   // R31: Team + Audit Log were present in the mobile bottom-tab config
   // but missing from this desktop sidebar config, so /agency/team was
