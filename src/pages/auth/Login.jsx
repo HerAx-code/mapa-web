@@ -294,7 +294,7 @@ export default function Login() {
                   <button
                     type="button"
                     aria-label={showPw ? t('auth.hidePassword') : t('auth.showPassword')}
-                    className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                    className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-brand-50 hover:text-brand-600 transition-colors"
                     onClick={() => setShowPw(!showPw)}>
                     {showPw ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
                   </button>
@@ -356,7 +356,7 @@ export default function Login() {
                           }`}>{acc.note}</span>
                         )}
                       </div>
-                      <p className="text-gray-400 truncate">{acc.email}</p>
+                      <p className="text-gray-500 truncate">{acc.email}</p>
                     </button>
                   ))}
                 </div>
@@ -382,20 +382,20 @@ export default function Login() {
             <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <h2 className="text-base font-semibold text-gray-900">{t('auth.reset.title')}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   {t('auth.reset.desc')}
                 </p>
               </div>
               <button
                 onClick={() => setShowReset(false)}
                 aria-label={t('auth.reset.cancel')}
-                className="flex-shrink-0 w-8 h-8 -mt-1 -mr-1 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                className="flex-shrink-0 w-8 h-8 -mt-1 -mr-1 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                 <MdClose size={20} />
               </button>
             </div>
             <div className="px-5 py-4 space-y-3">
               <div className="relative">
-                <MdEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <MdEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <input
                   type="email"
                   autoComplete="email"

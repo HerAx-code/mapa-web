@@ -43,13 +43,13 @@ export default function AnnouncementBanner({
   const titleNode = title
     ? <span className="text-sm font-semibold text-gray-900 mr-2">{title}</span>
     : placeholder
-      ? <span className="text-sm font-semibold text-gray-400 italic mr-2">{t('shell.announcement.enterTitle')}</span>
+      ? <span className="text-sm font-semibold text-gray-500 italic mr-2">{t('shell.announcement.enterTitle')}</span>
       : null
 
   const messageNode = message
     ? <span className="text-sm text-gray-600">{message}</span>
     : placeholder
-      ? <span className="text-sm text-gray-400 italic">{t('shell.announcement.enterMessage')}</span>
+      ? <span className="text-sm text-gray-500 italic">{t('shell.announcement.enterMessage')}</span>
       : null
 
   return (

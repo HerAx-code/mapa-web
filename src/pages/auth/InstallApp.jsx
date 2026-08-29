@@ -111,7 +111,7 @@ function StepsSection({ t, platform, stepsRef }) {
           ))}
         </div>
       </div>
-      <p className="text-xs text-gray-400">{using}</p>
+      <p className="text-xs text-gray-500">{using}</p>
       <ol className="relative space-y-5 border-l border-gray-200 pl-6">
         {stepKeys.map((k, i) => (
           <li key={k} className="relative">
@@ -125,7 +125,7 @@ function StepsSection({ t, platform, stepsRef }) {
       </ol>
       {platform === 'desktop' && (
         <p className="text-xs text-gray-500 flex items-start gap-2">
-          <MdLaptop size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+          <MdLaptop size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
           {t('installPage.cta.desktopDesc')}
         </p>
       )}
@@ -323,7 +323,7 @@ export default function InstallApp() {
           </>
         )}
       </button>
-      <p className="text-xs text-gray-400 mt-2.5">
+      <p className="text-xs text-gray-500 mt-2.5">
         {buttonState === 'preparing' ? t('installPage.cta.preparingHint')
          : buttonState === 'cancelled' ? t('installPage.cta.cancelledHint')
          : buttonState === 'unsupported' && platform === 'ios' ? t('installPage.cta.iosHint')
@@ -395,7 +395,7 @@ export default function InstallApp() {
 
             {/* Why install — benefits */}
             <section className="space-y-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
                 {t('installPage.benefits.title')}
               </p>
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
@@ -418,7 +418,7 @@ export default function InstallApp() {
             </section>
 
             {/* Trust footer */}
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               {t('installPage.footer')}
             </p>
           </div>
@@ -427,7 +427,7 @@ export default function InstallApp() {
           <aside className="hidden lg:block">
             <div className="sticky top-8 space-y-5">
               <PhonePreview />
-              <p className="text-center text-xs text-gray-400">{t('installPage.phonePreviewCaption')}</p>
+              <p className="text-center text-xs text-gray-500">{t('installPage.phonePreviewCaption')}</p>
               {!installed && <ContinueOnPhone t={t} />}
             </div>
           </aside>

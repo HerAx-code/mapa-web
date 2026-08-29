@@ -66,7 +66,7 @@ export default function AnnouncementFeedCard({ items }) {
       <div className="flex items-center gap-2 mb-3">
         <MdCampaign className="text-brand-500" size={18} />
         <h2 className="text-sm font-semibold text-gray-900">{t('shell.announcement.whatsNew')}</h2>
-        <span className="text-xs text-gray-400">({visible.length})</span>
+        <span className="text-xs text-gray-500">({visible.length})</span>
       </div>
 
       <ul className="space-y-2.5">
