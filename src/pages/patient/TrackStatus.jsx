@@ -509,7 +509,7 @@ export default function TrackStatus() {
                 {stages.map((s, i) => {
                   const dot = (
                     <div className="flex flex-col items-center">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-green-500 text-white' : s.active ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-green-500 text-white' : s.active ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                         {s.done ? <MdCheck size={15} /> : <span className="text-xs font-semibold">{i + 1}</span>}
                       </div>
                       {i < stages.length - 1 && <div className={`w-0.5 flex-1 min-h-4 ${s.done ? 'bg-green-300' : 'bg-gray-100'}`} />}
@@ -517,8 +517,8 @@ export default function TrackStatus() {
                   )
                   const labelBlock = (
                     <div className="pb-1 min-w-0 flex-1">
-                      <p className={`text-sm ${s.active ? 'font-semibold text-gray-900' : s.done ? 'text-gray-700' : 'text-gray-400'}`}>{s.label}</p>
-                      {(s.active || s.done) && <p className="text-xs text-gray-400 leading-snug">{s.note}</p>}
+                      <p className={`text-sm ${s.active ? 'font-semibold text-gray-900' : s.done ? 'text-gray-700' : 'text-gray-500'}`}>{s.label}</p>
+                      {(s.active || s.done) && <p className="text-xs text-gray-500 leading-snug">{s.note}</p>}
                       {s.path && s.cta && (
                         <p className="text-xs font-medium text-brand-600 mt-1">{s.cta} →</p>
                       )}
@@ -548,7 +548,7 @@ export default function TrackStatus() {
 
               {/* Coverage */}
               <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>{peso(committed)} {t('patient.request.secured')}</span>
                   <span>{peso(balance)} {t('patient.request.remaining')}</span>
                 </div>
@@ -590,10 +590,10 @@ export default function TrackStatus() {
             {activeApps.length === 0 ? (
               <div className="card p-10 text-center">
                 <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <MdInbox size={28} className="text-gray-400" />
+                  <MdInbox size={28} className="text-gray-500" />
                 </div>
                 <p className="text-sm font-medium text-gray-600 mb-1">{t('patient.track.noActive')}</p>
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-gray-500 mb-4">
                   {pastApps.length > 0
                     ? t('patient.track.hasPastApps')
                     : t('patient.track.neverApplied')}
@@ -841,11 +841,11 @@ export default function TrackStatus() {
                             </div>
                             <div className={`flex-1 pb-5 ${i === visibleStages.length - 1 ? 'pb-0' : ''}`}>
                               <div className="flex items-start justify-between">
-                                <p className={`text-sm font-medium ${stage.done ? 'text-gray-800' : stage.active ? 'text-brand-700' : 'text-gray-400'}`}>
+                                <p className={`text-sm font-medium ${stage.done ? 'text-gray-800' : stage.active ? 'text-brand-700' : 'text-gray-500'}`}>
                                   {stage.label}
                                   {stage.active && <span className="ml-2 badge badge-blue text-xs">{t('patient.track.timeline.current')}</span>}
                                 </p>
-                                {stage.date && <span className="text-xs text-gray-400">{stage.date}</span>}
+                                {stage.date && <span className="text-xs text-gray-500">{stage.date}</span>}
                               </div>
                               <p className={`text-sm mt-0.5 ${stage.done || stage.active ? 'text-gray-500' : 'text-gray-300'}`}>
                                 {stage.note}
@@ -890,7 +890,7 @@ export default function TrackStatus() {
                             </div>
                           ) : (
                             <button
-                              className="min-h-[44px] py-2 text-sm text-gray-400 hover:text-red-500 transition-colors"
+                              className="min-h-[44px] py-2 text-sm text-gray-500 hover:text-red-500 transition-colors"
                               onClick={() => setConfirmWithdrawId(app.id)}>
                               {t('patient.track.withdraw')}
                             </button>
@@ -910,8 +910,8 @@ export default function TrackStatus() {
           <div className="space-y-3">
             {pastApps.length === 0 ? (
               <div className="card p-8 text-center">
-                <p className="text-sm text-gray-400">{t('patient.track.noPast')}</p>
-                <p className="text-xs text-gray-400 mt-1">{t('patient.track.noPastSub')}</p>
+                <p className="text-sm text-gray-500">{t('patient.track.noPast')}</p>
+                <p className="text-xs text-gray-500 mt-1">{t('patient.track.noPastSub')}</p>
                 <button className="btn-primary mt-3 text-sm" onClick={() => navigate('/patient/request')}>
                   {t('patient.nav.requestAssistance')} →
                 </button>

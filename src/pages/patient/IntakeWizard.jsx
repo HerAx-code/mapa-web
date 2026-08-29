@@ -245,15 +245,15 @@ export default function IntakeWizard() {
           ))}
         </div>
         <div className="flex items-center justify-between mb-5">
-          <p className="text-xs text-gray-400">Step {step + 1} of {STEPS.length} · Hakbang {step + 1} sa {STEPS.length}</p>
+          <p className="text-xs text-gray-500">Step {step + 1} of {STEPS.length} · Hakbang {step + 1} sa {STEPS.length}</p>
           {/* Tiny auto-save indicator. Stays gentle so it doesn't compete
               with the form -- the patient only needs to know "my work is
               being saved". On error we surface a console log; no toast,
               since the next field change or step navigation retries. */}
           {autoSaving ? (
-            <p className="text-xs text-gray-400 italic">Saving…</p>
+            <p className="text-xs text-gray-500 italic">Saving…</p>
           ) : lastSavedAt ? (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               Saved · {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
           ) : null}
@@ -298,7 +298,7 @@ export default function IntakeWizard() {
               <div>
                 <Q en="About how much does your household earn each month?" fil="Halos magkano ang kinikita ng inyong sambahayan kada buwan?" required htmlFor="iw-income" />
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base">₱</span>
                   <input id="iw-income" type="number" min="0" inputMode="numeric"
                     ref={errorField === 'monthlyIncome' ? errorRef : null}
                     className={`${inputCls} pl-8 ${errorField === 'monthlyIncome' ? inputErrCls : ''}`}
@@ -321,7 +321,7 @@ export default function IntakeWizard() {
           {/* ── Expenses ── */}
           {cur.key === 'expenses' && (
             <>
-              <p className="text-sm text-gray-500">Roughly how much do you spend each month? Leave blank if unsure.<br /><span className="text-gray-400">Halos magkano ang gastos kada buwan? Iwanang blanko kung hindi sigurado.</span></p>
+              <p className="text-sm text-gray-500">Roughly how much do you spend each month? Leave blank if unsure.<br /><span className="text-gray-500">Halos magkano ang gastos kada buwan? Iwanang blanko kung hindi sigurado.</span></p>
               {[
                 { k: 'food',      en: 'Food',          fil: 'Pagkain' },
                 { k: 'utilities', en: 'Water & power', fil: 'Tubig at kuryente' },
@@ -329,9 +329,9 @@ export default function IntakeWizard() {
                 { k: 'medicine',  en: 'Medicine',      fil: 'Gamot' },
               ].map(row => (
                 <div key={row.k}>
-                  <label htmlFor={`iw-expense-${row.k}`} className="block text-base font-medium text-gray-800">{row.en} <span className="text-gray-400 font-normal">· {row.fil}</span></label>
+                  <label htmlFor={`iw-expense-${row.k}`} className="block text-base font-medium text-gray-800">{row.en} <span className="text-gray-500 font-normal">· {row.fil}</span></label>
                   <div className="relative mt-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base">₱</span>
                     <input id={`iw-expense-${row.k}`} type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.expenses?.[row.k] ?? ''} onChange={setExp(row.k)} placeholder="0" />
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export default function IntakeWizard() {
               <div>
                 <Q en="Estimated total cost, if known (optional)" fil="Tinatayang kabuuang gastos, kung alam (opsyonal)" htmlFor="iw-cost" />
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base">₱</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base">₱</span>
                   <input id="iw-cost" type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.estimatedTotalCost} onChange={set('estimatedTotalCost')} placeholder="0" />
                 </div>
               </div>
@@ -392,7 +392,7 @@ export default function IntakeWizard() {
             ]
             return (
               <div className="space-y-4 text-sm">
-                <p className="text-gray-500">Please check your answers, then tap Submit.<br /><span className="text-gray-400">Pakitingnan ang inyong mga sagot, pagkatapos ay i-Submit.</span></p>
+                <p className="text-gray-500">Please check your answers, then tap Submit.<br /><span className="text-gray-500">Pakitingnan ang inyong mga sagot, pagkatapos ay i-Submit.</span></p>
                 {sections.map(section => (
                   <div key={section.title}>
                     <div className="flex items-baseline justify-between mb-1">
@@ -404,13 +404,13 @@ export default function IntakeWizard() {
                     </div>
                     {section.rows.map(([label, val]) => (
                       <div key={label} className="flex justify-between gap-3 border-b border-gray-50 py-1.5">
-                        <span className="text-gray-400">{label}</span>
+                        <span className="text-gray-500">{label}</span>
                         <span className="font-medium text-gray-800 text-right">{val}</span>
                       </div>
                     ))}
                   </div>
                 ))}
-                <p className="text-xs text-gray-400 pt-2">CRMC will review this with you and complete the assessment. · Susuriin ito ng CRMC kasama kayo.</p>
+                <p className="text-xs text-gray-500 pt-2">CRMC will review this with you and complete the assessment. · Susuriin ito ng CRMC kasama kayo.</p>
               </div>
             )
           })()}

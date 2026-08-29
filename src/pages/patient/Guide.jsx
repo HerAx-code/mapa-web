@@ -26,8 +26,8 @@ function Section({ icon: Icon, title, content, steps, items, note, link, forceOp
           {Icon && <Icon size={18} className="text-brand-400 flex-shrink-0" />}
           <span className="text-sm font-semibold text-gray-800">{title}</span>
         </div>
-        {isOpen ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0" />
-                : <MdExpandMore size={20} className="text-gray-400 flex-shrink-0" />}
+        {isOpen ? <MdExpandLess size={20} className="text-gray-500 flex-shrink-0" />
+                : <MdExpandMore size={20} className="text-gray-500 flex-shrink-0" />}
       </button>
       {isOpen && (
         <div className="px-5 pb-5 pt-1 bg-white border-t border-gray-50 space-y-3">
@@ -261,7 +261,7 @@ export default function UserGuide() {
             is non-empty, only matching sections render and they're
             force-expanded so the answer is visible at once. */}
         <div className="relative mb-3">
-          <MdSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <MdSearch size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="search"
             value={searchQuery}
@@ -272,7 +272,7 @@ export default function UserGuide() {
             <button
               onClick={() => setSearchQuery('')}
               aria-label={t('common.clear')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
               <MdClose size={14} />
             </button>
           )}

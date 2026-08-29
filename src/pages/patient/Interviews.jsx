@@ -174,7 +174,7 @@ export default function Interviews() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h2 className="text-sm font-semibold text-gray-800 truncate">{app.agencyName}</h2>
-                      <p className="text-xs text-gray-400 truncate">{app.appId}</p>
+                      <p className="text-xs text-gray-500 truncate">{app.appId}</p>
                     </div>
                     <span className="badge badge-red flex-shrink-0">{t('patient.interviews.datePassedBadge')}</span>
                   </div>
@@ -235,7 +235,7 @@ export default function Interviews() {
 
                   {/* What to expect */}
                   <div className="card p-5">
-                    <p className="text-xs text-gray-400 mb-2">{app.agencyName} · {app.appId}</p>
+                    <p className="text-xs text-gray-500 mb-2">{app.agencyName} · {app.appId}</p>
                     <p className="text-sm text-gray-500 leading-relaxed">{t('patient.interviews.joinIntro')}</p>
                     <button
                       className="mt-2 inline-flex items-center min-h-[44px] text-sm text-brand-500 hover:text-brand-600 font-medium gap-1"
@@ -260,7 +260,7 @@ export default function Interviews() {
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-3">{t('patient.interviews.meetHint')}</p>
+                    <p className="text-xs text-gray-500 mt-3">{t('patient.interviews.meetHint')}</p>
                   </div>
                 </div>
               )
@@ -272,12 +272,12 @@ export default function Interviews() {
         {!loading && interviews.length === 0 && (
           <div className="card p-8 max-w-md mx-auto text-center">
             <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MdVideoCall size={28} className="text-gray-400" />
+              <MdVideoCall size={28} className="text-gray-500" />
             </div>
             {hasCompletedInterview ? (
               <>
                 <h2 className="text-base font-semibold text-gray-700 mb-1">{t('patient.interviews.empty.completedTitle')}</h2>
-                <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                <p className="text-sm text-gray-500 mb-5 leading-relaxed">
                   {t('patient.interviews.empty.completedDesc')}
                 </p>
                 <button className="btn-primary text-sm flex items-center gap-1.5 mx-auto"
@@ -288,7 +288,7 @@ export default function Interviews() {
             ) : hasActiveApp ? (
               <>
                 <h2 className="text-base font-semibold text-gray-700 mb-1">{t('patient.interviews.empty.notYetTitle')}</h2>
-                <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                <p className="text-sm text-gray-500 mb-5 leading-relaxed">
                   {t('patient.interviews.empty.notYetDesc')}
                 </p>
                 <button className="btn-secondary text-sm mx-auto"
@@ -299,7 +299,7 @@ export default function Interviews() {
             ) : (
               <>
                 <h2 className="text-base font-semibold text-gray-700 mb-1">{t('patient.interviews.empty.noAppTitle')}</h2>
-                <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+                <p className="text-sm text-gray-500 mb-5 leading-relaxed">
                   {t('patient.interviews.empty.noAppDesc')}
                 </p>
                 <button className="btn-primary text-sm mx-auto"

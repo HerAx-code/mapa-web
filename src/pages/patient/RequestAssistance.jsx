@@ -507,7 +507,7 @@ export default function RequestAssistance() {
                 everything in My Application), so it doesn't deserve hero
                 treatment under the green check. Kept here so they can
                 screenshot or quote it if they message CRMC. */}
-            <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5 pt-1">
+            <p className="text-xs text-gray-500 flex items-center justify-center gap-1.5 pt-1">
               <span>{t('patient.request.successIdLabel')}:</span>
               <span className="font-mono text-gray-600">{submittedId}</span>
               <button
@@ -567,7 +567,7 @@ export default function RequestAssistance() {
                 procedure, and the requirements the patient must comply with. */}
             {slices.length > 0 && (
               <div className="mt-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('patient.request.coveragePlan')}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('patient.request.coveragePlan')}</p>
                 <div className="space-y-3">
                   {slices.map(s => {
                     const secured  = ['approved', 'certificate'].includes(s.status)
@@ -584,7 +584,7 @@ export default function RequestAssistance() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
-                            <p className="text-xs text-gray-400">{peso(amt)} · {pctBill}% {t('patient.request.ofYourBill')}</p>
+                            <p className="text-xs text-gray-500">{peso(amt)} · {pctBill}% {t('patient.request.ofYourBill')}</p>
                           </div>
                           <StatusBadge status={s.status} kind="app" className="flex-shrink-0" />
                         </div>
@@ -652,7 +652,7 @@ export default function RequestAssistance() {
               return (
                 <div className="mt-4">
                   <div className="flex items-center gap-2 p-3 rounded-xl border border-gray-100">
-                    <MdDescription size={18} className="text-gray-400 flex-shrink-0" />
+                    <MdDescription size={18} className="text-gray-500 flex-shrink-0" />
                     <p className="text-sm text-gray-700 flex-1 min-w-0">{t('patient.request.docsSummary', { count: myDocs.length })}</p>
                     <span className={`badge text-xs flex-shrink-0 ${chip.cls}`}>{chip.label}</span>
                   </div>
@@ -661,7 +661,7 @@ export default function RequestAssistance() {
                       <p className="text-xs text-red-600">{t('patient.request.docsNeedFix')}</p>
                       {rejected.map(d => (
                         <div key={d.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-red-100 bg-red-50/50">
-                          <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                          <MdDescription size={16} className="text-gray-500 flex-shrink-0" />
                           <p className="text-sm text-gray-700 flex-1 min-w-0 truncate">{d.name}</p>
                           <label className="text-xs font-medium text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1 flex-shrink-0">
                             <MdUploadFile size={14} /> {replacing === d.id ? t('patient.request.reuploading') : t('patient.request.reupload')}
@@ -747,7 +747,7 @@ export default function RequestAssistance() {
           {/* Assistance type */}
           <div>
             <label htmlFor="req-type" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
-            <select id="req-type" className={`input ${!form.assistanceType ? 'text-gray-400' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
+            <select id="req-type" className={`input ${!form.assistanceType ? 'text-gray-500' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
               <option value="">{t('patient.request.typePlaceholder')}</option>
               {types.map(tp => <option key={tp} value={tp}>{tp}</option>)}
             </select>
@@ -760,7 +760,7 @@ export default function RequestAssistance() {
             <label htmlFor="req-bill" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>
             <input id="req-bill" type="number" min="0" inputMode="numeric" className="input" placeholder="0"
               value={form.totalBill} onChange={set('totalBill')} />
-            <p className="text-xs text-gray-400 mt-1">{t('patient.request.billHint')}</p>
+            <p className="text-xs text-gray-500 mt-1">{t('patient.request.billHint')}</p>
           </div>
 
           {/* Description */}
@@ -778,9 +778,9 @@ export default function RequestAssistance() {
               re-submitted each time. */}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.documentsTitle')}</p>
-            <p className="text-xs text-gray-400 mb-2">{t('patient.request.documentsHint')}</p>
+            <p className="text-xs text-gray-500 mb-2">{t('patient.request.documentsHint')}</p>
             {reqDocTypes.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">{t('patient.request.documentsNone')}</p>
+              <p className="text-xs text-gray-500 italic">{t('patient.request.documentsNone')}</p>
             ) : (
               <div className="space-y-2">
                 {reqDocTypes.map(tp => {
@@ -791,7 +791,7 @@ export default function RequestAssistance() {
                   return (
                     <div key={tp.id} className="p-3 rounded-lg border border-gray-100">
                       <div className="flex items-start gap-2">
-                        <MdDescription size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                        <MdDescription size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-gray-700">{tp.name} <span className="text-red-400">*</span></p>
                           {pending
@@ -799,7 +799,7 @@ export default function RequestAssistance() {
                             : onFile && <p className="text-xs text-green-600">{t('patient.request.billingOnFile')}</p>}
                         </div>
                         {pending && (
-                          <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(tp.name)}>
+                          <button type="button" className="text-gray-500 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(tp.name)}>
                             <MdClose size={18} />
                           </button>
                         )}
@@ -822,7 +822,7 @@ export default function RequestAssistance() {
                       {isIdType(tp.name) && pending && (ocrBusy || ocr) && (
                         <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
                           <p className={`text-xs ${
-                            ocrBusy ? 'text-gray-400'
+                            ocrBusy ? 'text-gray-500'
                             : ocr?.match === true ? 'text-green-600'
                             : 'text-amber-600' /* no-match AND unreadable both warn -- patient should look */
                           }`}>
@@ -860,7 +860,7 @@ export default function RequestAssistance() {
               <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
                 checked={filedByRep} onChange={e => setFiledByRep(e.target.checked)} />
               <span className="text-sm text-gray-700 leading-snug">{t('patient.request.repToggle')}
-                <span className="block text-xs text-gray-400">{t('patient.request.repToggleHint')}</span>
+                <span className="block text-xs text-gray-500">{t('patient.request.repToggleHint')}</span>
               </span>
             </label>
 
@@ -877,13 +877,13 @@ export default function RequestAssistance() {
                 {/* Representative ID */}
                 <div className="p-3 rounded-lg border border-gray-100">
                   <div className="flex items-start gap-2">
-                    <MdDescription size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                    <MdDescription size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-700">{t('patient.request.repId')} <span className="text-red-400">*</span></p>
                       {pendingFiles[REP_ID] && <p className="text-xs text-green-600 break-all">{pendingFiles[REP_ID].name}</p>}
                     </div>
                     {pendingFiles[REP_ID] && (
-                      <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(REP_ID)}>
+                      <button type="button" className="text-gray-500 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(REP_ID)}>
                         <MdClose size={18} />
                       </button>
                     )}
@@ -905,7 +905,7 @@ export default function RequestAssistance() {
                     return (
                       <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
                         <p className={`text-xs ${
-                          busy ? 'text-gray-400'
+                          busy ? 'text-gray-500'
                           : ocr?.match === true ? 'text-green-600'
                           : 'text-amber-600'
                         }`}>
@@ -930,13 +930,13 @@ export default function RequestAssistance() {
                 {/* Representative selfie */}
                 <div className="p-3 rounded-lg border border-gray-100">
                   <div className="flex items-start gap-2">
-                    <MdCameraAlt size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                    <MdCameraAlt size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-700">{t('patient.request.repSelfie')} <span className="text-red-400">*</span></p>
                       {pendingFiles[REP_SELFIE] && <p className="text-xs text-green-600">{t('patient.request.selfieReady')}</p>}
                     </div>
                     {pendingFiles[REP_SELFIE] && (
-                      <button type="button" className="text-gray-400 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(REP_SELFIE)}>
+                      <button type="button" className="text-gray-500 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(REP_SELFIE)}>
                         <MdClose size={18} />
                       </button>
                     )}
@@ -962,20 +962,20 @@ export default function RequestAssistance() {
           {/* Review summary */}
           <div className="space-y-2">
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
-              <span className="text-gray-400">{t('patient.request.typeLabel')}</span>
+              <span className="text-gray-500">{t('patient.request.typeLabel')}</span>
               <span className="font-medium text-gray-800 text-right">{form.assistanceType || '—'}</span>
             </div>
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
-              <span className="text-gray-400">{t('patient.request.billLabel')}</span>
+              <span className="text-gray-500">{t('patient.request.billLabel')}</span>
               <span className="font-medium text-gray-800 text-right">{peso(totalBill)}</span>
             </div>
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
-              <span className="text-gray-400">{t('patient.request.documentsTitle')}</span>
+              <span className="text-gray-500">{t('patient.request.documentsTitle')}</span>
               <span className="font-medium text-gray-800 text-right">{reqDocTypes.length - missingDocs.length}/{reqDocTypes.length}</span>
             </div>
             {filedByRep && (
               <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
-                <span className="text-gray-400">{t('patient.request.repName')}</span>
+                <span className="text-gray-500">{t('patient.request.repName')}</span>
                 <span className="font-medium text-gray-800 text-right">{repForm.name} ({repForm.relationship})</span>
               </div>
             )}
@@ -1010,7 +1010,7 @@ export default function RequestAssistance() {
             </button>
           )}
         </div>
-        <p className="text-xs text-gray-400 text-center mt-2">{t('patient.request.routeNote')}</p>
+        <p className="text-xs text-gray-500 text-center mt-2">{t('patient.request.routeNote')}</p>
       </div>
 
       {selfieFor && (
