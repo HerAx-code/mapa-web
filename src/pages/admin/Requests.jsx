@@ -10,7 +10,7 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
 import { isIdType } from '../../utils/idOcr'
-import { isIntakeComplete } from '../../utils/intakeSheet'
+import { deriveRequestStage } from '../../utils/requestStage'
 import { getOrCreateConversation } from '../../utils/messages'
 import { tsToDate } from '../../utils/dates'
 import { Link, useNavigate } from 'react-router-dom'
@@ -591,12 +591,14 @@ function RequestDetail({ request, agencies, onClose }) {
   const reqDocs = (request.attachedDocuments ?? []).map(a => ({
     ...a, ...(docById[a.documentId] ?? {}), id: a.documentId,
   }))
-  const allVerified = reqDocs.length > 0 && reqDocs.every(d => d.status === 'verified')
-  const intakeComplete = isIntakeComplete(request.intakeSheet)
-  // The guided stepper gate: endorsement is only allowed after every document
-  // is verified AND the assessment is done (interview outcome recorded + the
-  // Unified Intake Sheet completed).
-  const canEndorse = allVerified && !!request.interviewOutcome && intakeComplete
+  // Phase 0: the verify → assess → interview → endorse gate now comes from the
+  // shared requestStage model (unit-tested to mirror the old inline logic
+  // exactly), so the queue chips, the coming stage rail, and this endorse gate
+  // stay in lock-step. Variable names preserved so the JSX below is unchanged.
+  const stage = deriveRequestStage(request, reqDocs)
+  const allVerified    = stage.docsVerified
+  const intakeComplete = stage.intakeComplete
+  const canEndorse     = stage.canEndorse
 
   // Verify / reject / un-verify a document. First verify or reject also
   // moves the request out of 'submitted' into 'under_review'. Rejection
