@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F9FAFB; color: #111827; -webkit-font-smoothing: antialiased; }
+    a { color: #0F6E56; text-decoration: none; } a:hover { color: #085041; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; min-height: 860px; background: #F9FAFB; padding: 32px 36px;">
+
+  <!-- page header -->
+  <div style="margin-bottom: 22px;">
+    <p style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9CA3AF;">CRMC · Scheduling</p>
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 4px;">
+      <div>
+        <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #111827;">Interview Availability</h1>
+        <p style="margin: 4px 0 0; font-size: 14px; color: #6B7280;">Publish the assessment-interview slots patients can book. All times Philippine time.</p>
+      </div>
+      <div style="display: inline-flex; align-items: center; gap: 6px; background: #0F6E56; color: #fff; padding: 0 18px; min-height: 44px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: 0 1px 2px rgba(15,110,86,0.3);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"></path></svg>
+        Publish availability
+      </div>
+    </div>
+  </div>
+
+  <!-- stat tiles -->
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px;">
+    <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 20px;">
+      <p style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">42</p>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #6B7280;">Open slots</p>
+    </div>
+    <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 20px;">
+      <p style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #0F6E56; line-height: 1; font-variant-numeric: tabular-nums;">11</p>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #6B7280;">Booked</p>
+    </div>
+    <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 20px;">
+      <p style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">6</p>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #6B7280;">Booked this week</p>
+    </div>
+    <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 20px;">
+      <p style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">3</p>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #6B7280;">Needing a time</p>
+    </div>
+  </div>
+
+  <!-- two-column: publisher + week grid -->
+  <div style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start;">
+
+    <!-- publisher -->
+    <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 20px;">
+      <h3 style="margin: 0 0 14px; font-size: 14px; font-weight: 600; color: #1F2937;">Publish availability</h3>
+
+      <p style="margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Weekdays</p>
+      <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #0F6E56; color: #fff; font-size: 13px; font-weight: 600;">M</span>
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #0F6E56; color: #fff; font-size: 13px; font-weight: 600;">T</span>
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #0F6E56; color: #fff; font-size: 13px; font-weight: 600;">W</span>
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #0F6E56; color: #fff; font-size: 13px; font-weight: 600;">T</span>
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #0F6E56; color: #fff; font-size: 13px; font-weight: 600;">F</span>
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #fff; color: #9CA3AF; border: 1px solid #E5E7EB; font-size: 13px; font-weight: 600;">S</span>
+        <span style="width: 34px; height: 34px; display:flex; align-items:center; justify-content:center; border-radius: 999px; background: #fff; color: #9CA3AF; border: 1px solid #E5E7EB; font-size: 13px; font-weight: 600;">S</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <p style="margin: 0 0 6px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Morning</p>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #374151;">9:00 – 11:30</div>
+        </div>
+        <div>
+          <p style="margin: 0 0 6px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Afternoon</p>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #374151;">1:00 – 4:00</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+        <div>
+          <p style="margin: 0 0 6px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Slot length</p>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #374151; display:flex; align-items:center; justify-content:space-between;">30 min <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+        <div>
+          <p style="margin: 0 0 6px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Weeks ahead</p>
+          <div style="border: 1px solid #E5E7EB; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #374151; display:flex; align-items:center; justify-content:space-between;">2 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+      </div>
+
+      <div style="background: #E1F5EE; border: 1px solid #C3EBDD; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 13px; color: #06402F;">Generates <strong>110 slots</strong> over 2 weeks.</div>
+
+      <div style="display: flex; gap: 8px;">
+        <div style="flex: 1; text-align:center; background: #fff; color: #374151; border: 1px solid #E5E7EB; padding: 0 14px; min-height: 44px; border-radius: 8px; font-size: 14px; font-weight: 500; display:inline-flex; align-items:center; justify-content:center;">Preview</div>
+        <div style="flex: 1; text-align:center; background: #0F6E56; color: #fff; padding: 0 14px; min-height: 44px; border-radius: 8px; font-size: 14px; font-weight: 500; display:inline-flex; align-items:center; justify-content:center;">Publish</div>
+      </div>
+    </div>
+
+    <!-- week grid -->
+    <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1F2937;">Week of September 1 – 5</h3>
+        <div style="display: flex; align-items: center; gap: 16px; font-size: 12px; color: #6B7280;">
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:12px;height:12px;border-radius:4px;border:1px solid #87D7BB;background:#fff;"></span>Open</span>
+          <span style="display:inline-flex; align-items:center; gap:6px;"><span style="width:12px;height:12px;border-radius:4px;background:#0F6E56;"></span>Booked</span>
+        </div>
+      </div>
+
+      <!-- day rows -->
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+
+        <div style="display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid #F3F4F6; align-items: center;">
+          <div><p style="margin:0;font-size:13px;font-weight:600;color:#374151;">Mon</p><p style="margin:2px 0 0;font-size:12px;color:#9CA3AF;">Sep 1</p></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:600;">9:00 · AR</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">9:30</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">10:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:600;">1:00 · ML</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">1:30</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">2:00</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid #F3F4F6; align-items: center;">
+          <div><p style="margin:0;font-size:13px;font-weight:600;color:#374151;">Tue</p><p style="margin:2px 0 0;font-size:12px;color:#9CA3AF;">Sep 2</p></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">9:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:600;">9:30 · JC</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">10:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:600;">1:00 · RS</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">2:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px dashed #D1D5DB;background:#F9FAFB;color:#9CA3AF;font-size:12px;font-weight:500;">2:30 blocked</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid #F3F4F6; align-items: center;">
+          <div><p style="margin:0;font-size:13px;font-weight:600;color:#374151;">Wed</p><p style="margin:2px 0 0;font-size:12px;color:#9CA3AF;">Sep 3</p></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">9:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">9:30</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:600;">10:00 · DV</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">1:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">1:30</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">2:00</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 12px; padding: 12px 0; align-items: center;">
+          <div><p style="margin:0;font-size:13px;font-weight:600;color:#374151;">Thu</p><p style="margin:2px 0 0;font-size:12px;color:#9CA3AF;">Sep 4</p></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #0F6E56;background:#0F6E56;color:#fff;font-size:12px;font-weight:600;">9:00 · BP</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">9:30</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">10:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">1:00</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">1:30</span>
+            <span style="padding:6px 10px;border-radius:8px;border:1px solid #87D7BB;background:#fff;color:#06402F;font-size:12px;font-weight:500;">3:30</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

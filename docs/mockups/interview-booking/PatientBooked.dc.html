@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F9FAFB; color: #111827; -webkit-font-smoothing: antialiased; }
+    a { color: #0F6E56; text-decoration: none; } a:hover { color: #085041; }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 844px; background: #F9FAFB; padding: 16px 12px 20px;">
+
+  <!-- page header -->
+  <div style="margin-bottom: 18px;">
+    <p style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9CA3AF;">Your interview</p>
+    <h1 style="margin: 4px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #111827;">Interviews</h1>
+    <p style="margin: 6px 0 0; font-size: 14px; color: #6B7280;">Ang inyong nakatakdang panayam. <span style="color:#9CA3AF;">Your scheduled interview.</span></p>
+  </div>
+
+  <!-- card-hero: the booked interview -->
+  <div style="border-radius: 16px; background: linear-gradient(135deg, #06402F 0%, #04301F 55%, #02200F 100%); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.25); overflow: hidden;">
+    <div style="padding: 22px;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+        <div style="min-width: 0;">
+          <p style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #87D7BB;">Assessment interview</p>
+          <p style="margin: 10px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #fff; line-height: 1.15;">Wednesday,<br>September 2</p>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #C3EBDD;">at 1:00 PM · Philippine time</p>
+          <p style="margin: 4px 0 0; font-size: 14px; color: #87D7BB;">with CRMC Malasakit Center</p>
+        </div>
+        <span style="flex-shrink: 0; border-radius: 999px; background: rgba(255,255,255,0.15); color: #fff; font-size: 12px; font-weight: 600; padding: 4px 10px;">in 4 days</span>
+      </div>
+
+      <div style="margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #04301F; padding: 11px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#04301F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg>
+        Join Google Meet
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#04301F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M7 7h10v10"></path></svg>
+      </div>
+      <div style="margin-top: 14px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #87D7BB;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#87D7BB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+        Add to calendar
+      </div>
+    </div>
+  </div>
+
+  <!-- reminder note -->
+  <div style="margin-top: 14px; background: #E1F5EE; border: 1px solid #C3EBDD; border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path><path d="M21 17H3l1.7-2.5a9 9 0 0 0 1.3-4.7V9a6 6 0 0 1 12 0v.8a9 9 0 0 0 1.3 4.7Z"></path></svg>
+    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #06402F;">Ipapaalala namin ito 24 oras at 1 oras bago. <span style="color:#085041;">We'll remind you by email and in-app 24 hours and 1 hour before.</span></p>
+  </div>
+
+  <!-- what to expect + reschedule -->
+  <div style="margin-top: 14px; background: #fff; border: 1px solid #F3F4F6; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 16px;">
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">CRMC Malasakit Center · REQ-2026-00214</p>
+    <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: #6B7280;">Join from a quiet place with a stable connection. Keep your valid ID nearby — the social worker may ask to see it.</p>
+    <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #F3F4F6; display: flex; align-items: center; gap: 6px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v6h6"></path><path d="M3 8a9 9 0 1 0 3-6.7L3 4"></path></svg>
+      <span style="font-size: 14px; font-weight: 500; color: #0F6E56;">Reschedule or cancel</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
