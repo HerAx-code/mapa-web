@@ -102,26 +102,108 @@ is designed desktop-first; mobile degrades gracefully.
 
 Each phase is incremental, CI-green, and **never touches the money-path**
 (the endorsement / coverage / slice transactions and their Firestore writes stay
-byte-for-byte the same — only their presentation changes).
+byte-for-byte the same — only their presentation changes). ✅ = shipped.
 
-- **Phase 0 — Refactor for safety (no visible change).** Extract `RequestDetail`'s
-  sections into components (`VerifyDocsPanel`, `AssessPanel`, `InterviewPanel`,
-  `EndorsePanel`) and lift the derived state (`allVerified`, `intakeComplete`,
-  `interviewOutcome`, `canEndorse`) into a small stage model. Pure structural
-  refactor — same DOM, same behavior — but it tames the 1,700-line file and is
-  the scaffold everything else builds on. *Verified by: existing behavior +
-  screenshots identical.*
+- **Phase 0 — Refactor for safety (no visible change).**
+  - ✅ Lifted the derived gate (`allVerified` / `intakeComplete` /
+    `interviewOutcome` / `canEndorse`) into a pure, tested `requestStage` model
+    (PR #69) — the single source of truth for the rail, the queue chips, and the
+    endorse gate.
+  - ⬜ Still to extract `RequestDetail`'s sections into `VerifyDocsPanel` /
+    `AssessPanel` / `InterviewPanel` / `EndorsePanel` (pure move — same DOM), so
+    the 1,700-line file is decomposed before the work-area restructure lands.
 
-- **Phase 1 — The staged workspace (core redesign).** Add the header band +
-  stage rail + focused work area + explicit blocker list. Same actions, same
-  transactions; the change is *information architecture and flow*, not logic.
+- **Phase 1 — The staged workspace (core redesign).**
+  - ✅ **Stage rail + explicit blockers** (PR #70) — the at-a-glance
+    verify → assess → interview → endorse progress, and the exact remaining
+    prerequisites as chips (replacing the vague warning). Additive.
+  - ⬜ **Header band + focused work area** — the summary/status/funding band and
+    the one-stage-at-a-time work area that replaces the long scroll. **This is
+    the primary Magic Patterns adoption point** (layout + interactions) and the
+    step that most needs live screenshot verification.
 
 - **Phase 2 — Queue triage.** Rebuild the list around the stage buckets and the
-  scannable row. Wire the queue chips to the same stage model.
+  scannable row (the second MP-adoption point). Wire the queue chips to the
+  `requestStage` model.
 
-- **Phase 3 — Reskin.** The visual polish pass on the new structure: header band,
-  stage-rail styling, spacing/hierarchy, loading + empty states, and consistency
-  with the app's design system (`.stat-tile`, `.eyebrow`, `.card`, brand tokens).
+- **Phase 3 — Reskin.** The visual polish pass on the new structure, reconciling
+  the Magic Patterns look with the app's design system (`.stat-tile`,
+  `.eyebrow`, `.card`, brand tokens) — spacing/hierarchy, loading + empty states.
+
+---
+
+## Adopting a Magic Patterns reference
+
+A Magic Patterns export gives us a polished **visual + interaction** reference.
+MAPA translates it through a fixed discipline so we take the *design*, not the
+mismatch — the same keep/adapt/reject approach used across the pilot (login,
+register, install, dashboards). **The mockup supplies the shell; MAPA supplies
+the wiring.**
+
+### Translation rules (non-negotiable)
+
+- **MAPA's design system, not the mockup's tokens.** Remap MP's colours,
+  spacing, and radii to MAPA tokens — brand pine-teal, Inter, `.card` /
+  `.stat-tile` / `.eyebrow` / `.badge`, 44px touch, `shadow-sm`. The MP palette
+  and type are a suggestion; the system wins. (See the MAPA Design System guide.)
+- **`react-icons/md`, not lucide.** MP exports ship lucide icons — swap to the
+  Material set the app already uses. No new icon dependency.
+- **JSX, not TSX.** Port MP's TypeScript components to the app's JS + existing
+  component patterns.
+- **Keep MAPA's logic; take MP's layout.** The mockup contributes structure,
+  hierarchy, states, and micro-interactions — never business logic. The
+  endorse/coverage/slice transactions, the `requestStage` model, and the
+  document/interview flows stay MAPA's, wired into the new shell.
+- **Staff = English-only.** No i18n on this surface (unlike the patient MP
+  adoptions, which are bilingual).
+- **Additive + behaviour-preserving.** Adopt into the component seams (rail,
+  panels, work area) so the money-path is untouched and each step is
+  screenshot-verifiable against a seeded request.
+
+### Keep / Adapt / Reject
+
+Every element in the reference is classified before a line is written:
+
+- **Keep** — layout, visual hierarchy, empty/loading states, micro-interactions,
+  the progress/stepper metaphor, scannable list rows. *Take as-is, remapped to
+  tokens + Material icons.*
+- **Adapt** — anything assuming a different data model or flow: an MP "approve"
+  affordance must route through MAPA's coverage → endorse gate; an MP status set
+  must map onto MAPA's lifecycle (`submitted … endorsed … fully_funded`); an MP
+  card must bind to `computeFunding` / `requestStage`.
+- **Reject** — anything that fights the CRMC model (a self-service action where
+  CRMC must gate; an agency re-review step that doesn't exist; a field CRMC
+  doesn't collect) or the constraints (lucide, TypeScript, a new dependency, a
+  dark-mode split).
+
+### Component map — where the reference plugs in
+
+The staged workspace is a fixed component set. An MP mockup contributes the
+*look* of each cell; the right column is the wiring that stays MAPA's.
+
+| Component | What the MP reference contributes | MAPA reconciliation |
+|---|---|---|
+| **Queue list + row** | scannable row, stage chips, filters, empty state | rows bind to `requestStage` buckets; figures from `computeFunding`; co-funding model kept |
+| **Header band** | summary + status + funding presentation | funding from `computeFunding`; status from the lifecycle; Message-patient action kept |
+| **Stage rail** ✅ | stepper visual (refined at reskin) | already built from `requestStage` |
+| **Work area · Verify** | doc-review list, verify/reject affordances, OCR advisory | wired to the existing verify/reject/reset + OCR logic |
+| **Work area · Assess** | intake summary + coverage calculator layout | coverage math + intake completeness stay MAPA's |
+| **Work area · Interview** | schedule / record-outcome layout | Google-Meet link + outcome logic kept |
+| **Work area · Endorse** | endorse action + slice/funding presentation | the endorse transaction + blocker gate untouched |
+| **Blocker list** ✅ | — (MAPA-specific) | already built from `stage.blockers` |
+
+### The process, per mockup
+
+1. Drop the Magic Patterns export in a `Downloads` folder (as before).
+2. I run a **keep/adapt/reject** pass against this map and flag anything that
+   fights the CRMC model — before building.
+3. Implement **additively** into the seams above, remapped to MAPA's system.
+4. **Screenshot-verify** each stage against the Design System + a seeded demo
+   request (`scripts/demo-data.mjs`).
+
+> Net: when a mockup lands, the work is *classify → remap → wire into the seams*,
+> not a from-scratch build. The seams (rail, blocker list, the `requestStage`
+> model) already exist.
 
 ---
 
