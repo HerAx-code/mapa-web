@@ -225,6 +225,19 @@ The staged workspace is a fixed component set. An MP mockup contributes the
 
 ---
 
+## Grounded in principles
+
+This redesign is a heuristics-driven rework, not a taste call — see
+`docs/principles.md` (Lens 2). Each move closes a gap against a named
+[usability heuristic](https://www.nngroup.com/articles/ten-usability-heuristics/):
+
+- **Visibility of system status** → the stage rail *(shipped)*.
+- **Error prevention** + **recognise/recover** → explicit endorse blockers *(shipped)*.
+- **Recognition over recall** + **aesthetic/minimalist** → the focused work area
+  replacing the long scroll *(Phase 1, next)*.
+- **Flexibility & efficiency** → the triaged queue *(Phase 2)*.
+- **Consistency & standards** → everything reskins from the Design System.
+
 ## Success criteria
 
 1. An operator can tell, at a glance, **what stage a request is in and what's
