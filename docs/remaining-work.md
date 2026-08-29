@@ -31,16 +31,16 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
 - 🟡 **App Check activation** **(owner)** — code is wired; register a
   reCAPTCHA v3 provider, set `VITE_APPCHECK_SITE_KEY`, start monitoring, then
   enforce per service (Firestore/Storage/Auth/Functions).
-- ⬜ **Anonymous-token acceptance on the email endpoint** **(code)** — minor;
-  reject `firebase.sign_in_provider === 'anonymous'` (notify() only runs under
-  real users).
+- ✅ **Anonymous-token rejection on the email endpoint** — done (#60): the
+  relay now refuses `firebase.sign_in_provider === 'anonymous'`.
 
 ### 2. Reliability & operations
 - 🟡 **Error tracking activation** **(owner)** — Sentry wired; create a Sentry
   project and set `VITE_SENTRY_DSN` to turn it on.
-- ⬜ **Uptime monitoring / alerting** **(owner + code)** — nothing pages when
-  the site or email route goes down. Add a free pinger; surface the existing
-  `notificationErrors` collection on the admin console.
+- 🟡 **Uptime monitoring / alerting** **(owner + code)** — ✅ the
+  `notificationErrors` collection is now surfaced as a delivery-health alert
+  on the admin dashboard (#61). ⬜ Still add an external uptime pinger for the
+  site + email route.
 - 🟡 **Backups are thin** **(owner)** — weekly / 7-day retention keeps only
   ~1 restore point. Move to **daily**, and **test a restore** ("an untested
   backup isn't a backup").
@@ -66,9 +66,11 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   patient can't download their own data (a DPA "right to access" nicety).
 
 ### 5. Quality assurance
-- ⬜ **No end-to-end tests** **(code)** — strong unit/component/functions/rules
-  coverage (305 tests), but no automated browser run through the real
-  patient → CRMC → agency flow. Add a Playwright smoke test in CI.
+- 🟡 **End-to-end tests** **(code)** — ✅ a Playwright smoke suite now runs in
+  CI over the public pages (landing/login/register/install), catching
+  white-screen/route regressions (#62). ⬜ Authenticated flows
+  (patient → CRMC → agency) still need a seeded test account as CI secrets
+  (owner-side).
 - 🟡 **Accessibility is partial** **(code)** — form labels done; still need a
   **contrast audit** and a **live screen-reader pass** on a low-end phone.
 - 🟡 **Performance** **(code)** — chunking done, but Firebase is still ~659 KB
