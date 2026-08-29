@@ -274,7 +274,7 @@ export default function Landing() {
                 className="btn-primary px-8 py-2.5 text-base flex items-center gap-2 mx-auto">
                 {t('landing.steps.startBtn')} <MdArrowForward size={18} />
               </button>
-              <p className="text-xs text-gray-400 mt-2">{t('landing.steps.footer')}</p>
+              <p className="text-xs text-gray-500 mt-2">{t('landing.steps.footer')}</p>
             </div>
           )}
         </div>
@@ -325,7 +325,7 @@ export default function Landing() {
                       <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
-                        <p className="text-xs text-gray-400 truncate">{agency.location}</p>
+                        <p className="text-xs text-gray-500 truncate">{agency.location}</p>
                       </div>
                       <span className={`badge text-xs ${isFull ? 'badge-red' : isLow ? 'badge-amber' : 'badge-green'}`}>
                         {isFull ? t('landing.programs.full') : t('landing.programs.slotsBadge', { count: remaining })}
@@ -337,7 +337,7 @@ export default function Landing() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-400">{t('landing.programs.slotsRemaining', { remaining, total })}</p>
+                    <p className="text-xs text-gray-500">{t('landing.programs.slotsRemaining', { remaining, total })}</p>
                   </div>
                 )
               })}
@@ -359,10 +359,10 @@ export default function Landing() {
                 <Logo size={32} />
                 <div>
                   <p className="text-sm font-bold">MAPA</p>
-                  <p className="text-xs text-gray-400">Medical Assistance Portal Access</p>
+                  <p className="text-xs text-gray-500">Medical Assistance Portal Access</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
+              <p className="text-xs text-gray-500 leading-relaxed">
                 {t('landing.footer.brandDesc')}
               </p>
             </div>
@@ -375,13 +375,13 @@ export default function Landing() {
                   <>
                     <li>
                       <button onClick={() => navigate('/register')}
-                        className="text-xs text-gray-400 hover:text-white transition-colors">
+                        className="text-xs text-gray-500 hover:text-white transition-colors">
                         {t('landing.footer.registerPatient')}
                       </button>
                     </li>
                     <li>
                       <button onClick={() => navigate('/login')}
-                        className="text-xs text-gray-400 hover:text-white transition-colors">
+                        className="text-xs text-gray-500 hover:text-white transition-colors">
                         {t('landing.footer.login')}
                       </button>
                     </li>
@@ -390,7 +390,7 @@ export default function Landing() {
                 {user && (
                   <li>
                     <button onClick={() => navigate(DASHBOARD[user.role] ?? '/')}
-                      className="text-xs text-gray-400 hover:text-white transition-colors">
+                      className="text-xs text-gray-500 hover:text-white transition-colors">
                       {t('landing.footer.dashboard')}
                     </button>
                   </li>
@@ -398,7 +398,7 @@ export default function Landing() {
                 <li>
                   <button
                     onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                    className="text-xs text-gray-400 hover:text-white transition-colors">
+                    className="text-xs text-gray-500 hover:text-white transition-colors">
                     {t('landing.footer.howItWorks')}
                   </button>
                 </li>
@@ -408,7 +408,7 @@ export default function Landing() {
             {/* Contact */}
             <div>
               <p className="text-xs font-semibold text-gray-300 uppercase tracking-widest mb-3">{t('landing.footer.contact')}</p>
-              <ul className="space-y-2 text-xs text-gray-400">
+              <ul className="space-y-2 text-xs text-gray-500">
                 <li className="flex items-start gap-2">
                   <MdLocationOn size={15} className="mt-0.5 flex-shrink-0 text-gray-500" />
                   <span>{t('landing.footer.addressLine1')}<br />{t('landing.footer.addressLine2')}</span>
@@ -453,7 +453,7 @@ export default function Landing() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
               <h2 className="text-base font-semibold text-gray-900">{t('landing.privacy.title')}</h2>
-              <button onClick={() => setShowPrivacy(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowPrivacy(false)} className="text-gray-500 hover:text-gray-600">
                 <MdClose size={20} />
               </button>
             </div>

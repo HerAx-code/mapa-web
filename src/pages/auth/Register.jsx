@@ -96,14 +96,14 @@ function StepIndicator({ current, steps, onJump }) {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                 s.num < current  ? 'bg-brand-500 text-white group-hover:bg-brand-600'
                 : s.num === current ? 'bg-brand-500 text-white ring-4 ring-brand-100'
-                : 'bg-gray-100 text-gray-400'
+                : 'bg-gray-100 text-gray-500'
               }`}>
                 {s.num < current ? <MdCheckCircle size={16} /> : s.num}
               </div>
               <span className={`hidden sm:block text-xs mt-1.5 font-medium text-center leading-tight px-1 ${
                 s.num === current ? 'text-brand-600'
                 : canJump        ? 'text-gray-500 group-hover:text-brand-600'
-                : 'text-gray-400'
+                : 'text-gray-500'
               }`}>{s.label}</span>
             </CircleWrap>
           </div>
@@ -576,7 +576,7 @@ export default function Register() {
         <div className="flex flex-1 justify-center px-6 pb-12 sm:px-10">
           <div className="w-full max-w-xl">
             {!isStandalone && (
-              <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 mb-6">← {t('register.backHome')}</Link>
+              <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-600 mb-6">← {t('register.backHome')}</Link>
             )}
 
             <div className="mb-6">
@@ -604,7 +604,7 @@ export default function Register() {
             <div className="space-y-4">
               <div className="mb-2">
                 <p className="text-sm font-semibold text-gray-800">{t('register.step1.sectionTitle')}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t('register.step1.sectionDesc')}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t('register.step1.sectionDesc')}</p>
               </div>
 
               {/* Name */}
@@ -626,7 +626,7 @@ export default function Register() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label htmlFor="reg-middleName" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.middleName')} <span className="text-gray-400 font-normal">{t('register.step1.optional')}</span></label>
+                  <label htmlFor="reg-middleName" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.middleName')} <span className="text-gray-500 font-normal">{t('register.step1.optional')}</span></label>
                   <input id="reg-middleName" data-field="middleName" className={inputCls('middleName')} placeholder="Santos"
                     value={form.middleName} onChange={setName('middleName')}
                     autoComplete="additional-name" autoCapitalize="words" maxLength={50} />
@@ -648,7 +648,7 @@ export default function Register() {
                   value={form.contactNumber} onChange={setPhone} />
                 <FieldError msg={errors.contactNumber} />
                 {!errors.contactNumber && (
-                  <p className="text-xs text-gray-400 mt-0.5">{t('register.step1.contactHint')}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{t('register.step1.contactHint')}</p>
                 )}
               </div>
 
@@ -658,7 +658,7 @@ export default function Register() {
                   etc.). Implementation lives in <AddressPicker>. */}
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">{t('register.step1.addressLabel')} <span className="text-red-400">*</span></p>
-                <p className="text-xs text-gray-400 mb-2">{t('register.step1.addressHint')}</p>
+                <p className="text-xs text-gray-500 mb-2">{t('register.step1.addressHint')}</p>
                 <AddressPicker
                   value={{ province: form.province, city: form.city, barangay: form.barangay }}
                   onChange={onAddressChange}
@@ -684,7 +684,7 @@ export default function Register() {
             <div className="space-y-4">
               <div className="mb-2">
                 <p className="text-sm font-semibold text-gray-800">{t('register.step2.sectionTitle')}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t('register.step2.sectionDesc')}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t('register.step2.sectionDesc')}</p>
               </div>
 
               <div>
@@ -704,7 +704,7 @@ export default function Register() {
                     value={form.password} onChange={set('password')} />
                   <button type="button"
                     aria-label={showPw ? t('register.step2.hidePassword') : t('register.step2.showPassword')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowPw(p => !p)}>
                     {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -742,7 +742,7 @@ export default function Register() {
                   )}
                   <button type="button"
                     aria-label={showConfirmPw ? t('register.step2.hidePassword') : t('register.step2.showPassword')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowConfirmPw(p => !p)}>
                     {showConfirmPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -757,7 +757,7 @@ export default function Register() {
             <div className="space-y-4">
               <div className="mb-2">
                 <p className="text-sm font-semibold text-gray-800">{t('register.step3.sectionTitle')}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t('register.step3.sectionDesc')}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t('register.step3.sectionDesc')}</p>
               </div>
 
               <div>
@@ -786,7 +786,7 @@ export default function Register() {
                       </span>
                       <button
                         type="button"
-                        className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+                        className="text-xs text-gray-500 hover:text-gray-600 underline underline-offset-2"
                         onClick={() => setHospitalVerified(false)}>
                         {t('register.step3.edit')}
                       </button>
@@ -803,7 +803,7 @@ export default function Register() {
                 </div>
                 <FieldError msg={errors.hospitalId} />
                 {!errors.hospitalId && !hospitalVerified && (
-                  <p className="text-xs text-gray-400 mt-1">{t('register.step3.accessCodeHint')}</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
                 )}
                 {/* If the code shows as already used, give the patient an
                     actionable recovery path — they may be a real holder
@@ -833,25 +833,25 @@ export default function Register() {
               <details className="border border-gray-100 rounded-xl overflow-hidden group">
                 <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between list-none">
                   <span>{t('register.step3.reviewToggle')}</span>
-                  <MdArrowForward size={16} className="text-gray-400 transition-transform group-open:rotate-90" />
+                  <MdArrowForward size={16} className="text-gray-500 transition-transform group-open:rotate-90" />
                 </summary>
                 <dl className="px-4 pb-3 pt-1 space-y-2 border-t border-gray-50">
                   <div>
-                    <dt className="text-xs text-gray-400">{t('register.step1.firstName')}</dt>
+                    <dt className="text-xs text-gray-500">{t('register.step1.firstName')}</dt>
                     <dd className="text-sm text-gray-800">
                       {[form.firstName, form.middleName, form.lastName, form.suffix].filter(Boolean).join(' ') || '—'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-400">{t('register.step2.email')}</dt>
+                    <dt className="text-xs text-gray-500">{t('register.step2.email')}</dt>
                     <dd className="text-sm text-gray-800 break-all">{form.email || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-400">{t('register.step1.contactNumber')}</dt>
+                    <dt className="text-xs text-gray-500">{t('register.step1.contactNumber')}</dt>
                     <dd className="text-sm text-gray-800">{form.contactNumber || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-gray-400">{t('register.step1.addressLabel')}</dt>
+                    <dt className="text-xs text-gray-500">{t('register.step1.addressLabel')}</dt>
                     <dd className="text-sm text-gray-800">
                       {[form.barangay, form.city, form.province].filter(Boolean).join(', ') || '—'}
                     </dd>

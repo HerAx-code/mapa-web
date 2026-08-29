@@ -115,7 +115,7 @@ const NOTIF_ICONS = {
   doc_rejected:       { icon: MdCancel,        color: 'text-red-500',    bg: 'bg-red-50'    },
   interview_sched:    { icon: MdCalendarToday, color: 'text-purple-500', bg: 'bg-purple-50' },
   app_advanced:       { icon: MdInfo,          color: 'text-amber-500',  bg: 'bg-amber-50'  },
-  app_submitted:      { icon: MdCheckCircle,   color: 'text-gray-400',   bg: 'bg-gray-50'   },
+  app_submitted:      { icon: MdCheckCircle,   color: 'text-gray-500',   bg: 'bg-gray-50'   },
   // Agency
   agency_disabled:    { icon: MdCancel,        color: 'text-red-500',    bg: 'bg-red-50'    },
   agency_enabled:     { icon: MdCheckCircle,   color: 'text-green-500',  bg: 'bg-green-50'  },
@@ -179,7 +179,7 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
         <h3 className="text-sm font-semibold text-gray-800">
           {t('shell.notifs.heading')}{unreadCount > 0 && <span className="ml-1.5 text-xs font-normal text-brand-500">{t('shell.notifs.unreadSuffix', { count: unreadCount })}</span>}
         </h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={16} /></button>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-600"><MdClose size={16} /></button>
       </div>
 
       {/* Notification items */}
@@ -187,7 +187,7 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
         {notifications.length === 0 && (
           <div className="py-12 flex flex-col items-center gap-2">
             <MdNotificationsNone size={36} className="text-gray-200" />
-            <p className="text-xs text-gray-400">{t('shell.notifs.empty')}</p>
+            <p className="text-xs text-gray-500">{t('shell.notifs.empty')}</p>
           </div>
         )}
         {notifications.map((n, idx) => {
@@ -211,9 +211,9 @@ function NotifPanel({ notifications, unreadCount, onMarkAllRead, onClose, uid, u
                 </p>
                 <p className="text-sm text-gray-500 mt-0.5 leading-snug line-clamp-2">{n.body}</p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <p className="text-xs text-gray-400">{timeAgo(n.createdAt)}</p>
+                  <p className="text-xs text-gray-500">{timeAgo(n.createdAt)}</p>
                   {NOTIF_CATEGORY[n.type] && (
-                    <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                       {NOTIF_CATEGORY[n.type]}
                     </span>
                   )}
@@ -356,13 +356,13 @@ function ComposeModal({ user, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-900">{t('shell.compose.title')}</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={handleClose} className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 pt-4 pb-2 space-y-0 divide-y divide-gray-100">
           {/* To */}
           <div className="flex items-start gap-3 pb-3 relative">
-            <span className="text-sm text-gray-400 w-16 flex-shrink-0 pt-1.5">{t('shell.compose.to')}</span>
+            <span className="text-sm text-gray-500 w-16 flex-shrink-0 pt-1.5">{t('shell.compose.to')}</span>
             {to ? (
               <div className="flex items-center gap-2 flex-wrap flex-1">
                 <span className="flex items-center gap-1.5 bg-brand-50 text-brand-700 text-xs font-medium px-2.5 py-1.5 rounded-lg">
@@ -393,13 +393,13 @@ function ComposeModal({ user, onClose }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800">{p.name}</p>
-                            <p className="text-xs text-gray-400">{p.email}</p>
+                            <p className="text-xs text-gray-500">{p.email}</p>
                           </div>
-                          <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">{roleLabel}</span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">{roleLabel}</span>
                         </button>
                       )
                     })}
-                    {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-4">{t('shell.compose.noUsers')}</p>}
+                    {filtered.length === 0 && <p className="text-xs text-gray-500 text-center py-4">{t('shell.compose.noUsers')}</p>}
                   </div>
                 )}
               </div>
@@ -417,7 +417,7 @@ function ComposeModal({ user, onClose }) {
 
           {/* Subject */}
           <div className="flex items-center gap-3 py-3">
-            <span className="text-sm text-gray-400 w-16 flex-shrink-0">{t('shell.compose.subject')}</span>
+            <span className="text-sm text-gray-500 w-16 flex-shrink-0">{t('shell.compose.subject')}</span>
             <input className="flex-1 text-sm text-gray-800 outline-none placeholder-gray-300"
               placeholder={t('shell.compose.subjectPlaceholder')}
               value={subject} onChange={e => setSubject(e.target.value)} />
@@ -431,7 +431,7 @@ function ComposeModal({ user, onClose }) {
               maxLength={1000}
               value={body} onChange={e => setBody(e.target.value)} />
             {body.length > 800 && (
-              <p className={`text-xs text-right mt-1 ${body.length >= 980 ? 'text-red-500' : 'text-gray-400'}`}>
+              <p className={`text-xs text-right mt-1 ${body.length >= 980 ? 'text-red-500' : 'text-gray-500'}`}>
                 {t('shell.compose.charsRemaining', { count: 1000 - body.length })}
               </p>
             )}
@@ -440,7 +440,7 @@ function ComposeModal({ user, onClose }) {
 
         {/* Footer */}
         <div className="px-5 pb-4 flex items-center justify-between">
-          <p className={`text-xs ${body.length > 900 ? 'text-red-500' : 'text-gray-400'}`}>
+          <p className={`text-xs ${body.length > 900 ? 'text-red-500' : 'text-gray-500'}`}>
             {/* eslint-disable-next-line i18next/no-literal-string -- numeric counter, not copy */}
             {body.length} / 1000
           </p>
@@ -483,7 +483,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-800">{t('shell.messages.heading')}</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={16} /></button>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-600"><MdClose size={16} /></button>
       </div>
 
       {/* Conversation list */}
@@ -491,9 +491,9 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
         {conversations.length === 0 && (
           <div className="py-10 flex flex-col items-center gap-2 px-4 text-center">
             <MdMessage size={32} className="text-gray-200" />
-            <p className="text-xs text-gray-400">{t('shell.messages.empty')}</p>
+            <p className="text-xs text-gray-500">{t('shell.messages.empty')}</p>
             {user?.role === 'patient' && (
-              <p className="text-xs text-gray-400"
+              <p className="text-xs text-gray-500"
                  dangerouslySetInnerHTML={{ __html: t('shell.messages.patientHint') }} />
             )}
           </div>
@@ -512,12 +512,12 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between gap-1">
                   <p className={`text-sm truncate ${isUnread ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>{name}</p>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(c.lastAt)}</span>
+                  <span className="text-xs text-gray-500 flex-shrink-0">{timeAgo(c.lastAt)}</span>
                 </div>
                 {c.subject && (
                   <p className={`text-xs truncate ${isUnread ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{c.subject}</p>
                 )}
-                <p className="text-xs text-gray-400 truncate">{c.lastMessage || t('shell.messages.noMessages')}</p>
+                <p className="text-xs text-gray-500 truncate">{c.lastMessage || t('shell.messages.noMessages')}</p>
               </div>
               {isUnread
                 ? <span className="w-2 h-2 bg-brand-500 rounded-full flex-shrink-0 mt-1.5 block" />
@@ -596,11 +596,11 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
           <Logo size={28} />
           <div>
             <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
-            <p className="text-xs text-gray-400 leading-tight">CRMC</p>
+            <p className="text-xs text-gray-500 leading-tight">CRMC</p>
           </div>
         </div>
         {/* Close button — mobile only */}
-        <button className="lg:hidden w-11 h-11 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={onClose}>
+        <button className="lg:hidden w-11 h-11 flex items-center justify-center text-gray-500 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors" onClick={onClose}>
           <MdClose size={20} />
         </button>
       </div>
@@ -725,7 +725,7 @@ function AppsPanel({ role, onNavigate, onClose }) {
     <div className="absolute right-0 top-12 w-72 max-w-[calc(100vw-1rem)] bg-white rounded-xl border border-gray-100 shadow-xl z-50 p-3">
       <div className="flex items-center justify-between mb-2 px-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('shell.apps.heading')}</p>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={15} /></button>
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-600"><MdClose size={15} /></button>
       </div>
       <div className="grid grid-cols-3 gap-1">
         {apps.map(app => (
@@ -791,7 +791,7 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">{user?.name}</p>
-            <p className="text-xs text-gray-400">{roleLabel}</p>
+            <p className="text-xs text-gray-500">{roleLabel}</p>
           </div>
         </button>
       </div>
@@ -810,7 +810,7 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
               <item.icon size={17} className="text-gray-600" />
             </div>
             <span className="flex-1 text-sm text-gray-800 font-medium">{item.label}</span>
-            {item.chevron && <MdChevronRight size={18} className="text-gray-400 flex-shrink-0" />}
+            {item.chevron && <MdChevronRight size={18} className="text-gray-500 flex-shrink-0" />}
           </button>
         ))}
       </div>
@@ -832,7 +832,7 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
 
       {/* Footer */}
       <div className="px-4 pb-3 pt-1">
-        <p className="text-xs text-gray-400 text-center">{t('shell.profile.footer')}</p>
+        <p className="text-xs text-gray-500 text-center">{t('shell.profile.footer')}</p>
       </div>
     </div>
   )
@@ -1052,7 +1052,7 @@ export default function Layout({ children, breadcrumb }) {
         <p className="text-sm text-gray-600 leading-relaxed max-w-md mb-5">
           {t('shell.staffInPWA.useWebPortal')}
         </p>
-        <p className="text-xs text-gray-400 mb-6 font-mono break-all max-w-md">
+        <p className="text-xs text-gray-500 mb-6 font-mono break-all max-w-md">
           {typeof window !== 'undefined' ? window.location.origin : ''}
         </p>
         <button
@@ -1060,7 +1060,7 @@ export default function Layout({ children, breadcrumb }) {
           className="btn-primary inline-flex items-center gap-2">
           <MdLogout size={16} /> {t('shell.staffInPWA.logout')}
         </button>
-        <p className="text-xs text-gray-400 mt-4 max-w-sm leading-relaxed">
+        <p className="text-xs text-gray-500 mt-4 max-w-sm leading-relaxed">
           {t('shell.staffInPWA.afterLogout')}
         </p>
       </div>
@@ -1221,7 +1221,7 @@ export default function Layout({ children, breadcrumb }) {
               <div className="relative flex items-center gap-1.5 ml-1 pl-1.5 border-l border-gray-100">
                 <div className="hidden md:block text-right">
                   <p className="text-xs font-medium text-gray-800 leading-tight">{userDisplayName}</p>
-                  <p className="text-xs text-gray-400 leading-tight">{getRoleLabel()}</p>
+                  <p className="text-xs text-gray-500 leading-tight">{getRoleLabel()}</p>
                 </div>
                 <button
                   className={`w-11 h-11 rounded-full overflow-hidden border-2 cursor-pointer flex-shrink-0 flex items-center justify-center text-xs font-semibold ${user.photoURL ? 'border-gray-200' : getAvatarColor()}`}
