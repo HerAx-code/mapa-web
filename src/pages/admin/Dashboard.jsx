@@ -12,7 +12,7 @@ import {
   MdWarning, MdSpeed, MdCheckCircle, MdTimer, MdTour,
   // De-emoji sweep: activity feed, metrics, alerts, empty state
   MdLocalHospital, MdPersonAdd, MdCancel, MdAssignment, MdCelebration,
-  MdBlock, MdWorkspacePremium, MdInbox, MdAccessTime,
+  MdBlock, MdWorkspacePremium, MdInbox, MdAccessTime, MdMarkEmailUnread,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { logAudit } from '../../utils/auditLog'
@@ -71,6 +71,11 @@ export default function AdminDashboard() {
   const [rejectedCount, setRejectedCount] = useState(0)
   const [approvedCount, setApprovedCount] = useState(0)
   const [certBacklog,   setCertBacklog]   = useState(0)
+  // Delivery health: how many notification/email sends failed recently.
+  // notify() logs failures to notificationErrors (admin-read). Surfaced as
+  // an alert so staff notice a broken email pipeline instead of it being
+  // silently invisible.
+  const [deliveryFailures, setDeliveryFailures] = useState(0)
 
   // Real-time metric counts. Note: agency budget aggregates are no longer
   // shown on the CRMC admin dashboard — funds are intra-agency per the
@@ -205,6 +210,23 @@ export default function AdminDashboard() {
     return () => { u1(); u2() }
   }, [isSuperAdmin])
 
+  // Delivery health — notification/email failures in the last 7 days.
+  // Fetch the 50 most recent and filter client-side so no composite index
+  // is required. Admin-read is granted on notificationErrors for both
+  // super_admin and staff_admin.
+  useEffect(() => {
+    const cutoff = Date.now() - 7 * 86400000
+    const u = onSnapshot(
+      query(collection(db, 'notificationErrors'), orderBy('at', 'desc'), limit(50)),
+      snap => {
+        const recent = snap.docs.filter(d => ((d.data().at?.seconds ?? 0) * 1000) >= cutoff)
+        setDeliveryFailures(recent.length)
+      },
+      err => { console.error('[Dashboard] delivery health failed:', err); setDeliveryFailures(0) }
+    )
+    return () => u()
+  }, [])
+
   const activityFeed = [...recentPatients, ...recentDocs, ...recentApps]
     .filter(a => a.createdAt)
     .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
@@ -292,6 +314,14 @@ export default function AdminDashboard() {
       detail: 'Awaiting review or resolution',
       tone: 'orange',
       path: '/admin/reports',
+    },
+    deliveryFailures > 0 && {
+      key: 'delivery',
+      Icon: MdMarkEmailUnread,
+      label: `${deliveryFailures} notification${deliveryFailures === 1 ? '' : 's'} failed to send`,
+      detail: 'Delivery errors in the last 7 days — check email configuration',
+      tone: 'red',
+      path: '/admin/logs',
     },
   ].filter(Boolean)
 
