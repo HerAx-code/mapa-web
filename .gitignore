@@ -36,3 +36,8 @@ replay_pid*.log
 # collection. These contain real patient PII and must never be
 # committed to the repo.
 backups/
+
+# Playwright E2E outputs
+/test-results/
+/playwright-report/
+/playwright/.cache/
