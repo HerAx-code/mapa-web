@@ -54,6 +54,7 @@ const AgencyGuide           = lazy(() => import('./pages/agency/Guide'))
 
 // Admin
 const AdminDashboard   = lazy(() => import('./pages/admin/Dashboard'))
+const AdminAnalytics   = lazy(() => import('./pages/admin/Analytics'))
 const Requests         = lazy(() => import('./pages/admin/Requests'))
 const Patients         = lazy(() => import('./pages/admin/Patients'))
 const HospitalIDs      = lazy(() => import('./pages/admin/HospitalIDs'))
@@ -141,6 +142,7 @@ export default function App() {
 
           {/* Admin */}
           <Route path="/admin/dashboard"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminDashboard /></PrivateRoute>} />
+          <Route path="/admin/analytics"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminAnalytics /></PrivateRoute>} />
           <Route path="/admin/requests"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Requests /></PrivateRoute>} />
           <Route path="/admin/requests/:id/intake" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><IntakeSheet collectionName="requests" /></PrivateRoute>} />
           <Route path="/admin/patients"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Patients /></PrivateRoute>} />

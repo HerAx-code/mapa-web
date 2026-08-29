@@ -12,7 +12,7 @@ import {
   MdInfo, MdCalendarToday, MdSend, MdEdit,
   MdSettings, MdHelp, MdFlag, MdChevronRight, MdLock, MdPerson,
   MdCancel, MdNotificationsNone, MdHistory, MdDownload,
-  MdCampaign, MdBuildCircle, MdWarning, MdAttachMoney, MdReceiptLong,
+  MdCampaign, MdBuildCircle, MdWarning, MdAttachMoney, MdReceiptLong, MdInsights,
   MdSync,
 } from 'react-icons/md'
 import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
@@ -93,6 +93,7 @@ const ADMIN_NAV = {
   ],
   operations: [
     { to: '/admin/requests',    icon: MdReceiptLong, label: 'Requests' },
+    { to: '/admin/analytics',   icon: MdInsights,  label: 'Analytics' },
     { to: '/admin/logs',        icon: MdListAlt,   label: 'App Logs' },
     { to: '/admin/patients',    icon: MdGroup,     label: 'Patients' },
     { to: '/admin/hospitalids', icon: MdBadge,     label: 'Access Codes' },
