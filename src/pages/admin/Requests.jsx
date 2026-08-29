@@ -11,6 +11,7 @@ import { logAudit } from '../../utils/auditLog'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
 import { isIdType } from '../../utils/idOcr'
 import { deriveRequestStage } from '../../utils/requestStage'
+import RequestStageRail from '../../components/admin/RequestStageRail'
 import { getOrCreateConversation } from '../../utils/messages'
 import { tsToDate } from '../../utils/dates'
 import { Link, useNavigate } from 'react-router-dom'
@@ -853,6 +854,10 @@ function RequestDetail({ request, agencies, onClose }) {
             </div>
           </div>
 
+          {/* Stage rail — at-a-glance verify → assess → interview → endorse
+              progress (redesign Phase 1), driven by the requestStage model. */}
+          <RequestStageRail stage={stage} />
+
           {/* Filed by a representative — verify the rep's ID + selfie (below) */}
           {request.filedBy && (
             <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-800">
@@ -1142,11 +1147,21 @@ function RequestDetail({ request, agencies, onClose }) {
           {/* Actions */}
           {!terminal && (
             <div className="card p-4">
-              {!canEndorse && (
-                <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
-                  <MdWarning size={12} className="flex-shrink-0" />
-                  Verify all documents, complete the intake sheet, and record the interview outcome before endorsing.
-                </p>
+              {!canEndorse && stage.blockers.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-amber-700 mb-1.5 flex items-center gap-1">
+                    <MdWarning size={12} className="flex-shrink-0" />
+                    Before endorsing, finish {stage.blockers.length} step{stage.blockers.length > 1 ? 's' : ''}:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {stage.blockers.map(b => (
+                      <span key={b.key}
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800">
+                        {b.label} <span className="text-amber-600/80">· {b.detail}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
               <div className="flex flex-wrap gap-2 justify-end">
                 <button className="btn-secondary text-sm flex items-center gap-1.5 text-red-500"
