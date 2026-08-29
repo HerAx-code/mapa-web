@@ -63,6 +63,15 @@ async function verifyCaller(req) {
       issuer:   `https://securetoken.google.com/${PROJECT_ID}`,
       audience: PROJECT_ID,
     })
+    // Reject anonymous sessions. Anonymous sign-in exists only for the
+    // registration access-code check; every notify() email is sent under a
+    // real signed-in user, so an anonymous token here is never legitimate —
+    // and refusing it stops anyone from minting a throwaway anonymous token
+    // to reach the relay.
+    if (payload.firebase?.sign_in_provider === 'anonymous') {
+      console.warn('[send-email] rejected anonymous token')
+      return null
+    }
     return payload
   } catch (err) {
     console.warn('[send-email] token verification failed:', err?.code || err?.message)
