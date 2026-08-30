@@ -86,12 +86,14 @@ export function computeAnalytics(slices = [], requests = null) {
   if (Array.isArray(requests)) {
     requestsTotal = requests.length
     requestsFullyFunded = requests.filter(r => r.status === 'fully_funded').length
-    // Approval rate: of the requests that reached a decision, the share fully
-    // funded. Closed = gave up on the remaining balance; rejected = ineligible.
+    // Approval rate: of the requests that reached a FUNDING decision, the share
+    // fully funded. Rejected = ineligible (a denial). 'closed' is excluded — it
+    // covers both CRMC give-ups and patient withdrawals, neither of which is a
+    // funding-eligibility decision, so counting them would deflate the rate.
     const closed   = requests.filter(r => r.status === 'closed').length
     const rejected = requests.filter(r => r.status === 'rejected').length
-    const decided  = requestsFullyFunded + closed + rejected
-    approvalRate = decided > 0 ? Math.round((requestsFullyFunded / decided) * 100) : null
+    const fundingDecided = requestsFullyFunded + rejected
+    approvalRate = fundingDecided > 0 ? Math.round((requestsFullyFunded / fundingDecided) * 100) : null
     // PhilHealth share of the total billed across all requests (first charge).
     const billSum = requests.reduce((s, r) => s + (Number(r.totalBill ?? r.amountNeeded) || 0), 0)
     const phSum   = requests.reduce((s, r) => s + (Number(r.philhealthCovered) || 0), 0)
@@ -102,7 +104,7 @@ export function computeAnalytics(slices = [], requests = null) {
     outcomes = [
       { key: 'fully_funded', label: 'Fully funded',        count: requestsFullyFunded, tone: 'brand' },
       { key: 'in_progress',  label: 'Still in progress',   count: Math.max(0, inProgress), tone: 'gray' },
-      { key: 'closed',       label: 'Closed (unfunded)',   count: closed,   tone: 'amber' },
+      { key: 'closed',       label: 'Closed / withdrawn',  count: closed,   tone: 'amber' },
       { key: 'rejected',     label: 'Rejected',            count: rejected, tone: 'red' },
     ]
   }
@@ -136,9 +138,14 @@ export function analyticsForRange(slices = [], requests = null, days = null, now
   const DAY = 86_400_000
   const winStart  = now - days * DAY
   const prevStart = now - 2 * days * DAY
-  const inWin = (s, start, end) => { const m = ms(s.approvedAt); return m != null && m >= start && m < end }
+  const inWin    = (s, start, end) => { const m = ms(s.approvedAt);  return m != null && m >= start && m < end }
+  // Requests are cohorted by submittedAt so the request-level metrics
+  // (approval rate, PhilHealth share, outcomes, totals) window with the range
+  // too — otherwise the selector would apply to only half the board.
+  const inReqWin = (r, start, end) => { const m = ms(r.submittedAt); return m != null && m >= start && m < end }
+  const winReqs  = Array.isArray(requests) ? requests.filter(r => inReqWin(r, winStart, now + 1)) : requests
 
-  const cur  = computeAnalytics(slices.filter(s => inWin(s, winStart, now + 1)), requests)
+  const cur  = computeAnalytics(slices.filter(s => inWin(s, winStart, now + 1)), winReqs)
   const prev = computeAnalytics(slices.filter(s => inWin(s, prevStart, winStart)), null)
   const pct = (c, p) => (p > 0 ? Math.round(((c - p) / p) * 100) : null)
 

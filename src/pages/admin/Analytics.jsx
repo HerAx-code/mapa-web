@@ -4,6 +4,7 @@ import Layout from '../../components/Layout'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { analyticsForRange, formatMonth } from '../../utils/analytics'
+import { stageCounts } from '../../utils/queueBuckets'
 import BarList from '../../components/charts/BarList'
 import TrendArea from '../../components/charts/TrendArea'
 import DeltaChip from '../../components/admin/DeltaChip'
@@ -15,11 +16,8 @@ import toast from 'react-hot-toast'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
-// Lifecycle stages for the pipeline distribution (all requests, in flow order).
-const PIPELINE = [
-  ['submitted', 'Submitted'], ['under_review', 'Under review'], ['assessment', 'Assessment'],
-  ['endorsed', 'Endorsed'], ['partially_funded', 'Partially funded'], ['fully_funded', 'Fully funded'],
-]
+// Full lifecycle (all requests, in flow order) for the pipeline distribution.
+const ANALYTICS_PIPELINE_KEYS = ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded', 'fully_funded']
 const OUTCOME_TONE = { brand: 'bg-brand-500', gray: 'bg-gray-300', amber: 'bg-amber-400', red: 'bg-red-400' }
 
 // CRMC Program Overview — the board-level analytics surface (Magic Patterns
@@ -57,9 +55,7 @@ export default function Analytics() {
 
   const a = useMemo(() => analyticsForRange(slices ?? [], requests, rangeDays), [slices, requests, rangeDays])
 
-  const pipelineStages = useMemo(
-    () => PIPELINE.map(([key, label]) => ({ key, label, count: requests.filter(r => r.status === key).length })),
-    [requests])
+  const pipelineStages = useMemo(() => stageCounts(requests, ANALYTICS_PIPELINE_KEYS), [requests])
   const outcomesMax = Math.max(1, ...(a.outcomes ?? []).map(o => o.count))
 
   const exportSummary = () => {
@@ -184,7 +180,7 @@ export default function Analytics() {
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0"><MdTimer size={18} className="text-brand-500" /></div>
                   <div>
-                    <p className="text-xs text-gray-400">Median agency turnaround</p>
+                    <p className="text-xs text-gray-400">Average agency turnaround</p>
                     <p className="text-xl font-semibold text-gray-800 tabular-nums">{a.avgTurnaroundDays != null ? `${a.avgTurnaroundDays.toFixed(1)} days` : '—'}</p>
                   </div>
                 </div>
@@ -207,7 +203,7 @@ export default function Analytics() {
 
             {/* Pipeline (7) + Outcomes (5) */}
             <div className="lg:col-span-7">
-              <PipelineFunnel stages={pipelineStages} onOpenQueue={() => navigate('/admin/requests')} />
+              <PipelineFunnel stages={pipelineStages} onOpenQueue={() => navigate('/admin/requests')} totalLabel="total" />
             </div>
             <div className="lg:col-span-5 card p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-800">Where requests end up</h2>
