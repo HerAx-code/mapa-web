@@ -825,7 +825,7 @@ function RequestDetail({ request, agencies, onClose }) {
     <div>
       {/* Sub-header — back to the list + request summary (stays inside the
           app shell so the CRMC nav/top bar remain available). */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-30">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onClose} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-brand-600 flex-shrink-0">
             <MdArrowBack size={16} /> Requests
