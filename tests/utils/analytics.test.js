@@ -81,3 +81,43 @@ describe('formatMonth', () => {
     expect(formatMonth('2026-08')).toBe('Aug 2026')
   })
 })
+
+// ── analyticsForRange (period window + deltas) ──────────────────────────────
+import { analyticsForRange } from '../../src/utils/analytics.js'
+
+describe('analyticsForRange', () => {
+  const NOW = Date.parse('2026-09-30T00:00:00Z')
+  const at = (iso) => ({ seconds: Math.floor(Date.parse(iso) / 1000) })
+  // current 30d window: Sep 1–30. prior 30d window: Aug 2–31.
+  const s = [
+    { status: 'approved', amountApproved: 1000, patientId: 'a', approvedAt: at('2026-09-10') }, // current
+    { status: 'approved', amountApproved: 1000, patientId: 'b', approvedAt: at('2026-09-20') }, // current
+    { status: 'approved', amountApproved: 1000, patientId: 'c', approvedAt: at('2026-08-15') }, // prior
+    { status: 'approved', amountApproved: 1000, patientId: 'd', approvedAt: at('2026-06-01') }, // outside both
+  ]
+
+  it('all-time (days=null) returns no window and no deltas', () => {
+    const r = analyticsForRange(s, null, null, NOW)
+    expect(r.rangeDays).toBeNull()
+    expect(r.deltas).toBeNull()
+    expect(r.totalFacilitated).toBe(4000) // all four
+  })
+
+  it('windows to the current period and computes deltas vs the prior period', () => {
+    const r = analyticsForRange(s, null, 30, NOW)
+    expect(r.rangeDays).toBe(30)
+    expect(r.totalFacilitated).toBe(2000)      // two in Sep
+    expect(r.patientsHelped).toBe(2)
+    // current 2000 vs prior 1000 → +100%
+    expect(r.deltas.totalFacilitated).toBe(100)
+    expect(r.deltas.glsIssued).toBe(100)
+  })
+
+  it('delta is null when there is no prior-period baseline', () => {
+    // only current-window data, nothing in the prior window
+    const only = [{ status: 'approved', amountApproved: 500, patientId: 'x', approvedAt: at('2026-09-10') }]
+    const r = analyticsForRange(only, null, 30, NOW)
+    expect(r.totalFacilitated).toBe(500)
+    expect(r.deltas.totalFacilitated).toBeNull()
+  })
+})

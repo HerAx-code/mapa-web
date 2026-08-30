@@ -101,6 +101,34 @@ export function computeAnalytics(slices = [], requests = null) {
   }
 }
 
+// Program analytics for a reporting window (facilitation dated by approvedAt),
+// plus period-over-period deltas vs the immediately preceding window of the
+// same length. `days = null` → all-time (no window, no deltas). Deltas are
+// percentages; null when there's no prior-period baseline (avoids misleading
+// "+100%" on a cold start). Request-level counts stay program-total.
+export function analyticsForRange(slices = [], requests = null, days = null, now = Date.now()) {
+  if (!days) return { ...computeAnalytics(slices, requests), rangeDays: null, deltas: null }
+
+  const DAY = 86_400_000
+  const winStart  = now - days * DAY
+  const prevStart = now - 2 * days * DAY
+  const inWin = (s, start, end) => { const m = ms(s.approvedAt); return m != null && m >= start && m < end }
+
+  const cur  = computeAnalytics(slices.filter(s => inWin(s, winStart, now + 1)), requests)
+  const prev = computeAnalytics(slices.filter(s => inWin(s, prevStart, winStart)), null)
+  const pct = (c, p) => (p > 0 ? Math.round(((c - p) / p) * 100) : null)
+
+  return {
+    ...cur,
+    rangeDays: days,
+    deltas: {
+      totalFacilitated: pct(cur.totalFacilitated, prev.totalFacilitated),
+      patientsHelped:   pct(cur.patientsHelped, prev.patientsHelped),
+      glsIssued:        pct(cur.glsIssued, prev.glsIssued),
+    },
+  }
+}
+
 // "2026-08" → "Aug 2026" for axis / row labels.
 export function formatMonth(key) {
   const [y, m] = String(key).split('-').map(Number)
