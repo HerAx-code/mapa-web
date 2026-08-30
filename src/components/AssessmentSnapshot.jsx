@@ -12,11 +12,12 @@ const shortLabel = (cat) => (MEANS_CATEGORIES.find(c => c.value === cat)?.label 
 
 export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdit = false, onApplyMeansTest }) {
   const income = Number(sheet?.monthlyIncome) || 0
-  const size   = Number(sheet?.householdSize) || 0
   const totalExpenses = Object.values(sheet?.expenses ?? {}).reduce((s, v) => s + (Number(v) || 0), 0)
-  const perCapita = size > 0 ? income / size : null
-  const expRatio  = income > 0 ? Math.round((totalExpenses / income) * 100) : null
   const suggestion = meansTestSuggestion({ monthlyIncome: sheet?.monthlyIncome, householdSize: sheet?.householdSize })
+  // Reuse the suggestion's per-capita (single source of truth; null when income
+  // or household size is blank, so an unfilled income isn't shown as ₱0).
+  const perCapita = suggestion?.perCapita ?? null
+  const expRatio  = income > 0 ? Math.round((totalExpenses / income) * 100) : null
   const current = sheet?.meansTestCategory
 
   // Nothing meaningful until at least income+size or some expenses exist.
@@ -48,7 +49,9 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
           <p className="text-xs text-gray-400 mb-1">Suggested means-test</p>
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-medium text-gray-800">{shortLabel(suggestion.category)}</span>
-            <span className="tabular-nums text-xs text-gray-400">{suggestion.ratio.toFixed(1)}× line</span>
+            {/* Floor to a tenth so the displayed multiple never rounds up across
+                a band boundary (e.g. 0.96 shows 0.9×, not 1.0×, beside Indigent). */}
+            <span className="tabular-nums text-xs text-gray-400">{(Math.floor(suggestion.ratio * 10) / 10).toFixed(1)}× line</span>
           </div>
           <p className="mt-1 text-[11px] leading-snug text-gray-400">
             Advisory — from income ÷ household size. You confirm the category.
