@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { computeAnalytics, formatMonth } from '../../utils/analytics'
+import { analyticsForRange, formatMonth } from '../../utils/analytics'
 import BarList from '../../components/charts/BarList'
 import TrendArea from '../../components/charts/TrendArea'
+import DeltaChip from '../../components/admin/DeltaChip'
 import {
   MdPayments, MdGroup, MdWorkspacePremium, MdCheckCircle, MdDownload, MdInsights,
 } from 'react-icons/md'
@@ -19,6 +20,7 @@ export default function Analytics() {
   const [slices,   setSlices]   = useState(null)
   const [requests, setRequests] = useState([])
   const [loading,  setLoading]  = useState(true)
+  const [rangeDays, setRangeDays] = useState(null) // null = all-time
 
   useEffect(() => {
     let alive = true
@@ -42,7 +44,7 @@ export default function Analytics() {
     return () => { alive = false }
   }, [])
 
-  const a = useMemo(() => computeAnalytics(slices ?? [], requests), [slices, requests])
+  const a = useMemo(() => analyticsForRange(slices ?? [], requests, rangeDays), [slices, requests, rangeDays])
 
   const exportSummary = () => {
     const rows = [
@@ -76,13 +78,15 @@ export default function Analytics() {
   }
 
   const kpis = [
-    { label: 'Assistance facilitated', value: peso(a.totalFacilitated), Icon: MdPayments,          tone: 'text-brand-600' },
-    { label: 'Patients helped',        value: a.patientsHelped,          Icon: MdGroup,             tone: 'text-gray-900' },
-    { label: 'Guarantee Letters issued', value: a.glsIssued, sub: `${a.glsRedeemed} redeemed`, Icon: MdWorkspacePremium, tone: 'text-gray-900' },
+    { label: 'Assistance facilitated', value: peso(a.totalFacilitated), Icon: MdPayments,          tone: 'text-brand-600', delta: a.deltas?.totalFacilitated },
+    { label: 'Patients helped',        value: a.patientsHelped,          Icon: MdGroup,             tone: 'text-gray-900', delta: a.deltas?.patientsHelped },
+    { label: 'Guarantee Letters issued', value: a.glsIssued, sub: `${a.glsRedeemed} redeemed`, Icon: MdWorkspacePremium, tone: 'text-gray-900', delta: a.deltas?.glsIssued },
     { label: 'Requests fully funded',  value: a.requestsFullyFunded, sub: `of ${a.requestsTotal} total`, Icon: MdCheckCircle, tone: 'text-gray-900' },
   ]
 
-  const hasData = (slices ?? []).length > 0 && a.totalFacilitated > 0
+  const hasAnyData = (slices ?? []).length > 0
+  const hasData = hasAnyData && a.totalFacilitated > 0
+  const RANGES = [['all', null, 'All'], ['90d', 90, '90d'], ['30d', 30, '30d'], ['7d', 7, '7d']]
 
   return (
     <Layout breadcrumb="Analytics">
@@ -97,10 +101,22 @@ export default function Analytics() {
               Assistance facilitated across CRMC and partner agencies — the outcome view behind the operational queues.
             </p>
           </div>
-          {hasData && (
-            <button onClick={exportSummary} className="btn-secondary text-sm flex items-center gap-1.5 flex-shrink-0">
-              <MdDownload size={16} /> Export summary
-            </button>
+          {hasAnyData && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex rounded-lg border border-gray-200 bg-white p-0.5" role="group" aria-label="Reporting period">
+                {RANGES.map(([key, days, label]) => (
+                  <button key={key} type="button" onClick={() => setRangeDays(days)} aria-pressed={rangeDays === days}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                      rangeDays === days ? 'bg-brand-600 text-white' : 'text-gray-500 hover:text-gray-800'
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button onClick={exportSummary} className="btn-secondary text-sm flex items-center gap-1.5">
+                <MdDownload size={16} /> Export
+              </button>
+            </div>
           )}
         </div>
 
@@ -129,11 +145,13 @@ export default function Analytics() {
                 <div key={k.label} className="stat-tile">
                   <div className="flex items-center justify-between">
                     <k.Icon size={18} className="text-gray-300" />
-                    {a.avgTurnaroundDays != null && k.label === 'Requests fully funded' && (
+                    {k.delta != null ? (
+                      <DeltaChip value={k.delta} />
+                    ) : a.avgTurnaroundDays != null && k.label === 'Requests fully funded' ? (
                       <span className="text-[11px] text-gray-400" title="Average agency decision time">
                         ~{a.avgTurnaroundDays.toFixed(1)}d avg
                       </span>
-                    )}
+                    ) : null}
                   </div>
                   <p className={`stat-num mt-2 ${k.tone}`}>{k.value}</p>
                   <p className="stat-label">{k.label}{k.sub ? ` · ${k.sub}` : ''}</p>
