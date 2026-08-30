@@ -20,6 +20,7 @@ import { isCrmcAdminRole } from '../../utils/constants'
 // intake-style forms can share them without re-declaring the helpers.
 import Field from '../../components/ui/Field'
 import PesoInput from '../../components/ui/PesoInput'
+import AssessmentSnapshot from '../../components/AssessmentSnapshot'
 
 const AUTOSAVE_MS = 1500
 
@@ -473,6 +474,20 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   </p>
                 )}
               </div>
+
+              {/* Financial snapshot + advisory means-test suggestion — fills the
+                  rail and turns the entered figures into decision support. The
+                  means-test suggestion is CRMC-side only (hidden while a patient
+                  fills their factual portion). */}
+              <AssessmentSnapshot
+                sheet={sheet}
+                showMeansTest={!patientFacts}
+                canEdit={canEdit}
+                onApplyMeansTest={(cat) => {
+                  setSheet(p => ({ ...p, meansTestCategory: cat }))
+                  scheduleAutosave()
+                }}
+              />
 
               {/* Editor info — agency mode prefers the parent request's
                   intake authorship (the real CRMC source); other modes use

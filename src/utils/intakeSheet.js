@@ -17,6 +17,34 @@ export const EMPLOYMENT_TYPES = [
   { value: 'other',         label: 'Other' },
 ]
 
+// Philippine per-capita monthly poverty threshold (~₱2,600 — the ~₱13,000/month
+// family-of-5 line ÷ 5, 2024 basis; see docs/intake-sheet-fields.md). Approximate
+// and configurable — it only drives an ADVISORY suggestion the social worker
+// confirms; classification stays a manual judgment by design.
+export const POVERTY_LINE_PER_CAPITA = 2600
+
+// Advisory means-test suggestion from income-per-capita vs the poverty line.
+// Returns { perCapita, ratio, category } or null when inputs are insufficient.
+// Bands mirror MEANS_CATEGORIES: <1× indigent · <1.5× marginalized ·
+// <2× low_income · ≥2× above_threshold.
+export function meansTestSuggestion({ monthlyIncome, householdSize } = {}) {
+  // Blank ('' / null / undefined) means "not entered yet" — no suggestion. A
+  // real 0 income still classifies (Number('') would otherwise read as 0).
+  if (monthlyIncome === '' || monthlyIncome == null) return null
+  if (householdSize === '' || householdSize == null) return null
+  const income = Number(monthlyIncome)
+  const size   = Number(householdSize)
+  if (!Number.isFinite(income) || income < 0) return null
+  if (!Number.isFinite(size) || size <= 0) return null
+  const perCapita = income / size
+  const ratio = perCapita / POVERTY_LINE_PER_CAPITA
+  const category = ratio < 1 ? 'indigent'
+    : ratio < 1.5 ? 'marginalized'
+    : ratio < 2 ? 'low_income'
+    : 'above_threshold'
+  return { perCapita, ratio, category }
+}
+
 export const REQUIRED_FIELDS = [
   { key: 'householdSize',     label: 'Household Size' },
   { key: 'monthlyIncome',     label: 'Monthly Income' },
