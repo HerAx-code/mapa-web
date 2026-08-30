@@ -210,7 +210,7 @@ export default function AuditLog() {
 
   return (
     <Layout breadcrumb="Audit Log">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header — Export CSV uses the current filter set so a
             compliance reviewer asking for "this week's account ops"
