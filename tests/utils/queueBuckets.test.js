@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   QUEUE_BUCKETS, QUEUE_TABS, BUCKET_LABELS,
   bucketOf, docCounts, bucketCounts, requestDocs,
+  COARSE_TABS, COARSE_LABELS, coarseBucketOf, coarseCounts,
 } from '../../src/utils/queueBuckets.js'
 
 // A fully-filled intake sheet (mirrors isIntakeComplete's 6 required fields).
@@ -117,5 +118,35 @@ describe('labels + tab order', () => {
   it('every tab has a label and All is last', () => {
     for (const key of QUEUE_TABS) expect(BUCKET_LABELS[key]).toBeTruthy()
     expect(QUEUE_TABS[QUEUE_TABS.length - 1]).toBe('all')
+  })
+})
+
+describe('coarse tabs (MP top-level categorization)', () => {
+  it('maps each request to one of the 5 coarse tabs', () => {
+    expect(coarseBucketOf(req({ status: 'submitted' }))).toBe('needs_action')
+    // pre-endorse with a rejected doc → needs action regardless of status
+    expect(coarseBucketOf(req({ status: 'under_review', attachedDocuments: docs('rejected', 'verified') }))).toBe('needs_action')
+    // being actively processed, nothing blocking → under review
+    expect(coarseBucketOf(req({ status: 'assessment', attachedDocuments: docs('verified') }))).toBe('under_review')
+    for (const status of ['endorsed', 'partially_funded', 'endorsing']) {
+      expect(coarseBucketOf(req({ status }))).toBe('awaiting_agency')
+    }
+    for (const status of ['fully_funded', 'closed', 'rejected']) {
+      expect(coarseBucketOf(req({ status }))).toBe('resolved')
+    }
+  })
+  it('coarseCounts tallies every tab plus all', () => {
+    const list = [
+      req({ status: 'submitted' }),                                   // needs_action
+      req({ status: 'assessment', attachedDocuments: docs('verified') }), // under_review
+      req({ status: 'endorsed' }),                                    // awaiting_agency
+      req({ status: 'closed' }),                                      // resolved
+    ]
+    const c = coarseCounts(list)
+    expect(c).toMatchObject({ all: 4, needs_action: 1, under_review: 1, awaiting_agency: 1, resolved: 1 })
+  })
+  it('every coarse tab has a label and All requests is last', () => {
+    for (const key of COARSE_TABS) expect(COARSE_LABELS[key]).toBeTruthy()
+    expect(COARSE_TABS[COARSE_TABS.length - 1]).toBe('all')
   })
 })

@@ -13,22 +13,22 @@ import userEvent from '@testing-library/user-event'
 import QueueTabs from '../../src/components/admin/requests/QueueTabs'
 import RequestsTable from '../../src/components/admin/requests/RequestsTable'
 
-const counts = { verify: 3, assess: 1, interview: 0, endorse: 2, endorsed: 4, completed: 5, all: 15 }
+const counts = { needs_action: 6, under_review: 4, awaiting_agency: 3, resolved: 2, all: 15 }
 
 describe('QueueTabs', () => {
-  it('renders every stage bucket with its count and marks the active one', () => {
-    render(<QueueTabs active="verify" counts={counts} onChange={() => {}} />)
-    expect(screen.getByRole('tab', { name: /Needs verification/ })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: /Ready to endorse/ })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /All/ })).toBeInTheDocument()
+  it('renders every coarse tab with its count and marks the active one', () => {
+    render(<QueueTabs active="needs_action" counts={counts} onChange={() => {}} />)
+    expect(screen.getByRole('tab', { name: /Needs action/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Awaiting agency/ })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /All requests/ })).toBeInTheDocument()
     // The active tab shows its count.
-    expect(within(screen.getByRole('tab', { name: /Needs verification/ })).getByText('3')).toBeInTheDocument()
+    expect(within(screen.getByRole('tab', { name: /Needs action/ })).getByText('6')).toBeInTheDocument()
   })
-  it('calls onChange with the bucket key when a tab is clicked', async () => {
+  it('calls onChange with the tab key when a tab is clicked', async () => {
     const onChange = vi.fn()
     render(<QueueTabs active="all" counts={counts} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('tab', { name: /Endorsed/ }))
-    expect(onChange).toHaveBeenCalledWith('endorsed')
+    await userEvent.click(screen.getByRole('tab', { name: /Awaiting agency/ }))
+    expect(onChange).toHaveBeenCalledWith('awaiting_agency')
   })
 })
 

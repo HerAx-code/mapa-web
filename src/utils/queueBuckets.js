@@ -66,3 +66,38 @@ export function bucketCounts(requests = []) {
   for (const r of requests) counts[bucketOf(r)] += 1
   return counts
 }
+
+// ── Coarse queue tabs (Magic Patterns adoption) ─────────────────────────────
+// The queue's top-level categorization is the coarser action-oriented set the
+// MP reference uses; the fine stage (verify/assess/interview/endorse above)
+// still drives each ROW's stage chip. Default landing tab is 'needs_action' —
+// the work actually blocked on CRMC.
+
+export const COARSE_TABS = ['needs_action', 'under_review', 'awaiting_agency', 'resolved', 'all']
+
+export const COARSE_LABELS = {
+  needs_action:   'Needs action',
+  under_review:   'Under review',
+  awaiting_agency:'Awaiting agency',
+  resolved:       'Resolved',
+  all:            'All requests',
+}
+
+export function coarseBucketOf(request) {
+  const status = request?.status
+  if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'resolved'
+  if (ENDORSED_STATUSES.includes(status)) return 'awaiting_agency'
+  // Pre-endorsement: a freshly-submitted request, or one with a blocking
+  // (rejected) document, needs CRMC to act; anything else is under active review.
+  const blocking = (request?.attachedDocuments ?? []).some(a => a?.status === 'rejected')
+  if (status === 'submitted' || blocking) return 'needs_action'
+  return 'under_review'
+}
+
+export function coarseCounts(requests = []) {
+  const counts = { all: requests.length }
+  for (const key of COARSE_TABS) counts[key] = 0
+  counts.all = requests.length
+  for (const r of requests) counts[coarseBucketOf(r)] += 1
+  return counts
+}

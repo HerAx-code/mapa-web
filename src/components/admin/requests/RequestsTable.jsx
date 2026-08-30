@@ -1,11 +1,22 @@
 import { MdKeyboardArrowDown, MdChevronRight, MdWarningAmber } from 'react-icons/md'
 import { computeFunding } from '../../../utils/requests'
-import { tsToDate } from '../../../utils/dates'
 import { bucketOf, docCounts } from '../../../utils/queueBuckets'
+import { slaState, slaLabel } from '../../../utils/sla'
 import StatusBadge from '../../ui/StatusBadge'
 
 // Local peso formatter (mirrors the one in admin/Requests.jsx — not exported).
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
+
+// submittedAt → epoch-ms across Timestamp / { seconds } / Date / ISO shapes.
+const toMs = (ts) => {
+  if (!ts) return null
+  if (typeof ts.toDate === 'function') return ts.toDate().getTime()
+  if (typeof ts.seconds === 'number') return ts.seconds * 1000
+  const d = new Date(ts)
+  return Number.isNaN(d.getTime()) ? null : d.getTime()
+}
+
+const SLA_TEXT = { ok: 'text-gray-700', due_soon: 'text-amber-700', overdue: 'text-red-700' }
 
 // Scannable, sortable request queue row (adopted from the Magic Patterns
 // reference, remapped to MAPA's design system + data model). Presentational:
@@ -28,9 +39,9 @@ const CHIP = {
 
 // Relative "waiting" duration from submittedAt.
 const waitingLabel = (ts) => {
-  const d = tsToDate(ts)
-  if (!d) return '—'
-  const ms = Date.now() - d.getTime()
+  const t = toMs(ts)
+  if (t == null) return '—'
+  const ms = Date.now() - t
   const days = Math.floor(ms / 86_400_000)
   if (days >= 1) return `${days}d`
   const hrs = Math.floor(ms / 3_600_000)
@@ -79,7 +90,8 @@ export default function RequestsTable({ requests, slicesByRequest, sort, onSort,
     const warning = coverageWarning(r)
     const mismatch = r.status === 'fully_funded' && needed > 0 && funding.committed < needed
     const needsAction = ['verify', 'assess', 'interview', 'endorse'].includes(bucketOf(r))
-    return { needed, funding, chip, dc, warning, mismatch, needsAction }
+    const sla = slaState(r)
+    return { needed, funding, chip, dc, warning, mismatch, needsAction, sla }
   }
 
   return (
@@ -101,7 +113,7 @@ export default function RequestsTable({ requests, slicesByRequest, sort, onSort,
           </thead>
           <tbody>
             {requests.map(r => {
-              const { funding, chip, dc, warning, mismatch, needsAction } = rowData(r)
+              const { funding, chip, dc, warning, mismatch, needsAction, sla } = rowData(r)
               return (
                 <tr key={r.id} className="cursor-pointer group" onClick={() => onOpen(r)}>
                   <td className={needsAction || warning ? 'border-l-2 border-brand-400' : 'border-l-2 border-transparent'}>
@@ -140,7 +152,12 @@ export default function RequestsTable({ requests, slicesByRequest, sort, onSort,
                     </div>
                   </td>
                   <td className="text-right">
-                    <p className="tabular-nums text-sm font-medium text-gray-700 whitespace-nowrap">{waitingLabel(r.submittedAt)}</p>
+                    <p className={`tabular-nums text-sm font-medium whitespace-nowrap ${SLA_TEXT[sla]}`}>{waitingLabel(r.submittedAt)}</p>
+                    {sla !== 'ok' && (
+                      <p className={`text-xs whitespace-nowrap ${sla === 'overdue' ? 'text-red-600' : 'text-amber-600'}`}>
+                        {sla === 'overdue' && <MdWarningAmber size={11} className="inline mb-0.5" />} {slaLabel(sla)}
+                      </p>
+                    )}
                   </td>
                   <td className="text-right"><MdChevronRight size={18} className="text-gray-300 group-hover:text-brand-500 inline" /></td>
                 </tr>
