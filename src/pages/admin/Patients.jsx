@@ -422,56 +422,39 @@ export default function Patients() {
 
   return (
     <Layout breadcrumb="Patient Accounts">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
-        <div className="mb-5">
-          <p className="eyebrow">Directory</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Patient Accounts</h1>
-          <p className="text-sm text-gray-500 mt-1">View and manage all registered patient accounts.</p>
+        {/* Header with search (Magic Patterns reskin) */}
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">Directory</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Patient Accounts</h1>
+            <p className="text-sm text-gray-500 mt-1">Registered accounts, their applications, and issued Guarantee Letters.</p>
+          </div>
+          <div className="relative w-full sm:w-80 flex-shrink-0">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input className="input pl-9" placeholder="Search name, email, or contact…"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          {[
-            { label: 'Total Accounts',      value: patients.length,                          color: 'text-gray-800',  tabKey: null        },
-            { label: 'Active',              value: patients.filter(p => !p.deletion).length, color: 'text-green-600', tabKey: 'active'    },
-            { label: 'Marked for Deletion', value: deletionCount,                            color: deletionCount > 0 ? 'text-red-500' : 'text-gray-400', tabKey: 'deletion' },
-          ].map((m, i) => (
-            <div key={i}
-              className={`card p-4 ${m.tabKey ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''} ${tab === m.tabKey ? 'ring-2 ring-brand-400' : ''}`}
-              onClick={() => m.tabKey && setTab(m.tabKey)}>
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          {[['active', 'Active Accounts'], ['deletion', 'Marked for Deletion']].map(([key, label]) => (
-            <button key={key}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${tab === key ? 'bg-brand-500 text-white border-brand-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-              onClick={() => setTab(key)}>
-              {label}
-              {key === 'deletion' && deletionCount > 0 && (
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${tab === 'deletion' ? 'bg-white/20' : 'bg-red-100 text-red-600'}`}>
-                  {deletionCount}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative mb-2">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by name, email or contact..."
-            value={search} onChange={e => setSearch(e.target.value)} />
+        {/* Underline tabs with counts */}
+        <div role="tablist" aria-label="Patient account status" className="mb-4 flex items-center gap-6 border-b border-gray-100">
+          {[['active', 'Active', patients.filter(p => !p.deletion).length], ['deletion', 'Marked for deletion', deletionCount]].map(([key, label, count]) => {
+            const active = tab === key
+            return (
+              <button key={key} role="tab" type="button" aria-selected={active} onClick={() => setTab(key)}
+                className={`-mb-px flex items-center gap-2 border-b-2 px-0.5 pb-2.5 text-sm font-medium transition-colors ${
+                  active ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}>
+                {label}
+                <span className={`tabular-nums rounded-full px-2 py-0.5 text-xs font-semibold ${active ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+              </button>
+            )
+          })}
         </div>
         {search && (
-          <p className="text-xs text-gray-400 mb-3">
-            {filtered.length} of {patients.filter(p => tab === 'active' ? !p.deletion : p.deletion).length} patients
-          </p>
+          <p className="text-xs text-gray-400 mb-3">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</p>
         )}
 
         {/* Table */}
@@ -480,6 +463,7 @@ export default function Patients() {
             <thead>
               <tr>
                 <th>Patient</th>
+                <th>Access code</th>
                 <th>Contact</th>
                 <th>Date Registered</th>
                 <th>Holding Period</th>
@@ -498,6 +482,7 @@ export default function Patients() {
                       </div>
                     </div>
                   </td>
+                  <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
                   <td><div className="h-3 bg-gray-100 rounded w-24" /></td>
                   <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
                   <td><div className="h-5 bg-gray-100 rounded-full w-16" /></td>
@@ -540,6 +525,7 @@ export default function Patients() {
                       </div>
                     </div>
                   </td>
+                  <td className="font-mono text-xs text-gray-600 whitespace-nowrap">{p.hospitalId || '—'}</td>
                   <td className="text-xs text-gray-500">{p.contact ? p.contact : '—'}</td>
                   <td className="text-xs text-gray-400">{formatDate(p.createdAt)}</td>
                   <td>
@@ -587,7 +573,7 @@ export default function Patients() {
                 {/* Holding period inline confirmation */}
                 {confirmHolding?.uid === p.uid && (
                   <tr key={p.uid + '_hold'} className="bg-amber-50">
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={6} className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <MdSchedule size={16} className="text-amber-500 flex-shrink-0" />
                         <p className="text-sm text-amber-700 flex-1">
@@ -608,7 +594,7 @@ export default function Patients() {
                 {/* Mark/Restore deletion inline confirmation */}
                 {confirmDeletion?.uid === p.uid && (
                   <tr key={p.uid + '_del'} className={p.deletion ? 'bg-green-50' : 'bg-red-50'}>
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={6} className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {p.deletion
                           ? <MdRestoreFromTrash size={16} className="text-green-500 flex-shrink-0" />
@@ -633,7 +619,7 @@ export default function Patients() {
               })}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center py-8">
+                  <td colSpan={6} className="text-center py-8">
                     <p className="text-sm text-gray-400">
                       {search
                         ? 'No patients match your search.'
