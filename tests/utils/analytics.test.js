@@ -131,10 +131,10 @@ describe('computeAnalytics request-level health', () => {
     { status: 'closed',       totalBill: 5000,  philhealthCovered: 1000 },
     { status: 'under_review', totalBill: 0 },
   ]
-  it('computes approval rate over decided requests', () => {
+  it('computes approval rate over funding-decided requests (closed excluded)', () => {
     const r = computeAnalytics([], reqs)
-    // decided = 2 funded + 1 rejected + 1 closed = 4; funded 2 → 50%
-    expect(r.approvalRate).toBe(50)
+    // funding-decided = 2 funded + 1 rejected = 3 (the 1 closed is excluded); 2/3 → 67%
+    expect(r.approvalRate).toBe(67)
   })
   it('computes PhilHealth share of total bills', () => {
     const r = computeAnalytics([], reqs)

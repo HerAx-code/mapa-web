@@ -17,9 +17,13 @@ export default function AgencyCapacityOverview({ agencies = [] }) {
   const remaining = Math.max(0, allocated - committed)
   const used = pct(committed, allocated)
 
-  const activeCount    = agencies.filter(a => a.enabled).length
-  const slotsRemaining = agencies.reduce((s, a) => s + (Number(a.slots?.remaining) || 0), 0)
-  const slotsTotal     = agencies.reduce((s, a) => s + (Number(a.slots?.total) || 0), 0)
+  // Slots come from active agencies only — a disabled agency can't take a
+  // patient today, so its residual slots shouldn't inflate the figure shown
+  // beside the active-agency count.
+  const active         = agencies.filter(a => a.enabled)
+  const activeCount    = active.length
+  const slotsRemaining = active.reduce((s, a) => s + (Number(a.slots?.remaining) || 0), 0)
+  const slotsTotal     = active.reduce((s, a) => s + (Number(a.slots?.total) || 0), 0)
 
   // Near depletion: funded agencies ≥85% committed against their allocation.
   const atRisk = funded

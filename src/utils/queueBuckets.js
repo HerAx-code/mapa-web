@@ -101,3 +101,24 @@ export function coarseCounts(requests = []) {
   for (const r of requests) counts[coarseBucketOf(r)] += 1
   return counts
 }
+
+// ── Lifecycle stage labels + counts (shared by the dashboard + analytics
+// pipeline panels, so the status→label mapping lives in one place). ──────────
+export const LIFECYCLE_STAGE_LABELS = {
+  submitted:        'Submitted',
+  under_review:     'Under review',
+  assessment:       'Assessment',
+  endorsed:         'Endorsed',
+  partially_funded: 'Partially funded',
+  fully_funded:     'Fully funded',
+}
+
+// Count requests per lifecycle status, in the given order, as
+// [{ key, label, count }] — the shape PipelineFunnel expects.
+export function stageCounts(requests = [], keys = []) {
+  return keys.map(key => ({
+    key,
+    label: LIFECYCLE_STAGE_LABELS[key] ?? key,
+    count: requests.filter(r => r?.status === key).length,
+  }))
+}

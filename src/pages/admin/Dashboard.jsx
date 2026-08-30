@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 import { logAudit } from '../../utils/auditLog'
 import Tour from '../../components/Tour'
 import PipelineFunnel from '../../components/admin/PipelineFunnel'
+import { stageCounts } from '../../utils/queueBuckets'
 import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
 
@@ -337,17 +338,12 @@ export default function AdminDashboard() {
     blue:   'bg-blue-50   border-blue-100   text-blue-700',
   }
 
-  // Active-request distribution across the CRMC lifecycle stages (live).
-  const PIPELINE_STAGES = [
-    ['submitted',        'Submitted'],
-    ['under_review',     'Under review'],
-    ['assessment',       'Assessment'],
-    ['endorsed',         'Endorsed'],
-    ['partially_funded', 'Partially funded'],
-  ]
-  const pipelineStages = PIPELINE_STAGES.map(([key, label]) => ({
-    key, label, count: pipelineReqs.filter(r => r.status === key).length,
-  }))
+  // Active-request distribution across the CRMC lifecycle stages (live) — open
+  // stages only (fully_funded/closed/rejected aren't loaded). Shared stageCounts
+  // helper so the label mapping isn't duplicated with Analytics.
+  const pipelineStages = useMemo(
+    () => stageCounts(pipelineReqs, ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded']),
+    [pipelineReqs])
 
   return (
     <Layout breadcrumb={isSuperAdmin ? 'System Administration' : 'Operations'}>

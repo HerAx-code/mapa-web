@@ -3,7 +3,7 @@
 // CRMC requests are distributed across the lifecycle stages, so an operator
 // sees at a glance where the workload is piling up. Presentational — the
 // container passes the already-counted stages. Live figures, no new data model.
-export default function PipelineFunnel({ stages = [], onOpenQueue }) {
+export default function PipelineFunnel({ stages = [], onOpenQueue, totalLabel = 'open' }) {
   const total = stages.reduce((n, s) => n + s.count, 0)
   const max = Math.max(1, ...stages.map(s => s.count))
 
@@ -13,7 +13,7 @@ export default function PipelineFunnel({ stages = [], onOpenQueue }) {
         <div>
           <h2 className="text-sm font-semibold text-gray-800">Request pipeline</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Active requests by stage · <span className="tabular-nums font-medium text-gray-700">{total}</span> open
+            Requests by stage · <span className="tabular-nums font-medium text-gray-700">{total}</span> {totalLabel}
           </p>
         </div>
         {onOpenQueue && (
