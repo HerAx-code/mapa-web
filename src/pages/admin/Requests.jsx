@@ -10,7 +10,8 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
 import { deriveRequestStage } from '../../utils/requestStage'
-import { bucketOf, bucketCounts } from '../../utils/queueBuckets'
+import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
+import { overdueCount, isOverdue, SLA_HOURS } from '../../utils/sla'
 import QueueTabs from '../../components/admin/requests/QueueTabs'
 import RequestsTable from '../../components/admin/requests/RequestsTable'
 import RequestStageRail from '../../components/admin/RequestStageRail'
@@ -26,7 +27,7 @@ import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle,
   MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch,
-  MdGroups, MdThumbDown,
+  MdGroups, MdThumbDown, MdWarningAmber,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -1167,8 +1168,11 @@ export default function Requests() {
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
   const [search,   setSearch]   = useState('')
-  const [filter,   setFilter]   = useState('all')
+  const [filter,   setFilter]   = useState('needs_action')
   const [sort,     setSort]     = useState('waiting')
+  const [category, setCategory] = useState('all')
+  const [overdueOnly, setOverdueOnly] = useState(false)
+  const [page,     setPage]     = useState(0)
   // R36 (§B.27): live pending referral suggestions from agencies. Surfaced
   // as an amber banner above the requests table so CRMC sees the
   // bottom-up coordination signal without leaving this page.
@@ -1351,18 +1355,24 @@ export default function Requests() {
   // Keep the open detail in sync with live request updates
   const selectedLive = selected ? requests.find(r => r.id === selected.id) ?? selected : null
 
-  // Categorize by the CRMC processing stage each request is waiting on
-  // (queueBuckets → the shared requestStage model), so the tabs, the row chip,
-  // and the detail's endorse blockers stay in lock-step.
-  const counts = useMemo(() => bucketCounts(requests), [requests])
+  // Top-level categorization is the coarse action set (queueBuckets); each row
+  // still shows its fine stage chip. counts drive the tab badges; overdue drives
+  // the SLA strip; categories populate the filter dropdown.
+  const counts = useMemo(() => coarseCounts(requests), [requests])
+  const overdue = useMemo(() => overdueCount(requests), [requests])
+  const categories = useMemo(
+    () => Array.from(new Set(requests.map(r => r.assistanceType).filter(Boolean))).sort(),
+    [requests])
 
-  // Filter by the active stage bucket + search, then sort. Sort keys mirror the
-  // table's sortable headers: 'waiting' (oldest first — most urgent), 'balance'
-  // (largest unfunded first), 'coverage' (least-covered first).
+  // Filter by tab + category + past-SLA + search, then sort. Sort keys mirror
+  // the table's sortable headers: 'waiting' (oldest first — most urgent),
+  // 'balance' (largest unfunded first), 'coverage' (least-covered first).
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = requests.filter(r => {
-      if (filter !== 'all' && bucketOf(r) !== filter) return false
+      if (filter !== 'all' && coarseBucketOf(r) !== filter) return false
+      if (category !== 'all' && r.assistanceType !== category) return false
+      if (overdueOnly && !isOverdue(r)) return false
       if (!q) return true
       return (r.patientName ?? '').toLowerCase().includes(q)
         || (r.requestId ?? '').toLowerCase().includes(q)
@@ -1374,7 +1384,14 @@ export default function Requests() {
     else if (sort === 'coverage') arr.sort((a, b) => fundOf(a).pct - fundOf(b).pct)
     else /* waiting */            arr.sort((a, b) => (a.submittedAt?.seconds ?? 0) - (b.submittedAt?.seconds ?? 0))
     return arr
-  }, [requests, filter, search, sort, slicesByRequest])
+  }, [requests, filter, category, overdueOnly, search, sort, slicesByRequest])
+
+  // Pagination. Reset to page 0 whenever the filtered set changes.
+  const PAGE_SIZE = 12
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage  = Math.min(page, pageCount - 1)
+  const visible   = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
+  useEffect(() => { setPage(0) }, [filter, category, overdueOnly, search, sort])
 
   if (selectedLive) {
     return (
@@ -1386,11 +1403,15 @@ export default function Requests() {
 
   return (
     <Layout breadcrumb="Assistance Requests">
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
         <div className="mb-5">
           <p className="eyebrow">CRMC gateway</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Assistance Requests</h1>
-          <p className="text-sm text-gray-500 mt-1">Review patient requests, verify the bill, and endorse them to agencies toward zero balance.</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Requests</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            <span className="tabular-nums font-medium text-gray-700">{counts.all}</span> request{counts.all === 1 ? '' : 's'} at CRMC
+            {' · '}
+            <span className="tabular-nums font-medium text-gray-700">{counts.needs_action}</span> waiting on your team
+          </p>
         </div>
 
         {/* R36: agency suggestions queue. Amber banner surfaces bottom-up
@@ -1458,14 +1479,55 @@ export default function Requests() {
           </div>
         )}
 
-        {/* Toolbar: search + stage-bucket categorization */}
-        <div className="mb-4 space-y-3">
-          <div className="relative">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9" placeholder="Search patient, request ID, or type…"
+        {/* SLA alert strip — breached requests can't be cleared for discharge. */}
+        {overdue > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <MdWarningAmber className="text-red-600 flex-shrink-0" size={18} />
+            <p className="min-w-0 flex-1 text-sm text-red-900">
+              <span className="font-semibold">{overdue} request{overdue === 1 ? '' : 's'} past the {SLA_HOURS}-hour SLA.</span>{' '}
+              Patients can't be cleared for discharge until a decision is recorded.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setFilter('all'); setOverdueOnly(true) }}
+              className="flex-shrink-0 rounded-lg bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 transition-colors">
+              Review them
+            </button>
+          </div>
+        )}
+
+        {/* Categorization tabs */}
+        <div className="mb-3 overflow-x-auto">
+          <QueueTabs active={filter} counts={counts} onChange={setFilter} />
+        </div>
+
+        {/* Filter bar */}
+        <div className="card px-3 py-2.5 mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input className="input pl-9 py-1.5" placeholder="Request ID, patient, or type…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <QueueTabs active={filter} counts={counts} onChange={setFilter} />
+          <select aria-label="Filter by category" value={category} onChange={e => setCategory(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <option value="all">All categories</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button type="button" aria-pressed={overdueOnly} onClick={() => setOverdueOnly(v => !v)}
+            className={`rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
+              overdueOnly ? 'border-red-300 bg-red-50 font-medium text-red-800' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900'
+            }`}>
+            Past SLA
+          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="tabular-nums hidden text-xs text-gray-500 sm:block">{filtered.length} shown</span>
+            <select aria-label="Sort requests" value={sort} onChange={e => setSort(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+              <option value="waiting">Longest waiting</option>
+              <option value="balance">Largest balance</option>
+              <option value="coverage">Least covered</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
@@ -1482,20 +1544,40 @@ export default function Requests() {
           <div className="card p-10 text-center">
             <p className="text-sm text-gray-400">No requests match your search or filter.</p>
             <button
-              onClick={() => { setSearch(''); setFilter('all') }}
+              onClick={() => { setSearch(''); setFilter('all'); setCategory('all'); setOverdueOnly(false) }}
               className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
               Clear filters
             </button>
           </div>
         ) : (
-          <RequestsTable
-            requests={filtered}
-            slicesByRequest={slicesByRequest}
-            sort={sort}
-            onSort={setSort}
-            onOpen={setSelected}
-            coverageWarning={coverageWarning}
-          />
+          <>
+            <RequestsTable
+              requests={visible}
+              slicesByRequest={slicesByRequest}
+              sort={sort}
+              onSort={setSort}
+              onOpen={setSelected}
+              coverageWarning={coverageWarning}
+            />
+            {filtered.length > PAGE_SIZE && (
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-3 px-1">
+                <p className="tabular-nums text-xs text-gray-500">
+                  Showing {safePage * PAGE_SIZE + 1}–{safePage * PAGE_SIZE + visible.length} of {filtered.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={safePage === 0} onClick={() => setPage(p => Math.max(0, p - 1))}
+                    className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-gray-300 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40">
+                    Previous
+                  </button>
+                  <span className="tabular-nums px-2 text-xs text-gray-500">Page {safePage + 1} of {pageCount}</span>
+                  <button type="button" disabled={safePage >= pageCount - 1} onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
+                    className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-gray-300 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40">
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </Layout>
