@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import AgencyAvatar from '../../components/AgencyAvatar'
+import AgencyCapacityOverview from '../../components/admin/AgencyCapacityOverview'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
@@ -566,6 +567,10 @@ export default function Agencies() {
             </button>
           ))}
         </div>
+
+        {/* Fund-capacity overview — program-wide budget utilisation + the
+            agencies whose funds are nearly exhausted (Magic Patterns adoption). */}
+        <AgencyCapacityOverview agencies={agencies} />
 
         {/* Search + Filter + Sort */}
         <div className="flex gap-3 mb-5 flex-wrap">
