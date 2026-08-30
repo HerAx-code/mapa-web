@@ -14,6 +14,7 @@ import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
 import { overdueCount, isOverdue, SLA_HOURS } from '../../utils/sla'
 import QueueTabs from '../../components/admin/requests/QueueTabs'
 import RequestsTable from '../../components/admin/requests/RequestsTable'
+import BulkActionBar from '../../components/admin/requests/BulkActionBar'
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -1171,8 +1172,11 @@ export default function Requests() {
   const [filter,   setFilter]   = useState('needs_action')
   const [sort,     setSort]     = useState('waiting')
   const [category, setCategory] = useState('all')
+  const [assignee, setAssignee] = useState('all')
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [page,     setPage]     = useState(0)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
   // R36 (§B.27): live pending referral suggestions from agencies. Surfaced
   // as an amber banner above the requests table so CRMC sees the
   // bottom-up coordination signal without leaving this page.
@@ -1363,6 +1367,9 @@ export default function Requests() {
   const categories = useMemo(
     () => Array.from(new Set(requests.map(r => r.assistanceType).filter(Boolean))).sort(),
     [requests])
+  const assignees = useMemo(
+    () => Array.from(new Set(requests.map(r => r.assignee).filter(Boolean))).sort(),
+    [requests])
 
   // Filter by tab + category + past-SLA + search, then sort. Sort keys mirror
   // the table's sortable headers: 'waiting' (oldest first — most urgent),
@@ -1372,6 +1379,7 @@ export default function Requests() {
     const list = requests.filter(r => {
       if (filter !== 'all' && coarseBucketOf(r) !== filter) return false
       if (category !== 'all' && r.assistanceType !== category) return false
+      if (assignee !== 'all' && (r.assignee ?? 'Unassigned') !== assignee) return false
       if (overdueOnly && !isOverdue(r)) return false
       if (!q) return true
       return (r.patientName ?? '').toLowerCase().includes(q)
@@ -1384,14 +1392,67 @@ export default function Requests() {
     else if (sort === 'coverage') arr.sort((a, b) => fundOf(a).pct - fundOf(b).pct)
     else /* waiting */            arr.sort((a, b) => (a.submittedAt?.seconds ?? 0) - (b.submittedAt?.seconds ?? 0))
     return arr
-  }, [requests, filter, category, overdueOnly, search, sort, slicesByRequest])
+  }, [requests, filter, category, assignee, overdueOnly, search, sort, slicesByRequest])
 
   // Pagination. Reset to page 0 whenever the filtered set changes.
   const PAGE_SIZE = 12
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage  = Math.min(page, pageCount - 1)
   const visible   = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
-  useEffect(() => { setPage(0) }, [filter, category, overdueOnly, search, sort])
+  useEffect(() => { setPage(0); setSelectedIds(new Set()) }, [filter, category, assignee, overdueOnly, search, sort])
+
+  // ── Selection + bulk actions ──────────────────────────────────────────────
+  const toggleRow = (id) => setSelectedIds(s => {
+    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n
+  })
+  const toggleAllVisible = () => setSelectedIds(s => {
+    const allSel = visible.length > 0 && visible.every(r => s.has(r.id))
+    return allSel ? new Set() : new Set(visible.map(r => r.id))
+  })
+  const clearSelection = () => setSelectedIds(new Set())
+  const selectedRequests = () => requests.filter(r => selectedIds.has(r.id))
+
+  // Assign selected requests to the current operator. Writes only the
+  // (non-money) assignee fields on the request; admins may update any field.
+  const assignToMe = async () => {
+    const rows = selectedRequests(); if (!rows.length) return
+    setBulkBusy(true)
+    try {
+      await Promise.all(rows.map(r => updateDoc(doc(db, 'requests', r.id), {
+        assignee: user.name ?? 'CRMC', assigneeUid: user.uid, updatedAt: serverTimestamp(),
+      })))
+      rows.forEach(r => logAudit(user, {
+        action: 'request_assigned', targetType: 'request', targetId: r.id, targetName: r.requestId,
+        details: `Assigned to ${user.name ?? 'CRMC'}`, requestId: r.id, patientId: r.patientId,
+      }))
+      toast.success(`Assigned ${rows.length} request${rows.length === 1 ? '' : 's'} to you.`)
+      clearSelection()
+    } catch (err) { console.error('[Requests] assign error:', err); toast.error('Failed to assign.') }
+    finally { setBulkBusy(false) }
+  }
+
+  // Notify the selected patients that CRMC needs more documents (uses notify()).
+  const requestDocuments = async () => {
+    const rows = selectedRequests(); if (!rows.length) return
+    setBulkBusy(true)
+    try {
+      await Promise.all(rows.map(r => notify(r.patientId, {
+        type: 'docs_requested', title: 'CRMC needs more documents',
+        body: `CRMC has requested additional documents for your request ${r.requestId}. Please review your requirements and upload what's missing.`,
+      }).catch(() => {})))
+      toast.success(`Requested documents on ${rows.length} request${rows.length === 1 ? '' : 's'}.`)
+      clearSelection()
+    } catch (err) { console.error('[Requests] request-docs error:', err); toast.error('Failed to send request.') }
+    finally { setBulkBusy(false) }
+  }
+
+  // Endorse cannot batch — it needs per-request agencies + amounts. Open the
+  // first selected request so CRMC endorses through the EndorseModal.
+  const bulkEndorse = () => {
+    const rows = selectedRequests(); if (!rows.length) return
+    if (rows.length > 1) toast('Endorse one request at a time — opening the first.', { icon: '↗' })
+    setSelected(rows[0]); clearSelection()
+  }
 
   if (selectedLive) {
     return (
@@ -1513,6 +1574,12 @@ export default function Requests() {
             <option value="all">All categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          <select aria-label="Filter by officer" value={assignee} onChange={e => setAssignee(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <option value="all">Any officer</option>
+            <option value="Unassigned">Unassigned</option>
+            {assignees.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
           <button type="button" aria-pressed={overdueOnly} onClick={() => setOverdueOnly(v => !v)}
             className={`rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
               overdueOnly ? 'border-red-300 bg-red-50 font-medium text-red-800' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900'
@@ -1558,6 +1625,9 @@ export default function Requests() {
               onSort={setSort}
               onOpen={setSelected}
               coverageWarning={coverageWarning}
+              selected={selectedIds}
+              onToggle={toggleRow}
+              onToggleAll={toggleAllVisible}
             />
             {filtered.length > PAGE_SIZE && (
               <div className="flex flex-wrap items-center justify-between gap-2 mt-3 px-1">
@@ -1580,6 +1650,15 @@ export default function Requests() {
           </>
         )}
       </div>
+
+      <BulkActionBar
+        count={selectedIds.size}
+        busy={bulkBusy}
+        onAssignMe={assignToMe}
+        onRequestDocs={requestDocuments}
+        onEndorse={bulkEndorse}
+        onClear={clearSelection}
+      />
     </Layout>
   )
 }

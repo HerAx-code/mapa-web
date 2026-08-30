@@ -42,40 +42,39 @@ describe('RequestsTable', () => {
     submittedAt: { seconds: Math.floor(Date.now() / 1000) - 2 * 86400 },
   }
   const slicesByRequest = new Map() // no slices → 0% covered, full balance
+  const base = {
+    requests: [request], slicesByRequest, sort: 'waiting',
+    onSort: () => {}, onOpen: () => {}, coverageWarning: () => null,
+    selected: new Set(), onToggle: () => {}, onToggleAll: () => {},
+  }
 
-  it('renders a scannable row: patient, docs X/N, balance', () => {
-    render(
-      <RequestsTable requests={[request]} slicesByRequest={slicesByRequest}
-        sort="waiting" onSort={() => {}} onOpen={() => {}} coverageWarning={() => null} />
-    )
-    // Patient appears (desktop table + mobile card both render in jsdom).
+  it('renders the exact columns: patient, docs X/N, balance, unassigned officer', () => {
+    render(<RequestsTable {...base} />)
     expect(screen.getAllByText('Maria Santos').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/REQ-2026-01/).length).toBeGreaterThan(0)
-    // Docs 1/2 verified.
-    expect(screen.getAllByText('1/2').length).toBeGreaterThan(0)
-    // Full balance (no coverage): ₱10,000.
-    expect(screen.getAllByText(/₱10,000/).length).toBeGreaterThan(0)
-    // Stage chip for the verify bucket.
-    expect(screen.getAllByText('Verify docs').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('1/2').length).toBeGreaterThan(0)          // docs
+    expect(screen.getAllByText(/₱10,000/).length).toBeGreaterThan(0)      // balance
+    expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0)   // officer column
   })
 
   it('opens a request when a row is clicked', async () => {
     const onOpen = vi.fn()
-    render(
-      <RequestsTable requests={[request]} slicesByRequest={slicesByRequest}
-        sort="waiting" onSort={() => {}} onOpen={onOpen} coverageWarning={() => null} />
-    )
+    render(<RequestsTable {...base} onOpen={onOpen} />)
     await userEvent.click(screen.getAllByText('Maria Santos')[0])
     expect(onOpen).toHaveBeenCalledWith(request)
   })
 
   it('fires onSort from a sortable header', async () => {
     const onSort = vi.fn()
-    render(
-      <RequestsTable requests={[request]} slicesByRequest={slicesByRequest}
-        sort="waiting" onSort={onSort} onOpen={() => {}} coverageWarning={() => null} />
-    )
+    render(<RequestsTable {...base} onSort={onSort} />)
     await userEvent.click(screen.getByRole('button', { name: 'Balance' }))
     expect(onSort).toHaveBeenCalledWith('balance')
+  })
+
+  it('toggles a row selection via its checkbox', async () => {
+    const onToggle = vi.fn()
+    render(<RequestsTable {...base} onToggle={onToggle} />)
+    await userEvent.click(screen.getByRole('checkbox', { name: /Select REQ-2026-01/ }))
+    expect(onToggle).toHaveBeenCalledWith('r1')
   })
 })
