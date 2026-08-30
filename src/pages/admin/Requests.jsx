@@ -24,6 +24,7 @@ import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import StatusBadge from '../../components/ui/StatusBadge'
 import InterviewModal from '../../components/InterviewModal'
+import CaseTimeline from '../../components/CaseTimeline'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle,
@@ -516,6 +517,8 @@ function RequestDetail({ request, agencies, onClose }) {
   // until saved. See docs/philhealth-first-plan.md.
   const [coverage, setCoverage] = useState({ ph: '', other: '' })
   const [busy, setBusy] = useState(false)
+  const [timeline, setTimeline] = useState([])
+  const [timelineLoading, setTimelineLoading] = useState(true)
   // Per-doc OCR-text expander state. When a doc's OCR verdict is "no match"
   // or "could not auto-read", the verifier needs to see WHAT OCR actually
   // read to judge whether the failure is an OCR misread, a patient-side
@@ -576,6 +579,22 @@ function RequestDetail({ request, agencies, onClose }) {
     return unsub
   }, [request.patientId])
 
+  // Activity timeline — auditLog entries scoped to this request (reuses the
+  // agency-side CaseTimeline + subscription pattern). Super-admin only:
+  // staff_admin has no audit access by design (CLAUDE.md), and the auditLog
+  // rule only grants request-scoped reads to super_admin, so the subscription
+  // is skipped for other roles rather than firing a denied query.
+  useEffect(() => {
+    if (user?.role !== 'super_admin') { setTimeline([]); setTimelineLoading(false); return }
+    setTimelineLoading(true)
+    const unsub = onSnapshot(
+      query(collection(db, 'auditLog'), where('requestId', '==', request.id), orderBy('createdAt', 'asc')),
+      snap => { setTimeline(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setTimelineLoading(false) },
+      (err) => { console.error('[Requests] timeline snapshot error:', err); setTimelineLoading(false) },
+    )
+    return unsub
+  }, [request.id, user?.role])
+
   const funding = computeFunding(request.amountNeeded, slices)
   const terminal = ['fully_funded', 'closed', 'rejected'].includes(request.status)
   // PhilHealth-first coverage: the bill base falls back to amountNeeded for
@@ -635,7 +654,10 @@ function RequestDetail({ request, agencies, onClose }) {
               : newStatus === 'rejected' ? 'doc_rejected'
               : 'doc_unverified',
         targetType: 'document', targetId: docItem.id, targetName: docItem.name,
-        details: `Request ${request.requestId}` + (cleanReason ? ` · reason: ${cleanReason}` : ''),
+        details: `${docItem.name}` + (cleanReason ? ` · reason: ${cleanReason}` : ''),
+        // requestId/patientId so the entry appears in the request Activity
+        // timeline (matches the bulk-verify path, which already sets these).
+        requestId: request.id, patientId: request.patientId,
       })
       if (newStatus === 'rejected') {
         await notify(request.patientId, {
@@ -1081,6 +1103,12 @@ function RequestDetail({ request, agencies, onClose }) {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Activity timeline — audit-logged case history (super-admin only;
+              staff_admin has no audit access by design). */}
+          {user?.role === 'super_admin' && (
+            <CaseTimeline events={timeline} loading={timelineLoading} />
           )}
       </div>
 
