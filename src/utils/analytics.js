@@ -81,9 +81,30 @@ export function computeAnalytics(slices = [], requests = null) {
 
   // Request-level (program view only).
   let requestsTotal = 0, requestsFullyFunded = 0
+  let approvalRate = null, philhealthShare = null
+  let outcomes = []
   if (Array.isArray(requests)) {
     requestsTotal = requests.length
     requestsFullyFunded = requests.filter(r => r.status === 'fully_funded').length
+    // Approval rate: of the requests that reached a decision, the share fully
+    // funded. Closed = gave up on the remaining balance; rejected = ineligible.
+    const closed   = requests.filter(r => r.status === 'closed').length
+    const rejected = requests.filter(r => r.status === 'rejected').length
+    const decided  = requestsFullyFunded + closed + rejected
+    approvalRate = decided > 0 ? Math.round((requestsFullyFunded / decided) * 100) : null
+    // PhilHealth share of the total billed across all requests (first charge).
+    const billSum = requests.reduce((s, r) => s + (Number(r.totalBill ?? r.amountNeeded) || 0), 0)
+    const phSum   = requests.reduce((s, r) => s + (Number(r.philhealthCovered) || 0), 0)
+    philhealthShare = billSum > 0 ? Math.round((phSum / billSum) * 100) : null
+    // Where requests end up (outcome distribution) — the data-clean stand-in
+    // for the MP "denial reasons" panel (MAPA's reasons are free text).
+    const inProgress = requestsTotal - requestsFullyFunded - closed - rejected
+    outcomes = [
+      { key: 'fully_funded', label: 'Fully funded',        count: requestsFullyFunded, tone: 'brand' },
+      { key: 'in_progress',  label: 'Still in progress',   count: Math.max(0, inProgress), tone: 'gray' },
+      { key: 'closed',       label: 'Closed (unfunded)',   count: closed,   tone: 'amber' },
+      { key: 'rejected',     label: 'Rejected',            count: rejected, tone: 'red' },
+    ]
   }
 
   return {
@@ -94,6 +115,9 @@ export function computeAnalytics(slices = [], requests = null) {
     avgTurnaroundDays,
     requestsTotal,
     requestsFullyFunded,
+    approvalRate,
+    philhealthShare,
+    outcomes,
     byAgency: topEntries(byAgencyMap),
     byType:   topEntries(byTypeMap),
     // Ascending by month so the trend reads left → right in time.
