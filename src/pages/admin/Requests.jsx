@@ -1464,7 +1464,7 @@ export default function Requests() {
 
   return (
     <Layout breadcrumb="Assistance Requests">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
         <div className="mb-5">
           <p className="eyebrow">CRMC gateway</p>
           <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Requests</h1>
