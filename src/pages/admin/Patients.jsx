@@ -20,7 +20,7 @@ import toast from 'react-hot-toast'
 
 // ── Profile Modal ─────────────────────────────────────────────────────────
 
-function ProfileModal({ patient, onClose }) {
+function ProfileModal({ patient, onClose, onMessage }) {
   const [activeApp,   setActiveApp]   = useState(null)
   const [glApps,      setGlApps]      = useState([])
   const [docSummary,  setDocSummary]  = useState(null)
@@ -65,129 +65,110 @@ function ProfileModal({ patient, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div className="fixed inset-0 z-[200]">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <aside role="dialog" aria-modal="true" aria-label={`Profile of ${patient.name}`}
+        className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Patient Profile</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <MdClose size={20} />
-          </button>
+        {/* Header — avatar, identity, status, Message */}
+        <div className="border-b border-gray-100 px-5 pt-5 pb-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {patient.photoURL ? (
+                <img src={patient.photoURL} alt={patient.name}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-brand-200 flex-shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-brand-50 border-2 border-brand-200 flex items-center justify-center text-lg font-bold text-brand-600 flex-shrink-0">
+                  {patient.name?.[0]?.toUpperCase() ?? '?'}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="eyebrow">Patient profile</p>
+                <h2 className="mt-0.5 text-lg font-semibold text-gray-900 truncate leading-tight">{patient.name}</h2>
+                <p className="text-xs text-gray-400 truncate">{patient.email}</p>
+              </div>
+            </div>
+            <button onClick={onClose} aria-label="Close profile"
+              className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+              <MdClose size={18} />
+            </button>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+            <span className={`badge text-xs ${patient.deletion ? 'badge-red' : 'badge-green'}`}>
+              {patient.deletion ? 'Marked for deletion' : 'Active'}
+            </span>
+            {patient.cooldown > 0 && <span className="badge badge-amber text-xs">Holding period active</span>}
+          </div>
+          {onMessage && (
+            <button onClick={() => onMessage(patient)}
+              className="btn-primary w-full mt-4 flex items-center justify-center gap-2 text-sm">
+              <MdMessage size={16} /> Message
+            </button>
+          )}
         </div>
 
-        <div className="px-5 py-4 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* Avatar + name */}
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-            {patient.photoURL ? (
-              <img src={patient.photoURL} alt={patient.name}
-                className="w-14 h-14 rounded-full object-cover border-2 border-brand-200 flex-shrink-0" />
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+          {/* Current application */}
+          <section>
+            <p className="eyebrow mb-3">Current application</p>
+            {ctxLoading ? (
+              <div className="h-20 bg-gray-100 rounded-xl animate-pulse" />
             ) : (
-              <div className="w-14 h-14 rounded-full bg-brand-50 border-2 border-brand-200 flex items-center justify-center text-xl font-bold text-brand-600 flex-shrink-0">
-                {patient.name?.[0]?.toUpperCase() ?? '?'}
+              <div className={`rounded-xl border p-4 ${activeApp ? 'border-blue-100 bg-blue-50/60' : 'border-gray-100 bg-gray-50'}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{activeApp ? activeApp.agencyName : 'No active application'}</p>
+                  {activeApp && <span className="badge badge-blue text-xs capitalize flex-shrink-0">{activeApp.status}</span>}
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {docSummary
+                    ? `${docSummary.verified} of ${docSummary.total} documents verified${docSummary.total - docSummary.verified > 0 ? ` · ${docSummary.total - docSummary.verified} pending/rejected` : ''}`
+                    : activeApp ? '' : 'This patient has not submitted an assistance application yet.'}
+                </p>
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold text-gray-900 truncate">{patient.name}</p>
-              <p className="text-xs text-gray-400 truncate">{patient.email}</p>
-              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                <span className={`badge text-xs ${patient.deletion ? 'badge-red' : 'badge-green'}`}>
-                  {patient.deletion ? 'Marked for Deletion' : 'Active'}
-                </span>
-                {patient.cooldown > 0 && (
-                  <span className="badge badge-amber text-xs">Holding Period Active</span>
-                )}
+            {activeApp && patient.deletion && (
+              <div className="mt-2 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">This patient has an active application at <strong>{activeApp.agencyName}</strong>. Deleting will affect it.</p>
               </div>
-            </div>
-          </div>
+            )}
+          </section>
 
-          {/* Application + document context */}
-          {ctxLoading ? (
-            <div className="grid grid-cols-2 gap-2 animate-pulse">
-              <div className="h-14 bg-gray-100 rounded-xl" />
-              <div className="h-14 bg-gray-100 rounded-xl" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              <div className={`rounded-xl p-3 ${activeApp ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50'}`}>
-                <p className="text-xs text-gray-400 mb-0.5">Active Application</p>
-                {activeApp ? (
-                  <>
-                    <p className="text-sm font-semibold text-blue-700 truncate">{activeApp.agencyName}</p>
-                    <span className="text-xs text-blue-500 capitalize">{activeApp.status}</span>
-                  </>
-                ) : (
-                  <p className="text-sm font-medium text-gray-400">None</p>
-                )}
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-400 mb-0.5">Documents</p>
-                {docSummary ? (
-                  <>
-                    <p className="text-sm font-semibold text-gray-800">
-                      {docSummary.verified}/{docSummary.total} verified
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {docSummary.total - docSummary.verified > 0
-                        ? `${docSummary.total - docSummary.verified} pending/rejected`
-                        : 'All verified'}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm font-medium text-gray-400">—</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Active application warning */}
-          {activeApp && patient.deletion && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
-              <MdWarning size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700">
-                This patient has an active application at <strong>{activeApp.agencyName}</strong>.
-                Deleting this account will affect their application.
-              </p>
-            </div>
-          )}
-
-          {/* Detail rows */}
-          <div className="space-y-3">
-            {rows.map((r, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <r.icon size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-400">{r.label}</p>
-                  <p className="text-sm text-gray-800 font-medium">{r.value}</p>
+          {/* Details */}
+          <section>
+            <p className="eyebrow mb-2">Details</p>
+            <dl className="divide-y divide-gray-100">
+              {rows.map((r, i) => (
+                <div key={i} className="flex items-start justify-between gap-6 py-2.5">
+                  <dt className="shrink-0 text-sm text-gray-500">{r.label}</dt>
+                  <dd className={`text-right text-sm font-medium text-gray-800 ${r.label === 'Access Code' || r.label === 'Patient ID' ? 'font-mono text-[13px]' : ''}`}>{r.value}</dd>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </dl>
+          </section>
 
           {/* Guarantee Letters (read-only audit view) */}
           {glApps.length > 0 && (
-            <div className="pt-4 border-t border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                Guarantee Letters ({glApps.length})
-              </p>
+            <section>
+              <p className="eyebrow mb-2">Guarantee Letters ({glApps.length})</p>
               <div className="space-y-2">
                 {glApps.map(a => (
                   <div key={a.id} className="space-y-1">
-                    <p className="text-xs text-gray-500">
-                      <strong className="text-gray-700">{a.agencyName}</strong> · {a.appId}
-                    </p>
+                    <p className="text-xs text-gray-500"><strong className="text-gray-700">{a.agencyName}</strong> · {a.appId}</p>
                     <GLDocumentPanel app={a} compact />
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           )}
         </div>
 
-        <div className="px-5 py-3 flex justify-end border-t border-gray-100">
+        {/* Footer */}
+        <div className="border-t border-gray-100 px-5 py-3 flex justify-end">
           <button className="btn-secondary text-sm" onClick={onClose}>Close</button>
         </div>
-      </div>
+      </aside>
     </div>
   )
 }
@@ -643,7 +624,8 @@ export default function Patients() {
 
         {/* Profile modal */}
         {viewProfile && (
-          <ProfileModal patient={viewProfile} onClose={() => setViewProfile(null)} />
+          <ProfileModal patient={viewProfile} onClose={() => setViewProfile(null)}
+            onMessage={(p) => { setViewProfile(null); handleMessage(p) }} />
         )}
 
         {/* Permanent delete confirmation */}
