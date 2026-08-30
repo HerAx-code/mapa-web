@@ -79,7 +79,11 @@ export default function RequestsTable({
     const dc      = docCounts(r)
     const warning = coverageWarning(r)
     const sla     = slaState(r)
-    return { needed, funding, dc, warning, sla }
+    // Funding-contract check: 'fully_funded' should imply committed >= needed.
+    // A break is a data-state symptom (legacy seed, rolled-back approval, stale
+    // amountCommitted) worth flagging so the row doesn't just look funded.
+    const mismatch = r.status === 'fully_funded' && needed > 0 && funding.committed < needed
+    return { needed, funding, dc, warning, sla, mismatch }
   }
 
   return (
@@ -107,7 +111,7 @@ export default function RequestsTable({
           </thead>
           <tbody>
             {requests.map(r => {
-              const { funding, dc, warning, sla } = rowData(r)
+              const { funding, dc, warning, sla, mismatch } = rowData(r)
               const isSelected = !!selected?.has(r.id)
               return (
                 <tr key={r.id} onClick={() => onOpen(r)}
@@ -165,6 +169,12 @@ export default function RequestsTable({
                     <div className="flex flex-col items-start gap-1">
                       <StatusBadge status={r.status} kind="request" />
                       {warning && <span className={`inline-block whitespace-nowrap text-[11px] font-medium px-1.5 py-0.5 rounded ${warning.cls}`}>{warning.label}</span>}
+                      {mismatch && (
+                        <span className="inline-block whitespace-nowrap text-[11px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200"
+                          title={`Funded status but only ${peso(funding.committed)} of ${peso(r.amountNeeded)} is actually secured. Likely legacy data — investigate or re-derive.`}>
+                          ⚠ data check
+                        </span>
+                      )}
                     </div>
                   </td>
 
@@ -186,7 +196,7 @@ export default function RequestsTable({
       {/* Mobile cards */}
       <div className="grid grid-cols-1 gap-3 sm:hidden">
         {requests.map(r => {
-          const { funding, dc, warning } = rowData(r)
+          const { funding, dc, warning, mismatch } = rowData(r)
           return (
             <button key={r.id} onClick={() => onOpen(r)} className="card p-4 text-left hover:shadow-md transition-all w-full">
               <div className="flex items-start justify-between gap-2 mb-1">
@@ -203,6 +213,7 @@ export default function RequestsTable({
                 <span className={`tabular-nums text-[11px] font-medium ${dc.blocking ? 'text-red-600' : 'text-gray-400'}`}>docs {dc.verified}/{dc.total}</span>
               </div>
               {warning && <div className="mt-2"><span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span></div>}
+              {mismatch && <div className="mt-2"><span className="inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">⚠ data check — only {peso(funding.committed)} secured</span></div>}
             </button>
           )
         })}
