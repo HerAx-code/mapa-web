@@ -338,7 +338,7 @@ export default function HospitalIDs() {
 
   return (
     <Layout breadcrumb="Patient Access Codes">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
