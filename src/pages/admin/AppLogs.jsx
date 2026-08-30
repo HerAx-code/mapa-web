@@ -75,7 +75,7 @@ export default function AppLogs() {
 
   return (
     <Layout breadcrumb="Application Logs">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         <div className="mb-5">
           <p className="eyebrow">Records</p>
