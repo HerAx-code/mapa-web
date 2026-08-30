@@ -10,7 +10,9 @@ export default function RequestStageRail({ stage }) {
   const { stages } = stage
 
   return (
-    <div className="card p-4 sm:p-5">
+    // `isolate` contains the circles' z-10 in this card's own stacking context
+    // so they never paint over sticky chrome (e.g. the detail sub-header).
+    <div className="card p-4 sm:p-5 isolate">
       <div className="flex items-start" role="list" aria-label="Processing stages">
         {stages.map((s, i) => (
           <div key={s.key} role="listitem" className="relative flex flex-1 flex-col items-center min-w-0">
