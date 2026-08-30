@@ -1429,11 +1429,22 @@ export default function Requests() {
         || (r.requestId ?? '').toLowerCase().includes(q)
         || (r.assistanceType ?? '').toLowerCase().includes(q)
     })
-    const fundOf = (r) => computeFunding(Number(r.amountNeeded) || 0, slicesByRequest.get(r.id) ?? [])
+    // Precompute funding once per request so the sort comparator doesn't call
+    // computeFunding O(n log n) times.
+    const fundMap = new Map(list.map(r => [r.id, computeFunding(Number(r.amountNeeded) || 0, slicesByRequest.get(r.id) ?? [])]))
+    // submittedAt → epoch-ms across Timestamp / { seconds } / Date / ISO shapes
+    // (matches the robust conversion used for the SLA + waiting labels).
+    const subMs = (r) => {
+      const t = r?.submittedAt
+      if (!t) return 0
+      if (typeof t.toDate === 'function') return t.toDate().getTime()
+      if (typeof t.seconds === 'number') return t.seconds * 1000
+      const d = new Date(t); return Number.isNaN(d.getTime()) ? 0 : d.getTime()
+    }
     const arr = [...list]
-    if (sort === 'balance')       arr.sort((a, b) => fundOf(b).balance - fundOf(a).balance)
-    else if (sort === 'coverage') arr.sort((a, b) => fundOf(a).pct - fundOf(b).pct)
-    else /* waiting */            arr.sort((a, b) => (a.submittedAt?.seconds ?? 0) - (b.submittedAt?.seconds ?? 0))
+    if (sort === 'balance')       arr.sort((a, b) => fundMap.get(b.id).balance - fundMap.get(a.id).balance)
+    else if (sort === 'coverage') arr.sort((a, b) => fundMap.get(a.id).pct - fundMap.get(b.id).pct)
+    else /* waiting */            arr.sort((a, b) => subMs(a) - subMs(b))
     return arr
   }, [requests, filter, category, assignee, overdueOnly, search, sort, slicesByRequest])
 
@@ -1483,6 +1494,12 @@ export default function Requests() {
         type: 'docs_requested', title: 'CRMC needs more documents',
         body: `CRMC has requested additional documents for your request ${r.requestId}. Please review your requirements and upload what's missing.`,
       }).catch(() => {})))
+      // All admin actions must call logAudit() (CLAUDE.md).
+      rows.forEach(r => logAudit(user, {
+        action: 'docs_requested', targetType: 'request', targetId: r.id, targetName: r.requestId,
+        details: 'Requested additional documents from the patient',
+        requestId: r.id, patientId: r.patientId,
+      }))
       toast.success(`Requested documents on ${rows.length} request${rows.length === 1 ? '' : 's'}.`)
       clearSelection()
     } catch (err) { console.error('[Requests] request-docs error:', err); toast.error('Failed to send request.') }
@@ -1654,7 +1671,7 @@ export default function Requests() {
           <div className="card p-10 text-center">
             <p className="text-sm text-gray-400">No requests match your search or filter.</p>
             <button
-              onClick={() => { setSearch(''); setFilter('all'); setCategory('all'); setOverdueOnly(false) }}
+              onClick={() => { setSearch(''); setFilter('all'); setCategory('all'); setAssignee('all'); setOverdueOnly(false) }}
               className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
               Clear filters
             </button>

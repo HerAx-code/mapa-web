@@ -62,14 +62,18 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
         {sliceRows.map(s => {
           const st = SLICE_STATE[s.status] ?? { label: s.status, cls: 'text-gray-400' }
           const amount = s.amountApproved ?? s.amountRequested ?? 0
-          const declined = st.label === 'declined'
+          // Only APPROVED funding actually reduces the balance (balance =
+          // needed − committed). Pending is a reserved cap, declined is nothing
+          // — so neither carries the "−" sign, and the visible "−" rows sum to
+          // the stated Remaining balance.
+          const isApproved = st.label === 'approved'
           return (
             <Row key={s.id}
               label={agencyName(s.agencyId)}
               sub={<span className={st.cls}>{st.label}</span>}
               amount={amount}
-              sign={declined ? '' : '− '}
-              muted={declined} />
+              sign={isApproved ? '− ' : ''}
+              muted={st.label === 'declined'} />
           )
         })}
 
