@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast'
 import { logAudit } from '../../utils/auditLog'
 import Tour from '../../components/Tour'
+import PipelineFunnel from '../../components/admin/PipelineFunnel'
 import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
 
@@ -56,6 +57,7 @@ export default function AdminDashboard() {
   const [patientCount,   setPatientCount]   = useState('—')
   const [agencyCount,    setAgencyCount]    = useState('—')
   const [openRequests,   setOpenRequests]   = useState('—')
+  const [pipelineReqs,   setPipelineReqs]   = useState([])
   const [pendingDocs,    setPendingDocs]    = useState('—')
   const [recentPatients, setRecentPatients] = useState([])
   const [recentDocs,     setRecentDocs]     = useState([])
@@ -95,7 +97,8 @@ export default function AdminDashboard() {
     // closed/rejected/fully_funded). This is the CRMC's actual day-to-day queue.
     const u4 = onSnapshot(
       query(collection(db, 'requests'), where('status', 'in', ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded'])),
-      snap => setOpenRequests(snap.size), () => setOpenRequests('—')
+      snap => { setOpenRequests(snap.size); setPipelineReqs(snap.docs.map(d => d.data())) },
+      () => { setOpenRequests('—'); setPipelineReqs([]) }
     )
     const u5 = onSnapshot(
       query(collection(db, 'documents'), where('status', '==', 'pending')),
@@ -332,6 +335,18 @@ export default function AdminDashboard() {
     blue:   'bg-blue-50   border-blue-100   text-blue-700',
   }
 
+  // Active-request distribution across the CRMC lifecycle stages (live).
+  const PIPELINE_STAGES = [
+    ['submitted',        'Submitted'],
+    ['under_review',     'Under review'],
+    ['assessment',       'Assessment'],
+    ['endorsed',         'Endorsed'],
+    ['partially_funded', 'Partially funded'],
+  ]
+  const pipelineStages = PIPELINE_STAGES.map(([key, label]) => ({
+    key, label, count: pipelineReqs.filter(r => r.status === key).length,
+  }))
+
   return (
     <Layout breadcrumb={isSuperAdmin ? 'System Administration' : 'Operations'}>
       <div className="p-4 sm:p-6">
@@ -436,6 +451,11 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── Request pipeline (live distribution across CRMC stages) ── */}
+        <div className="mb-5">
+          <PipelineFunnel stages={pipelineStages} onOpenQueue={() => navigate('/admin/requests')} />
+        </div>
 
         {/* ── Two-column layout ── */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
