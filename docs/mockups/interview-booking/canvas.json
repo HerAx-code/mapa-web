@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "Patient · Book" },
+    { "file": "PatientBooked.dc.html", "x": 470, "y": 0, "w": 390, "h": 844, "title": "Patient · Booked" },
+    { "file": "PatientEmpty.dc.html", "x": 940, "y": 0, "w": 390, "h": 640, "title": "Patient · No slots yet" },
+    { "file": "AdminAvailability.dc.html", "x": 0, "y": 1000, "w": 1280, "h": 860, "title": "CRMC · Availability manager" },
+    { "file": "InterviewGate.dc.html", "x": 1360, "y": 1000, "w": 540, "h": 440, "title": "CRMC · Per-request gate" }
+  ],
+  "annotations": [
+    { "id": "patient-row", "x": 0, "y": -72, "w": 520, "text": "PATIENT — mobile, bilingual (Filipino + English). The booked card reuses the app's existing card-hero, so booking just fills in the interview card patients already see." },
+    { "id": "admin-row", "x": 0, "y": 928, "w": 520, "text": "CRMC ADMIN — desktop, English-only. Publish availability from a preset weekly template; the per-request gate keeps CRMC authoritative over who may self-book." }
+  ],
+  "launch": { "view": "canvas" }
+}

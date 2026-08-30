@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F9FAFB; color: #111827; -webkit-font-smoothing: antialiased; }
+    a { color: #0F6E56; text-decoration: none; } a:hover { color: #085041; }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 844px; background: #F9FAFB; padding: 16px 12px 20px;">
+
+  <!-- page header -->
+  <div style="margin-bottom: 18px;">
+    <p style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #9CA3AF;">Book your interview</p>
+    <h1 style="margin: 4px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #111827;">Book your interview</h1>
+    <p style="margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: #6B7280;">Piliin ang oras na akma sa inyo. <span style="color:#9CA3AF;">Choose a time that works for you.</span></p>
+  </div>
+
+  <!-- picker card -->
+  <div style="background: #fff; border: 1px solid #F3F4F6; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 16px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+      <span style="font-size: 13px; font-weight: 600; color: #374151;">Select a day</span>
+      <span style="display:inline-flex; align-items:center; gap:4px; font-size: 11px; color: #9CA3AF;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        All times PH
+      </span>
+    </div>
+
+    <!-- day rail -->
+    <div style="display: flex; gap: 8px; overflow: hidden; margin-bottom: 16px;">
+      <div style="min-width: 62px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border: 1px solid #E5E7EB; border-radius: 12px; background: #fff;">
+        <span style="font-size: 11px; font-weight: 600; color: #6B7280;">Mon</span>
+        <span style="font-size: 15px; font-weight: 700; color: #111827;">Sep 1</span>
+        <span style="font-size: 11px; font-weight: 600; color: #0F6E56;">3 open</span>
+      </div>
+      <div style="min-width: 62px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border: 1px solid #0F6E56; border-radius: 12px; background: #0F6E56; box-shadow: 0 1px 2px rgba(15,110,86,0.3);">
+        <span style="font-size: 11px; font-weight: 600; color: #C3EBDD;">Wed</span>
+        <span style="font-size: 15px; font-weight: 700; color: #fff;">Sep 2</span>
+        <span style="font-size: 11px; font-weight: 600; color: #87D7BB;">5 open</span>
+      </div>
+      <div style="min-width: 62px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border: 1px solid #E5E7EB; border-radius: 12px; background: #fff;">
+        <span style="font-size: 11px; font-weight: 600; color: #6B7280;">Thu</span>
+        <span style="font-size: 15px; font-weight: 700; color: #111827;">Sep 3</span>
+        <span style="font-size: 11px; font-weight: 600; color: #0F6E56;">6 open</span>
+      </div>
+      <div style="min-width: 62px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; border: 1px solid #E5E7EB; border-radius: 12px; background: #fff;">
+        <span style="font-size: 11px; font-weight: 600; color: #6B7280;">Fri</span>
+        <span style="font-size: 15px; font-weight: 700; color: #111827;">Sep 4</span>
+        <span style="font-size: 11px; font-weight: 600; color: #0F6E56;">4 open</span>
+      </div>
+    </div>
+
+    <!-- morning -->
+    <p style="margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Morning · Umaga</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px;">
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">9:00 AM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">9:30 AM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">10:00 AM</div>
+    </div>
+
+    <!-- afternoon -->
+    <p style="margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.04em;">Afternoon · Hapon</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 2px solid #0F6E56; border-radius: 8px; font-size: 14px; font-weight: 600; color: #fff; background: #0F6E56; box-shadow: 0 0 0 3px rgba(29,175,119,0.25);">1:00 PM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">1:30 PM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">2:00 PM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">2:30 PM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #9CA3AF; background: #F9FAFB;">3:00 PM</div>
+      <div style="min-height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-weight: 500; color: #374151; background: #fff;">3:30 PM</div>
+    </div>
+  </div>
+
+  <!-- confirm bar -->
+  <div style="margin-top: 16px; background: #fff; border: 1px solid #F3F4F6; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 14px 16px; display: flex; align-items: center; gap: 12px;">
+    <div style="flex: 1; min-width: 0;">
+      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #111827;">Wed, Sep 2 · 1:00 PM</p>
+      <p style="margin: 2px 0 0; font-size: 12px; color: #6B7280;">Philippine time · about 30 minutes</p>
+    </div>
+    <div style="background: #0F6E56; color: #fff; padding: 0 18px; min-height: 44px; border-radius: 8px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(15,110,86,0.3);">
+      Confirm
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
