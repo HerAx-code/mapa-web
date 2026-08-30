@@ -83,6 +83,13 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const dirtyRef       = useRef(false)
   const saveTimerRef   = useRef(null)
   const sectionRefs    = useRef({})
+  // Always holds the latest sheet so the debounced performSave writes the
+  // current values, not the ones captured in the render that scheduled the
+  // timer (that stale closure dropped the last edit — e.g. a single
+  // "Use suggestion" click). Timers are cleared on id-change, so this never
+  // crosses documents.
+  const sheetRef       = useRef(sheet)
+  useEffect(() => { sheetRef.current = sheet }, [sheet])
 
   // Subscribe to application — use a ref for the "have we hydrated" flag
   // so the snapshot subscription doesn't tear down + recreate the moment
@@ -150,16 +157,18 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     if (!app || !dirtyRef.current) return
     setSaveState(prev => ({ ...prev, status: 'saving' }))
     try {
-      const cleanedMembers = (sheet.familyMembers ?? [])
+      // Read the LATEST sheet (via ref), not this render's captured `sheet`.
+      const s = sheetRef.current
+      const cleanedMembers = (s.familyMembers ?? [])
         .filter(m => m.name?.trim() || m.relationship?.trim())
       const payload = {
-        ...sheet,
+        ...s,
         familyMembers: cleanedMembers,
-        householdSize:      sheet.householdSize === '' ? null : Number(sheet.householdSize),
-        monthlyIncome:      sheet.monthlyIncome === '' ? null : Number(sheet.monthlyIncome),
-        estimatedTotalCost: sheet.estimatedTotalCost === '' ? null : Number(sheet.estimatedTotalCost),
+        householdSize:      s.householdSize === '' ? null : Number(s.householdSize),
+        monthlyIncome:      s.monthlyIncome === '' ? null : Number(s.monthlyIncome),
+        estimatedTotalCost: s.estimatedTotalCost === '' ? null : Number(s.estimatedTotalCost),
         expenses: Object.fromEntries(
-          Object.entries(sheet.expenses ?? {}).map(([k, v]) => [k, v === '' ? null : Number(v)])
+          Object.entries(s.expenses ?? {}).map(([k, v]) => [k, v === '' ? null : Number(v)])
         ),
         completedBy:   app.intakeSheet?.completedBy ?? user.name,
         completedAt:   app.intakeSheet?.completedAt ?? serverTimestamp(),
@@ -475,19 +484,22 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 )}
               </div>
 
-              {/* Financial snapshot + advisory means-test suggestion — fills the
-                  rail and turns the entered figures into decision support. The
-                  means-test suggestion is CRMC-side only (hidden while a patient
-                  fills their factual portion). */}
-              <AssessmentSnapshot
-                sheet={sheet}
-                showMeansTest={!patientFacts}
-                canEdit={canEdit}
-                onApplyMeansTest={(cat) => {
-                  setSheet(p => ({ ...p, meansTestCategory: cat }))
-                  scheduleAutosave()
-                }}
-              />
+              {/* Financial snapshot + advisory means-test suggestion — a CRMC
+                  assessment aid that fills the rail and turns the entered
+                  figures into decision support. Not shown while a patient fills
+                  their factual portion (it's staff decision support, and would
+                  otherwise be English-only on a patient-facing surface). */}
+              {!patientFacts && (
+                <AssessmentSnapshot
+                  sheet={sheet}
+                  showMeansTest
+                  canEdit={canEdit}
+                  onApplyMeansTest={(cat) => {
+                    setSheet(p => ({ ...p, meansTestCategory: cat }))
+                    scheduleAutosave()
+                  }}
+                />
+              )}
 
               {/* Editor info — agency mode prefers the parent request's
                   intake authorship (the real CRMC source); other modes use
