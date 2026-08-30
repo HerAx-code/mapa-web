@@ -329,7 +329,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 
   if (loading || !app) return (
     <Layout breadcrumb="Case Assessment">
-      <div className="p-4 sm:p-6 max-w-5xl space-y-4">
+      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto space-y-4">
         {[1, 2, 3].map(i => (
           <div key={i} className="card p-5 animate-pulse">
             <div className="h-4 bg-gray-100 rounded w-48 mb-3" />
@@ -342,7 +342,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 
   return (
     <Layout breadcrumb={`Case Assessment · ${app.patientName}`}>
-      <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto">
 
         {/* Sticky header */}
         <div className="sticky top-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gray-50/95 backdrop-blur border-b border-gray-100 z-20 mb-5 print:hidden">
