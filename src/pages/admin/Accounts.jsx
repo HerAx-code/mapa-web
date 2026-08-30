@@ -329,7 +329,7 @@ export default function Accounts() {
 
   return (
     <Layout breadcrumb="Admin Accounts">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
@@ -357,35 +357,26 @@ export default function Accounts() {
           ))}
         </div>
 
-        {/* Search + Filters */}
-        <div className="flex gap-3 mb-4 flex-wrap">
-          <div className="relative flex-1 min-w-48">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9" placeholder="Search by name, email or contact..."
+        {/* Filter bar (Magic Patterns reskin) */}
+        <div className="card px-3 py-2.5 mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input className="input pl-9 py-1.5" placeholder="Search by name or email…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-        </div>
-        <div className="flex gap-3 mb-5 flex-wrap items-center">
-          {/* Role filter */}
-          <div className="flex gap-1">
-            {[['all','All'], ['super_admin','Super Admin'], ['staff_admin','Staff Admin']].map(([key, label]) => (
-              <button key={key} onClick={() => setRoleFilter(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${roleFilter === key ? 'bg-brand-500 text-white border-brand-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="text-gray-200">|</span>
-          {/* Status filter */}
-          <div className="flex gap-1">
-            {[['all','All Status'], ['active','Active'], ['deactivated','Deactivated']].map(([key, label]) => (
-              <button key={key} onClick={() => setStatusFilter(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${statusFilter === key ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="text-xs text-gray-400 ml-auto">{filtered.length} account{filtered.length !== 1 ? 's' : ''}</span>
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <option value="all">All roles</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="staff_admin">Staff Admin</option>
+          </select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <option value="all">All status</option>
+            <option value="active">Active</option>
+            <option value="deactivated">Deactivated</option>
+          </select>
+          <span className="tabular-nums text-xs text-gray-500 ml-auto">{filtered.length} account{filtered.length !== 1 ? 's' : ''}</span>
         </div>
 
         {/* Table */}
