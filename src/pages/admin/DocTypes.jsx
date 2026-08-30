@@ -319,7 +319,7 @@ export default function DocTypes() {
 
   return (
     <Layout breadcrumb="Document Types">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
