@@ -11,7 +11,7 @@ import { logAudit } from '../../utils/auditLog'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
 import { deriveRequestStage } from '../../utils/requestStage'
 import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
-import { overdueCount, isOverdue, SLA_HOURS } from '../../utils/sla'
+import { overdueCount, isOverdue, slaState, slaLabel, SLA_HOURS } from '../../utils/sla'
 import QueueTabs from '../../components/admin/requests/QueueTabs'
 import RequestsTable from '../../components/admin/requests/RequestsTable'
 import BulkActionBar from '../../components/admin/requests/BulkActionBar'
@@ -876,6 +876,16 @@ function RequestDetail({ request, agencies, onClose }) {
               )}
               <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-400 flex-shrink-0" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
               <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400 flex-shrink-0" /> submitted {fmtDate(request.submittedAt)}</p>
+              {/* Case facts (MP detail): who's handling it + how it sits against
+                  the 48-hour SLA — read-only, derived from submittedAt. */}
+              <p className="flex items-center gap-1.5">
+                <MdAssignment size={13} className="text-gray-400 flex-shrink-0" />
+                Officer: <span className={request.assignee ? 'text-gray-700 font-medium' : 'text-amber-700 font-medium'}>{request.assignee ?? 'Unassigned'}</span>
+                {!terminal && (() => {
+                  const sla = slaState(request)
+                  return <span className={`ml-1 ${sla === 'overdue' ? 'text-red-600' : sla === 'due_soon' ? 'text-amber-600' : 'text-gray-400'}`}>· {slaLabel(sla)} ({SLA_HOURS}h SLA)</span>
+                })()}
+              </p>
             </div>
           </div>
 
