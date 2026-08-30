@@ -121,3 +121,31 @@ describe('analyticsForRange', () => {
     expect(r.deltas.totalFacilitated).toBeNull()
   })
 })
+
+// ── request-level health metrics (approval rate / PhilHealth share / outcomes) ─
+describe('computeAnalytics request-level health', () => {
+  const reqs = [
+    { status: 'fully_funded', totalBill: 10000, philhealthCovered: 4000 },
+    { status: 'fully_funded', totalBill: 10000, philhealthCovered: 0 },
+    { status: 'rejected',     totalBill: 5000,  philhealthCovered: 0 },
+    { status: 'closed',       totalBill: 5000,  philhealthCovered: 1000 },
+    { status: 'under_review', totalBill: 0 },
+  ]
+  it('computes approval rate over decided requests', () => {
+    const r = computeAnalytics([], reqs)
+    // decided = 2 funded + 1 rejected + 1 closed = 4; funded 2 → 50%
+    expect(r.approvalRate).toBe(50)
+  })
+  it('computes PhilHealth share of total bills', () => {
+    const r = computeAnalytics([], reqs)
+    // phSum 5000 / billSum 30000 = 16.67 → 17%
+    expect(r.philhealthShare).toBe(17)
+  })
+  it('builds an outcome distribution that covers every request', () => {
+    const r = computeAnalytics([], reqs)
+    const total = r.outcomes.reduce((s, o) => s + o.count, 0)
+    expect(total).toBe(reqs.length)
+    expect(r.outcomes.find(o => o.key === 'fully_funded').count).toBe(2)
+    expect(r.outcomes.find(o => o.key === 'in_progress').count).toBe(1)
+  })
+})
