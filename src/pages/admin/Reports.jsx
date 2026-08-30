@@ -181,13 +181,20 @@ export default function Reports() {
 
   return (
     <Layout breadcrumb="Reports">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto">
 
-        {/* Header */}
-        <div className="mb-5">
-          <p className="eyebrow">Support</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Problem Reports</h1>
-          <p className="text-sm text-gray-500 mt-1">View and manage reports submitted by users through the portal.</p>
+        {/* Header with search (Magic Patterns reskin) */}
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">Support</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Problem Reports</h1>
+            <p className="text-sm text-gray-500 mt-1">Reports submitted by patients and agency staff through the portal.</p>
+          </div>
+          <div className="relative w-full sm:w-72 flex-shrink-0">
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input className="input pl-9" placeholder="Search reports…"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
         </div>
 
         {/* Summary */}
@@ -214,71 +221,34 @@ export default function Reports() {
           })}
         </div>
 
-        {/* Search */}
-        <div className="relative mb-3">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by category, description or reporter..."
-            value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-
-        {/* Filters */}
-        <div className="space-y-2 mb-4">
-
-          {/* Status */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400 w-16 flex-shrink-0">Status</span>
-            {[['all','All'], ['open','Open'], ['in_progress','In Progress'], ['resolved','Resolved']].map(([key, label]) => (
-              <button key={key} onClick={() => setStatusFilter(key)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  statusFilter === key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {label}
-              </button>
-            ))}
+        {/* Filters: category + reporter (status is driven by the summary tiles above) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <p className="text-xs text-gray-400">
+            {filtered.length} report{filtered.length !== 1 ? 's' : ''}{isFiltered && reports.length > 0 ? ` of ${reports.length}` : ''}
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            {categories.length > 0 && (
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
+                Category
+                <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                  <option value="all">All categories</option>
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+            )}
+            {roles.length > 1 && (
+              <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
+                Reporter
+                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                  <option value="all">All reporters</option>
+                  {roles.map(r => <option key={r} value={r}>{ROLE_LABEL[r] ?? r}</option>)}
+                </select>
+              </label>
+            )}
           </div>
-
-          {/* Category */}
-          {categories.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-400 w-16 flex-shrink-0">Category</span>
-              {[{ key: 'all', label: 'All' }, ...categories.map(c => ({ key: c, label: c }))].map(({ key, label }) => (
-                <button key={key} onClick={() => setCatFilter(key)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                    catFilter === key
-                      ? 'bg-brand-500 text-white border-brand-500'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Reporter role */}
-          {roles.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-400 w-16 flex-shrink-0">Reporter</span>
-              {[{ key: 'all', label: 'All' }, ...roles.map(r => ({ key: r, label: ROLE_LABEL[r] ?? r }))].map(({ key, label }) => (
-                <button key={key} onClick={() => setRoleFilter(key)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                    roleFilter === key
-                      ? 'bg-brand-500 text-white border-brand-500'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-
-        {/* Result count */}
-        <p className="text-xs text-gray-400 mb-4">
-          {filtered.length} report{filtered.length !== 1 ? 's' : ''}
-          {isFiltered && reports.length > 0 && ` (filtered from ${reports.length})`}
-        </p>
 
         {/* ── Cards ── */}
         {loading ? (
