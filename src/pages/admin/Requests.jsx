@@ -15,6 +15,7 @@ import { overdueCount, isOverdue, slaState, slaLabel, SLA_HOURS } from '../../ut
 import QueueTabs from '../../components/admin/requests/QueueTabs'
 import RequestsTable from '../../components/admin/requests/RequestsTable'
 import BulkActionBar from '../../components/admin/requests/BulkActionBar'
+import PathToZeroBalance from '../../components/admin/requests/PathToZeroBalance'
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -888,6 +889,10 @@ function RequestDetail({ request, agencies, onClose }) {
               </p>
             </div>
           </div>
+
+          {/* Path to zero balance — consolidated funding-source breakdown
+              (coverage-first → agency slices), read-only. */}
+          <PathToZeroBalance request={request} slices={slices} agencies={agencies} funding={funding} />
 
           {/* Stage rail — at-a-glance verify → assess → interview → endorse
               progress (redesign Phase 1), driven by the requestStage model. */}
