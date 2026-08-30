@@ -9,7 +9,7 @@ import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
   MdListAlt, MdGroup, MdMessage, MdDescription, MdFavorite,
   MdHistory, MdFlag, MdDownload, MdCampaign,
-  MdWarning, MdSpeed, MdCheckCircle, MdTimer, MdTour,
+  MdWarning, MdCheckCircle, MdTour,
   // De-emoji sweep: activity feed, metrics, alerts, empty state
   MdLocalHospital, MdPersonAdd, MdCancel, MdAssignment, MdCelebration,
   MdBlock, MdWorkspacePremium, MdInbox, MdAccessTime, MdMarkEmailUnread,
@@ -251,15 +251,9 @@ export default function AdminDashboard() {
     return { avgDays, approvalRate, certBacklog }
   }, [isSuperAdmin, approvedApps, approvedCount, rejectedCount, certBacklog])
 
+  // Action-first: an operator's live workload (open requests, docs to verify)
+  // leads; program totals (patients, agencies) follow.
   const METRICS = [
-    {
-      label: 'Total Patients',  value: patientCount,
-      Icon: MdGroup, valueCls: 'text-gray-900', bg: 'bg-blue-50', iconCls: 'text-blue-600', path: '/admin/patients',
-    },
-    {
-      label: 'Active Agencies', value: agencyCount,
-      Icon: MdLocalHospital, valueCls: 'text-green-600', bg: 'bg-green-50', iconCls: 'text-green-600', path: '/admin/agencies',
-    },
     {
       label: 'Open Requests',   value: openRequests,
       Icon: MdListAlt, valueCls: 'text-brand-600', bg: 'bg-brand-50', iconCls: 'text-brand-600', path: '/admin/requests',
@@ -267,6 +261,14 @@ export default function AdminDashboard() {
     {
       label: 'Pending Docs',    value: pendingDocs,
       Icon: MdDescription, valueCls: 'text-amber-600', bg: 'bg-amber-50', iconCls: 'text-amber-600', path: '/admin/requests',
+    },
+    {
+      label: 'Total Patients',  value: patientCount,
+      Icon: MdGroup, valueCls: 'text-gray-900', bg: 'bg-blue-50', iconCls: 'text-blue-600', path: '/admin/patients',
+    },
+    {
+      label: 'Active Agencies', value: agencyCount,
+      Icon: MdLocalHospital, valueCls: 'text-green-600', bg: 'bg-green-50', iconCls: 'text-green-600', path: '/admin/agencies',
     },
   ]
 
@@ -349,203 +351,146 @@ export default function AdminDashboard() {
 
   return (
     <Layout breadcrumb={isSuperAdmin ? 'System Administration' : 'Operations'}>
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
-        {/* Page header */}
-        <div className="mb-6 flex items-start justify-between gap-3">
-          <div>
+        {/* Header — compact; processing-health chips inline (super admin), so
+            the health read sits at first glance without a separate strip. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="min-w-0">
             <p className="eyebrow">Console</p>
-            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">
-              {isSuperAdmin ? 'System Administration' : 'Operations Dashboard'}
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              {isSuperAdmin ? 'System Administration' : 'Operations'}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {isSuperAdmin
-                ? 'Global overview of MAPA metrics, alerts, and processing health.'
-                : 'Daily operations — review documents, manage applications, and respond to patient needs.'}
-            </p>
           </div>
+          {isSuperAdmin && slaMetrics && (
+            <div className="flex items-center gap-2">
+              {[
+                { label: 'Avg. processing', value: slaMetrics.avgDays != null ? `${slaMetrics.avgDays}d` : '—' },
+                { label: 'Approval rate',   value: slaMetrics.approvalRate != null ? `${slaMetrics.approvalRate}%` : '—' },
+                { label: 'GL backlog',      value: slaMetrics.certBacklog },
+              ].map(h => (
+                <div key={h.label} className="rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-center min-w-[74px]">
+                  <p className="text-sm font-semibold text-gray-800 tabular-nums leading-none">{h.value}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">{h.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* ── Metric cards ── */}
-        <div data-tour-id="admin-metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        {/* KPI tiles — live workload first */}
+        <div data-tour-id="admin-metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {METRICS.map((m, i) => (
             <button key={i} onClick={() => navigate(m.path)}
               className="stat-tile text-left hover:shadow-md transition-all">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between">
                 <div className={`w-9 h-9 ${m.bg} rounded-xl flex items-center justify-center`}>
                   <m.Icon className={m.iconCls} size={20} />
                 </div>
                 <p className={`stat-num ${m.valueCls}`}>{m.value}</p>
               </div>
-              <p className="stat-label mt-0">{m.label}</p>
+              <p className="stat-label mt-2">{m.label}</p>
             </button>
           ))}
         </div>
 
-        {/* ── SLA strip (super admin only) ── */}
-        {isSuperAdmin && slaMetrics && (
-          <div className="card p-4 mb-5">
-            <div className="flex items-center gap-2 mb-3">
-              <MdSpeed size={16} className="text-brand-500" />
-              <p className="text-sm font-semibold text-gray-800">Processing Health</p>
-              <span className="text-xs text-gray-400 ml-auto">Last 30 days · all agencies</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MdTimer size={18} className="text-brand-500" />
+        {/* Main grid — attention + pipeline (priority, left) · shortcuts +
+            activity (right). Compact so the whole console reads on one screen. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+          <div className="lg:col-span-8 space-y-4">
+            {/* Needs attention — the first thing an operator should act on. */}
+            {alerts.length > 0 && (
+              <div data-tour-id="admin-alerts" className="card p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MdWarning size={16} className="text-amber-500" />
+                  <p className="text-sm font-semibold text-gray-800">Needs attention</p>
+                  <span className="text-xs text-gray-400">{alerts.length} item{alerts.length === 1 ? '' : 's'}</span>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-400">Avg. Processing Time</p>
-                  <p className="text-xl font-semibold text-gray-800">
-                    {slaMetrics.avgDays != null ? `${slaMetrics.avgDays}d` : '—'}
-                  </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {alerts.map(a => (
+                    <button key={a.key} onClick={() => navigate(a.path)}
+                      className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm ${TONE_CLS[a.tone]}`}>
+                      <a.Icon size={17} className="mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{a.label}</p>
+                        <p className="text-xs opacity-80 truncate">{a.detail}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MdCheckCircle size={18} className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Approval Rate</p>
-                  <p className="text-xl font-semibold text-gray-800">
-                    {slaMetrics.approvalRate != null ? `${slaMetrics.approvalRate}%` : '—'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MdFactCheck size={18} className="text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">Guarantee Letter Backlog</p>
-                  <p className="text-xl font-semibold text-gray-800">{slaMetrics.certBacklog}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Funds overview removed — CRMC has zero fund authority. Each
-            agency manages its own allocation via /agency/allocation. */}
-
-        {/* ── Alerts panel ── */}
-        {alerts.length > 0 && (
-          <div data-tour-id="admin-alerts" className="mb-5">
-            <div className="flex items-center gap-2 mb-2">
-              <MdWarning size={16} className="text-amber-500" />
-              <p className="text-sm font-semibold text-gray-800">Needs Attention</p>
-              <span className="text-xs text-gray-400">{alerts.length} item{alerts.length === 1 ? '' : 's'}</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {alerts.map(a => (
-                <button key={a.key} onClick={() => navigate(a.path)}
-                  className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all hover:shadow-sm ${TONE_CLS[a.tone]}`}>
-                  <a.Icon size={18} className="mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{a.label}</p>
-                    <p className="text-xs opacity-80 truncate">{a.detail}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Request pipeline (live distribution across CRMC stages) ── */}
-        <div className="mb-5">
-          <PipelineFunnel stages={pipelineStages} onOpenQueue={() => navigate('/admin/requests')} />
-        </div>
-
-        {/* ── Two-column layout ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-
-          {/* Recent Activity (3/5) */}
-          <div data-tour-id="admin-activity" className="xl:col-span-3">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-800">Recent Activity</h2>
-              <button onClick={() => navigate('/admin/logs')}
-                className="text-xs text-brand-500 hover:text-brand-600 font-medium">
-                View all →
-              </button>
-            </div>
-            <div className="card overflow-hidden divide-y divide-gray-50">
-              {activityFeed.length === 0 && (
-                <div className="py-12 text-center">
-                  <MdInbox className="mx-auto mb-2 text-gray-300" size={36} />
-                  <p className="text-sm text-gray-400">No recent activity yet</p>
-                  <p className="text-xs text-gray-300 mt-1">Activity will appear as patients register and upload documents</p>
-                </div>
-              )}
-              {activityFeed.map((item) => {
-                const cfg = ACTIVITY_CONFIG[item.type] || ACTIVITY_CONFIG.doc_upload
-                return (
-                  <button key={item.id + item.type}
-                    onClick={() => handleActivityClick(item)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-                    <div className={`w-8 h-8 ${cfg.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                      <cfg.Icon className="text-gray-600" size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-700">{cfg.label}</p>
-                      <p className="text-xs text-gray-400 truncate">{item.body}</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">
-                      {timeAgo(item.createdAt)}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+            {/* Request pipeline — where the active workload sits. */}
+            <PipelineFunnel stages={pipelineStages} onOpenQueue={() => navigate('/admin/requests')} />
           </div>
 
-          {/* Quick Actions (2/5) */}
-          <div data-tour-id="admin-actions" className="xl:col-span-2 flex flex-col gap-4">
-            {/* Manage */}
-            <div>
+          {/* Right — shortcuts + recent activity, both compact. */}
+          <div className="lg:col-span-4 space-y-4">
+            <div data-tour-id="admin-actions" className="card p-4">
               <p className="eyebrow mb-2">Manage</p>
               <div className="grid grid-cols-3 gap-2">
                 {MANAGE_ACTIONS.map((qa, i) => (
                   <button key={i} onClick={() => navigate(qa.path)}
-                    className="card p-3 flex flex-col items-center gap-1.5 hover:shadow-md transition-all text-center">
-                    <div className={`w-9 h-9 ${qa.color} rounded-xl flex items-center justify-center`}>
-                      <qa.icon size={18} />
-                    </div>
-                    <p className="text-xs text-gray-600 font-medium leading-tight">{qa.label}</p>
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 hover:shadow-sm transition-all text-center">
+                    <div className={`w-8 h-8 ${qa.color} rounded-lg flex items-center justify-center`}><qa.icon size={17} /></div>
+                    <p className="text-[11px] text-gray-600 font-medium leading-tight">{qa.label}</p>
                   </button>
                 ))}
               </div>
-            </div>
-            {/* Review */}
-            <div>
-              <p className="eyebrow mb-2">Review</p>
+              <p className="eyebrow mb-2 mt-4">Review</p>
               <div className="grid grid-cols-3 gap-2">
                 {REVIEW_ACTIONS.map((qa, i) => (
                   <button key={i} onClick={() => navigate(qa.path)}
-                    className="card p-3 flex flex-col items-center gap-1.5 hover:shadow-md transition-all text-center">
-                    <div className={`w-9 h-9 ${qa.color} rounded-xl flex items-center justify-center`}>
-                      <qa.icon size={18} />
-                    </div>
-                    <p className="text-xs text-gray-600 font-medium leading-tight">{qa.label}</p>
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 hover:shadow-sm transition-all text-center">
+                    <div className={`w-8 h-8 ${qa.color} rounded-lg flex items-center justify-center`}><qa.icon size={17} /></div>
+                    <p className="text-[11px] text-gray-600 font-medium leading-tight">{qa.label}</p>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
 
+            {/* Recent activity — top 6, compact. */}
+            <div data-tour-id="admin-activity" className="card overflow-hidden">
+              <div className="flex items-center justify-between px-4 pt-4 pb-1">
+                <h2 className="text-sm font-semibold text-gray-800">Recent activity</h2>
+                <button onClick={() => navigate('/admin/logs')}
+                  className="text-xs text-brand-500 hover:text-brand-600 font-medium">View all →</button>
+              </div>
+              {activityFeed.length === 0 ? (
+                <div className="py-8 text-center">
+                  <MdInbox className="mx-auto mb-2 text-gray-300" size={30} />
+                  <p className="text-sm text-gray-400">No recent activity yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {activityFeed.slice(0, 6).map((item) => {
+                    const cfg = ACTIVITY_CONFIG[item.type] || ACTIVITY_CONFIG.doc_upload
+                    return (
+                      <button key={item.id + item.type} onClick={() => handleActivityClick(item)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left">
+                        <div className={`w-7 h-7 ${cfg.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          <cfg.Icon className="text-gray-600" size={16} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-700">{cfg.label}</p>
+                          <p className="text-xs text-gray-400 truncate">{item.body}</p>
+                        </div>
+                        <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">{timeAgo(item.createdAt)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Replay-tour link. Unobtrusive footer placement so it's
-            available when needed (onboarding new staff_admins, thesis
-            demo) without crowding the daily-use surface. */}
-        <div className="mt-8 pt-4 border-t border-gray-100 text-center">
+        {/* Replay-tour link — compact footer. */}
+        <div className="mt-6 text-center">
           <button
-            onClick={() => {
-              resetTourFlag('admin-dashboard', user?.uid)
-              // Force a refresh so <Tour> re-evaluates its localStorage
-              // gate on mount. Simpler than wiring an external trigger.
-              window.location.reload()
-            }}
+            onClick={() => { resetTourFlag('admin-dashboard', user?.uid); window.location.reload() }}
             className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors">
             <MdTour size={14} /> Show welcome tour again
           </button>
