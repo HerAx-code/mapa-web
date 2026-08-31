@@ -160,6 +160,7 @@ export default function AuditLog() {
   const [search,         setSearch]         = useState('')
   const [dateFilter,     setDateFilter]     = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [actorFilter,    setActorFilter]    = useState('all')
 
   const loadEntries = async (cursor = null) => {
     if (cursor) setLoadingMore(true)
@@ -199,6 +200,16 @@ export default function AuditLog() {
     return d ? (now - d) / 3600000 < 168 : false
   }).length
 
+  // Distinct actors present in the loaded entries, for the actor filter — the
+  // accountability question "show me everything this person did".
+  const actors = (() => {
+    const map = new Map()
+    entries.forEach(e => {
+      if (e.actorId && !map.has(e.actorId)) map.set(e.actorId, { id: e.actorId, name: e.actorName ?? 'System', role: e.actorRole })
+    })
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+  })()
+
   const filtered = entries.filter(e => {
     if (dateFilter !== 'all' && e.createdAt) {
       const d = tsToDate(e.createdAt)
@@ -212,6 +223,7 @@ export default function AuditLog() {
       const cat = ACTION_CATEGORIES.find(c => c.key === categoryFilter)
       if (cat?.actions && !cat.actions.includes(e.action)) return false
     }
+    if (actorFilter !== 'all' && e.actorId !== actorFilter) return false
     const q = search.toLowerCase()
     return !q ||
       e.actorName?.toLowerCase().includes(q) ||
@@ -220,7 +232,7 @@ export default function AuditLog() {
       (ACTION_CONFIG[e.action]?.label ?? '').toLowerCase().includes(q)
   })
 
-  const isFiltered = search || dateFilter !== 'all' || categoryFilter !== 'all'
+  const isFiltered = search || dateFilter !== 'all' || categoryFilter !== 'all' || actorFilter !== 'all'
 
   return (
     <Layout breadcrumb="Audit Log">
@@ -316,6 +328,22 @@ export default function AuditLog() {
                 {c.label}
               </button>
             ))}
+          </div>
+          {/* Actor — a dropdown rather than chips, since there can be many. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-400 w-16 flex-shrink-0">Actor</span>
+            <select value={actorFilter} onChange={e => setActorFilter(e.target.value)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                actorFilter !== 'all'
+                  ? 'bg-brand-500 text-white border-brand-500'
+                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}>
+              <option value="all">All actors</option>
+              {actors.map(a => (
+                <option key={a.id} value={a.id}>{a.name}{a.role ? ` · ${ROLE_LABEL[a.role] ?? a.role}` : ''}</option>
+              ))}
+            </select>
+            <span className="text-xs text-gray-300">of loaded entries</span>
           </div>
         </div>
 
@@ -432,7 +460,7 @@ export default function AuditLog() {
               </p>
               {isFiltered && (
                 <button
-                  onClick={() => { setSearch(''); setDateFilter('all'); setCategoryFilter('all') }}
+                  onClick={() => { setSearch(''); setDateFilter('all'); setCategoryFilter('all'); setActorFilter('all') }}
                   className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
                   Clear filters
                 </button>
