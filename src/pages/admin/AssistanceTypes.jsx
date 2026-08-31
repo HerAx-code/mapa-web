@@ -315,7 +315,7 @@ export default function AssistanceTypes() {
 
   return (
     <Layout breadcrumb="Assistance Types">
-      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
@@ -422,7 +422,7 @@ export default function AssistanceTypes() {
 
         {/* Table */}
         <div className="card overflow-hidden">
-          <table className="data-table">
+          <table className="data-table w-full">
             <thead>
               <tr>
                 <th className="w-10">
