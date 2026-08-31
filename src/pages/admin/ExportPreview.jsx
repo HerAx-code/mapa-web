@@ -8,6 +8,7 @@ import {
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { exportToCSV, dateStamp, readableFileType, openPrintTab } from '../../utils/export'
+import { logAudit } from '../../utils/auditLog'
 import { tsToDate } from '../../utils/dates'
 import {
   MdArrowBack, MdSearch, MdRefresh, MdDownload, MdClose,
@@ -279,7 +280,17 @@ export default function ExportPreview() {
   // without closing over a stale `filtered` between renders.
   const [pendingExport, setPendingExport] = useState(null)
 
-  const runExport = ({ rows, filename }) => exportToCSV(filename, config.cols, rows)
+  const runExport = ({ rows, filename }) => {
+    exportToCSV(filename, config.cols, rows)
+    // RA 10173: a CSV of personal / financial records is leaving the system —
+    // record who exported which dataset, how many rows, and when.
+    logAudit(user, {
+      action:     'data_exported',
+      targetType: 'export',
+      targetName: config.title ?? type,
+      details:    `${rows.length} row${rows.length === 1 ? '' : 's'} · ${filename}`,
+    })
+  }
 
   const requestExport = ({ rows, filename }) => {
     if (rows.length === 0) return
