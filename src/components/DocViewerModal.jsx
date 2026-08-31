@@ -136,10 +136,10 @@ export function DocPreview({ docMeta, className = '' }) {
 
         {!loading && !error && content && isImage && !imgError && (
           <button onClick={() => setLightboxOpen(true)}
-            className="relative group rounded-lg overflow-hidden bg-white border border-gray-200 shadow-sm hover:ring-2 hover:ring-brand-300 transition-all">
+            className="relative group w-full max-w-3xl rounded-lg overflow-hidden bg-white border border-gray-200 shadow-sm hover:ring-2 hover:ring-brand-300 transition-all">
             <img src={content} alt={docMeta?.name ?? 'Document'}
               onError={() => setImgError(true)}
-              className="max-w-full max-h-[60vh] object-contain block" />
+              className="w-full max-h-[74vh] object-contain block mx-auto" />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-colors">
               <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium flex items-center gap-1">
                 <MdZoomIn size={18} /> View full size
@@ -163,7 +163,7 @@ export function DocPreview({ docMeta, className = '' }) {
                 won't trigger a download when the browser is set to download
                 PDFs (which was popping a Save dialog on view). */}
             <object data={pdfBlobUrl} type="application/pdf"
-              className="w-full h-[60vh] bg-white rounded-lg border border-gray-200 shadow-sm">
+              className="w-full h-[74vh] bg-white rounded-lg border border-gray-200 shadow-sm">
               <div className="p-6 text-center">
                 <MdInsertDriveFile size={36} className="text-gray-300 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 font-medium mb-1">PDF preview isn't available in this browser</p>
@@ -213,7 +213,7 @@ export default function DocViewerModal({ docMeta, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
         </div>
