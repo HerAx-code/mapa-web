@@ -53,7 +53,9 @@ Dashboard ✅(#87/#90/#92) · Analytics ✅(#88/#89/#92) · Requests + detail wo
 ✅(#117) · Patients + profile slide-over ✅(#93/#94) · Reports ✅(#95/#114) ·
 Accounts ✅(#96) · Document Types ✅(#113) · Assistance Types ✅(#113) · App Logs
 ✅ · Audit Log ✅ + actor filter (#110) + coverage fix (#108) · Access Codes ✅ ·
-Announcements split ✅(#115) · ⌘K command palette ✅(#109/#112).
+Announcements split ✅(#115) · ⌘K command palette ✅(#109/#112) · Audit Log
+**redesigned** ✅(#124) — facet sidebar + day-grouped stream (research: the
+super-admin redesign artifact).
 ➖ Export (short form) · Export Preview (full-bleed preview) · Messages (chat).
 
 ### Agency — partly done
