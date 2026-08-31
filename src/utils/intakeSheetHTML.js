@@ -42,11 +42,11 @@ const empLabel = (key) => ({
 
 const seal = `
   <svg class="seal" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="40" cy="40" r="37" fill="none" stroke="#1a3a5c" stroke-width="2.5"/>
-    <circle cx="40" cy="40" r="30" fill="none" stroke="#1a3a5c" stroke-width="1"/>
-    <text x="40" y="34" text-anchor="middle" font-size="11" fill="#1a3a5c" font-weight="bold" font-family="serif">CRMC</text>
-    <text x="40" y="46" text-anchor="middle" font-size="6.5" fill="#1a3a5c" font-family="serif">COTABATO</text>
-    <text x="40" y="55" text-anchor="middle" font-size="5.5" fill="#1a3a5c" font-family="serif">REGIONAL MEDICAL</text>
+    <circle cx="40" cy="40" r="37" fill="none" stroke="#0f6e56" stroke-width="2.5"/>
+    <circle cx="40" cy="40" r="30" fill="none" stroke="#0f6e56" stroke-width="1"/>
+    <text x="40" y="34" text-anchor="middle" font-size="11" fill="#0f6e56" font-weight="bold" font-family="serif">CRMC</text>
+    <text x="40" y="46" text-anchor="middle" font-size="6.5" fill="#0f6e56" font-family="serif">COTABATO</text>
+    <text x="40" y="55" text-anchor="middle" font-size="5.5" fill="#0f6e56" font-family="serif">REGIONAL MEDICAL</text>
   </svg>
 `
 
@@ -57,6 +57,13 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
     .reduce((sum, k) => sum + (Number(exp[k]) || 0), 0)
 
   const author = s.completedBy || currentUser?.name || ''
+
+  // The sheet prints for both agency applications (appId / agencyName) and CRMC
+  // requests (requestId / assistanceType, no agency until endorsement), so fall
+  // back across both shapes rather than rendering "undefined".
+  const refNo           = app.appId || app.requestId || ''
+  const program         = app.agencyName || app.assistanceType || ''
+  const signatoryAgency = app.agencyName || 'CRMC Malasakit Center'
 
   const familyRows = (s.familyMembers ?? [])
     .filter(m => (m?.name?.trim() || m?.relationship?.trim()))
@@ -81,7 +88,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Intake Sheet &ndash; ${app.appId}</title>
+  <title>Unified Intake Sheet &ndash; ${app.patientName || refNo || 'MAPA'}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -99,12 +106,12 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
     .seal { width: 64px; height: 64px; flex-shrink: 0; }
     .header-text { text-align: center; }
     .republic    { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: #444; }
-    .agency-name { font-size: 17px; font-weight: bold; color: #1a3a5c; line-height: 1.2; margin-top: 2px; }
+    .agency-name { font-size: 17px; font-weight: bold; color: #0f6e56; line-height: 1.2; margin-top: 2px; }
     .sub         { font-size: 10px; color: #555; margin-top: 2px; }
-    .divider     { border: none; border-top: 2px solid #1a3a5c; margin: 10px 0 6px; }
+    .divider     { border: none; border-top: 2px solid #0f6e56; margin: 10px 0 6px; }
     .title {
       text-align: center; font-size: 17px; font-weight: bold;
-      letter-spacing: 1.5px; text-transform: uppercase; color: #1a3a5c;
+      letter-spacing: 1.5px; text-transform: uppercase; color: #0f6e56;
       margin: 6px 0 2px;
     }
     .subtitle {
@@ -113,15 +120,15 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
     }
 
     .section-header {
-      background: #eef3f8;
+      background: #eaf4ef;
       padding: 5px 10px;
       font-weight: bold;
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #1a3a5c;
+      color: #0f6e56;
       margin: 14px 0 6px;
-      border-left: 3px solid #1a3a5c;
+      border-left: 3px solid #0f6e56;
     }
 
     .field-grid {
@@ -138,7 +145,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
 
     table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 11px; }
     th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
-    th { background: #eef3f8; color: #1a3a5c; font-weight: bold; }
+    th { background: #eaf4ef; color: #0f6e56; font-weight: bold; }
 
     .narrative {
       padding: 8px 10px; background: #fafafa; border: 1px solid #ddd;
@@ -148,9 +155,9 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
     .narrative.empty-block { color: #aaa; font-style: italic; }
 
     .means {
-      display: inline-block; padding: 3px 10px; background: #eef3f8;
-      border: 1px solid #c9d6e4; border-radius: 4px; font-weight: bold;
-      color: #1a3a5c; margin-top: 2px;
+      display: inline-block; padding: 3px 10px; background: #eaf4ef;
+      border: 1px solid #bfe0d3; border-radius: 4px; font-weight: bold;
+      color: #0f6e56; margin-top: 2px;
     }
 
     .sig-section {
@@ -195,9 +202,9 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
 
   <!-- Application reference -->
   <div class="field-grid">
-    <div class="field"><span class="field-label">Application No.:</span> <span class="field-value">${app.appId}</span></div>
+    <div class="field"><span class="field-label">Reference No.:</span> <span class="field-value">${orDash(refNo)}</span></div>
     <div class="field"><span class="field-label">Date of Application:</span> <span class="field-value">${fmtDate(app.submittedAt)}</span></div>
-    <div class="field"><span class="field-label">Agency Program:</span> <span class="field-value">${app.agencyName}</span></div>
+    <div class="field"><span class="field-label">Program:</span> <span class="field-value">${orDash(program)}</span></div>
     <div class="field"><span class="field-label">Date Printed:</span> <span class="field-value">${printDate}</span></div>
   </div>
 
@@ -287,7 +294,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
       <div class="sig-line"></div>
       <p class="sig-name">${author || '_________________________'}</p>
       <p class="sig-title">Medical Social Worker</p>
-      <p class="sig-title">${app.agencyName}</p>
+      <p class="sig-title">${signatoryAgency}</p>
     </div>
     <div class="sig-block">
       <div class="sig-line"></div>
@@ -298,7 +305,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
   </div>
 
   <div class="footer">
-    Generated by MAPA &mdash; Medical Assistance Portal Access &nbsp;&middot;&nbsp; CRMC &nbsp;&middot;&nbsp; ${app.appId} &nbsp;&middot;&nbsp; Printed ${printDate}
+    Generated by MAPA &mdash; Medical Assistance Portal Access &nbsp;&middot;&nbsp; CRMC &nbsp;&middot;&nbsp; ${refNo || '&mdash;'} &nbsp;&middot;&nbsp; Printed ${printDate}
   </div>
 
 </body>
