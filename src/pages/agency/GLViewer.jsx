@@ -149,9 +149,9 @@ export default function GLViewer() {
     <Layout breadcrumb="Guarantee Letter">
     <div className="bg-gray-100 min-h-full">
 
-      {/* ── Thin nav strip (hidden during print) ── */}
+      {/* ── Thin nav strip (back + identity; hidden during print) ── */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 print:hidden">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <Link to={`/agency/applications/${app.id}`}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium">
             <MdArrowBack size={16} /> Back to application
@@ -161,90 +161,126 @@ export default function GLViewer() {
             <span className="text-gray-300">·</span>
             <span>{app.patientName}</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* One button — both physical-print and PDF-save go through the
-                browser print dialog. A separate "Save as PDF" used to live
-                here but called the same window.print(), which misled users
-                into thinking the dialog would behave differently. */}
-            <button type="button"
-              onClick={() => window.print()}
-              className="btn-primary text-sm flex items-center gap-1.5"
-              title="Opens the browser print dialog — pick your printer, or pick 'Save as PDF' as the destination to get a PDF file.">
-              <MdPrint size={14} /> Print / Save as PDF
-            </button>
-            {canUpload && (
-              <button type="button"
-                onClick={() => setShowUpload(true)}
-                className="text-sm flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600">
-                <MdUpload size={14} /> {signedScan ? 'Replace Signed Scan' : 'Upload Signed Scan'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Help banner */}
-        <div className="bg-blue-50 border-t border-blue-100 print:hidden">
-          <div className="max-w-5xl mx-auto px-4 py-2 flex items-start gap-2">
-            <MdInfo size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-700 leading-relaxed flex-1">
-              Click <strong>Print / Save as PDF</strong> to open the browser print dialog. Pick your printer to wet-sign the GL, or pick <em>"Save as PDF"</em> as the destination to get a true vector PDF identical to what you see here.
-            </p>
-            <span className="text-xs text-blue-600 flex items-center gap-1 flex-shrink-0 bg-white/60 px-2 py-1 rounded">
-              <MdKeyboard size={12} /> Or press Ctrl/Cmd+P
-            </span>
-          </div>
         </div>
       </div>
 
-      {/* ── Status banner (print:hidden) ── */}
-      <div className="max-w-5xl mx-auto px-4 mt-4 print:hidden">
-        {app.status === 'approved' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-            <MdWarning size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-800">
-                This GL has not been marked as Issued yet.
-              </p>
-              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                After you successfully Print (or Save as PDF) the GL, click "Mark as Issued" to advance the application status and notify the patient. The patient will then expect you to upload the wet-signed scan.
-              </p>
+      {/* ── Document workspace: the letter stays paper-shaped (A4/800px) while
+          status, case facts, and every action live in a sticky rail beside it,
+          so the horizontal space is used without stretching a legal document.
+          On print the rail drops out and only the paper remains. ── */}
+      <div className="max-w-[1400px] mx-auto px-4 py-6 print:p-0 print:max-w-none">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start print:block">
+
+          {/* Paper */}
+          <div className="order-2 lg:order-1 min-w-0 print:order-none">
+            <div className="max-w-[800px] mx-auto bg-white shadow-md print:shadow-none">
+              <GuaranteeLetter
+                app={app}
+                patient={patient}
+                signatory={signatory}
+              />
             </div>
-            <button type="button"
-              className="text-sm flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
-              disabled={markingIssued}
-              onClick={() => setShowConfirmIssued(true)}>
-              <MdCheckCircle size={14} /> {markingIssued ? 'Marking…' : 'Mark as Issued'}
-            </button>
           </div>
-        )}
-        {app.status === 'certificate' && (
-          <div className="bg-green-50 border border-green-100 rounded-xl p-3 flex items-center gap-2">
-            <MdCheckCircle size={16} className="text-green-500 flex-shrink-0" />
-            <p className="text-sm text-green-700 leading-relaxed">
-              <strong>Guarantee Letter Issued.</strong> {signedScan
-                ? <>Signed scan uploaded — the patient can download it from their Track Status page.</>
-                : <>Upload the wet-signed scan so the patient can download the signed copy.</>}
-            </p>
-          </div>
-        )}
-        {!['approved', 'certificate'].includes(app.status) && (
-          <div className="bg-gray-100 border border-gray-200 rounded-xl p-3 flex items-center gap-2">
-            <MdInfo size={16} className="text-gray-500 flex-shrink-0" />
-            <p className="text-sm text-gray-600">
-              This application is not yet approved — the Guarantee Letter shown below is a draft for review only.
-            </p>
-          </div>
-        )}
-      </div>
 
-      {/* ── GL Document ── */}
-      <div className="py-6 print:py-0 print:bg-white">
-        <div className="max-w-[800px] mx-auto bg-white shadow-md print:shadow-none">
-          <GuaranteeLetter
-            app={app}
-            patient={patient}
-            signatory={signatory}
-          />
+          {/* Action rail */}
+          <aside className="order-1 lg:order-2 space-y-4 lg:sticky lg:top-[68px] print:hidden">
+
+            {/* Status */}
+            {app.status === 'approved' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
+                  <MdWarning size={16} className="flex-shrink-0" /> Not issued yet
+                </p>
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                  Print (or Save as PDF) the letter, then mark it issued to advance the application and notify the patient.
+                </p>
+              </div>
+            )}
+            {app.status === 'certificate' && (
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5">
+                  <MdCheckCircle size={16} className="flex-shrink-0" /> Guarantee Letter issued
+                </p>
+                <p className="text-xs text-green-700/90 mt-1 leading-relaxed">
+                  {signedScan
+                    ? 'Signed scan uploaded — the patient can download it from Track Status.'
+                    : 'Upload the wet-signed scan so the patient can download the signed copy.'}
+                </p>
+              </div>
+            )}
+            {!['approved', 'certificate'].includes(app.status) && (
+              <div className="bg-gray-100 border border-gray-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-gray-600 flex items-center gap-1.5">
+                  <MdInfo size={16} className="flex-shrink-0" /> Draft — not yet approved
+                </p>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  The letter below is for review only until the application is approved.
+                </p>
+              </div>
+            )}
+
+            {/* Case facts */}
+            <div className="card p-4">
+              <p className="eyebrow mb-2">Guarantee Letter</p>
+              <dl className="space-y-2 text-sm">
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-gray-500">Amount approved</dt>
+                  <dd className="tabular-nums font-semibold text-brand-700">₱{Number(app.approvedAmount ?? 0).toLocaleString()}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-gray-500 flex-shrink-0">Patient</dt>
+                  <dd className="text-gray-800 text-right truncate">{app.patientName}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-gray-500 flex-shrink-0">Agency</dt>
+                  <dd className="text-gray-800 text-right truncate">{app.agencyName}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-gray-500 flex-shrink-0">Application</dt>
+                  <dd className="font-mono text-xs text-gray-500 text-right truncate">{app.appId}</dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Actions */}
+            <div className="card p-4 space-y-2">
+              {/* One button — both physical-print and PDF-save go through the
+                  browser print dialog. Kept as an inline window.print() tight
+                  to the gesture; any indirection can get the dialog blocked. */}
+              <button type="button"
+                onClick={() => window.print()}
+                className="btn-primary text-sm w-full flex items-center justify-center gap-1.5"
+                title="Opens the browser print dialog — pick your printer, or pick 'Save as PDF' as the destination to get a PDF file.">
+                <MdPrint size={14} /> Print / Save as PDF
+              </button>
+              {app.status === 'approved' && (
+                <button type="button"
+                  className="text-sm w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  disabled={markingIssued}
+                  onClick={() => setShowConfirmIssued(true)}>
+                  <MdCheckCircle size={14} /> {markingIssued ? 'Marking…' : 'Mark as Issued'}
+                </button>
+              )}
+              {canUpload && (
+                <button type="button"
+                  onClick={() => setShowUpload(true)}
+                  className="text-sm w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors">
+                  <MdUpload size={14} /> {signedScan ? 'Replace Signed Scan' : 'Upload Signed Scan'}
+                </button>
+              )}
+            </div>
+
+            {/* Print help */}
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+              <p className="text-xs text-blue-700 leading-relaxed">
+                <strong>Print / Save as PDF</strong> opens the browser dialog. Pick your printer to wet-sign, or choose <em>"Save as PDF"</em> for a true vector PDF identical to what you see.
+              </p>
+              <span className="mt-2 inline-flex items-center gap-1 rounded bg-white/60 px-2 py-1 text-xs text-blue-600">
+                <MdKeyboard size={12} /> Or press Ctrl/Cmd+P
+              </span>
+            </div>
+          </aside>
+
         </div>
       </div>
 
