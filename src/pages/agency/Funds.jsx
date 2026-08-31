@@ -215,7 +215,7 @@ export default function AgencyFunds() {
 
   return (
     <Layout breadcrumb="Funds">
-      <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="mb-5">
