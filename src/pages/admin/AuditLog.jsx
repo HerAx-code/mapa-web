@@ -118,6 +118,34 @@ const timeAgo = (ts) => {
   return ''
 }
 
+// Group a (desc-sorted) list of entries into day buckets with a friendly
+// heading — Today / Yesterday / "Mon D, YYYY" — so a long stream becomes
+// navigable instead of one flat wall.
+function groupByDay(entries) {
+  const groups = []
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
+  const today = startOfDay(new Date())
+  const oneDay = 86400000
+  for (const e of entries) {
+    const d = tsToDate(e.createdAt)
+    const key = d ? String(startOfDay(d)) : 'unknown'
+    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
+    if (!g) {
+      let label = 'Earlier', sub = ''
+      if (d) {
+        const day = startOfDay(d)
+        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday'
+          : d.toLocaleDateString([], { weekday: 'long' })
+        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      }
+      g = { key, label, sub, entries: [] }
+      groups.push(g)
+    }
+    g.entries.push(e)
+  }
+  return groups
+}
+
 // ── Audit details cell ────────────────────────────────────────────────────
 // The `details` string is user-supplied (any authenticated caller of
 // logAudit() can put anything in it). Clamp to 240 chars by default so a
@@ -234,6 +262,16 @@ export default function AuditLog() {
 
   const isFiltered = search || dateFilter !== 'all' || categoryFilter !== 'all' || actorFilter !== 'all'
 
+  // Per-category counts over the loaded entries, shown beside each sidebar row.
+  const categoryCounts = ACTION_CATEGORIES.reduce((acc, cat) => {
+    acc[cat.key] = cat.actions == null ? entries.length : entries.filter(e => cat.actions.includes(e.action)).length
+    return acc
+  }, {})
+
+  // The filtered stream, bucketed by day for the sticky date headers.
+  const dayGroups = groupByDay(filtered)
+  const clearAll = () => { setSearch(''); setDateFilter('all'); setCategoryFilter('all'); setActorFilter('all') }
+
   return (
     <Layout breadcrumb="Audit Log">
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
@@ -280,195 +318,221 @@ export default function AuditLog() {
           </button>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          {[
-            { label: 'Total Entries', value: totalCount ?? '—', color: 'text-gray-800'  },
-            { label: 'Today',         value: todayCount,         color: 'text-brand-600' },
-            { label: 'This Week',     value: weekCount,          color: 'text-blue-600'  },
-          ].map((m, i) => (
-            <div key={i} className="card p-4">
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
-            </div>
-          ))}
-        </div>
+        {/* Two-pane workspace: a sticky filter/facet sidebar + the entry stream
+            grouped by day, so the controls stop eating the top of the screen
+            and the stream fills the width. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
 
-        {/* Search */}
-        <div className="relative mb-3">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by actor, target, or action..."
-            value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
+          {/* ── Filter sidebar ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
 
-        {/* Filters */}
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400 w-16 flex-shrink-0">Date</span>
-            {DATE_FILTERS.map(f => (
-              <button key={f.key} onClick={() => setDateFilter(f.key)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  dateFilter === f.key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {f.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400 w-16 flex-shrink-0">Category</span>
-            {ACTION_CATEGORIES.map(c => (
-              <button key={c.key} onClick={() => setCategoryFilter(c.key)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  categoryFilter === c.key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {c.label}
-              </button>
-            ))}
-          </div>
-          {/* Actor — a dropdown rather than chips, since there can be many. */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400 w-16 flex-shrink-0">Actor</span>
-            <select value={actorFilter} onChange={e => setActorFilter(e.target.value)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                actorFilter !== 'all'
-                  ? 'bg-brand-500 text-white border-brand-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}>
-              <option value="all">All actors</option>
-              {actors.map(a => (
-                <option key={a.id} value={a.id}>{a.name}{a.role ? ` · ${ROLE_LABEL[a.role] ?? a.role}` : ''}</option>
+            {/* Stat readouts */}
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Total', value: totalCount ?? '—', color: 'text-gray-800'  },
+                { label: 'Today', value: todayCount,         color: 'text-brand-600' },
+                { label: 'Week',  value: weekCount,          color: 'text-blue-600'  },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
               ))}
-            </select>
-            <span className="text-xs text-gray-300">of loaded entries</span>
-          </div>
-        </div>
+            </div>
 
-        {/* Result count + controls */}
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-gray-400">
-            {filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}
-            {isFiltered && entries.length > 0 && ` (filtered from ${entries.length} loaded)`}
-            {hasMore && !isFiltered && ' — more available'}
-          </p>
-          <div className="flex gap-2">
-            <button className="btn-secondary text-xs py-1" onClick={() => loadEntries()}>
-              Refresh
-            </button>
-            {hasMore && (
-              <button className="btn-secondary text-xs py-1" disabled={loadingMore}
-                onClick={() => loadEntries(lastVisible)}>
-                {loadingMore ? 'Loading…' : `Load more (${entries.length} loaded)`}
-              </button>
-            )}
-          </div>
-        </div>
+            {/* Search */}
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Search actor, action, target"
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
 
-        {/* ── Activity feed ── */}
-        <div className="card overflow-hidden divide-y divide-gray-50">
-
-          {/* Skeleton */}
-          {loading && Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex gap-3 px-4 py-4 animate-pulse">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 space-y-2.5 min-w-0">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="h-3 bg-gray-100 rounded w-36" />
-                  <div className="h-3 bg-gray-100 rounded w-28 flex-shrink-0" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-5 bg-gray-100 rounded-full w-28" />
-                  <div className="h-3 bg-gray-100 rounded w-32" />
-                </div>
-                <div className="h-3 bg-gray-100 rounded w-3/4" />
+            {/* Date — segmented control */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Date</p>
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
+                {DATE_FILTERS.map(f => (
+                  <button key={f.key} onClick={() => setDateFilter(f.key)}
+                    className={`rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                      dateFilter === f.key ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}>
+                    {f.label}
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
 
-          {/* Entries */}
-          {!loading && filtered.map(e => {
-            const cfg       = ACTION_CONFIG[e.action]
-            const ago       = timeAgo(e.createdAt)
-            const avatarCls = ROLE_AVATAR[e.actorRole] ?? 'bg-gray-100 text-gray-600'
+            {/* Category — list with counts */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
+              <ul className="-mx-1.5 space-y-px">
+                {ACTION_CATEGORIES.map(c => {
+                  const n = categoryCounts[c.key] ?? 0
+                  const active = categoryFilter === c.key
+                  // Hide empty categories (keep the active one so it can be cleared).
+                  if (c.key !== 'all' && n === 0 && !active) return null
+                  return (
+                    <li key={c.key}>
+                      <button onClick={() => setCategoryFilter(c.key)}
+                        aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${
+                          active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'
+                        }`}>
+                        <span className="truncate">{c.key === 'all' ? 'All categories' : c.label}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-400'}`}>{n}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
 
-            return (
-              <div key={e.id} className="flex gap-3 px-4 py-4 hover:bg-gray-50 transition-colors">
+            {/* Actor */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Actor</p>
+              <select value={actorFilter} onChange={e => setActorFilter(e.target.value)} className="input text-sm py-2">
+                <option value="all">All actors</option>
+                {actors.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}{a.role ? ` · ${ROLE_LABEL[a.role] ?? a.role}` : ''}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-300 mt-1">of {entries.length} loaded entries</p>
+            </div>
 
-                {/* Avatar */}
-                <div className={`w-8 h-8 rounded-full ${avatarCls} flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5`}>
-                  {e.actorName?.[0]?.toUpperCase() ?? '?'}
-                </div>
+            <button onClick={clearAll} disabled={!isFiltered}
+              className={`text-xs font-medium underline underline-offset-2 ${isFiltered ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
+            </button>
+          </aside>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
+          {/* ── Entry stream ── */}
+          <div className="min-w-0">
 
-                  {/* Row 1: actor + timestamp */}
-                  <div className="flex items-start justify-between gap-4 mb-1.5">
-                    <p className="text-sm font-semibold text-gray-800 leading-snug">
-                      {e.actorName ?? '—'}
-                      <span className="ml-1.5 text-xs font-normal text-gray-400">
-                        {ROLE_LABEL[e.actorRole] ?? e.actorRole ?? ''}
-                      </span>
-                    </p>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-gray-500 whitespace-nowrap">{fullDate(e.createdAt)}</p>
-                      {ago && <p className="text-xs text-gray-400">{ago}</p>}
-                    </div>
-                  </div>
-
-                  {/* Row 2: action badge + target */}
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    {cfg ? (
-                      <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${cfg.badge}`}>
-                        {cfg.label}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400 font-mono flex-shrink-0">{e.action ?? '—'}</span>
-                    )}
-                    {e.targetName && (
-                      <span className="text-sm text-gray-600 truncate">
-                        {e.targetName}
-                        {e.targetType && (
-                          <span className="ml-1 text-xs text-gray-400 capitalize">({e.targetType})</span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Row 3: details — clamped to 240 chars by default so a
-                      maliciously long payload (we've seen prompt-injection
-                      attempts embedded here) can't push other rows out of
-                      sight. The full text is one click away. */}
-                  {e.details && <AuditDetails text={e.details} />}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Empty state */}
-          {!loading && filtered.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <MdHistory size={36} className="text-gray-200 mb-3" />
-              <p className="text-sm font-medium text-gray-500 mb-1">No entries found</p>
+            {/* Result count + refresh */}
+            <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-400">
-                {isFiltered
-                  ? 'No entries match your current filter. Try clearing the search or changing the category.'
-                  : 'No audit log entries yet. Actions will be recorded here as admins use the portal.'}
+                {filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}
+                {isFiltered && entries.length > 0 && ` (filtered from ${entries.length} loaded)`}
               </p>
-              {isFiltered && (
-                <button
-                  onClick={() => { setSearch(''); setDateFilter('all'); setCategoryFilter('all'); setActorFilter('all') }}
-                  className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
-                  Clear filters
-                </button>
+              <button className="btn-secondary text-xs py-1" onClick={() => loadEntries()}>Refresh</button>
+            </div>
+
+            {/* ── Grouped stream ── */}
+            <div className="card overflow-hidden">
+
+              {/* Skeleton */}
+              {loading && (
+                <div className="divide-y divide-gray-50">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex gap-3 px-4 py-4 animate-pulse">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2.5 min-w-0">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="h-3 bg-gray-100 rounded w-36" />
+                          <div className="h-3 bg-gray-100 rounded w-28 flex-shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-5 bg-gray-100 rounded-full w-28" />
+                          <div className="h-3 bg-gray-100 rounded w-32" />
+                        </div>
+                        <div className="h-3 bg-gray-100 rounded w-3/4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Day-grouped entries */}
+              {!loading && dayGroups.map(group => (
+                <section key={group.key}>
+                  <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
+                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
+                  </div>
+                  <ul className="divide-y divide-gray-50">
+                    {group.entries.map(e => {
+                      const cfg       = ACTION_CONFIG[e.action]
+                      const ago       = timeAgo(e.createdAt)
+                      const avatarCls = ROLE_AVATAR[e.actorRole] ?? 'bg-gray-100 text-gray-600'
+                      return (
+                        <li key={e.id} className="flex gap-3 px-4 py-4 hover:bg-gray-50 transition-colors">
+                          {/* Avatar — role-tinted */}
+                          <div className={`w-8 h-8 rounded-full ${avatarCls} flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5`}>
+                            {e.actorName?.[0]?.toUpperCase() ?? '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {/* Row 1: actor + timestamp */}
+                            <div className="flex items-start justify-between gap-4 mb-1.5">
+                              <p className="text-sm font-semibold text-gray-800 leading-snug">
+                                {e.actorName ?? '—'}
+                                <span className="ml-1.5 text-xs font-normal text-gray-400">{ROLE_LABEL[e.actorRole] ?? e.actorRole ?? ''}</span>
+                              </p>
+                              <div className="text-right flex-shrink-0">
+                                <p className="text-xs text-gray-500 whitespace-nowrap">{fullDate(e.createdAt)}</p>
+                                {ago && <p className="text-xs text-gray-400">{ago}</p>}
+                              </div>
+                            </div>
+                            {/* Row 2: action badge + target */}
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              {cfg ? (
+                                <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+                              ) : (
+                                <span className="text-xs text-gray-400 font-mono flex-shrink-0">{e.action ?? '—'}</span>
+                              )}
+                              {e.targetName && (
+                                <span className="text-sm text-gray-600 truncate">
+                                  {e.targetName}
+                                  {e.targetType && <span className="ml-1 text-xs text-gray-400 capitalize">({e.targetType})</span>}
+                                </span>
+                              )}
+                            </div>
+                            {/* Row 3: details — clamped so a long payload can't dominate the row. */}
+                            {e.details && <AuditDetails text={e.details} />}
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+
+              {/* Empty state */}
+              {!loading && filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <MdHistory size={36} className="text-gray-200 mb-3" />
+                  <p className="text-sm font-medium text-gray-500 mb-1">No entries found</p>
+                  <p className="text-xs text-gray-400">
+                    {isFiltered
+                      ? 'No entries match your current filter. Try clearing the search or changing the category.'
+                      : 'No audit log entries yet. Actions will be recorded here as admins use the portal.'}
+                  </p>
+                  {isFiltered && (
+                    <button onClick={clearAll}
+                      className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
+                      Clear filters
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
 
-        </div>
+            {/* Load more */}
+            {!loading && filtered.length > 0 && (
+              <div className="flex flex-col items-center gap-2 py-5">
+                {hasMore ? (
+                  <button className="btn-secondary text-sm" disabled={loadingMore} onClick={() => loadEntries(lastVisible)}>
+                    {loadingMore ? 'Loading…' : 'Load more entries'}
+                  </button>
+                ) : (
+                  <p className="text-xs text-gray-400">End of the record for these filters.</p>
+                )}
+                <p className="text-[11px] text-gray-400 tabular-nums">Showing {filtered.length} of {entries.length} loaded</p>
+              </div>
+            )}
+
+          </div>{/* /entry stream */}
+        </div>{/* /two-pane grid */}
 
       </div>
     </Layout>
