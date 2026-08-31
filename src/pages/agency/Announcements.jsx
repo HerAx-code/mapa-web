@@ -26,7 +26,6 @@ export default function AgencyAnnouncements() {
   const [agencyName,    setAgencyName]    = useState('')
   const [announcements, setAnnouncements] = useState([])
   const [loading,       setLoading]       = useState(true)
-  const [showForm,      setShowForm]      = useState(false)
   const [editing,       setEditing]       = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting,      setDeleting]      = useState(false)
@@ -92,7 +91,7 @@ export default function AgencyAnnouncements() {
 
         toast.success('Promotion posted. Patients will see it on their dashboard and on Find Programs.')
       }
-      setShowForm(false); setEditing(null); load()
+      setEditing(null); load()
     } catch { toast.error('Failed to save announcement.') }
   }
 
@@ -180,7 +179,7 @@ export default function AgencyAnnouncements() {
           <div className="flex items-center gap-1 flex-shrink-0">
             <button title="Edit"
               className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-              onClick={() => { setEditing(ann); setShowForm(true) }}>
+              onClick={() => setEditing(ann)}>
               <MdEdit size={15} />
             </button>
             {ann.active ? (
@@ -223,7 +222,7 @@ export default function AgencyAnnouncements() {
 
   return (
     <Layout breadcrumb="Announcements">
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
           <div>
@@ -231,9 +230,10 @@ export default function AgencyAnnouncements() {
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Promote Your Programs</h1>
             <p className="text-sm text-gray-500 mt-1">Post promotions patients see on the Find Programs page (e.g. new assistance offerings, open slots, requirements updates).</p>
           </div>
-          <button className="btn-primary flex items-center gap-1.5 text-sm"
-            onClick={() => { setEditing(null); setShowForm(true) }}>
-            <MdAdd size={16} /> New Promotion
+          <button className="btn-secondary flex items-center gap-1.5 text-sm"
+            onClick={() => setEditing(null)}
+            title="Clear the compose form to start a new promotion">
+            <MdAdd size={16} /> New / clear
           </button>
         </div>
 
@@ -246,6 +246,21 @@ export default function AgencyAnnouncements() {
           </p>
         </div>
 
+        {/* Split: compose form (left, sticky) · promotions feed (right). */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] gap-5 items-start">
+          <aside className="lg:sticky lg:top-[68px]">
+            <AnnouncementForm
+              embedded
+              promo
+              key={editing?.id ?? 'new'}
+              announcement={editing}
+              audienceNote="patients on the Find Programs page"
+              onSave={handleSave}
+              onClose={() => setEditing(null)}
+            />
+          </aside>
+
+          <div className="min-w-0">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -266,25 +281,17 @@ export default function AgencyAnnouncements() {
             <p className="text-sm font-medium text-gray-600 mb-1">No promotions yet</p>
             <p className="text-xs text-gray-400 mb-4">Post one to show your programs on the patient Find Programs page.</p>
             <button
-              onClick={() => { setEditing(null); setShowForm(true) }}
+              onClick={() => setEditing(null)}
               className="btn-primary text-sm inline-flex items-center gap-1.5">
-              <MdAdd size={15} /> Post First Promotion
+              <MdAdd size={15} /> Start a promotion
             </button>
           </div>
         ) : (
           <div className="space-y-3">{announcements.map(renderCard)}</div>
         )}
+          </div>{/* /feed column */}
+        </div>{/* /split grid */}
       </div>
-
-      {showForm && (
-        <AnnouncementForm
-          announcement={editing}
-          promo
-          audienceNote="patients on the Find Programs page"
-          onClose={() => { setShowForm(false); setEditing(null) }}
-          onSave={handleSave}
-        />
-      )}
     </Layout>
   )
 }
