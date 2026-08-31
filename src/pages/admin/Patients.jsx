@@ -183,7 +183,7 @@ export default function Patients() {
   const [patients,             setPatients]             = useState([])
   const [confirmDeletePatient, setConfirmDeletePatient] = useState(null)
   const [loading,              setLoading]              = useState(true)
-  const [search,               setSearch]               = useState('')
+  const [search,               setSearch]               = useState(() => searchParams.get('q') ?? '')
   const [tab,                  setTab]                  = useState('active')
   const [viewProfile,          setViewProfile]          = useState(null)
   const [activeApplicantIds,   setActiveApplicantIds]   = useState(new Set())

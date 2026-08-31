@@ -20,7 +20,7 @@ import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
 import { tsToDate } from '../../utils/dates'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -1231,7 +1231,9 @@ export default function Requests() {
   const [allSlices, setAllSlices] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
-  const [search,   setSearch]   = useState('')
+  const [searchParams] = useSearchParams()
+  // Seed from ?q= so the ⌘K palette's "Requests matching …" lands pre-filtered.
+  const [search,   setSearch]   = useState(() => searchParams.get('q') ?? '')
   const [filter,   setFilter]   = useState('needs_action')
   const [sort,     setSort]     = useState('waiting')
   const [category, setCategory] = useState('all')
