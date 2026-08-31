@@ -65,7 +65,7 @@ Intake Sheet / Case Assessment (widen + snapshot, #99).
 - ✅ **Audit Log** (#119) — widened to `max-w-[1400px]` (entry list fills the card).
 - ✅ **Application Logs** (#119) — centered to `max-w-[1400px]`.
 - ✅ **Team** (#120) — widened to `max-w-[1400px]`; member list → 2-column card grid.
-- ⬜ **Agency Profile / Program** (`max-w-3xl`) — profile page; 2-column (identity/details + config).
+- ✅ **Agency Profile / Program** (#121) — 2-column: editable cards left, live patient-view preview pinned right (dropped the toggle).
 - ⬜ **Promotions / Announcements** (`max-w-2xl`) — reuse the admin **split layout** (`AnnouncementForm embedded` already exists).
 - ⬜ **Budget Allocation** (`max-w-2xl`) — inspect: if data-heavy, widen; if a short form, leave.
 - ⬜ **Slot Management** (`max-w-xl`) — inspect: likely a settings form, may stay contained.
