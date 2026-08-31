@@ -401,7 +401,7 @@ export default function AgencyTeam() {
 
   return (
     <Layout breadcrumb="Team">
-      <div className="p-4 sm:p-6 max-w-4xl">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
@@ -431,25 +431,24 @@ export default function AgencyTeam() {
           </div>
         </div>
 
-        {/* Member list */}
-        <div className="card overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-sm text-gray-400">Loading team…</div>
-          ) : team.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-sm text-gray-500 mb-3">No team members yet.</p>
-              <button onClick={() => setShowAdd(true)}
-                className="btn-primary text-sm inline-flex items-center gap-1.5">
-                <MdAdd size={15} /> Add First Coordinator
-              </button>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
+        {/* Member list — a 2-column card grid so the team fills the width */}
+        {loading ? (
+          <div className="card p-8 text-center text-sm text-gray-400">Loading team…</div>
+        ) : team.length === 0 ? (
+          <div className="card p-8 text-center">
+            <p className="text-sm text-gray-500 mb-3">No team members yet.</p>
+            <button onClick={() => setShowAdd(true)}
+              className="btn-primary text-sm inline-flex items-center gap-1.5">
+              <MdAdd size={15} /> Add First Coordinator
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
               {team.map(coord => {
                 const isActive = coord.active !== false
                 const isYou    = coord.uid === user.uid
                 return (
-                  <div key={coord.uid} className={`flex items-center gap-3 px-5 py-3.5 ${!isActive ? 'opacity-50' : ''}`}>
+                  <div key={coord.uid} className={`card p-4 flex items-center gap-3 ${!isActive ? 'opacity-50' : ''}`}>
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
                       coord.role === 'agency_admin' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
                     }`}>
@@ -498,9 +497,8 @@ export default function AgencyTeam() {
                   </div>
                 )
               })}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <p className="text-xs text-gray-400 mt-4 leading-relaxed">
           <strong>Note —</strong> Deleting a coordinator account requires CRMC system administration. To permanently remove someone, deactivate them here and contact CRMC. Coordinators you add will receive a password reset email (if checked) and must set their password before logging in.
