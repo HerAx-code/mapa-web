@@ -208,7 +208,7 @@ export default function SlotManagement() {
 
   return (
     <Layout breadcrumb="Slot Management">
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         <div className="mb-5">
           <p className="eyebrow">Capacity</p>
@@ -216,7 +216,11 @@ export default function SlotManagement() {
           <p className="text-sm text-gray-500 mt-1">Manage daily patient slots for {agency.name}.</p>
         </div>
 
-        <div className="max-w-xl space-y-4">
+        {/* Split: slot controls on the left, adjustment history on the right. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] gap-4 items-start">
+
+          {/* Controls */}
+          <div className="space-y-4 min-w-0">
 
           {/* Default capacity */}
           <div className="card p-5 border-l-4 border-brand-500">
@@ -372,8 +376,10 @@ export default function SlotManagement() {
               </p>
             </div>
           </div>
+          </div>{/* /controls column */}
 
           {/* Adjustment history */}
+          <aside className="lg:sticky lg:top-[68px]">
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-3">
               <MdHistory size={14} className="text-gray-400" />
@@ -407,8 +413,9 @@ export default function SlotManagement() {
               </div>
             )}
           </div>
+          </aside>{/* /history column */}
 
-        </div>
+        </div>{/* /split grid */}
       </div>
     </Layout>
   )
