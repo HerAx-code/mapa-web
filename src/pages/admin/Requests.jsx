@@ -856,15 +856,22 @@ function RequestDetail({ request, agencies, onClose }) {
       <div className="max-w-4xl px-4 sm:px-6 py-5 space-y-4">
           {/* Summary — amount needed, funding progress, request meta */}
           <div className="card p-4 sm:p-5 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-gray-500">Amount needed <span className="text-gray-400">(verify vs. billing statement)</span></p>
-              <p className="text-xl font-bold text-brand-700 whitespace-nowrap">{peso(request.amountNeeded)}</p>
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="eyebrow">Amount needed</p>
+                <p className="mt-1 text-3xl font-bold tracking-tight text-brand-700 tabular-nums leading-none">{peso(request.amountNeeded)}</p>
+                <p className="mt-1.5 text-[11px] text-gray-400">Verify against the billing statement</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className={`text-2xl font-semibold tabular-nums leading-none ${funding.balance > 0 ? 'text-gray-900' : 'text-green-600'}`}>{peso(funding.balance)}</p>
+                <p className="mt-1.5 text-[11px] text-gray-400">{funding.balance > 0 ? 'still to raise' : 'fully covered'}</p>
+              </div>
             </div>
 
             <div>
               <div className="flex justify-between text-xs text-gray-400 mb-1">
                 <span>{peso(funding.committed)} secured · {peso(funding.outstanding)} pending</span>
-                <span>{peso(funding.balance)} remaining</span>
+                <span className="tabular-nums">{funding.pct}% covered</span>
               </div>
               <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${funding.pct}%` }} />
