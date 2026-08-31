@@ -351,7 +351,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 
   return (
     <Layout breadcrumb={`Case Assessment · ${app.patientName}`}>
-      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Sticky header */}
         <div className="sticky top-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gray-50/95 backdrop-blur border-b border-gray-100 z-20 mb-5 print:hidden">
