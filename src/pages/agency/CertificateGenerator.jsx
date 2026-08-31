@@ -349,7 +349,7 @@ export default function CertificateGenerator() {
 
   return (
     <Layout breadcrumb="Guarantee Letters">
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
@@ -391,7 +391,7 @@ export default function CertificateGenerator() {
 
         {/* List */}
         {loading ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="card p-4 animate-pulse flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-gray-100 flex-shrink-0" />
@@ -416,7 +416,7 @@ export default function CertificateGenerator() {
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {filtered.map(app => {
               const isIssued      = app.status === 'certificate'
               const hasSigned     = !!uploaded[app.id]
