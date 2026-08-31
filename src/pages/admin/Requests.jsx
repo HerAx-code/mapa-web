@@ -851,9 +851,16 @@ function RequestDetail({ request, agencies, onClose }) {
         </div>
       </div>
 
-      {/* Single-column review, left-aligned to match the sub-header.
-          Documents open in a large viewer. */}
-      <div className="max-w-4xl px-4 sm:px-6 py-5 space-y-4">
+      {/* Two-column review workspace: the documents → interview → endorse flow
+          fills a wide work column; the money summary, path-to-zero, and stage
+          rail pin to a sticky context rail on the right (desktop) / stack on
+          top (mobile). Uses the full width instead of a narrow centred column. */}
+      <div className="px-4 sm:px-6 py-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
+
+          {/* Context rail — at-a-glance money + progress. order-1 on mobile
+              (shown first), pushed right and pinned on desktop. */}
+          <aside className="space-y-4 order-1 lg:order-2 lg:sticky lg:top-[68px]">
           {/* Summary — amount needed, funding progress, request meta */}
           <div className="card p-4 sm:p-5 space-y-4">
             <div className="flex items-end justify-between gap-3">
@@ -904,6 +911,10 @@ function RequestDetail({ request, agencies, onClose }) {
           {/* Stage rail — at-a-glance verify → assess → interview → endorse
               progress (redesign Phase 1), driven by the requestStage model. */}
           <RequestStageRail stage={stage} />
+          </aside>
+
+          {/* Work column — the operator's flow: verify → assess → endorse. */}
+          <div className="space-y-4 min-w-0 order-2 lg:order-1">
 
           {/* Filed by a representative — verify the rep's ID + selfie (below) */}
           {request.filedBy && (
@@ -1132,7 +1143,9 @@ function RequestDetail({ request, agencies, onClose }) {
           {user?.role === 'super_admin' && (
             <CaseTimeline events={timeline} loading={timelineLoading} />
           )}
-      </div>
+          </div>{/* /work column */}
+        </div>{/* /grid */}
+      </div>{/* /workspace */}
 
       {viewingDoc && (
         <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
