@@ -98,4 +98,5 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - docs/intake-sheet-fields.md — every field from CRMC's paper intake forms
 - docs/sprint-plan.md — current sprint goals
 - docs/design-workflow.md — how to combine the design skills + Magic Patterns MCP for web UI work (read before non-trivial reskins)
+- docs/reskin-relayout-plan.md — the living tracker of which pages are reskinned/relaid out and what remains (check before touching any page)
 - (add others as you create them)
