@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import NotificationModal, { getNotifRoute } from './NotificationModal'
 import CommandPalette from './admin/CommandPalette'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
@@ -873,6 +873,21 @@ export default function Layout({ children, breadcrumb }) {
     ]
   }, [user?.role])
 
+  // Query-derived palette actions: type a name/id, jump to the queue filtered
+  // to it. Uses ?q= (read by Requests / Patients) rather than a live query in
+  // the palette — deep-links stay simple and there's nothing to mis-index.
+  const adminCommandQueryActions = useCallback((raw) => {
+    const role = user?.role
+    if (role !== ROLES.SUPER_ADMIN && role !== ROLES.STAFF_ADMIN) return []
+    const q = raw.trim()
+    if (q.length < 2) return []
+    const enc = encodeURIComponent(q)
+    return [
+      { key: 'search-requests', section: 'Search', icon: MdReceiptLong, label: `Requests matching “${q}”`, to: `/admin/requests?q=${enc}` },
+      { key: 'search-patients', section: 'Search', icon: MdGroup,       label: `Patients matching “${q}”`, to: `/admin/patients?q=${enc}` },
+    ]
+  }, [user?.role])
+
   // Phase 1.4 (post-review hardening): if an admin changes this user's
   // role while they're signed in (rare but real -- patient promoted to
   // coordinator, coordinator promoted to agency_admin), the new role
@@ -1337,7 +1352,7 @@ export default function Layout({ children, breadcrumb }) {
         )}
 
         {/* ⌘K / Ctrl-K command palette — admin workspaces only */}
-        {adminCommandItems.length > 0 && <CommandPalette items={adminCommandItems} />}
+        {adminCommandItems.length > 0 && <CommandPalette items={adminCommandItems} queryActions={adminCommandQueryActions} />}
       </div>
     </div>
   )

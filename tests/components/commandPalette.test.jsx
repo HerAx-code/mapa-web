@@ -58,6 +58,28 @@ describe('CommandPalette', () => {
     expect(onDash).toHaveBeenCalledTimes(1)
   })
 
+  it('surfaces query-derived actions (search passthrough) that lead the list', () => {
+    const onSearch = vi.fn()
+    const queryActions = (q) => q.length >= 2
+      ? [{ key: 'q-req', section: 'Search', label: `Requests matching “${q}”`, icon: MdSearch, action: onSearch }]
+      : []
+    render(
+      <MemoryRouter>
+        <CommandPalette
+          items={[{ key: '/dash', label: 'Dashboard', icon: MdSearch, section: 'System admin', action: () => {} }]}
+          queryActions={queryActions}
+        />
+      </MemoryRouter>
+    )
+    openPalette()
+    const input = screen.getByPlaceholderText(PLACEHOLDER)
+    fireEvent.change(input, { target: { value: 'aaron' } })
+    expect(screen.getByText(/Requests matching “aaron”/)).toBeInTheDocument()
+    // The dynamic action leads the list, so Enter runs it.
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onSearch).toHaveBeenCalledTimes(1)
+  })
+
   it('shows an empty state and closes on Escape', () => {
     renderPalette()
     openPalette()

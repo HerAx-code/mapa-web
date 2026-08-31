@@ -5,9 +5,10 @@ import { MdSearch } from 'react-icons/md'
 // ⌘K / Ctrl-K command palette for the admin workspace. Dependency-free: a
 // global key listener toggles it, arrow keys + Enter drive it, Esc closes it.
 // `items` are { key, label, icon, to?, action?, section?, keywords?, hint? };
-// selecting one navigates to `to` or runs `action`. v1 is navigation + quick
-// actions; entity search (requests / patients by id) can layer on later.
-export default function CommandPalette({ items = [] }) {
+// selecting one navigates to `to` or runs `action`. `queryActions(query)` is an
+// optional function returning extra items derived from the typed text — used to
+// offer "search patients / requests for <query>" that land on the filtered list.
+export default function CommandPalette({ items = [], queryActions }) {
   const [open, setOpen]     = useState(false)
   const [query, setQuery]   = useState('')
   const [active, setActive] = useState(0)
@@ -41,14 +42,19 @@ export default function CommandPalette({ items = [] }) {
   }, [open])
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const raw = query.trim()
+    const q = raw.toLowerCase()
+    // Query-derived actions (e.g. "search patients for X") lead, so a name typed
+    // in full still surfaces its search action even when no nav label matches.
+    const dynamic = raw && queryActions ? queryActions(raw) : []
     if (!q) return items
-    return items.filter(it =>
+    const matched = items.filter(it =>
       it.label.toLowerCase().includes(q) ||
       it.section?.toLowerCase().includes(q) ||
       it.keywords?.some(k => k.toLowerCase().includes(q))
     )
-  }, [query, items])
+    return [...dynamic, ...matched]
+  }, [query, items, queryActions])
 
   // Keep the highlighted row valid as the list shrinks/grows.
   useEffect(() => { setActive(a => Math.min(a, Math.max(results.length - 1, 0))) }, [results.length])
