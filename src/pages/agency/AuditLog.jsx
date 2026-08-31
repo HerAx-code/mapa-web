@@ -141,7 +141,7 @@ export default function AgencyAuditLog() {
   if (!isAgencyAdmin) {
     return (
       <Layout breadcrumb="Audit Log">
-        <div className="p-4 sm:p-6 max-w-2xl">
+        <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
           <div className="card p-6 bg-amber-50 border-amber-200 flex items-start gap-3">
             <MdLockOutline size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
@@ -188,7 +188,7 @@ export default function AgencyAuditLog() {
 
   return (
     <Layout breadcrumb="Audit Log">
-      <div className="p-4 sm:p-6 max-w-5xl">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header — Export CSV uses the current filter set so a
             COA auditor asking for "this quarter's budget actions"

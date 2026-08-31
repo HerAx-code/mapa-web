@@ -62,8 +62,8 @@ Impact (#106) · GL Viewer workspace (#102) · Certificate Generator grid (#107)
 Intake Sheet / Case Assessment (widen + snapshot, #99).
 
 **⬜ Remaining — the active queue:**
-- ⬜ **Audit Log** (`max-w-2xl`) — it's a log **table**; widen to `max-w-[1400px]`, table `w-full`. *(highest: wrong archetype width)*
-- ⬜ **Application Logs** (full-width) — center to `max-w-[1400px]` for consistency.
+- ✅ **Audit Log** (#119) — widened to `max-w-[1400px]` (entry list fills the card).
+- ✅ **Application Logs** (#119) — centered to `max-w-[1400px]`.
 - ⬜ **Team** (`max-w-2xl`) — team-accounts list; widen, consider a 2-col member grid.
 - ⬜ **Agency Profile / Program** (`max-w-3xl`) — profile page; 2-column (identity/details + config).
 - ⬜ **Promotions / Announcements** (`max-w-2xl`) — reuse the admin **split layout** (`AnnouncementForm embedded` already exists).
