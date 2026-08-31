@@ -148,7 +148,7 @@ export default function Inbox() {
 
   return (
     <Layout breadcrumb="Application Inbox">
-      <div className="p-4 sm:p-6">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="mb-5">

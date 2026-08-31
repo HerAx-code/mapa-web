@@ -252,7 +252,7 @@ export default function AgencyDashboard() {
 
   if (!agency) return (
     <Layout breadcrumb="Agency Dashboard">
-      <div className="p-4 sm:p-6 max-w-3xl space-y-4">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
         <div className="h-8 bg-gray-100 rounded w-48 animate-pulse mb-6" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[1,2,3].map(i => (
@@ -277,7 +277,7 @@ export default function AgencyDashboard() {
 
   return (
     <Layout breadcrumb="Agency Dashboard">
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
