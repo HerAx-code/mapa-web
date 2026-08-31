@@ -268,7 +268,7 @@ export default function AddAgency() {
 
   return (
     <Layout breadcrumb="Add Agency">
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Back */}
         <button
@@ -283,8 +283,13 @@ export default function AddAgency() {
           Set up the agency profile and its first Agency Administrator account in one step.
         </p>
 
+        {/* Two-column: the agency profile fills the wider left column; the first
+            administrator account sits in a sticky right column, so the "two
+            things in one form" reads side by side instead of one long scroll. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-5 items-start mb-6">
+
         {/* ── Section 1: Agency Details ── */}
-        <div className="card p-6 mb-5 space-y-5">
+        <div className="card p-6 space-y-5">
 
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Agency Details</p>
 
@@ -430,7 +435,8 @@ export default function AddAgency() {
         </div>
 
         {/* ── Section 2: First Agency Administrator (required) ── */}
-        <div className="card p-6 mb-6">
+        <div className="lg:sticky lg:top-[68px]">
+        <div className="card p-6">
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">First Agency Administrator <span className="text-red-400">*</span></p>
             <p className="text-xs text-gray-400 mt-1">
@@ -487,6 +493,8 @@ export default function AddAgency() {
             </p>
           </div>
         </div>
+        </div>{/* /admin sticky column */}
+        </div>{/* /two-column grid */}
 
         {/* ── Actions ── */}
         <div className="flex items-center justify-between">
