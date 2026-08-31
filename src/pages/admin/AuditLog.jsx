@@ -4,6 +4,8 @@ import {
   collection, query, orderBy, limit, getDocs, startAfter, getCountFromServer,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { useAuth } from '../../contexts/AuthContext'
+import { logAudit } from '../../utils/auditLog'
 import { MdSearch, MdHistory, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { exportToCSV, dateStamp } from '../../utils/export'
@@ -58,6 +60,16 @@ const ACTION_CONFIG = {
   gl_expired:             { label: 'GL Expired',                badge: 'bg-orange-50 text-orange-700 border-orange-200' },
   gl_auto_expired:        { label: 'GL Auto-Expired',           badge: 'bg-orange-50 text-orange-700 border-orange-200' },
   approval_reversed:      { label: 'Approval Reversed',         badge: 'bg-red-50 text-red-700 border-red-200'          },
+  // These actions were being LOGGED in code but had no ACTION_CONFIG entry, so
+  // the audit log rendered them with raw keys, unstyled badges, and no category
+  // filter (the same gap the R22 note fixed for the lifecycle actions).
+  coverage_updated:       { label: 'Coverage Updated',          badge: 'bg-blue-50 text-blue-700 border-blue-200'       },
+  request_assigned:       { label: 'Request Assigned',          badge: 'bg-blue-50 text-blue-700 border-blue-200'       },
+  docs_requested:         { label: 'Documents Requested',       badge: 'bg-amber-50 text-amber-700 border-amber-200'    },
+  request_rejected:       { label: 'Request Rejected',          badge: 'bg-red-50 text-red-700 border-red-200'          },
+  request_closed:         { label: 'Request Closed',            badge: 'bg-orange-50 text-orange-700 border-orange-200' },
+  hospitalid_printed:     { label: 'Access Code Printed',       badge: 'bg-gray-50 text-gray-600 border-gray-200'       },
+  data_exported:          { label: 'Data Exported',             badge: 'bg-cyan-50 text-cyan-700 border-cyan-200'       },
 }
 
 const ACTION_CATEGORIES = [
@@ -66,12 +78,13 @@ const ACTION_CATEGORIES = [
   { key: 'agencies',    label: 'Agencies',     actions: ['agency_created', 'agency_updated', 'agency_enabled', 'agency_disabled', 'agency_deleted'] },
   { key: 'accounts',    label: 'Accounts',     actions: ['account_created', 'account_updated', 'account_deactivated', 'account_activated', 'account_deleted'] },
   { key: 'patients',    label: 'Patients',     actions: ['patient_marked', 'patient_unmarked', 'patient_deleted', 'holding_applied', 'holding_removed'] },
-  { key: 'hospitalids', label: 'Access Codes', actions: ['hospitalid_added', 'hospitalid_bulk', 'hospitalid_deleted', 'hospitalid_revoked'] },
+  { key: 'hospitalids', label: 'Access Codes', actions: ['hospitalid_added', 'hospitalid_bulk', 'hospitalid_deleted', 'hospitalid_revoked', 'hospitalid_printed'] },
   { key: 'config',      label: 'Config',       actions: ['doctype_added', 'doctype_updated', 'doctype_deleted', 'assistance_added', 'assistance_updated', 'assistance_deleted'] },
   { key: 'reports',       label: 'Reports',       actions: ['report_updated', 'report_deleted'] },
   { key: 'announcements', label: 'Announcements', actions: ['announcement_created', 'announcement_updated', 'announcement_deleted'] },
   // R22: request + interview + GL lifecycle filter.
-  { key: 'lifecycle',     label: 'Lifecycle',     actions: ['request_endorsed', 'interview_scheduled', 'interview_completed', 'intake_completed', 'gl_redeemed', 'gl_unmark_redeemed', 'gl_expired', 'gl_auto_expired', 'approval_reversed'] },
+  { key: 'lifecycle',     label: 'Lifecycle',     actions: ['request_assigned', 'docs_requested', 'coverage_updated', 'request_endorsed', 'request_rejected', 'request_closed', 'interview_scheduled', 'interview_completed', 'intake_completed', 'gl_redeemed', 'gl_unmark_redeemed', 'gl_expired', 'gl_auto_expired', 'approval_reversed'] },
+  { key: 'exports',       label: 'Exports',       actions: ['data_exported'] },
 ]
 
 const DATE_FILTERS = [
@@ -137,6 +150,7 @@ function AuditDetails({ text }) {
 const PAGE_SIZE = 100
 
 export default function AuditLog() {
+  const { user } = useAuth()
   const [entries,        setEntries]        = useState([])
   const [loading,        setLoading]        = useState(true)
   const [loadingMore,    setLoadingMore]    = useState(false)
@@ -227,7 +241,14 @@ export default function AuditLog() {
             type="button"
             className="btn-secondary flex items-center gap-1.5 text-sm"
             disabled={loading || filtered.length === 0}
-            onClick={() => exportToCSV(
+            onClick={() => {
+              logAudit(user, {
+                action:     'data_exported',
+                targetType: 'auditlog',
+                targetName: 'Platform audit log',
+                details:    `${filtered.length} row${filtered.length === 1 ? '' : 's'}`,
+              })
+              exportToCSV(
               `platform-audit-${dateStamp()}.csv`,
               [
                 { label: 'Timestamp',     getValue: e => fullDate(e.createdAt) },
@@ -241,7 +262,8 @@ export default function AuditLog() {
                 { label: 'Details',       getValue: e => e.details ?? '' },
               ],
               filtered,
-            )}>
+              )
+            }}>
             <MdDownload size={15} /> Export CSV ({filtered.length})
           </button>
         </div>
