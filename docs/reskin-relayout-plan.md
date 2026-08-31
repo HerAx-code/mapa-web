@@ -67,9 +67,12 @@ Intake Sheet / Case Assessment (widen + snapshot, #99).
 - ✅ **Team** (#120) — widened to `max-w-[1400px]`; member list → 2-column card grid.
 - ✅ **Agency Profile / Program** (#121) — 2-column: editable cards left, live patient-view preview pinned right (dropped the toggle).
 - ✅ **Promotions / Announcements** (#122) — split layout (embedded compose form left, promotions feed right), same as admin #115.
-- ⬜ **Budget Allocation** (`max-w-2xl`) — inspect: if data-heavy, widen; if a short form, leave.
-- ⬜ **Slot Management** (`max-w-xl`) — inspect: likely a settings form, may stay contained.
+- ✅ **Budget Allocation** (#123) — inspected: form + history → 2-column split (controls left, allocation history right).
+- ✅ **Slot Management** (#123) — inspected: settings + history → 2-column split (controls left, adjustment history right).
 - ➖ **User Guide** (`max-w-3xl`) — reading content, stays contained.
+
+**Agency queue is clear — the reskin + relayout goal is met.** Any future page
+change gets a row here first.
 
 ### Patient — ➖ correct as-is (do not widen)
 Dashboard, Track Status, Request/Intake wizard, Medical Programs, Interviews,

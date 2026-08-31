@@ -337,7 +337,7 @@ export default function AgencyAllocation() {
 
   return (
     <Layout breadcrumb="Budget Allocation">
-      <div className="p-4 sm:p-6 max-w-3xl">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         <div className="mb-5">
           <p className="eyebrow">Budget</p>
@@ -364,6 +364,12 @@ export default function AgencyAllocation() {
             </button>
           </div>
         )}
+
+        {/* Split: budget controls on the left, allocation history on the right. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] gap-5 items-start">
+
+          {/* Controls (cards space themselves via their own mb-5) */}
+          <div className="min-w-0">
 
         {/* Current budget snapshot */}
         <div className="card p-5 mb-5">
@@ -601,6 +607,10 @@ export default function AgencyAllocation() {
           </div>
         )}
 
+          </div>{/* /controls column */}
+
+          {/* Allocation history */}
+          <aside className="lg:sticky lg:top-[68px]">
         {/* Allocation history — last 10 budget changes for this agency.
             Sources from auditLog filtered to this agency's actorAgencyId.
             For the full agency-wide audit slice, see /agency/audit. */}
@@ -649,6 +659,8 @@ export default function AgencyAllocation() {
             </div>
           )}
         </div>
+          </aside>{/* /history column */}
+        </div>{/* /split grid */}
 
         <p className="text-xs text-gray-400 mt-2 leading-relaxed">
           <strong>Accountability —</strong> Changes here are recorded in your agency's audit log. As Agency Administrator, you are accountable to your funding source (PCSO / DOH / DSWD / etc.) for how the allocation is set and spent. CRMC operates the platform but does not control your agency's budget.
