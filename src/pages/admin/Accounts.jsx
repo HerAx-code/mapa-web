@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail, deleteUser } from 'firebase/auth'
@@ -264,6 +264,19 @@ export default function Accounts() {
     })
     .sort((a, b) => a.name?.localeCompare(b.name))
 
+  // Access-governance readouts + the roster grouped by role.
+  const superCount = accounts.filter(a => a.role === 'super_admin').length
+  const staffCount = accounts.filter(a => a.role === 'staff_admin').length
+  const offCount   = accounts.filter(a => a.active === false).length
+  const isFiltered = search || roleFilter !== 'all' || statusFilter !== 'all'
+  const clearAll   = () => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') }
+  const roleGroups = [
+    { role: 'super_admin', label: 'Super Admins' },
+    { role: 'staff_admin', label: 'Staff Admins' },
+  ].map(g => ({ ...g, members: filtered.filter(a => a.role === g.role) })).filter(g => g.members.length > 0)
+  const otherMembers = filtered.filter(a => a.role !== 'super_admin' && a.role !== 'staff_admin')
+  if (otherMembers.length) roleGroups.push({ role: 'other', label: 'Other roles', members: otherMembers })
+
   // ── Actions ──────────────────────────────────────────────────────────
 
   const handleToggleActive = async (account) => {
@@ -343,191 +356,161 @@ export default function Accounts() {
           </button>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          {[
-            { label: 'Total',       value: accounts.length,                                     color: 'text-gray-800'   },
-            { label: 'Super Admin', value: accounts.filter(a => a.role === 'super_admin').length, color: 'text-purple-600' },
-            { label: 'Staff Admin', value: accounts.filter(a => a.role === 'staff_admin').length, color: 'text-blue-600'   },
-          ].map((m, i) => (
-            <div key={i} className="card p-4">
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
-            </div>
-          ))}
-        </div>
+        {/* Two-pane: facet sidebar + roster grouped by role. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
 
-        {/* Filter bar (Magic Patterns reskin) */}
-        <div className="card px-3 py-2.5 mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px]">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input className="input pl-9 py-1.5" placeholder="Search by name or email…"
-              value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value="all">All roles</option>
-            <option value="super_admin">Super Admin</option>
-            <option value="staff_admin">Staff Admin</option>
-          </select>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value="all">All status</option>
-            <option value="active">Active</option>
-            <option value="deactivated">Deactivated</option>
-          </select>
-          <span className="tabular-nums text-xs text-gray-500 ml-auto">{filtered.length} account{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-
-        {/* Table */}
-        <div className="card overflow-hidden">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Account</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0" />
-                      <div className="space-y-1.5">
-                        <div className="h-3 bg-gray-100 rounded w-28" />
-                        <div className="h-2.5 bg-gray-100 rounded w-36" />
-                      </div>
-                    </div>
-                  </td>
-                  <td><div className="h-5 bg-gray-100 rounded-full w-20" /></td>
-                  <td><div className="h-5 bg-gray-100 rounded-full w-16" /></td>
-                  <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
-                  <td><div className="h-6 bg-gray-100 rounded w-20" /></td>
-                </tr>
+          {/* ── Filter sidebar — doubles as the access-governance readout ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Super', value: superCount, color: 'text-purple-600' },
+                { label: 'Staff', value: staffCount, color: 'text-blue-600'   },
+                { label: 'Off',   value: offCount,   color: offCount ? 'text-red-500' : 'text-gray-400' },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
               ))}
-              {!loading && filtered.map(a => {
-                const isActive     = a.active !== false
-                const isSelf       = a.uid === currentUser?.uid
-                const isDeleting   = confirmDelete?.uid === a.uid
+            </div>
 
-                return (
-                  <Fragment key={a.uid}>
-                    <tr className={!isActive ? 'opacity-50' : ''}>
-                      <td>
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                            a.role === 'super_admin' ? 'bg-purple-50 text-purple-600'
-                            : 'bg-blue-50 text-blue-600'
-                          }`}>
-                            {a.name?.[0]?.toUpperCase() ?? '?'}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-800 text-sm">
-                              {a.name} {isSelf && <span className="text-xs text-gray-400">(you)</span>}
-                            </p>
-                            <p className="text-xs text-gray-400">{a.email}</p>
-                            {a.contact && <p className="text-xs text-gray-400">{a.contact}</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td><span className={`badge text-xs ${ROLE_BADGE[a.role] || 'badge-gray'}`}>{ROLE_LABEL[a.role] || a.role}</span></td>
-                      <td>
-                        <span className={`badge text-xs ${isActive ? 'badge-green' : 'badge-red'}`}>
-                          {isActive ? 'Active' : 'Deactivated'}
-                        </span>
-                      </td>
-                      <td className="text-xs text-gray-400">{formatDate(a.createdAt)}</td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          {/* Edit */}
-                          <button title="Edit account"
-                            className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                            onClick={() => setModal(a)}>
-                            <MdEdit size={15} />
-                          </button>
-                          {/* Reset password */}
-                          <button title="Send password reset email"
-                            className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-                            onClick={() => handleResetPassword(a)}>
-                            <MdKey size={15} />
-                          </button>
-                          {/* Deactivate / Activate */}
-                          {!isSelf && (
-                            <button title={isActive ? 'Deactivate account' : 'Reactivate account'}
-                              className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-400 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}
-                              onClick={() => handleToggleActive(a)}>
-                              {isActive ? <MdLock size={15} /> : <MdLockOpen size={15} />}
-                            </button>
-                          )}
-                          {/* Delete */}
-                          {!isSelf && (
-                            <button title="Delete account"
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              onClick={() => setConfirmDelete(a)}>
-                              <MdDelete size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Name or email"
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
 
-                    {/* Delete confirmation row */}
-                    {isDeleting && (
-                      <tr className="bg-red-50">
-                        <td colSpan={5} className="px-4 py-3">
-                          <div className="flex items-start gap-3">
-                            <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-sm text-red-700">
-                                Delete <strong>{a.name}</strong>? This removes their portal access permanently.
-                              </p>
-                              <p className="text-xs text-red-600/80 mt-1 leading-relaxed">
-                                Note: The Firebase Auth account can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console → Authentication. Otherwise it'll appear as "already in use" when re-creating an account with the same email.
-                              </p>
-                            </div>
-                            <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
-                              onClick={() => setConfirmDelete(null)}>Cancel</button>
-                            <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0"
-                              onClick={() => handleDelete(a)}>Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center py-12">
-                    <MdSupervisedUserCircle size={36} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
-                      {search || roleFilter !== 'all' || statusFilter !== 'all'
-                        ? 'No accounts match your filter.'
-                        : 'No accounts found.'}
-                    </p>
-                    {(search || roleFilter !== 'all' || statusFilter !== 'all') ? (
-                      <button
-                        onClick={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') }}
-                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
-                        Clear filters
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Role</p>
+              <ul className="-mx-1.5 space-y-px">
+                {[
+                  ['all', 'All roles', accounts.length],
+                  ['super_admin', 'Super Admin', superCount],
+                  ['staff_admin', 'Staff Admin', staffCount],
+                ].map(([key, label, n]) => {
+                  const active = roleFilter === key
+                  return (
+                    <li key={key}>
+                      <button onClick={() => setRoleFilter(key)} aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <span>{label}</span>
+                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => setModal('add')}
-                        className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5">
-                        <MdAdd size={15} /> Add First Account
-                      </button>
-                    )}
-                  </td>
-                </tr>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <div className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
+                {[['all', 'All'], ['active', 'Active'], ['deactivated', 'Off']].map(([k, l]) => (
+                  <button key={k} onClick={() => setStatusFilter(k)}
+                    className={`rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${statusFilter === k ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={clearAll} disabled={!isFiltered}
+              className={`text-xs font-medium underline underline-offset-2 ${isFiltered ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
+            </button>
+          </aside>
+
+          {/* ── Roster, grouped by role ── */}
+          <div className="min-w-0">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400">{filtered.length} account{filtered.length !== 1 ? 's' : ''}{isFiltered ? ` of ${accounts.length}` : ''}</p>
+            </div>
+
+            <div className="card overflow-hidden">
+              {loading && (
+                <div className="divide-y divide-gray-50">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3.5 animate-pulse">
+                      <div className="w-9 h-9 rounded-full bg-gray-100 flex-shrink-0" />
+                      <div className="flex-1 space-y-2 min-w-0"><div className="h-3 bg-gray-100 rounded w-32" /><div className="h-2.5 bg-gray-100 rounded w-44" /></div>
+                      <div className="h-5 bg-gray-100 rounded-full w-16" />
+                    </div>
+                  ))}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+
+              {!loading && roleGroups.map(group => (
+                <section key={group.role}>
+                  <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.members.length} {group.members.length === 1 ? 'account' : 'accounts'}</span>
+                  </div>
+                  <ul className="divide-y divide-gray-50">
+                    {group.members.map(a => {
+                      const isActive   = a.active !== false
+                      const isSelf     = a.uid === currentUser?.uid
+                      const isDeleting = confirmDelete?.uid === a.uid
+                      return (
+                        <li key={a.uid} className={!isActive ? 'opacity-60' : ''}>
+                          <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${a.role === 'super_admin' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                              {a.name?.[0]?.toUpperCase() ?? '?'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">
+                                {a.name} {isSelf && <span className="text-xs font-normal text-gray-400">· you</span>}
+                              </p>
+                              <p className="text-xs text-gray-400 truncate">{a.email}{a.contact ? ` · ${a.contact}` : ''}</p>
+                            </div>
+                            <span className={`badge text-xs flex-shrink-0 ${isActive ? 'badge-green' : 'badge-red'}`}>{isActive ? 'Active' : 'Off'}</span>
+                            <span className="text-xs text-gray-400 flex-shrink-0 w-20 text-right hidden sm:block">{formatDate(a.createdAt)}</span>
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              <button title="Edit account" className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" onClick={() => setModal(a)}><MdEdit size={15} /></button>
+                              <button title="Send password reset email" className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => handleResetPassword(a)}><MdKey size={15} /></button>
+                              {!isSelf && (
+                                <button title={isActive ? 'Deactivate account' : 'Reactivate account'}
+                                  className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-400 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}
+                                  onClick={() => handleToggleActive(a)}>
+                                  {isActive ? <MdLock size={15} /> : <MdLockOpen size={15} />}
+                                </button>
+                              )}
+                              {!isSelf && (
+                                <button title="Delete account" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(a)}><MdDelete size={15} /></button>
+                              )}
+                            </div>
+                          </div>
+                          {isDeleting && (
+                            <div className="flex items-start gap-3 border-t border-red-100 bg-red-50 px-4 py-3">
+                              <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm text-red-700">Delete <strong>{a.name}</strong>? This removes their portal access permanently.</p>
+                                <p className="text-xs text-red-600/80 mt-1 leading-relaxed">Note: The Firebase Auth account can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console → Authentication.</p>
+                              </div>
+                              <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                              <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0" onClick={() => handleDelete(a)}>Delete</button>
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+
+              {!loading && filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <MdSupervisedUserCircle size={36} className="text-gray-200 mb-2" />
+                  <p className="text-sm text-gray-400">{isFiltered ? 'No accounts match your filter.' : 'No accounts found.'}</p>
+                  {isFiltered ? (
+                    <button onClick={clearAll} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
+                  ) : (
+                    <button onClick={() => setModal('add')} className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5"><MdAdd size={15} /> Add First Account</button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>{/* /roster */}
+        </div>{/* /two-pane grid */}
 
         {/* Modal */}
         {modal && (
