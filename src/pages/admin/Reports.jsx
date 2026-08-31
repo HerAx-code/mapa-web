@@ -181,7 +181,7 @@ export default function Reports() {
 
   return (
     <Layout breadcrumb="Reports">
-      <div className="w-full p-4 sm:p-6 max-w-5xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header with search (Magic Patterns reskin) */}
         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -252,7 +252,7 @@ export default function Reports() {
 
         {/* ── Cards ── */}
         {loading ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="card p-4 animate-pulse space-y-3">
                 <div className="flex items-center justify-between">
@@ -299,7 +299,7 @@ export default function Reports() {
           </div>
 
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
             {filtered.map(r => {
               const status    = r.status ?? 'open'
               const catBadge  = CATEGORY_BADGE[r.category] ?? 'badge-gray'
