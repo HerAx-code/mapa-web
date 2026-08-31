@@ -31,7 +31,7 @@ function ImageLightbox({ src, onClose }) {
 // (legacy path). Renders the image/PDF inline with robust fallbacks.
 // Used both inside DocViewerModal and inline in the CRMC request
 // detail's side-by-side review panel.
-export function DocPreview({ docMeta, className = '' }) {
+export function DocPreview({ docMeta, className = '', onClose }) {
   const [content, setContent]     = useState(null)
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
@@ -193,14 +193,21 @@ export function DocPreview({ docMeta, className = '' }) {
         )}
       </div>
 
-      {content && (
-        <div className="flex items-center justify-end gap-2 px-2 py-2 flex-shrink-0">
-          <button onClick={handleOpenInNewTab} className="btn-secondary text-sm flex items-center gap-1.5">
-            <MdOpenInNew size={14} /> Open in new tab
-          </button>
-          <button onClick={handleDownload} className="btn-primary text-sm flex items-center gap-1.5">
-            <MdDownload size={14} /> Download
-          </button>
+      {(content || onClose) && (
+        <div className="flex items-center justify-end gap-2 px-3 py-2.5 flex-shrink-0 border-t border-gray-100">
+          {onClose && (
+            <button onClick={onClose} className="btn-secondary text-sm mr-auto">Close</button>
+          )}
+          {content && (
+            <>
+              <button onClick={handleOpenInNewTab} className="btn-secondary text-sm flex items-center gap-1.5">
+                <MdOpenInNew size={14} /> Open in new tab
+              </button>
+              <button onClick={handleDownload} className="btn-primary text-sm flex items-center gap-1.5">
+                <MdDownload size={14} /> Download
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -230,10 +237,7 @@ export default function DocViewerModal({ docMeta, onClose }) {
         {docMeta?.documentTypeName && (
           <div className="px-5 py-2 border-b border-gray-50 text-xs text-gray-500 flex-shrink-0">Type: {docMeta.documentTypeName}</div>
         )}
-        <DocPreview docMeta={docMeta} className="flex-1" />
-        <div className="flex justify-end px-5 py-3 border-t border-gray-100 flex-shrink-0">
-          <button onClick={onClose} className="btn-secondary text-sm">Close</button>
-        </div>
+        <DocPreview docMeta={docMeta} onClose={onClose} className="flex-1" />
       </div>
     </div>
   )
