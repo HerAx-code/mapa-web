@@ -64,7 +64,7 @@ Intake Sheet / Case Assessment (widen + snapshot, #99).
 **⬜ Remaining — the active queue:**
 - ✅ **Audit Log** (#119) — widened to `max-w-[1400px]` (entry list fills the card).
 - ✅ **Application Logs** (#119) — centered to `max-w-[1400px]`.
-- ⬜ **Team** (`max-w-2xl`) — team-accounts list; widen, consider a 2-col member grid.
+- ✅ **Team** (#120) — widened to `max-w-[1400px]`; member list → 2-column card grid.
 - ⬜ **Agency Profile / Program** (`max-w-3xl`) — profile page; 2-column (identity/details + config).
 - ⬜ **Promotions / Announcements** (`max-w-2xl`) — reuse the admin **split layout** (`AnnouncementForm embedded` already exists).
 - ⬜ **Budget Allocation** (`max-w-2xl`) — inspect: if data-heavy, widen; if a short form, leave.
