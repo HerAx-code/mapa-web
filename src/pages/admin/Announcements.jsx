@@ -98,7 +98,7 @@ function BannerPreview({ type, title, message, startAt, endAt }) {
 
 // ── Create / Edit Modal ───────────────────────────────────────────────────
 
-export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, promo = false }) {
+export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, promo = false, embedded = false }) {
   const isEdit = !!announcement
   const noun   = promo ? 'Promotion' : 'Announcement'
 
@@ -166,16 +166,18 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+  const shell = (
+      <div className={embedded
+        ? 'card flex flex-col overflow-hidden'
+        : 'bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden'}>
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">
             {isEdit ? `Edit ${noun}` : `New ${noun}`}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          {/* In embedded mode the X clears any in-progress edit back to a fresh
+              "new" form; in modal mode it closes the dialog. */}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" title={isEdit ? 'Cancel edit' : 'Close'}><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -334,6 +336,13 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
           </button>
         </div>
       </div>
+  )
+
+  if (embedded) return shell
+  return (
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      {shell}
     </div>
   )
 }
@@ -344,7 +353,6 @@ export default function Announcements() {
   const { user }                        = useAuth()
   const [announcements, setAnnouncements] = useState([])
   const [loading, setLoading]           = useState(true)
-  const [showForm, setShowForm]         = useState(false)
   const [editing, setEditing]           = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting, setDeleting]         = useState(false)
@@ -396,7 +404,6 @@ export default function Announcements() {
 
         toast.success('Announcement created and all users notified.')
       }
-      setShowForm(false)
       setEditing(null)
       load()
     } catch {
@@ -494,7 +501,7 @@ export default function Announcements() {
           <div className="flex items-center gap-1 flex-shrink-0">
             <button title="Edit"
               className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-              onClick={() => { setEditing(ann); setShowForm(true) }}>
+              onClick={() => setEditing(ann)}>
               <MdEdit size={15} />
             </button>
             {(status === 'active' || status === 'upcoming') && ann.active && (
@@ -561,7 +568,7 @@ export default function Announcements() {
 
   return (
     <Layout breadcrumb="Announcements">
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
@@ -572,9 +579,10 @@ export default function Announcements() {
               Manage system-wide banners for scheduled maintenance and important notices.
             </p>
           </div>
-          <button className="btn-primary flex items-center gap-1.5 text-sm"
-            onClick={() => { setEditing(null); setShowForm(true) }}>
-            <MdAdd size={16} /> New Announcement
+          <button className="btn-secondary flex items-center gap-1.5 text-sm"
+            onClick={() => setEditing(null)}
+            title="Clear the compose form to start a new announcement">
+            <MdAdd size={16} /> New / clear
           </button>
         </div>
 
@@ -602,7 +610,22 @@ export default function Announcements() {
           </p>
         </div>
 
-        {/* Sections */}
+        {/* Split layout: the compose form lives in a sticky left panel and the
+            feed of announcements fills the right — instead of a modal floating
+            over a narrow centred list. Editing a card loads it into the same
+            left form (keyed so it re-initialises). */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] gap-5 items-start">
+          <aside className="lg:sticky lg:top-[68px]">
+            <AnnouncementForm
+              embedded
+              key={editing?.id ?? 'new'}
+              announcement={editing}
+              onSave={handleSave}
+              onClose={() => setEditing(null)}
+            />
+          </aside>
+
+          <div className="min-w-0">
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -625,16 +648,9 @@ export default function Announcements() {
             {renderSection('Past / Inactive', past, 'No past announcements.')}
           </div>
         )}
+          </div>{/* /feed column */}
+        </div>{/* /split grid */}
       </div>
-
-      {/* Form modal */}
-      {showForm && (
-        <AnnouncementForm
-          announcement={editing}
-          onClose={() => { setShowForm(false); setEditing(null) }}
-          onSave={handleSave}
-        />
-      )}
     </Layout>
   )
 }
