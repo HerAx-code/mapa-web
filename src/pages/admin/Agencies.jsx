@@ -606,7 +606,7 @@ export default function Agencies() {
         </div>
 
         {loading && (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="card p-4 animate-pulse">
                 <div className="flex items-center gap-3">
@@ -622,8 +622,9 @@ export default function Agencies() {
           </div>
         )}
 
-        {/* Agency cards */}
-        <div className="space-y-3">
+        {/* Agency cards — 2-column grid on wide screens so the list fills the
+            width and shows twice as many agencies at a glance. */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
           {filtered.map(agency => {
             const stats          = appStats[agency.id]
             const appCount       = stats?.total ?? 0
@@ -728,7 +729,7 @@ export default function Agencies() {
           })}
 
           {!loading && filtered.length === 0 && (
-            <div className="card p-10 text-center">
+            <div className="card p-10 text-center xl:col-span-2">
               {search || statusFilter !== 'all'
             ? <MdSearch className="mx-auto mb-3 text-gray-300" size={32} />
             : <MdLocationOn className="mx-auto mb-3 text-gray-300" size={32} />}
