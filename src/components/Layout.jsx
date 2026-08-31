@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import NotificationModal, { getNotifRoute } from './NotificationModal'
+import CommandPalette from './admin/CommandPalette'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   MdMenu, MdClose, MdApps, MdMessage, MdNotifications,
@@ -856,6 +857,22 @@ export default function Layout({ children, breadcrumb }) {
   const [showCompose, setShowCompose]       = useState(false)
   const [banners, setBanners]               = useState([])
 
+  // ⌘K command-palette targets — the admin nav, filtered by role exactly as the
+  // sidebar filters it (staff_admin can't reach Accounts / Audit Log).
+  const adminCommandItems = useMemo(() => {
+    const role = user?.role
+    if (role !== ROLES.SUPER_ADMIN && role !== ROLES.STAFF_ADMIN) return []
+    const toItem = (section) => (it) => ({ key: it.to, label: it.label, icon: it.icon, to: it.to, section })
+    return [
+      ...ADMIN_NAV.management
+        .filter(it => role === ROLES.SUPER_ADMIN || (!it.superOnly && it.to !== '/admin/accounts'))
+        .map(toItem('System admin')),
+      ...ADMIN_NAV.operations
+        .filter(it => role === ROLES.SUPER_ADMIN || it.to !== '/admin/auditlog')
+        .map(toItem('Operations')),
+    ]
+  }, [user?.role])
+
   // Phase 1.4 (post-review hardening): if an admin changes this user's
   // role while they're signed in (rare but real -- patient promoted to
   // coordinator, coordinator promoted to agency_admin), the new role
@@ -1318,6 +1335,9 @@ export default function Layout({ children, breadcrumb }) {
         {user?.role === ROLES.PATIENT && (
           <div className="print:hidden"><BottomTabBar unreadMessages={totalUnreadMessages} /></div>
         )}
+
+        {/* ⌘K / Ctrl-K command palette — admin workspaces only */}
+        {adminCommandItems.length > 0 && <CommandPalette items={adminCommandItems} />}
       </div>
     </div>
   )
