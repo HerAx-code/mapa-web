@@ -192,7 +192,6 @@ export default function AgencyProfile() {
   const [agency, setAgency]         = useState(null)
   const [coordinators, setCoords]   = useState([])
   const [loading, setLoading]       = useState(true)
-  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     if (!user?.agencyId) return
@@ -263,7 +262,7 @@ export default function AgencyProfile() {
 
   return (
     <Layout breadcrumb="Agency Profile">
-      <div className="p-4 sm:p-6 max-w-3xl">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
@@ -272,25 +271,20 @@ export default function AgencyProfile() {
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agency Profile</h1>
             <p className="text-sm text-gray-500 mt-1">Manage the information patients see about your agency.</p>
           </div>
-          <button
-            className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border transition-colors ${
-              showPreview
-                ? 'bg-purple-500 text-white border-purple-500 hover:bg-purple-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-            }`}
-            onClick={() => setShowPreview(p => !p)}>
-            {showPreview
-              ? <><MdVisibilityOff size={15} /> Hide patient view</>
-              : <><MdVisibility size={15} /> Preview patient view</>}
-          </button>
         </div>
 
-        {/* Patient preview (toggle) */}
-        {showPreview && (
-          <div className="mb-5">
+        {/* Split: editable / info cards on the left; a live patient-view preview
+            pinned on the right so edits read as patients will see them. On mobile
+            the preview stacks on top. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-5 items-start">
+
+          {/* Right — live patient preview */}
+          <aside className="order-1 lg:order-2 lg:sticky lg:top-[68px]">
             <PatientPreview agency={agency} />
-          </div>
-        )}
+          </aside>
+
+          {/* Left — the editable / info cards */}
+          <div className="order-2 lg:order-1 min-w-0">
 
         {/* Agency identity card (read-only — admin sets) */}
         <div className="card p-5 mb-5">
@@ -459,6 +453,9 @@ export default function AgencyProfile() {
             <strong>Need to change something locked?</strong> Use <strong>Report a Problem</strong> in the user menu, or message your system administrator directly. Slot capacity changes are on the <button className="underline" onClick={() => navigate('/agency/slots')}>Slot Management</button> page.
           </p>
         </div>
+
+          </div>{/* /left column */}
+        </div>{/* /split grid */}
 
       </div>
     </Layout>
