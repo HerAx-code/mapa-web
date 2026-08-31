@@ -12,13 +12,24 @@ describe('AssessmentSnapshot', () => {
 
   it('shows income per person and a means-test suggestion', () => {
     render(<AssessmentSnapshot sheet={sheet} showMeansTest canEdit onApplyMeansTest={() => {}} />)
-    expect(screen.getByText('Income / person')).toBeInTheDocument()
+    expect(screen.getByText('Income per person')).toBeInTheDocument()
     // 6000 / 4 = 1500 per person → below the 2600 line → Indigent.
     expect(screen.getByText(/₱1,500/)).toBeInTheDocument()
     expect(screen.getByText('Suggested means-test')).toBeInTheDocument()
     expect(screen.getByText('Indigent')).toBeInTheDocument()
-    // Expenses 3000 / income 6000 = 50%.
-    expect(screen.getByText('50%')).toBeInTheDocument()
+    // Below the poverty line → warning pill (1500 / 2600 ≈ 0.58 → 42% under).
+    expect(screen.getByText(/Below poverty line — 42% under/)).toBeInTheDocument()
+    // Expenses vs income section shows the entered figures.
+    expect(screen.getByText('Expenses vs income')).toBeInTheDocument()
+    expect(screen.getByText(/₱3,000/)).toBeInTheDocument()
+  })
+
+  it('states the peso shortfall (not a raw ratio) when expenses exceed income', () => {
+    // A household several times underwater must not render a runaway percentage.
+    const underwater = { monthlyIncome: 10, householdSize: 9, expenses: { bills: 35085 } }
+    render(<AssessmentSnapshot sheet={underwater} showMeansTest={false} />)
+    expect(screen.getByText(/₱35,075 monthly shortfall/)).toBeInTheDocument()
+    expect(screen.queryByText(/350,?850%/)).not.toBeInTheDocument() // the old runaway ratio is gone
   })
 
   it('applies the suggestion when "Use suggestion" is clicked', async () => {
@@ -31,7 +42,7 @@ describe('AssessmentSnapshot', () => {
   it('hides the means-test block when showMeansTest is false (patient facts mode)', () => {
     render(<AssessmentSnapshot sheet={sheet} showMeansTest={false} canEdit={false} />)
     expect(screen.queryByText('Suggested means-test')).not.toBeInTheDocument()
-    expect(screen.getByText('Income / person')).toBeInTheDocument() // financials still shown
+    expect(screen.getByText('Income per person')).toBeInTheDocument() // financials still shown
   })
 
   it('renders nothing when there is no income/household or expenses yet', () => {
