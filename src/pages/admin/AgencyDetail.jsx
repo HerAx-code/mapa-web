@@ -419,7 +419,7 @@ export default function AgencyDetail() {
   if (loading) {
     return (
       <Layout breadcrumb="Agency">
-        <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-4">
+        <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="card p-5 animate-pulse space-y-3">
               <div className="h-4 bg-gray-100 rounded w-40" />
@@ -441,7 +441,7 @@ export default function AgencyDetail() {
 
   return (
     <Layout breadcrumb={agency.name}>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Back */}
         <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-5"
@@ -492,8 +492,8 @@ export default function AgencyDetail() {
 
         </div>
 
-        {/* ── Details grid ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        {/* ── Details + stats grid — four cards fill the width on desktop ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
 
           {/* Requirements */}
           <div className="card p-4">
@@ -522,10 +522,6 @@ export default function AgencyDetail() {
               <p className="text-xs text-gray-400 italic">No assistance types listed.</p>
             )}
           </div>
-        </div>
-
-        {/* ── Stats + Slots ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
 
           {/* Application stats */}
           <div className="card p-4">
