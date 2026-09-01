@@ -1,5 +1,5 @@
 import Layout from '../../components/Layout'
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect } from 'react'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
@@ -178,6 +178,12 @@ export default function HospitalIDs() {
     return h.id.toLowerCase().includes(q) ||
       (h.usedBy && h.usedBy.toLowerCase().includes(q))
   })
+
+  const isFiltered = search || statusFilter !== 'all'
+  const statusGroups = [
+    { key: 'available', label: 'Available' },
+    { key: 'used', label: 'Used' },
+  ].map(g => ({ ...g, entries: filtered.filter(h => h.status === g.key) })).filter(g => g.entries.length > 0)
 
   // ── Actions ──────────────────────────────────────────────────────────
 
@@ -377,213 +383,148 @@ export default function HospitalIDs() {
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          {[
-            { label: 'Total Codes', value: hospitalIds.length, color: 'text-gray-800',  filterKey: 'all'       },
-            { label: 'Available', value: available.length,   color: 'text-green-600', filterKey: 'available' },
-            { label: 'Used',      value: used.length,        color: 'text-brand-600', filterKey: 'used'      },
-          ].map((m) => (
-            <button key={m.filterKey}
-              className={`card p-4 text-left w-full transition-colors hover:bg-gray-50 ${statusFilter === m.filterKey ? 'ring-2 ring-brand-400' : ''}`}
-              onClick={() => setStatusFilter(statusFilter === m.filterKey ? 'all' : m.filterKey)}>
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
-            </button>
-          ))}
-        </div>
+        {/* Two-pane: facet sidebar + codes grouped by status. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
 
-        {/* Next ID preview — Super Admin only */}
-        {isSuperAdmin && (
-          <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 mb-5 flex items-center gap-2">
-            <span className="text-xs text-gray-500">Next code to be generated:</span>
-            <span className="font-mono text-sm font-semibold text-gray-800">
-              CRMC-{new Date().getFullYear()}-{String(nextNum).padStart(5, '0')}
-            </span>
-          </div>
-        )}
+          {/* ── Filter sidebar ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Total',     value: hospitalIds.length, color: 'text-gray-800'  },
+                { label: 'Available', value: available.length,   color: 'text-green-600' },
+                { label: 'Used',      value: used.length,        color: 'text-brand-600' },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
 
-        {/* Status filter chips */}
-        <div className="flex items-center gap-2 flex-wrap mb-4">
-          <span className="text-xs text-gray-400 flex-shrink-0">Status</span>
-          {[
-            { key: 'all',       label: 'All'       },
-            { key: 'available', label: 'Available' },
-            { key: 'used',      label: 'Used'      },
-          ].map(f => (
-            <button key={f.key}
-              onClick={() => setStatusFilter(statusFilter === f.key && f.key !== 'all' ? 'all' : f.key)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                statusFilter === f.key
-                  ? 'bg-brand-500 text-white border-brand-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Code or patient name" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9 pr-10" placeholder="Search by access code or patient name..."
-            value={search} onChange={e => setSearch(e.target.value)} />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-              <MdClose size={14} />
-            </button>
-          )}
-        </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <ul className="-mx-1.5 space-y-px">
+                {[
+                  ['all', 'All codes', hospitalIds.length],
+                  ['available', 'Available', available.length],
+                  ['used', 'Used', used.length],
+                ].map(([key, label, n]) => {
+                  const active = statusFilter === key
+                  return (
+                    <li key={key}>
+                      <button onClick={() => setStatusFilter(key)} aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <span>{label}</span>
+                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
 
-        {/* Table */}
-        <div className="card overflow-x-auto">
-          <table className="data-table min-w-full">
-            <thead>
-              <tr>
-                <th>Access Code</th>
-                <th>Status</th>
-                <th>Used By</th>
-                <th>Patient ID</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td><div className="h-3 bg-gray-100 rounded w-36 font-mono" /></td>
-                  <td><div className="h-5 bg-gray-100 rounded-full w-20" /></td>
-                  <td><div className="h-3 bg-gray-100 rounded w-28" /></td>
-                  <td><div className="h-3 bg-gray-100 rounded w-24" /></td>
-                  <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
-                  <td><div className="h-6 bg-gray-100 rounded w-16" /></td>
-                </tr>
+            {isSuperAdmin && (
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Next code</p>
+                <p className="font-mono text-sm font-semibold text-gray-800">CRMC-{new Date().getFullYear()}-{String(nextNum).padStart(5, '0')}</p>
+              </div>
+            )}
+
+            {isFiltered && (
+              <button onClick={() => { setSearch(''); setStatusFilter('all') }}
+                className="text-xs font-medium text-gray-500 hover:text-brand-600 underline underline-offset-2">
+                Clear filters
+              </button>
+            )}
+          </aside>
+
+          {/* ── Code stream, grouped by status ── */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 mb-3">{filtered.length} code{filtered.length !== 1 ? 's' : ''}{isFiltered ? ` of ${hospitalIds.length}` : ''}</p>
+
+            <div className="card overflow-hidden">
+              {loading && (
+                <div className="divide-y divide-gray-50">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3.5 animate-pulse">
+                      <div className="h-3 bg-gray-100 rounded w-40" />
+                      <div className="h-5 bg-gray-100 rounded-full w-16 ml-auto" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!loading && statusGroups.map(group => (
+                <section key={group.key}>
+                  <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'code' : 'codes'}</span>
+                  </div>
+                  <ul className="divide-y divide-gray-50">
+                    {group.entries.map(h => {
+                      const isDeleting = confirmDelete?.id === h.id
+                      const isRevoking = confirmRevoke?.id === h.id
+                      const isUsed     = h.status === 'used'
+                      return (
+                        <li key={h.id}>
+                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                            <span className="font-mono text-sm text-gray-700 flex-shrink-0">{h.id}</span>
+                            <span className={`badge text-xs flex-shrink-0 ${isUsed ? 'badge-blue' : 'badge-green'}`}>{isUsed ? 'Used' : 'Available'}</span>
+                            <div className="flex-1 min-w-0 text-sm text-gray-600 truncate">
+                              {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-400">{h.patId}</span>}</> : <span className="text-gray-300">Unclaimed</span>}
+                            </div>
+                            <span className="text-xs text-gray-400 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
+                            {isSuperAdmin ? (
+                              <div className="flex items-center gap-0.5 flex-shrink-0">
+                                {isUsed && (
+                                  <button title="Reset to Available (revoke from current patient)" className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setConfirmRevoke(h)}><MdRefresh size={15} /></button>
+                                )}
+                                <button title="Delete code" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(h)}><MdDelete size={15} /></button>
+                              </div>
+                            ) : <span className="text-xs text-gray-300 flex-shrink-0">View only</span>}
+                          </div>
+                          {isRevoking && (
+                            <div className="flex items-center gap-3 border-t border-amber-100 bg-amber-50 px-4 py-3">
+                              <MdWarning size={16} className="text-amber-500 flex-shrink-0" />
+                              <p className="text-sm text-amber-800 flex-1">Reset <strong className="font-mono">{h.id}</strong> to Available? <span className="font-normal">Currently linked to <strong>{h.usedBy ?? '—'}</strong>. They lose access; the code returns to the pool. Their profile remains; only the hospitalId link is cleared.</span></p>
+                              <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0" onClick={() => setConfirmRevoke(null)}>Cancel</button>
+                              <button className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600 flex-shrink-0" onClick={async () => { await handleRevoke(h); setConfirmRevoke(null) }}>Reset to Available</button>
+                            </div>
+                          )}
+                          {isDeleting && (
+                            <div className="flex items-center gap-3 border-t border-red-100 bg-red-50 px-4 py-3">
+                              <MdWarning size={16} className="text-red-500 flex-shrink-0" />
+                              <p className="text-sm text-red-700 flex-1">Delete <strong className="font-mono">{h.id}</strong>?{isUsed && <span className="font-normal"> Linked to <strong>{h.usedBy}</strong> — their hospital ID will be cleared from their profile.</span>}</p>
+                              <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                              <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0" onClick={() => handleDelete(h)}>Delete</button>
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
               ))}
 
-              {!loading && filtered.map(h => {
-                const isDeleting = confirmDelete?.id === h.id
-                const isRevoking = confirmRevoke?.id === h.id
-                const isUsed     = h.status === 'used'
-
-                return (
-                  <Fragment key={h.id}>
-                    <tr>
-                      <td className="font-mono text-sm text-gray-700">{h.id}</td>
-                      <td>
-                        <span className={`badge text-xs ${isUsed ? 'badge-blue' : 'badge-green'}`}>
-                          {isUsed ? 'Used' : 'Available'}
-                        </span>
-                      </td>
-                      <td className="text-sm text-gray-700">{h.usedBy || '—'}</td>
-                      <td className="text-xs text-gray-400 font-mono">{h.patId || '—'}</td>
-                      <td className="text-xs text-gray-400">{fmtDate(h.createdAt)}</td>
-                      <td>
-                        {isSuperAdmin ? (
-                          <div className="flex items-center gap-1">
-                            {isUsed && (
-                              <button
-                                title="Reset to Available (revoke from current patient)"
-                                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-                                onClick={() => setConfirmRevoke(h)}>
-                                <MdRefresh size={15} />
-                              </button>
-                            )}
-                            <button
-                              title="Delete ID"
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              onClick={() => setConfirmDelete(h)}>
-                              <MdDelete size={15} />
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-300">View only</span>
-                        )}
-                      </td>
-                    </tr>
-
-                    {/* Phase 4.8: Revoke confirmation row (amber) */}
-                    {isRevoking && (
-                      <tr className="bg-amber-50">
-                        <td colSpan={6} className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <MdWarning size={16} className="text-amber-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-amber-800">
-                                Reset <strong className="font-mono">{h.id}</strong> to Available?
-                                <span className="ml-1 font-normal">
-                                  Currently linked to <strong>{h.usedBy ?? '—'}</strong>. They will lose access; the code returns to the pool and a new patient can claim it via registration. Their patient profile remains; only the hospitalId link is cleared.
-                                </span>
-                              </p>
-                            </div>
-                            <button
-                              className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
-                              onClick={() => setConfirmRevoke(null)}>Cancel</button>
-                            <button
-                              className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600 flex-shrink-0"
-                              onClick={async () => { await handleRevoke(h); setConfirmRevoke(null) }}>Reset to Available</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* Delete confirmation row */}
-                    {isDeleting && (
-                      <tr className="bg-red-50">
-                        <td colSpan={6} className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <MdWarning size={16} className="text-red-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-red-700">
-                                Delete <strong className="font-mono">{h.id}</strong>?
-                                {isUsed && (
-                                  <span className="ml-1 font-normal">
-                                    This ID is currently linked to <strong>{h.usedBy}</strong>. Their hospital ID will be cleared from their profile.
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <button
-                              className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
-                              onClick={() => setConfirmDelete(null)}>Cancel</button>
-                            <button
-                              className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0"
-                              onClick={() => handleDelete(h)}>Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-
               {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-8">
-                    <p className="text-sm text-gray-400">
-                      {search ? 'No IDs match your search.' : 'No hospital IDs found.'}
-                    </p>
-                    {search ? (
-                      <button
-                        onClick={() => setSearch('')}
-                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
-                        Clear search
-                      </button>
-                    ) : isSuperAdmin && (
-                      <button
-                        onClick={() => setShowBulkAdd(true)}
-                        className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5">
-                        <MdAdd size={15} /> Generate Hospital IDs
-                      </button>
-                    )}
-                  </td>
-                </tr>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <MdSearch size={32} className="text-gray-200 mb-2" />
+                  <p className="text-sm text-gray-400">{search || statusFilter !== 'all' ? 'No codes match your filter.' : 'No access codes yet.'}</p>
+                  {(search || statusFilter !== 'all') ? (
+                    <button onClick={() => { setSearch(''); setStatusFilter('all') }} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
+                  ) : isSuperAdmin && (
+                    <button onClick={() => setShowBulkAdd(true)} className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5"><MdAdd size={15} /> Generate codes</button>
+                  )}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>{/* /code stream */}
+        </div>{/* /two-pane grid */}
 
         {/* Bulk add modal */}
         {showBulkAdd && (
