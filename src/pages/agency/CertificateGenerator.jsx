@@ -286,7 +286,6 @@ export default function CertificateGenerator() {
   const navigate          = useNavigate()
   const [apps, setApps]   = useState([])
   const [loading, setLoading]   = useState(true)
-  const [printing, setPrinting] = useState(null)
   const [search, setSearch]     = useState('')
 
   // Track which apps have an uploaded signed scan
@@ -480,10 +479,9 @@ export default function CertificateGenerator() {
                             ? 'bg-brand-500 text-white hover:bg-brand-600'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                         }`}
-                        onClick={() => handlePrint(app)}
-                        disabled={printing === app.id}>
+                        onClick={() => handlePrint(app)}>
                         <MdPrint size={15} />
-                        {printing === app.id ? 'Opening…' : isIssued ? 'Re-print' : 'Print GL'}
+                        {isIssued ? 'Re-print' : 'Print GL'}
                       </button>
                       {isIssued && (
                         <button
