@@ -70,6 +70,9 @@ describe('handleInterviewSlotWritten — book (open → booked)', () => {
     expect(captured.reqUpdate.interviewMode).toBe('in_person')
     expect(captured.reqUpdate.interviewSlotId).toBe('slot1')
     expect(captured.reqUpdate.status).toBe('assessment')
+    // Re-arms the reminder cadence for the (possibly rescheduled) time.
+    expect(captured.reqUpdate.reminderSent24h).toBe(false)
+    expect(captured.reqUpdate.reminderSent1h).toBe(false)
   })
 
   it('assigns a booking-order queue number to slot and request (in-person)', async () => {
