@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { collection, query, where, orderBy, limit, getDocs, startAfter, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { tsToDate } from '../../utils/dates'
+import { groupByDay } from '../../utils/groupByDay'
 import StatusBadge from '../../components/ui/StatusBadge'
 
 const PAGE_SIZE = 100
@@ -22,32 +23,6 @@ const STATUS_ROWS = [
   ['pending',       'Pending (legacy)'  ],
   ['interview',     'Interview (legacy)'],
 ]
-
-// Group applications into day buckets by submittedAt so a long list becomes
-// navigable — Today / Yesterday / weekday, each with a count.
-function groupByDay(apps) {
-  const groups = []
-  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
-  const today = startOfDay(new Date())
-  const oneDay = 86400000
-  for (const a of apps) {
-    const d = tsToDate(a.submittedAt)
-    const key = d ? String(startOfDay(d)) : 'unknown'
-    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
-    if (!g) {
-      let label = 'Undated', sub = ''
-      if (d) {
-        const day = startOfDay(d)
-        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
-        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-      }
-      g = { key, label, sub, entries: [] }
-      groups.push(g)
-    }
-    g.entries.push(a)
-  }
-  return groups
-}
 
 const fmtTime = (ts) => {
   const d = tsToDate(ts)
@@ -125,7 +100,7 @@ export default function AppLogs() {
   // Distinct agency names present in the loaded apps, for the agency facet.
   const agencies = [...new Set(apps.map(a => a.agencyName).filter(Boolean))].sort()
 
-  const dayGroups = groupByDay(filtered)
+  const dayGroups = groupByDay(filtered, a => a.submittedAt)
   const isFiltered = search || filter !== 'all' || agencyFilter !== 'all' || dateFilter !== 'all'
   const clearAll = () => { setSearch(''); setFilter('all'); setAgencyFilter('all'); setDateFilter('all') }
 

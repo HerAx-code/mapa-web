@@ -10,6 +10,7 @@ import { MdSearch, MdHistory, MdLockOutline, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { exportToCSV, dateStamp } from '../../utils/export'
 import { tsToDate } from '../../utils/dates'
+import { groupByDay } from '../../utils/groupByDay'
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -95,32 +96,6 @@ function AuditDetails({ text }) {
       )}
     </p>
   )
-}
-
-// Group entries into day buckets — Today / Yesterday / weekday — so a long
-// stream becomes navigable instead of one flat wall.
-function groupByDay(items) {
-  const groups = []
-  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
-  const today = startOfDay(new Date())
-  const oneDay = 86400000
-  for (const it of items) {
-    const d = tsToDate(it.createdAt)
-    const key = d ? String(startOfDay(d)) : 'unknown'
-    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
-    if (!g) {
-      let label = 'Undated', sub = ''
-      if (d) {
-        const day = startOfDay(d)
-        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
-        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-      }
-      g = { key, label, sub, entries: [] }
-      groups.push(g)
-    }
-    g.entries.push(it)
-  }
-  return groups
 }
 
 export default function AgencyAuditLog() {
