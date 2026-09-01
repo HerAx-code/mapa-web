@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
@@ -25,6 +26,7 @@ const getNextNum = (ids) => {
 function BulkAddModal({ nextNum, onClose }) {
   const [count, setCount]   = useState(10)
   const [adding, setAdding] = useState(false)
+  useEscapeKey(onClose, !adding)
   const { user }            = useAuth()
   const year     = new Date().getFullYear()
   const startNum = nextNum
@@ -435,12 +437,10 @@ export default function HospitalIDs() {
               </div>
             )}
 
-            {isFiltered && (
-              <button onClick={() => { setSearch(''); setStatusFilter('all') }}
-                className="text-xs font-medium text-gray-500 hover:text-brand-600 underline underline-offset-2">
-                Clear filters
-              </button>
-            )}
+            <button onClick={() => { setSearch(''); setStatusFilter('all') }} disabled={!isFiltered}
+              className={`text-xs font-medium underline underline-offset-2 ${isFiltered ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
+            </button>
           </aside>
 
           {/* ── Code stream, grouped by status ── */}

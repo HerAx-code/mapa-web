@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect, Fragment } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import {
   collection, onSnapshot, addDoc, deleteDoc, updateDoc,
   doc, serverTimestamp, writeBatch, getDocs, query, where,
@@ -30,6 +31,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
     description:  type?.description  ?? '',
   })
   const [saving, setSaving] = useState(false)
+  useEscapeKey(onClose, !saving)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
   const handleSave = async () => {

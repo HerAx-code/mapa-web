@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import {
   collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, updateDoc,
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
@@ -71,6 +72,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const [selected, setSelected] = useState(() => new Set())
   const [notes,    setNotes]    = useState('')
   const [saving,   setSaving]   = useState(false)
+  useEscapeKey(onClose, !saving)
 
   // R13: pre-endorse document existence check. The request snapshots
   // `attachedDocuments` at submission, but those Firestore docs can disappear

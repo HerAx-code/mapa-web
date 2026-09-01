@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import Layout from '../../components/Layout'
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail, deleteUser } from 'firebase/auth'
@@ -57,6 +58,7 @@ function AccountModal({ account, onClose }) {
   })
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving]   = useState(false)
+  useEscapeKey(onClose, !saving)
 
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 

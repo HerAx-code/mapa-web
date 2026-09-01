@@ -458,12 +458,10 @@ export default function Patients() {
               </ul>
             </div>
 
-            {(search || tab !== 'active') && (
-              <button onClick={() => { setSearch(''); setTab('active') }}
-                className="text-xs font-medium text-gray-500 hover:text-brand-600 underline underline-offset-2">
-                Reset filters
-              </button>
-            )}
+            <button onClick={() => { setSearch(''); setTab('active') }} disabled={!(search || tab !== 'active')}
+              className={`text-xs font-medium underline underline-offset-2 ${(search || tab !== 'active') ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
+            </button>
           </aside>
 
           {/* ── Roster ── */}
