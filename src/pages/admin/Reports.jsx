@@ -46,6 +46,31 @@ const formatDate = (ts) => {
   return d ? d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 }
 
+// Group reports into day buckets by createdAt — Today / Yesterday / weekday.
+function groupByDay(items) {
+  const groups = []
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
+  const today = startOfDay(new Date())
+  const oneDay = 86400000
+  for (const it of items) {
+    const d = tsToDate(it.createdAt)
+    const key = d ? String(startOfDay(d)) : 'unknown'
+    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
+    if (!g) {
+      let label = 'Undated', sub = ''
+      if (d) {
+        const day = startOfDay(d)
+        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
+        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      }
+      g = { key, label, sub, entries: [] }
+      groups.push(g)
+    }
+    g.entries.push(it)
+  }
+  return groups
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────
 
 export default function Reports() {
@@ -178,77 +203,95 @@ export default function Reports() {
   const inProgressCount = reports.filter(r => r.status === 'in_progress').length
   const resolvedCount   = reports.filter(r => r.status === 'resolved').length
   const isFiltered      = search || statusFilter !== 'all' || catFilter !== 'all' || roleFilter !== 'all'
+  const dayGroups       = groupByDay(filtered)
+  const clearAll        = () => { setSearch(''); setStatusFilter('all'); setCatFilter('all'); setRoleFilter('all') }
 
   return (
     <Layout breadcrumb="Reports">
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
-        {/* Header with search (Magic Patterns reskin) */}
-        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow">Support</p>
-            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Problem Reports</h1>
-            <p className="text-sm text-gray-500 mt-1">Reports submitted by patients and agency staff through the portal.</p>
-          </div>
-          <div className="relative w-full sm:w-72 flex-shrink-0">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9" placeholder="Search reports…"
-              value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
+        {/* Header */}
+        <div className="mb-5">
+          <p className="eyebrow">Support</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Problem Reports</h1>
+          <p className="text-sm text-gray-500 mt-1">Reports submitted by patients and agency staff, grouped by the day they came in.</p>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          {[
-            { label: 'Open',        value: openCount,        color: 'text-amber-600', bg: 'bg-amber-50',  dot: 'bg-amber-400', key: 'open'        },
-            { label: 'In Progress', value: inProgressCount,  color: 'text-blue-600',  bg: 'bg-blue-50',   dot: 'bg-blue-400',  key: 'in_progress' },
-            { label: 'Resolved',    value: resolvedCount,    color: 'text-green-600', bg: 'bg-green-50',  dot: 'bg-green-500', key: 'resolved'    },
-          ].map((m) => {
-            const active = statusFilter === m.key
-            return (
-              <button key={m.key}
-                className={`card p-4 flex items-center gap-3 text-left w-full transition-colors ${active ? 'ring-2 ring-brand-400' : 'hover:bg-gray-50'}`}
-                onClick={() => setStatusFilter(active ? 'all' : m.key)}>
-                <div className={`w-9 h-9 ${m.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <div className={`w-3 h-3 rounded-full ${m.dot}`} />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400">{m.label}</p>
-                  <p className={`text-2xl font-semibold ${m.color}`}>{m.value}</p>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+        {/* Two-pane: facet sidebar + day-grouped report stream. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
 
-        {/* Filters: category + reporter (status is driven by the summary tiles above) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <p className="text-xs text-gray-400">
-            {filtered.length} report{filtered.length !== 1 ? 's' : ''}{isFiltered && reports.length > 0 ? ` of ${reports.length}` : ''}
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
+          {/* ── Filter sidebar ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Open',     value: openCount,       color: 'text-amber-600' },
+                { label: 'Progress', value: inProgressCount, color: 'text-blue-600'  },
+                { label: 'Resolved', value: resolvedCount,   color: 'text-green-600' },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Search reports" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <ul className="-mx-1.5 space-y-px">
+                {[
+                  ['all', 'All reports', reports.length],
+                  ['open', 'Open', openCount],
+                  ['in_progress', 'In progress', inProgressCount],
+                  ['resolved', 'Resolved', resolvedCount],
+                ].map(([key, label, n]) => {
+                  const active = statusFilter === key
+                  return (
+                    <li key={key}>
+                      <button onClick={() => setStatusFilter(key)} aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <span>{label}</span>
+                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
             {categories.length > 0 && (
-              <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                Category
-                <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
+                <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="input text-sm py-2">
                   <option value="all">All categories</option>
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-              </label>
+              </div>
             )}
+
             {roles.length > 1 && (
-              <label className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                Reporter
-                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Reporter</p>
+                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input text-sm py-2">
                   <option value="all">All reporters</option>
                   {roles.map(r => <option key={r} value={r}>{ROLE_LABEL[r] ?? r}</option>)}
                 </select>
-              </label>
+              </div>
             )}
-          </div>
-        </div>
+
+            <button onClick={clearAll} disabled={!isFiltered}
+              className={`text-xs font-medium underline underline-offset-2 ${isFiltered ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
+            </button>
+          </aside>
+
+          {/* ── Report stream ── */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 mb-3">{filtered.length} report{filtered.length !== 1 ? 's' : ''}{isFiltered && reports.length > 0 ? ` of ${reports.length}` : ''}</p>
 
         {/* ── Cards ── */}
         {loading ? (
@@ -299,8 +342,16 @@ export default function Reports() {
           </div>
 
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
-            {filtered.map(r => {
+          <div className="space-y-6">
+            {dayGroups.map(group => (
+              <section key={group.key}>
+                <div className="mb-2.5 flex items-baseline gap-2">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                  <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
+                  <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'report' : 'reports'}</span>
+                </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
+                  {group.entries.map(r => {
               const status    = r.status ?? 'open'
               const catBadge  = CATEGORY_BADGE[r.category] ?? 'badge-gray'
               const rRole     = r.reporterRole ?? r.role
@@ -426,9 +477,14 @@ export default function Reports() {
                 </div>
               )
             })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
 
+          </div>{/* /report stream */}
+        </div>{/* /two-pane grid */}
       </div>
     </Layout>
   )
