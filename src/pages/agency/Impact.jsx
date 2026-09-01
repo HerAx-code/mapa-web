@@ -82,7 +82,7 @@ export default function AgencyImpact() {
 
   return (
     <Layout breadcrumb="Impact">
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-6xl mx-auto">
 
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
