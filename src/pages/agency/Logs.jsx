@@ -9,14 +9,54 @@ import { APP_STATUS_CONFIG } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
 import StatusBadge from '../../components/ui/StatusBadge'
 
-// Pull labels straight from the canonical APP_STATUS_CONFIG so the CSV
-// status column matches the rendered table cell. <StatusBadge /> handles
-// the in-table rendering.
+// Pull labels straight from the canonical APP_STATUS_CONFIG so the CSV status
+// column matches the rendered cell. <StatusBadge /> handles in-list rendering.
 const statusLabel = (s) => APP_STATUS_CONFIG[s]?.label ?? s ?? ''
 
 const formatDate = (ts) => {
   const d = tsToDate(ts)
   return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+}
+const fmtTime = (ts) => {
+  const d = tsToDate(ts)
+  return d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+}
+
+const STATUS_ROWS = [
+  ['endorsed',      'Endorsed'          ],
+  ['reviewing',     'For Funding'       ],
+  ['awaiting_info', 'Needs Info'        ],
+  ['approved',      'Approved'          ],
+  ['certificate',   'Guarantee Letter'  ],
+  ['rejected',      'Rejected'          ],
+  ['pending',       'Pending (legacy)'  ],
+  ['interview',     'Interview (legacy)'],
+]
+
+// Group applications into day buckets by submittedAt — Today / Yesterday /
+// weekday — so a long history becomes navigable instead of one flat wall.
+function groupByDay(items) {
+  const groups = []
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
+  const today = startOfDay(new Date())
+  const oneDay = 86400000
+  for (const it of items) {
+    const d = tsToDate(it.submittedAt)
+    const key = d ? String(startOfDay(d)) : 'unknown'
+    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
+    if (!g) {
+      let label = 'Undated', sub = ''
+      if (d) {
+        const day = startOfDay(d)
+        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
+        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      }
+      g = { key, label, sub, entries: [] }
+      groups.push(g)
+    }
+    g.entries.push(it)
+  }
+  return groups
 }
 
 export default function AgencyLogs() {
@@ -25,21 +65,15 @@ export default function AgencyLogs() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
   const [filter, setFilter]   = useState('all')
+  const [dateFilter, setDateFilter] = useState('all')
 
   useEffect(() => {
     if (!user?.agencyId) return
-    const q = query(
-      collection(db, 'applications'),
-      where('agencyId', '==', user.agencyId),
-    )
+    const q = query(collection(db, 'applications'), where('agencyId', '==', user.agencyId))
     const unsub = onSnapshot(q, snap => {
       setApps(
         snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          // Sort via tsToDate so legacy data stored as JS Date or ISO
-          // string still sorts correctly. The previous `.seconds`
-          // accessor only worked on Firestore Timestamp objects --
-          // legacy entries fell back to 0 and clustered at the top.
           .sort((a, b) => (tsToDate(b.submittedAt)?.getTime() ?? 0) - (tsToDate(a.submittedAt)?.getTime() ?? 0))
       )
       setLoading(false)
@@ -50,8 +84,19 @@ export default function AgencyLogs() {
     return unsub
   }, [user?.agencyId])
 
+  const countOf = (s) => apps.filter(a => a.status === s).length
+
+  const inDateRange = (a) => {
+    if (dateFilter === 'all') return true
+    const d = tsToDate(a.submittedAt)
+    if (!d) return false
+    const days = (Date.now() - d.getTime()) / 86400000
+    return dateFilter === 'week' ? days <= 7 : dateFilter === 'month' ? days <= 31 : true
+  }
+
   const filtered = apps.filter(a => {
     if (filter !== 'all' && a.status !== filter) return false
+    if (!inDateRange(a)) return false
     const q = search.toLowerCase()
     return !q ||
       a.patientName?.toLowerCase().includes(q) ||
@@ -59,7 +104,11 @@ export default function AgencyLogs() {
       a.patientContact?.includes(q)
   })
 
-  const countOf = (s) => apps.filter(a => a.status === s).length
+  const openTotal     = countOf('endorsed') + countOf('reviewing') + countOf('awaiting_info') + countOf('pending') + countOf('interview')
+  const approvedTotal = countOf('approved') + countOf('certificate')
+  const dayGroups  = groupByDay(filtered)
+  const isFiltered = search || filter !== 'all' || dateFilter !== 'all'
+  const clearAll   = () => { setSearch(''); setFilter('all'); setDateFilter('all') }
 
   return (
     <Layout breadcrumb="Application Logs">
@@ -70,7 +119,7 @@ export default function AgencyLogs() {
           <div>
             <p className="eyebrow">Records</p>
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Application Logs</h1>
-            <p className="text-sm text-gray-500 mt-1">Complete history of all applications for your agency.</p>
+            <p className="text-sm text-gray-500 mt-1">Your agency's applications, grouped by the day they were submitted.</p>
           </div>
           <button className="btn-secondary flex items-center gap-1.5 text-sm"
             onClick={() => exportToCSV(`agency-logs-${dateStamp()}.csv`, [
@@ -84,129 +133,134 @@ export default function AgencyLogs() {
           </button>
         </div>
 
-        {/* Summary — covers the co-funding slice lifecycle. 'Approved'
-            rolls up approved + certificate (post-GL-issuance) since
-            either way the agency has committed funds. */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-5">
-          {[
-            { label: 'Total',       value: apps.length,                                   color: 'text-gray-800'   },
-            { label: 'Endorsed',    value: countOf('endorsed'),                           color: 'text-purple-600' },
-            { label: 'For Funding', value: countOf('reviewing'),                          color: 'text-amber-600'  },
-            { label: 'Needs Info',  value: countOf('awaiting_info'),                      color: 'text-orange-600' },
-            { label: 'Approved',    value: countOf('approved') + countOf('certificate'),  color: 'text-green-600'  },
-            { label: 'Rejected',    value: countOf('rejected'),                           color: 'text-red-500'    },
-          ].map((m, i) => (
-            <div key={i} className="card p-4">
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
-              <p className={`text-2xl font-semibold ${m.color}`}>{loading ? '—' : m.value}</p>
+        {/* Two-pane: facet sidebar + day-grouped stream. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
+
+          {/* ── Filter sidebar ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Total',    value: apps.length,    color: 'text-gray-800'  },
+                { label: 'Open',     value: openTotal,      color: 'text-amber-600' },
+                { label: 'Approved', value: approvedTotal,  color: 'text-green-600' },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{loading ? '—' : m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Filter tabs — tabs hide when their count is 0 so legacy-only
-            statuses (pending/interview) don't show forever on a fully
-            migrated system. */}
-        <div className="flex gap-1.5 mb-4 flex-wrap">
-          {[
-            ['all',           'All'],
-            ['endorsed',      'Endorsed'],
-            ['reviewing',     'For Funding'],
-            ['awaiting_info', 'Needs Info'],
-            ['approved',      'Approved'],
-            ['certificate',   'Guarantee Letter'],
-            ['rejected',      'Rejected'],
-            ['pending',       'Pending (legacy)'],
-            ['interview',     'Interview (legacy)'],
-          ]
-            .filter(([key]) => key === 'all' || countOf(key) > 0 || filter === key)
-            .map(([key, label]) => (
-              <button key={key}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  filter === key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}
-                onClick={() => setFilter(key)}>
-                {label}
-              </button>
-            ))}
-        </div>
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Patient, contact, or app ID"
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input className="input pl-9" placeholder="Search by patient name, contact, or application ID..."
-            value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-
-        {/* Table */}
-        <div className="card overflow-x-auto">
-          <table className="data-table min-w-full">
-            <thead>
-              <tr>
-                <th>Patient</th>
-                <th>Application ID</th>
-                <th>Submitted</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gray-100 flex-shrink-0" />
-                      <div className="space-y-1.5">
-                        <div className="h-3 bg-gray-100 rounded w-28" />
-                        <div className="h-2.5 bg-gray-100 rounded w-20" />
-                      </div>
-                    </div>
-                  </td>
-                  <td><div className="h-3 bg-gray-100 rounded w-24" /></td>
-                  <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
-                  <td><div className="h-5 bg-gray-100 rounded-full w-16" /></td>
-                </tr>
-              ))}
-              {!loading && filtered.map(a => (
-                <tr key={a.id}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                        {a.patientName?.[0]?.toUpperCase() ?? '?'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{a.patientName}</p>
-                        <p className="text-xs text-gray-400">{a.patientContact || '—'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="font-mono text-xs text-gray-500">{a.appId || a.id.slice(0, 12)}</td>
-                  <td className="text-xs text-gray-400">{formatDate(a.submittedAt)}</td>
-                  <td>
-                    <StatusBadge status={a.status} />
-                  </td>
-                </tr>
-              ))}
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center py-12">
-                    <MdListAlt size={36} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
-                      {search || filter !== 'all' ? 'No applications match your filter.' : 'No applications yet.'}
-                    </p>
-                    {(search || filter !== 'all') && (
-                      <button
-                        onClick={() => { setSearch(''); setFilter('all') }}
-                        className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
-                        Clear filters
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <ul className="-mx-1.5 space-y-px">
+                <li>
+                  <button onClick={() => setFilter('all')} aria-current={filter === 'all' ? 'true' : undefined}
+                    className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${filter === 'all' ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <span>All statuses</span>
+                    <span className={`tabular-nums text-xs ${filter === 'all' ? 'text-brand-600' : 'text-gray-400'}`}>{apps.length}</span>
+                  </button>
+                </li>
+                {STATUS_ROWS.map(([key, label]) => {
+                  const n = countOf(key)
+                  const active = filter === key
+                  if (n === 0 && !active) return null
+                  return (
+                    <li key={key}>
+                      <button onClick={() => setFilter(key)} aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <span className="truncate">{label}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-400'}`}>{n}</span>
                       </button>
-                    )}
-                  </td>
-                </tr>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Date</p>
+              <div className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
+                {[['all', 'All'], ['week', 'Week'], ['month', 'Month']].map(([k, l]) => (
+                  <button key={k} onClick={() => setDateFilter(k)}
+                    className={`rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${dateFilter === k ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={clearAll} disabled={!isFiltered}
+              className={`text-xs font-medium underline underline-offset-2 ${isFiltered ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
+            </button>
+          </aside>
+
+          {/* ── Entry stream ── */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 mb-3">{filtered.length} application{filtered.length !== 1 ? 's' : ''}{isFiltered && apps.length > 0 ? ` of ${apps.length}` : ''}</p>
+
+            <div className="card overflow-hidden">
+              {loading && (
+                <div className="divide-y divide-gray-50">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3.5 animate-pulse">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0" />
+                      <div className="flex-1 space-y-2 min-w-0"><div className="h-3 bg-gray-100 rounded w-40" /><div className="h-2.5 bg-gray-100 rounded w-24" /></div>
+                      <div className="h-5 bg-gray-100 rounded-full w-20" />
+                    </div>
+                  ))}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+
+              {!loading && dayGroups.map(group => (
+                <section key={group.key}>
+                  <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
+                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
+                  </div>
+                  <ul className="divide-y divide-gray-50">
+                    {group.entries.map(a => (
+                      <li key={a.id} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          {a.patientName?.[0]?.toUpperCase() ?? '?'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {a.patientName || '—'}
+                            <span className="ml-2 font-mono text-[11px] font-normal text-gray-400">{a.appId || a.id.slice(0, 12)}</span>
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">{a.patientContact || 'No contact'}</p>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <StatusBadge status={a.status} />
+                          <span className="text-xs text-gray-400 tabular-nums w-14 text-right">{fmtTime(a.submittedAt)}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+
+              {!loading && filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <MdListAlt size={34} className="text-gray-200 mb-2" />
+                  <p className="text-sm text-gray-400">{isFiltered ? 'No applications match your filter.' : 'No applications yet.'}</p>
+                  {isFiltered && (
+                    <button onClick={clearAll} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>{/* /entry stream */}
+        </div>{/* /two-pane grid */}
       </div>
     </Layout>
   )

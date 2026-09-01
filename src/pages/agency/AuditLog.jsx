@@ -97,6 +97,32 @@ function AuditDetails({ text }) {
   )
 }
 
+// Group entries into day buckets — Today / Yesterday / weekday — so a long
+// stream becomes navigable instead of one flat wall.
+function groupByDay(items) {
+  const groups = []
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
+  const today = startOfDay(new Date())
+  const oneDay = 86400000
+  for (const it of items) {
+    const d = tsToDate(it.createdAt)
+    const key = d ? String(startOfDay(d)) : 'unknown'
+    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
+    if (!g) {
+      let label = 'Undated', sub = ''
+      if (d) {
+        const day = startOfDay(d)
+        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
+        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      }
+      g = { key, label, sub, entries: [] }
+      groups.push(g)
+    }
+    g.entries.push(it)
+  }
+  return groups
+}
+
 export default function AgencyAuditLog() {
   const { user }      = useAuth()
   const navigate      = useNavigate()
@@ -186,6 +212,19 @@ export default function AgencyAuditLog() {
     return true
   })
 
+  // Stats + per-category counts over the loaded entries; day-grouped stream.
+  const now = Date.now()
+  const todayStr = new Date().toDateString()
+  const todayCount = entries.filter(e => { const d = tsToDate(e.createdAt); return d && d.toDateString() === todayStr }).length
+  const weekCount  = entries.filter(e => { const d = tsToDate(e.createdAt); return d && (now - d.getTime()) <= 7 * 86400000 }).length
+  const categoryCounts = ACTION_CATEGORIES.reduce((acc, cat) => {
+    acc[cat.key] = cat.actions == null ? entries.length : entries.filter(e => cat.actions.includes(e.action)).length
+    return acc
+  }, {})
+  const dayGroups  = groupByDay(filtered)
+  const isFiltered = search || dateFilter !== 'all' || categoryFilter !== 'all'
+  const clearAll   = () => { setSearch(''); setDateFilter('all'); setCategoryFilter('all') }
+
   return (
     <Layout breadcrumb="Audit Log">
       <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
@@ -225,106 +264,133 @@ export default function AgencyAuditLog() {
           </button>
         </div>
 
-        {/* Category chips */}
-        <div className="flex gap-2 mb-3 flex-wrap">
-          {ACTION_CATEGORIES.map(c => (
-            <button key={c.key}
-              onClick={() => setCategoryFilter(c.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                categoryFilter === c.key
-                  ? 'bg-brand-500 text-white border-brand-500'
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}>
-              {c.label}
+        {/* Two-pane: facet sidebar + day-grouped stream. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
+
+          {/* ── Filter sidebar ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Loaded', value: entries.length, color: 'text-gray-800'  },
+                { label: 'Today',  value: todayCount,      color: 'text-brand-600' },
+                { label: 'Week',   value: weekCount,       color: 'text-blue-600'  },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Search actor, target, details"
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Date</p>
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
+                {DATE_FILTERS.map(d => (
+                  <button key={d.key} onClick={() => setDateFilter(d.key)}
+                    className={`rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                      dateFilter === d.key ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}>
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
+              <ul className="-mx-1.5 space-y-px">
+                {ACTION_CATEGORIES.map(c => {
+                  const n = categoryCounts[c.key] ?? 0
+                  const active = categoryFilter === c.key
+                  if (c.key !== 'all' && n === 0 && !active) return null
+                  return (
+                    <li key={c.key}>
+                      <button onClick={() => setCategoryFilter(c.key)} aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${
+                          active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'
+                        }`}>
+                        <span className="truncate">{c.key === 'all' ? 'All categories' : c.label}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-400'}`}>{n}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            <button onClick={clearAll} disabled={!isFiltered}
+              className={`text-xs font-medium underline underline-offset-2 ${isFiltered ? 'text-gray-500 hover:text-brand-600' : 'text-gray-300 cursor-default'}`}>
+              Clear filters
             </button>
-          ))}
-        </div>
+          </aside>
 
-        {/* Date + search */}
-        <div className="flex gap-3 mb-5 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9"
-              placeholder="Search actor, target, or details..."
-              value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <div className="flex gap-1">
-            {DATE_FILTERS.map(d => (
-              <button key={d.key}
-                onClick={() => setDateFilter(d.key)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  dateFilter === d.key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {d.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          {/* ── Entry stream ── */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 mb-3">{filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}{isFiltered && entries.length > 0 ? ` of ${entries.length} loaded` : ''}</p>
 
-        {/* List */}
-        <div className="card overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-sm text-gray-400">Loading audit log…</div>
-          ) : filtered.length === 0 ? (
-            <div className="p-8 text-center">
-              <MdHistory size={32} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">
-                {search || dateFilter !== 'all' || categoryFilter !== 'all'
-                  ? 'No entries match the current filters.'
-                  : 'No audit entries yet. Actions taken by your agency staff will appear here.'}
-              </p>
-              {(search || dateFilter !== 'all' || categoryFilter !== 'all') && (
-                <button
-                  onClick={() => { setSearch(''); setDateFilter('all'); setCategoryFilter('all') }}
-                  className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">
-                  Clear filters
-                </button>
+            <div className="card overflow-hidden">
+              {loading && <div className="p-8 text-center text-sm text-gray-400">Loading audit log…</div>}
+
+              {!loading && dayGroups.map(group => (
+                <section key={group.key}>
+                  <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
+                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
+                  </div>
+                  <ul className="divide-y divide-gray-50">
+                    {group.entries.map(e => {
+                      const cfg = ACTION_CONFIG[e.action] ?? { label: e.action, badge: 'bg-gray-50 text-gray-700 border-gray-200' }
+                      return (
+                        <li key={e.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className={`badge text-xs border ${cfg.badge}`}>{cfg.label}</span>
+                                {e.targetName && <span className="text-sm font-medium text-gray-800 truncate">{e.targetName}</span>}
+                              </div>
+                              {e.details && <AuditDetails text={e.details} />}
+                              <p className="text-xs text-gray-400 mt-1">by <strong>{e.actorName ?? 'System'}</strong></p>
+                            </div>
+                            <div className="text-xs text-gray-400 flex-shrink-0 text-right" title={fullDate(e.createdAt)}>
+                              <div>{timeAgo(e.createdAt)}</div>
+                              <div className="text-gray-300">{fullDate(e.createdAt)}</div>
+                            </div>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+
+              {!loading && filtered.length === 0 && (
+                <div className="p-8 text-center">
+                  <MdHistory size={32} className="text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">{isFiltered ? 'No entries match the current filters.' : 'No audit entries yet. Actions taken by your agency staff will appear here.'}</p>
+                  {isFiltered && (
+                    <button onClick={clearAll} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
+                  )}
+                </div>
               )}
             </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {filtered.map(e => {
-                const cfg = ACTION_CONFIG[e.action] ?? { label: e.action, badge: 'bg-gray-50 text-gray-700 border-gray-200' }
-                return (
-                  <div key={e.id} className="px-5 py-3 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={`badge text-xs border ${cfg.badge}`}>{cfg.label}</span>
-                          {e.targetName && (
-                            <span className="text-sm font-medium text-gray-800 truncate">{e.targetName}</span>
-                          )}
-                        </div>
-                        {e.details && <AuditDetails text={e.details} />}
-                        <p className="text-xs text-gray-400 mt-1">
-                          by <strong>{e.actorName ?? 'System'}</strong>
-                        </p>
-                      </div>
-                      <div className="text-xs text-gray-400 flex-shrink-0 text-right" title={fullDate(e.createdAt)}>
-                        <div>{timeAgo(e.createdAt)}</div>
-                        <div className="text-gray-300">{fullDate(e.createdAt)}</div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
 
-          {/* Load more */}
-          {!loading && hasMore && (
-            <div className="px-5 py-3 border-t border-gray-100 flex justify-center">
-              <button
-                onClick={() => loadEntries(lastVisible)}
-                disabled={loadingMore}
-                className="text-xs font-medium px-4 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50">
-                {loadingMore ? 'Loading…' : 'Load more'}
-              </button>
-            </div>
-          )}
-        </div>
+            {!loading && hasMore && (
+              <div className="flex justify-center py-4">
+                <button onClick={() => loadEntries(lastVisible)} disabled={loadingMore}
+                  className="btn-secondary text-sm disabled:opacity-50">
+                  {loadingMore ? 'Loading…' : 'Load more entries'}
+                </button>
+              </div>
+            )}
+          </div>{/* /entry stream */}
+        </div>{/* /two-pane grid */}
 
         <p className="text-xs text-gray-400 mt-4 leading-relaxed">
           <strong>Note —</strong> This log shows actions taken with your agency as the context. CRMC platform-level actions (account onboarding, doc verification across agencies) are visible only to the CRMC system administrator. Entries are append-only and immutable.
