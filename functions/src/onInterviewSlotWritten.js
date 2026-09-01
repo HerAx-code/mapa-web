@@ -71,6 +71,10 @@ async function bookSync({ db, slotId, slot, serverTimestamp }) {
     interviewAt:      slot.start ?? null,   // the instant (Timestamp)
     meetLink:         slot.meetLink || null,
     interviewQueueNo: queueNo,
+    // Re-arm the reminder cadence for this (possibly rescheduled) time so the
+    // interviewReminders function fires fresh 24h/1h reminders. See Phase 2b.
+    reminderSent24h:  false,
+    reminderSent1h:   false,
     updatedAt:        serverTimestamp(),
   }
   if (PRE_ASSESSMENT_STATUSES.includes(req.status)) {
@@ -101,6 +105,8 @@ async function cancelSync({ db, slotId, prevSlot, serverTimestamp }) {
     interviewAt:      null,
     meetLink:         null,
     interviewQueueNo: null,
+    reminderSent24h:  false,
+    reminderSent1h:   false,
     updatedAt:        serverTimestamp(),
   }
   // Roll the lifecycle back off 'assessment' if the booking had advanced it.
