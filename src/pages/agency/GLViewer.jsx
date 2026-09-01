@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
 import GuaranteeLetter from '../../components/GuaranteeLetter'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 
 // This page renders the Guarantee Letter natively (browser layout engine)
 // so the on-screen view and the printed/saved-as-PDF output are pixel-identical.
@@ -29,6 +30,10 @@ export default function GLViewer() {
   const [showUpload, setShowUpload]   = useState(false)
   const [markingIssued, setMarkingIssued] = useState(false)
   const [showConfirmIssued, setShowConfirmIssued] = useState(false)
+
+  // Escape closes the mark-issued confirm — but not mid-write, mirroring the
+  // backdrop click's !markingIssued guard so the two dismissals behave alike.
+  useEscapeKey(() => setShowConfirmIssued(false), showConfirmIssued && !markingIssued)
 
   // R28: only the FIRST snapshot's missing state counts as "not found";
   // subsequent missing states (Firestore offline replay, a transient
@@ -291,7 +296,7 @@ export default function GLViewer() {
 
       {/* ── Confirm Mark-as-Issued modal ── */}
       {showConfirmIssued && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 print:hidden"
+        <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4 print:hidden"
           onClick={e => e.target === e.currentTarget && !markingIssued && setShowConfirmIssued(false)}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">

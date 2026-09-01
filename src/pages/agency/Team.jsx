@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import ConfirmModal from '../../components/ConfirmModal'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import {
   collection, query, where, onSnapshot, doc, setDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
@@ -42,6 +43,8 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
   const [sendReset, setSendReset] = useState(true)
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  useEscapeKey(onClose, !saving)
 
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
   const regeneratePw = () => setForm(p => ({ ...p, password: generateTempPassword() }))
@@ -108,7 +111,7 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[300] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -179,6 +182,8 @@ function EditCoordModal({ coord, currentUser, onClose }) {
   const [form, setForm]     = useState({ name: coord.name ?? '', contact: coord.contact ?? '' })
   const [saving, setSaving] = useState(false)
 
+  useEscapeKey(onClose, !saving)
+
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name cannot be empty.'); return }
     setSaving(true)
@@ -205,7 +210,7 @@ function EditCoordModal({ coord, currentUser, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[300] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">

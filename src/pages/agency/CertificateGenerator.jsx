@@ -505,7 +505,6 @@ export default function CertificateGenerator() {
           </div>
         )}
 
-        {/* Print confirmation modal */}
         {/* Upload signed scan modal */}
         {uploadModal && (
           <SignedGLUploadModal

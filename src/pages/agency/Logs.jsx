@@ -96,7 +96,8 @@ export default function AgencyLogs() {
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Application Logs</h1>
             <p className="text-sm text-gray-500 mt-1">Your agency's applications, grouped by the day they were submitted.</p>
           </div>
-          <button className="btn-secondary flex items-center gap-1.5 text-sm"
+          <button className="btn-secondary flex items-center gap-1.5 text-sm disabled:opacity-50"
+            disabled={loading || filtered.length === 0}
             onClick={() => exportToCSV(`agency-logs-${dateStamp()}.csv`, [
               { label: 'Application ID', getValue: a => a.appId ?? '' },
               { label: 'Patient',        getValue: a => a.patientName ?? '' },
