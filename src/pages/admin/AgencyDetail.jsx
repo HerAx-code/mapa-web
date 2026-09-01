@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useParams, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
@@ -119,6 +120,7 @@ export default function AgencyDetail() {
   const [promotionTarget, setPromotionTarget] = useState(null)
   const [promoting,         setPromoting]         = useState(false)
   const [disabling,         setDisabling]         = useState(false)
+  useEscapeKey(() => { if (!disabling) setShowDisableDialog(false) }, showDisableDialog)
   const [deletingAgency,    setDeletingAgency]    = useState(false)
 
   // Slot editing
