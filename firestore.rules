@@ -876,5 +876,55 @@ service cloud.firestore {
                        request.resource.data.status in ['accepted', 'declined'];
       allow delete: if false;
     }
+
+    // ── interviewSlots ──────────────────────────────────────────────────────
+    // CRMC publishes bookable interview slots; a patient self-books one open
+    // slot for a request they own. `status == 'open'` on the existing doc is the
+    // double-booking guard, and the booking write is field-limited so a patient
+    // can't tamper with the slot's date / time / duration. A Cloud Function syncs
+    // a booked slot back onto the request (interviewDate / meetLink) — that
+    // money-adjacent request write stays server-side, off the patient's client
+    // write surface. See docs/appointment-system-plan.md.
+    match /interviewSlots/{slotId} {
+      // The request being attached must belong to the booking patient.
+      function ownsRequest(reqId) {
+        return reqId != null &&
+               get(/databases/$(database)/documents/requests/$(reqId)).data.patientId == uid();
+      }
+
+      // Patient books an OPEN slot onto their own request, stamping only the
+      // booking fields (open → booked).
+      function isBooking() {
+        return isPatient() &&
+               resource.data.status == 'open' &&
+               request.resource.data.status == 'booked' &&
+               request.resource.data.patientId == uid() &&
+               ownsRequest(request.resource.data.requestId) &&
+               request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'patientId', 'requestId', 'bookedAt']);
+      }
+
+      // The booking patient releases their own slot back to the pool
+      // (booked → open), again touching only the booking fields.
+      function isCancelling() {
+        return isPatient() &&
+               resource.data.status == 'booked' &&
+               resource.data.patientId == uid() &&
+               request.resource.data.status == 'open' &&
+               request.resource.data.patientId == null &&
+               request.resource.data.requestId == null &&
+               request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'patientId', 'requestId', 'updatedAt']);
+      }
+
+      // Open slots are public to signed-in users (the booking picker lists them);
+      // a booked slot is visible only to the patient who holds it (and admins).
+      allow read:   if isAdmin() ||
+                       resource.data.status == 'open' ||
+                       (isPatient() && resource.data.patientId == uid());
+      allow create: if isAdmin();                       // only CRMC publishes
+      allow update: if isAdmin() || isBooking() || isCancelling();
+      allow delete: if isAdmin();
+    }
   }
 }
