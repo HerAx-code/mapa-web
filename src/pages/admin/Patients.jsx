@@ -400,43 +400,75 @@ export default function Patients() {
   }
 
   const deletionCount = patients.filter(p => p.deletion).length
+  const activeCount   = patients.length - deletionCount
 
   return (
     <Layout breadcrumb="Patient Accounts">
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
-        {/* Header with search (Magic Patterns reskin) */}
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow">Directory</p>
-            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Patient Accounts</h1>
-            <p className="text-sm text-gray-500 mt-1">Registered accounts, their applications, and issued Guarantee Letters.</p>
-          </div>
-          <div className="relative w-full sm:w-80 flex-shrink-0">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input className="input pl-9" placeholder="Search name, email, or contact…"
-              value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
+        {/* Header */}
+        <div className="mb-5">
+          <p className="eyebrow">Directory</p>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Patient Accounts</h1>
+          <p className="text-sm text-gray-500 mt-1">Registered accounts, their applications, and issued Guarantee Letters.</p>
         </div>
 
-        {/* Underline tabs with counts */}
-        <div role="tablist" aria-label="Patient account status" className="mb-4 flex items-center gap-6 border-b border-gray-100">
-          {[['active', 'Active', patients.filter(p => !p.deletion).length], ['deletion', 'Marked for deletion', deletionCount]].map(([key, label, count]) => {
-            const active = tab === key
-            return (
-              <button key={key} role="tab" type="button" aria-selected={active} onClick={() => setTab(key)}
-                className={`-mb-px flex items-center gap-2 border-b-2 px-0.5 pb-2.5 text-sm font-medium transition-colors ${
-                  active ? 'border-brand-500 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-900'
-                }`}>
-                {label}
-                <span className={`tabular-nums rounded-full px-2 py-0.5 text-xs font-semibold ${active ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+        {/* Two-pane: facet sidebar + patient roster (click a row for the profile). */}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
+
+          {/* ── Filter sidebar ── */}
+          <aside className="lg:sticky lg:top-[68px] space-y-4">
+            <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
+              {[
+                { label: 'Total',  value: patients.length, color: 'text-gray-800'  },
+                { label: 'Active', value: activeCount,     color: 'text-green-600' },
+                { label: 'Marked', value: deletionCount,   color: deletionCount ? 'text-red-500' : 'text-gray-400' },
+              ].map((m, i) => (
+                <div key={i} className="px-2 py-2.5">
+                  <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="relative">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input className="input pl-9 text-sm" placeholder="Name, email, or contact" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <ul className="-mx-1.5 space-y-px">
+                {[
+                  ['all', 'All patients', patients.length],
+                  ['active', 'Active', activeCount],
+                  ['deletion', 'Marked for deletion', deletionCount],
+                ].map(([key, label, n]) => {
+                  const active = tab === key
+                  return (
+                    <li key={key}>
+                      <button onClick={() => setTab(key)} aria-current={active ? 'true' : undefined}
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <span className="truncate">{label}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
+            {(search || tab !== 'active') && (
+              <button onClick={() => { setSearch(''); setTab('active') }}
+                className="text-xs font-medium text-gray-500 hover:text-brand-600 underline underline-offset-2">
+                Reset filters
               </button>
-            )
-          })}
-        </div>
-        {search && (
-          <p className="text-xs text-gray-400 mb-3">{filtered.length} match{filtered.length === 1 ? '' : 'es'}</p>
-        )}
+            )}
+          </aside>
+
+          {/* ── Roster ── */}
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 mb-3">{filtered.length} patient{filtered.length !== 1 ? 's' : ''}{(search || tab !== 'all') ? ' shown' : ''}</p>
 
         {/* Table */}
         <div className="card overflow-hidden">
@@ -621,6 +653,8 @@ export default function Patients() {
             </tbody>
           </table>
         </div>
+          </div>{/* /roster */}
+        </div>{/* /two-pane grid */}
 
         {/* Profile modal */}
         {viewProfile && (
