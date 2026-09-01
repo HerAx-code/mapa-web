@@ -240,7 +240,7 @@ export default function AgencyProfile() {
 
   if (loading) return (
     <Layout breadcrumb="Agency Profile">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
         {[1, 2, 3].map(i => (
           <div key={i} className="card p-5 animate-pulse">
             <div className="h-4 bg-gray-100 rounded w-40 mb-3" />
@@ -262,7 +262,7 @@ export default function AgencyProfile() {
 
   return (
     <Layout breadcrumb="Agency Profile">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">

@@ -406,7 +406,7 @@ export default function AgencyTeam() {
 
   return (
     <Layout breadcrumb="Team">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
