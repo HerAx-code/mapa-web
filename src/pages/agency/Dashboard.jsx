@@ -24,7 +24,7 @@ import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
 import { agencyDashboardTour, resetTourFlag } from '../../utils/tours'
-import { tsToDate } from '../../utils/dates'
+import { tsToDate, phTodayKey } from '../../utils/dates'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import toast from 'react-hot-toast'
 
@@ -66,8 +66,9 @@ export default function AgencyDashboard() {
       const data  = snap.data()
       // Anchor the "today" key to Asia/Manila so the reset fires at the
       // pilot-local midnight, not at UTC midnight (which is 08:00 PHT and
-      // would delay the reset by 8 hours).
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+      // would delay the reset by 8 hours). Shared with Slot Management's
+      // reset-pending check via phTodayKey() so the two never diverge.
+      const today = phTodayKey()
       if (data.lastResetDate !== today && (data.slots?.total ?? 0) > 0) {
         // New day — reset remaining slots back to total
         await updateDoc(doc(db, 'agencies', snap.id), {

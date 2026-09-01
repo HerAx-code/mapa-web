@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
+import { phTodayKey } from '../../utils/dates'
 import toast from 'react-hot-toast'
 
 const MAX_CAPACITY     = 100
@@ -95,8 +96,11 @@ export default function SlotManagement() {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   })
 
-  const todayISO = new Date().toISOString().slice(0, 10)
-  const resetPending = agency.lastResetDate !== todayISO && (slots.total ?? 0) > 0
+  // Compare against the PH-local day key — the same key the Dashboard writes to
+  // agency.lastResetDate. Using a UTC date here made this flag fire spuriously
+  // for the first 8h of each PH day (UTC still on the previous date).
+  const todayKey = phTodayKey()
+  const resetPending = agency.lastResetDate !== todayKey && (slots.total ?? 0) > 0
 
   const adjustments = Array.isArray(agency.slotAdjustments) ? agency.slotAdjustments : []
   const recentAdjustments = [...adjustments].reverse().slice(0, HISTORY_KEEP)
