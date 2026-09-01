@@ -1,9 +1,9 @@
 # MAPA Project Context
 
 ## What This Is
-MAPA (Medical Assistance Portal Access) is a platform for Cotabato Regional Medical Center (CRMC). It digitizes the medical financial assistance application process — patients apply online, agencies review and conduct online interviews, approved patients receive digital certificates to claim at the agency office.
+MAPA (Medical Assistance Portal Access) is a platform for Cotabato Regional Medical Center (CRMC). It digitizes the medical financial assistance application process — patients apply online, CRMC reviews the documents and conducts one online assessment interview, then endorses the request to one or more funding agencies; approved patients receive a Guarantee Letter (digital certificate) to claim at the agency office.
 
-This is a thesis project (solo student, 9 months). The pilot partner is CRMC Malasakit Center in Cotabato City, Philippines.
+This is a **production system** deployed for real use at CRMC Malasakit Center in Cotabato City, Philippines. It began as a solo ~9-month build, but it is **not a throwaway pilot** — apply a production quality and robustness bar, and weigh features by real operational value at scale (coordinator workload, interview no-shows, concurrency safety, indigent-patient phone UX), not demo-readiness. Pilot-era shortcuts in this file are being reconciled against that reality.
 
 The system has two patient-facing surfaces:
 - A web portal (this codebase) — used by agencies, admins, and patients who prefer browser access
@@ -25,7 +25,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
   - System stores and shares the link with the patient
   - Patient clicks link to join in their browser or Google Meet app
 - Notifications: in-app notifications (Firestore) + email (Firebase)
-  - NO SMS — cost not feasible for thesis pilot
+  - No SMS today — email + in-app cover notifications; push is planned via Firebase Cloud Messaging when the mobile app ships. **SMS is now an open production decision, not a settled "no"** — many patients are phone-primary and may lack reliable email/data, so it is gated on an SMS-gateway budget rather than on the old "thesis pilot" cost reason. Decide before relying on email reach.
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 - Reminders for interviews go via email + in-app notification (24h before, 1h before)
 
@@ -47,7 +47,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
 - Real money movement (no bank APIs, no payments). Note: monetary *commitments* ARE tracked as data — approved amounts, agency budgets, Guarantee Letter status. MAPA records intent; actual settlement happens off-system between agency and provider.
-- SMS notifications (cost not feasible — use email + in-app + future push notifications)
+- SMS notifications — **deferred pending a production decision** (not built). Email + in-app + future push cover current needs; revisit if an SMS-gateway budget is approved. No longer ruled out purely on "pilot" cost — see Communication Channels.
 - Embedded video calling (use Google Meet links instead — no Daily.co, Jitsi, or WebRTC integration)
 - Donor portal
 - Fraud detection engine (manual judgment by social workers)
