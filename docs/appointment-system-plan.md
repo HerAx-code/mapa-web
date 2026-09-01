@@ -7,34 +7,68 @@ new parallel subsystem. Grounded in `docs/principles.md` (Lens 1 server-
 authoritative writes; Lens 2 status/error-prevention heuristics) and the
 CRMC-gateway model in `docs/redesign-plan.md`.*
 
-> Status: **plan only — nothing built or deployed.** A validated starter for
-> Phase 1 (a pure `utils/appointments.js` + its unit and rules tests) exists
-> untracked in the tree; it is wired to nothing and can be adopted or discarded.
+> Status: **Phase 1 shipped.** The pure `utils/appointments.js` foundation +
+> `interviewSlots` rules + tests are merged (#135); the hybrid `SLOT_MODE`
+> primitive is merged/under review (#140). UI + Cloud Functions are next.
 >
-> **Mockups:** static UI mockups of both surfaces live in
-> [`mockups/interview-booking/`](mockups/interview-booking/) (editable canvas:
-> <https://claude.ai/code/artifact/5907d1d0-9b66-4535-b571-7bda4cec97f4>).
+> **Model reconciled — v2 (this supersedes §1's original "online-first" framing).**
+> The interview is **in-person at the CRMC office by default** — the appointment
+> system exists to control office congestion and spare indigent patients wasted
+> travel — with an **online Google Meet fallback** CRMC switches to for emergencies
+> (COVID-style restrictions, typhoons, off-site staff) or patients who can't travel.
+> Confirmed with the owner alongside the CLAUDE.md production reconciliation (#139).
+> MAPA is a **production deployment**, not a thesis pilot.
+>
+> **Confirmed build decisions:** mode control = **program-wide + per-day**; patient
+> in-person **appointment slip** = **full** (date, CRMC office, queue number,
+> what-to-bring); **reschedule** = **included in v1**.
+>
+> **Mockup (redrawn, hybrid):**
+> <https://claude.ai/code/artifact/673bb962-0771-4534-ada5-1e57d068b59b>
 
 ---
 
 ## 1. The decision — what "appointment system" means for MAPA
 
-MAPA is deliberately **online-first**: patients apply online, CRMC verifies
-online, the single assessment interview is a **Google Meet**. So the highest-
-value appointment feature is **not** an in-person hospital queue ticket — it is
-letting the patient **self-book the online interview** from CRMC's published
-availability, instead of CRMC manually assigning a time and hoping it fits.
+The assessment interview is a **mandatory, capacity-limited** step conducted by a
+CRMC social worker, and it is **in-person at the office by default.** The whole
+point of scheduling is **congestion control**: only a fixed number of interviews
+are possible per day (social workers × hours ÷ ~30 min, and waiting-room seats),
+so without appointments patients — indigent, often travelling far and sick —
+arrive unpredictably, crowd the hospital waiting area, wait all day, and some are
+turned away *after already spending scarce money to travel*. Appointments cap and
+level daily arrivals to match capacity, give a fair queue, and let a patient make
+the trip only when they hold a confirmed slot. The patient books from CRMC's
+published availability instead of CRMC assigning a time and hoping it fits.
+
+The system is **hybrid**: every slot carries a `mode` (`in_person` | `online`).
+**Online (Google Meet) is the fallback** CRMC switches to when in-person isn't
+feasible — a health emergency (COVID-style restrictions), a typhoon, an off-site
+social worker, or a patient too far or unwell to travel. This makes the appointment
+system the one backbone that keeps the mandatory interview running under disruption
+(**continuity of service**) instead of halting when the office can't take walk-ins.
 
 Rejected alternatives (and why):
-- **In-person Malasakit visit booking** — cuts against the online-first design;
-  most intake is already remote. Out of scope for v1.
-- **A generic reusable appointment engine** — over-built for a solo thesis
-  pilot with exactly one appointment type. Model the one real need well.
+- **Online-only booking** — this doc's original v1 framing, now **reversed**:
+  in-person is the real default for this kind of assistance and congestion control
+  is the core value. Online stays, as the fallback mode.
+- **A generic reusable appointment engine** — over-built for one appointment type.
+  Model the one real need well.
+- **Building our own video for the online mode** — no; Google Meet is free and
+  reliable on weak networks, which is what these patients need most. A *managed*
+  embedded provider is a far-future reconsideration only. See CLAUDE.md Out Of Scope.
 
 ---
 
 ## 2. Why it's worth building
 
+- **Congestion control (the core).** The in-person interview is a fixed-capacity
+  bottleneck; appointments ration that capacity fairly instead of by crowding and
+  turn-aways, and spare the poorest patients wasted, repeated travel. This is the
+  primary operational justification for a real deployment.
+- **Continuity of service.** The hybrid mode lets CRMC keep interviewing during a
+  lockdown, typhoon, or staff shortage by shifting online — the service degrades
+  gracefully instead of stopping.
 - **Removes real friction.** Today CRMC guesses a date/time
   (`scheduleInterview` in `src/pages/admin/Requests.jsx`) and the patient just
   *sees* it; any "that time doesn't work" negotiation happens off-system.
@@ -75,14 +109,23 @@ interviewSlots/{slotId} {
   date:        'YYYY-MM-DD',// denormalized for display + the patient query
   time:        '9:00 AM',   // denormalized display (matches interviewTime format)
   durationMin: 30,
+  mode:        'in_person' | 'online', // default in_person; online = Meet fallback
   status:      'open' | 'booked',
   patientId:   null | uid,  // set on book
   requestId:   null | reqId,// set on book
-  meetLink:    '',          // CRMC attaches; carried onto the request at sync
+  meetLink:    '',          // ONLINE mode only — CRMC attaches; carried at sync
+  queueNo:     null | 'A-014', // IN_PERSON mode — office queue number (set on book)
   createdBy:   adminUid,
   bookedAt, createdAt, updatedAt
 }
 ```
+
+`mode` is set by CRMC at slot creation (`SLOT_MODE`, merged in #140) — the patient
+booking update never touches it. In-person mode carries the office queue number and
+the fixed CRMC office location (a constant, not per-slot) for the appointment slip;
+online mode carries the Meet link. The request-side interview fields gain
+`interviewMode` at sync so the patient's Interviews page renders the right surface
+(slip vs. Meet card).
 
 Add one field to the **request**: `interviewBookingOpen: boolean` — CRMC's
 **explicit per-request gate** ("this patient is ready to interview"). Self-
@@ -204,21 +247,25 @@ the open pool. Avoid shaming language; keep it civic and warm (per CLAUDE.md ton
 Each phase is independently CI-green and shippable. Phases 1–2 are fully
 verifiable without a browser; 3–4 add UI and want live screenshot verification.
 
-- **Phase 1 — Foundation (no UI).**
+- **Phase 1 — Foundation (no UI). ✅ shipped.**
   `utils/appointments.js` (slot generation, PH-local date maths, the
-  `canBookInterview` gate) + `interviewSlots` rules + unit tests + emulator
-  rules test + this doc. *(A validated starter for this phase already exists
-  untracked.)*
-- **Phase 2 — Cloud Functions.** The `onInterviewSlotBooked` sync trigger and
-  the `interviewReminders` scheduled function, with `tests/functions` coverage.
+  `canBookInterview` gate) + `interviewSlots` rules + unit + emulator rules
+  tests + this doc (#135), and the hybrid `SLOT_MODE` primitive (#140).
+- **Phase 2 — Cloud Functions.** The `onInterviewSlotBooked` sync trigger
+  (carries `mode`/`meetLink`/`queueNo` → request `interviewMode` etc.) and the
+  `interviewReminders` scheduled function, with `tests/functions` coverage.
   Deploy needs the owner's approval (Blaze, `asia-southeast1`).
-- **Phase 3 — Admin: publish & manage availability.** A small availability
-  manager (preset weekly windows → generate slots → review → publish; see
-  booked/open at a glance; attach a Meet link; the per-request "Open self-
-  booking" toggle in the Interview panel). Build + component test.
-- **Phase 4 — Patient: the booking picker.** A bilingual, mobile-first
+- **Phase 3 — Admin: publish & manage availability.** The CRMC availability
+  publisher: preset weekly windows → generate → review → publish; open/booked at
+  a glance (day-grouped); the **program-wide + per-day mode** control (in-person
+  default, flip to online for emergencies); attach a Meet link on online slots;
+  the per-request "Open self-booking" toggle in the Interview panel. Build +
+  component test.
+- **Phase 4 — Patient: booking + appointment.** A bilingual, mobile-first
   day/time picker on `Interviews.jsx`, shown only when `canBookInterview` is
-  true; confirm, and cancel/reschedule. Build + component + i18n; screenshot-
+  true. The result renders by mode: a **full in-person appointment slip** (date,
+  CRMC office, queue number, what-to-bring) or the **online Meet** card. Includes
+  **reschedule** (cancel + re-book). Build + component + i18n; screenshot-
   verified. **Accessibility acceptance (WCAG 2.1 AA, from the research):**
   explicit labels ("Choose an interview time"), full keyboard operation
   (Tab / arrows / Enter / Esc) with visible focus, a live region announcing
