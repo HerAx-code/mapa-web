@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect, useCallback } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import {
   collection, getDocs, addDoc, updateDoc, deleteDoc,
   doc, serverTimestamp, query, orderBy, Timestamp,
@@ -108,6 +109,9 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
   const [title,     setTitle]     = useState(announcement?.title   ?? '')
   const [message,   setMessage]   = useState(announcement?.message ?? '')
   const [saving,    setSaving]    = useState(false)
+  // Escape closes the dialog in modal mode only — in embedded mode it's an
+  // inline panel, not an overlay, so Escape shouldn't wipe the form.
+  useEscapeKey(onClose, !embedded && !saving)
 
   // R38: surface + targetRoles. Promos are locked at 'feed' / ['patient']
   // (agency promotions never go in the top strip and only target patients).

@@ -8,6 +8,7 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import StatusBadge from './ui/StatusBadge'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 // ── Fullscreen image lightbox ────────────────────────────────────────────
 
@@ -217,6 +218,7 @@ export function DocPreview({ docMeta, className = '', onClose }) {
 // ── Modal wrapper (used where a side-by-side panel isn't available) ──────
 
 export default function DocViewerModal({ docMeta, onClose }) {
+  useEscapeKey(onClose)
   return (
     <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>

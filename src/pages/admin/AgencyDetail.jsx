@@ -810,7 +810,7 @@ export default function AgencyDetail() {
       {/* #7 — Disable cascade dialog: admin chooses how in-flight apps
           are handled when the agency is disabled mid-flow. */}
       {showDisableDialog && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
           onClick={e => e.target === e.currentTarget && !disabling && setShowDisableDialog(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
