@@ -50,11 +50,12 @@ Legend: ✅ done · ⬜ to-do · ➖ correct as-is (with reason). "PR" is where 
 ### Admin — ✅ complete
 Dashboard ✅(#87/#90/#92) · Analytics ✅(#88/#89/#92) · Requests + detail workspace
 ✅(queue + #99/#101) · Agencies list ✅(#116) · Agency detail ✅(#111) · Add Agency
-✅(#117) · Patients + profile slide-over ✅(#93/#94) · Reports **redesigned** ✅(#127, facet sidebar + day-grouped card stream) ·
+✅(#117) · Patients **facet sidebar** ✅(#129, sidebar + status list, kept table + slide-over) · Reports **redesigned** ✅(#127, facet sidebar + day-grouped card stream) ·
 Accounts **redesigned** ✅(#126, facet sidebar + role-grouped roster + governance
 readout) · Application Logs **redesigned** ✅(#125, facet sidebar + day-grouped
 stream) · Document Types ✅(#113) · Assistance Types ✅(#113) · App Logs
-✅ · Audit Log ✅ + actor filter (#110) + coverage fix (#108) · Access Codes ✅ ·
+✅ · Audit Log ✅ + actor filter (#110) + coverage fix (#108) · Access Codes
+**redesigned** ✅(#128, facet sidebar + status-grouped stream) ·
 Announcements split ✅(#115) · ⌘K command palette ✅(#109/#112) · Audit Log
 **redesigned** ✅(#124) — facet sidebar + day-grouped stream (research: the
 super-admin redesign artifact).
