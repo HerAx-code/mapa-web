@@ -146,7 +146,7 @@ export default function AgencyAllocation() {
   if (loading || !agency) {
     return (
       <Layout breadcrumb="Budget Allocation">
-        <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
+        <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
           {[1,2,3].map(i => (
             <div key={i} className="card p-5 animate-pulse">
               <div className="h-4 bg-gray-100 rounded w-48 mb-3" />
@@ -337,7 +337,7 @@ export default function AgencyAllocation() {
 
   return (
     <Layout breadcrumb="Budget Allocation">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         <div className="mb-5">
           <p className="eyebrow">Budget</p>

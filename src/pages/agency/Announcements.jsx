@@ -222,7 +222,7 @@ export default function AgencyAnnouncements() {
 
   return (
     <Layout breadcrumb="Announcements">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
           <div>

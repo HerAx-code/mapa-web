@@ -421,7 +421,7 @@ export default function AgencyDetail() {
   if (loading) {
     return (
       <Layout breadcrumb="Agency">
-        <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
+        <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="card p-5 animate-pulse space-y-3">
               <div className="h-4 bg-gray-100 rounded w-40" />
@@ -443,7 +443,7 @@ export default function AgencyDetail() {
 
   return (
     <Layout breadcrumb={agency.name}>
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Back */}
         <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-5"

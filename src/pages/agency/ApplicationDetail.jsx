@@ -1019,7 +1019,7 @@ export default function ApplicationDetail() {
 
   if (appLoading || !app) return (
     <Layout breadcrumb="Application">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto space-y-4">
         {[1, 2, 3].map(i => (
           <div key={i} className="card p-5 animate-pulse">
             <div className="h-4 bg-gray-100 rounded w-48 mb-3" />
@@ -1099,7 +1099,7 @@ export default function ApplicationDetail() {
 
   return (
     <Layout breadcrumb={`Application · ${app.patientName}`}>
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* ── Thin nav strip ── */}
         <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
