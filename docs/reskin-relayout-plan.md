@@ -79,6 +79,19 @@ Intake Sheet / Case Assessment (widen + snapshot, #99).
 **Agency queue is clear — the reskin + relayout goal is met.** Any future page
 change gets a row here first.
 
+**Consistency + functionality pass (post-reskin), all 18 agency surfaces read:**
+- ✅ **Modal convention** — the four inline agency-page modals (Team ×2,
+  Dashboard top-up, GLViewer mark-issued) now match the admin/shared contract:
+  `useEscapeKey` + `z-[200]` + `<MdClose>`. Shared modals already conformed.
+- ✅ **Slot Management "Pending reset" TZ bug** — the reset-pending check used a
+  UTC day key while the Dashboard writes `lastResetDate` in Asia/Manila; both
+  now go through shared `utils/dates` `phTodayKey()` (+ regression test).
+- ✅ **Minor** — App Logs export disabled-guard; dropped dead `printing` state +
+  a stale comment in CertificateGenerator; loading-skeleton width jumps on Slot
+  Management / Allocation / Agency Profile.
+- ➖ Impact's hand-rolled CSV left as an intentional divergence (summary shape,
+  not a flat table — `exportToCSV` doesn't fit). Review artifact: agency-workspace-review.
+
 ### Patient — ➖ correct as-is (do not widen)
 Dashboard, Track Status, Request/Intake wizard, Medical Programs, Interviews,
 More, Access Log, Guide — all mobile-first + bilingual + centered per
