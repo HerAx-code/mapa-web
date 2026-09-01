@@ -268,7 +268,7 @@ export default function AddAgency() {
 
   return (
     <Layout breadcrumb="Add Agency">
-      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Back */}
         <button
