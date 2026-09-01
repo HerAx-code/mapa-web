@@ -10,6 +10,7 @@ import { MdSearch, MdHistory, MdDownload } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { exportToCSV, dateStamp } from '../../utils/export'
 import { tsToDate } from '../../utils/dates'
+import { groupByDay } from '../../utils/groupByDay'
 
 // ── Config ────────────────────────────────────────────────────────────────
 
@@ -116,34 +117,6 @@ const timeAgo = (ts) => {
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
   return ''
-}
-
-// Group a (desc-sorted) list of entries into day buckets with a friendly
-// heading — Today / Yesterday / "Mon D, YYYY" — so a long stream becomes
-// navigable instead of one flat wall.
-function groupByDay(entries) {
-  const groups = []
-  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
-  const today = startOfDay(new Date())
-  const oneDay = 86400000
-  for (const e of entries) {
-    const d = tsToDate(e.createdAt)
-    const key = d ? String(startOfDay(d)) : 'unknown'
-    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
-    if (!g) {
-      let label = 'Earlier', sub = ''
-      if (d) {
-        const day = startOfDay(d)
-        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday'
-          : d.toLocaleDateString([], { weekday: 'long' })
-        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-      }
-      g = { key, label, sub, entries: [] }
-      groups.push(g)
-    }
-    g.entries.push(e)
-  }
-  return groups
 }
 
 // ── Audit details cell ────────────────────────────────────────────────────

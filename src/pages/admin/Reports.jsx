@@ -9,6 +9,7 @@ import { MdSearch, MdDelete, MdFlag, MdCheckCircle, MdHourglassEmpty, MdWarning,
 import toast from 'react-hot-toast'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { tsToDate } from '../../utils/dates'
+import { groupByDay } from '../../utils/groupByDay'
 
 // ── Config ────────────────────────────────────────────────────────────────
 // Report badge rendering is delegated to <StatusBadge kind="report" />
@@ -44,31 +45,6 @@ const ROLE_AVATAR = {
 const formatDate = (ts) => {
   const d = tsToDate(ts)
   return d ? d.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
-}
-
-// Group reports into day buckets by createdAt — Today / Yesterday / weekday.
-function groupByDay(items) {
-  const groups = []
-  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
-  const today = startOfDay(new Date())
-  const oneDay = 86400000
-  for (const it of items) {
-    const d = tsToDate(it.createdAt)
-    const key = d ? String(startOfDay(d)) : 'unknown'
-    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
-    if (!g) {
-      let label = 'Undated', sub = ''
-      if (d) {
-        const day = startOfDay(d)
-        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
-        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-      }
-      g = { key, label, sub, entries: [] }
-      groups.push(g)
-    }
-    g.entries.push(it)
-  }
-  return groups
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────

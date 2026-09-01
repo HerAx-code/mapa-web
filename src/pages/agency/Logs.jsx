@@ -7,6 +7,7 @@ import { MdSearch, MdDownload, MdListAlt } from 'react-icons/md'
 import { exportToCSV, dateStamp } from '../../utils/export'
 import { APP_STATUS_CONFIG } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
+import { groupByDay } from '../../utils/groupByDay'
 import StatusBadge from '../../components/ui/StatusBadge'
 
 // Pull labels straight from the canonical APP_STATUS_CONFIG so the CSV status
@@ -32,32 +33,6 @@ const STATUS_ROWS = [
   ['pending',       'Pending (legacy)'  ],
   ['interview',     'Interview (legacy)'],
 ]
-
-// Group applications into day buckets by submittedAt — Today / Yesterday /
-// weekday — so a long history becomes navigable instead of one flat wall.
-function groupByDay(items) {
-  const groups = []
-  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
-  const today = startOfDay(new Date())
-  const oneDay = 86400000
-  for (const it of items) {
-    const d = tsToDate(it.submittedAt)
-    const key = d ? String(startOfDay(d)) : 'unknown'
-    let g = groups.length && groups[groups.length - 1].key === key ? groups[groups.length - 1] : null
-    if (!g) {
-      let label = 'Undated', sub = ''
-      if (d) {
-        const day = startOfDay(d)
-        label = day === today ? 'Today' : day === today - oneDay ? 'Yesterday' : d.toLocaleDateString([], { weekday: 'long' })
-        sub = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-      }
-      g = { key, label, sub, entries: [] }
-      groups.push(g)
-    }
-    g.entries.push(it)
-  }
-  return groups
-}
 
 export default function AgencyLogs() {
   const { user }          = useAuth()
@@ -106,7 +81,7 @@ export default function AgencyLogs() {
 
   const openTotal     = countOf('endorsed') + countOf('reviewing') + countOf('awaiting_info') + countOf('pending') + countOf('interview')
   const approvedTotal = countOf('approved') + countOf('certificate')
-  const dayGroups  = groupByDay(filtered)
+  const dayGroups  = groupByDay(filtered, a => a.submittedAt)
   const isFiltered = search || filter !== 'all' || dateFilter !== 'all'
   const clearAll   = () => { setSearch(''); setFilter('all'); setDateFilter('all') }
 
