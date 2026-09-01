@@ -1,5 +1,6 @@
 import Layout from '../../components/Layout'
 import { useState, useEffect, Fragment } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   MdSearch, MdMessage, MdSchedule, MdDelete, MdClose,
@@ -182,6 +183,7 @@ export default function Patients() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [patients,             setPatients]             = useState([])
   const [confirmDeletePatient, setConfirmDeletePatient] = useState(null)
+  useEscapeKey(() => setConfirmDeletePatient(null), !!confirmDeletePatient)
   const [loading,              setLoading]              = useState(true)
   const [search,               setSearch]               = useState(() => searchParams.get('q') ?? '')
   const [tab,                  setTab]                  = useState('active')
