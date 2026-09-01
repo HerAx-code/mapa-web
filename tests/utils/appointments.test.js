@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  SLOT_STATUS, DEFAULT_WINDOWS, canBookInterview, formatSlotTime, toDateKey,
+  SLOT_STATUS, SLOT_MODE, DEFAULT_WINDOWS, canBookInterview, formatSlotTime, toDateKey,
   addDaysKey, phWeekdayOfKey, generateSlots, isFutureSlot, groupSlotsByDay,
 } from '../../src/utils/appointments.js'
 
@@ -95,6 +95,24 @@ describe('generateSlots', () => {
     expect(days.has('2026-08-31')).toBe(true)  // Mon
     // 2.5h (5 slots) + 3h (6 slots) = 11 slots per weekday.
     expect(slots.filter(s => s.date === '2026-08-31')).toHaveLength(11)
+  })
+})
+
+describe('slot mode', () => {
+  const win = [{ weekday: 1, startMin: 9 * 60, endMin: 10 * 60 }]
+  it('defaults every generated slot to in-person', () => {
+    const slots = generateSlots({ fromKey: '2026-08-31', days: 1, windows: win })
+    expect(slots.length).toBeGreaterThan(0)
+    expect(slots.every(s => s.mode === SLOT_MODE.IN_PERSON)).toBe(true)
+  })
+  it('stamps the online mode when the batch is generated online', () => {
+    const slots = generateSlots({ fromKey: '2026-08-31', days: 1, windows: win, mode: SLOT_MODE.ONLINE })
+    expect(slots.length).toBeGreaterThan(0)
+    expect(slots.every(s => s.mode === SLOT_MODE.ONLINE)).toBe(true)
+  })
+  it('exposes the two modes as stable string values', () => {
+    expect(SLOT_MODE.IN_PERSON).toBe('in_person')
+    expect(SLOT_MODE.ONLINE).toBe('online')
   })
 })
 

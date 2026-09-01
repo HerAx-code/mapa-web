@@ -17,6 +17,15 @@
 
 export const SLOT_STATUS = { OPEN: 'open', BOOKED: 'booked' }
 
+// Interview mode. In-person is the default — the assessment interview happens at
+// the CRMC office and the appointment system exists to stagger arrivals and
+// control congestion. Online (Google Meet) is the fallback CRMC switches to when
+// in-person isn't feasible (a health emergency, a typhoon, an off-site social
+// worker, or a patient who can't travel). The mode rides on the slot so a single
+// booking flow serves both — only the "where" differs. See CLAUDE.md
+// (Communication Channels) and docs/appointment-system-plan.md.
+export const SLOT_MODE = { IN_PERSON: 'in_person', ONLINE: 'online' }
+
 // A booked interview can no longer be re-booked once concluded, and a request
 // in a terminal state is done. `interviewBookingOpen` is the explicit,
 // per-request gate CRMC sets ("this patient is ready to interview") — self-
@@ -77,8 +86,10 @@ export function phWeekdayOfKey(key) {
 }
 
 // Build one slot descriptor. `start` is a real Date at PH-local wall time,
-// suitable for writing to Firestore as a Timestamp.
-function makeSlot(key, startMin, durationMin) {
+// suitable for writing to Firestore as a Timestamp. `mode` defaults to
+// in-person (the norm); the publisher passes SLOT_MODE.ONLINE when generating
+// online (Meet) slots for a day/period switched to the online fallback.
+function makeSlot(key, startMin, durationMin, mode = SLOT_MODE.IN_PERSON) {
   const hh = String(Math.floor(startMin / 60)).padStart(2, '0')
   const mm = String(startMin % 60).padStart(2, '0')
   return {
@@ -88,21 +99,26 @@ function makeSlot(key, startMin, durationMin) {
     durationMin,
     start: new Date(`${key}T${hh}:${mm}:00+08:00`),
     status: SLOT_STATUS.OPEN,
+    mode,
   }
 }
 
 // Expand a weekly availability template into concrete slot descriptors for the
 // `days` days starting at `fromKey` (a "YYYY-MM-DD"). CRMC reviews these before
 // they are written to Firestore. A window only yields whole slots that fit
-// entirely inside it (t + durationMin <= endMin).
-export function generateSlots({ fromKey, days, windows, durationMin = 30 }) {
+// entirely inside it (t + durationMin <= endMin). `mode` stamps every generated
+// slot (default in-person); to publish a mixed week, call once per mode-segment
+// (e.g. an in-person batch and a separate online batch) — per-slot mode is the
+// primitive, so program-wide / per-day / per-appointment modes are all just
+// how the caller groups its generate calls.
+export function generateSlots({ fromKey, days, windows, durationMin = 30, mode = SLOT_MODE.IN_PERSON }) {
   const out = []
   for (let i = 0; i < days; i++) {
     const key = addDaysKey(fromKey, i)
     const wd = phWeekdayOfKey(key)
     for (const w of windows.filter(x => x.weekday === wd)) {
       for (let t = w.startMin; t + durationMin <= w.endMin; t += durationMin) {
-        out.push(makeSlot(key, t, durationMin))
+        out.push(makeSlot(key, t, durationMin, mode))
       }
     }
   }
