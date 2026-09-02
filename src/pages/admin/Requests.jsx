@@ -754,6 +754,41 @@ function RequestDetail({ request, agencies, onClose }) {
     finally { setBusy(false) }
   }
 
+  // Self-service booking: instead of CRMC assigning the time, open the gate so
+  // the patient picks a slot from published availability (canBookInterview()
+  // checks interviewBookingOpen; the onInterviewSlotWritten trigger fills
+  // interviewDate when they book). Coexists with Schedule directly — CRMC's call.
+  const openBooking = async () => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'requests', request.id), {
+        interviewBookingOpen: true,
+        updatedAt:            serverTimestamp(),
+      })
+      logAudit(user, { action: 'interview_booking_opened', targetType: 'request', targetId: request.id, targetName: request.requestId, details: 'Opened self-booking', requestId: request.id, patientId: request.patientId })
+      await notify(request.patientId, {
+        type:  'interview_booking_open',
+        title: 'You can now book your interview',
+        body:  'CRMC has opened interview booking for your request. Open the Interviews page to pick a date and time.',
+      }).catch(() => {})
+      toast.success('Self-booking opened — the patient can now pick a time.')
+    } catch (err) { console.error(err); toast.error('Failed to open self-booking.') }
+    finally { setBusy(false) }
+  }
+
+  const closeBooking = async () => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'requests', request.id), {
+        interviewBookingOpen: false,
+        updatedAt:            serverTimestamp(),
+      })
+      logAudit(user, { action: 'interview_booking_closed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: 'Closed self-booking', requestId: request.id, patientId: request.patientId })
+      toast.success('Self-booking closed.')
+    } catch (err) { console.error(err); toast.error('Failed to close self-booking.') }
+    finally { setBusy(false) }
+  }
+
   const recordOutcome = async (outcome) => {
     setBusy(true)
     try {
@@ -991,13 +1026,33 @@ function RequestDetail({ request, agencies, onClose }) {
             </div>
             {!request.interviewDate ? (
               <div className="p-3 rounded-lg border border-gray-100">
-                {!allVerified
-                  ? <p className="text-xs text-gray-400 italic">Verify all documents first, then schedule the assessment interview.</p>
-                  : <p className="text-xs text-gray-500 mb-2">Documents verified. Schedule the assessment interview.</p>}
-                <button className="btn-primary text-sm flex items-center gap-1.5 mt-1" disabled={!allVerified || busy}
-                  onClick={() => setShowInterview(true)}>
-                  <MdVideoCall size={14} /> Schedule interview
-                </button>
+                {!allVerified ? (
+                  <p className="text-xs text-gray-400 italic">Verify all documents first, then open the assessment interview.</p>
+                ) : request.interviewBookingOpen ? (
+                  <>
+                    <p className="text-xs text-gray-500 mb-2">
+                      <span className="font-medium text-brand-600">Self-booking open</span> — waiting for the patient to pick a time from published availability.
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      <button className="btn-secondary text-sm" disabled={busy} onClick={closeBooking}>Close booking</button>
+                      <button className="btn-secondary text-sm flex items-center gap-1.5" disabled={busy}
+                        onClick={() => setShowInterview(true)}>
+                        <MdVideoCall size={14} /> Schedule directly instead
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500 mb-2">Documents verified. Let the patient book a time, or schedule it directly.</p>
+                    <div className="flex gap-2 flex-wrap">
+                      <button className="btn-primary text-sm" disabled={busy} onClick={openBooking}>Open self-booking</button>
+                      <button className="btn-secondary text-sm flex items-center gap-1.5" disabled={busy}
+                        onClick={() => setShowInterview(true)}>
+                        <MdVideoCall size={14} /> Schedule directly
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="p-3 rounded-lg border border-gray-100 space-y-2">
