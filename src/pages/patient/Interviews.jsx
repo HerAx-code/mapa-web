@@ -105,7 +105,7 @@ function BookingPicker({ slots, onBook, booking }) {
     <div className="card p-5 space-y-4">
       <div>
         <p className="eyebrow">{t('patient.interviews.booking.eyebrow')}</p>
-        <h2 className="text-lg font-bold text-gray-900 mt-1">{t('patient.interviews.booking.title')}</h2>
+        <h2 className="font-display text-lg font-bold text-gray-900 mt-1">{t('patient.interviews.booking.title')}</h2>
         <p className="text-sm text-gray-500 mt-1">{t('patient.interviews.booking.subtitle')}</p>
       </div>
 
@@ -184,7 +184,7 @@ function BookedAppointment({ slot, onReschedule, rescheduling }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-brand-200">{t('patient.interviews.booking.yourAppointment')}</p>
-              <p className="mt-2 text-2xl sm:text-[28px] font-bold tracking-tight text-white">{fmtDate(slot.date)}</p>
+              <p className="font-display mt-2 text-2xl sm:text-[28px] font-bold tracking-tight text-white">{fmtDate(slot.date)}</p>
               <p className="mt-0.5 text-sm text-brand-100">{t('patient.interviews.atTime', { time: slot.time })}</p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1 rounded-full bg-white/15 text-white text-xs font-semibold px-2.5 py-1">
@@ -393,7 +393,7 @@ export default function Interviews() {
 
         <div className="w-full mb-5">
           <p className="eyebrow">{t('patient.interviews.eyebrow')}</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.interviews.title')}</h1>
+          <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.interviews.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.interviews.subtitle')}</p>
         </div>
 
@@ -483,7 +483,7 @@ export default function Interviews() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold uppercase tracking-wider text-brand-200">{t('patient.interviews.heroEyebrow')}</p>
-                          <p className="mt-2 text-2xl sm:text-[28px] font-bold tracking-tight text-white">{fmtDate(app.interviewDate)}</p>
+                          <p className="font-display mt-2 text-2xl sm:text-[28px] font-bold tracking-tight text-white">{fmtDate(app.interviewDate)}</p>
                           {app.interviewTime && <p className="mt-0.5 text-sm text-brand-100">{t('patient.interviews.atTime', { time: app.interviewTime })}</p>}
                           {app.conductedBy && <p className="mt-1 text-sm text-brand-200">{t('patient.interviews.conductedBy', { name: app.conductedBy })}</p>}
                         </div>
