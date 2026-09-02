@@ -4,15 +4,15 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../../firebase'
 import { sendMessage } from '../../../utils/messages'
-import { MdMessage, MdSend } from 'react-icons/md'
+import { MdMessage, MdSend, MdArrowBack } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { MAX_CHARS, fmtFull, fmtDateLabel } from './helpers'
 
 /**
- * Conversation thread (messages list + reply box) used by both the
- * patient ConversationModal (full-screen) and the admin two-panel
- * inline view. Extracted from src/pages/admin/Messages.jsx as part
- * of the Phase 2.2 split. Behavior preserved verbatim including:
+ * Conversation thread (messages list + reply box). One component for
+ * every surface: rendered inline in the desktop / admin two-panel split,
+ * and full-screen (fixed inset-0, with a back button via onBack) on the
+ * patient's phone. Behavior preserved verbatim including:
  *   - R23 loadError state so transient snapshot errors don't show
  *     the empty-thread empty state
  *   - R27 mark-read updateDoc with explicit catch (was silent)
@@ -22,7 +22,7 @@ import { MAX_CHARS, fmtFull, fmtDateLabel } from './helpers'
  * Lifted state into a `text` controlled prop so the parent can
  * preserve draft text across thread switches in the admin pane.
  */
-export default function ConversationThread({ conversation, user, text, setText }) {
+export default function ConversationThread({ conversation, user, text, setText, onBack }) {
   const [messages,    setMessages]    = useState([])
   const [loadingMsgs, setLoadingMsgs] = useState(true)
   const [loadError,   setLoadError]   = useState(false)
@@ -81,14 +81,24 @@ export default function ConversationThread({ conversation, user, text, setText }
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
 
-      {/* Thread header */}
-      <div className="px-5 py-3.5 border-b border-gray-100 flex-shrink-0 bg-white">
-        <p className="text-sm font-semibold text-gray-900">{oName}</p>
-        {conversation.subject && (
-          <p className="text-xs text-gray-500 mt-0.5">
-            <span className="font-medium">Subject:</span> {conversation.subject}
-          </p>
+      {/* Thread header. A back button appears only when onBack is passed
+          (the patient's full-screen mobile view); the desktop split panel
+          leaves it off since the list is always visible beside it. */}
+      <div className="px-4 sm:px-5 py-3 border-b border-gray-100 flex-shrink-0 bg-white flex items-center gap-2">
+        {onBack && (
+          <button onClick={onBack} aria-label="Back to conversations"
+            className="w-9 h-9 -ml-1 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 flex-shrink-0">
+            <MdArrowBack size={20} />
+          </button>
         )}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">{oName}</p>
+          {conversation.subject && (
+            <p className="text-xs text-gray-500 mt-0.5 truncate">
+              <span className="font-medium">Subject:</span> {conversation.subject}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -159,7 +169,7 @@ export default function ConversationThread({ conversation, user, text, setText }
                 <p className="text-xs text-gray-400 mb-0.5">
                   {isMe ? 'You' : m.fromName} · {fmtFull(m.createdAt)}
                 </p>
-                <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                <div className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap
                   ${isMe ? 'bg-brand-500 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
                   {m.text}
                 </div>
