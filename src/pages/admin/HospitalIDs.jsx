@@ -7,6 +7,7 @@ import { logAudit } from '../../utils/auditLog'
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { tsToDate } from '../../utils/dates'
+import QRCode from 'qrcode'
 import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -239,7 +240,7 @@ export default function HospitalIDs() {
   // view they'd have to hand-copy each code, which doesn't scale past a
   // handful. 4-up on A4 keeps each card large enough to read at arm's
   // length and gives a clean dashed border for scissors.
-  const handlePrintAvailable = () => {
+  const handlePrintAvailable = async () => {
     const codes = filtered.filter(h => h.status === 'available')
     if (codes.length === 0) {
       toast.error('No available codes in the current view. Filter to "Available" or generate codes first.')
@@ -250,12 +251,29 @@ export default function HospitalIDs() {
       toast.error('Could not open the print window. Check your browser pop-up settings.')
       return
     }
+    // Opened synchronously to keep the popup gesture; QR generation below is
+    // async, so show a placeholder and fill the window in a second write.
+    win.document.write('<!doctype html><meta charset="utf-8"><title>Preparing…</title><body style="font:15px -apple-system,sans-serif;padding:2rem;color:#374151">Preparing access-code cards…</body>')
+
     const registerUrl = `${window.location.origin}/register`
     const today = new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
     const escape = (s) => String(s).replace(/[&<>"']/g, c => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     ))
-    const cards = codes.map(c => `
+    // One QR per code, encoding the prefill link (…/register?code=CRMC-…) so a
+    // scan from the slip/card/wristband lands on Register with the code filled
+    // and verified. SVG stays crisp at any print size. Falls back to the
+    // printed code + URL below if a QR can't be generated. The code is still
+    // MSS-issued and single-use — the QR only removes mistyping, never the gate.
+    const cards = (await Promise.all(codes.map(async c => {
+      const url = `${registerUrl}?code=${encodeURIComponent(c.id)}`
+      let qr = ''
+      try {
+        qr = await QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' })
+      } catch (err) {
+        console.error('[HospitalIDs] QR generation failed for', c.id, err)
+      }
+      return `
       <div class="card">
         <div class="header">
           <div class="brand">MAPA</div>
@@ -263,16 +281,20 @@ export default function HospitalIDs() {
         </div>
         <div class="label">Patient Access Code</div>
         <div class="code">${escape(c.id)}</div>
+        ${qr ? `<div class="qr">${qr}</div><div class="scan">Scan to register · I-scan para magparehistro</div>` : ''}
         <div class="instructions">
-          <p>Register online at:</p>
+          <p>Or register online at:</p>
           <p class="url">${escape(registerUrl)}</p>
           <p class="note">Use this code once during sign-up.<br/>Keep it private — do not share.</p>
         </div>
         <div class="issued">Issued ${escape(today)} · Medical Social Services</div>
       </div>
-    `).join('')
+    `
+    }))).join('')
     // Self-contained HTML so the popup doesn't depend on app CSS that
-    // won't be loaded in the new window context.
+    // won't be loaded in the new window context. document.open() clears the
+    // "Preparing…" placeholder before we write the real page.
+    win.document.open()
     win.document.write(`<!doctype html>
 <html>
 <head>
@@ -291,7 +313,10 @@ export default function HospitalIDs() {
     .header .brand { font-size: 22pt; font-weight: 700; color: #0f766e; letter-spacing: 0.05em; }
     .header .sub { font-size: 9pt; color: #6b7280; margin-top: 2px; }
     .label { font-size: 9pt; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
-    .code { font-family: 'Courier New', monospace; font-size: 20pt; font-weight: 700; letter-spacing: 0.08em; color: #111827; margin: 6px 0 12px; }
+    .code { font-family: 'Courier New', monospace; font-size: 20pt; font-weight: 700; letter-spacing: 0.08em; color: #111827; margin: 6px 0 10px; }
+    .qr { width: 3.4cm; height: 3.4cm; margin: 4px auto; }
+    .qr svg { width: 100%; height: 100%; display: block; }
+    .scan { font-size: 8pt; color: #374151; margin-bottom: 8px; }
     .instructions p { margin: 4px 0; font-size: 10pt; color: #374151; }
     .instructions .url { font-family: 'Courier New', monospace; font-size: 9pt; color: #0f766e; word-break: break-all; }
     .instructions .note { font-size: 8.5pt; color: #6b7280; margin-top: 8px; line-height: 1.4; }
@@ -306,7 +331,7 @@ export default function HospitalIDs() {
   <div class="toolbar">
     <button class="primary" onclick="window.print()">Print</button>
     <button onclick="window.close()">Close</button>
-    <span class="count">${codes.length} access code${codes.length === 1 ? '' : 's'} · A4 · 4 per page</span>
+    <span class="count">${codes.length} access code${codes.length === 1 ? '' : 's'} · A4 · scan or type to register</span>
   </div>
   <div class="grid">${cards}</div>
 </body>

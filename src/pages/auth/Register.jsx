@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   MdShield, MdVerified, MdVisibility, MdVisibilityOff,
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
@@ -118,6 +118,7 @@ function StepIndicator({ current, steps, onJump }) {
 export default function Register() {
   const { t }                 = useTranslation()
   const navigate              = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { updateUser }        = useAuth()
 
   // Hide the 'Back to Home' link when running in the installed PWA —
@@ -345,8 +346,12 @@ export default function Register() {
     } catch { return 0 }
   }
 
-  const handleVerify = async () => {
-    if (!ACCESS_CODE_RE.test(form.hospitalId)) {
+  // codeArg is a string only when called programmatically (the QR auto-verify);
+  // when wired to onClick the first arg is the event, so we fall back to state.
+  // opts.fromQR routes an already-used code to login instead of showing an error.
+  const handleVerify = async (codeArg, opts = {}) => {
+    const code = typeof codeArg === 'string' ? codeArg : form.hospitalId
+    if (!ACCESS_CODE_RE.test(code)) {
       setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeFormat', { year: CURRENT_YEAR }) }))
       return
     }
@@ -367,7 +372,7 @@ export default function Register() {
       try {
         if (!auth.currentUser) await signInAnonymously(auth)
         const call = httpsCallable(functions, 'verifyAccessCode')
-        const result = await call({ code: form.hospitalId })
+        const result = await call({ code })
         available = result.data.available
         exists    = result.data.exists
       } catch (err) {
@@ -378,7 +383,7 @@ export default function Register() {
         }
         console.warn('[Register] verifyAccessCode function failed; falling back to direct read:', err)
         usedFallback = true
-        const snap = await getDoc(doc(db, 'hospitalIds', form.hospitalId))
+        const snap = await getDoc(doc(db, 'hospitalIds', code))
         exists    = snap.exists()
         available = exists && snap.data().status === 'available'
       }
@@ -386,6 +391,13 @@ export default function Register() {
       if (!exists) {
         setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeNotFound') }))
       } else if (!available) {
+        // A used code scanned from a slip / card / wristband means the patient
+        // already registered — send them to login instead of a dead-end error.
+        if (opts.fromQR) {
+          toast(t('register.toast.alreadyRegistered'), { icon: 'ℹ️', duration: 6000 })
+          navigate('/login')
+          return
+        }
         setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeUsed') }))
       } else {
         setHospitalVerified(true)
@@ -401,6 +413,21 @@ export default function Register() {
       setVerifying(false)
     }
   }
+
+  // Consume a ?code= from a scanned QR (access-code slip / card / wristband):
+  // prefill the field, verify it once, then strip it from the URL so it doesn't
+  // linger in history/referrer. A used code routes to login (handleVerify
+  // fromQR). Manual entry stays the fallback for anyone without a scannable code.
+  useEffect(() => {
+    const qrCode = searchParams.get('code')
+    if (!qrCode || !ACCESS_CODE_RE.test(qrCode)) return
+    setForm(prev => ({ ...prev, hospitalId: qrCode }))
+    searchParams.delete('code')
+    setSearchParams(searchParams, { replace: true })
+    handleVerify(qrCode, { fromQR: true })
+    // Run once on mount; deps intentionally omitted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Submit ──────────────────────────────────────────────────────────────
 
