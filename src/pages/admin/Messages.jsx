@@ -305,7 +305,7 @@ export default function Messages() {
     return (
       <Layout breadcrumb="Messages">
         {/* ── Mobile (<md) — centered card + modal ── */}
-        <div className="p-4 sm:p-6 max-w-3xl mx-auto md:hidden">
+        <div className="w-full max-w-3xl mx-auto p-4 sm:p-6 overflow-x-clip md:hidden">
           <div className="flex items-start justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
