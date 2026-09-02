@@ -559,6 +559,9 @@ export default function ApplicationDetail() {
         type:  'interview_approved',
         title: 'Application approved',
         body:  `Your application to ${app.agencyName} is approved for ₱${approvedAmount.toLocaleString()} (${purposeOfAssistance.join(', ')}). A Guarantee Letter will be issued shortly.`,
+        // Good news + actionable → also SMS. Minimal text, NO amount (RA-10173).
+        sms:     true,
+        smsText: `MAPA: Good news — your assistance application to ${app.agencyName} was approved. Open the MAPA app for details.`,
       })
       if (app.endorsedById) {
         const partial = approvedAmount < (app.amountRequested ?? 0)

@@ -747,6 +747,10 @@ function RequestDetail({ request, agencies, onClose }) {
         type:  'interview_sched',
         title: 'Assessment interview scheduled',
         body:  `CRMC scheduled your assessment interview on ${form.date} at ${form.time}. Join via the Google Meet link in your dashboard.`,
+        // High-value + time-critical for phone-primary patients → also SMS.
+        // Minimal content (no link/PII) per RA-10173.
+        sms:     true,
+        smsText: `MAPA: Your CRMC assessment interview is on ${form.date} at ${form.time}. Open the MAPA app for details.`,
       }).catch(() => {})
       toast.success('Interview scheduled.')
       setShowInterview(false)
