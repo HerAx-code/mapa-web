@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import ConfirmModal from '../../components/ConfirmModal'
 import {
   MdVideoCall, MdCalendarToday, MdOpenInNew, MdWarning,
   MdDescription, MdChat, MdTimer, MdAssignment, MdWifi,
-  MdEvent,
+  MdEvent, MdApartment, MdVideocam, MdCheckCircle, MdLocationOn,
+  MdConfirmationNumber,
 } from 'react-icons/md'
-import { collection, query, where, onSnapshot } from 'firebase/firestore'
+import {
+  collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp,
+} from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { CRMC_GATEWAY_NAME, CRMC_GATEWAY_INITIALS, CRMC_GATEWAY_COLOR } from '../../utils/constants'
+import {
+  canBookInterview, SLOT_MODE, SLOT_STATUS, groupSlotsByDay, isFutureSlot,
+} from '../../utils/appointments'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
@@ -70,6 +77,174 @@ const buildGcalUrl = (app) => {
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
+// ── Booking picker — shown when CRMC has opened booking and nothing is booked
+// yet. Day tabs → open-time chips → confirm. Real <button>s (native keyboard),
+// ≥44px targets, an explicit timezone note. Bilingual via t().
+function BookingPicker({ slots, onBook, booking }) {
+  const { t } = useTranslation()
+  const days = useMemo(() => groupSlotsByDay(slots), [slots])
+  const [dayIdx, setDayIdx] = useState(0)
+  const [selectedId, setSelectedId] = useState(null)
+
+  if (days.length === 0) {
+    return (
+      <div className="card p-6 text-center">
+        <MdCalendarToday size={28} className="text-gray-300 mx-auto mb-2" />
+        <p className="text-sm text-gray-500">{t('patient.interviews.booking.noSlots')}</p>
+      </div>
+    )
+  }
+
+  const day       = days[Math.min(dayIdx, days.length - 1)]
+  const selected  = day.slots.find(s => s.id === selectedId) ?? null
+  const selMode   = selected?.mode ?? day.slots[0]?.mode ?? SLOT_MODE.IN_PERSON
+  const online    = selMode === SLOT_MODE.ONLINE
+  const ModeIcon  = online ? MdVideocam : MdApartment
+
+  return (
+    <div className="card p-5 space-y-4">
+      <div>
+        <p className="eyebrow">{t('patient.interviews.booking.eyebrow')}</p>
+        <h2 className="text-lg font-bold text-gray-900 mt-1">{t('patient.interviews.booking.title')}</h2>
+        <p className="text-sm text-gray-500 mt-1">{t('patient.interviews.booking.subtitle')}</p>
+      </div>
+
+      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
+        online ? 'bg-blue-50 text-blue-700' : 'bg-brand-50 text-brand-700'
+      }`}>
+        <ModeIcon size={14} /> {online ? t('patient.interviews.booking.modeOnline') : t('patient.interviews.booking.modeInPerson')}
+      </span>
+
+      {/* Day tabs */}
+      <div>
+        <p className="text-xs font-semibold text-gray-600 mb-1.5">{t('patient.interviews.booking.chooseDay')}</p>
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label={t('patient.interviews.booking.chooseDay')}>
+          {days.map((d, i) => {
+            const on = i === Math.min(dayIdx, days.length - 1)
+            const dd = new Date(`${d.date}T12:00:00+08:00`)
+            return (
+              <button key={d.date} type="button" role="tab" aria-selected={on}
+                onClick={() => { setDayIdx(i); setSelectedId(null) }}
+                className={`flex-shrink-0 min-w-[64px] min-h-[44px] rounded-xl border px-3 py-1.5 text-center transition-colors ${
+                  on ? 'bg-brand-500 border-brand-500 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-brand-300'
+                }`}>
+                <span className="block text-base font-bold leading-tight">{dd.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', day: 'numeric' })}</span>
+                <span className="block text-[11px]">{dd.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short' })}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Open time chips */}
+      <div>
+        <p className="text-xs font-semibold text-gray-600 mb-1.5">{t('patient.interviews.booking.openTimes')}</p>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label={t('patient.interviews.booking.openTimes')}>
+          {day.slots.map(s => {
+            const on = s.id === selectedId
+            return (
+              <button key={s.id} type="button" aria-pressed={on}
+                onClick={() => setSelectedId(s.id)}
+                className={`min-h-[44px] rounded-lg border text-sm font-medium tabular-nums transition-colors ${
+                  on ? 'bg-brand-500 border-brand-500 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-brand-300'
+                }`}>
+                {s.time}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[11px] text-gray-400 mt-2">{t('patient.interviews.booking.timezoneNote')}</p>
+      </div>
+
+      {/* Confirm */}
+      {selected && (
+        <div className="border-t border-gray-100 pt-3" aria-live="polite">
+          <p className="text-sm text-gray-700 mb-1">{t('patient.interviews.booking.selected', { time: selected.time, date: day.label })}</p>
+          <p className="text-xs text-gray-400 mb-3 leading-relaxed">{t('patient.interviews.booking.congestionNote')}</p>
+          <button type="button" onClick={() => onBook(selected)} disabled={booking}
+            className="btn-primary w-full min-h-[44px] flex items-center justify-center gap-1.5">
+            {booking ? t('patient.interviews.booking.confirming') : t('patient.interviews.booking.confirmBtn')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Booked appointment — rendered from the patient's own booked slot, so it
+// works even before the server-side request sync (Phase 2). In-person shows the
+// slip (office, queue, what-to-bring); online shows the Meet card.
+function BookedAppointment({ slot, onReschedule, rescheduling }) {
+  const { t } = useTranslation()
+  const online = slot.mode === SLOT_MODE.ONLINE
+  return (
+    <div className="space-y-4">
+      <div className="card-hero">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-brand-200">{t('patient.interviews.booking.yourAppointment')}</p>
+              <p className="mt-2 text-2xl sm:text-[28px] font-bold tracking-tight text-white">{fmtDate(slot.date)}</p>
+              <p className="mt-0.5 text-sm text-brand-100">{t('patient.interviews.atTime', { time: slot.time })}</p>
+            </div>
+            <span className="flex-shrink-0 inline-flex items-center gap-1 rounded-full bg-white/15 text-white text-xs font-semibold px-2.5 py-1">
+              {online ? <MdVideocam size={13} /> : <MdApartment size={13} />}
+              {online ? t('patient.interviews.booking.modeOnline') : t('patient.interviews.booking.modeInPerson')}
+            </span>
+          </div>
+          {online && (
+            slot.meetLink ? (
+              <a href={slot.meetLink} target="_blank" rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-50 transition-colors min-h-[44px]">
+                <MdVideoCall size={18} /> {t('patient.interviews.joinBtn')} <MdOpenInNew size={13} />
+              </a>
+            ) : (
+              <div className="mt-5 inline-block rounded-lg bg-white/10 px-4 py-2.5 text-sm text-brand-100">{t('patient.interviews.noLink')}</div>
+            )
+          )}
+        </div>
+      </div>
+
+      {online ? (
+        <div className="card p-5">
+          <p className="text-sm text-gray-600 leading-relaxed">{t('patient.interviews.booking.onlineNote')}</p>
+          <p className="text-xs text-gray-500 mt-2">{t('patient.interviews.meetHint')}</p>
+        </div>
+      ) : (
+        <div className="card p-5 space-y-3">
+          <div className="flex items-start gap-2">
+            <MdLocationOn size={18} className="text-brand-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-700">{t('patient.interviews.booking.office')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <MdConfirmationNumber size={18} className="text-brand-500 flex-shrink-0" />
+            <p className="text-sm text-gray-700">
+              {slot.queueNo
+                ? t('patient.interviews.booking.queueNo', { no: slot.queueNo })
+                : t('patient.interviews.booking.queuePending')}
+            </p>
+          </div>
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <p className="text-xs font-semibold text-gray-600 mb-2">{t('patient.interviews.booking.bring')}</p>
+            {['bring1', 'bring2', 'bring3'].map(k => (
+              <p key={k} className="flex items-start gap-2 text-sm text-gray-600 mb-1 last:mb-0">
+                <MdCheckCircle size={14} className="text-brand-400 flex-shrink-0 mt-0.5" />
+                <span>{t(`patient.interviews.booking.${k}`)}</span>
+              </p>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500">{t('patient.interviews.booking.joinNote')}</p>
+        </div>
+      )}
+
+      <button type="button" onClick={onReschedule} disabled={rescheduling}
+        className="btn-secondary w-full min-h-[44px]">
+        {rescheduling ? t('patient.interviews.booking.rescheduling') : t('patient.interviews.booking.reschedule')}
+      </button>
+    </div>
+  )
+}
+
 export default function Interviews() {
   const { t }                       = useTranslation()
   const { user }                    = useAuth()
@@ -78,6 +253,15 @@ export default function Interviews() {
   const [loading,              setLoading]              = useState(true)
   const [hasActiveApp,         setHasActiveApp]         = useState(false)
   const [hasCompletedInterview, setHasCompletedInterview] = useState(false)
+  // Self-service booking (Phase 4): the active request drives the booking gate;
+  // the patient's own booked slot renders the appointment (slip / Meet) even
+  // before the server-side request sync; open slots feed the picker.
+  const [activeRequest, setActiveRequest] = useState(null)
+  const [bookedSlot,    setBookedSlot]    = useState(null)
+  const [openSlots,     setOpenSlots]     = useState([])
+  const [booking,       setBooking]       = useState(false)
+  const [confirmReschedule, setConfirmReschedule] = useState(false)
+  const [rescheduling,  setRescheduling]  = useState(false)
   // Per-card prep panel state — keyed by application id so multiple
   // interviews can expand/collapse independently.
   const [expandedPrep,         setExpandedPrep]         = useState(new Set())
@@ -96,6 +280,7 @@ export default function Interviews() {
       snap => {
         const reqs   = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         const active = reqs.find(r => !['closed', 'rejected', 'fully_funded'].includes(r.status)) ?? null
+        setActiveRequest(active)
         setHasActiveApp(!!active)
         setHasCompletedInterview(reqs.some(r => r.interviewOutcome === 'completed'))
 
@@ -125,6 +310,81 @@ export default function Interviews() {
     return unsub
   }, [user?.uid])
 
+  // The patient's own booked slot (rules allow reading a booked slot you hold).
+  // This is what renders the appointment straight after booking, before the
+  // Phase-2 Cloud Function syncs the interview onto the request.
+  useEffect(() => {
+    if (!user?.uid) return
+    const unsub = onSnapshot(
+      query(collection(db, 'interviewSlots'),
+        where('patientId', '==', user.uid),
+        where('status', '==', SLOT_STATUS.BOOKED)),
+      snap => setBookedSlot(snap.docs.map(d => ({ id: d.id, ...d.data() }))[0] ?? null),
+      (err) => console.error('[Interviews] booked-slot snapshot error:', err),
+    )
+    return unsub
+  }, [user?.uid])
+
+  // Booking is open when CRMC has flagged this request AND nothing is booked or
+  // assigned yet. canBookInterview() also guards terminal/concluded states.
+  const canBook = !!(activeRequest && canBookInterview(activeRequest) &&
+    !activeRequest.interviewDate && !bookedSlot)
+
+  // Only subscribe to the open-slot list while the picker is actually shown.
+  useEffect(() => {
+    if (!canBook) { setOpenSlots([]); return }
+    const unsub = onSnapshot(
+      query(collection(db, 'interviewSlots'), where('status', '==', SLOT_STATUS.OPEN)),
+      snap => setOpenSlots(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(s => isFutureSlot(s))),
+      (err) => console.error('[Interviews] open-slots snapshot error:', err),
+    )
+    return unsub
+  }, [canBook])
+
+  // Book an open slot: open → booked, stamping only the booking fields the
+  // isBooking() rule permits. The rule's status=='open' precondition is the
+  // compare-and-set, so a lost race surfaces as permission-denied.
+  const handleBook = async (slot) => {
+    if (!activeRequest || booking) return
+    setBooking(true)
+    try {
+      await updateDoc(doc(db, 'interviewSlots', slot.id), {
+        status:    SLOT_STATUS.BOOKED,
+        patientId: user.uid,
+        requestId: activeRequest.id,
+        bookedAt:  serverTimestamp(),
+      })
+      toast.success(t('patient.interviews.booking.booked'))
+    } catch (err) {
+      console.error('[Interviews] book error:', err)
+      if (err?.code === 'permission-denied') toast.error(t('patient.interviews.booking.taken'))
+      else toast.error(t('patient.interviews.booking.bookError'))
+    } finally {
+      setBooking(false)
+    }
+  }
+
+  // Reschedule = release the slot (booked → open) and let the picker reappear.
+  const performReschedule = async () => {
+    if (!bookedSlot || rescheduling) return
+    setRescheduling(true)
+    try {
+      await updateDoc(doc(db, 'interviewSlots', bookedSlot.id), {
+        status:    SLOT_STATUS.OPEN,
+        patientId: null,
+        requestId: null,
+        updatedAt: serverTimestamp(),
+      })
+      toast.success(t('patient.interviews.booking.rescheduled'))
+      setConfirmReschedule(false)
+    } catch (err) {
+      console.error('[Interviews] reschedule error:', err)
+      toast.error(t('patient.interviews.booking.rescheduleError'))
+    } finally {
+      setRescheduling(false)
+    }
+  }
+
   return (
     <Layout breadcrumb={t('patient.interviews.title')}>
       {/* Hard viewport cap so long agency names or app IDs can't push
@@ -152,8 +412,26 @@ export default function Interviews() {
           </div>
         )}
 
-        {/* Interview cards */}
-        {!loading && interviews.length > 0 && (
+        {/* Booked appointment — rendered from the patient's own slot */}
+        {!loading && bookedSlot && (
+          <div className="w-full">
+            <BookedAppointment
+              slot={bookedSlot}
+              onReschedule={() => setConfirmReschedule(true)}
+              rescheduling={rescheduling}
+            />
+          </div>
+        )}
+
+        {/* Booking picker — when CRMC has opened booking and nothing is booked */}
+        {!loading && !bookedSlot && canBook && (
+          <div className="w-full">
+            <BookingPicker slots={openSlots} onBook={handleBook} booking={booking} />
+          </div>
+        )}
+
+        {/* Interview cards (CRMC-assigned interview on the request) */}
+        {!loading && !bookedSlot && !canBook && interviews.length > 0 && (
           <div className="space-y-4 w-full">
             {interviews.map(app => {
               const isPast  = isPastDate(app.interviewDate)
@@ -269,7 +547,7 @@ export default function Interviews() {
         )}
 
         {/* Empty state — context-aware */}
-        {!loading && interviews.length === 0 && (
+        {!loading && !bookedSlot && !canBook && interviews.length === 0 && (
           <div className="card p-8 max-w-md mx-auto text-center">
             <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <MdVideoCall size={28} className="text-gray-500" />
@@ -312,6 +590,16 @@ export default function Interviews() {
         )}
 
       </div>
+
+      <ConfirmModal
+        open={confirmReschedule}
+        onClose={() => !rescheduling && setConfirmReschedule(false)}
+        onConfirm={performReschedule}
+        title={t('patient.interviews.booking.rescheduleConfirm')}
+        tone="warning"
+        confirmLabel={t('patient.interviews.booking.reschedule')}
+        confirmLabelBusy={t('patient.interviews.booking.rescheduling')}
+      />
     </Layout>
   )
 }
