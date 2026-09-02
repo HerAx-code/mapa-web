@@ -1,8 +1,8 @@
 /**
  * Date formatting helpers extracted from src/pages/admin/Messages.jsx
- * as part of the Phase 2.2 split. Used by ConversationModal,
- * ConversationThread, PatientComposeModal, AdminComposeModal, and the
- * Messages page itself for inbox + bubble timestamps + date separators.
+ * as part of the Phase 2.2 split. Used by ConversationThread,
+ * PatientComposeModal, AdminComposeModal, and the Messages page itself
+ * for inbox + bubble timestamps + date separators.
  *
  * - fmtDate(ts)      "9:32 AM" today, "Mar 5" otherwise -- inbox preview
  * - fmtFull(ts)      "Mar 5, 9:32 AM" -- bubble timestamps

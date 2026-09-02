@@ -17,7 +17,6 @@ import {
 // ./messages/. The page now focuses on the inbox list + selection state
 // + the two-pane orchestration. ~900 lines removed.
 import { fmtDate } from './messages/helpers'
-import ConversationModal     from './messages/ConversationModal'
 import ConversationThread    from './messages/ConversationThread'
 import PatientComposeModal   from './messages/PatientComposeModal'
 import AdminComposeModal     from './messages/AdminComposeModal'
@@ -360,19 +359,23 @@ export default function Messages() {
             renders itself when showCompose is true. */}
         {composeModal}
 
-        {/* Mobile-only thread modal. md:hidden on the wrapper so the
-            fixed overlay inside doesn't escape onto desktop. */}
-        <div className="md:hidden">
-          {activeConv && (
-            <ConversationModal
-              conversations={filtered}
-              activeIndex={activeIndex}
+        {/* Mobile-only full-screen thread. fixed inset-0 fills the phone
+            screen at a STABLE height (no content-based resizing — the old
+            centered modal grew/shrank with message count), with a back
+            arrow — the standard mobile chat pattern, not a floating dialog.
+            Reuses the same ConversationThread the desktop split uses. */}
+        {activeConv && (
+          <div className="md:hidden fixed inset-0 z-[200] bg-white flex flex-col">
+            <ConversationThread
+              key={activeConv.id}
+              conversation={activeConv}
               user={user}
-              onClose={() => setActiveIndex(null)}
-              onNavigate={setActiveIndex}
+              text={threadText}
+              setText={setThreadText}
+              onBack={() => { setActiveIndex(null); setThreadText('') }}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ── Desktop (md+) — two-panel split ── */}
         <div className="hidden md:flex flex-1 min-h-0 overflow-hidden">
