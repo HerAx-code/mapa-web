@@ -6,6 +6,7 @@ import {
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import BalanceHero from '../../components/patient/BalanceHero'
+import JourneyStrip from '../../components/patient/JourneyStrip'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -428,7 +429,7 @@ export default function TrackStatus() {
 
         <div className="mb-5">
           <p className="eyebrow">{t('patient.track.eyebrow')}</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.track.title')}</h1>
+          <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.track.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.track.subtitle')}</p>
         </div>
 
@@ -497,6 +498,13 @@ export default function TrackStatus() {
           const { committed, balance, pct } = funding
           return (
             <div data-tour-id="track-request" className="space-y-5 mb-5">
+              {/* Glance-first: the same journey strip the Dashboard leads
+                  with, so tapping through to Status keeps the "where am I"
+                  anchor in view before the money + detailed stepper below. */}
+              <div className="card px-3 py-3.5">
+                <JourneyStrip status={activeRequest.status} />
+              </div>
+
               {/* Shared balance hero — same signature centrepiece as the
                   Dashboard, so the two surfaces read as one flow. */}
               <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
@@ -509,10 +517,10 @@ export default function TrackStatus() {
                 {stages.map((s, i) => {
                   const dot = (
                     <div className="flex flex-col items-center">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-green-500 text-white' : s.active ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-brand-500 text-white' : s.active ? 'border-2 border-amber-500 bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-400'}`}>
                         {s.done ? <MdCheck size={15} /> : <span className="text-xs font-semibold">{i + 1}</span>}
                       </div>
-                      {i < stages.length - 1 && <div className={`w-0.5 flex-1 min-h-4 ${s.done ? 'bg-green-300' : 'bg-gray-100'}`} />}
+                      {i < stages.length - 1 && <div className={`w-0.5 flex-1 min-h-4 ${s.done ? 'bg-brand-300' : 'bg-gray-100'}`} />}
                     </div>
                   )
                   const labelBlock = (
