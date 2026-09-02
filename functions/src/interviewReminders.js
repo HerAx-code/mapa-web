@@ -1,6 +1,18 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
+const { defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
+const nodemailer = require('nodemailer')
+
+// Gmail SMTP credentials, shared with the Vercel /api/send-email route (the
+// same Gmail App Password). Stored as Firebase secrets and bound to this
+// function — so they MUST be set before deploying functions:
+//   firebase functions:secrets:set SMTP_USER   (the Gmail address)
+//   firebase functions:secrets:set SMTP_PASS   (the 16-char App Password)
+// The From line defaults to "MAPA CRMC <SMTP_USER>"; override with a plain
+// (non-secret) SMTP_FROM env var if a different display From is wanted.
+const SMTP_USER = defineSecret('SMTP_USER')
+const SMTP_PASS = defineSecret('SMTP_PASS')
 
 /**
  * interviewReminders — scheduled reminders for upcoming assessment interviews
@@ -100,30 +112,71 @@ async function handleInterviewReminders({ db, nowMs, timestampFromMs, serverTime
 exports.handleInterviewReminders = handleInterviewReminders
 exports.reminderCopy = reminderCopy
 
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+))
+
+// The same branded shell notify() uses on the web, so a reminder email looks
+// like every other MAPA email.
+function reminderEmailHtml(title, body) {
+  return [
+    '<div style="font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111827;">',
+    `<h2 style="margin:0 0 12px;color:#111827;font-size:18px;">${escapeHtml(title)}</h2>`,
+    `<p style="margin:0 0 16px;color:#374151;line-height:1.5;font-size:14px;">${escapeHtml(body).replace(/\n/g, '<br>')}</p>`,
+    '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;">',
+    '<p style="margin:0;color:#9ca3af;font-size:12px;">MAPA · Cotabato Regional Medical Center · Sinsuat Avenue, Cotabato City</p>',
+    '</div>',
+  ].join('')
+}
+
 exports.interviewReminders = onSchedule(
   {
     schedule: 'every 30 minutes',
     timeZone: 'Asia/Manila',
     region: 'asia-southeast1',
     retryCount: 2,
+    secrets: [SMTP_USER, SMTP_PASS],
   },
   async () => {
     const db = admin.firestore()
+    // One transport per invocation, reused across the batch's sends.
+    const mailFrom = process.env.SMTP_FROM || `MAPA CRMC <${SMTP_USER.value()}>`
+    const transport = nodemailer.createTransport({
+      host: 'smtp.gmail.com', port: 465, secure: true,
+      auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
+    })
+
     const result = await handleInterviewReminders({
       db,
       nowMs: Date.now(),
       timestampFromMs: (ms) => admin.firestore.Timestamp.fromMillis(ms),
       serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
-      // In-app notification: the same notifications/{uid}/items shape the
-      // client notify() writes. Admin SDK, so rules are bypassed; fromUid null
-      // marks it system-generated.
       sendNotification: async ({ uid, type, title, body }) => {
         if (!uid) return
+        // 1. In-app (primary): the same notifications/{uid}/items shape the
+        //    client notify() writes. Admin SDK bypasses rules; fromUid null
+        //    marks it system-generated.
         await db.collection('notifications').doc(uid).collection('items').add({
           type, title, body, read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           fromUid: null,
         })
+        // 2. Email (secondary): only if the patient has an email on file.
+        //    Best-effort — a mail failure never fails the reminder or the batch.
+        try {
+          const snap  = await db.collection('users').doc(uid).get()
+          const email = snap.exists ? snap.data()?.email : null
+          if (!email) return
+          await transport.sendMail({
+            from:    mailFrom,
+            to:      email,
+            subject: title,
+            text:    `${body}\n\n— MAPA · Cotabato Regional Medical Center`,
+            html:    reminderEmailHtml(title, body),
+          })
+        } catch (err) {
+          logger.warn('[interviewReminders] email send failed', { uid, err: err?.message })
+        }
       },
     })
     logger.info('[interviewReminders] run complete', result)
