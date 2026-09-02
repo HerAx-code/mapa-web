@@ -22,6 +22,9 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        // Warm humanist display for patient-facing headlines (the redesign) —
+        // reads as a companion, not an admin panel. Use via `font-display`.
+        display: ['"Bricolage Grotesque"', 'Inter', 'system-ui', 'sans-serif'],
       },
     },
   },

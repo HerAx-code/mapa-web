@@ -1223,6 +1223,15 @@
           "content": "Sa Login page, i-click ang \"Forgot Password?\" at ipasok ang inyong rehistradong email address. Magpapadala ng password reset link sa inyong email. I-click ang link upang gumawa ng bagong password. Kung hindi ninyo natanggap ang email, tingnan ang inyong spam o junk folder. Para sa karagdagang tulong, makipag-ugnayan sa CRMC Medical Social Services."
         }
       }
+    },
+    "journey": {
+      "label": "Iyong progreso",
+      "submitted": "Naisumite",
+      "verified": "Na-verify",
+      "interview": "Panayam",
+      "endorsed": "Na-endorso",
+      "approved": "Naaprubahan",
+      "letter": "Sulat"
     }
   },
   "register": {
