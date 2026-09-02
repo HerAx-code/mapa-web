@@ -94,7 +94,8 @@ const ADMIN_NAV = {
     { to: '/admin/assistance',      icon: MdFavorite,             label: 'Assistance Types' },
   ],
   operations: [
-    { to: '/admin/requests',    icon: MdReceiptLong, label: 'Requests' },
+    { to: '/admin/requests',    icon: MdReceiptLong,  label: 'Requests' },
+    { to: '/admin/interviews',  icon: MdCalendarToday, label: 'Interviews' },
     { to: '/admin/analytics',   icon: MdInsights,  label: 'Analytics' },
     { to: '/admin/logs',        icon: MdListAlt,   label: 'App Logs' },
     { to: '/admin/patients',    icon: MdGroup,     label: 'Patients' },
@@ -709,6 +710,7 @@ const APPS = {
     { label: 'Doc Types',      icon: MdDescription,          to: '/admin/doctypes'    },
     { label: 'Assistance',     icon: MdFavorite,             to: '/admin/assistance'  },
     { label: 'Requests',       icon: MdReceiptLong,          to: '/admin/requests'    },
+    { label: 'Interviews',     icon: MdCalendarToday,        to: '/admin/interviews'  },
     { label: 'App Logs',       icon: MdListAlt,              to: '/admin/logs'        },
     { label: 'Patients',       icon: MdGroup,                to: '/admin/patients'    },
     { label: 'Access Codes',   icon: MdBadge,                to: '/admin/hospitalids' },
