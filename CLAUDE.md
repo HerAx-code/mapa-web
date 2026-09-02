@@ -25,7 +25,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
   - **Online (fallback):** a Google Meet link, for when in-person isn't feasible — a health emergency (COVID-style restrictions), typhoon/flooding, or a patient too far or too unwell to travel. Same booking system; only the "where" changes. CRMC can shift the mix (per slot/day, or a program-wide switch) so the service keeps running under disruption.
   - Google Meet is deliberate for the online mode — free, reliable on weak networks, no infra to run. Building our own video is NOT planned (see Out Of Scope).
 - Notifications: in-app notifications (Firestore) + email (Firebase)
-  - No SMS today — email + in-app cover notifications; push is planned via Firebase Cloud Messaging when the mobile app ships. **SMS is now an open production decision, not a settled "no"** — many patients are phone-primary and may lack reliable email/data, so it is gated on an SMS-gateway budget rather than on the old "thesis pilot" cost reason. Decide before relying on email reach.
+  - **SMS via Semaphore** (semaphore.co, PH-local) — built as a third channel through `api/send-sms.js` + `notify({ sms: true, smsText })`. It's **opt-in per call and paid per segment**, so reserved for high-value, time-critical messages (interview scheduled, approval) with minimal, PII-free copy (RA-10173) — never every notification. Provisioned by setting `SEMAPHORE_API_KEY` in Vercel; unset = the channel no-ops (in-app + email unaffected). Push is planned via Firebase Cloud Messaging when the mobile app ships. Reminders-by-SMS (the `interviewReminders` function) is a deliberate follow-up.
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 - Reminders for interviews go via email + in-app notification (24h before, 1h before)
 
@@ -47,7 +47,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
 - Real money movement (no bank APIs, no payments). Note: monetary *commitments* ARE tracked as data — approved amounts, agency budgets, Guarantee Letter status. MAPA records intent; actual settlement happens off-system between agency and provider.
-- SMS notifications — **deferred pending a production decision** (not built). Email + in-app + future push cover current needs; revisit if an SMS-gateway budget is approved. No longer ruled out purely on "pilot" cost — see Communication Channels.
+- ~~SMS notifications~~ — **now built** via Semaphore (opt-in, high-value messages only). See Communication Channels. Remaining SMS work (reminders-by-SMS in the Cloud Function) is a scoped follow-up, not out of scope.
 - Custom video calling built on raw WebRTC (own signaling/TURN/SFU/media infra) — **not planned.** The online-interview fallback uses Google Meet. A *managed* embedded-video provider (Daily / LiveKit / self-hosted Jitsi) is a reconsiderable production option only if in-app join friction proves to be a real, observed barrier — never a from-scratch WebRTC build. See Communication Channels.
 - Donor portal
 - Fraud detection engine (manual judgment by social workers)
