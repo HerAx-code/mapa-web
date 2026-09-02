@@ -1232,6 +1232,16 @@
       "endorsed": "Endorsed",
       "approved": "Approved",
       "letter": "Letter"
+    },
+    "hero": {
+      "step": "Step {{n}} of {{total}}",
+      "trackCta": "See my request",
+      "interviewCta": "Your interview",
+      "s0": { "title": "Request received", "sub": "CRMC will start reviewing your documents soon." },
+      "s1": { "title": "Under review", "sub": "CRMC is checking your documents." },
+      "s2": { "title": "Your interview", "sub": "It's time for your assessment interview with CRMC." },
+      "s3": { "title": "With the agencies", "sub": "CRMC endorsed your request to a funding agency." },
+      "s4": { "title": "Partly approved", "sub": "An agency approved part of your request." }
     }
   },
   "register": {

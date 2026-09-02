@@ -1232,6 +1232,16 @@
       "endorsed": "Na-endorso",
       "approved": "Naaprubahan",
       "letter": "Sulat"
+    },
+    "hero": {
+      "step": "Hakbang {{n}} ng {{total}}",
+      "trackCta": "Tingnan ang kahilingan",
+      "interviewCta": "Ang iyong panayam",
+      "s0": { "title": "Natanggap ang kahilingan", "sub": "Sisimulan nang suriin ng CRMC ang iyong mga dokumento." },
+      "s1": { "title": "Sinusuri", "sub": "Sinusuri ng CRMC ang iyong mga dokumento." },
+      "s2": { "title": "Ang iyong panayam", "sub": "Oras na para sa iyong panayam sa CRMC." },
+      "s3": { "title": "Nasa mga ahensya", "sub": "Na-endorso ng CRMC ang iyong kahilingan sa ahensya." },
+      "s4": { "title": "Bahagyang naaprubahan", "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan." }
     }
   },
   "register": {

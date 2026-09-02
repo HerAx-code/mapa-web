@@ -11,6 +11,7 @@ import {
 import Layout from '../../components/Layout'
 import BalanceHero from '../../components/patient/BalanceHero'
 import JourneyStrip from '../../components/patient/JourneyStrip'
+import StatusHero from '../../components/patient/StatusHero'
 import InstallPrompt from '../../components/InstallPrompt'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
@@ -748,7 +749,12 @@ export default function PatientDashboard() {
             <div className="h-12 bg-gray-100 rounded-xl" />
           </div>
         ) : activeRequest && funding ? (
-            <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
+            // Pre-funding stages (submitted → assessment) get the redesign's
+            // cohesive "Step X of 6 + one action" pine hero; once money is in
+            // play (endorsed onward) the balance/coverage hero is what matters.
+            (REQ_RANK[activeRequest.status] ?? 0) < 3
+              ? <StatusHero request={activeRequest} nextAction={nextAction} navigate={navigate} />
+              : <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
         ) : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
           const vis = STATUS_VISUAL[activeApp.status]
           const txt = `patient.dashboard.statusCard.${activeApp.status}`
@@ -910,8 +916,11 @@ export default function PatientDashboard() {
         )}
 
         {/* Next action (when the ball is with the patient) + the real event
-            timeline. Coverage breakdown lives in the aside now. */}
-        {nextAction && <NextActionCard action={nextAction} />}
+            timeline. Coverage breakdown lives in the aside now. When the pine
+            StatusHero is showing it already carries this action as its CTA, so
+            we don't repeat it as a separate card. */}
+        {nextAction && !(activeRequest && funding && (REQ_RANK[activeRequest.status] ?? 0) < 3)
+          && <NextActionCard action={nextAction} />}
         {activeRequest && <TimelineCard request={activeRequest} docStats={docStats} t={t} />}
 
         {/* Step guide — collapsible */}
