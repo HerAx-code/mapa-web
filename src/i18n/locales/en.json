@@ -1289,7 +1289,8 @@
     },
     "toast": {
       "codeVerified": "Access code verified!",
-      "welcome": "Welcome, {{name}}! Your account has been created."
+      "welcome": "Welcome, {{name}}! Your account has been created.",
+      "alreadyRegistered": "You have already registered with this access code. Please log in."
     },
     "password": {
       "tooShort": "Too short",

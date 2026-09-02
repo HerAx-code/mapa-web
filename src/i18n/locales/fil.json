@@ -1289,7 +1289,8 @@
     },
     "toast": {
       "codeVerified": "Na-verify ang access code!",
-      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account."
+      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account.",
+      "alreadyRegistered": "Nakarehistro ka na gamit ang access code na ito. Mangyaring mag-login."
     },
     "password": {
       "tooShort": "Masyadong maikli",
