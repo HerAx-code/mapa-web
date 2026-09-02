@@ -1223,6 +1223,15 @@
           "content": "On the Login page, click \"Forgot Password?\" and enter your registered email address. A password reset link will be sent to your email. Click the link to set a new password. If you did not receive the email, check your spam or junk folder. For further help, contact CRMC Medical Social Services."
         }
       }
+    },
+    "journey": {
+      "label": "Your progress",
+      "submitted": "Submitted",
+      "verified": "Verified",
+      "interview": "Interview",
+      "endorsed": "Endorsed",
+      "approved": "Approved",
+      "letter": "Letter"
     }
   },
   "register": {

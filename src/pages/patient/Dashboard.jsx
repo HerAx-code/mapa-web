@@ -10,6 +10,7 @@ import {
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import BalanceHero from '../../components/patient/BalanceHero'
+import JourneyStrip from '../../components/patient/JourneyStrip'
 import InstallPrompt from '../../components/InstallPrompt'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
@@ -717,7 +718,7 @@ export default function PatientDashboard() {
             On desktop (sm+) the greeting returns to page-title weight
             so the dashboard reads like a landing page. */}
         <div data-tour-id="patient-greeting">
-          <h1 className="text-base sm:text-xl font-semibold text-gray-700 sm:text-gray-900">
+          <h1 className="font-display text-lg sm:text-2xl font-bold tracking-tight text-gray-800 sm:text-gray-900">
             {t('patient.dashboard.subtitle', { name: firstName })}
           </h1>
           {greetingStatus && (
@@ -898,6 +899,15 @@ export default function PatientDashboard() {
           </div>
         )}
         </div>{/* /patient-hero wrapper */}
+
+        {/* At-a-glance journey strip — the redesign's "where am I" answered
+            without reading, right under the hero. Full detail lives in the
+            Status timeline below / on the Status tab. */}
+        {activeRequest && (
+          <div className="card px-3 py-3.5">
+            <JourneyStrip status={activeRequest.status} />
+          </div>
+        )}
 
         {/* Next action (when the ball is with the patient) + the real event
             timeline. Coverage breakdown lives in the aside now. */}
