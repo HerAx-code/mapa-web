@@ -1,0 +1,81 @@
+name: Deploy Firestore rules
+
+# Runs the rules test suite and then deploys firestore.rules to production, so
+# prod rules can never drift from tested state (they are otherwise deployed by
+# hand: `firebase deploy --only firestore:rules`). Triggers only on pushes to
+# main that touch the rules or their tests.
+#
+# INERT UNTIL ACTIVATED: the deploy step is skipped when the
+# FIREBASE_SERVICE_ACCOUNT secret is absent, and the workflow still goes green.
+# So this file can land ahead of the secret.
+#
+# One-time setup to activate:
+#   1. Create a dedicated, least-privilege service account on the mapa-crmc
+#      project with role  roles/firebaserules.admin  (Firebase Rules Admin) —
+#      NOT the full owner key.
+#   2. Add its JSON key as a GitHub Actions secret named
+#      FIREBASE_SERVICE_ACCOUNT (Settings → Secrets and variables → Actions).
+# After that, every merge to main that changes the rules tests them and, on
+# pass, deploys them.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'tests/rules/**'
+      - '.github/workflows/deploy-rules.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-rules
+  cancel-in-progress: false
+
+jobs:
+  test-and-deploy:
+    name: Rules tests → deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Java (Firestore emulator requirement)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@^13
+
+      - name: Run rules tests (gate — must pass before deploy)
+        run: npm run test:rules
+
+      - name: Check for deploy credentials
+        id: creds
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$SA_JSON" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::FIREBASE_SERVICE_ACCOUNT not set — rules tested but NOT deployed. Add the secret to activate auto-deploy."
+          fi
+
+      - name: Deploy Firestore rules
+        if: steps.creds.outputs.present == 'true'
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
+        run: |
+          printf '%s' "$SA_JSON" > "$GITHUB_WORKSPACE/sa.json"
+          firebase deploy --only firestore:rules --project mapa-crmc --non-interactive
+          rm -f "$GITHUB_WORKSPACE/sa.json"

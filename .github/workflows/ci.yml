@@ -117,6 +117,19 @@ jobs:
         run: npm run lint:i18n
         continue-on-error: true
 
+      - name: Dependency audit (informational)
+        # OWASP 2025 A03 (Software Supply Chain Failures). Surfaces
+        # high/critical advisories in the web + functions dependency trees
+        # as a CI signal. Non-blocking (continue-on-error) so a freshly
+        # disclosed transitive advisory doesn't wall off an unrelated PR;
+        # Dependabot opens the actual fix PRs. Review the output on merges.
+        continue-on-error: true
+        run: |
+          echo "== web =="
+          npm audit --audit-level=high || true
+          echo "== functions =="
+          (cd functions && npm audit --audit-level=high || true)
+
   rules-tests:
     name: Firestore rules tests (emulator)
     runs-on: ubuntu-latest
