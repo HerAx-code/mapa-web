@@ -560,7 +560,19 @@ include `Interviews.jsx` (self-booking) and `AccessLog.jsx`.
 | `announcements` | auto-id | System-wide banner messages |
 | `auditLog` | auto-id | Immutable platform action history |
 | `docReviewPresence` | matches `documents.id` | Ephemeral "who is reviewing this document" tracking |
+| `interviewSlots` *(2026-09)* | auto-id | Bookable CRMC assessment-interview slots (appointment system) — see note below |
 | `mail` | auto-id (deprecated) | Stub from earlier Firebase Extension attempt (no longer written) |
+
+> **`interviewSlots` (2026-09 addendum).** Fields: `date` ("YYYY-MM-DD"),
+> `time` (display string), `start` (Timestamp), `durationMin`, `mode`
+> (`in_person` | `online`), `status` (`open` | `booked`); once booked,
+> `patientId`, `requestId`, `bookedAt`; `queueNo` (in-person, assigned in
+> booking order by the `onInterviewSlotWritten` function), `meetLink`
+> (online), and `reminderSent24h` / `reminderSent1h` flags (managed by
+> `interviewReminders`). Rules: admin-only create / delete / reschedule;
+> a patient may only book or cancel their **own** slot through field-locked
+> writes gated by a `status == 'open'` compare-and-set (a lost race surfaces
+> as permission-denied rather than a double-book).
 
 ### 6.2 Key Document Schemas
 

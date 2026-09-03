@@ -55,7 +55,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Real-time IHOMIS integration (use manual case number reference instead)
 
 ## Firestore Collections
-users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
+users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence, interviewSlots
 
 ## Co-funding model (current)
 CRMC is the single intake gateway; agencies only fund. The patient submits ONE
