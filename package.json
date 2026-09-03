@@ -57,7 +57,7 @@
     "eslint-plugin-i18next": "^6.1.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "firebase-admin": "^13.10.0",
+    "firebase-admin": "^14.3.0",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.4.35",
