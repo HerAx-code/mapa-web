@@ -60,6 +60,28 @@ Last updated: 2026-06-07. **Current-state refresh: 2026-08-25.**
 > - Auth pages elevated to match the landing. PWA install CTA relabelled
 >   "Install App" (was "Download App") with honest, safe-install copy;
 >   `docs/mobile-app-apk.md` documents the PWA-vs-APK path.
+>
+> **Addendum — 2026-09-03 (work after the 2026-08-25 banner)**
+> - **Interview booking is now a self-service appointment system.** Patients
+>   book the single CRMC assessment interview from capacity-limited slots;
+>   **in-person by default, Google Meet online as a fallback.** Adds an
+>   `interviewSlots` collection, an admin slot publisher + per-request
+>   open/close-booking gate, and two more **deployed** Cloud Functions —
+>   `onInterviewSlotWritten` (book/cancel sync + in-person queue number) and
+>   `interviewReminders` (scheduled 24 h + 1 h email + in-app). Interview
+>   reminders are therefore no longer client-side/dashboard-poll only.
+> - **QR Patient Access Codes** — the code is also issued as a scannable QR
+>   that opens the portal and pre-fills it; printed code stays as fallback.
+> - **SMS: built, not yet live.** Semaphore (opt-in, PII-free, high-value
+>   alerts) via `api/send-sms.js` + `notify({ sms, smsText })`, pending
+>   sender-name approval; in-app + email remain the live channels. Any "no
+>   SMS" text is superseded.
+> - **CI adds a Playwright E2E smoke suite** to the existing suites.
+> - **Patient-mobile redesign** — `JourneyStrip` + `StatusHero`, Bricolage
+>   display font, pine/amber (stage) vs green (money) colour language.
+> - **Landing + `/install` redesign** — one warm cohesive design system;
+>   added eligibility, a free/anti-scam band, an FAQ, and a visit-us block;
+>   PWA maskable icon fixed (blue-border-behind-logo).
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,

@@ -37,6 +37,42 @@
 >   CSS animated "aurora" background on the landing hero + Login + Register
 >   (reduced-motion-safe); elevated auth cards; PWA CTA relabelled
 >   "Install App." See `docs/mobile-app-apk.md`.
+>
+> ### Addendum — 2026-09-03 (work after the 2026-08-25 banner)
+> - **Appointment / interview booking system.** Patients now **self-book**
+>   the single CRMC assessment interview from capacity-limited slots. Hybrid
+>   by design — **in-person at the office by default, Google Meet online as a
+>   fallback** for health emergencies, disaster, or distance. New
+>   `interviewSlots` collection + an admin slot publisher and a per-request
+>   open/close-booking gate; two more **deployed** Cloud Functions —
+>   `onInterviewSlotWritten` (book/cancel → syncs the interview onto the
+>   request and assigns an in-person queue number) and `interviewReminders`
+>   (scheduled 24 h + 1 h email + in-app reminders). Any text describing the
+>   interview as agency-scheduled, online-only, or dashboard-poll-reminded is
+>   superseded. See `docs/appointment-system-plan.md`.
+> - **QR Patient Access Codes.** The Access Code is now also issued as a
+>   scannable QR (e.g. on a patient armband) that opens the portal and
+>   pre-fills the code; the printed code remains the fallback.
+> - **SMS notifications — built, activation pending.** SMS via **Semaphore**
+>   (PH-local gateway), opt-in per message and PII-free, reserved for
+>   high-value alerts (interview scheduled, approval), via `api/send-sms.js`
+>   + `notify({ sms, smsText })`. **Not yet live** — the sender name "MAPA"
+>   is pending Semaphore approval; in-app + email remain the active channels.
+>   Reminders-by-SMS is a deferred follow-up. Supersedes "no SMS" everywhere.
+> - **CI now also runs a Playwright E2E smoke suite** alongside the
+>   utils / components / functions / rules suites (the "286 tests / four
+>   suites" figure above predates it).
+> - **Patient-mobile redesign.** Status-first restructure with a reusable
+>   `JourneyStrip` (6-node lifecycle) and a cohesive pine `StatusHero`
+>   ("Step X of 6 + one action"); **Bricolage Grotesque** as the patient
+>   display font; a consistent **pine/amber = stage progress vs green =
+>   money** colour language across Dashboard, Status, Interviews and More.
+> - **Public landing + install redesign.** A warm, cohesive art-direction
+>   pass (single warm ground, soft cards, warm icon chips, display headings)
+>   with a one-moment hero entrance; new trust sections — who-can-apply /
+>   eligibility, a free / anti-scam band, an FAQ, and a visit-us / contact
+>   block; the `/install` page reskinned to match; the PWA **maskable icon
+>   corrected** (it had a blue border behind the logo).
 
 **Last updated:** 2026-06-07 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32, and **the Inter-Agency Coordination Plan Phase 1 (R33 Case Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard)** — see `docs/revision-list.md` for the change log)
 
