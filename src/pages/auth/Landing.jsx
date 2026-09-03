@@ -38,9 +38,18 @@ export default function Landing() {
   const { t }       = useTranslation()
   const { user }    = useAuth()
   const featuresRef = useRef(null)
+  const programsRef = useRef(null)
 
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [agencies, setAgencies]       = useState([])
+  // Program-slot bars fill from empty the first time the Programs section
+  // scrolls into view — motion that conveys the data (how full each program
+  // is), not decoration. Starts already "in" under reduced motion so the
+  // bars render at their real width with no animation.
+  const [programsIn, setProgramsIn] = useState(
+    () => typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
+  )
 
   // Installed-PWA users have no reason to see the marketing landing
   // page. The 'Download App' CTA is meaningless (they already have
@@ -69,6 +78,20 @@ export default function Landing() {
     )
     return unsub
   }, [])
+
+  // Reveal the slot bars on first scroll into view. Skipped entirely under
+  // reduced motion (programsIn already starts true there).
+  useEffect(() => {
+    if (programsIn) return
+    const el = programsRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setProgramsIn(true); return }
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setProgramsIn(true); io.disconnect() } },
+      { threshold: 0.2 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [programsIn])
 
   const handleMainCTA = () => {
     if (user) navigate(DASHBOARD[user.role] ?? '/patient/dashboard')
@@ -286,7 +309,7 @@ export default function Landing() {
       </section>}
 
       {/* Available Programs */}
-      <section className="py-16 px-6 bg-gray-50">
+      <section ref={programsRef} className="py-16 px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
             <div>
@@ -318,7 +341,7 @@ export default function Landing() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {agencies.map(agency => {
+              {agencies.map((agency, i) => {
                 const total     = agency.slots?.total ?? 0
                 const remaining = agency.slots?.remaining ?? 0
                 const pct       = total > 0 ? Math.round(((total - remaining) / total) * 100) : 0
@@ -336,10 +359,10 @@ export default function Landing() {
                         {isFull ? t('landing.programs.full') : t('landing.programs.slotsBadge', { count: remaining })}
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full mb-1">
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full mb-1 overflow-hidden">
                       <div
-                        className={`h-1.5 rounded-full transition-all ${isFull ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-brand-500'}`}
-                        style={{ width: `${pct}%` }}
+                        className={`h-1.5 rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${isFull ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-brand-500'}`}
+                        style={{ width: programsIn ? `${pct}%` : '0%', transitionDelay: `${i * 80}ms` }}
                       />
                     </div>
                     <p className="text-xs text-gray-500">{t('landing.programs.slotsRemaining', { remaining, total })}</p>
