@@ -461,6 +461,79 @@ The same SPA functions as the "mobile app" when installed. The distinction betwe
 
 The install page detects whether the app is already installed and presents either platform-specific instructions or a one-tap install button (via `beforeinstallprompt`).
 
+### 5.6 Current architecture — 2026-09-03 addendum
+
+§5.1–5.2 describe the **as-submitted** architecture, where all business logic
+ran client-side or inside Security Rules. Since the Blaze upgrade the system
+also has a **server-side tier of Cloud Functions** and a **second Vercel
+function for SMS**. The current shape:
+
+- **Serverless (Vercel):** `/api/send-email` (Nodemailer → Gmail SMTP) and
+  `/api/send-sms` (Semaphore, a PH-local gateway; opt-in per call, PII-free,
+  and a hard no-op when unconfigured). Both verify the caller's Firebase
+  token (`jose`) before relaying.
+- **Cloud Functions (Firebase, `asia-southeast1`)** — server-authoritative
+  logic the rules alone cannot express:
+  - `verifyAccessCode` — server-side access-code throttle.
+  - `syncRequestFinancials` — Firestore trigger; recomputes a request's
+    funding tally from its slices.
+  - `deleteAuthUser` — super-admin-only Auth-account erasure (RA 10173 §16e).
+  - `onInterviewSlotWritten` — Firestore trigger; on interview-slot
+    book/cancel, syncs the interview onto the request and assigns an
+    in-person queue number.
+  - `interviewReminders` — scheduled; 24 h + 1 h interview reminders via
+    email + in-app.
+- **Firebase Storage** is available (Blaze) but `documentContents` remain
+  base64-in-Firestore until the written migration runs.
+- **External services:** Gmail SMTP (email), Semaphore (SMS — live once the
+  sender name is approved), and Google Meet (online-interview fallback — a
+  stored link, no API integration).
+
+Updated high-level component diagram:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  User's Device — Browser / installed PWA / Service Worker     │
+└───────────────────────────────┬──────────────────────────────┘
+                                │ HTTPS
+                                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                          Vercel CDN                           │
+│   Static React bundle (code-split per role)                   │
+│   ├─ /api/send-email  ──SMTP TLS──▶  Gmail SMTP               │
+│   └─ /api/send-sms    ──HTTPS────▶   Semaphore SMS gateway    │
+└───────────────┬──────────────────────────────────────────────┘
+                │ Firestore SDK (WebSocket) + Firebase ID token
+                ▼
+┌──────────────────────────────────────────────────────────────┐
+│              Firebase / Google Cloud (asia-southeast1)        │
+│   ┌───────────────┐   ┌────────────────────────────────────┐  │
+│   │ Firebase Auth │   │ Cloud Firestore + Security Rules   │  │
+│   └───────┬───────┘   │ + composite indexes                │  │
+│           │           └───────────────┬────────────────────┘  │
+│           │                           │ triggers / schedule    │
+│           ▼                           ▼                        │
+│   ┌──────────────────────────────────────────────────────┐    │
+│   │ Cloud Functions:                                     │    │
+│   │  verifyAccessCode · syncRequestFinancials ·          │    │
+│   │  deleteAuthUser · onInterviewSlotWritten (trigger) · │    │
+│   │  interviewReminders (scheduled → email + in-app)     │    │
+│   └──────────────────────────────────────────────────────┘    │
+│   ┌──────────────────────────────────────────────────────┐    │
+│   │ Firebase Storage (available; documentContents still  │    │
+│   │ base64-in-Firestore pending migration)               │    │
+│   └──────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────┘
+   External (no API integration): Google Meet link = online-interview fallback
+```
+
+**Code-organization deltas since §5.3:** `api/send-sms.js`; a `functions/`
+directory (Cloud Functions, written with a testable-handler pattern + thin
+v2 wrappers, covered by the `functions` test suite); `src/utils/
+appointments.js` (interview-slot model); `src/components/patient/` gains
+`JourneyStrip`, `StatusHero`, and `BalanceHero`; the patient pages now
+include `Interviews.jsx` (self-booking) and `AccessLog.jsx`.
+
 ---
 
 ## 6. Data Model (Firestore Collections)
