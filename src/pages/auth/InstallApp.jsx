@@ -57,11 +57,11 @@ function ContinueOnPhone({ t }) {
       .catch(() => setCopied(false))
   }
   return (
-    <div className="card p-4">
+    <div className="lp-card p-4">
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
-          <MdSmartphone size={16} className="text-brand-500" />
-        </div>
+        <span className="lp-chip h-9 w-9 bg-brand-50 text-brand-600">
+          <MdSmartphone size={17} />
+        </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900">{t('installPage.continueOnPhone.title')}</p>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">{t('installPage.continueOnPhone.desc')}</p>
@@ -95,7 +95,7 @@ function StepsSection({ t, platform, stepsRef }) {
   return (
     <section ref={stepsRef} aria-labelledby="install-steps-heading" className="space-y-4 scroll-mt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="install-steps-heading" className="text-lg font-bold tracking-tight text-gray-900">
+        <h2 id="install-steps-heading" className="font-display text-xl font-bold tracking-tight text-brand-900">
           {t('installPage.steps.title')}
         </h2>
         <div role="tablist" aria-label={t('installPage.steps.choosePhone')}
@@ -294,7 +294,7 @@ export default function InstallApp() {
 
   // Shared: the smart install button + its dynamic hint (logic unchanged).
   const installCta = installed ? (
-    <div className="card p-4 flex items-start gap-3 border-green-200 bg-green-50">
+    <div className="lp-card p-4 flex items-start gap-3 border-green-200 bg-green-50">
       <MdCheckCircle size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-green-800">{t('installPage.alreadyInstalled.title')}</p>
@@ -305,7 +305,7 @@ export default function InstallApp() {
     <div>
       <button onClick={handleInstallClick}
         disabled={buttonState === 'preparing'}
-        className="w-full sm:w-auto sm:min-w-[260px] bg-brand-500 hover:bg-brand-600 active:bg-brand-700 disabled:bg-brand-400 text-white font-semibold px-6 py-4 rounded-2xl inline-flex items-center justify-center gap-2.5 text-base shadow-sm transition-colors">
+        className="w-full sm:w-auto sm:min-w-[260px] bg-brand-500 hover:bg-brand-600 active:bg-brand-700 disabled:bg-brand-400 text-white font-semibold px-6 py-4 rounded-2xl inline-flex items-center justify-center gap-2.5 text-base shadow-lg shadow-brand-900/15 transition-colors">
         {buttonState === 'preparing' ? (
           <>
             <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -338,12 +338,12 @@ export default function InstallApp() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#FBFAF8] text-gray-800 flex flex-col">
 
       {/* Topbar — hide 'Back to home' when the app is already
           installed; the Landing page redirects away in standalone
           mode so the link would just round-trip the user. */}
-      <header className="border-b border-gray-100 px-5 sm:px-6 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-[#FBFAF8]/85 backdrop-blur px-5 sm:px-6 py-3 flex items-center justify-between">
         <Logo size={32} withWordmark />
         <div className="flex items-center gap-2">
           <LanguageToggle />
@@ -363,8 +363,8 @@ export default function InstallApp() {
 
             {/* Hero */}
             <section className="space-y-5">
-              <p className="eyebrow">{t('installPage.org')}</p>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 leading-[1.1] max-w-xl">
+              <p className="text-sm font-semibold text-brand-600">{t('installPage.org')}</p>
+              <h1 className="font-display text-3xl sm:text-[40px] font-bold tracking-tight text-brand-900 leading-[1.08] max-w-xl">
                 {t('installPage.hero.title')}
               </h1>
               <p className="text-base text-gray-500 leading-relaxed max-w-xl">
@@ -391,25 +391,28 @@ export default function InstallApp() {
               <StepsSection t={t} platform={platform} stepsRef={manualStepsRef} />
             )}
 
-            <hr className="border-gray-100" />
+            <hr className="border-brand-900/10" />
 
             {/* Why install — benefits */}
-            <section className="space-y-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                {t('installPage.benefits.title')}
-              </p>
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+            <section className="space-y-5">
+              <div>
+                <h2 className="font-display text-xl font-bold tracking-tight text-brand-900">
+                  {t('installPage.benefits.title')}
+                </h2>
+                <div className="mt-3 h-1 w-12 rounded-full bg-amber-400" />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
                 {[
                   { Icon: MdHome,          textKey: 'benefits.homescreen' },
                   { Icon: MdFlashOn,       textKey: 'benefits.faster'     },
                   { Icon: MdWifiOff,       textKey: 'benefits.offline'    },
                   { Icon: MdNotifications, textKey: 'benefits.notifs'     },
                 ].map(({ Icon, textKey }) => (
-                  <div key={textKey} className="flex items-start gap-3">
-                    <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon size={18} className="text-brand-500" />
-                    </div>
-                    <p className="text-sm text-gray-700 leading-relaxed pt-1.5">
+                  <div key={textKey} className="lp-card p-4 flex items-start gap-3">
+                    <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600">
+                      <Icon size={20} />
+                    </span>
+                    <p className="text-sm text-gray-700 leading-relaxed pt-1">
                       {t(`installPage.${textKey}`)}
                     </p>
                   </div>
