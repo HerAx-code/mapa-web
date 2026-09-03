@@ -1,0 +1,36 @@
+# Dependency + supply-chain update automation (OWASP 2025 A03 — Software
+# Supply Chain Failures). Dependabot opens PRs for outdated/vulnerable
+# dependencies weekly; security updates are opened as soon as an advisory
+# lands regardless of schedule.
+version: 2
+updates:
+  # Web app (root package.json)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # Batch minor/patch bumps into one PR to reduce review churn; majors
+      # still come as individual PRs so they get a deliberate look.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    labels: ["dependencies", "security"]
+
+  # Cloud Functions (functions/package.json)
+  - package-ecosystem: "npm"
+    directory: "/functions"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    labels: ["dependencies", "security", "functions"]
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]
