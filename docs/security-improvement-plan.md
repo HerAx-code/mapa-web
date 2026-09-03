@@ -98,10 +98,16 @@ and `Permissions-Policy`. Limits XSS blast radius + clickjacking.
   `Content-Security-Policy-Report-Only` → `Content-Security-Policy`. Replacing
   `script-src 'unsafe-inline'` with a nonce is the follow-up hardening.
 
-### 2.4 Rules-deploy gate in CI  → closes "manual rule deploy"
+### 2.4 Rules-deploy gate in CI  → closes "manual rule deploy"  — 🟡 scaffolded (2026-09-03)
 A CI job that runs the rules tests and (on `main`) deploys `firestore.rules`
 via a service account, so production rules can't silently drift from the
 tested state or be forgotten after a change.
+- **Done:** `.github/workflows/deploy-rules.yml` — on a rules change to `main`
+  it runs the rules suite and then deploys. **Inert until activated:** the
+  deploy step is skipped (workflow stays green) while the secret is absent.
+- **Remaining (you):** create a least-privilege service account with
+  `roles/firebaserules.admin` on `mapa-crmc` and add its JSON key as the
+  GitHub secret **`FIREBASE_SERVICE_ACCOUNT`**. Auto-deploy activates then.
 
 ### 2.5 Harden the Vercel API functions
 For `send-email` / `send-sms`: verify the `jose` token strictly (audience +
