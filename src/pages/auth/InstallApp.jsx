@@ -22,17 +22,19 @@ function PhonePreview() {
         <div className="flex h-7 items-center justify-center">
           <div className="h-1.5 w-14 rounded-full bg-gray-900/15" />
         </div>
-        {/* App grid — MAPA highlighted, then muted placeholder apps (4 rows) */}
+        {/* App grid — MAPA highlighted, then muted placeholder apps (4 rows).
+            Icons are w-full/aspect-square so each fills its own grid column;
+            a fixed icon width would overflow the columns and overlap. */}
         <div className="px-4 pb-2 pt-1">
           <div className="grid grid-cols-4 gap-x-3 gap-y-4">
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-1.5">
               <img src="/pwa-192.png" alt=""
-                className="h-11 w-11 max-w-none object-contain rounded-[0.85rem] shadow-sm ring-2 ring-brand-400/50" />
+                className="w-full aspect-square object-contain rounded-[0.7rem] shadow-sm ring-2 ring-brand-400/50" />
               <span className="text-[8px] font-semibold text-gray-700">MAPA</span>
             </div>
             {Array.from({ length: 15 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <div className="h-11 w-11 rounded-[0.85rem] bg-gray-200/70" />
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <div className="w-full aspect-square rounded-[0.7rem] bg-gray-200/70" />
                 <span className="h-1.5 w-6 rounded bg-gray-200/60" />
               </div>
             ))}
