@@ -60,9 +60,14 @@ export const getStatus = (ann) => {
 const tsToInputs = (ts) => {
   const d = tsToDate(ts)
   if (!d) return { date: '', time: '' }
+  // Both fields must be LOCAL to round-trip through inputsToTs, which parses
+  // `${date}T${time}` as local time. Deriving the date in UTC (toISOString)
+  // while the time was local shifted the date back a day for pre-08:00 PH
+  // times — editing an announcement then silently re-saved it a day earlier.
+  const pad = (n) => String(n).padStart(2, '0')
   return {
-    date: d.toISOString().slice(0, 10),
-    time: d.toTimeString().slice(0, 5),
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
   }
 }
 

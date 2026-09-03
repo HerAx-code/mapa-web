@@ -963,7 +963,11 @@ export default function Layout({ children, breadcrumb }) {
   useEffect(() => {
     if (!user?.uid) return
     const TWENTY_FOUR_H = 24 * 60 * 60 * 1000
-    const dismissed = JSON.parse(sessionStorage.getItem('dismissed_announcements') || '[]')
+    // Best-effort: sessionStorage access can throw (private mode, locked-down
+    // webview) and the value could be corrupt — never let that crash the shell.
+    let dismissed = []
+    try { dismissed = JSON.parse(sessionStorage.getItem('dismissed_announcements') || '[]') }
+    catch { dismissed = [] }
     const now = Date.now()
 
     getDocs(query(collection(db, 'announcements'), where('active', '==', true)))
@@ -1009,8 +1013,12 @@ export default function Layout({ children, breadcrumb }) {
   }, [user?.uid])
 
   const dismissBanner = (id) => {
-    const dismissed = JSON.parse(sessionStorage.getItem('dismissed_announcements') || '[]')
-    sessionStorage.setItem('dismissed_announcements', JSON.stringify([...dismissed, id]))
+    // Persisting the dismissal is best-effort; a storage failure must not stop
+    // the banner from closing for this session.
+    try {
+      const dismissed = JSON.parse(sessionStorage.getItem('dismissed_announcements') || '[]')
+      sessionStorage.setItem('dismissed_announcements', JSON.stringify([...dismissed, id]))
+    } catch { /* storage blocked/corrupt — dismissal is in-memory only */ }
     setBanners(prev => prev.filter(b => b.id !== id))
   }
 

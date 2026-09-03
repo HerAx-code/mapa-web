@@ -3,6 +3,7 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { notify } from '../utils/notifications'
 import { logAudit } from '../utils/auditLog'
+import { phTodayKey } from '../utils/dates'
 import { MdClose } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -110,7 +111,7 @@ export default function OutcomeModal({ app, outcome, currentUser, onClose, onSav
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">New Date</label>
                 <input type="date" className="input" value={newDate}
-                  min={new Date().toISOString().slice(0, 10)}
+                  min={phTodayKey()}
                   onChange={e => setNewDate(e.target.value)} />
               </div>
               <div>
