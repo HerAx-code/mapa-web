@@ -15,33 +15,34 @@ import LanguageToggle from '../../components/LanguageToggle'
 // MAPA highlighted, and a home indicator — so it reads as a phone, not a card.
 function PhonePreview() {
   return (
-    <div aria-hidden="true" className="mx-auto w-[212px] rounded-[2.4rem] bg-gray-900 p-2 shadow-xl">
+    <div aria-hidden="true" className="mx-auto w-[220px] rounded-[2.4rem] bg-gray-900 p-2 shadow-xl">
       {/* Screen */}
       <div className="relative overflow-hidden rounded-[1.9rem] bg-gradient-to-b from-brand-50 via-white to-gray-50">
         {/* Notch / status pill */}
         <div className="flex h-7 items-center justify-center">
           <div className="h-1.5 w-14 rounded-full bg-gray-900/15" />
         </div>
-        {/* App grid — MAPA highlighted, then muted placeholder apps (4 rows).
-            Icons are w-full/aspect-square so each fills its own grid column;
-            a fixed icon width would overflow the columns and overlap. */}
-        <div className="px-4 pb-2 pt-1">
-          <div className="grid grid-cols-4 gap-x-3 gap-y-4">
+        {/* App grid — MAPA highlighted, then muted placeholder apps (3 rows).
+            Fixed 36px square icons genuinely fit the phone's content width:
+            220px − 16 (phone p-2) − 24 (px-3) = 180px; 4×36 + 3×10 = 174 ≤ 180.
+            So the icons never overflow their columns or overlap. */}
+        <div className="px-3 pb-2 pt-1">
+          <div className="grid grid-cols-4 gap-x-2.5 gap-y-4 justify-items-center">
             <div className="flex flex-col items-center gap-1.5">
               <img src="/pwa-192.png" alt=""
-                className="w-full aspect-square object-contain rounded-[0.7rem] shadow-sm ring-2 ring-brand-400/50" />
+                className="h-9 w-9 max-w-none object-contain rounded-[0.6rem] shadow-sm ring-2 ring-brand-400/50" />
               <span className="text-[8px] font-semibold text-gray-700">MAPA</span>
             </div>
-            {Array.from({ length: 15 }).map((_, i) => (
+            {Array.from({ length: 11 }).map((_, i) => (
               <div key={i} className="flex flex-col items-center gap-1.5">
-                <div className="w-full aspect-square rounded-[0.7rem] bg-gray-200/70" />
+                <div className="h-9 w-9 rounded-[0.6rem] bg-gray-200/70" />
                 <span className="h-1.5 w-6 rounded bg-gray-200/60" />
               </div>
             ))}
           </div>
         </div>
         {/* Home indicator */}
-        <div className="flex justify-center pb-2.5 pt-1.5">
+        <div className="flex justify-center pb-2.5 pt-2">
           <div className="h-1 w-16 rounded-full bg-gray-900/20" />
         </div>
       </div>
