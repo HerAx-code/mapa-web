@@ -9,6 +9,7 @@ import { ROLES } from '../../utils/constants'
 import { firstGivenName } from '../../utils/names'
 import { sendPasswordResetEmail } from 'firebase/auth'
 import { auth, db } from '../../firebase'
+import { isMfaChallenge, resolverFor, resolveTotpSignIn } from '../../utils/mfa'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { TYPE_CONFIG } from '../admin/Announcements'
 import toast from 'react-hot-toast'
@@ -82,6 +83,12 @@ export default function Login() {
   const [showReset, setShowReset]             = useState(false)
   const [resetEmail, setResetEmail]           = useState('')
   const [activeAnnouncement, setActiveAnnouncement] = useState(null)
+  // MFA (TOTP) challenge state — set when an enrolled staff user needs to
+  // enter their authenticator code to finish signing in.
+  const [mfaResolver, setMfaResolver] = useState(null)
+  const [mfaCode, setMfaCode]         = useState('')
+  const [mfaBusy, setMfaBusy]         = useState(false)
+  const [mfaError, setMfaError]       = useState('')
 
   // Redirect if already logged in
   useEffect(() => {
@@ -130,10 +137,34 @@ export default function Login() {
       navigate(DASHBOARD[loggedIn.role] ?? '/patient/dashboard')
     } catch (err) {
       const code = err.code ?? ''
+      // Enrolled staff: password was correct but a second factor is required.
+      // Switch to the code step instead of showing a credentials error.
+      if (isMfaChallenge(err)) {
+        setMfaResolver(resolverFor(auth, err))
+        return
+      }
       setLoginError(true)   // Fix 3 — highlight fields on error
       toast.error(friendlyError(code, t))
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Second step for enrolled users: verify the 6-digit TOTP code. On success
+  // the auth state updates and the redirect effect navigates to the dashboard.
+  const handleMfaSubmit = async (e) => {
+    e.preventDefault()
+    setMfaError(''); setMfaBusy(true)
+    try {
+      await resolveTotpSignIn(mfaResolver, mfaCode)
+      // onAuthStateChanged sets the user; the mount effect handles navigation.
+    } catch (err) {
+      if (err?.code === 'auth/invalid-verification-code' || err?.code === 'auth/invalid-payload')
+        setMfaError('That code did not match. Enter the current code from your authenticator app.')
+      else
+        setMfaError('Could not verify the code. Please try again.')
+    } finally {
+      setMfaBusy(false)
     }
   }
 
@@ -249,6 +280,7 @@ export default function Login() {
               )
             })()}
 
+            {!mfaResolver ? (
             <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
               <div>
                 <label htmlFor="login-email" className="block text-sm font-medium text-gray-900">{t('auth.email')}</label>
@@ -309,6 +341,46 @@ export default function Login() {
                 {!loading && <span aria-hidden="true">→</span>}
               </button>
             </form>
+            ) : (
+              /* Second factor — enrolled staff enter their authenticator code.
+                 Staff-only surface, so English (patients never enroll). */
+              <form onSubmit={handleMfaSubmit} noValidate className="mt-8 space-y-5">
+                <div className="flex items-center gap-2 text-brand-700">
+                  <MdShield size={18} />
+                  <p className="text-sm font-semibold">Two-step verification</p>
+                </div>
+                <div>
+                  <label htmlFor="mfa-code" className="block text-sm font-medium text-gray-900">Enter your 6-digit code</label>
+                  <p className="mt-1 text-sm text-gray-500">Open your authenticator app and enter the current code for MAPA.</p>
+                  <input
+                    id="mfa-code"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    autoFocus
+                    autoComplete="one-time-code"
+                    className={`mt-2 ${FIELD_BASE} text-center font-mono tracking-[0.4em]`}
+                    placeholder="123456"
+                    value={mfaCode}
+                    onChange={e => { setMfaCode(e.target.value.replace(/\D/g, '')); setMfaError('') }}
+                  />
+                  {mfaError && <p className="mt-2 text-sm text-red-600">{mfaError}</p>}
+                </div>
+                <button
+                  type="submit"
+                  disabled={mfaBusy || mfaCode.length !== 6}
+                  className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 text-[15px] font-semibold text-white transition-colors hover:bg-brand-600 active:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {mfaBusy ? 'Verifying…' : 'Verify'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMfaResolver(null); setMfaCode(''); setMfaError('') }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700">
+                  Back to sign in
+                </button>
+              </form>
+            )}
 
             <p className="mt-6 text-sm text-gray-500">
               {t('auth.noAccount')}{' '}
