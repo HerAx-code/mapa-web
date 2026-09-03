@@ -19,6 +19,29 @@ Last updated: 2026-06-01. **Current-state note: 2026-08-25.**
 >   limit is obsolete. "Pilot runs on Spark" → now Blaze.
 > - The 2026-08-25 UI redesign is presentational and does not change the
 >   threat surface.
+>
+> ### Addendum — 2026-09-03 (posture deltas since 2026-08-25)
+> - **Two more Cloud Functions deployed** for the appointment system:
+>   `onInterviewSlotWritten` (Firestore trigger; on book/cancel, syncs the
+>   interview onto the request and assigns an in-person queue number) and
+>   `interviewReminders` (scheduled; email + in-app 24 h/1 h reminders,
+>   reads `SMTP_USER`/`SMTP_PASS` via `defineSecret`). Same trust model as
+>   the existing functions — server-authoritative, service-account-scoped.
+> - **New `interviewSlots` collection.** Rules: create/delete/update are
+>   `isAdmin()`-only; patients may only book/cancel their own slot through
+>   field-locked `isBooking()`/`isCancelling()` writes (compare-and-set on
+>   `status=='open'`, so a lost race surfaces as permission-denied rather
+>   than a double-book).
+> - **New outbound SMS channel** (`api/send-sms.js`, Semaphore) — server-side
+>   on Vercel, jose-verified caller token, minimal PII-free copy (RA 10173),
+>   and a hard no-op when `SEMAPHORE_API_KEY` is unset. Opt-in per call. Not
+>   yet live (sender-name approval pending). The "No SMS" row below is
+>   updated accordingly.
+> - **QR Patient Access Codes** encode the same Access Code already issued in
+>   person — no new secret and no new server surface; the code remains the
+>   registration gate.
+> - The 2026-09 patient/landing/install redesigns are presentational and do
+>   not change the threat surface.
 
 This document records what threats MAPA addresses, what threats it
 deliberately accepts (and why), and the mitigations in place for each.
