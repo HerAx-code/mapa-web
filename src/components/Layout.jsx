@@ -11,7 +11,7 @@ import {
   MdSupervisedUserCircle, MdFavorite, MdFactCheck,
   MdGroup, MdBadge, MdEmail, MdStar, MdCheckCircle,
   MdInfo, MdCalendarToday, MdSend, MdEdit,
-  MdSettings, MdHelp, MdFlag, MdChevronRight, MdLock, MdPerson,
+  MdSettings, MdHelp, MdFlag, MdChevronRight, MdLock, MdPerson, MdVerifiedUser,
   MdCancel, MdNotificationsNone, MdHistory, MdDownload,
   MdCampaign, MdBuildCircle, MdWarning, MdAttachMoney, MdReceiptLong, MdInsights,
   MdSync,
@@ -23,6 +23,7 @@ import { notify } from '../utils/notifications'
 import { useAuth } from '../contexts/AuthContext'
 import { useLiveData } from '../contexts/LiveDataContext'
 import { ROLES, ROLE_LABEL_SHORT } from '../utils/constants'
+import { roleNeedsMfa } from '../utils/mfa'
 import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
 import LanguageToggle from './LanguageToggle'
@@ -775,6 +776,10 @@ function ProfilePanel({ user, avatarColor, initials, roleLabel, onLogout, onClos
   const MENU_ITEMS = [
     { icon: MdPerson,   label: t('shell.profile.accountSettings'), modal: 'account',  chevron: true  },
     { icon: MdLock,     label: t('shell.profile.changePassword'),  modal: 'password', chevron: true  },
+    // Two-step verification — staff roles only (patients don't enrol).
+    ...(roleNeedsMfa(user?.role)
+      ? [{ icon: MdVerifiedUser, label: t('shell.profile.twoStep'), modal: 'mfa', chevron: true }]
+      : []),
     { icon: MdShield,   label: t('shell.profile.privacyNotice'),   modal: 'settings', chevron: true  },
     { icon: MdHelp,     label: t('shell.profile.helpSupport'),     modal: 'help',     chevron: true  },
     { icon: MdFlag,     label: t('shell.profile.reportProblem'),   modal: 'report',   chevron: false },

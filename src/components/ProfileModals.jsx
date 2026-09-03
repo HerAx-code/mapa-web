@@ -4,6 +4,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, auth, storage } from '../firebase'
 import { notify } from '../utils/notifications'
+import MfaEnrollModal from './MfaEnrollModal'
 
 // Phase 2.4: profile photos now live in Cloud Storage at
 //   /profilePhotos/{uid}/avatar.jpg
@@ -828,6 +829,8 @@ function ReportModal({ onClose }) {
 
 export default function ProfileModals({ activeModal, onClose, onSetModal }) {
   if (!activeModal) return null
+  // Two-step verification setup brings its own overlay + reauth flow.
+  if (activeModal === 'mfa') return <MfaEnrollModal onClose={onClose} />
   return (
     <div className="fixed inset-0 bg-black/50 z-[200] flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>

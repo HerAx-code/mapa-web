@@ -362,6 +362,7 @@
     "profile": {
       "accountSettings": "Mga Setting ng Account",
       "changePassword": "Palitan ang Password",
+      "twoStep": "Two-step verification",
       "privacyNotice": "Abiso sa Privacy",
       "helpSupport": "Tulong at Suporta",
       "reportProblem": "Mag-ulat ng Problema",
