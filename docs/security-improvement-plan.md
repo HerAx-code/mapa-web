@@ -86,10 +86,17 @@ Migrate `documentContents` from base64-in-Firestore to Cloud Storage with
 rules-gated access + short-lived **signed URLs** (code already exists, dormant).
 Smaller Firestore surface, per-object ACLs, expiry, and no ~700 KB cap.
 
-### 2.3 Security headers + CSP (Vercel)
+### 2.3 Security headers + CSP (Vercel)  — 🟡 partially shipped (2026-09-03)
 Add via `vercel.json`: a Content-Security-Policy, `Strict-Transport-Security`,
 `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`,
 and `Permissions-Policy`. Limits XSS blast radius + clickjacking.
+- **Done:** HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff,
+  Referrer-Policy, and Permissions-Policy (camera=(self) so the ID selfie
+  keeps working) are live. CSP ships in **Report-Only** mode.
+- **Remaining:** watch the browser console for CSP violations on real flows
+  (selfie/OCR worker, Firebase, fonts, agency logo URLs), tighten, then flip
+  `Content-Security-Policy-Report-Only` → `Content-Security-Policy`. Replacing
+  `script-src 'unsafe-inline'` with a nonce is the follow-up hardening.
 
 ### 2.4 Rules-deploy gate in CI  → closes "manual rule deploy"
 A CI job that runs the rules tests and (on `main`) deploys `firestore.rules`
@@ -106,9 +113,13 @@ turned into an open email/SMS relay.
 
 ## P3 — Process & long-term
 
-### 3.1 Dependency / supply-chain scanning
+### 3.1 Dependency / supply-chain scanning  — 🟡 partially shipped (2026-09-03)
 Enable Dependabot + `npm audit` (web **and** `functions/`) in CI; review the
 `jose` / `nodemailer` / `qrcode` / `firebase` pins.
+- **Done:** `.github/dependabot.yml` — weekly npm updates for `/` and
+  `/functions` (minor/patch grouped, majors individual) + github-actions.
+- **Remaining:** add a non-blocking `npm audit --audit-level=high` step to CI
+  as a second signal.
 
 ### 3.2 RA 10173 program: retention + breach response
 Define a data retention/erasure schedule; document breach response in the
