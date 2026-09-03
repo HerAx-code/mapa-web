@@ -302,7 +302,7 @@ vs server-written entries.
 | No staging environment | Dev work hits the same Firestore as the pilot |
 | No automated CI / no rule-deploy gate | Manual `firebase deploy --only firestore:rules`; tests must be run locally |
 | No 2FA, no session timeout | Firebase Auth defaults |
-| No SMS, no offline mode | Out of scope per CLAUDE.md |
+| SMS built but not live; basic offline handling present | SMS via Semaphore (opt-in, PII-free, high-value alerts) is implemented and awaits sender-name approval; until then in-app + email are the channels. Offline is handled at the shell level by the installable PWA (cached app shell + an offline banner), not full offline data sync |
 | Client-side rate limiting only | Bypassable; production needs server-side throttle |
 
 ## How this document evolves

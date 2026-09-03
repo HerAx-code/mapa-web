@@ -76,7 +76,7 @@ to zero balance. Agencies don't re-review documents or re-interview
 ### What this system deliberately does NOT do
 
 - **No real money movement.** MAPA tracks intent (approved amounts, GL status); actual settlement happens off-system between agency and provider.
-- **No SMS notifications.** In-app + email only; push notifications planned when the mobile app ships.
+- **SMS: built, activation pending.** SMS via Semaphore (opt-in per message, PII-free, reserved for high-value alerts like interview-scheduled and approval) is implemented but not yet live — it turns on once the Semaphore sender name "MAPA" clears approval. In-app + email are the active channels today; FCM push is planned when the mobile app ships.
 - **No embedded video calling.** Google Meet links (free, no API integration).
 - **No PhilSys API integration.** OCR-assisted, social-worker-confirmed ID verification.
 - **No donor portal, no fraud detection engine, no multi-hospital network, no real-time IHOMIS integration** — all out of scope for the thesis pilot.

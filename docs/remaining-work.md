@@ -83,16 +83,21 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
 
 ## Deliberately OUT OF SCOPE (design decisions, not gaps)
 
-Documented in `CLAUDE.md`, mostly cost/scope-driven for the thesis pilot:
-**SMS notifications**, **real money movement / payments**, **PhilSys /
+Documented in `CLAUDE.md`, mostly cost/scope-driven:
+**real money movement / payments**, **PhilSys /
 biometric verification**, **embedded video calling** (Google Meet links
 instead), **donor portal**, **fraud-detection engine**, **multi-hospital
 support**, **real-time IHOMIS integration**.
 
-> Note on reachability: with SMS out of scope, a patient with no reliable
-> email and an offline phone is the weakest link in actually informing
-> indigent patients. Future push notifications (free via FCM, once the mobile
-> app ships) are the intended mitigation.
+> **SMS is no longer out of scope — it is now built** via Semaphore (opt-in
+> per message, paid per segment, PII-free, reserved for high-value alerts).
+> It is not yet *live*: the Semaphore sender name "MAPA" is pending approval
+> (3–5 business days), and the channel no-ops until `SEMAPHORE_API_KEY` +
+> `SEMAPHORE_SENDER` are set in Vercel. Reminders-by-SMS (the
+> `interviewReminders` function) remains a scoped follow-up. Until SMS is
+> live, a patient with no reliable email and an offline phone is the weakest
+> reachability link; FCM push (free, once the mobile app ships) is the
+> further mitigation.
 
 ---
 

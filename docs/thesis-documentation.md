@@ -93,7 +93,7 @@ The system is scoped to CRMC's Cotabato City pilot. The following are explicitly
 
 - PhilSys/National ID API integration (manual social-worker verification used instead)
 - Real money movement / banking APIs (the system tracks monetary commitments as data only)
-- SMS notifications (cost-prohibitive for thesis pilot; email + in-app + future push notifications used instead)
+- SMS notifications were out of scope at submission (cost); they have since been **built** for production via Semaphore (opt-in, PII-free, high-value alerts only) and await sender-name approval before going live. Email + in-app remain the active channels, with FCM push planned for the mobile app.
 - Embedded video calling (Google Meet links used instead)
 - Donor portal
 - Fraud detection engine (manual social-worker judgment)
@@ -1439,7 +1439,7 @@ Phases 3 (in-case comment threads, joint Meet scheduling, Open Referral/HSDS ada
 | Low | Some icon-only buttons missing `aria-label` | Identified during audit; gradually fixed |
 | Acknowledged | Email notifications require Vercel env vars (SMTP_USER, SMTP_PASS, SMTP_FROM) to be set in the deployment | One-time setup; documented in DEPLOY.md |
 | Acknowledged | Signed GL PDF upload capped at ~700 KB raw (Firestore 1 MiB document limit, base64 expansion) | Documented; full Firebase Storage migration is the production path (currently blocked by Firebase Spark plan constraints on post-Oct-2024 projects) |
-| Acknowledged | No automated tests | Outside scope; manual testing + read-pass review series on every change |
+| Resolved | Automated tests added post-submission | Vitest unit (utils) + jsdom/RTL component smoke + Firestore-emulator rules + Playwright E2E, all run in GitHub Actions CI on every push/PR; pre-commit hook runs the unit tests. (At submission: manual testing + the read-pass review series.) |
 | Acknowledged | GL_STATUS_CONFIG not yet extracted | Two render sites use different visual treatments (badge vs text); would need a label-only helper rather than a full canonical config. Documented; not blocking |
 | Acknowledged | Keyboard shortcuts on admin/Requests (V to verify focused doc, J/K to navigate queue) | Bulk-verify shipped 2026-05-31. Keyboard shortcuts deferred — useful for high-volume CRMC days but design call needed on focus model and shortcut conflict with browser shortcuts |
 | Acknowledged | Four `firestore.rules` branches grant broader writes than the UI exercises (`agencies` update for any agency role, `applications` update for own agency, `auditLog` create with no actor-must-match check, `conversations` create open to any authenticated user) | Comments in `firestore.rules` document each as an intentional deferral; UI is the gate today | See §7.3 "Known broad-write surfaces" for the per-surface tightening path. Each could be closed with a small rule addition once the UI gating is fully audited; deferred to post-pilot |
@@ -1468,11 +1468,11 @@ Phases 3 (in-case comment threads, joint Meet scheduling, Open Referral/HSDS ada
 
 2. **No Firebase Cloud Functions.** Email delivery uses a Vercel serverless route as a workaround. The scheduled daily slot reset has a Cloud Function ready (gated on Blaze) but currently relies on a belt-and-suspenders lazy reset on the CRMC Requests page on first visit of the day. If Blaze plan is acquired, migration to Firebase Cloud Functions (and the official Trigger Email from Firestore extension) would simplify ops.
 
-3. **No automated tests.** Manual testing + the read-pass review series is sufficient for thesis pilot but should be supplemented by Cypress (E2E) and Vitest (unit) before production. The read-pass series caught 16 real correctness bugs that an automated suite would have caught earlier.
+3. **Automated tests — added for production.** At submission the system relied on manual testing + the read-pass review series (which caught 16 real correctness bugs). It has since been supplemented with an automated suite run in GitHub Actions CI on every push and PR: Vitest unit tests (utils), jsdom + React Testing Library component smoke tests, Firestore-emulator security-rules tests, and a Playwright E2E smoke test — plus a pre-commit hook running the unit tests.
 
 4. **Single-pilot scope.** The system is hardcoded for one hospital (CRMC). A multi-hospital deployment would require restructuring the `users.hospitalId` namespace, the Patient Access Code format, and adding a `hospitals` collection.
 
-5. **No SMS notification fallback.** Patients without consistent email access miss notifications. SMS via a service like Twilio would close this gap (cost-prohibitive for thesis pilot per CLAUDE.md).
+5. **SMS notification fallback — now built, activation pending.** Patients without consistent email access miss notifications. This gap is closed in code: SMS via Semaphore (semaphore.co, a PH-local gateway — chosen over Twilio for local sender support and price) is implemented as an opt-in, PII-free channel for high-value alerts (interview scheduled, approval). It is not yet live pending Semaphore sender-name approval; email + in-app remain the active channels until then.
 
 6. **Document storage in Firestore.** Documents and signed GL scans are stored as base64 in Firestore. This is convenient but inefficient at scale; the base64 expansion caps PDF GL scans at ~700 KB raw. Migration to Firebase Storage with signed URLs is the recommended long-term path, blocked currently by Spark-plan restrictions on Storage for post-Oct-2024 projects.
 
