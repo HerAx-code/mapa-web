@@ -730,7 +730,7 @@ export default function RequestAssistance() {
       <div className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
         <div className="mb-4">
           <p className="eyebrow">{t('patient.request.eyebrow')}</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.request.title')}</h1>
+          <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.request.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.request.subtitle')}</p>
         </div>
 

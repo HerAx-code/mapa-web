@@ -236,7 +236,7 @@ export default function IntakeWizard() {
         </button>
         <div className="flex items-center gap-2 mb-1">
           <cur.Icon className="text-brand-500 flex-shrink-0" size={24} />
-          <h1 className="text-xl font-bold text-gray-900">{cur.en}</h1>
+          <h1 className="font-display text-xl font-bold text-gray-900">{cur.en}</h1>
         </div>
         <p className="text-sm text-gray-500 mb-3">{cur.fil}</p>
         <div className="flex items-center gap-1.5 mb-1">
