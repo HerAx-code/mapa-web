@@ -221,6 +221,55 @@
       "slotsBadge": "{{count}} slots",
       "slotsRemaining": "{{remaining}} ng {{total}} na slot ang natitira ngayon"
     },
+    "cost": {
+      "title": "Libre ang pag-apply",
+      "body": "Hindi kayo hihingan ng bayad ng MAPA — hindi sa pagrehistro, hindi sa Access Code, at hindi sa paglabas ng Guarantee Letter.",
+      "point1": "Walang bayad sa pagrehistro",
+      "point2": "Walang processing fee",
+      "point3": "Walang fixer o tagapamagitan",
+      "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-CRMC. Isumbong agad sa Malasakit Center."
+    },
+    "eligibility": {
+      "title": "Sino ang maaaring mag-apply",
+      "intro": "Para sa mga pasyente ng CRMC na hindi kayang bayaran ang bill. Hindi kailangang marunong sa computer — maikli ang form, at may staff na maaaring tumulong sa inyo.",
+      "qualifyHeading": "Maaari kayong mag-apply kung…",
+      "q1": "Kayo ay naka-admit o ginamot sa CRMC.",
+      "q2": "May hindi pa bayad na bill o billing statement.",
+      "q3": "Naitala kayong indigent patient ng social worker ng CRMC.",
+      "q4": "Kayo ang pasyente, o kapamilyang nag-aapply para sa kanya.",
+      "codeHeading": "Kailangan ng Patient Access Code",
+      "codeBody": "Naka-print ito at ibinibigay nang personal sa CRMC Medical Social Services office. Hindi ito ipinapadala sa text, email, o social media — at walang makapagbibigay nito online.",
+      "codeSample": "Halimbawa ng code",
+      "codeCta": "Saan ang opisina?"
+    },
+    "faq": {
+      "heading": "Mga tanong na madalas itanong",
+      "intro": "Kung wala rito ang tanong ninyo, tumawag o dumalaw — mas mabuting ipaliwanag namin kaysa manghula kayo.",
+      "q1": "May kailangan ba akong bayaran?",
+      "a1": "Wala. Libre ang buong proseso sa MAPA, mula sa pagre-register hanggang sa paglabas ng Guarantee Letter. Hindi kayo hihingan ng bayad, deposito, o 'processing fee' ng CRMC o ng MAPA. Kung may humingi ng pera kapalit ng approval, ipagbigay-alam agad sa Medical Social Services.",
+      "q2": "Ano ang Patient Access Code at paano ito makukuha?",
+      "a2": "Isang naka-print na code na ibinibigay nang personal sa CRMC Medical Social Services office, matapos makumpirma ng social worker na kayo ay pasyente ng CRMC na may hindi pa bayad na bill. Ang code ang nag-uugnay sa inyong online application at tunay na hospital record, kaya hindi ito maaaring hingin sa telepono, text, o email. Magdala ng valid ID at billing statement.",
+      "q3": "Maaari ba akong mag-apply para sa kapamilya?",
+      "a3": "Oo. Maaaring mag-apply ang asawa, magulang, anak na nasa hustong gulang, o awtorisadong kinatawan para sa pasyente — karaniwan kapag naka-confine pa ang pasyente o hindi kayang gumamit ng telepono. Itatanong ang inyong relasyon sa pasyente, sarili ninyong valid ID, at authorization letter na nilagdaan ng pasyente o pamilya.",
+      "q4": "Gaano katagal ang proseso?",
+      "a4": "Depende ito sa kakumpletuhan ng inyong dokumento at sa review at bakanteng slot ng bawat ahensya. Sinisikap ng CRMC na mabilis na masuri ang dokumento at ma-schedule ang assessment interview, at makikita ninyo ang bawat hakbang sa inyong account.",
+      "q5": "Paano kung hindi ako makakarating sa interview?",
+      "a5": "Sabihin sa inyong social worker at maaaring gawing online interview sa Google Meet. Ipapadala ang link sa inyong nakarehistrong email at mobile number, at tumatagal ito ng mga 15–20 minuto. Kung mahina ang signal, maaari rin itong gawin sa tawag.",
+      "q6": "Ligtas ba ang aking impormasyon?",
+      "a6": "Oo. Pinapatakbo ang MAPA ng CRMC at pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ahensyang pinagsumite ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras."
+    },
+    "help": {
+      "title": "Kailangan ng tulong? Dumalaw.",
+      "intro": "Ang staff sa CRMC Malasakit Center ay maaaring magrehistro para sa inyo, kunan ng selfie, at mag-upload ng dokumento. Dalhin ang papeles at may tutulong sa inyo.",
+      "onsite": "May tulong para sa walk-in — hindi kailangan ng appointment.",
+      "startBtn": "Simulan ang aplikasyon",
+      "addressLabel": "Address",
+      "address": "CRMC Malasakit Center, Sinsuat Avenue, Lungsod ng Cotabato, Maguindanao del Norte 9600",
+      "phoneLabel": "Telepono",
+      "emailLabel": "Email",
+      "hoursLabel": "Oras ng opisina",
+      "hours": "Lunes hanggang Biyernes, 8:00 AM – 5:00 PM. Sarado sa holiday."
+    },
     "footer": {
       "brandDesc": "Ang opisyal na online system ng Cotabato Regional Medical Center para sa pagproseso ng medical assistance applications.",
       "quickLinks": "Mabilisang Links",

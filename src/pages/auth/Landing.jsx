@@ -12,6 +12,8 @@ import {
   MdBadge, MdMailOutline, MdSmartphone, MdLocationOn,
   MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
   MdPhone, MdSchedule,
+  MdCheck, MdWarningAmber, MdChevronRight, MdConfirmationNumber,
+  MdExpandMore, MdGroups, MdMoneyOff,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import AgencyAvatar from '../../components/AgencyAvatar'
@@ -219,6 +221,49 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Who can apply — eligibility checklist + the Patient Access Code,
+          the real gate to registering. New visitors only. */}
+      {!user && <section id="eligibility" className="py-16 px-6 bg-white">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">{t('landing.eligibility.title')}</h2>
+          <p className="text-sm text-gray-500 mb-8 max-w-2xl leading-relaxed">{t('landing.eligibility.intro')}</p>
+          <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
+            {/* Qualify checklist */}
+            <div className="lg:col-span-7">
+              <h3 className="text-base font-semibold text-gray-800 mb-4">{t('landing.eligibility.qualifyHeading')}</h3>
+              <ul className="divide-y divide-gray-100 border-t border-gray-100">
+                {['q1', 'q2', 'q3', 'q4'].map(k => (
+                  <li key={k} className="flex items-start gap-3 py-3.5">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                      <MdCheck size={15} />
+                    </span>
+                    <span className="text-sm leading-relaxed text-gray-700">{t(`landing.eligibility.${k}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Access-code card — amber, because it's the one thing they must
+                have before registering (and the anti-scam warning). */}
+            <div className="lg:col-span-5">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-amber-600">
+                  <MdConfirmationNumber size={22} />
+                </span>
+                <h3 className="mt-4 font-display text-lg font-bold text-gray-900">{t('landing.eligibility.codeHeading')}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-gray-700">{t('landing.eligibility.codeBody')}</p>
+                <div className="mt-5 rounded-xl border border-dashed border-amber-400 bg-white px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{t('landing.eligibility.codeSample')}</p>
+                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">CRMC-2026-00042</p>
+                </div>
+                <a href="#help" className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
+                  {t('landing.eligibility.codeCta')} <MdChevronRight size={16} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>}
+
       {/* What to prepare — only shown to unauthenticated visitors */}
       {!user && <section className="py-10 px-6 bg-brand-500">
         <div className="max-w-4xl mx-auto">
@@ -308,6 +353,37 @@ export default function Landing() {
         </div>
       </section>}
 
+      {/* Applying is free — the single biggest trust question for an indigent
+          patient, and an anti-fixer warning. Bold pine band; sits between the
+          two white sections so it doesn't collide with the brand-500 prepare
+          band above. New visitors only. */}
+      {!user && <section className="py-14 px-6 bg-brand-700">
+        <div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-12 lg:items-start lg:gap-12">
+          <div className="lg:col-span-6">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-white mb-3 flex items-center gap-2.5">
+              <MdMoneyOff size={26} className="text-brand-200 flex-shrink-0" /> {t('landing.cost.title')}
+            </h2>
+            <p className="text-brand-50/90 text-sm leading-relaxed mb-6 max-w-xl">{t('landing.cost.body')}</p>
+            <ul className="flex flex-wrap gap-x-6 gap-y-3">
+              {['point1', 'point2', 'point3'].map(k => (
+                <li key={k} className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-brand-100">
+                    <MdCheck size={13} />
+                  </span>
+                  {t(`landing.cost.${k}`)}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="lg:col-span-6 lg:pt-1">
+            <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-brand-800 p-5">
+              <MdWarningAmber size={20} className="mt-0.5 flex-shrink-0 text-amber-400" />
+              <p className="text-sm leading-relaxed text-brand-50">{t('landing.cost.warning')}</p>
+            </div>
+          </div>
+        </div>
+      </section>}
+
       {/* Available Programs */}
       <section ref={programsRef} className="py-16 px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
@@ -371,6 +447,69 @@ export default function Landing() {
               })}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* FAQ — the real questions a worried first-time applicant asks.
+          Native <details> so it works with zero JS and stays accessible;
+          shown to everyone. */}
+      <section id="faq" className="py-16 px-6 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">{t('landing.faq.heading')}</h2>
+          <p className="text-sm text-gray-500 mb-8 leading-relaxed">{t('landing.faq.intro')}</p>
+          <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
+            {['1', '2', '3', '4', '5', '6'].map(n => (
+              <details key={n} className="group">
+                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden py-4 min-h-[44px] text-sm font-semibold text-gray-800">
+                  <span>{t(`landing.faq.q${n}`)}</span>
+                  <MdExpandMore size={22} className="flex-shrink-0 text-brand-500 transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="pb-4 pr-8 text-sm leading-relaxed text-gray-600">{t(`landing.faq.a${n}`)}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Need help / Visit us — the human escape hatch for low-literacy
+          users: real CRMC contact details + a note that staff will do the
+          whole application with them in person. Shown to everyone. */}
+      <section id="help" className="py-16 px-6 bg-gray-50">
+        <div className="max-w-5xl mx-auto grid gap-10 lg:grid-cols-12 lg:gap-14">
+          <div className="lg:col-span-5">
+            <h2 className="font-display text-2xl font-bold text-gray-900 mb-3">{t('landing.help.title')}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">{t('landing.help.intro')}</p>
+            <div className="mt-5 flex items-start gap-3 rounded-2xl bg-brand-50 p-4">
+              <MdGroups size={20} className="mt-0.5 flex-shrink-0 text-brand-700" />
+              <p className="text-sm font-medium leading-relaxed text-brand-700">{t('landing.help.onsite')}</p>
+            </div>
+            {!user && (
+              <button onClick={() => navigate('/register')}
+                className="btn-primary mt-5 px-6 py-2.5 text-base flex items-center gap-2">
+                {t('landing.help.startBtn')} <MdArrowForward size={18} />
+              </button>
+            )}
+          </div>
+          <div className="lg:col-span-7">
+            <dl className="divide-y divide-gray-100 border-y border-gray-100 bg-white rounded-2xl px-4">
+              {[
+                { Icon: MdLocationOn,  label: t('landing.help.addressLabel'), value: t('landing.help.address') },
+                { Icon: MdPhone,       label: t('landing.help.phoneLabel'),   value: '(064) 421-2500' },
+                { Icon: MdMailOutline, label: t('landing.help.emailLabel'),   value: 'records@crmc.gov.ph' },
+                { Icon: MdSchedule,    label: t('landing.help.hoursLabel'),   value: t('landing.help.hours') },
+              ].map((row, i) => (
+                <div key={i} className="flex gap-4 py-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500">
+                    <row.Icon size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">{row.label}</dt>
+                    <dd className="mt-1 text-sm leading-relaxed text-gray-900 break-words">{row.value}</dd>
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
       </section>
 
