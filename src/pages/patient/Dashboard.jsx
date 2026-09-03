@@ -426,10 +426,16 @@ export default function PatientDashboard() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(false)
   useEffect(() => {
     if (!user?.uid) return
-    setWelcomeDismissed(localStorage.getItem(`mapa_welcome_dismissed_${user.uid}`) === '1')
+    // localStorage access can throw when storage is blocked — treat any
+    // failure as "not dismissed" rather than crashing the dashboard on mount.
+    try {
+      setWelcomeDismissed(localStorage.getItem(`mapa_welcome_dismissed_${user.uid}`) === '1')
+    } catch { setWelcomeDismissed(false) }
   }, [user?.uid])
   const dismissWelcome = () => {
-    if (user?.uid) localStorage.setItem(`mapa_welcome_dismissed_${user.uid}`, '1')
+    try {
+      if (user?.uid) localStorage.setItem(`mapa_welcome_dismissed_${user.uid}`, '1')
+    } catch { /* storage blocked — dismissal is in-memory only this session */ }
     setWelcomeDismissed(true)
   }
 

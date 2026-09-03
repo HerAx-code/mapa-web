@@ -9,9 +9,16 @@ import fil from './locales/fil.json'
 
 const STORAGE_KEY = 'mapa.lang'
 
-const savedLang = (typeof window !== 'undefined' && window.localStorage)
-  ? window.localStorage.getItem(STORAGE_KEY)
-  : null
+// Reading window.localStorage can throw a SecurityError when storage is
+// blocked (sandboxed iframe, strict privacy policy). Guard it so a blocked
+// storage never turns into a blank-screen boot failure — we just default the
+// language.
+let savedLang = null
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    savedLang = window.localStorage.getItem(STORAGE_KEY)
+  }
+} catch { savedLang = null }
 
 i18n
   .use(initReactI18next)
@@ -23,9 +30,11 @@ i18n
   })
 
 i18n.on('languageChanged', (lng) => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.setItem(STORAGE_KEY, lng)
-  }
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(STORAGE_KEY, lng)
+    }
+  } catch { /* storage unavailable — language just won't persist across reloads */ }
 })
 
 export default i18n
