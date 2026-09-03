@@ -38,9 +38,18 @@ export default function Landing() {
   const { t }       = useTranslation()
   const { user }    = useAuth()
   const featuresRef = useRef(null)
+  const programsRef = useRef(null)
 
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [agencies, setAgencies]       = useState([])
+  // Program-slot bars fill from empty the first time the Programs section
+  // scrolls into view — motion that conveys the data (how full each program
+  // is), not decoration. Starts already "in" under reduced motion so the
+  // bars render at their real width with no animation.
+  const [programsIn, setProgramsIn] = useState(
+    () => typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
+  )
 
   // Installed-PWA users have no reason to see the marketing landing
   // page. The 'Download App' CTA is meaningless (they already have
@@ -69,6 +78,20 @@ export default function Landing() {
     )
     return unsub
   }, [])
+
+  // Reveal the slot bars on first scroll into view. Skipped entirely under
+  // reduced motion (programsIn already starts true there).
+  useEffect(() => {
+    if (programsIn) return
+    const el = programsRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') { setProgramsIn(true); return }
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setProgramsIn(true); io.disconnect() } },
+      { threshold: 0.2 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [programsIn])
 
   const handleMainCTA = () => {
     if (user) navigate(DASHBOARD[user.role] ?? '/patient/dashboard')
@@ -115,22 +138,24 @@ export default function Landing() {
             auto-disabled under prefers-reduced-motion (see index.css). */}
         <div className="hero-aurora" aria-hidden="true" />
         <div className="relative max-w-6xl mx-auto grid gap-12 px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-20">
-          {/* Left: copy + CTAs + proof points */}
+          {/* Left: copy + CTAs + proof points. Each element rises in on load
+              with a small increasing delay — one continuous sequence, not a
+              per-element effect. */}
           <div>
-            <div className="inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-600 font-medium mb-6 shadow-sm">
+            <div className="hero-rise inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-600 font-medium mb-6 shadow-sm">
               <MdShield size={14} />
               {t('landing.hero.badge')}
             </div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-brand-900 leading-[1.1] mb-4 max-w-xl">
+            <h1 className="hero-rise font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-brand-900 leading-[1.1] mb-4 max-w-xl" style={{ animationDelay: '90ms' }}>
               {t('landing.hero.headline')}
             </h1>
-            <p className="text-gray-500 text-sm mb-3 flex items-center gap-1.5">
+            <p className="hero-rise text-gray-500 text-sm mb-3 flex items-center gap-1.5" style={{ animationDelay: '170ms' }}>
               <MdLocationOn size={16} className="text-brand-500" /> {t('landing.hero.location')}
             </p>
-            <p className="text-gray-600 text-lg mb-8 max-w-xl leading-relaxed">
+            <p className="hero-rise text-gray-600 text-lg mb-8 max-w-xl leading-relaxed" style={{ animationDelay: '230ms' }}>
               {t('landing.hero.tagline')}
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="hero-rise flex flex-col gap-3 sm:flex-row sm:items-center" style={{ animationDelay: '310ms' }}>
               <button
                 className="btn-primary flex items-center justify-center gap-2 px-6 py-2.5 text-base w-full sm:w-auto"
                 onClick={handleMainCTA}>
@@ -144,7 +169,7 @@ export default function Landing() {
               </button>
             </div>
             {/* Proof points — honest value props, no fabricated stats */}
-            <dl className="mt-12 grid grid-cols-3 gap-x-6 gap-y-6 border-t border-gray-100 pt-8 max-w-xl">
+            <dl className="hero-rise mt-12 grid grid-cols-3 gap-x-6 gap-y-6 border-t border-gray-100 pt-8 max-w-xl" style={{ animationDelay: '390ms' }}>
               {[
                 { value: t('landing.hero.proof1Value'), label: t('landing.hero.proof1Label') },
                 { value: t('landing.hero.proof2Value'), label: t('landing.hero.proof2Label') },
@@ -158,9 +183,12 @@ export default function Landing() {
             </dl>
           </div>
 
-          {/* Right: illustrative application-journey card */}
-          <div className="card p-6 sm:p-7 lg:justify-self-end w-full max-w-md">
-            <h2 className="text-lg font-bold tracking-tight text-brand-900">
+          {/* Right: illustrative application-journey card — the hero's
+              memorable element. Slightly lifted (ring + soft brand shadow),
+              its steps build in one after another so the eye is walked down
+              the patient's actual path. */}
+          <div className="hero-rise card p-6 sm:p-7 lg:justify-self-end w-full max-w-md ring-1 ring-brand-100/70 shadow-xl shadow-brand-900/[0.06]" style={{ animationDelay: '240ms' }}>
+            <h2 className="font-display text-lg font-bold tracking-tight text-brand-900">
               {t('landing.hero.journeyTitle')}
             </h2>
             <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">
@@ -173,9 +201,9 @@ export default function Landing() {
                 { label: t('landing.hero.stage3Label'), detail: t('landing.hero.stage3Detail') },
                 { label: t('landing.hero.stage4Label'), detail: t('landing.hero.stage4Detail') },
               ].map((s, i, arr) => (
-                <li key={i} className="flex gap-3">
+                <li key={i} className="hero-step flex gap-3" style={{ animationDelay: `${460 + i * 120}ms` }}>
                   <div className="flex flex-col items-center">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold ring-4 ring-brand-50">
                       {i + 1}
                     </span>
                     {i < arr.length - 1 && <span className="w-px flex-1 bg-brand-100 my-1 min-h-[20px]" />}
@@ -228,7 +256,7 @@ export default function Landing() {
       {/* How MAPA Works — step-by-step, only for new visitors */}
       {!user && <section ref={featuresRef} className="py-16 px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">{t('landing.steps.heading')}</h2>
+          <h2 className="font-display text-2xl font-bold text-gray-900 text-center mb-2">{t('landing.steps.heading')}</h2>
           <p className="text-gray-500 text-center text-sm mb-12">
             {t('landing.steps.subtitle')}
           </p>
@@ -281,11 +309,11 @@ export default function Landing() {
       </section>}
 
       {/* Available Programs */}
-      <section className="py-16 px-6 bg-gray-50">
+      <section ref={programsRef} className="py-16 px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{t('landing.programs.heading')}</h2>
+              <h2 className="font-display text-2xl font-bold text-gray-900">{t('landing.programs.heading')}</h2>
               <p className="text-sm text-gray-500 mt-1">
                 {t('landing.programs.subtitle')}
               </p>
@@ -313,7 +341,7 @@ export default function Landing() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {agencies.map(agency => {
+              {agencies.map((agency, i) => {
                 const total     = agency.slots?.total ?? 0
                 const remaining = agency.slots?.remaining ?? 0
                 const pct       = total > 0 ? Math.round(((total - remaining) / total) * 100) : 0
@@ -331,10 +359,10 @@ export default function Landing() {
                         {isFull ? t('landing.programs.full') : t('landing.programs.slotsBadge', { count: remaining })}
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full mb-1">
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full mb-1 overflow-hidden">
                       <div
-                        className={`h-1.5 rounded-full transition-all ${isFull ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-brand-500'}`}
-                        style={{ width: `${pct}%` }}
+                        className={`h-1.5 rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${isFull ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-brand-500'}`}
+                        style={{ width: programsIn ? `${pct}%` : '0%', transitionDelay: `${i * 80}ms` }}
                       />
                     </div>
                     <p className="text-xs text-gray-500">{t('landing.programs.slotsRemaining', { remaining, total })}</p>

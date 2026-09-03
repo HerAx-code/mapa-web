@@ -157,6 +157,22 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Landing hero entrance — the page's ONE orchestrated moment. On load the
+   hero copy rises into place, then the illustrative "application journey"
+   card's steps build in sequence (that journey is the product itself, so it
+   earns the emphasis). Nothing else on the page animates on scroll — a single
+   deliberate reveal reads as considered, scattered ones read as noise. Both
+   keyframes are compositor-only (opacity + transform). Fully disabled, with
+   content shown at rest, under prefers-reduced-motion. */
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroStep {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 /* Landing hero "aurora": a slow drift of soft brand-teal light over a
    near-white base. CSS-only (no image, no JS, GPU-cheap background-position
    animation) so it stays light on slow connections + low-end phones. The
@@ -176,6 +192,27 @@
      motion-reduce: variants on the consumer side. */
   .animate-fade-in {
     animation: fadeIn 180ms ease-out;
+  }
+
+  /* Hero entrance primitives. Both start hidden and settle via forwards
+     fill; stagger is set per-element with an inline animation-delay so the
+     sequence stays readable in the JSX. Under reduced motion they resolve
+     instantly to the resting state (visible, no transform) — never leaving
+     content stuck at opacity 0. */
+  .hero-rise {
+    opacity: 0;
+    animation: heroRise 620ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  .hero-step {
+    opacity: 0;
+    animation: heroStep 520ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-rise, .hero-step {
+      opacity: 1;
+      animation: none;
+      transform: none;
+    }
   }
 
   /* Soft drifting brand-teal light for the landing hero. Oversized and
