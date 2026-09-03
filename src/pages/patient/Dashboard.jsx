@@ -19,41 +19,13 @@ import { patientDashboardTour } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import {
-  collection, query, where, orderBy, onSnapshot, getDocs,
+  collection, query, where, orderBy, onSnapshot,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { notify } from '../../utils/notifications'
 import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { isSliceTerminal, computeFunding } from '../../utils/requests'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
-
-// Parses "YYYY-MM-DD" + "2:00 PM" / "14:00" / "2:00 pm" into a Date.
-// Returns null if either part can't be parsed.
-function parseInterviewMoment(iso, timeStr) {
-  if (!iso || !timeStr) return null
-  const s = String(timeStr).trim()
-  // 12h with AM/PM
-  const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)$/)
-  let hours = null, minutes = null
-  if (m12) {
-    hours   = parseInt(m12[1], 10) % 12
-    minutes = parseInt(m12[2], 10)
-    if (/pm/i.test(m12[3])) hours += 12
-  } else {
-    // 24h fallback
-    const m24 = s.match(/^(\d{1,2}):(\d{2})$/)
-    if (m24) {
-      hours   = parseInt(m24[1], 10)
-      minutes = parseInt(m24[2], 10)
-    }
-  }
-  if (hours == null) return null
-  const d = new Date(`${iso}T00:00:00`)
-  if (Number.isNaN(d.getTime())) return null
-  d.setHours(hours, minutes, 0, 0)
-  return d
-}
 
 // ── Plain-language status config ──────────────────────────────────────────
 
@@ -477,92 +449,12 @@ export default function PatientDashboard() {
     return unsub
   }, [user?.uid])
 
-  // Interview reminder sweep — client-side, best-effort.
-  // For each upcoming interview, fire a notification at 24h and 1h before
-  // the meeting. Per-device localStorage dedup: keys are scoped to user +
-  // interview id so a patient checking their dashboard repeatedly doesn't
-  // get the same reminder twice. The previous implementation tried to
-  // persist the dedup flag on the doc itself (reminderSent24h /
-  // reminderSent1h) but firestore.rules don't permit patients to write
-  // those fields -- the .catch was silently swallowing permission-denied
-  // and the dedup never actually worked.
-  //
-  // Two parallel sweeps because under the redesign:
-  //   - legacy direct-to-agency apps may still be in status 'interview'
-  //   - new-model interviews live on the REQUEST (CRMC-conducted, single
-  //     assessment) and never set application.status to 'interview'.
-  useEffect(() => {
-    if (!user?.uid) return
-    const remindedKey = (kind, id, tier) => `mapa_reminder_${tier}_${user.uid}_${kind}_${id}`
-    const isReminded = (kind, id, tier) => localStorage.getItem(remindedKey(kind, id, tier)) === '1'
-    const markReminded = (kind, id, tier) => {
-      try { localStorage.setItem(remindedKey(kind, id, tier), '1') } catch (_e) { /* private mode / quota: best-effort */ }
-    }
-    const fireReminder = async (kind, item, target, msUntil) => {
-      const within24h = msUntil <= 24 * 60 * 60 * 1000 && msUntil > 60 * 60 * 1000 && !isReminded(kind, item.id, '24h')
-      const within1h  = msUntil <= 60 * 60 * 1000      && !isReminded(kind, item.id, '1h')
-      const isRequest = kind === 'request'
-      const scope     = isRequest ? 'CRMC' : item.agencyName
-      if (within24h) {
-        await notify(user.uid, {
-          type:  'interview_sched',
-          title: isRequest ? 'Reminder: CRMC assessment tomorrow' : 'Reminder: interview tomorrow',
-          body:  `Your interview with ${scope} is scheduled for ${item.interviewDate} at ${item.interviewTime}. Make sure you have the Google Meet link ready.`,
-          conversationId: null,
-        }).catch(() => {})
-        markReminded(kind, item.id, '24h')
-      }
-      if (within1h) {
-        await notify(user.uid, {
-          type:  'interview_sched',
-          title: isRequest ? 'Your CRMC assessment starts soon' : 'Your interview starts soon',
-          body:  `Your interview with ${scope} starts in less than an hour (${item.interviewTime}). Open it from the Interviews page.`,
-          conversationId: null,
-        }).catch(() => {})
-        markReminded(kind, item.id, '1h')
-      }
-    }
-
-    const run = async () => {
-      try {
-        const now = Date.now()
-        // Legacy: per-agency apps in status 'interview'.
-        const appSnap = await getDocs(query(
-          collection(db, 'applications'),
-          where('patientId', '==', user.uid),
-          where('status', '==', 'interview'),
-        ))
-        for (const d of appSnap.docs) {
-          const a = { id: d.id, ...d.data() }
-          if (!a.interviewDate || !a.interviewTime) continue
-          const target = parseInterviewMoment(a.interviewDate, a.interviewTime)
-          if (!target) continue
-          const msUntil = target.getTime() - now
-          if (msUntil <= 0) continue
-          await fireReminder('app', a, target, msUntil)
-        }
-
-        // New model: CRMC assessment interview on the request.
-        const reqSnap = await getDocs(query(
-          collection(db, 'requests'),
-          where('patientId', '==', user.uid),
-        ))
-        for (const d of reqSnap.docs) {
-          const r = { id: d.id, ...d.data() }
-          if (!r.interviewDate || !r.interviewTime) continue
-          if (r.interviewOutcome === 'completed' || r.interviewOutcome === 'no_show') continue
-          const target = parseInterviewMoment(r.interviewDate, r.interviewTime)
-          if (!target) continue
-          const msUntil = target.getTime() - now
-          if (msUntil <= 0) continue
-          await fireReminder('request', r, target, msUntil)
-        }
-      } catch (err) {
-        console.error('Interview reminder sweep failed:', err)
-      }
-    }
-    run()
-  }, [user?.uid])
+  // Interview reminders are handled entirely server-side by the
+  // `interviewReminders` Cloud Function (scheduled; fires 24h + 1h before,
+  // in-app + email). The old client-side sweep that used to live here was
+  // removed: it duplicated those reminders (patients could get each one
+  // twice) and one of its queries tripped a Firestore rules denial that
+  // surfaced as a console error on the patient dashboard.
 
   // Live document stats so the verified/pending counts update the moment
   // CRMC verifies or rejects a doc -- no reload required.
