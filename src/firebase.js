@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
 import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -25,12 +25,14 @@ const app = initializeApp(firebaseConfig)
 // right after the app — before Auth/Firestore/Storage/Functions — so its
 // token attaches to their requests.
 //
-// Rollout (owner): in Firebase Console → App Check, register a reCAPTCHA v3
-// provider (gives a site key), set VITE_APPCHECK_SITE_KEY in the deploy env
-// (read at build time), start in "monitoring" mode, then enable enforcement
-// per service once traffic looks clean. For local dev against an enforcing
-// project, set VITE_APPCHECK_DEBUG='true' and register the debug token the
-// console prints.
+// Rollout (owner): in Firebase Console → App Check, register the web app with
+// the reCAPTCHA Enterprise provider (plain reCAPTCHA v3 is deprecated). Create
+// a reCAPTCHA Enterprise key (Google Cloud → Security → reCAPTCHA) for the
+// prod + localhost domains, use its key id as both the provider key here and
+// VITE_APPCHECK_SITE_KEY in the deploy env (read at build time). Start in
+// "monitoring" mode, then enforce per service once traffic looks clean. For
+// local dev against an enforcing project, set VITE_APPCHECK_DEBUG='true' and
+// register the debug token the console prints.
 const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY
 if (appCheckSiteKey) {
   if (import.meta.env.VITE_APPCHECK_DEBUG === 'true' && typeof self !== 'undefined') {
@@ -39,7 +41,7 @@ if (appCheckSiteKey) {
   }
   try {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
       isTokenAutoRefreshEnabled: true,
     })
   } catch (err) {
