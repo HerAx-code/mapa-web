@@ -371,8 +371,10 @@ to be presented honestly during defense.
 
 - Single hospital (CRMC). Multi-tenancy is v2 architecture, not a
   config change.
-- No SMS notifications. Cost-prohibitive for the pilot —
-  in-app + email + future FCM push are the channels.
+- SMS notifications are built (Semaphore, opt-in and PII-free,
+  reserved for high-value alerts) but not yet activated — the
+  sender name is pending approval, so in-app + email are the live
+  channels, with FCM push planned for the mobile app.
 - No PhilSys integration. Government API access requires an
   approval process that does not fit a nine-month timeline.
 - No real money movement. MAPA records commitments; settlement
