@@ -120,7 +120,7 @@ export default function PatientMore() {
         {/* Header */}
         <div className="mb-5">
           <p className="eyebrow">{t('patient.more.eyebrow')}</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.more.title')}</h1>
+          <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.more.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.more.subtitle')}</p>
         </div>
 
@@ -133,7 +133,7 @@ export default function PatientMore() {
               {user.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold text-gray-900 truncate">{user.name}</p>
+              <p className="font-display text-base font-semibold text-gray-900 truncate">{user.name}</p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
             <MdChevronRight size={20} className="text-gray-300 flex-shrink-0" />

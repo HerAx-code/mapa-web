@@ -252,7 +252,7 @@ export default function UserGuide() {
         {/* Header */}
         <div className="mb-6">
           <p className="eyebrow">{t('patient.guide.eyebrow')}</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.guide.title')}</h1>
+          <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.guide.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.guide.subtitle')}</p>
         </div>
 

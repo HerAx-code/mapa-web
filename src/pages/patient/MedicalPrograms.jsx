@@ -83,7 +83,7 @@ export default function MedicalPrograms() {
 
         <div className="mb-5 w-full min-w-0">
           <p className="eyebrow">{t('patient.programs.eyebrow')}</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.programs.title')}</h1>
+          <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.programs.title')}</h1>
           <p className="text-sm text-gray-500 mt-1 break-words max-w-2xl">{t('patient.programs.subtitle')}</p>
         </div>
 
