@@ -121,10 +121,17 @@ Enable Dependabot + `npm audit` (web **and** `functions/`) in CI; review the
 - **Remaining:** add a non-blocking `npm audit --audit-level=high` step to CI
   as a second signal.
 
-### 3.2 RA 10173 program: retention + breach response
+### 3.2 RA 10173 program: retention + breach response  — 🟡 partially shipped (2026-09-03)
 Define a data retention/erasure schedule; document breach response in the
 runbook (rotate creds, revoke sessions, **NPC notification within 72 h**);
 confirm consent + DPO coverage.
+- **Done:** `docs/incident-response-runbook.md` — the five-phase breach
+  response, the 72-hour NPC + data-subject notification with its three
+  mandatory conditions, incident-record + notice templates, and a retention
+  schedule table.
+- **Remaining (CRMC decisions):** appoint + register a **DPO**, register the
+  processing system with the NPC, and set the actual **retention durations**
+  in the runbook's schedule.
 
 ### 3.3 Provenance tagging for client- vs server-written strings  → closes **A8**
 Tag `auditLog` / `notifications` entries with a server-set `source` flag so a
