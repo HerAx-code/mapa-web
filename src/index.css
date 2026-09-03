@@ -108,6 +108,21 @@
            text-white shadow-lg overflow-hidden;
   }
 
+  /* ── Landing (marketing) design system ─────────────────────────────────
+     A warmer, softer card + icon chip for the public landing page. Kept
+     separate from the app's .card so the marketing surface can carry more
+     depth (layered pine-tinted shadow, rounded-2xl) without changing the
+     denser in-app card. Everything on the landing sits on one warm ground
+     (#FBFAF8) as these soft cards + a few rounded pine panels, so the page
+     reads as one designed surface rather than stacked colour bands. */
+  .lp-card {
+    @apply rounded-2xl bg-white border border-brand-900/[0.06];
+    box-shadow: 0 1px 2px rgba(8, 80, 65, 0.05), 0 18px 34px -22px rgba(8, 80, 65, 0.22);
+  }
+  .lp-chip {
+    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl;
+  }
+
   /* Stat tile — a small-caps label over a big tabular number. Unifies the
      admin / agency metric cards. */
   .stat-tile {
