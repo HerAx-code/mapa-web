@@ -221,6 +221,55 @@
       "slotsBadge": "{{count}} slots",
       "slotsRemaining": "{{remaining}} of {{total}} slots remaining today"
     },
+    "cost": {
+      "title": "Applying is free",
+      "body": "MAPA will never ask you for payment — not for registration, not for your Access Code, and not for the release of your Guarantee Letter.",
+      "point1": "No registration fee",
+      "point2": "No processing fee",
+      "point3": "No fixer, no middleman",
+      "warning": "If anyone asks you to pay to speed up your approval, they are not from CRMC. Report it to the Malasakit Center right away."
+    },
+    "eligibility": {
+      "title": "Who can apply",
+      "intro": "MAPA is for CRMC patients who cannot pay their hospital bill. You do not need to be good with computers — the form is short, and staff can sit with you and help.",
+      "qualifyHeading": "You may apply if…",
+      "q1": "You are admitted at, or were treated in, CRMC.",
+      "q2": "You have an unpaid hospital bill or billing statement.",
+      "q3": "A CRMC social worker has classified you as an indigent patient.",
+      "q4": "You are the patient, or an immediate family member filing for them.",
+      "codeHeading": "You will need a Patient Access Code",
+      "codeBody": "This is printed and handed to you in person at the CRMC Medical Social Services office. It is never sent by text, email, or social media — and no one online can give you one.",
+      "codeSample": "Sample code",
+      "codeCta": "Where is the office?"
+    },
+    "faq": {
+      "heading": "Questions people ask us",
+      "intro": "If your question isn't here, call or visit us — we would rather explain it than have you guess.",
+      "q1": "Do I need to pay anything?",
+      "a1": "No. Applying through MAPA is free, from registration to the release of your Guarantee Letter. CRMC staff and MAPA will never ask for a fee, a deposit, or a 'processing charge'. If anyone asks you for money in exchange for approval, report it to the Medical Social Services office right away.",
+      "q2": "What is a Patient Access Code and how do I get one?",
+      "a2": "It is a printed code given to you in person at the CRMC Medical Social Services office, after a social worker confirms you are a CRMC patient with an unpaid hospital bill. The code links your online application to your real hospital record, so it cannot be requested by phone, text, or email. Bring a valid ID and your billing statement.",
+      "q3": "Can I apply for a family member?",
+      "a3": "Yes. A spouse, parent, adult child, or authorized representative may file on behalf of the patient — common when the patient is still confined or cannot use a phone. You'll be asked for your relationship to the patient, your own valid ID, and an authorization letter signed by the patient or immediate family.",
+      "q4": "How long does it take?",
+      "a4": "It depends on how complete your documents are and on each agency's review and available slots. CRMC works to verify documents and schedule your assessment interview as quickly as possible, and you can track every step in your account.",
+      "q5": "What if I can't come in person for the interview?",
+      "a5": "Tell your assigned social worker and an online interview via Google Meet can be arranged instead. A link is sent to your registered email and mobile number, and the interview takes about 15–20 minutes. If your signal is weak, it may be done by phone call.",
+      "q6": "Is my information safe?",
+      "a6": "Yes. MAPA is operated by CRMC and handles your data under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the funding agency your request is endorsed to. You may ask for a copy of your data or ask that it be corrected at any time."
+    },
+    "help": {
+      "title": "Need help? Visit us.",
+      "intro": "Staff at the CRMC Malasakit Center can register you, take your selfie, and upload your documents for you. Bring your papers and someone will sit with you.",
+      "onsite": "Walk-in assistance available — no appointment needed.",
+      "startBtn": "Start my application",
+      "addressLabel": "Address",
+      "address": "CRMC Malasakit Center, Sinsuat Avenue, Cotabato City, Maguindanao del Norte 9600",
+      "phoneLabel": "Phone",
+      "emailLabel": "Email",
+      "hoursLabel": "Office hours",
+      "hours": "Monday to Friday, 8:00 AM – 5:00 PM. Closed on holidays."
+    },
     "footer": {
       "brandDesc": "The official online system of Cotabato Regional Medical Center for processing medical assistance applications.",
       "quickLinks": "Quick Links",
