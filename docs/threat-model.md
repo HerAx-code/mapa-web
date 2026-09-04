@@ -42,6 +42,27 @@ Last updated: 2026-06-01. **Current-state note: 2026-08-25.**
 >   registration gate.
 > - The 2026-09 patient/landing/install redesigns are presentational and do
 >   not change the threat surface.
+>
+> ### Addendum — 2026-09-04 (security hardening sweep)
+> A dedicated security pass shipped several controls; the paired accepted
+> risks / operational limits below are now mitigated:
+> - **Staff MFA (TOTP)** is live — `super_admin`, `staff_admin`, `agency_admin`,
+>   `agency` can enrol an authenticator-app second factor (Identity Platform;
+>   `src/utils/mfa.js` + `MfaEnrollModal` + login challenge). Directly mitigates
+>   **A2** (stolen staff password). Currently voluntary (`MFA_MODE='prompt'`);
+>   flip to `'required'` once staff are enrolled.
+> - **Firebase App Check** (reCAPTCHA Enterprise) is wired and running in
+>   **monitor mode** — attests requests come from the genuine app, the layer
+>   the rules can't provide. Shrinks "client-side rate limiting only." Enforce
+>   after a week of clean metrics.
+> - **HTTP security headers** (HSTS, X-Frame-Options DENY, nosniff, Referrer-
+>   Policy, Permissions-Policy) live; **CSP in report-only** pending a flip to
+>   enforce. **Dependabot** + a non-blocking `npm audit` CI step address supply
+>   chain. A **rules-deploy CI gate** keeps prod rules from drifting from tested
+>   state. An **incident-response / breach runbook** (`docs/incident-response-runbook.md`)
+>   operationalises the RA 10173 72-hour duty.
+> - The `users.update` role-escalation lock (companion to T1) now has explicit
+>   regression tests. See `docs/security-improvement-plan.md` + `security-research.md`.
 
 This document records what threats MAPA addresses, what threats it
 deliberately accepts (and why), and the mitigations in place for each.
@@ -269,11 +290,15 @@ deleted by anyone with the service account key. Mitigation: limit who
 holds the service account key; rotate it on personnel change (see
 `docs/runbook.md`).
 
-### A2. Stolen agency_admin or super_admin password
+### A2. Stolen agency_admin or super_admin password  — largely mitigated (2026-09-04)
 
-No 2FA, no session timeout. Firebase Auth defaults give indefinite
-session persistence. Mitigation: training + reset password on suspected
-compromise. Future work: enable 2FA for non-patient roles.
+**Now addressed:** TOTP **MFA is live** for all staff roles (see the
+2026-09-04 addendum) — a stolen password alone no longer grants access once
+the account has enrolled. Enrolment is currently voluntary
+(`MFA_MODE='prompt'`) and becomes mandatory when flipped to `'required'`.
+Residual: accounts that haven't yet enrolled, and no idle session timeout yet
+(the next hardening item). Mitigation for the residual: training + reset
+password on suspected compromise; require enrolment for privileged accounts.
 
 ### A3. Hospital ID forgery
 
@@ -324,9 +349,9 @@ vs server-written entries.
 | No tamper-evident audit log | Admin SDK deletes are unrecorded; service-account key holders are trusted |
 | No staging environment | Dev work hits the same Firestore as the pilot |
 | No automated CI / no rule-deploy gate | Manual `firebase deploy --only firestore:rules`; tests must be run locally |
-| No 2FA, no session timeout | Firebase Auth defaults |
+| ~~No 2FA~~ → TOTP MFA live for staff (2026-09-04); no session timeout yet | MFA voluntary (`MFA_MODE='prompt'`) → flip to `'required'`; idle-timeout is the next item |
 | SMS built but not live; basic offline handling present | SMS via Semaphore (opt-in, PII-free, high-value alerts) is implemented and awaits sender-name approval; until then in-app + email are the channels. Offline is handled at the shell level by the installable PWA (cached app shell + an offline banner), not full offline data sync |
-| Client-side rate limiting only | Bypassable; production needs server-side throttle |
+| Client-side rate limiting + App Check (monitor mode, 2026-09-04) | App Check attests app origin (reCAPTCHA Enterprise); enforce after clean metrics. Server-side per-endpoint throttle on `/api/send-*` still pending |
 
 ## How this document evolves
 

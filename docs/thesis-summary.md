@@ -82,6 +82,14 @@ Last updated: 2026-06-07. **Current-state refresh: 2026-08-25.**
 > - **Landing + `/install` redesign** — one warm cohesive design system;
 >   added eligibility, a free/anti-scam band, an FAQ, and a visit-us block;
 >   PWA maskable icon fixed (blue-border-behind-logo).
+>
+> **Addendum — 2026-09-04 (security hardening).** Staff **TOTP MFA** (all
+> non-patient roles, Identity Platform; patients exempt); **App Check**
+> (reCAPTCHA Enterprise) in monitor mode; **security headers + report-only
+> CSP**, **Dependabot** + `npm audit` CI, and a **rules-deploy CI gate**; an
+> **incident-response / breach runbook** (RA 10173 72-hour duty) + a
+> `users.update` role-escalation test. See `docs/security-improvement-plan.md`,
+> `security-research.md`, `incident-response-runbook.md`, `threat-model.md`.
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,
