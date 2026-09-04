@@ -319,16 +319,9 @@ export default function Messages() {
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && <span className="badge badge-blue">{unreadCount} unread</span>}
-              {/* Header compose button only renders when conversations
-                  exist. On the empty state the inline "+ New Message"
-                  card-centre button is the call-to-action, so showing
-                  both was reported as redundant by patients during the
-                  Tier-2 audit. */}
-              {conversations.length > 0 && (
-                <button className="btn-primary flex items-center gap-1.5 text-sm" onClick={() => setShowCompose(true)}>
-                  <MdMessage size={15} /> New Message
-                </button>
-              )}
+              {/* "New message" moved to a bottom-right FAB (below) — the
+                  app-native, thumb-reachable pattern. On the empty state
+                  the inline card-centre CTA remains the call-to-action. */}
             </div>
           </div>
           <div className="card overflow-hidden">
@@ -354,6 +347,21 @@ export default function Messages() {
             <div className="divide-y divide-gray-50">{convList}</div>
           </div>
         </div>
+
+        {/* Bottom-right "+" FAB — the app-native "new conversation" affordance,
+            thumb-reachable and clearing the bottom tab bar (60px nav + iOS
+            safe area). Mobile-only (md:hidden, matching the mobile card) and
+            only when conversations exist — the empty state has its own CTA.
+            z-40 keeps it under the full-screen thread (z-200). */}
+        {conversations.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowCompose(true)}
+            aria-label="New message"
+            className="md:hidden fixed right-5 bottom-[calc(76px_+_env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg shadow-brand-900/25 transition-colors hover:bg-brand-600 active:bg-brand-700">
+            <MdAdd size={26} />
+          </button>
+        )}
 
         {/* The compose flow is the same on both layouts -- the modal
             renders itself when showCompose is true. */}
