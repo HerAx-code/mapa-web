@@ -73,6 +73,30 @@
 >   eligibility, a free / anti-scam band, an FAQ, and a visit-us / contact
 >   block; the `/install` page reskinned to match; the PWA **maskable icon
 >   corrected** (it had a blue border behind the logo).
+>
+> ### Addendum — 2026-09-04 (security hardening sweep)
+> A dedicated security pass — see `docs/security-improvement-plan.md`,
+> `security-research.md`, `incident-response-runbook.md`, and the updated
+> `threat-model.md`:
+> - **Staff MFA (TOTP)** — authenticator-app two-step verification for all
+>   non-patient roles via Identity Platform (`src/utils/mfa.js` +
+>   `MfaEnrollModal` + a login TOTP challenge + a "Two-step verification" entry
+>   in the staff profile menu, with an email-verification step). Patients
+>   exempt. Mitigates the "stolen staff password" risk. Voluntary
+>   (`MFA_MODE='prompt'`) pending a flip to `'required'`.
+> - **Firebase App Check** (reCAPTCHA Enterprise) wired in `src/firebase.js`,
+>   registered, and running in **monitor mode** — app-origin attestation the
+>   Security Rules can't give.
+> - **HTTP security headers + report-only CSP** (`vercel.json`), **Dependabot**
+>   + an `npm audit` CI signal, and a **rules-deploy CI gate** (`.github/
+>   workflows/deploy-rules.yml`) that deploys `firestore.rules` only after the
+>   rules suite passes.
+> - **Incident-response / data-breach runbook** operationalising the RA 10173
+>   72-hour notification duty, plus a `users.update` role-escalation regression
+>   test (companion to T1).
+> - Minor: patient-mobile Messages "New Message" became a bottom-right "+" FAB;
+>   removed a redundant client-side interview-reminder sweep (the
+>   `interviewReminders` Cloud Function owns reminders).
 
 **Last updated:** 2026-06-07 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32, and **the Inter-Agency Coordination Plan Phase 1 (R33 Case Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard)** — see `docs/revision-list.md` for the change log)
 

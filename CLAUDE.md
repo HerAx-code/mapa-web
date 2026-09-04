@@ -14,7 +14,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 ## Tech Stack (do not change without discussion)
 - Frontend (web): React 18 + Vite + Tailwind CSS
 - Backend: Firebase (Firestore, Auth, Hosting)
-- Auth: Firebase Authentication (email + password)
+- Auth: Firebase Authentication (email + password) + **TOTP MFA for staff roles** (Identity Platform; patients exempt) and **Firebase App Check** (reCAPTCHA Enterprise, monitor mode). See `docs/security-improvement-plan.md` + `security-research.md`.
 - Database: Cloud Firestore (NoSQL)
 - Mobile app: planned, framework TBD (likely React Native or Flutter — share Firebase backend with web)
 - i18n: react-i18next for Filipino/English support — not yet integrated
