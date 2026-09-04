@@ -42,7 +42,14 @@ session. Treat both as **compromised**.
 
 ## P1 — Highest risk reduction
 
-### 1.1 Firebase App Check  → closes "client-side rate limiting only"; hardens **all** Firestore + Function access
+### 1.1 Firebase App Check  → closes "client-side rate limiting only"; hardens **all** Firestore + Function access  — 🟡 live in monitor mode (2026-09-04)
+- **Done:** wired in `src/firebase.js` with the **reCAPTCHA Enterprise**
+  provider (v3 is deprecated), key in `VITE_APPCHECK_SITE_KEY`, registered in
+  the Firebase console. Running in **monitor mode** — verified traffic is
+  being logged.
+- **Remaining:** watch App Check → Requests for ~a week, then flip **Enforce**
+  on Cloud Firestore + Cloud Functions.
+
 Rules verify *who* you are, not *what app* you're calling from — a valid token
 minted by a script still passes rules. App Check attests the request comes from
 the genuine app (reCAPTCHA Enterprise on web, Play Integrity / DeviceCheck on
@@ -51,13 +58,19 @@ mobile) and is enforced at the Firestore + Cloud Functions layer.
   spam writes, throttle-bypass attempts).
 - reCAPTCHA Enterprise has a free tier adequate for pilot volume.
 
-### 1.2 MFA for all non-patient roles  → closes **A2**
+### 1.2 MFA for all non-patient roles  → closes **A2**  — 🟢 shipped, voluntary enrolment (2026-09-04)
 Enable Firebase Auth **MFA (TOTP)** via Identity Platform for `super_admin`,
 `staff_admin`, `agency_admin`, and `agency`. A stolen staff password alone no
 longer grants access to patient PII or funding controls.
 - Patients stay exempt (indigent, phone-primary — the friction isn't worth it
   for the lowest-trust role that only sees its own data).
-- **Dependency:** Google Cloud Identity Platform (Blaze).
+- **Done:** TOTP enabled on the project (Identity Platform Admin API); code in
+  `src/utils/mfa.js` + `MfaEnrollModal` (enrol / verify-email / remove) + the
+  login TOTP challenge + a "Two-step verification" entry in the staff profile
+  menu. `MFA_MODE = 'prompt'` — enrolment is available but not force-gated, so
+  no staff can be locked out during rollout. Verified working end to end.
+- **Remaining:** once staff have enrolled, flip `MFA_MODE` to `'required'` to
+  hard-gate staff access.
 
 ### 1.3 Session timeout + re-auth for sensitive actions  → closes **A2**
 - Idle timeout for staff sessions (e.g. 30–60 min).
