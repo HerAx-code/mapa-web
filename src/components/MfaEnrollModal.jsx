@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
-import { MdClose, MdShield, MdCheckCircle, MdContentCopy, MdCheck } from 'react-icons/md'
+import { MdClose, MdShield, MdCheckCircle, MdContentCopy, MdCheck, MdMailOutline } from 'react-icons/md'
 import toast from 'react-hot-toast'
+import { sendEmailVerification } from 'firebase/auth'
 import { auth } from '../firebase'
 import {
   isMfaEnrolled, reauthWithPassword, startTotpEnrollment,
@@ -26,6 +27,7 @@ export default function MfaEnrollModal({ onClose }) {
   const [busy, setBusy]       = useState(false)
   const [error, setError]     = useState('')
   const [copied, setCopied]   = useState(false)
+  const [verifySent, setVerifySent] = useState(false)
 
   // Render the otpauth URL to a QR image once we have one.
   useEffect(() => {
@@ -39,13 +41,30 @@ export default function MfaEnrollModal({ onClose }) {
 
   const fail = (err, fallback) => {
     console.warn('[mfa]', err?.code || err?.message)
-    if (err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential')
+    const code = err?.code || ''
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential')
       setError('Incorrect password.')
-    else if (err?.code === 'auth/invalid-verification-code' || err?.code === 'auth/invalid-payload')
+    else if (code === 'auth/invalid-verification-code' || code === 'auth/invalid-payload')
       setError('That code did not match. Check your authenticator app and try again.')
-    else if (err?.code === 'auth/unsupported-first-factor' || err?.code === 'auth/operation-not-allowed')
+    else if (code === 'auth/unsupported-first-factor' || code === 'auth/operation-not-allowed')
       setError('Two-step verification is not enabled on this project yet. Ask the administrator to turn on TOTP in Firebase.')
-    else setError(fallback)
+    else if (code === 'auth/unverified-email' || code === 'auth/email-not-verified')
+      // Firebase requires a verified email before MFA enrolment.
+      setStep('verify-email')
+    else
+      // Surface the actual code so an unexpected failure is diagnosable.
+      setError(`${fallback}${code ? ` (${code})` : ''}`)
+  }
+
+  const doSendVerification = async () => {
+    setError(''); setBusy(true)
+    try {
+      await sendEmailVerification(fbUser)
+      setVerifySent(true)
+      toast.success('Verification email sent.')
+    } catch (err) {
+      fail(err, 'Could not send the verification email.')
+    } finally { setBusy(false) }
   }
 
   const doReauth = async (e) => {
@@ -119,6 +138,31 @@ export default function MfaEnrollModal({ onClose }) {
                 {busy ? 'Checking…' : 'Continue'}
               </button>
             </form>
+          )}
+
+          {step === 'verify-email' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-amber-700">
+                <MdMailOutline size={18} />
+                <p className="text-sm font-semibold">Verify your email first</p>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Two-step verification requires a verified email address. We'll send a
+                verification link to <span className="font-medium text-gray-900">{fbUser?.email}</span>.
+                Open it, then reopen this to finish setup.
+              </p>
+              {verifySent ? (
+                <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                  Sent. Check your inbox (and spam), click the link, then reopen Two-step verification.
+                </p>
+              ) : (
+                <button type="button" onClick={doSendVerification} disabled={busy} className="btn-primary w-full">
+                  {busy ? 'Sending…' : 'Send verification email'}
+                </button>
+              )}
+              <button type="button" onClick={() => { setStep('reauth'); setError('') }}
+                className="w-full text-sm text-gray-500 hover:text-gray-700">Back</button>
+            </div>
           )}
 
           {step === 'setup' && (
