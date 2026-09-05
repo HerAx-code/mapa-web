@@ -254,3 +254,53 @@ describe('certificates.create — Phase 0.4 appId cross-check', () => {
     }))
   })
 })
+// Phase 1.6 hardening: the agency approval figure (amountApproved) is capped
+// at the CRMC-endorsed amountRequested — an agency can't over-approve its
+// slice via a direct write and over-commit the request past its need.
+describe('applications.update — amountApproved capped at amountRequested', () => {
+  const APP = {
+    patientId: 'pat-1', agencyId: 'malasakit', requestId: 'req-1',
+    amountRequested: 5000, status: 'reviewing',
+  }
+  async function seedApp() {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'applications', 'app-1'), APP)
+    })
+  }
+
+  it('allows an agency to approve up to the endorsed cap', async () => {
+    await seedUser('coord-1', 'agency', 'malasakit')
+    await seedApp()
+    const ctx = testEnv.authenticatedContext('coord-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      ...APP, status: 'approved', amountApproved: 5000,
+    }))
+  })
+
+  it('rejects an agency approving MORE than the endorsed cap', async () => {
+    await seedUser('coord-1', 'agency', 'malasakit')
+    await seedApp()
+    const ctx = testEnv.authenticatedContext('coord-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      ...APP, status: 'approved', amountApproved: 6000,
+    }))
+  })
+
+  it('allows a non-approval update that carries no amountApproved', async () => {
+    await seedUser('coord-1', 'agency', 'malasakit')
+    await seedApp()
+    const ctx = testEnv.authenticatedContext('coord-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      ...APP, status: 'awaiting_info',
+    }))
+  })
+
+  it('rejects an agency editing a slice belonging to another agency', async () => {
+    await seedUser('coord-2', 'agency', 'pcso')
+    await seedApp()
+    const ctx = testEnv.authenticatedContext('coord-2')
+    await assertFails(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+      ...APP, status: 'approved', amountApproved: 3000,
+    }))
+  })
+})

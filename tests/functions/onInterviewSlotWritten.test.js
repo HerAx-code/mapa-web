@@ -33,19 +33,30 @@ const serverTimestamp = () => 'MOCK_TS'
 
 // Minimal Firestore double. Captures the request + slot update payloads and
 // serves a configurable request doc and a day booked-slot count for the queue.
-function makeDb({ request, dayBookedCount = 0 }) {
-  const captured = { reqUpdate: null, slotUpdate: null }
+function makeDb({ request, dayBookedCount = 0, held = [] }) {
+  const captured = { reqUpdate: null, slotUpdate: null, releases: [] }
   const reqRef = {
     get: async () => ({ exists: request != null, data: () => request }),
     update: async (u) => { captured.reqUpdate = u },
   }
-  const slotDoc = { update: async (u) => { captured.slotUpdate = u } }
+  // slot .doc(id).update(): a release (status:'open') is a dedupe write; anything
+  // else (the queueNo write-back) is the current slot.
+  const slotDoc = (id) => ({
+    update: async (u) => {
+      if (u.status === 'open') captured.releases.push({ id, ...u })
+      else captured.slotUpdate = u
+    },
+  })
+  // The queue-number query chains 3 wheres → { size }; the dedupe query chains
+  // 2 wheres → { docs }. So the object after two wheres must offer BOTH a third
+  // .where() (queue count) and a .get() (dedupe docs).
   const whereChain = { get: async () => ({ size: dayBookedCount }) }
-  const nestedWhere = { where: () => ({ where: () => whereChain }) }
+  const twoWhere = { where: () => whereChain, get: async () => ({ docs: held.map((id) => ({ id })) }) }
+  const oneWhere = { where: () => twoWhere }
   const db = {
     collection: (name) => {
       if (name === 'requests') return { doc: () => reqRef }
-      if (name === 'interviewSlots') return { doc: () => slotDoc, where: () => nestedWhere }
+      if (name === 'interviewSlots') return { doc: (id) => slotDoc(id), where: () => oneWhere }
       return { doc: () => ({}) }
     },
   }
@@ -83,6 +94,21 @@ describe('handleInterviewSlotWritten — book (open → booked)', () => {
     expect(res.queueNo).toBe('A-003')
     expect(captured.slotUpdate.queueNo).toBe('A-003')
     expect(captured.reqUpdate.interviewQueueNo).toBe('A-003')
+  })
+
+  it('releases any OTHER slot the patient already holds (dedupe)', async () => {
+    // Patient pat-1 is booking slot1 but a cross-device race left them holding
+    // oldslot too — it must be released back to the pool, slot1 kept.
+    const { db, captured } = makeDb({
+      request: { status: 'under_review' }, dayBookedCount: 1, held: ['slot1', 'oldslot'],
+    })
+    const res = await handleInterviewSlotWritten({
+      db, slotId: 'slot1', before: openSlot(),
+      after: bookedSlot({ patientId: 'pat-1' }), serverTimestamp,
+    })
+    expect(res.released).toBe(1)
+    expect(captured.releases.map((r) => r.id)).toEqual(['oldslot'])
+    expect(captured.releases[0]).toMatchObject({ status: 'open', patientId: null, requestId: null })
   })
 
   it('online booking carries the Meet link and assigns no queue number', async () => {
