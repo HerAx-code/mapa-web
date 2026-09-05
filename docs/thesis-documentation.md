@@ -97,6 +97,23 @@
 > - Minor: patient-mobile Messages "New Message" became a bottom-right "+" FAB;
 >   removed a redundant client-side interview-reminder sweep (the
 >   `interviewReminders` Cloud Function owns reminders).
+>
+> ### Addendum — 2026-09-06 (consistency / money-path review)
+> A system-wide bug/consistency review (tests green) fixed:
+> - **Deactivation enforced on every auth path** — the `active`/`deletion`
+>   gates were only in `login()`; `onAuthStateChanged` (MFA-challenge sign-in +
+>   page refresh) skipped them, so a deactivated MFA-enrolled staff account
+>   could sign in. Moved the gate to the single choke point.
+> - **Over-approval closed** — `applications.update` now caps
+>   `amountApproved <= amountRequested` (the CRMC-endorsed cap), so an agency
+>   can't over-approve its slice and over-commit the request past its need
+>   (double-funding). Rules-tested; auto-deployed via the rules-deploy gate.
+> - **Interview-slot capacity leak closed** — `onInterviewSlotWritten` releases
+>   any other slot a patient holds on a new booking.
+> - `REQ_RANK` (the request lifecycle rank) de-duplicated into one shared
+>   `utils/requests` export; Firestore `onSnapshot` listeners audited (no leaks).
+> - The **rules-deploy CI gate is proven in production** — rules now auto-test
+>   and deploy on merge; no manual `firebase deploy --only firestore:rules`.
 
 **Last updated:** 2026-06-07 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32, and **the Inter-Agency Coordination Plan Phase 1 (R33 Case Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard)** — see `docs/revision-list.md` for the change log)
 

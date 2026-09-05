@@ -15,15 +15,12 @@ reduction, **P2** = hardening, **P3** = process / long-term.
 
 ## P0 — Immediate (credential hygiene — this week, no Blaze needed)
 
-### 0.1 Rotate the two exposed credentials  🔴 urgent
+### 0.1 Rotate the two exposed credentials  — ✅ done (2026-09)
 The **Gmail App Password** (`SMTP_PASS`) and the **Semaphore API key**
 (`SEMAPHORE_API_KEY`) were typed in plaintext into an assistant chat/terminal
-session. Treat both as **compromised**.
-- Revoke + regenerate the Gmail App Password (Google Account → Security → App
-  passwords) and update `SMTP_PASS` in Vercel + the Firebase Functions secret.
-- Regenerate the Semaphore API key and update `SEMAPHORE_API_KEY` in Vercel.
-- Confirm neither value was ever committed (see 0.2).
-- **Closes:** live credential exposure (operational, not a modeled threat).
+session, so both were treated as **compromised** and **rotated** — regenerated
+and updated in Vercel + the Firebase Functions secret. Ongoing hygiene (0.2,
+0.3) still applies.
 
 ### 0.2 Secret-scan the repo + full history
 - Run `gitleaks`/`trufflehog` over the working tree **and** git history; confirm
@@ -111,16 +108,14 @@ and `Permissions-Policy`. Limits XSS blast radius + clickjacking.
   `Content-Security-Policy-Report-Only` → `Content-Security-Policy`. Replacing
   `script-src 'unsafe-inline'` with a nonce is the follow-up hardening.
 
-### 2.4 Rules-deploy gate in CI  → closes "manual rule deploy"  — 🟡 scaffolded (2026-09-03)
+### 2.4 Rules-deploy gate in CI  → closes "manual rule deploy"  — 🟢 live & proven (2026-09-06)
 A CI job that runs the rules tests and (on `main`) deploys `firestore.rules`
 via a service account, so production rules can't silently drift from the
 tested state or be forgotten after a change.
-- **Done:** `.github/workflows/deploy-rules.yml` — on a rules change to `main`
-  it runs the rules suite and then deploys. **Inert until activated:** the
-  deploy step is skipped (workflow stays green) while the secret is absent.
-- **Remaining (you):** create a least-privilege service account with
-  `roles/firebaserules.admin` on `mapa-crmc` and add its JSON key as the
-  GitHub secret **`FIREBASE_SERVICE_ACCOUNT`**. Auto-deploy activates then.
+- **Done + activated:** `.github/workflows/deploy-rules.yml`; the
+  `FIREBASE_SERVICE_ACCOUNT` secret is set. **Proven in production 2026-09-06** —
+  the `amountApproved` cap (#195) was tested by the gate and auto-deployed on
+  merge. Rules no longer require a manual `firebase deploy`.
 
 ### 2.5 Harden the Vercel API functions
 For `send-email` / `send-sms`: verify the `jose` token strictly (audience +
@@ -136,9 +131,11 @@ turned into an open email/SMS relay.
 Enable Dependabot + `npm audit` (web **and** `functions/`) in CI; review the
 `jose` / `nodemailer` / `qrcode` / `firebase` pins.
 - **Done:** `.github/dependabot.yml` — weekly npm updates for `/` and
-  `/functions` (minor/patch grouped, majors individual) + github-actions.
-- **Remaining:** add a non-blocking `npm audit --audit-level=high` step to CI
-  as a second signal.
+  `/functions` (minor/patch grouped, majors individual) + github-actions; and a
+  non-blocking `npm audit --audit-level=high` CI step over both trees (#186).
+- **Noted:** the functions deploy warns `firebase-functions` is outdated;
+  upgrading has breaking changes, so it's a deliberate scoped task (Dependabot
+  will also surface it), not urgent.
 
 ### 3.2 RA 10173 program: retention + breach response  — 🟡 partially shipped (2026-09-03)
 Define a data retention/erasure schedule; document breach response in the
