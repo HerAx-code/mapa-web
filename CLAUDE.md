@@ -67,7 +67,7 @@ do NOT re-review documents or re-interview — they only approve their slice and
 Guarantee Letter issues at approval. See docs/redesign-plan.md.
 
 - **Request lifecycle:** submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). Patient can withdraw before endorsement.
-- **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or needs_info / rejected).
+- **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or needs_info / rejected). An agency's `amountApproved` is **rules-capped at the CRMC-endorsed `amountRequested`** so approvals can't over-commit the request past `amountNeeded`.
 - The interview lives on the **request** (CRMC-conducted, one assessment interview — in-person by default, Google Meet as the online fallback). The agency's job is the funding decision only.
 
 ## Coding Conventions

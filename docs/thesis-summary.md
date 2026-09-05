@@ -90,6 +90,15 @@ Last updated: 2026-06-07. **Current-state refresh: 2026-08-25.**
 > **incident-response / breach runbook** (RA 10173 72-hour duty) + a
 > `users.update` role-escalation test. See `docs/security-improvement-plan.md`,
 > `security-research.md`, `incident-response-runbook.md`, `threat-model.md`.
+>
+> **Addendum — 2026-09-06 (consistency / money-path review).** Fixed:
+> deactivation now enforced on every auth path (was password-login only, so an
+> MFA-enrolled deactivated staff account could sign in); `applications.update`
+> caps `amountApproved <= amountRequested` (no agency over-approval /
+> double-funding); `onInterviewSlotWritten` releases a patient's duplicate
+> booked slot; `REQ_RANK` de-duplicated to one shared export; listeners audited
+> (no leaks). The **rules-deploy CI gate is proven in production** (rules
+> auto-test + deploy on merge).
 
 This document distils the MAPA project for thesis defense. It is
 organised in the order a panel typically asks: what did you build,

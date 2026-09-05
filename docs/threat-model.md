@@ -63,6 +63,29 @@ Last updated: 2026-06-01. **Current-state note: 2026-08-25.**
 >   operationalises the RA 10173 72-hour duty.
 > - The `users.update` role-escalation lock (companion to T1) now has explicit
 >   regression tests. See `docs/security-improvement-plan.md` + `security-research.md`.
+>
+> ### Addendum — 2026-09-06 (consistency / money-path review)
+> - **Account deactivation now enforced on every auth path.** The
+>   `active===false` / `deletion===true` gates lived only in `login()`; the
+>   `onAuthStateChanged` handler (which resolves the session on the **MFA
+>   challenge** sign-in and on every **page refresh**) set the user with no
+>   check — so a deactivated MFA-enrolled staff account could sign in, and a
+>   deactivated user survived a refresh. Moved the gate into
+>   `onAuthStateChanged` (the single choke point).
+> - **Over-approval / double-funding closed.** `applications.update` locked the
+>   endorsed cap (`amountRequested`) but left the approval figure
+>   (`amountApproved`) unbounded at the rules layer — enforced only in the UI.
+>   An agency writing directly could approve **more than CRMC endorsed**, and
+>   `syncRequestFinancials` would sum the inflated figure, over-committing the
+>   request past `amountNeeded`. Added `amountApproved <= amountRequested` to
+>   the agency branch, with rules tests. (Deployed via the rules-deploy gate.)
+> - **Interview-slot capacity leak closed.** `isBooking()` guards one slot at a
+>   time but can't enforce one-per-patient; a cross-device race could leave a
+>   patient holding two booked slots. `onInterviewSlotWritten` now releases any
+>   other slot the patient holds on a new booking.
+> - **The rules-deploy CI gate is now proven in production** — a merged rules
+>   change ran the rules suite and auto-deployed `firestore.rules`. The
+>   "manual rule deploy" operational limit no longer applies to rules.
 
 This document records what threats MAPA addresses, what threats it
 deliberately accepts (and why), and the mitigations in place for each.
@@ -348,7 +371,7 @@ vs server-written entries.
 | Pilot runs on Spark (free) plan — Cloud Functions + Cloud Storage not active | Background jobs run via client-side lazy fallbacks in `agency/Dashboard.jsx` (slot reset + GL expiry sweep on agency-user dashboard load). Patient document content is base64-in-Firestore, ~700 KiB-after-compression cap per file. Both the Cloud Functions surface and the documentContents→Storage migration are implemented and remain in tree for a future Blaze deploy; the pilot operates without them |
 | No tamper-evident audit log | Admin SDK deletes are unrecorded; service-account key holders are trusted |
 | No staging environment | Dev work hits the same Firestore as the pilot |
-| No automated CI / no rule-deploy gate | Manual `firebase deploy --only firestore:rules`; tests must be run locally |
+| ~~No automated CI / no rule-deploy gate~~ → both exist (2026-09) | GitHub Actions runs all suites on every push/PR; a rules-deploy gate tests then auto-deploys `firestore.rules` on merge (proven in prod 2026-09-06) |
 | ~~No 2FA~~ → TOTP MFA live for staff (2026-09-04); no session timeout yet | MFA voluntary (`MFA_MODE='prompt'`) → flip to `'required'`; idle-timeout is the next item |
 | SMS built but not live; basic offline handling present | SMS via Semaphore (opt-in, PII-free, high-value alerts) is implemented and awaits sender-name approval; until then in-app + email are the channels. Offline is handled at the shell level by the installable PWA (cached app shell + an offline banner), not full offline data sync |
 | Client-side rate limiting + App Check (monitor mode, 2026-09-04) | App Check attests app origin (reCAPTCHA Enterprise); enforce after clean metrics. Server-side per-endpoint throttle on `/api/send-*` still pending |
