@@ -24,7 +24,19 @@ export function AuthProvider({ children }) {
       if (fbUser) {
         const snap = await getDoc(doc(db, 'users', fbUser.uid))
         if (snap.exists()) {
-          setUser({ uid: fbUser.uid, email: fbUser.email, ...snap.data() })
+          const data = snap.data()
+          // Enforce the deactivated / marked-for-deletion gates on EVERY auth
+          // resolution — not just the password login() path. Otherwise an
+          // account that authenticated via the MFA challenge (which bypasses
+          // login()) or one that simply refreshed the page would keep a
+          // session after being deactivated. Sign out and drop to null.
+          if (data.active === false || data.deletion === true) {
+            await signOut(auth)
+            setUser(null)
+            setLoading(false)
+            return
+          }
+          setUser({ uid: fbUser.uid, email: fbUser.email, ...data })
         } else {
           // User doc not present (yet). Two legitimate possibilities:
           //   (a) Registration is IN FLIGHT — the Register flow creates

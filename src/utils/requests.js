@@ -48,6 +48,16 @@ export function deriveAmountNeeded(req = {}) {
 export const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
 export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'for_funding', 'needs_info', 'reviewing', 'interview']
 
+// Rank of a request status along the co-funding lifecycle (0-5). Single source
+// of truth for the patient "where am I" surfaces (JourneyStrip / StatusHero /
+// Dashboard) — import this instead of re-declaring the map, so adding or
+// reordering a status can't silently diverge between them.
+export const REQ_RANK = {
+  submitted: 0, under_review: 1, assessment: 2,
+  endorsed: 3, partially_funded: 4, fully_funded: 5,
+}
+export const reqRank = (status) => REQ_RANK[status] ?? 0
+
 // Given a request's amountNeeded and its slices (child applications), compute
 // the live funding figures:
 //   - committed:   Σ amountApproved for secured slices

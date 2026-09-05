@@ -1,18 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { MdCheck } from 'react-icons/md'
+import { REQ_RANK } from '../../utils/requests'
 
 // The request lifecycle as a compact, at-a-glance horizontal strip — the
 // signature element of the patient-mobile redesign: "where am I?" answered
 // without reading. Driven by the request's own status rank, so it stays in
 // lockstep with the server. Reused on the Dashboard and the Status screen.
 //
-// Ranks mirror REQ_RANK in Dashboard/TrackStatus (the co-funding lifecycle):
-//   submitted 0 · under_review 1 · assessment 2 · endorsed 3 ·
-//   partially_funded 4 · fully_funded 5.
-const REQ_RANK = {
-  submitted: 0, under_review: 1, assessment: 2,
-  endorsed: 3, partially_funded: 4, fully_funded: 5,
-}
+// Ranks come from the shared REQ_RANK in utils/requests (the co-funding
+// lifecycle): submitted 0 · under_review 1 · assessment 2 · endorsed 3 ·
+// partially_funded 4 · fully_funded 5.
 
 const STAGES = [
   { key: 'submitted', entry: 0 },
