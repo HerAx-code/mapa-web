@@ -1,16 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { MdArrowForward } from 'react-icons/md'
+import { REQ_RANK } from '../../utils/requests'
 
 // The redesign's status hero: one calm pine card that answers "which stage am
 // I on, and what's my one next step" — replacing the per-status coloured cards
-// with a single cohesive treatment. Driven by the request's lifecycle rank
-// (same ranks as JourneyStrip), so hero + strip always agree. Used for the
-// pre-funding stages (submitted → assessment); once money is committed the
+// with a single cohesive treatment. Driven by the shared request lifecycle
+// rank (same REQ_RANK as JourneyStrip), so hero + strip always agree. Used for
+// the pre-funding stages (submitted → assessment); once money is committed the
 // Dashboard shows BalanceHero instead.
-const REQ_RANK = {
-  submitted: 0, under_review: 1, assessment: 2,
-  endorsed: 3, partially_funded: 4, fully_funded: 5,
-}
 const TOTAL = 6
 
 export default function StatusHero({ request, nextAction, navigate }) {

@@ -23,7 +23,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
-import { isSliceTerminal, computeFunding } from '../../utils/requests'
+import { isSliceTerminal, computeFunding, REQ_RANK } from '../../utils/requests'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 
@@ -191,9 +191,9 @@ function CoverageCard({ request, t }) {
 }
 
 // ── Application timeline ─────────────────────────────────────────────────────
-// A real event timeline driven by the request's own lifecycle rank, with dates
-// where they exist. Degrades gracefully: future steps read "upcoming".
-const REQ_RANK = { submitted: 0, under_review: 1, assessment: 2, endorsed: 3, partially_funded: 4, fully_funded: 5 }
+// A real event timeline driven by the request's own lifecycle rank (shared
+// REQ_RANK from utils/requests), with dates where they exist. Degrades
+// gracefully: future steps read "upcoming".
 function TimelineCard({ request, docStats, t }) {
   const rank = REQ_RANK[request.status] ?? 0
   const interviewWhen = request.interviewDate
