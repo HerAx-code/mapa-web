@@ -81,7 +81,30 @@ async function bookSync({ db, slotId, slot, serverTimestamp }) {
     update.status = 'assessment'
   }
   await reqRef.update(update)
-  return { synced: 'booked', requestId, queueNo, mode: slot.mode }
+
+  // Dedupe: a cross-device race can leave a patient holding an EARLIER booked
+  // slot too (the isBooking() rule guards one slot at a time but can't count
+  // "one per patient"). Release any OTHER slot they hold back to the pool so
+  // capacity isn't leaked and the request points at exactly one slot. Done
+  // after the repoint above, so each released slot's own cancel-sync sees the
+  // request already pointing elsewhere (interviewSlotId === slotId) and skips
+  // the request wipe.
+  let released = 0
+  if (slot.patientId) {
+    const held = await db.collection('interviewSlots')
+      .where('patientId', '==', slot.patientId)
+      .where('status', '==', 'booked')
+      .get()
+    const others = (held.docs || []).filter((d) => d.id !== slotId)
+    if (others.length) {
+      await Promise.all(others.map((d) =>
+        db.collection('interviewSlots').doc(d.id).update({
+          status: 'open', patientId: null, requestId: null, updatedAt: serverTimestamp(),
+        })))
+      released = others.length
+    }
+  }
+  return { synced: 'booked', requestId, queueNo, mode: slot.mode, released }
 }
 
 async function cancelSync({ db, slotId, prevSlot, serverTimestamp }) {

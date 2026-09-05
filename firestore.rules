@@ -173,13 +173,20 @@ service cloud.firestore {
         // approve / reverse / GL / redeem flow is affected. This is a locked-
         // immutables guard rather than a field allowlist precisely so it can't
         // silently break one of those multi-field transitions.
-        // amountApproved (the agency's decision) stays free; amountRequested
-        // (CRMC's endorsed cap) is locked.
+        // amountApproved (the agency's decision) stays writable but is CAPPED
+        // at amountRequested (CRMC's endorsed cap, itself locked). Without the
+        // cap an agency could approve MORE than CRMC endorsed via a direct
+        // write, over-committing the request past its need (double-funding) —
+        // syncRequestFinancials would then faithfully sum the inflated figure.
+        // Guarded so non-approval updates that don't carry amountApproved
+        // (needs_info, reject) still pass.
         (isAgency() && resource.data.agencyId == userAgencyId() &&
           request.resource.data.patientId      == resource.data.patientId &&
           request.resource.data.agencyId       == resource.data.agencyId &&
           request.resource.data.requestId      == resource.data.requestId &&
-          request.resource.data.amountRequested == resource.data.amountRequested) ||
+          request.resource.data.amountRequested == resource.data.amountRequested &&
+          (!('amountApproved' in request.resource.data) ||
+            request.resource.data.amountApproved <= resource.data.amountRequested)) ||
         isAdmin()
       );
       allow delete: if isAdmin();
