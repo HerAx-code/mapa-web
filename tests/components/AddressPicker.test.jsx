@@ -16,18 +16,24 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AddressPicker, { joinAddress } from '../../src/components/AddressPicker'
 
-// Labels are now properly bound to their controls via useId() +
-// htmlFor (fixed alongside this test refactor). Tests use accessible
-// queries -- if a future change breaks the binding, the test fails
-// immediately, which is the right signal.
-const provinceSelect = () => screen.getByRole('combobox', { name: /province/i })
-const citySelect     = () => screen.getByRole('combobox', { name: /city/i })
+// The province/city/barangay pickers are now custom SearchableSelect
+// comboboxes (a styled trigger button that opens a searchable listbox),
+// not native <select>s. Each trigger carries an aria-label of the field
+// name, so an accessible-name query still finds it; picking a value means
+// opening the list and clicking the option.
+const provinceTrigger = () => screen.getByRole('button', { name: /province/i })
+const cityTrigger     = () => screen.getByRole('button', { name: /city/i })
+
+const pick = async (user, trigger, optionName) => {
+  await user.click(trigger())
+  await user.click(await screen.findByRole('option', { name: optionName }))
+}
 
 describe('AddressPicker', () => {
-  it('renders the province + city selects (no barangay until selection)', () => {
+  it('renders the province + city pickers (no barangay until selection)', () => {
     render(<AddressPicker value={{}} onChange={() => {}} />)
-    expect(provinceSelect()).toBeInTheDocument()
-    expect(citySelect()).toBeInTheDocument()
+    expect(provinceTrigger()).toBeInTheDocument()
+    expect(cityTrigger()).toBeInTheDocument()
     expect(screen.getByText(/barangay/i)).toBeInTheDocument()
   })
 
@@ -36,7 +42,7 @@ describe('AddressPicker', () => {
     const onChange = vi.fn()
     render(<AddressPicker value={{}} onChange={onChange} />)
 
-    await user.selectOptions(provinceSelect(), 'Cotabato City')
+    await pick(user, provinceTrigger, 'Cotabato City')
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
       province: 'Cotabato City',
       city: '',
@@ -49,7 +55,7 @@ describe('AddressPicker', () => {
     const onChange = vi.fn()
     render(<AddressPicker value={{}} onChange={onChange} />)
 
-    await user.selectOptions(provinceSelect(), '__other__')
+    await pick(user, provinceTrigger, /other \(not listed\)/i)
     expect(screen.getByPlaceholderText(/enter province/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/enter city/i)).toBeInTheDocument()
   })
