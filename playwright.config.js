@@ -11,6 +11,11 @@ import { defineConfig, devices } from '@playwright/test'
 // real credentials are needed.
 export default defineConfig({
   testDir: './tests/e2e',
+  // The Appendix-D capture spec is a manual, credentialed tool (it logs into a
+  // live deployment with demo accounts and screenshots). It must NOT run in CI
+  // — CI's webServer uses the dummy Firebase config where login can't succeed.
+  // Run it via its own config: `npx playwright test --config=playwright.capture.config.js`.
+  testIgnore: ['**/capture-appendix-d.spec.js'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
