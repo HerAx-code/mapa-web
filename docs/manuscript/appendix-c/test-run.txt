@@ -1,0 +1,119 @@
+==================================================================
+MAPA — Appendix C test run
+Date: Sun Sep  6 08:02:39 MPST 2026
+Commit: 586432e
+==================================================================
+
+########## npm run test:all (utils + components + rules) ##########
+
+> mapa-crmc@1.0.0 test:all
+> npm run test && npm run test:components && npm run test:functions && npm run test:rules
+
+
+> mapa-crmc@1.0.0 test
+> vitest run tests/utils
+
+[2m8:02:47 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
+[2m8:02:47 AM[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.8 C:/Users/MY PC/Downloads/mapa-web
+
+
+ Test Files  12 passed (12)
+      Tests  128 passed (128)
+   Start at  08:02:48
+   Duration  67.52s (transform 528ms, setup 11.52s, import 3.87s, tests 263ms, environment 38.25s)
+
+
+> mapa-crmc@1.0.0 test:components
+> vitest run tests/components
+
+[2m8:03:57 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
+[2m8:03:57 AM[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.8 C:/Users/MY PC/Downloads/mapa-web
+
+
+ Test Files  16 passed (16)
+      Tests  90 passed (90)
+   Start at  08:03:58
+   Duration  47.78s (transform 1.43s, setup 6.30s, import 5.43s, tests 7.86s, environment 23.90s)
+
+
+> mapa-crmc@1.0.0 test:functions
+> vitest run tests/functions
+
+[2m8:04:47 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
+[2m8:04:47 AM[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.8 C:/Users/MY PC/Downloads/mapa-web
+
+
+ Test Files  7 passed (7)
+      Tests  75 passed (75)
+   Start at  08:04:47
+   Duration  28.54s (transform 318ms, setup 2.91s, import 408ms, tests 12.24s, environment 11.11s)
+
+
+> mapa-crmc@1.0.0 test:rules
+> firebase emulators:exec --only firestore --project mapa-rules-test "vitest run tests/rules"
+
+[36m[1mi  emulators:[22m[39m Starting emulators: firestore
+[36m[1mi  firestore:[22m[39m Firestore Emulator logging to [1mfirestore-debug.log[22m
+[32m[1m+  firestore:[22m[39m Firestore Emulator was started in standard edition.
+[32m[1m+  firestore:[22m[39m Firestore Emulator UI websocket is running on 9150.
+[36m[1mi [22m[39m Running script: [1mvitest run tests/rules[22m
+[2m8:06:12 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
+[2m8:06:12 AM[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.8 C:/Users/MY PC/Downloads/mapa-web
+
+
+ Test Files  10 passed (10)
+      Tests  166 passed (166)
+   Start at  08:06:13
+   Duration  61.94s (transform 285ms, setup 4.28s, import 3.92s, tests 33.94s, environment 16.79s)
+
+[32m[1m+ [22m[39m Script exited successfully (code 0)
+[36m[1mi  emulators:[22m[39m Shutting down emulators.
+[36m[1mi  firestore:[22m[39m Stopping Firestore Emulator
+[33m[1m! [22m[39m Firestore Emulator has exited upon receiving signal: SIGINT
+[36m[1mi  hub:[22m[39m Stopping emulator hub
+[36m[1mi  logging:[22m[39m Stopping Logging Emulator
+
+########## npm run test:functions ##########
+
+> mapa-crmc@1.0.0 test:functions
+> vitest run tests/functions
+
+[2m8:07:18 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
+[2m8:07:18 AM[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+
+ RUN  v4.1.8 C:/Users/MY PC/Downloads/mapa-web
+
+
+ Test Files  7 passed (7)
+      Tests  75 passed (75)
+   Start at  08:07:19
+   Duration  18.45s (transform 316ms, setup 2.73s, import 380ms, tests 3.43s, environment 10.08s)
+
+
+########## npm run test:e2e ##########
+
+> mapa-crmc@1.0.0 test:e2e
+> playwright test
+
+
+Running 4 tests using 4 workers
+
+  ok 4 [chromium] › tests\e2e\smoke.spec.js:33:1 › install page renders the install action (8.8s)
+  ok 2 [chromium] › tests\e2e\smoke.spec.js:27:1 › register page renders step 1 (8.8s)
+  ok 3 [chromium] › tests\e2e\smoke.spec.js:20:1 › login page renders its form (8.9s)
+  ok 1 [chromium] › tests\e2e\smoke.spec.js:14:1 › landing page renders (8.8s)
+
+  4 passed (50.9s)
