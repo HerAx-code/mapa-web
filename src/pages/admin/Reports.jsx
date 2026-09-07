@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
@@ -242,20 +243,22 @@ export default function Reports() {
             {categories.length > 0 && (
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
-                <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="input text-sm py-2">
-                  <option value="all">All categories</option>
-                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SearchableSelect
+                  triggerClassName="py-2"
+                  value={catFilter}
+                  onChange={setCatFilter}
+                  options={[{ value: 'all', label: 'All categories' }, ...categories.map(c => ({ value: c, label: c }))]} />
               </div>
             )}
 
             {roles.length > 1 && (
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Reporter</p>
-                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input text-sm py-2">
-                  <option value="all">All reporters</option>
-                  {roles.map(r => <option key={r} value={r}>{ROLE_LABEL[r] ?? r}</option>)}
-                </select>
+                <SearchableSelect
+                  triggerClassName="py-2"
+                  value={roleFilter}
+                  onChange={setRoleFilter}
+                  options={[{ value: 'all', label: 'All reporters' }, ...roles.map(r => ({ value: r, label: ROLE_LABEL[r] ?? r }))]} />
               </div>
             )}
 

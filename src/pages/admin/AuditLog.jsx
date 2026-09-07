@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import {
   collection, query, orderBy, limit, getDocs, startAfter, getCountFromServer,
 } from 'firebase/firestore'
@@ -363,12 +364,15 @@ export default function AuditLog() {
             {/* Actor */}
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Actor</p>
-              <select value={actorFilter} onChange={e => setActorFilter(e.target.value)} className="input text-sm py-2">
-                <option value="all">All actors</option>
-                {actors.map(a => (
-                  <option key={a.id} value={a.id}>{a.name}{a.role ? ` · ${ROLE_LABEL[a.role] ?? a.role}` : ''}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                triggerClassName="py-2"
+                value={actorFilter}
+                onChange={setActorFilter}
+                searchPlaceholder="Search actors…"
+                options={[
+                  { value: 'all', label: 'All actors' },
+                  ...actors.map(a => ({ value: a.id, label: `${a.name}${a.role ? ` · ${ROLE_LABEL[a.role] ?? a.role}` : ''}` })),
+                ]} />
               <p className="text-[10px] text-gray-300 mt-1">of {entries.length} loaded entries</p>
             </div>
 

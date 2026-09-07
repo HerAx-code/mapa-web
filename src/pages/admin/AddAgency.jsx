@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import {
   collection, addDoc, setDoc, deleteDoc, doc, serverTimestamp, query, orderBy, where, getDocs,
@@ -382,11 +383,10 @@ export default function AddAgency() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Processing Time</label>
-              <select className="input" value={agency.processingTime} onChange={setA('processingTime')}>
-                {['Same Day', '1–2 Days', '3–5 Days', '5–7 Days', '1–2 Weeks'].map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={agency.processingTime}
+                onChange={v => setA('processingTime')({ target: { value: v } })}
+                options={['Same Day', '1–2 Days', '3–5 Days', '5–7 Days', '1–2 Weeks'].map(v => ({ value: v, label: v }))} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Daily Slot Capacity</label>

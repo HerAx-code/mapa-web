@@ -1,6 +1,7 @@
 import { useState, useId } from 'react'
 import { BARMM_PROVINCES, BARMM_MUNICIPALITIES } from '../utils/barmm'
 import { BARANGAYS } from '../utils/barmm-barangays'
+import SearchableSelect from './ui/SearchableSelect'
 
 /**
  * AddressPicker — cascading BARMM Province → City → Barangay dropdown.
@@ -96,8 +97,7 @@ export default function AddressPicker({
     ...next,
   })
 
-  const onProvinceSelect = (e) => {
-    const v = e.target.value
+  const onProvinceSelect = (v) => {
     setBarangayOther(false)
     if (v === '__other__') {
       // "Other" at province level cascades: a province outside BARMM
@@ -112,8 +112,7 @@ export default function AddressPicker({
     }
   }
 
-  const onCitySelect = (e) => {
-    const v = e.target.value
+  const onCitySelect = (v) => {
     setBarangayOther(false)
     if (v === '__other__') {
       setCityOther(true)
@@ -124,8 +123,7 @@ export default function AddressPicker({
     }
   }
 
-  const onBarangaySelect = (e) => {
-    const v = e.target.value
+  const onBarangaySelect = (v) => {
     if (v === '__other__') {
       setBarangayOther(true)
       emit({ barangay: '' })
@@ -157,18 +155,18 @@ export default function AddressPicker({
         {!hideLabels && (
           <label htmlFor={provinceId} className="block text-xs font-medium text-gray-700 mb-1">{labels.province}</label>
         )}
-        <select
+        <SearchableSelect
           id={provinceId}
-          data-field="province"
-          aria-label={hideLabels ? labels.province : undefined}
-          className={`${inputCls('province')} ${(!provinceOther && !value.province) ? 'text-gray-400' : ''}`}
+          dataField="province"
+          ariaLabel={labels.province}
+          error={!!errors.province}
+          placeholder={labels.selectProvince}
+          searchPlaceholder={labels.selectProvince}
           value={provinceOther ? '__other__' : value.province}
           onChange={onProvinceSelect}
-          disabled={disabled}>
-          <option value="">{labels.selectProvince}</option>
-          {BARMM_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-          <option value="__other__">{labels.otherNotListed}</option>
-        </select>
+          disabled={disabled}
+          options={BARMM_PROVINCES.map(p => ({ value: p, label: p }))}
+          pinnedOption={{ value: '__other__', label: labels.otherNotListed }} />
         {provinceOther && (
           <input
             className={`${inputCls('province')} mt-2`}
@@ -202,18 +200,18 @@ export default function AddressPicker({
             maxLength={60} />
         ) : (
           <>
-            <select
+            <SearchableSelect
               id={cityId}
-              data-field="city"
-              aria-label={hideLabels ? labels.city : undefined}
-              className={`${inputCls('city')} ${(!cityOther && !value.city) ? 'text-gray-400' : ''}`}
+              dataField="city"
+              ariaLabel={labels.city}
+              error={!!errors.city}
+              placeholder={value.province ? labels.selectCity : labels.pickProvinceFirst}
+              searchPlaceholder={labels.selectCity}
               value={cityOther ? '__other__' : value.city}
               onChange={onCitySelect}
-              disabled={disabled || (!value.province && !cityOther)}>
-              <option value="">{value.province ? labels.selectCity : labels.pickProvinceFirst}</option>
-              {(BARMM_MUNICIPALITIES[value.province] ?? []).map(c => <option key={c} value={c}>{c}</option>)}
-              <option value="__other__">{labels.otherNotListed}</option>
-            </select>
+              disabled={disabled || (!value.province && !cityOther)}
+              options={(BARMM_MUNICIPALITIES[value.province] ?? []).map(c => ({ value: c, label: c }))}
+              pinnedOption={{ value: '__other__', label: labels.otherNotListed }} />
             {cityOther && (
               <input
                 className={`${inputCls('city')} mt-2`}
@@ -251,18 +249,18 @@ export default function AddressPicker({
               maxLength={80} />
           ) : (
             <>
-              <select
+              <SearchableSelect
                 id={barangayId}
-                data-field="barangay"
-                aria-label={hideLabels ? labels.barangay : undefined}
-                className={`${inputCls('barangay')} ${(!barangayOther && !value.barangay) ? 'text-gray-400' : ''}`}
+                dataField="barangay"
+                ariaLabel={labels.barangay}
+                error={!!errors.barangay}
+                placeholder={labels.selectBarangay}
+                searchPlaceholder={labels.selectBarangay}
                 value={barangayOther ? '__other__' : value.barangay}
                 onChange={onBarangaySelect}
-                disabled={disabled}>
-                <option value="">{labels.selectBarangay}</option>
-                {bgyList.map(b => <option key={b} value={b}>{b}</option>)}
-                <option value="__other__">{labels.otherNotListed}</option>
-              </select>
+                disabled={disabled}
+                options={bgyList.map(b => ({ value: b, label: b }))}
+                pinnedOption={{ value: '__other__', label: labels.otherNotListed }} />
               {barangayOther && (
                 <input
                   className={`${inputCls('barangay')} mt-2`}

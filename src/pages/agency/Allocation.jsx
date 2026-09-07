@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -486,11 +487,14 @@ export default function AgencyAllocation() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Period</label>
-                <select className="input" value={newPeriod} onChange={e => setNewPeriod(e.target.value)}>
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
+                <SearchableSelect
+                  value={newPeriod}
+                  onChange={setNewPeriod}
+                  options={[
+                    { value: 'monthly',   label: 'Monthly' },
+                    { value: 'quarterly', label: 'Quarterly' },
+                    { value: 'yearly',    label: 'Yearly' },
+                  ]} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">

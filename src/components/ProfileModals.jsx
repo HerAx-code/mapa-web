@@ -3,6 +3,7 @@ import { doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, getDocs, q
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, auth, storage } from '../firebase'
+import SearchableSelect from './ui/SearchableSelect'
 import { notify } from '../utils/notifications'
 import MfaEnrollModal from './MfaEnrollModal'
 
@@ -804,11 +805,11 @@ function ReportModal({ onClose }) {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.report.categoryLabel')} <span className="text-red-400">*</span></label>
-          <select className="input" value={form.category}
-            onChange={e => setForm(prev => ({ ...prev, category: e.target.value }))}>
-            <option value="">{t('profile.report.categoryPlaceholder')}</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <SearchableSelect
+            value={form.category}
+            onChange={v => setForm(prev => ({ ...prev, category: v }))}
+            placeholder={t('profile.report.categoryPlaceholder')}
+            options={CATEGORIES.map(c => ({ value: c, label: c }))} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.report.descriptionLabel')} <span className="text-red-400">*</span></label>

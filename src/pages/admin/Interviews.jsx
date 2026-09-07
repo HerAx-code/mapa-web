@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useState, useEffect, useMemo } from 'react'
 import {
@@ -259,9 +260,10 @@ export default function AdminInterviews() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Publish availability</p>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Range</label>
-                <select className="input text-sm" value={rangeDays} onChange={e => { setRangeDays(Number(e.target.value)); setPreview(null) }}>
-                  {RANGE_OPTIONS.map(r => <option key={r.days} value={r.days}>{r.label}</option>)}
-                </select>
+                <SearchableSelect
+                  value={String(rangeDays)}
+                  onChange={v => { setRangeDays(Number(v)); setPreview(null) }}
+                  options={RANGE_OPTIONS.map(r => ({ value: String(r.days), label: r.label }))} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Mode</label>

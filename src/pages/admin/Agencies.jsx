@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import AgencyCapacityOverview from '../../components/admin/AgencyCapacityOverview'
 import { useState, useEffect } from 'react'
@@ -277,11 +278,10 @@ export function AgencyModal({ agency, onClose, onSave }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Processing Time</label>
-              <select className="input" value={form.processingTime} onChange={set('processingTime')}>
-                {['Same Day', '1–2 Days', '3–5 Days', '5–7 Days', '1–2 Weeks'].map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={form.processingTime}
+                onChange={v => set('processingTime')({ target: { value: v } })}
+                options={['Same Day', '1–2 Days', '3–5 Days', '5–7 Days', '1–2 Weeks'].map(v => ({ value: v, label: v }))} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Daily Slot Capacity</label>
@@ -588,12 +588,16 @@ export default function Agencies() {
             ))}
           </div>
           <div className="flex gap-1">
-            <select className="input w-40" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="name">Sort: Name</option>
-              <option value="status">Sort: Status</option>
-              <option value="slots">Sort: Slot Usage</option>
-              <option value="apps">Sort: Applications</option>
-            </select>
+            <SearchableSelect
+              className="w-40"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'name',   label: 'Sort: Name' },
+                { value: 'status', label: 'Sort: Status' },
+                { value: 'slots',  label: 'Sort: Slot Usage' },
+                { value: 'apps',   label: 'Sort: Applications' },
+              ]} />
             <button
               type="button"
               onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}

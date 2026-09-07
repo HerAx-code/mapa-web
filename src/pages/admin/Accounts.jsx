@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import Layout from '../../components/Layout'
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail, deleteUser } from 'firebase/auth'
@@ -180,10 +181,13 @@ function AccountModal({ account, onClose }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Role <span className="text-red-400">*</span></label>
-            <select className="input" value={form.role} onChange={set('role')}>
-              <option value="super_admin">Super Admin</option>
-              <option value="staff_admin">Staff Admin</option>
-            </select>
+            <SearchableSelect
+              value={form.role}
+              onChange={v => set('role')({ target: { value: v } })}
+              options={[
+                { value: 'super_admin', label: 'Super Admin' },
+                { value: 'staff_admin', label: 'Staff Admin' },
+              ]} />
             <p className="text-xs text-gray-400 mt-1">Agency staff are managed under each agency.</p>
           </div>
 
