@@ -112,3 +112,13 @@ the same PR. No batching unrelated pages.
 
 When this list is all ✅/➖, the reskin+relayout goal is met — and this file is
 the proof so we don't start over.
+
+## Shared form controls
+
+- **Dropdowns → `SearchableSelect` (`src/components/ui/SearchableSelect.jsx`).**
+  As of R42 (2026-09-07) every native `<select>` in the app was replaced with a
+  shared searchable combobox: styled to match `.input` + the brand focus ring,
+  type-to-filter search on long lists (auto-hidden under 8 items), full keyboard
+  nav, ARIA listbox semantics, 44px touch rows, and a `pinnedOption` for an
+  "Other (not listed)" escape hatch. **New forms use `SearchableSelect`, not a
+  raw `<select>`.** It adds no dependency. See `docs/revision-list.md §B.27`.
