@@ -42,6 +42,7 @@ export default function SearchableSelect({
   dataField,
   ariaLabel,
   className = '',
+  triggerClassName = '',
   emptyText = 'No matches',
 }) {
   const [open, setOpen]     = useState(false)
@@ -132,7 +133,8 @@ export default function SearchableSelect({
     'input flex items-center justify-between gap-2 text-left cursor-pointer ' +
     (disabled ? 'opacity-60 cursor-not-allowed ' : '') +
     (error ? 'border-red-400 bg-red-50 ' : '') +
-    (open ? 'ring-2 ring-brand-500 border-transparent ' : '')
+    (open ? 'ring-2 ring-brand-500 border-transparent ' : '') +
+    triggerClassName
 
   return (
     <div ref={rootRef} className={`relative ${className}`} onKeyDown={onKeyDown}>

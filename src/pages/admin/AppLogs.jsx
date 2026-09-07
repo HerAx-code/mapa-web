@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MdSearch } from 'react-icons/md'
@@ -173,10 +174,12 @@ export default function AppLogs() {
 
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Agency</p>
-              <select value={agencyFilter} onChange={e => setAgencyFilter(e.target.value)} className="input text-sm py-2">
-                <option value="all">All agencies</option>
-                {agencies.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
+              <SearchableSelect
+                triggerClassName="py-2"
+                value={agencyFilter}
+                onChange={setAgencyFilter}
+                searchPlaceholder="Search agencies…"
+                options={[{ value: 'all', label: 'All agencies' }, ...agencies.map(a => ({ value: a, label: a }))]} />
               <p className="text-[10px] text-gray-300 mt-1">of {apps.length} loaded</p>
             </div>
 

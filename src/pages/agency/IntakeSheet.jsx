@@ -1,4 +1,5 @@
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -626,9 +627,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     disabled={!canEdit} />
                 </Field>
                 <Field label="Employment Type">
-                  <select className="input" value={sheet.employmentType} onChange={set('employmentType')} disabled={!canEdit}>
-                    {EMPLOYMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={sheet.employmentType}
+                    onChange={v => set('employmentType')({ target: { value: v } })}
+                    disabled={!canEdit}
+                    options={EMPLOYMENT_TYPES.map(t => ({ value: t.value, label: t.label }))} />
                 </Field>
                 <Field label="Employer">
                   <input className="input" value={sheet.employer} onChange={set('employer')} disabled={!canEdit} />
@@ -709,10 +712,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               <div className="space-y-3">
                 <Field label="Means-Test Category" required
                   hint="Manually classified by the social worker based on income, household size, and observed conditions.">
-                  <select className="input" value={sheet.meansTestCategory}
-                    onChange={set('meansTestCategory')} disabled={!canEdit}>
-                    {MEANS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={sheet.meansTestCategory}
+                    onChange={v => set('meansTestCategory')({ target: { value: v } })}
+                    disabled={!canEdit}
+                    options={MEANS_CATEGORIES.map(c => ({ value: c.value, label: c.label }))} />
                 </Field>
                 <Field label="Social Case Study Narrative"
                   hint="Family background, circumstances of illness, observations during home visit or interview.">

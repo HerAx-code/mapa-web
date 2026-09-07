@@ -62,21 +62,24 @@ const defaultProps = {
   onClose: vi.fn(),
 }
 
-// Waiting on `mockGetDocs` having been CALLED only proves the fetch
-// started. The promise may not have resolved and React may not have
-// re-rendered yet, so the picker can still be showing its 'Loading…'
-// placeholder -- which is exactly how this suite flaked in CI
-// ("expected [ 'Loading…' ] to include 'PCSO'") while passing locally.
-// Wait on the rendered option list instead, and return the picker so
-// callers don't re-query it.
-async function waitForAgencyPicker() {
-  let select
-  await waitFor(() => {
-    select = screen.getAllByRole('combobox')[0]
-    const options = Array.from(select.options).map(o => o.textContent)
-    expect(options).toContain('PCSO')
-  })
-  return select
+// The agency picker is now a SearchableSelect combobox: a trigger button
+// whose label is the placeholder ("Loading…" then "Pick an agency" once the
+// fetch resolves), which opens a listbox of options. findByRole on the
+// loaded label doubles as the load-settled wait that this suite needs
+// (it flaked in CI when it asserted before the getDocs promise resolved).
+const agencyTriggerLoaded = () =>
+  screen.findByRole('button', { name: /pick an agency/i })
+
+// Open the agency picker and return the option labels it renders.
+async function openAgencyOptions(user) {
+  await user.click(await agencyTriggerLoaded())
+  return screen.getAllByRole('option').map(o => o.textContent)
+}
+
+// Open the picker and click one agency option by its visible name.
+async function pickAgency(user, name) {
+  await user.click(await agencyTriggerLoaded())
+  await user.click(screen.getByRole('option', { name }))
 }
 
 describe('SuggestEndorsementModal', () => {
@@ -87,10 +90,9 @@ describe('SuggestEndorsementModal', () => {
   })
 
   it('REGRESSION GUARD: excludes own agency (sibling) from the picker', async () => {
+    const user = userEvent.setup()
     render(<SuggestEndorsementModal {...defaultProps} />)
-    // Wait for agencies to load
-    const select = await waitForAgencyPicker()
-    const optionText = Array.from(select.options).map(o => o.textContent)
+    const optionText = await openAgencyOptions(user)
     // Malasakit (own) should not appear
     expect(optionText).not.toContain('Malasakit Center')
     // PCSO and DSWD AICS should appear
@@ -99,22 +101,22 @@ describe('SuggestEndorsementModal', () => {
   })
 
   it('REGRESSION GUARD: excludes disabled agencies from the picker', async () => {
+    const user = userEvent.setup()
     render(<SuggestEndorsementModal {...defaultProps} />)
-    const select = await waitForAgencyPicker()
-    const optionText = Array.from(select.options).map(o => o.textContent)
+    const optionText = await openAgencyOptions(user)
     expect(optionText).not.toContain('Disabled Org')
   })
 
   it('disables Send until both agency picked AND reason >= 10 chars', async () => {
     const user = userEvent.setup()
     render(<SuggestEndorsementModal {...defaultProps} />)
-    await waitForAgencyPicker()
+    await agencyTriggerLoaded()
 
     const sendBtn = screen.getByRole('button', { name: /Send suggestion/i })
     expect(sendBtn).toBeDisabled()
 
     // Pick agency only
-    await user.selectOptions(screen.getAllByRole('combobox')[0], 'pcso')
+    await pickAgency(user, 'PCSO')
     expect(sendBtn).toBeDisabled()  // still disabled, no reason yet
 
     // Type 5 chars — still below 10
@@ -130,9 +132,9 @@ describe('SuggestEndorsementModal', () => {
   it('REGRESSION GUARD: addDoc payload self-attributes via fromAgencyId/fromUserId', async () => {
     const user = userEvent.setup()
     render(<SuggestEndorsementModal {...defaultProps} />)
-    await waitForAgencyPicker()
+    await agencyTriggerLoaded()
 
-    await user.selectOptions(screen.getAllByRole('combobox')[0], 'pcso')
+    await pickAgency(user, 'PCSO')
     await user.type(
       screen.getByPlaceholderText(/Patient mentions/i),
       'Patient eligible under PCSO MAP scope',

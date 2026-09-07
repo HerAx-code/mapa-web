@@ -6,6 +6,7 @@ import {
   MdSchedule, MdPlace,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import LanguageToggle from '../../components/LanguageToggle'
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
@@ -661,9 +662,11 @@ export default function Register() {
                 </div>
                 <div>
                   <label htmlFor="reg-suffix" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.suffix')}</label>
-                  <select id="reg-suffix" className="input" value={form.suffix} onChange={set('suffix')}>
-                    {SUFFIXES.map(s => <option key={s} value={s}>{s || `— ${t('register.step1.suffixNone')} —`}</option>)}
-                  </select>
+                  <SearchableSelect
+                    id="reg-suffix"
+                    value={form.suffix}
+                    onChange={v => set('suffix')({ target: { value: v } })}
+                    options={SUFFIXES.map(s => ({ value: s, label: s || `— ${t('register.step1.suffixNone')} —` }))} />
                 </div>
               </div>
 

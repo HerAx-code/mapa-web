@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
+import SearchableSelect from '../ui/SearchableSelect'
 import { useAuth } from '../../contexts/AuthContext'
 import { MdClose, MdSend, MdGroups } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -142,17 +143,13 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Suggested agency <span className="text-red-400">*</span>
             </label>
-            <select
-              className={`input ${!toAgencyId ? 'text-gray-400' : ''}`}
+            <SearchableSelect
               value={toAgencyId}
-              onChange={e => setToAgencyId(e.target.value)}
+              onChange={setToAgencyId}
               disabled={loadingAgencies || agencies.length === 0}
-            >
-              <option value="">{loadingAgencies ? 'Loading…' : 'Pick an agency'}</option>
-              {agencies.map(a => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
+              placeholder={loadingAgencies ? 'Loading…' : 'Pick an agency'}
+              searchPlaceholder="Search agencies…"
+              options={agencies.map(a => ({ value: a.id, label: a.name }))} />
             {!loadingAgencies && agencies.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
                 All eligible agencies are already on this case. No siblings left to suggest.
@@ -202,11 +199,10 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
           {/* Urgency */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Urgency</label>
-            <select className="input text-sm" value={urgency} onChange={e => setUrgency(e.target.value)}>
-              {URGENCY_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={urgency}
+              onChange={setUrgency}
+              options={URGENCY_OPTIONS.map(o => ({ value: o.value, label: o.label }))} />
           </div>
         </div>
 

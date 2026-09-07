@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useAuth } from '../../contexts/AuthContext'
 import Layout from '../../components/Layout'
 import { blankSheet } from '../../utils/intakeSheet'
@@ -307,9 +308,11 @@ export default function IntakeWizard() {
               </div>
               <div>
                 <Q en="Work situation (optional)" fil="Kalagayan sa trabaho (opsyonal)" htmlFor="iw-employment" />
-                <select id="iw-employment" className={inputCls} value={sheet.employmentType} onChange={set('employmentType')}>
-                  {EMPLOYMENT.map(o => <option key={o.value} value={o.value}>{o.en}{o.value ? ` · ${o.fil}` : ''}</option>)}
-                </select>
+                <SearchableSelect
+                  id="iw-employment"
+                  value={sheet.employmentType}
+                  onChange={v => set('employmentType')({ target: { value: v } })}
+                  options={EMPLOYMENT.map(o => ({ value: o.value, label: `${o.en}${o.value ? ` · ${o.fil}` : ''}` }))} />
               </div>
               <div>
                 <Q en="Where does the money come from? (optional)" fil="Saan nanggagaling ang pera? (opsyonal)" htmlFor="iw-income-source" />

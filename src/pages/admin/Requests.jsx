@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import {
   collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, updateDoc,
@@ -1712,17 +1713,24 @@ export default function Requests() {
             <input className="input pl-9 py-1.5" placeholder="Request ID, patient, or type…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select aria-label="Filter by category" value={category} onChange={e => setCategory(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value="all">All categories</option>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select aria-label="Filter by officer" value={assignee} onChange={e => setAssignee(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value="all">Any officer</option>
-            <option value="Unassigned">Unassigned</option>
-            {assignees.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <SearchableSelect
+            ariaLabel="Filter by category"
+            className="w-44"
+            triggerClassName="py-1.5"
+            value={category}
+            onChange={setCategory}
+            options={[{ value: 'all', label: 'All categories' }, ...categories.map(c => ({ value: c, label: c }))]} />
+          <SearchableSelect
+            ariaLabel="Filter by officer"
+            className="w-44"
+            triggerClassName="py-1.5"
+            value={assignee}
+            onChange={setAssignee}
+            options={[
+              { value: 'all', label: 'Any officer' },
+              { value: 'Unassigned', label: 'Unassigned' },
+              ...assignees.map(a => ({ value: a, label: a })),
+            ]} />
           <button type="button" aria-pressed={overdueOnly} onClick={() => setOverdueOnly(v => !v)}
             className={`rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
               overdueOnly ? 'border-red-300 bg-red-50 font-medium text-red-800' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900'
@@ -1731,12 +1739,17 @@ export default function Requests() {
           </button>
           <div className="ml-auto flex items-center gap-2">
             <span className="tabular-nums hidden text-xs text-gray-500 sm:block">{filtered.length} shown</span>
-            <select aria-label="Sort requests" value={sort} onChange={e => setSort(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 hover:border-gray-300 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-              <option value="waiting">Longest waiting</option>
-              <option value="balance">Largest balance</option>
-              <option value="coverage">Least covered</option>
-            </select>
+            <SearchableSelect
+              ariaLabel="Sort requests"
+              className="w-44"
+              triggerClassName="py-1.5"
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: 'waiting',  label: 'Longest waiting' },
+                { value: 'balance',  label: 'Largest balance' },
+                { value: 'coverage', label: 'Least covered' },
+              ]} />
           </div>
         </div>
 

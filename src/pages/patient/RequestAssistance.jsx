@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import {
   collection, query, where, onSnapshot, getDocs,
   doc, setDoc, updateDoc, writeBatch, serverTimestamp,
@@ -747,10 +748,13 @@ export default function RequestAssistance() {
           {/* Assistance type */}
           <div>
             <label htmlFor="req-type" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
-            <select id="req-type" className={`input ${!form.assistanceType ? 'text-gray-500' : ''}`} value={form.assistanceType} onChange={set('assistanceType')}>
-              <option value="">{t('patient.request.typePlaceholder')}</option>
-              {types.map(tp => <option key={tp} value={tp}>{tp}</option>)}
-            </select>
+            <SearchableSelect
+              id="req-type"
+              value={form.assistanceType}
+              onChange={v => set('assistanceType')({ target: { value: v } })}
+              placeholder={t('patient.request.typePlaceholder')}
+              searchPlaceholder={t('patient.request.typePlaceholder')}
+              options={types.map(tp => ({ value: tp, label: tp }))} />
           </div>
 
           {/* Total hospital bill — the full amount on the patient's Statement
