@@ -627,5 +627,10 @@ Shared conversation surface (role-scoped).
 - **Role guards** are enforced at the route (`PrivateRoute allowedRoles`) *and*
   in `firestore.rules`; the AA/SU annotations above match the route guards in
   `src/App.jsx`.
+- **Dropdowns.** Every control labelled "select" above is the shared
+  `SearchableSelect` combobox (`src/components/ui/SearchableSelect.jsx`), not a
+  native `<select>` — type-to-filter on long lists, keyboard-navigable, styled
+  to match the app (R42, see `docs/revision-list.md §B.27`). The selected value
+  and behaviour are unchanged; only the widget differs.
 - This document reflects the code as read on 2026-09-07 and should be
   regenerated if the pages change.

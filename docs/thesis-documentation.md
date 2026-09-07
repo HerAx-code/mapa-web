@@ -115,7 +115,7 @@
 > - The **rules-deploy CI gate is proven in production** — rules now auto-test
 >   and deploy on merge; no manual `firebase deploy --only firestore:rules`.
 
-**Last updated:** 2026-06-07 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32, and **the Inter-Agency Coordination Plan Phase 1 (R33 Case Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard)** — see `docs/revision-list.md` for the change log)
+**Last updated:** 2026-09-07 (reflects the CRMC-gateway redesign, the post-redesign read-pass review series, the operator-throughput follow-up batch, the first-visit guided tour batch, the full-system 46-page audit, the post-pilot live-session audit round 2 (R13–R29), the demo-account maintenance trio + Spark write-quota investigation, the post-quota recovery push: reference-data seeder, agency logo support, full-database backup, defense-demo scenario, sidebar gap fix R31, BARMM location dropdowns R32, the Inter-Agency Coordination Plan Phase 1 (R33 Case Timeline + R34 Watcher Subscriptions + R35 Live Over-Commitment Guard), and **the app-wide searchable-dropdown rollout (R42 — a shared `SearchableSelect` combobox replaces every native `<select>`; deployed to production 2026-09-07)** — see `docs/revision-list.md` for the change log)
 
 This document compiles the requirement analysis, architecture, page-by-page documentation, data model, security model, workflows, testing notes, and future work for the **MAPA (Medical Assistance Portal Access)** system, developed as the partner-pilot platform for the Cotabato Regional Medical Center (CRMC) Malasakit Center.
 
@@ -185,7 +185,7 @@ The system is scoped to CRMC's Cotabato City pilot. The following are explicitly
 
 #### 3.1.1 Patient Functional Requirements
 
-**FR-P-01 Registration.** A patient shall self-register with a Patient Access Code (format `CRMC-YYYY-NNNNN`) previously issued by CRMC Medical Social Services. Registration shall collect full name, contact number, complete address (via cascading BARMM-region location dropdowns), and account credentials.
+**FR-P-01 Registration.** A patient shall self-register with a Patient Access Code (format `CRMC-YYYY-NNNNN`) previously issued by CRMC Medical Social Services. Registration shall collect full name, contact number, complete address (via **searchable** cascading BARMM-region location dropdowns — a type-to-filter combobox so a patient finds their barangay among dozens without scrolling), and account credentials.
 
 **FR-P-02 Request Submission.** A patient shall submit **one assistance request at a time** stating the assistance type, the bill amount needed, an optional description, and uploading the required documents (Valid ID, Barangay Certificate of Indigency, Hospital Billing Statement, Medical Abstract, PhilHealth ID, Medical Certificate, Laboratory Results, etc.). Submission is a 4-step guided wizard. Documents uploaded with the request are scoped per-request and reusable verified documents (e.g., Valid ID) carry over without re-upload.
 

@@ -541,6 +541,18 @@ Pending coordination work (Phases 2–4) documented in `docs/thesis-documentatio
 - Phase 3 (Blaze-dependent v2): In-case comment threads (Salesforce Chatter), joint Meet scheduling, Open Referral / HSDS adapter
 - Phase 4 (production / multi-hospital): Multi-hospital sharding, real outcome tracking, donor analytics, PhilSys integration
 
+### B.27 — App-wide searchable dropdowns (R42)
+
+Triggered by an operator screenshot on 2026-09-07 showing the native `<select>` for the barangay field — a cramped, unsearchable OS popup forcing the patient to scroll ~37 near-identical Cotabato City barangay names on a phone. Introduced a shared `SearchableSelect` combobox (`src/components/ui/SearchableSelect.jsx`) and replaced **every** native `<select>` in the app with it (16 files, ~25 controls). Verified live on production.
+
+| # | Theme | Action Taken | Commit |
+|---|---|---|---|
+| 27.1 (R42) | `SearchableSelect` component — accessible, searchable, mobile-first | Controlled combobox, **no new dependency**. A styled trigger opens a popover with a type-to-filter search box (shown only when the list has > 7 items, so short lists stay clean), full keyboard navigation (Arrow/Home/End/Enter/Escape), the ARIA listbox pattern (`role=combobox/listbox/option`, `aria-activedescendant`), outside-click + Escape to close, focus return to the trigger, and 44px touch rows. Matches the app's `.input` styling + brand focus ring so all dropdowns read as one system. A `pinnedOption` prop keeps the "Other (not listed)" free-text escape hatch always visible and never filtered out; a `triggerClassName` prop lets compact filter toolbars keep their sizing | `28ade27` |
+| 27.2 (R42) | Rollout across the app | Converted `AddressPicker` (province/city/barangay, Other-fallback preserved) plus Register (suffix), RequestAssistance (assistance type), IntakeWizard + IntakeSheet (employment / means-test), Accounts (role), AddAgency + Agencies (processing time, sort), ProfileModals (report category), Allocation (period), SuggestEndorsementModal (agency, urgency), and the admin filter toolbars on Requests (category / officer / sort), Reports (category / reporter), AuditLog (actor), AppLogs (agency), Interviews (range). Event-based `set()` setters were adapted with a `{ target: { value } }` shim so their side effects (autosave, error-clear) are preserved; triggers keep `data-field`/`id` so Register's scroll-to-first-error still works | `28ade27` |
+| 27.3 (R42) | Tests updated to drive the combobox | `AddressPicker` and `SuggestEndorsementModal` component tests were rewritten from native `selectOptions` to the open-list-and-click interaction. Full component suite green (90 passed); utils 128 passed | `28ade27` |
+
+End-state of B.27: no native `<select>` remains in `src/`. Long lists (barangay, agency, actor/officer filters) gain type-to-filter search; short lists render as styled dropdowns with no search box. This closes the reskin-plan's implicit "forms use one dropdown control" gap and directly enhances R32 (BARMM location dropdowns) and R39 (`AddressPicker`). Shipped as PR #199, merged and deployed to production 2026-09-07, verified live on `/register`.
+
 ### B.22 — Closing summary
 
 | Metric | Value |
