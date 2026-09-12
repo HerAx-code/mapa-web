@@ -295,7 +295,7 @@ The system is scoped to CRMC's Cotabato City pilot. The following are explicitly
 
 **NFR-03 Availability.** The system shall be hosted on Vercel and Firebase, with public-cloud SLAs of 99.9 % uptime.
 
-**NFR-04 Security.** All client-server communication shall use HTTPS. Data-layer access control shall be enforced through Firestore Security Rules. No client-side authority shall be trusted.
+**NFR-04 Security.** All client-server communication shall use HTTPS. Data-layer access control shall be enforced through Firestore Security Rules, deny-by-default for unauthenticated access (the previously open single-document read on `hospitalIds` was closed to `if isAuth()` — see Revision Report §4.1). No client-side authority shall be trusted.
 
 **NFR-05 Bilingual.** All patient-facing strings shall be externalized as locale keys with translations for Filipino and English. The user shall be able to switch language at any time.
 
@@ -967,7 +967,7 @@ The rules treat every collection as a separate authorization surface. Helper fun
 | `agencies` | Public | Super admin | Admin / own agency (any agency role on own agency — field-level constraints, e.g. budget/cap vs slots vs operational fields, are enforced in the client UI) | Super admin |
 | `documentTypes` | Authenticated | Super admin | Super admin | Super admin |
 | `assistanceTypes` | Authenticated | Super admin | Super admin | Super admin |
-| `hospitalIds` | Public single GET (registration) / authenticated list | Super admin | Admin / authenticated (registration claim, fields constrained) / agency (cooldown stamp, fields constrained) | Super admin |
+| `hospitalIds` | Authenticated single GET (registration reads the code after anonymous/real sign-in) / authenticated list | Super admin | Admin / authenticated (registration claim, fields constrained) / agency (cooldown stamp, fields constrained) | Super admin |
 | `notifications/{uid}/items` | Owner | Authenticated | Owner | Owner |
 | `conversations` | Participants | Authenticated | Participants | Admin / participant |
 | `conversations/{id}/messages` | Participants | Participants | — | Admin |

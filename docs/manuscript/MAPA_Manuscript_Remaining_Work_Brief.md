@@ -151,17 +151,22 @@ The template supplies the vitae as **tables**, not prose:
 Each in reverse chronological order. Rebuild the four vitae as empty tables in
 this shape so each proponent just fills cells.
 
-### 3.5 One open security item to resolve before submission
+### 3.5 One open security item — RESOLVED (2026-09-12)
 
-`firestore.rules:425` — `allow get: if true` on `/hospitalIds/{id}`. Because
-this is open, NFR-04 makes no blanket deny-by-default claim and the item appears
-as **Recommendation 1 for the System** in the Conclusion.
+`firestore.rules` — the open `allow get: if true` on `/hospitalIds/{id}` has been
+**closed to `allow get: if isAuth()`** and deployed via the rules-deploy CI gate.
+Rather than routing registration exclusively through `verifyAccessCode` (not
+feasible — the atomic claim must client-read the code to check availability), the
+read was gated to authenticated principals: registration signs in anonymously
+before the verify step and creates the real account before the claim `tx.get`, so
+the code is never read unauthenticated. `tests/rules/hospitalIds.rules.test.js`
+was inverted to assert the unauthenticated GET is denied.
 
-If you want it closed: route registration exclusively through the
-`verifyAccessCode` Cloud Function, withdraw the direct-read permission, and
-**invert `tests/rules/hospitalIds.rules.test.js:53`**, which currently asserts
-the unauthenticated GET as correct behaviour. Then tell me and I'll rewrite that
-recommendation as a closed item and strengthen NFR-04.
+Manuscript effect: **NFR-04 now claims deny-by-default for unauthenticated
+access**, and the former **Recommendation 1 for the System** is retired as a
+completed item (see Revision Report §4.1). Residual future work: an
+anonymously-authenticated probe is still possible; fully closing it needs the
+claim moved server-side.
 
 ---
 
