@@ -355,8 +355,15 @@ service cloud.firestore {
     // give the broad write permission. A tighter field-level guard can be
     // added later (request.resource.data.budget == resource.data.budget for
     // CRMC admin) once the UI gating is fully verified.
+    // The rich agency doc carries budget (allocated / committed / disbursed),
+    // fundSource, contacts and signatories. It was world-readable (`if true`)
+    // only so the public Landing page could show a live programs teaser — which
+    // leaked every partner's internal budget to the internet (audit SEC-3). The
+    // teaser now reads the non-sensitive `agenciesPublic` projection below, so
+    // this collection is gated to authenticated principals. Every in-app reader
+    // (admin/agency surfaces, LiveDataContext) is already authenticated.
     match /agencies/{agencyId} {
-      allow read:   if true;
+      allow read:   if isAuth();
       allow create: if isSuperAdmin();
       // Update authority split:
       //   - CRMC admin: anything (operational fields + emergency budget
@@ -395,6 +402,17 @@ service cloud.firestore {
                         // access and denies the write.
                         request.resource.data.budget.get('fundSource', null) == resource.data.budget.get('fundSource', null));
       allow delete: if isSuperAdmin();
+    }
+
+    // ── agenciesPublic ──────────────────────────────────────────────────────────
+    // A non-sensitive projection of each agency (name + slots + enabled only),
+    // maintained by the onAgencyWritten Cloud Function. World-readable so the
+    // public Landing page can show its live programs teaser without exposing the
+    // rich `agencies` doc (budget / fundSource / contacts / signatories). No
+    // client ever writes here — only the function (Admin SDK, bypasses rules).
+    match /agenciesPublic/{agencyId} {
+      allow read:  if true;
+      allow write: if false;
     }
 
     // ── documentTypes ─────────────────────────────────────────────────────────

@@ -85,8 +85,13 @@ export default function Landing() {
   }, [user, navigate])
 
   useEffect(() => {
+    // Reads the public projection (name + slots + enabled), NOT the rich
+    // `agencies` doc — that one is auth-gated because it carries budget /
+    // fundSource / contacts. The projection is maintained by the
+    // onAgencyWritten Cloud Function. If it's empty (function/backfill not yet
+    // run) the teaser simply shows nothing — never an error.
     const unsub = onSnapshot(
-      query(collection(db, 'agencies'), where('enabled', '==', true)),
+      query(collection(db, 'agenciesPublic'), where('enabled', '==', true)),
       snap => setAgencies(
         snap.docs
           .map(d => ({ id: d.id, ...d.data() }))

@@ -17,6 +17,7 @@ const { syncRequestFinancials }  = require('./src/syncRequestFinancials')
 const { onInterviewSlotWritten } = require('./src/onInterviewSlotWritten')
 const { interviewReminders }     = require('./src/interviewReminders')
 const { deleteAuthUser }         = require('./src/deleteAuthUser')
+const { onAgencyWritten }        = require('./src/onAgencyWritten')
 
 exports.resetAgencySlots        = resetAgencySlots
 exports.glExpirySweep           = glExpirySweep
@@ -25,3 +26,4 @@ exports.syncRequestFinancials   = syncRequestFinancials
 exports.onInterviewSlotWritten  = onInterviewSlotWritten
 exports.interviewReminders      = interviewReminders
 exports.deleteAuthUser          = deleteAuthUser
+exports.onAgencyWritten         = onAgencyWritten
