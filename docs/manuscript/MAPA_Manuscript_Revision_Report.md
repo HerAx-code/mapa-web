@@ -69,7 +69,7 @@ Every item below was verified against the repository, not inferred.
 | 3 | Limitation: "**No SMS notifications** — excluded as cost-prohibitive" | SMS **is built** via Semaphore (`api/send-sms.js`, opt-in per call, PII-free); **not yet live** pending sender-name approval | Limitations, Implementation Plan (readiness gates), Recommendations |
 | 4 | Four partner agencies incl. **Malasakit Center as a funder**; PhilHealth treated as a program alongside them | **Four GL-issuing funders: DOH-MAIP, PCSO MAP, DSWD AICS, AMBaG.** Malasakit is modelled as the **CRMC gateway role itself** (RA 11463 = a coordination hub, not a funder) and retained disabled. **PhilHealth is not an agency** — it is the first-charge coverage (`philhealthCovered`) that reduces the bill under JAO 2020-0001 | Project Context, Purpose & Description, new subsection **"The Order of Charging in the Data Model"**, FR-CRMC-05, Table 7, Conclusions |
 | 5 | Data model listed 12 collections | ~18 in `firestore.rules`, incl. `interviewSlots`, `docReviewPresence`, `notificationErrors`, `referralSuggestions` | **Table 7** rewritten |
-| 6 | NFR-04 security = HTTPS + Firestore rules only | Adds **staff TOTP MFA** (Identity Platform, patients exempt), **App Check** (reCAPTCHA Enterprise, monitor mode), **security headers + report-only CSP**, Dependabot + `npm audit` in CI, and a **rules-deploy CI gate** | NFR-04, Technical Background, Development → Security Practices, Permissions matrix |
+| 6 | NFR-04 security = HTTPS + Firestore rules only | Adds **staff TOTP MFA** (Identity Platform, patients exempt), **App Check** (reCAPTCHA Enterprise, monitor mode), **security headers + report-only CSP**, Dependabot + `npm audit` in CI, a **rules-deploy CI gate**, and **deny-by-default for unauthenticated reads** — the two previously world-readable collections (`hospitalIds`, `agencies`) are now `if isAuth()`, the latter fronted by a non-sensitive `agenciesPublic` projection for the public Landing page | NFR-04, Technical Background, Development → Security Practices, Permissions matrix |
 | 7 | No testing evidence anywhere in the manuscript | **286 automated tests** (utils 35 / components 64 / functions 49 / rules 138) + Playwright E2E, GitHub Actions CI, pre-commit hook | New **Tables 9, 10, 11**; NFR-12 added |
 | 8 | NFR-02: "50 concurrent applications per agency per day **within the constraints of the free-tier Firebase plan**" | The fixed daily write quota is gone on the metered plan | NFR-02 rewritten |
 | 9 | RA 10173 §16(e): Auth account was an acknowledged residual after erasure | Closed by the deployed `deleteAuthUser` function | Compliance Verification, FR-CRMC-17, Table 6 |
@@ -84,7 +84,7 @@ Every item below was verified against the repository, not inferred.
 
 ## 4. Things I want you to check before submitting
 
-### 4.1 The one open security finding — now closed (2026-09-12)
+### 4.1 The open security findings — now all closed (2026-09-12)
 
 Earlier drafts reported an open item: `/hospitalIds/{id}` carried `allow get: if
 true`, so single-document reads of Patient Access Codes were possible without
@@ -110,6 +110,16 @@ The other critical finding from your August audit — the unauthenticated
 `api/send-email.js` open relay — **is closed**; the route now verifies the
 Firebase ID token via `jose` and rejects anonymous sessions. That's reflected
 positively in the manuscript.
+
+The high-severity finding SEC-3 — the `agencies` collection was world-readable,
+exposing every partner's budget (allocated / committed / disbursed), fund source,
+contacts and signatories — **is also closed** (deployed 2026-09-12). `agencies`
+read is now `if isAuth()`; the public Landing page reads a non-sensitive
+projection instead, `agenciesPublic/{id}` (agency name + interview-slot counts +
+enabled flag only), kept in sync by the `onAgencyWritten` Cloud Function. No
+budget or contact data is world-readable, and the funding money-path code was left
+untouched (no data migration). With SEC-1, SEC-2 and SEC-3 all closed, every
+security finding from the August audit is resolved.
 
 ### 4.2 Data I could not source — fill these in
 
