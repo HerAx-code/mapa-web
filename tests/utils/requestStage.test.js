@@ -33,8 +33,8 @@ describe('deriveRequestStage', () => {
     expect(r.current).toBe('interview')
   })
 
-  it('reaches endorse only when docs + intake + interview outcome are all done', () => {
-    const req = { status: 'assessment', intakeSheet: completeIntake, interviewOutcome: 'eligible' }
+  it('reaches endorse only when docs + intake + a COMPLETED interview are all done', () => {
+    const req = { status: 'assessment', intakeSheet: completeIntake, interviewOutcome: 'completed' }
     const r = deriveRequestStage(req, verified)
     expect(r.canEndorse).toBe(true)
     expect(r.current).toBe('endorse')
@@ -42,11 +42,23 @@ describe('deriveRequestStage', () => {
     expect(stageStatus(req, verified).endorse).toBe('current')
   })
 
-  it('matches the original inline gate exactly (allVerified && interviewOutcome && intakeComplete)', () => {
+  it('the gate is allVerified && intakeComplete && interviewOutcome === "completed"', () => {
     // Missing just the interview outcome → still blocked.
     const r = deriveRequestStage({ status: 'assessment', intakeSheet: completeIntake }, verified)
     expect(r.canEndorse).toBe(false)
     expect(r.blockers.map(b => b.key)).toEqual(['interview'])
+  })
+
+  it('a no-show or rescheduled interview does NOT unlock endorsement', () => {
+    // A recorded outcome that isn't "completed" means the assessment did not
+    // actually happen — it must keep the interview stage blocking.
+    for (const outcome of ['no_show', 'rescheduled']) {
+      const req = { status: 'assessment', intakeSheet: completeIntake, interviewOutcome: outcome }
+      const r = deriveRequestStage(req, verified)
+      expect(r.canEndorse).toBe(false)
+      expect(r.interviewDone).toBe(false)
+      expect(r.blockers.map(b => b.key)).toEqual(['interview'])
+    }
   })
 
   it('lists the exact remaining blockers with jump targets', () => {
@@ -57,7 +69,7 @@ describe('deriveRequestStage', () => {
 
   it('reports no active stage for terminal requests', () => {
     for (const status of ['fully_funded', 'closed', 'rejected']) {
-      const r = deriveRequestStage({ status, intakeSheet: completeIntake, interviewOutcome: 'x' }, verified)
+      const r = deriveRequestStage({ status, intakeSheet: completeIntake, interviewOutcome: 'completed' }, verified)
       expect(r.terminal).toBe(true)
       expect(r.current).toBeNull()
     }

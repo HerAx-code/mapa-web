@@ -131,6 +131,20 @@ describe('syncRequestFinancials — derived figure is authoritative', () => {
     expect(updates[0].amountCommitted).toBe(0)
     expect(updates[0].status).toBe('endorsed')
   })
+
+  it('counts an awaiting_info slice as outstanding → endorsed, never submitted', async () => {
+    // Regression: 'awaiting_info' was missing from OUTSTANDING_SLICE_STATUSES,
+    // so a request whose only slice was parked in awaiting_info fell to
+    // outstanding=0 and derived to 'submitted'. Stored status is stale
+    // 'submitted' here so the trigger must actively CORRECT it to 'endorsed';
+    // the buggy code would derive 'submitted', see it in-sync, and leave the
+    // request wrongly stuck at the start of the journey.
+    const { updates } = await run(
+      { amountNeeded: 25000, amountCommitted: 0, status: 'submitted' },
+      [{ status: 'awaiting_info', amountRequested: 25000 }],
+    )
+    expect(updates[0].status).toBe('endorsed')
+  })
 })
 
 describe('syncRequestFinancials — CRMC lifecycle authority', () => {
@@ -198,6 +212,7 @@ describe('parity with src/utils/requests.js', () => {
     { need: 25000, slices: [{ status: 'certificate', amountApproved: 5000 }] },
     { need: 25000, slices: [{ status: 'certificate', glStatus: 'expired', amountApproved: 5000 }] },
     { need: 25000, slices: [{ status: 'reviewing', amountRequested: 12500 }] },
+    { need: 25000, slices: [{ status: 'awaiting_info', amountRequested: 12500 }] },
     { need: 25000, slices: [{ status: 'endorsed', amountRequested: 12500 }] },
     { need: 0,     slices: [{ status: 'approved', amountApproved: 100 }] },
     { need: 25000, slices: [

@@ -9,7 +9,13 @@
 // inline logic exactly:
 //   allVerified  = docs.length > 0 && every doc verified
 //   intakeComplete = isIntakeComplete(request.intakeSheet)
-//   canEndorse   = allVerified && !!interviewOutcome && intakeComplete
+//   canEndorse   = allVerified && interviewOutcome === 'completed' && intakeComplete
+//
+// The interview prerequisite requires the outcome to be 'completed' — a
+// 'no_show' or 'rescheduled' outcome means the assessment did not actually
+// happen, so it must NOT unlock endorsement (the assessment interview is
+// mandatory per CLAUDE.md). Earlier this was `!!interviewOutcome`, which let a
+// no-show endorse straight through.
 
 import { isIntakeComplete } from './intakeSheet'
 
@@ -25,14 +31,18 @@ export function deriveRequestStage(request = {}, docs = []) {
   const verifiedDocs  = docs.filter(d => d?.status === 'verified').length
   const docsVerified  = totalDocs > 0 && verifiedDocs === totalDocs
   const intakeComplete = isIntakeComplete(request?.intakeSheet)
-  const interviewDone = !!request?.interviewOutcome
+  const interviewDone = request?.interviewOutcome === 'completed'
   const canEndorse    = docsVerified && intakeComplete && interviewDone
 
   const done = { verify: docsVerified, assess: intakeComplete, interview: interviewDone, endorse: false }
   const detail = {
     verify:    totalDocs ? `${verifiedDocs}/${totalDocs} verified` : 'No documents',
     assess:    intakeComplete ? 'Intake complete' : 'Intake incomplete',
-    interview: interviewDone ? 'Outcome recorded' : 'No outcome yet',
+    interview: interviewDone
+      ? 'Completed'
+      : request?.interviewOutcome
+        ? `${request.interviewOutcome.replace('_', '-')} — needs a completed interview`
+        : 'No outcome yet',
     endorse:   canEndorse ? 'Ready to endorse' : 'Prerequisites pending',
   }
   const label = { verify: 'Verify documents', assess: 'Assess', interview: 'Interview', endorse: 'Endorse' }

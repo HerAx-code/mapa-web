@@ -122,6 +122,30 @@ describe('computeFunding', () => {
     expect(f.committed).toBe(0)
   })
 
+  it('counts an awaiting_info slice as outstanding (regression: it used to vanish)', () => {
+    // When an agency clicks "Request more info" the slice becomes
+    // 'awaiting_info'. Its reserved amount must still count as outstanding —
+    // otherwise headroom is overstated and syncRequestFinancials would regress
+    // the parent request back to 'submitted'.
+    const slices = [{ status: 'awaiting_info', amountRequested: 20_000 }]
+    const f = computeFunding(50_000, slices)
+    expect(f.outstanding).toBe(20_000)
+    expect(f.headroom).toBe(30_000)
+    // And the derived status must stay 'endorsed', not fall back to 'submitted'.
+    expect(deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, 50_000)).toBe('endorsed')
+  })
+
+  it('the never-written statuses for_funding / needs_info are NOT counted (guard against reintroduction)', () => {
+    const f = computeFunding(50_000, [
+      { status: 'for_funding', amountRequested: 10_000 },
+      { status: 'needs_info',  amountRequested: 10_000 },
+    ])
+    expect(f.outstanding).toBe(0)
+    expect(OUTSTANDING_SLICE_STATUSES).not.toContain('for_funding')
+    expect(OUTSTANDING_SLICE_STATUSES).not.toContain('needs_info')
+    expect(OUTSTANDING_SLICE_STATUSES).toContain('awaiting_info')
+  })
+
   it('EXCLUDES expired GLs from committed (R2 fix)', () => {
     // Expiry releases budget back to the agency's allocation, so the
     // expired slice must stop counting as committed on the parent
@@ -150,9 +174,13 @@ describe('computeFunding', () => {
   it('exports the status sets so callers can stay consistent with the aggregator', () => {
     expect(COMMITTED_SLICE_STATUSES).toContain('approved')
     expect(COMMITTED_SLICE_STATUSES).toContain('certificate')
+    // Must be the exact strings the app writes to applications.status.
     expect(OUTSTANDING_SLICE_STATUSES).toContain('endorsed')
-    expect(OUTSTANDING_SLICE_STATUSES).toContain('for_funding')
-    expect(OUTSTANDING_SLICE_STATUSES).toContain('needs_info')
+    expect(OUTSTANDING_SLICE_STATUSES).toContain('reviewing')
+    expect(OUTSTANDING_SLICE_STATUSES).toContain('awaiting_info')
+    // These were never written by the app; they must not reappear.
+    expect(OUTSTANDING_SLICE_STATUSES).not.toContain('for_funding')
+    expect(OUTSTANDING_SLICE_STATUSES).not.toContain('needs_info')
   })
 })
 

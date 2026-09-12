@@ -56,8 +56,13 @@ const admin = require('firebase-admin')
 // maths in src/utils/requests.js, change it here too -- a mismatch would
 // make the trigger "correct" the client's figure to a different wrong
 // number, which is worse than no trigger at all.
+// ⚠ Mirror of src/utils/requests.js — MUST match the exact strings written to
+// applications.status. Previously listed the never-written 'for_funding' /
+// 'needs_info' and omitted the real 'awaiting_info', so this trigger dropped an
+// awaiting_info slice from `outstanding` and could rewrite an endorsed request
+// back to 'submitted'.
 const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
-const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'for_funding', 'needs_info', 'reviewing', 'interview']
+const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info', 'interview']
 
 // A `certificate` slice whose GL has expired released its committed
 // budget back to the agency, so it must stop counting as committed.
