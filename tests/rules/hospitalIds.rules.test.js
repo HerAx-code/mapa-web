@@ -45,23 +45,30 @@ async function seedPrivateInfo(hospitalId, usedById, usedBy = 'Maria Santos') {
   })
 }
 
-// ── Phase 0.3 — hospitalIds parent stays public for registration ───────
-// The parent doc retains allow get: if true so registration verification
-// can happen before sign-in. Tests pin that behavior so a future
-// "let's just close it" change doesn't break the registration flow.
-describe('hospitalIds parent — public get preserved (Phase 0.3)', () => {
-  it('allows an unauthenticated client to GET the parent doc', async () => {
+// ── hospitalIds parent — GET requires auth (unauthenticated probe closed) ──
+// Previously `allow get: if true` let anyone probe whether a code existed.
+// Registration never needs an UNauthenticated read: Register.jsx signs the
+// user in anonymously before the verify step, and the atomic claim runs its
+// `tx.get` after the real account is created — both are authenticated. Gating
+// get on isAuth() closes the unauthenticated probe (NFR-04 deny-by-default)
+// without breaking registration, agency cooldown reads, or admin management.
+describe('hospitalIds parent — get requires auth', () => {
+  it('DENIES an unauthenticated client from GETting the parent doc', async () => {
     await seedHospitalId('CRMC-2026-00001')
     const ctx = testEnv.unauthenticatedContext()
-    await assertSucceeds(getDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001')))
+    await assertFails(getDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001')))
+  })
+
+  it('allows an authenticated client to GET the parent doc (the registration path)', async () => {
+    // The registrant is authenticated (anon at verify, real account at the
+    // claim tx.get) — this is exactly how registration reads the code.
+    await seedHospitalId('CRMC-2026-00002')
+    const ctx = testEnv.authenticatedContext('registrant-uid')
+    await assertSucceeds(getDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00002')))
   })
 
   it('rejects an unauthenticated client from LISTING the collection', async () => {
-    // get is allowed; list requires auth. Together they let registration
-    // verify a specific code without exposing a scrapable enumeration
-    // endpoint.
     const ctx = testEnv.unauthenticatedContext()
-    // assertFails on a list intentionally: rules deny the broader scope.
     await assertFails(
       ctx.firestore().collection('hospitalIds').get()
     )

@@ -412,8 +412,17 @@ service cloud.firestore {
     }
 
     // ── hospitalIds ───────────────────────────────────────────────────────────
-    // Unauthenticated single-document GET is needed for hospital ID verification
-    // during patient registration (user is not yet logged in at that point).
+    // Single-document GET requires authentication. Registration never reads a
+    // code unauthenticated: Register.jsx signs the user in anonymously before
+    // the verify step, and the atomic claim runs a `tx.get` after the real
+    // account is created (createUserWithEmailAndPassword) -- both are isAuth().
+    // Agencies get() the parent to read cooldown fields at approval; admins
+    // manage codes. Closing the previous `allow get: if true` removes the
+    // unauthenticated code-existence probe (NFR-04 deny-by-default); the parent
+    // carries no PII (the patient name lives behind the auth-gated privateInfo
+    // sub-collection, and patId is an opaque uid). An anon-authenticated probe
+    // is still possible in principle -- fully closing that needs the claim
+    // moved server-side, tracked as future work.
     // Listing all IDs requires authentication.
     // Updates:
     //   - admin: anything (manual reset, status changes)
@@ -429,7 +438,7 @@ service cloud.firestore {
     //     without needing the role lookup.
     // Only super_admin can create or delete IDs.
     match /hospitalIds/{hospitalId} {
-      allow get:    if true;
+      allow get:    if isAuth();
       allow list:   if isAuth();
       allow create: if isSuperAdmin();
       allow update: if isAdmin() ||
