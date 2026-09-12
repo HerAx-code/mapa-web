@@ -106,6 +106,11 @@ becomes live again in <60 sec.
 
 ### 0.3 Lock down `hospitalIds` enumeration (10 min)
 
+> **DONE 2026-09-12 (PR #205):** now `allow get: if isAuth()`, closing the
+> unauthenticated enumeration; the PII half (`usedBy`) was already moved to the
+> auth-gated `privateInfo` sub-collection. The rest of this section is the
+> original plan.
+
 `firestore.rules:313`. Currently:
 ```
 allow get: if true;

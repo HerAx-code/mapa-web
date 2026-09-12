@@ -84,21 +84,27 @@ Every item below was verified against the repository, not inferred.
 
 ## 4. Things I want you to check before submitting
 
-### 4.1 One open security finding — I reported it honestly rather than hiding it
+### 4.1 The one open security finding — now closed (2026-09-12)
 
-`firestore.rules:425` still reads `allow get: if true` on `/hospitalIds/{id}`.
-Single-document reads of Patient Access Codes are therefore possible without
+Earlier drafts reported an open item: `/hospitalIds/{id}` carried `allow get: if
+true`, so single-document reads of Patient Access Codes were possible without
 authentication via the Firestore REST API, bypassing the `verifyAccessCode`
-throttle. `Register.jsx` still keeps a direct-read fallback, and
-`tests/rules/hospitalIds.rules.test.js:53` **asserts the unauthenticated GET as
-correct behaviour**, so closing this means inverting the test, not just the rule.
+throttle.
 
-I did **not** write a blanket "all access is server-enforced and deny-by-default"
-claim into NFR-04, because it would be false while this is open. Instead the
-manuscript states the security posture accurately and lists the item as
-**Recommendation 1 for the System**, in the proponents' own voice. If you close
-the rule before submission, tell me and I'll rewrite that recommendation as a
-closed item.
+**This is now closed.** The rule is `allow get: if isAuth()` (deployed via the
+rules-deploy CI gate). Registration is unaffected: `Register.jsx` signs the user
+in anonymously before the verify step, and the atomic claim's `tx.get` runs after
+the real account is created — both authenticated — so the code is only ever read
+by an authenticated principal. `tests/rules/hospitalIds.rules.test.js` was
+inverted accordingly: it now asserts the unauthenticated GET is **denied** and
+adds an authenticated-GET success case.
+
+Because the unauthenticated read is gone, **NFR-04 now states deny-by-default for
+unauthenticated access**, and the former "Recommendation 1 for the System" is
+retired as a completed item. One honest residual remains: an attacker who first
+obtains an anonymous auth token could still probe code existence — fully closing
+that requires moving the claim transaction server-side (documented as future
+work), because the claim must read the code to check availability atomically.
 
 The other critical finding from your August audit — the unauthenticated
 `api/send-email.js` open relay — **is closed**; the route now verifies the
