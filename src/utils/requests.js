@@ -43,10 +43,19 @@ export function deriveAmountNeeded(req = {}) {
 }
 
 // Slice statuses that count as money already secured vs. still in flight.
-// 'for_funding'/'needs_info' are the redesign's agency-decision states;
-// 'reviewing'/'interview' are kept for back-compat until their writers move.
+// These MUST match the exact strings the app writes to `applications.status`
+// (see the agency ApplicationDetail handlers): a slice is endorsed → reviewing
+// ("For Funding") → awaiting_info (agency chasing the patient) → approved →
+// certificate, or rejected. 'interview' is a legacy pre-redesign in-flight
+// state kept for back-compat.
+// ⚠ Mirror of the identical list in functions/src/syncRequestFinancials.js —
+// that Cloud Function is the authoritative writer of request.status, so the two
+// lists MUST stay in sync. Earlier this listed the never-written 'for_funding'
+// and 'needs_info' and OMITTED 'awaiting_info', so an awaiting_info slice fell
+// out of `outstanding` and the sync function could regress an endorsed request
+// back to 'submitted'.
 export const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
-export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'for_funding', 'needs_info', 'reviewing', 'interview']
+export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info', 'interview']
 
 // Rank of a request status along the co-funding lifecycle (0-5). Single source
 // of truth for the patient "where am I" surfaces (JourneyStrip / StatusHero /
