@@ -808,6 +808,37 @@ function RequestDetail({ request, agencies, onClose }) {
     finally { setBusy(false) }
   }
 
+  // Recover from a non-completed interview outcome (no-show / rescheduled).
+  // Fix #2 (requestStage) correctly keeps such an outcome from unlocking
+  // endorsement, but the recorded outcome then leaves the request with a past
+  // interviewDate and no way forward — the assessment must be re-done. This
+  // clears the stale interview + outcome and re-opens self-booking so the
+  // patient can pick a new time (which onInterviewSlotWritten re-stamps and
+  // rolls the request back into 'assessment'). CRMC records 'completed' after
+  // the new interview to unlock endorsement.
+  const reopenInterview = async () => {
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'requests', request.id), {
+        interviewBookingOpen: true,
+        interviewDate:        null,
+        interviewTime:        null,
+        meetLink:             '',
+        interviewOutcome:     null,
+        interviewNotes:       null,
+        updatedAt:            serverTimestamp(),
+      })
+      logAudit(user, { action: 'interview_booking_opened', targetType: 'request', targetId: request.id, targetName: request.requestId, details: 'Re-opened booking after a non-completed interview outcome', requestId: request.id, patientId: request.patientId })
+      await notify(request.patientId, {
+        type:  'interview_booking_open',
+        title: 'Please rebook your interview',
+        body:  'CRMC re-opened interview booking for your request. Open the Interviews page to pick a new date and time.',
+      }).catch(() => {})
+      toast.success('Booking re-opened — the patient can pick a new time.')
+    } catch (err) { console.error(err); toast.error('Failed to re-open booking.') }
+    finally { setBusy(false) }
+  }
+
   // PhilHealth-first: record the coverage applied before endorsement and
   // recompute the residual (amountNeeded) the agencies co-fund. Gated to
   // pre-endorsement in the UI because the endorse transaction freezes
@@ -1071,6 +1102,25 @@ function RequestDetail({ request, agencies, onClose }) {
                     <span className="text-gray-400">Outcome:</span> <span className="font-medium">{request.interviewOutcome}</span>
                     {request.interviewNotes && (
                       <p className="text-gray-600 whitespace-pre-wrap mt-0.5">{request.interviewNotes}</p>
+                    )}
+                    {request.interviewOutcome !== 'completed' && (
+                      <div className="mt-2 space-y-1.5">
+                        <p className="text-amber-700">This interview wasn't completed — it must be re-done before the request can be endorsed.</p>
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            disabled={busy}
+                            onClick={reopenInterview}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
+                            <MdEventRepeat size={14} /> Re-open self-booking
+                          </button>
+                          <button
+                            disabled={busy}
+                            onClick={() => setShowInterview(true)}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
+                            <MdVideoCall size={14} /> Schedule directly
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
