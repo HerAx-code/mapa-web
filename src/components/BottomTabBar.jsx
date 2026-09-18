@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  MdDashboard, MdTimeline, MdFavorite, MdMessage, MdMenu,
+  MdDashboard, MdTimeline, MdPostAdd, MdMessage, MdMenu,
 } from 'react-icons/md'
 
 /**
@@ -11,7 +11,7 @@ import {
  * and admin users keep the sidebar + hamburger pattern because their
  * surfaces are web-only per CLAUDE.md.
  *
- * The 5 tabs are: Dashboard, My Application, Documents, Messages, More.
+ * The 5 tabs are: Dashboard, Status, Request, Messages, More.
  * "More" now NAVIGATES to /patient/more (a dedicated page) instead of
  * opening a left-side drawer. The drawer pattern was disproportionate
  * for the 3-item overflow group, and a real page lets hardware back
@@ -32,7 +32,10 @@ export default function BottomTabBar({ unreadMessages = 0 }) {
     // tapped it expecting to start a new request and landed on the
     // tracker instead. The 'Request' tab below is the actual apply flow.
     { to: '/patient/status',    Icon: MdTimeline,  labelKey: 'patient.tab.status'    },
-    { to: '/patient/request',   Icon: MdFavorite,  labelKey: 'patient.tab.request'   },
+    // MdPostAdd (not MdFavorite): a heart reads as "favourite/like" in
+    // every other mobile app — a false signal for "submit a request for
+    // medical assistance". A document-with-plus matches the action (MOB-4).
+    { to: '/patient/request',   Icon: MdPostAdd,   labelKey: 'patient.tab.request'   },
     {
       to:        '/patient/messages',
       Icon:      MdMessage,

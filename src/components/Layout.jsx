@@ -1343,10 +1343,16 @@ export default function Layout({ children, breadcrumb }) {
         {/* ── Page content ─────────────────────────────────────────── */}
         {/* overflow-x-clip is the stricter sibling of -hidden: it
             forbids horizontal scroll AND prevents the main from being
-            sized by intrinsic-width children. pb-20 on patient mobile
-            leaves room for the BottomTabBar (56 px + safe-area). */}
+            sized by intrinsic-width children. The bottom padding on
+            patient mobile clears the BottomTabBar, which is min-h-[60px]
+            PLUS env(safe-area-inset-bottom) on a home-indicator phone.
+            The old flat pb-20 (80px) omitted the safe-area term, so the
+            last ~14px of every page — including the Submit button on the
+            request/intake forms — sat under the bar (MOB-1). The calc
+            reserves the full bar height + safe area + a 1rem breathing
+            gap; lg:pb-0 drops it once the sidebar layout takes over. */}
         <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 print:overflow-visible print:block ${
-          user?.role === ROLES.PATIENT ? 'pb-20 lg:pb-0' : ''
+          user?.role === ROLES.PATIENT ? 'pb-[calc(60px_+_env(safe-area-inset-bottom)_+_1rem)] lg:pb-0' : ''
         }`}>
           {/* Key on pathname so each navigation re-mounts this wrapper
               and re-triggers the fade-in animation. Subtle motion
