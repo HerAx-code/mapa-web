@@ -295,15 +295,10 @@ export default function Messages() {
         {/* ── Mobile (<md) — centered card + modal ── */}
         <div className="w-full max-w-3xl mx-auto p-4 sm:p-6 overflow-x-clip md:hidden">
           <div className="flex items-start justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
-                <MdMessage size={22} className="text-brand-500" />
-              </div>
-              <div>
-                <p className="eyebrow">Inbox</p>
-                <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Messages</h1>
-                <p className="text-sm text-gray-500 mt-1">All your conversations in one place.</p>
-              </div>
+            <div>
+              <p className="eyebrow">Inbox</p>
+              <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Messages</h1>
+              <p className="text-sm text-gray-500 mt-1">All your conversations in one place.</p>
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && <span className="badge badge-blue">{unreadCount} unread</span>}
