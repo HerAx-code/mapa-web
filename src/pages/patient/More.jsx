@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   MdSearch, MdVideoCall, MdMenuBook,
-  MdPerson, MdLock, MdShield, MdHelp, MdFlag,
+  MdPerson, MdShield, MdHelp, MdFlag,
   MdLogout, MdChevronRight, MdLanguage, MdTour, MdSecurity,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -75,13 +75,21 @@ export default function PatientMore() {
       ],
     },
     {
+      // Account settings + Change password are merged into one page
+      // (/patient/account) with Profile + Security sections, the way most
+      // apps group them.
       heading: t('patient.more.account'),
       items: [
-        { icon: MdPerson,   label: t('shell.profile.accountSettings'),       modal: 'account'  },
-        { icon: MdLock,     label: t('shell.profile.changePassword'),        modal: 'password' },
-        // R37: citizen-visible audit trail (RA 10173 §16c). Route lives at
-        // /patient/access-log -- handled by item.to in handleRowClick.
-        { icon: MdSecurity, label: 'Who has accessed your record',           to: '/patient/access-log' },
+        { icon: MdPerson, label: t('patient.more.accountSecurity'), sub: t('patient.more.accountSecurityDesc'), to: '/patient/account' },
+      ],
+    },
+    {
+      // Privacy & data (RA 10173): the citizen-visible access log lives at
+      // /patient/access-log; the privacy notice is the modal for now.
+      heading: t('patient.more.privacyData'),
+      items: [
+        { icon: MdSecurity, label: t('patient.more.whoAccessed'),   to: '/patient/access-log' },
+        { icon: MdShield,   label: t('shell.profile.privacyNotice'), modal: 'settings' },
       ],
     },
     {
@@ -93,10 +101,14 @@ export default function PatientMore() {
           trailing: i18nHook.language === 'fil' ? 'Filipino' : 'English',
           action: toggleLang,
         },
-        { icon: MdShield, label: t('shell.profile.privacyNotice'), modal: 'settings' },
-        { icon: MdHelp,   label: t('shell.profile.helpSupport'),   modal: 'help'     },
-        { icon: MdTour,   label: t('patient.more.showTour'),       action: handleReplayTour },
-        { icon: MdFlag,   label: t('shell.profile.reportProblem'), modal: 'report'   },
+        { icon: MdTour, label: t('patient.more.showTour'), action: handleReplayTour },
+      ],
+    },
+    {
+      heading: t('patient.more.helpSupport'),
+      items: [
+        { icon: MdHelp, label: t('shell.profile.helpSupport'),   modal: 'help'   },
+        { icon: MdFlag, label: t('shell.profile.reportProblem'), modal: 'report' },
       ],
     },
   ]
@@ -127,7 +139,7 @@ export default function PatientMore() {
         {/* Profile card — name + role, tap to open account settings */}
         {user && (
           <button
-            onClick={() => setActiveModal('account')}
+            onClick={() => navigate('/patient/account')}
             className="w-full card p-4 mb-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors">
             <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 border-2 border-brand-400 flex items-center justify-center text-base font-bold flex-shrink-0">
               {user.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'}
@@ -155,7 +167,10 @@ export default function PatientMore() {
                   <div className="w-9 h-9 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
                     <item.icon size={18} className="text-brand-500" />
                   </div>
-                  <span className="flex-1 text-sm font-medium text-gray-800">{item.label}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium text-gray-800">{item.label}</span>
+                    {item.sub && <span className="block text-xs text-gray-500">{item.sub}</span>}
+                  </span>
                   {item.trailing && (
                     <span className="text-xs text-gray-500">{item.trailing}</span>
                   )}
