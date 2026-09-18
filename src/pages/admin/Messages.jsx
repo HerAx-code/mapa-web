@@ -32,10 +32,11 @@ export default function Messages() {
   const [selected, setSelected] = useState(new Set())
   const [search, setSearch]    = useState('')
 
-  // Patient: modal uses index-based navigation
-  const [activeIndex, setActiveIndex] = useState(null)
-
-  // Admin: inline thread uses conversation ID
+  // Active thread is tracked by conversation ID on every surface. It used
+  // to be an array index for patients, but the list re-sorts by lastAt on
+  // every snapshot — so sending a message (which bumps lastAt) reordered
+  // the list and the stale index pointed at a *different* conversation,
+  // making the thread switch chats mid-send. An ID survives re-sorts.
   const [activeConvId,       setActiveConvId]       = useState(null)
   const [threadText,         setThreadText]         = useState('')
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
@@ -68,24 +69,13 @@ export default function Messages() {
   useEffect(() => {
     const convParam = searchParams.get('conv')
     if (!convParam || conversations.length === 0) return
-    if (isPatient) {
-      const idx = filtered.findIndex(c => c.id === convParam)
-      if (idx !== -1) setActiveIndex(idx)
-    } else {
-      setActiveConvId(convParam)
-    }
+    if (filtered.some(c => c.id === convParam)) setActiveConvId(convParam)
   }, [searchParams, conversations])
 
   // ── Auto-open after compose ────────────────────────────────────────────
   useEffect(() => {
     if (!pendingOpenConvId || conversations.length === 0) return
-    if (isPatient) {
-      const idx = filtered.findIndex(c => c.id === pendingOpenConvId)
-      if (idx !== -1) {
-        setActiveIndex(idx)
-        setPendingOpenConvId(null)
-      }
-    } else {
+    if (filtered.some(c => c.id === pendingOpenConvId)) {
       setActiveConvId(pendingOpenConvId)
       setPendingOpenConvId(null)
     }
@@ -158,7 +148,6 @@ export default function Messages() {
     await batch.commit()
     if (selected.has(activeConvId)) { setActiveConvId(null); setThreadText('') }
     setSelected(new Set())
-    setActiveIndex(null)
     setConfirmDelete(false)
   }
 
@@ -178,15 +167,15 @@ export default function Messages() {
           <div className="h-3 bg-gray-100 rounded w-12 flex-shrink-0" />
         </div>
       ))}
-      {!loading && filtered.map((c, idx) => {
+      {!loading && filtered.map((c) => {
         const oUid      = c.participants?.find(p => p !== user.uid)
         const name      = c.names?.[oUid] ?? 'Unknown'
         const unread    = (c.unread?.[user.uid] ?? 0) > 0
         const isSelected = selected.has(c.id)
-        const isActive   = isPatient ? activeIndex === idx : c.id === activeConvId
+        const isActive   = c.id === activeConvId
         return (
           <div key={c.id}
-            onClick={() => isPatient ? setActiveIndex(idx) : trySelectConversation(c.id)}
+            onClick={() => isPatient ? setActiveConvId(c.id) : trySelectConversation(c.id)}
             className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors
               ${isActive
                 ? 'bg-brand-50 border-r-2 border-brand-500'
@@ -298,10 +287,9 @@ export default function Messages() {
     // thread doesn't pop in a modal. On <md it falls back to the
     // centered card + modal pattern that works well on phones.
     //
-    // The conversation index (activeIndex) drives both branches so a
-    // patient who picked a conversation on mobile keeps the same one
-    // selected if they rotate to landscape / resize the window.
-    const activeConv = activeIndex !== null ? filtered[activeIndex] : null
+    // Both branches select by activeConvId (the component-scope activeConv
+    // above), so a patient keeps the same conversation open across a
+    // re-sort, a rotate to landscape, or a window resize.
     return (
       <Layout breadcrumb="Messages">
         {/* ── Mobile (<md) — centered card + modal ── */}
@@ -380,7 +368,7 @@ export default function Messages() {
               user={user}
               text={threadText}
               setText={setThreadText}
-              onBack={() => { setActiveIndex(null); setThreadText('') }}
+              onBack={() => { setActiveConvId(null); setThreadText('') }}
             />
           </div>
         )}
