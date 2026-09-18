@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.jsx'
+import AppToaster from './components/AppToaster.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initSentry } from './sentry'
 import './index.css'
@@ -33,18 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         v7_relativeSplatPath: true,
       }}>
         <App />
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#1f2937',
-              color: '#f9fafb',
-              borderRadius: '10px',
-              fontSize: '13px',
-            },
-          }}
-        />
+        <AppToaster />
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>,

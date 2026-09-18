@@ -17,6 +17,7 @@ import {
 // ./messages/. The page now focuses on the inbox list + selection state
 // + the two-pane orchestration. ~900 lines removed.
 import { fmtDate } from './messages/helpers'
+import { useVisualViewport } from '../../hooks/useVisualViewport'
 import ConversationThread    from './messages/ConversationThread'
 import PatientComposeModal   from './messages/PatientComposeModal'
 import AdminComposeModal     from './messages/AdminComposeModal'
@@ -25,6 +26,9 @@ import AdminComposeModal     from './messages/AdminComposeModal'
 
 export default function Messages() {
   const { user }               = useAuth()
+  // Size the mobile full-screen thread to the visual viewport so the composer
+  // rides above the on-screen keyboard instead of being covered ("sliced").
+  const vp                     = useVisualViewport()
   const isPatient              = user?.role === 'patient'
   const [searchParams]         = useSearchParams()
   const [conversations, setConversations] = useState([])
@@ -373,7 +377,8 @@ export default function Messages() {
             arrow — the standard mobile chat pattern, not a floating dialog.
             Reuses the same ConversationThread the desktop split uses. */}
         {activeConv && (
-          <div className="md:hidden fixed inset-0 z-[200] bg-white flex flex-col">
+          <div className="md:hidden fixed left-0 right-0 z-[200] bg-white flex flex-col"
+            style={{ top: vp.offsetTop, height: vp.height }}>
             <ConversationThread
               key={activeConv.id}
               conversation={activeConv}
