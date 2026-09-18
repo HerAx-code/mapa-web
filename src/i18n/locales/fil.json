@@ -584,6 +584,7 @@
     "unreadBadge": "{{count}} hindi pa nababasa",
     "markAllRead": "Markahan lahat na nabasa na",
     "clearAll": "Burahin lahat",
+    "moreActions": "Iba pang aksyon",
     "clearConfirm": "Burahin lahat ng {{count}} na abiso. Hindi maibabalik.",
     "cancel": "Kanselahin",
     "clearYes": "Oo, burahin lahat",

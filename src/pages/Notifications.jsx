@@ -6,7 +6,7 @@ import { tsToDate } from '../utils/dates'
 import { useAuth } from '../contexts/AuthContext'
 import { useTranslation } from 'react-i18next'
 import {
-  MdDone, MdDelete, MdCheckCircle, MdNotificationsNone, MdClearAll,
+  MdDone, MdDelete, MdCheckCircle, MdNotificationsNone, MdClearAll, MdMoreVert,
   MdNotifications, MdStar, MdFolder, MdCancel, MdCalendarToday,
   MdInfo, MdCheckCircleOutline, MdAssignment, MdFavorite, MdEdit,
   MdDescription, MdSupervisedUserCircle, MdLock, MdLockOpen,
@@ -82,6 +82,7 @@ export default function Notifications() {
   const [modalIdx, setModalIdx]           = useState(null)
   const [category, setCategory]           = useState('all')
   const [confirmClear, setConfirmClear]   = useState(false)
+  const [menuOpen, setMenuOpen]           = useState(false)
   const isPatient = user?.role === 'patient'
 
   // Category labels rebuilt per render so they respond to language toggle.
@@ -166,6 +167,14 @@ export default function Notifications() {
 
   const unreadCount = notifications.filter(n => !n.read).length
 
+  // Categories worth showing as filter chips: 'all' plus any (role-scoped)
+  // category that actually has notifications. When only 'all' qualifies, we hide
+  // the chip row entirely rather than show a lone "All" chip.
+  const chipCats = CATEGORY_DEFS.filter(c =>
+    (!isPatient || ['all', 'messages', 'documents', 'applications'].includes(c.key)) &&
+    (c.key === 'all' || notifications.filter(n => c.types?.includes(n.type)).length > 0)
+  )
+
   return (
     <Layout breadcrumb={t('notifsPage.title')}>
       <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
@@ -173,7 +182,7 @@ export default function Notifications() {
         {/* Header — title block on its own row on mobile, action buttons
             on a second row. On sm+ the buttons return to the right side
             of the title (justify-between layout). */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <div className="flex items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center flex-shrink-0">
               <MdNotifications size={20} className="text-brand-500" />
@@ -183,23 +192,44 @@ export default function Notifications() {
               <p className="page-sub truncate">{t('notifsPage.subtitle')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {unreadCount > 0 && (
-              <span className="badge badge-blue">{t('notifsPage.unreadBadge', { count: unreadCount })}</span>
-            )}
-            {unreadCount > 0 && (
-              <button onClick={markAllRead}
-                className="btn-secondary text-xs flex items-center gap-1.5">
-                <MdDone size={14} /> {t('notifsPage.markAllRead')}
-              </button>
-            )}
-            {notifications.length > 0 && (
-              <button onClick={() => setConfirmClear(true)}
-                className="btn-secondary text-xs flex items-center gap-1 text-red-500 border-red-200 hover:bg-red-50">
-                <MdClearAll size={14} /> {t('notifsPage.clearAll')}
-              </button>
-            )}
-          </div>
+          {/* Actions consolidated: unread count + one overflow menu. Keeps the
+              destructive "Clear all" out of the top level (it's in the menu,
+              behind a confirm) so it isn't a co-equal red button beside the
+              title. */}
+          {notifications.length > 0 && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {unreadCount > 0 && (
+                <span className="badge badge-blue whitespace-nowrap">{t('notifsPage.unreadBadge', { count: unreadCount })}</span>
+              )}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(o => !o)}
+                  aria-label={t('notifsPage.moreActions')}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
+                  <MdMoreVert size={18} />
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+                    <div role="menu" className="absolute right-0 mt-1 w-48 bg-white border border-gray-100 rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+                      {unreadCount > 0 && (
+                        <button role="menuitem" onClick={() => { setMenuOpen(false); markAllRead() }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                          <MdDone size={16} className="text-brand-500" /> {t('notifsPage.markAllRead')}
+                        </button>
+                      )}
+                      <button role="menuitem" onClick={() => { setMenuOpen(false); setConfirmClear(true) }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 text-left">
+                        <MdClearAll size={16} /> {t('notifsPage.clearAll')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Clear all confirmation banner */}
@@ -221,35 +251,35 @@ export default function Notifications() {
           </div>
         )}
 
-        {/* Category filter tabs — patients only see relevant categories */}
-        <div className="flex gap-1.5 mb-4 flex-wrap">
-          {CATEGORY_DEFS.filter(c =>
-            !isPatient || ['all','messages','documents','applications'].includes(c.key)
-          ).map(cat => {
-            const count = cat.key === 'all'
-              ? notifications.length
-              : notifications.filter(n => cat.types?.includes(n.type)).length
-            if (cat.key !== 'all' && count === 0) return null
-            return (
-              <button key={cat.key}
-                onClick={() => { setCategory(cat.key); setSelected(new Set()) }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                  category === cat.key
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}>
-                {categoryLabel(cat.key)}
-                {count > 0 && (
-                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                    category === cat.key ? 'bg-white text-brand-600' : 'bg-gray-100'
+        {/* Category filter tabs — only when there's more than one to choose
+            from (a lone "All" chip is noise), scrollable on one line. */}
+        {chipCats.length > 1 && (
+          <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {chipCats.map(cat => {
+              const count = cat.key === 'all'
+                ? notifications.length
+                : notifications.filter(n => cat.types?.includes(n.type)).length
+              return (
+                <button key={cat.key}
+                  onClick={() => { setCategory(cat.key); setSelected(new Set()) }}
+                  className={`flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    category === cat.key
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+                  {categoryLabel(cat.key)}
+                  {count > 0 && (
+                    <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                      category === cat.key ? 'bg-white text-brand-600' : 'bg-gray-100'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         <div className="card overflow-hidden">
           {/* Toolbar */}
