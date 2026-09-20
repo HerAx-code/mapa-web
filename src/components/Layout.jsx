@@ -1116,8 +1116,14 @@ export default function Layout({ children, breadcrumb }) {
     )
   }
 
+  // h-[100dvh], not h-screen (100vh): on mobile 100vh is the LARGE viewport
+  // height and does not shrink for the address bar, so the shell grew taller
+  // than the visible area — its bottom (where main's scroll content ends and
+  // the fixed tab bar sits) fell below the fold and the last part of every
+  // page was cut off on scroll. The dynamic viewport unit dvh tracks the
+  // actually-visible height. Desktop is unaffected (dvh == vh, no toolbar).
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
+    <div className="flex h-[100dvh] overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
       <ProfileModals activeModal={activeModal} onClose={() => setActiveModal(null)} onSetModal={setActiveModal} />
       {showCompose && <ComposeModal user={user} onClose={() => setShowCompose(false)} />}
 
