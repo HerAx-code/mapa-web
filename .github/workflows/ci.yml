@@ -57,7 +57,7 @@ jobs:
       VITE_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000'
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -134,7 +134,7 @@ jobs:
     name: Firestore rules tests (emulator)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -183,7 +183,7 @@ jobs:
       VITE_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000'
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
