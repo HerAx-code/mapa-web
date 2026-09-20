@@ -1116,8 +1116,14 @@ export default function Layout({ children, breadcrumb }) {
     )
   }
 
+  // h-[100dvh], not h-screen (100vh): on mobile 100vh is the LARGE viewport
+  // height and does not shrink for the address bar, so the shell grew taller
+  // than the visible area — its bottom (where main's scroll content ends and
+  // the fixed tab bar sits) fell below the fold and the last part of every
+  // page was cut off on scroll. The dynamic viewport unit dvh tracks the
+  // actually-visible height. Desktop is unaffected (dvh == vh, no toolbar).
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
+    <div className="flex h-[100dvh] overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
       <ProfileModals activeModal={activeModal} onClose={() => setActiveModal(null)} onSetModal={setActiveModal} />
       {showCompose && <ComposeModal user={user} onClose={() => setShowCompose(false)} />}
 
@@ -1343,10 +1349,16 @@ export default function Layout({ children, breadcrumb }) {
         {/* ── Page content ─────────────────────────────────────────── */}
         {/* overflow-x-clip is the stricter sibling of -hidden: it
             forbids horizontal scroll AND prevents the main from being
-            sized by intrinsic-width children. pb-20 on patient mobile
-            leaves room for the BottomTabBar (56 px + safe-area). */}
+            sized by intrinsic-width children. The bottom padding on
+            patient mobile clears the BottomTabBar, which is min-h-[60px]
+            PLUS env(safe-area-inset-bottom) on a home-indicator phone.
+            The old flat pb-20 (80px) omitted the safe-area term, so the
+            last ~14px of every page — including the Submit button on the
+            request/intake forms — sat under the bar (MOB-1). The calc
+            reserves the full bar height + safe area + a 1rem breathing
+            gap; lg:pb-0 drops it once the sidebar layout takes over. */}
         <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 print:overflow-visible print:block ${
-          user?.role === ROLES.PATIENT ? 'pb-20 lg:pb-0' : ''
+          user?.role === ROLES.PATIENT ? 'pb-[calc(60px_+_env(safe-area-inset-bottom)_+_1rem)] lg:pb-0' : ''
         }`}>
           {/* Key on pathname so each navigation re-mounts this wrapper
               and re-triggers the fade-in animation. Subtle motion
