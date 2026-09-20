@@ -586,6 +586,7 @@
     "unreadBadge": "{{count}} unread",
     "markAllRead": "Mark all read",
     "clearAll": "Clear all",
+    "moreActions": "More actions",
     "clearConfirm": "This will permanently delete all {{count}} notifications. This cannot be undone.",
     "cancel": "Cancel",
     "clearYes": "Yes, clear all",
