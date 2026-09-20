@@ -33,6 +33,8 @@ const TrackStatus      = lazy(() => import('./pages/patient/TrackStatus'))
 const Interviews       = lazy(() => import('./pages/patient/Interviews'))
 const PatientMore      = lazy(() => import('./pages/patient/More'))
 const PatientAccountSecurity = lazy(() => import('./pages/patient/AccountSecurity'))
+const PatientPrivacyNotice   = lazy(() => import('./pages/patient/PrivacyNotice'))
+const PatientHelp            = lazy(() => import('./pages/patient/Help'))
 const PatientAccessLogPage = lazy(() => import('./pages/patient/AccessLog'))
 
 // Agency
@@ -123,6 +125,8 @@ export default function App() {
           <Route path="/patient/guide"      element={<PrivateRoute allowedRoles={PATIENT_ROLES}><UserGuide /></PrivateRoute>} />
           <Route path="/patient/more"       element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientMore /></PrivateRoute>} />
           <Route path="/patient/account"    element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientAccountSecurity /></PrivateRoute>} />
+          <Route path="/patient/privacy"    element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientPrivacyNotice /></PrivateRoute>} />
+          <Route path="/patient/help"       element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientHelp /></PrivateRoute>} />
           <Route path="/patient/access-log" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientAccessLogPage /></PrivateRoute>} />
 
           {/* Agency */}

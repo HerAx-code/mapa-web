@@ -506,10 +506,12 @@
       "exportButton": "I-download ang aking datos (JSON)",
       "exporting": "Hinahanda ang inyong datos…",
       "exportSuccess": "Na-download na ang inyong datos.",
+      "exportPartial": "Na-download ngunit may {{count}} bahagi na hindi makuha. Tingnan ang \"errors\" sa file, o makipag-ugnayan sa MSS.",
       "exportFailed": "Hindi nahanda ang inyong datos. Subukan muli o makipag-ugnayan sa MSS."
     },
     "help": {
       "title": "Tulong at Suporta",
+      "faqTitle": "Mga madalas itanong",
       "intro": "Madalas na mga tanong tungkol sa MAPA {{portal}}.",
       "portalPatient": "patient portal",
       "portalAgency": "agency portal",
@@ -770,6 +772,8 @@
       "privacyData": "Privacy at datos",
       "whoAccessed": "Sino ang nakakita ng inyong rekord",
       "downloadData": "I-download ang aking datos",
+      "downloadDataDesc": "Kopya ng lahat (JSON)",
+      "downloadDataPreparing": "Inihahanda ang inyong datos…",
       "helpSupport": "Tulong",
       "settings": "Settings",
       "language": "Wika",

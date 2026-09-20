@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   MdSearch, MdVideoCall, MdMenuBook,
-  MdPerson, MdShield, MdHelp, MdFlag,
+  MdPerson, MdShield, MdHelp, MdFlag, MdCloudDownload, MdWarning,
   MdLogout, MdChevronRight, MdLanguage, MdTour, MdSecurity,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -11,6 +11,7 @@ import Layout from '../../components/Layout'
 import ProfileModals from '../../components/ProfileModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { resetTourFlag } from '../../utils/tours'
+import { buildPatientDataExport, downloadAsJSON, patientExportFilename } from '../../utils/dataExport'
 import i18n from '../../i18n'
 
 /**
@@ -33,6 +34,7 @@ export default function PatientMore() {
   const { t, i18n: i18nHook } = useTranslation()
   const { user, logout }   = useAuth()
   const [activeModal, setActiveModal] = useState(null)
+  const [exporting, setExporting]     = useState(false)
 
   const toggleLang = () => {
     const next = i18nHook.language === 'fil' ? 'en' : 'fil'
@@ -62,6 +64,32 @@ export default function PatientMore() {
     navigate('/patient/dashboard')
   }
 
+  // Data portability (RA 10173 §16f). Surfaced as its own row instead of
+  // being buried at the bottom of the privacy notice, where it was
+  // effectively invisible. Same builder + partial-failure handling the
+  // old privacy modal used.
+  const handleExportData = async () => {
+    if (!user?.uid || exporting) return
+    setExporting(true)
+    try {
+      const data = await buildPatientDataExport(user.uid)
+      downloadAsJSON(data, patientExportFilename(user.uid))
+      if (data.errors && data.errors.length > 0) {
+        toast(
+          t('profile.privacy.exportPartial', { count: data.errors.length }),
+          { icon: <MdWarning className="text-amber-500" />, duration: 8000 },
+        )
+      } else {
+        toast.success(t('profile.privacy.exportSuccess'))
+      }
+    } catch (err) {
+      console.error('[PatientMore] data export failed:', err)
+      toast.error(t('profile.privacy.exportFailed'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Section model — each section gets a header + a list of rows.
   // Rows that open a modal pass `modal`, rows that navigate pass `to`,
   // rows that fire an action pass `action`.
@@ -84,12 +112,19 @@ export default function PatientMore() {
       ],
     },
     {
-      // Privacy & data (RA 10173): the citizen-visible access log lives at
-      // /patient/access-log; the privacy notice is the modal for now.
+      // Privacy & data (RA 10173): the citizen-visible access log, the
+      // privacy notice (now a full page), and one-tap data portability.
       heading: t('patient.more.privacyData'),
       items: [
         { icon: MdSecurity, label: t('patient.more.whoAccessed'),   to: '/patient/access-log' },
-        { icon: MdShield,   label: t('shell.profile.privacyNotice'), modal: 'settings' },
+        { icon: MdShield,   label: t('shell.profile.privacyNotice'), to: '/patient/privacy' },
+        {
+          icon:  MdCloudDownload,
+          label: exporting ? t('patient.more.downloadDataPreparing') : t('patient.more.downloadData'),
+          sub:   t('patient.more.downloadDataDesc'),
+          action: handleExportData,
+          busy:  exporting,
+        },
       ],
     },
     {
@@ -107,7 +142,7 @@ export default function PatientMore() {
     {
       heading: t('patient.more.helpSupport'),
       items: [
-        { icon: MdHelp, label: t('shell.profile.helpSupport'),   modal: 'help'   },
+        { icon: MdHelp, label: t('shell.profile.helpSupport'),   to: '/patient/help' },
         { icon: MdFlag, label: t('shell.profile.reportProblem'), modal: 'report' },
       ],
     },
@@ -174,7 +209,9 @@ export default function PatientMore() {
                   {item.trailing && (
                     <span className="text-xs text-gray-500">{item.trailing}</span>
                   )}
-                  <MdChevronRight size={18} className="text-gray-300 flex-shrink-0" />
+                  {item.busy
+                    ? <span className="w-[18px] h-[18px] border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin flex-shrink-0" aria-hidden="true" />
+                    : <MdChevronRight size={18} className="text-gray-300 flex-shrink-0" />}
                 </button>
               ))}
             </div>

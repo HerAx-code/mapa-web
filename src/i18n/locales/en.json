@@ -506,10 +506,12 @@
       "exportButton": "Download my data (JSON)",
       "exporting": "Preparing your data…",
       "exportSuccess": "Your data has been downloaded.",
+      "exportPartial": "Downloaded with {{count}} section(s) unavailable. See the \"errors\" field in the file, or contact MSS.",
       "exportFailed": "Couldn't prepare your data. Please try again or contact MSS."
     },
     "help": {
       "title": "Help & Support",
+      "faqTitle": "Frequently asked questions",
       "intro": "Frequently asked questions about the MAPA {{portal}}.",
       "portalPatient": "patient portal",
       "portalAgency": "agency portal",
@@ -770,6 +772,8 @@
       "privacyData": "Privacy & data",
       "whoAccessed": "Who has accessed your record",
       "downloadData": "Download my data",
+      "downloadDataDesc": "A copy of everything (JSON)",
+      "downloadDataPreparing": "Preparing your data…",
       "helpSupport": "Help & support",
       "settings": "Settings",
       "language": "Language",
