@@ -4,7 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- interactive-widget=resizes-content: on Android Chrome/Edge the layout
+         viewport shrinks when the on-screen keyboard opens, so fixed/100dvh
+         surfaces (e.g. the mobile message thread) end above the keyboard
+         instead of the composer being covered. iOS Safari ignores this and is
+         handled with the VisualViewport API (useVisualViewport). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>MAPA — Medical Assistance Portal Access | CRMC</title>
 
     <!-- PWA: theme color drives the Android status bar tint when the app is

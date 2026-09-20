@@ -185,8 +185,9 @@ export default function ConversationThread({ conversation, user, text, setText, 
         <div ref={bottomRef} />
       </div>
 
-      {/* Reply box */}
-      <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 bg-white">
+      {/* Reply box — extra bottom padding clears the home indicator when the
+          keyboard is closed (safe area); harmless when the keyboard is open. */}
+      <div className="px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] border-t border-gray-100 flex-shrink-0 bg-white">
         <div className="flex items-end gap-2">
           <textarea
             className="input flex-1 text-sm resize-none min-h-[38px] max-h-[120px] leading-relaxed"

@@ -123,27 +123,26 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF8] text-gray-800">
-      {/* Topbar — sticky, on the warm ground with a soft blur so it belongs
-          to the page rather than sitting on a hard white slab. */}
-      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-[#FBFAF8]/85 backdrop-blur px-5 sm:px-6 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Logo size={32} withWordmark />
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <LanguageToggle className="self-end sm:self-auto" />
+      {/* Topbar — one compact, seated row (not a stack of full-width buttons).
+          Brand left; language + install are icon actions and there's a single
+          primary auth button on the right. Install is an icon here because the
+          InstallNudge banner only shows inside the signed-in shell, not on this
+          public page; Register isn't duplicated here — it's the hero's CTA. A
+          near-solid ground + hairline keeps the bar seated rather than floating. */}
+      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-[#FBFAF8]/95 backdrop-blur px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+        <Logo size={30} withWordmark />
+        <div className="flex items-center gap-1">
+          <LanguageToggle />
           <button
-            className="btn-secondary flex items-center justify-center gap-1.5 text-sm"
+            type="button"
+            aria-label={t('landing.header.downloadApp')}
+            title={t('landing.header.downloadApp')}
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
             onClick={() => navigate('/install')}>
-            <MdDownload size={16} />
-            {t('landing.header.downloadApp')}
+            <MdDownload size={18} />
           </button>
-          {!user && (
-            <button
-              className="btn-secondary w-full sm:w-auto text-sm"
-              onClick={() => navigate('/register')}>
-              {t('landing.header.register')}
-            </button>
-          )}
           <button
-            className="btn-primary w-full sm:w-auto"
+            className="btn-primary text-sm whitespace-nowrap ml-1"
             onClick={() => user ? navigate(DASHBOARD[user.role] ?? '/') : navigate('/login')}>
             {user ? t('landing.header.dashboard') : t('landing.header.login')}
           </button>
