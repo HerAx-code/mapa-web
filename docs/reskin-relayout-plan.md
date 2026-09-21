@@ -98,6 +98,32 @@ More, Access Log, Guide — all mobile-first + bilingual + centered per
 `[[feedback_patient_layout]]`. Touch only on a specific, stated complaint, and
 then it's **craft, not width**.
 
+**Mobile cleanup pass — ✅ shipped 2026-09-20 (craft, not width).** Prompted by
+operator screenshots on real devices; every change kept the centered patient
+column. Merged to `main` and deployed to production in one integration.
+- ✅ **Shell / viewport** — app shell moved `h-screen` (100vh) → `h-[100dvh]`
+  so the page bottom isn't cut off when the mobile address bar shows; patient
+  `<main>` bottom padding now clears the tab bar's safe-area (MOB-1); PWA
+  `start_url` → `/patient/dashboard`, Request tab icon `MdFavorite` → `MdPostAdd`,
+  splash `background_color` → white (MOB-2/MOB-4). *(#215)*
+- ✅ **Landing header** — single seated row, icon actions, one primary CTA
+  (MOB-3). Toasts responsive (top-center on phones, capped at 3); message-thread
+  composer no longer sliced by the on-screen keyboard (visual-viewport). *(#212)*
+- ✅ **Settings pages** — Account settings + Change password merged into one
+  **Account & security** page (`/patient/account`, #213); **Privacy notice**
+  (`/patient/privacy`) and **Help & support** (`/patient/help`) converted from
+  modals to pages; **Download my data** (RA 10173 §16f) surfaced as its own
+  More row instead of buried in the privacy modal. *(#213, #216)*
+- ✅ **Notifications** — header actions consolidated into a ⋮ overflow menu
+  (destructive "Clear all" behind it, not a co-equal red button); category
+  chips only when >1 applies. *(#214)*
+- ✅ **Messages** — bug fix: sending a message no longer switches the open chat
+  (thread now tracked by conversation ID, not list index); redundant header
+  icon removed. *(#217)*
+
+New patient pages added to the app: `AccountSecurity.jsx`, `PrivacyNotice.jsx`,
+`Help.jsx` — all mobile-first + bilingual + centered `max-w-3xl`, `lint:i18n` clean.
+
 ## Execution order for the remaining ⬜
 
 One PR per page (or per tight pair), each gated through CI, each ticked here in
