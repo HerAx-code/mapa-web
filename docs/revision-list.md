@@ -568,7 +568,7 @@ Triggered by operator review on real devices during a live dev-server walkthroug
 | 28.7 | Notifications header | Two co-equal buttons ("Mark all read" + a red "Clear all") consolidated into a ⋮ overflow menu (destructive action behind it, still gated by its confirm); category chips render only when more than one applies, scroll on one line | #214 |
 | 28.8 | Messages: send switches the open chat (bug) | Patient thread was tracked by **array index** into a list that re-sorts by `lastAt` on every snapshot; sending a message bumped `lastAt`, the list reordered, and the stale index pointed at a different conversation — so the thread visibly switched chats on Send. Now tracked by conversation ID everywhere (unified with the admin surface). Also removed the redundant message icon from the mobile inbox header | #217 |
 
-End-state of B.28: MOB-1…MOB-4 closed; three new patient pages (`AccountSecurity.jsx`, `PrivacyNotice.jsx`, `Help.jsx`), all bilingual + centered + `lint:i18n` clean; one real messages bug fixed. Gates on the integrated tree: esbuild parse on all hot files, `lint:i18n` PASS, `test:all` green (utils 131 + components 90 + rules 172 = 393). Deployed to production 2026-09-20; new build verified live via the manifest. Six merged branches deleted.
+End-state of B.28: MOB-1…MOB-4 closed; three new patient pages (`AccountSecurity.jsx`, `PrivacyNotice.jsx`, `Help.jsx`), all bilingual + centered + `lint:i18n` clean; one real messages bug fixed. Gates on the integrated tree: esbuild parse on all hot files, `lint:i18n` PASS, `test:all` green (utils 131 + components 90 + functions 82 + rules 172 = 475). Deployed to production 2026-09-20; new build verified live via the manifest. Six merged branches deleted.
 
 ### B.22 — Closing summary
 
