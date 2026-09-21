@@ -553,6 +553,23 @@ Triggered by an operator screenshot on 2026-09-07 showing the native `<select>` 
 
 End-state of B.27: no native `<select>` remains in `src/`. Long lists (barangay, agency, actor/officer filters) gain type-to-filter search; short lists render as styled dropdowns with no search box. This closes the reskin-plan's implicit "forms use one dropdown control" gap and directly enhances R32 (BARMM location dropdowns) and R39 (`AddressPicker`). Shipped as PR #199, merged and deployed to production 2026-09-07, verified live on `/register`.
 
+### B.28 — Mobile PWA cleanup pass (2026-09-20)
+
+Triggered by operator review on real devices during a live dev-server walkthrough. A round of mobile UI cleanup + two genuine layout/behaviour bugs, all on the patient surface. Every change kept the centered patient column (per `feedback_patient_layout`) — craft, not width. The six PRs were integrated into `main` in one merge and deployed to production together; the new manifest (`start_url` `/patient/dashboard`, `background_color` `#FFFFFF`) was verified live. Closes audit findings MOB-1…MOB-4 (`docs/audit-2026-08-25.md`).
+
+| # | Theme | Action Taken | PR |
+|---|---|---|---|
+| 28.1 | Whole-page bottom cutoff on scroll | App shell `h-screen` (100vh) → `h-[100dvh]`. On mobile, 100vh is the *large* viewport height that ignores the address bar, so the shell rendered taller than the visible area and the bottom of every page (where `<main>`'s scroll ends and the fixed tab bar sits) fell below the fold. `dvh` tracks the visible height; desktop unaffected | #215 |
+| 28.2 | Content under the tab bar (MOB-1) | Patient `<main>` padding `pb-20` (80px) → `calc(60px + env(safe-area-inset-bottom) + 1rem)`. The bar is `min-h-[60px]` + safe area (up to 94px on a notched phone), so the Submit button on the request/intake forms sat under it. `lg:pb-0` still drops it under the sidebar | #215 |
+| 28.3 | PWA manifest + tab icon (MOB-2/MOB-4) | `start_url` `/patient/request` → `/patient/dashboard` (no longer opens the new-request form on every launch; the Request `shortcuts[]` entry keeps the direct path); Request tab icon `MdFavorite` → `MdPostAdd`; `background_color` `#f9fafb` → `#FFFFFF`; corrected the stale BottomTabBar tab-list comment | #215 |
+| 28.4 | Landing header (MOB-3) + shell polish | Landing header collapsed to a single seated row (logo left; language toggle + 44px download icon + one primary CTA right); responsive toaster (top-center on phones, max 3 visible); message-thread composer no longer sliced by the on-screen keyboard (`useVisualViewport` + `interactive-widget=resizes-content`) | #212 |
+| 28.5 | Account & security page | Merged the separate "Account settings" and "Change password" More rows into one `/patient/account` page (Profile + Security sections) that reuses the existing, tested `ProfileModals` for the writes | #213 |
+| 28.6 | Privacy & Help as pages + Download my data | `Privacy notice` → `/patient/privacy` page and `Help & support` → `/patient/help` page (were modals; content still from shared `profile.privacy.*` / `profile.help.*` keys, so staff modals stay in sync). Data-portability export (RA 10173 §16f) surfaced as its own **Download my data** More row with inline spinner + partial-failure toast, instead of buried at the bottom of the privacy modal | #216 |
+| 28.7 | Notifications header | Two co-equal buttons ("Mark all read" + a red "Clear all") consolidated into a ⋮ overflow menu (destructive action behind it, still gated by its confirm); category chips render only when more than one applies, scroll on one line | #214 |
+| 28.8 | Messages: send switches the open chat (bug) | Patient thread was tracked by **array index** into a list that re-sorts by `lastAt` on every snapshot; sending a message bumped `lastAt`, the list reordered, and the stale index pointed at a different conversation — so the thread visibly switched chats on Send. Now tracked by conversation ID everywhere (unified with the admin surface). Also removed the redundant message icon from the mobile inbox header | #217 |
+
+End-state of B.28: MOB-1…MOB-4 closed; three new patient pages (`AccountSecurity.jsx`, `PrivacyNotice.jsx`, `Help.jsx`), all bilingual + centered + `lint:i18n` clean; one real messages bug fixed. Gates on the integrated tree: esbuild parse on all hot files, `lint:i18n` PASS, `test:all` green (utils 131 + components 90 + rules 172 = 393). Deployed to production 2026-09-20; new build verified live via the manifest. Six merged branches deleted.
+
 ### B.22 — Closing summary
 
 | Metric | Value |
