@@ -95,19 +95,33 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'SMS service not configured' })
   }
 
-  try {
+  const trySend = async (useSender) => {
     const params = new URLSearchParams({ apikey: API_KEY, number, message })
-    if (process.env.SEMAPHORE_SENDER) params.set('sendername', process.env.SEMAPHORE_SENDER)
-
+    if (useSender && process.env.SEMAPHORE_SENDER) params.set('sendername', process.env.SEMAPHORE_SENDER)
     const r = await fetch('https://api.semaphore.co/api/v4/messages', {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    params.toString(),
     })
     const data = await r.json().catch(() => null)
-    if (!r.ok) {
-      console.error('[send-sms] semaphore error', r.status, data)
-      return res.status(502).json({ error: 'SMS gateway error' })
+    // Semaphore returns a JSON array of message objects on success; an error
+    // object (e.g. { sendername: ["..."] }) otherwise.
+    const ok = r.ok && Array.isArray(data) && data.length > 0
+    return { ok, status: r.status, data }
+  }
+
+  try {
+    let resp = await trySend(true)
+    // A custom SEMAPHORE_SENDER that isn't registered/approved makes Semaphore
+    // reject the send. Fall back to the default sender so delivery still
+    // succeeds instead of hard-failing on a sender-name misconfig.
+    if (!resp.ok && process.env.SEMAPHORE_SENDER) {
+      console.warn('[send-sms] custom-sender send failed', resp.status, JSON.stringify(resp.data), '— retrying with default sender')
+      resp = await trySend(false)
+    }
+    if (!resp.ok) {
+      console.error('[send-sms] semaphore error', resp.status, JSON.stringify(resp.data))
+      return res.status(502).json({ error: 'SMS gateway error', detail: resp.data })
     }
     return res.status(200).json({ ok: true })
   } catch (err) {
