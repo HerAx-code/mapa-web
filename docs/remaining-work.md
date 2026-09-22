@@ -9,6 +9,28 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
 
 ---
 
+## ⚠️ Secondary notifications (email + SMS) — update 2026-09-22
+
+- ✅ **(code) JWKS bug fixed (#222).** `api/send-email.js` + `api/send-sms.js`
+  fetched Firebase token-verification keys from `.../service_accounts/v1/`**`jwks`**`/`
+  (plural) — a **404 HTML page** — so `jwtVerify` threw and the shared auth gate
+  returned **401 for every authenticated call**. Both email and SMS relays had
+  been **silently failing in production** (in-app unaffected; `notify()` swallows
+  relay errors). Corrected to the singular `.../v1/`**`jwk`**`/`.
+- ✅ **Email verified delivering** post-fix (`/api/send-email` → 200, SMTP dispatched).
+- ✅ **(code) SMS hardened (#223):** retry with Semaphore's default sender if a
+  custom `SEMAPHORE_SENDER` is rejected; real gateway error logged server-side.
+- ⏳ **(owner) SMS blocked on Semaphore sender-name approval (~3–5 days).**
+  Semaphore returns *"No active sender name found. Please apply for a sender name
+  before sending messages."* — the account has no approved sender, and this
+  account can't send even with the default sender until one is approved. Credits
+  are fine (1,010). **Finish when approved:** set `SEMAPHORE_SENDER` in Vercel to
+  the exact approved name (apply as `MAPA`/`CRMC`) → **redeploy** → send a
+  confirming test. Until then SMS opt-in calls no-op at the gateway (in-app +
+  email unaffected).
+
+---
+
 ## What's solid now (closed today)
 
 - ✅ **All Cloud Functions deployed** (`asia-southeast1`) — money-truth
