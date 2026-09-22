@@ -81,6 +81,14 @@
       ]
     },
     {
+      "collectionGroup": "auditLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "order": "ASCENDING"  },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "referralSuggestions",
       "queryScope": "COLLECTION",
       "fields": [
