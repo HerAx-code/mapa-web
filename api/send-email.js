@@ -47,8 +47,10 @@ const MAX_HTML_LEN    = 50000
 // them across warm invocations, so this is one fetch per key rotation,
 // not per request.
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID
+// Path is /jwk/ (singular). /jwks/ (plural) 404s → verification always threw →
+// every valid token rejected 401. Fixed alongside api/send-sms.js.
 const JWKS = createRemoteJWKSet(new URL(
-  'https://www.googleapis.com/service_accounts/v1/jwks/securetoken@system.gserviceaccount.com'
+  'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
 ))
 
 async function verifyCaller(req) {

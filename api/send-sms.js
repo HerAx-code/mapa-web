@@ -23,8 +23,12 @@ import { jwtVerify, createRemoteJWKSet } from 'jose'
 const MAX_MESSAGE_LEN = 320  // ~2 SMS segments; a runaway body can't fan out cost
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID
+// NOTE: the path is /jwk/ (singular). The /jwks/ (plural) variant 404s (returns
+// an HTML error page), which made createRemoteJWKSet fail and jwtVerify throw —
+// rejecting EVERY valid token with 401. That silently broke both the SMS and
+// email relays in production. The singular /jwk/ endpoint returns real JWKS.
 const JWKS = createRemoteJWKSet(new URL(
-  'https://www.googleapis.com/service_accounts/v1/jwks/securetoken@system.gserviceaccount.com'
+  'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
 ))
 
 async function verifyCaller(req) {
