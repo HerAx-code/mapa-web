@@ -120,8 +120,10 @@ export default async function handler(req, res) {
       resp = await trySend(false)
     }
     if (!resp.ok) {
+      // Full Semaphore error → server log only; client gets a generic message
+      // (don't leak gateway internals to callers).
       console.error('[send-sms] semaphore error', resp.status, JSON.stringify(resp.data))
-      return res.status(502).json({ error: 'SMS gateway error', detail: resp.data })
+      return res.status(502).json({ error: 'SMS gateway error' })
     }
     return res.status(200).json({ ok: true })
   } catch (err) {
