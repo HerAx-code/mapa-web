@@ -53,7 +53,8 @@ async function verifyCaller(req) {
 // Normalize a PH mobile number to the local 09XXXXXXXXX form Semaphore expects.
 // Accepts 09…, +639…, 639…; returns null for anything that isn't a plausible
 // PH mobile number so we never spend a credit on a malformed send.
-function normalizePhone(raw) {
+// Exported for unit testing (tests/utils/sendSms.test.js).
+export function normalizePhone(raw) {
   let d = String(raw || '').replace(/\D/g, '')
   if (d.startsWith('63') && d.length >= 12) d = '0' + d.slice(2)
   return (d.length === 11 && d.startsWith('09')) ? d : null
