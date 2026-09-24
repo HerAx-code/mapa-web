@@ -6,10 +6,9 @@ import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { tsToDate } from '../../utils/dates'
 
-// InterviewModal lived here historically but it's shared with admin/Requests
-// (CRMC schedules the assessment interview on the parent request under the
-// co-funding redesign). Now at components/InterviewModal.jsx -- this file
-// keeps only the agency-specific modals (Reject / Approve / RequestInfo).
+// This file keeps only the agency-specific modals (Reject / Approve /
+// RequestInfo). The interview scheduling flow was removed in the async-
+// assessment change (docs/remove-interview-scheduling-plan.md).
 
 const REQUEST_INFO_TEMPLATES = [
   'Please upload your most recent proof of income.',

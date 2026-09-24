@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  MdSearch, MdVideoCall, MdMenuBook,
+  MdSearch, MdMenuBook,
   MdPerson, MdShield, MdHelp, MdFlag, MdCloudDownload, MdWarning,
   MdLogout, MdChevronRight, MdLanguage, MdTour, MdSecurity,
 } from 'react-icons/md'
@@ -98,7 +98,6 @@ export default function PatientMore() {
       heading: t('patient.more.navigation'),
       items: [
         { icon: MdSearch,    label: t('patient.nav.findPrograms'), to: '/patient/programs' },
-        { icon: MdVideoCall, label: t('patient.nav.interviews'),   to: '/patient/interviews' },
         { icon: MdMenuBook,  label: t('patient.nav.userGuide'),    to: '/patient/guide'      },
       ],
     },

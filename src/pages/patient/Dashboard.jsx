@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next'
 import {
   MdUpload, MdCheckCircle, MdPending,
   MdArrowForward, MdExpandMore, MdExpandLess,
-  MdHourglassEmpty, MdAssignment, MdSchedule, MdVideoCall,
-  MdReceipt, MdCancel, MdLocalHospital, MdCalendarMonth, MdAccessTime,
-  MdOpenInNew, MdCheck, MdClose, MdMenuBook, MdChatBubbleOutline,
+  MdHourglassEmpty, MdAssignment, MdSchedule,
+  MdReceipt, MdCancel, MdLocalHospital,
+  MdCheck, MdClose, MdMenuBook, MdChatBubbleOutline,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import BalanceHero from '../../components/patient/BalanceHero'
@@ -82,16 +82,6 @@ const STATUS_VISUAL = {
     text:     'text-orange-800',
     subtext:  'text-orange-700',
     btnClass: 'bg-orange-500 hover:bg-orange-600 text-white',
-  },
-  interview: {
-    icon:     MdVideoCall,
-    iconBg:   'bg-purple-100 text-purple-600',
-    path:     '/patient/interviews',
-    border:   'border-purple-300',
-    bg:       'bg-purple-50',
-    text:     'text-purple-800',
-    subtext:  'text-purple-600',
-    btnClass: 'bg-purple-500 hover:bg-purple-600 text-white',
   },
   approved: {
     icon:     MdCheckCircle,
@@ -196,14 +186,11 @@ function CoverageCard({ request, t }) {
 // gracefully: future steps read "upcoming".
 function TimelineCard({ request, docStats, t }) {
   const rank = REQ_RANK[request.status] ?? 0
-  const interviewWhen = request.interviewDate
-    ? `${new Date(`${request.interviewDate}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}${request.interviewTime ? ` · ${request.interviewTime}` : ''}`
-    : t('patient.dashboard.timeline.s3metaTBD')
 
   const steps = [
     { entry: 0, label: t('patient.dashboard.timeline.s1'), meta: formatDate(request.submittedAt) },
     { entry: 1, label: t('patient.dashboard.timeline.s2'), meta: rank > 1 ? t('patient.dashboard.timeline.s2metaDone', { verified: docStats.verified }) : t('patient.dashboard.timeline.s2metaReviewing') },
-    { entry: 2, label: t('patient.dashboard.timeline.s3'), meta: interviewWhen },
+    { entry: 2, label: t('patient.dashboard.timeline.s3'), meta: t('patient.dashboard.timeline.s3metaTBD') },
     { entry: 3, label: t('patient.dashboard.timeline.s4'), meta: t('patient.dashboard.timeline.s4meta') },
     { entry: 4, label: t('patient.dashboard.timeline.s5'), meta: rank >= 5 ? t('patient.dashboard.timeline.s5metaDone') : t('patient.dashboard.timeline.s5metaAfter') },
   ]
@@ -330,8 +317,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
 
 // ── Next-action card ─────────────────────────────────────────────────────────
 // Surfaces the single most pressing real action (fix a rejected doc / respond
-// to an agency / join a scheduled interview). Renders nothing when the ball is
-// in CRMC's court.
+// to an agency). Renders nothing when the ball is in CRMC's court.
 function NextActionCard({ action }) {
   const Icon = action.icon
   return (
@@ -449,13 +435,6 @@ export default function PatientDashboard() {
     return unsub
   }, [user?.uid])
 
-  // Interview reminders are handled entirely server-side by the
-  // `interviewReminders` Cloud Function (scheduled; fires 24h + 1h before,
-  // in-app + email). The old client-side sweep that used to live here was
-  // removed: it duplicated those reminders (patients could get each one
-  // twice) and one of its queries tripped a Firestore rules denial that
-  // surfaced as a console error on the patient dashboard.
-
   // Live document stats so the verified/pending counts update the moment
   // CRMC verifies or rejects a doc -- no reload required.
   useEffect(() => {
@@ -527,7 +506,7 @@ export default function PatientDashboard() {
     {
       num: 4, title: t('patient.dashboard.steps.s4Title'),
       desc:   t('patient.dashboard.steps.s4Desc'),
-      path:   '/patient/interviews',
+      path:   '/patient/status',
       done:   ['approved','certificate'].includes(activeStatus),
     },
     {
@@ -580,19 +559,6 @@ export default function PatientDashboard() {
       detail: activeApp.agencyName ?? '',
       cta: t('patient.dashboard.nextAction.view'),
       onClick: () => navigate('/patient/status'),
-    }
-    const interviewActive = activeApp?.status === 'interview'
-      || (activeRequest?.interviewDate && !['completed', 'no_show'].includes(activeRequest?.interviewOutcome))
-    if (interviewActive) {
-      const d    = activeRequest?.interviewDate ?? activeApp?.interviewDate
-      const time = activeRequest?.interviewTime ?? activeApp?.interviewTime
-      return {
-        icon: MdVideoCall, eyebrow: t('patient.dashboard.nextAction.eyebrow'),
-        title: t('patient.dashboard.nextAction.interview'),
-        detail: d ? `${new Date(`${d}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}${time ? ` · ${time}` : ''}` : '',
-        cta: t('patient.dashboard.nextAction.join'),
-        onClick: () => navigate('/patient/interviews'),
-      }
     }
     return null
   })()
@@ -657,13 +623,7 @@ export default function PatientDashboard() {
           const vis = STATUS_VISUAL[activeApp.status]
           const txt = `patient.dashboard.statusCard.${activeApp.status}`
           const isAwaiting  = activeApp.status === 'awaiting_info'
-          const isInterview = activeApp.status === 'interview'
           const Icon = vis.icon
-          // Pre-format interview details for inline display.
-          // i18n.language picks 'en' or 'fil' (resolved through i18next at runtime).
-          const interviewDateStr = activeApp.interviewDate
-            ? new Date(`${activeApp.interviewDate}T00:00:00`).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
-            : null
           return (
             <div className={`card p-5 border-2 ${vis.border} ${vis.bg}`}>
               <div className="flex items-center gap-3 mb-3">
@@ -681,33 +641,6 @@ export default function PatientDashboard() {
                     {t('patient.dashboard.statusCard.awaiting_info.messageFrom', { agency: activeApp.agencyName })}
                   </p>
                   <p className="text-sm text-gray-700 leading-relaxed">{activeApp.awaitingInfoMessage}</p>
-                </div>
-              )}
-
-              {/* interview: show date/time/Meet link inline — most time-sensitive
-                  event in the journey; patient shouldn't need an extra click. */}
-              {isInterview && (interviewDateStr || activeApp.interviewTime || activeApp.meetLink) && (
-                <div className="bg-white border border-purple-200 rounded-xl p-3 mb-4 space-y-2">
-                  {interviewDateStr && (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <MdCalendarMonth size={16} className="text-purple-500 flex-shrink-0" />
-                      <span className="font-medium">{interviewDateStr}</span>
-                    </div>
-                  )}
-                  {activeApp.interviewTime && (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <MdAccessTime size={16} className="text-purple-500 flex-shrink-0" />
-                      <span className="font-medium">{activeApp.interviewTime}</span>
-                    </div>
-                  )}
-                  {activeApp.meetLink && (
-                    <a href={activeApp.meetLink} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-medium pt-1 border-t border-purple-100">
-                      <MdVideoCall size={16} className="flex-shrink-0" />
-                      <span className="truncate">{t('patient.dashboard.statusCard.interview.joinMeet')}</span>
-                      <MdOpenInNew size={13} className="flex-shrink-0 opacity-60" />
-                    </a>
-                  )}
                 </div>
               )}
 

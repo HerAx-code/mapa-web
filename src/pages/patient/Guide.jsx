@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import {
   MdExpandMore, MdExpandLess, MdCheckCircle,
   MdInfo, MdPerson, MdPersonAdd, MdUpload, MdAssignment,
-  MdUndo, MdTimeline, MdVideoCall, MdDownload, MdMessage, MdLock,
+  MdUndo, MdTimeline, MdDownload, MdMessage, MdLock,
   MdSearch, MdClose, MdGroups, MdFactCheck,
 } from 'react-icons/md'
 
@@ -205,19 +205,6 @@ export default function UserGuide() {
         { label: t('patient.guide.sections.statuses.rejectedLabel'),   desc: t('patient.guide.sections.statuses.rejectedDesc')   },
       ],
       link: { label: t('patient.guide.linkGoToStatus'), path: '/patient/status' },
-    },
-    {
-      icon:  MdVideoCall,
-      title: t('patient.guide.sections.interview.title'),
-      steps: [
-        t('patient.guide.sections.interview.s1'),
-        t('patient.guide.sections.interview.s2'),
-        t('patient.guide.sections.interview.s3'),
-        t('patient.guide.sections.interview.s4'),
-        t('patient.guide.sections.interview.s5'),
-      ],
-      note: t('patient.guide.sections.interview.note'),
-      link: { label: t('patient.guide.linkGoToInterviews'), path: '/patient/interviews' },
     },
     {
       icon:  MdDownload,

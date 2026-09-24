@@ -30,7 +30,6 @@ const MedicalPrograms  = lazy(() => import('./pages/patient/MedicalPrograms'))
 const RequestAssistance = lazy(() => import('./pages/patient/RequestAssistance'))
 const IntakeWizard      = lazy(() => import('./pages/patient/IntakeWizard'))
 const TrackStatus      = lazy(() => import('./pages/patient/TrackStatus'))
-const Interviews       = lazy(() => import('./pages/patient/Interviews'))
 const PatientMore      = lazy(() => import('./pages/patient/More'))
 const PatientAccountSecurity = lazy(() => import('./pages/patient/AccountSecurity'))
 const PatientPrivacyNotice   = lazy(() => import('./pages/patient/PrivacyNotice'))
@@ -60,7 +59,6 @@ const AgencyGuide           = lazy(() => import('./pages/agency/Guide'))
 const AdminDashboard   = lazy(() => import('./pages/admin/Dashboard'))
 const AdminAnalytics   = lazy(() => import('./pages/admin/Analytics'))
 const Requests         = lazy(() => import('./pages/admin/Requests'))
-const AdminInterviews  = lazy(() => import('./pages/admin/Interviews'))
 const Patients         = lazy(() => import('./pages/admin/Patients'))
 const HospitalIDs      = lazy(() => import('./pages/admin/HospitalIDs'))
 const Agencies         = lazy(() => import('./pages/admin/Agencies'))
@@ -120,7 +118,6 @@ export default function App() {
           <Route path="/patient/request"    element={<PrivateRoute allowedRoles={PATIENT_ROLES}><RequestAssistance /></PrivateRoute>} />
           <Route path="/patient/request/:id/intake" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><IntakeWizard /></PrivateRoute>} />
           <Route path="/patient/status"     element={<PrivateRoute allowedRoles={PATIENT_ROLES}><TrackStatus /></PrivateRoute>} />
-          <Route path="/patient/interviews" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><Interviews /></PrivateRoute>} />
           <Route path="/patient/messages"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><AdminMessages /></PrivateRoute>} />
           <Route path="/patient/guide"      element={<PrivateRoute allowedRoles={PATIENT_ROLES}><UserGuide /></PrivateRoute>} />
           <Route path="/patient/more"       element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientMore /></PrivateRoute>} />
@@ -153,7 +150,6 @@ export default function App() {
           <Route path="/admin/dashboard"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminDashboard /></PrivateRoute>} />
           <Route path="/admin/analytics"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminAnalytics /></PrivateRoute>} />
           <Route path="/admin/requests"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Requests /></PrivateRoute>} />
-          <Route path="/admin/interviews" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AdminInterviews /></PrivateRoute>} />
           <Route path="/admin/requests/:id/intake" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><IntakeSheet collectionName="requests" /></PrivateRoute>} />
           <Route path="/admin/patients"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Patients /></PrivateRoute>} />
           <Route path="/admin/hospitalids"element={<PrivateRoute allowedRoles={ADMIN_ROLES}><HospitalIDs /></PrivateRoute>} />
