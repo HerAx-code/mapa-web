@@ -1,3 +1,9 @@
+> ⚠️ **SUPERSEDED / REMOVED (2026-09-24).** The interview appointment/booking
+> system this plan describes has been removed from MAPA. The assessment is now
+> **remote and asynchronous** (no scheduled interview, no slots). See
+> **docs/remove-interview-scheduling-plan.md** for the current model and the
+> removal steps. This file is kept only as historical context.
+
 # Appointment System — Execution & Integration Plan
 
 *Scope: add **patient self-service booking** of the CRMC assessment interview.

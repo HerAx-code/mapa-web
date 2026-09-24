@@ -175,7 +175,7 @@
       "stage1Label": "Filed",
       "stage1Detail": "You submit one request with your requirements.",
       "stage2Label": "Reviewed & assessed",
-      "stage2Detail": "CRMC verifies your documents and holds one interview.",
+      "stage2Detail": "CRMC verifies your documents and assesses your case.",
       "stage3Label": "Endorsed & approved",
       "stage3Detail": "Partner agencies fund it and your Guarantee Letter is issued.",
       "stage4Label": "Released",
@@ -205,8 +205,8 @@
       "s3Desc": "Open Request Assistance, upload your required documents, and verify your ID with a selfie.",
       "s4Title": "CRMC Verifies Your Documents",
       "s4Desc": "A CRMC social worker reviews your documents to make sure everything is in order.",
-      "s5Title": "Attend Your Assessment Interview",
-      "s5Desc": "Join your online assessment interview with CRMC via Google Meet at the scheduled time.",
+      "s5Title": "CRMC Assesses Your Case",
+      "s5Desc": "A CRMC social worker assesses your case remotely and may message you if anything is needed — no interview to attend.",
       "s6Title": "Get Endorsed & Receive Your Guarantee Letter",
       "s6Desc": "CRMC endorses your request to agencies that can fund it. Get your Guarantee Letter to present at the named provider.",
       "startBtn": "Start with Step 1",
@@ -252,9 +252,9 @@
       "q3": "Can I apply for a family member?",
       "a3": "Yes. A spouse, parent, adult child, or authorized representative may file on behalf of the patient — common when the patient is still confined or cannot use a phone. You'll be asked for your relationship to the patient, your own valid ID, and an authorization letter signed by the patient or immediate family.",
       "q4": "How long does it take?",
-      "a4": "It depends on how complete your documents are and on each agency's review and available slots. CRMC works to verify documents and schedule your assessment interview as quickly as possible, and you can track every step in your account.",
-      "q5": "What if I can't come in person for the interview?",
-      "a5": "Tell your assigned social worker and an online interview via Google Meet can be arranged instead. A link is sent to your registered email and mobile number, and the interview takes about 15–20 minutes. If your signal is weak, it may be done by phone call.",
+      "a4": "It depends on how complete your documents are and on each agency's review and available slots. CRMC works to verify documents and assess your case as quickly as possible, and you can track every step in your account.",
+      "q5": "Do I have to travel to CRMC for an interview?",
+      "a5": "No. The assessment is done remotely — a CRMC social worker reviews your case online and messages you through the app if they need anything. If a short live conversation is needed, they send a Google Meet link. There is no scheduled office interview to attend.",
       "q6": "Is my information safe?",
       "a6": "Yes. MAPA is operated by CRMC and handles your data under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the funding agency your request is endorsed to. You may ask for a copy of your data or ask that it be corrected at any time."
     },
@@ -480,7 +480,7 @@
       "useTitle": "How Your Data is Used",
       "use1": "To process and track your medical assistance applications",
       "use2": "To verify your eligibility for assistance programs",
-      "use3": "To communicate with you about application updates and interview schedules",
+      "use3": "To communicate with you about application updates and your assessment",
       "use4": "To generate official Guarantee Letters for approved assistance",
       "use5": "To comply with government record-keeping regulations",
       "accessTitle": "Who Has Access",
@@ -540,8 +540,8 @@
           "a": "You'll receive in-app + email notifications at each step — when CRMC endorses your request, when agencies review it, and at each approval. The Request Assistance page shows your coverage plan and how much has been secured toward zero balance."
         },
         {
-          "q": "How do I join my online interview?",
-          "a": "If an agency schedules an interview, a Google Meet link appears on your Interviews page and Dashboard. Click it a few minutes before your slot — no install needed on a recent browser."
+          "q": "Do I need to attend an interview?",
+          "a": "No. CRMC assesses your case remotely — a social worker reviews your documents and messages you through the app if anything is unclear. If a short live conversation is needed, they send a Google Meet link; there is no scheduled interview to attend."
         },
         {
           "q": "Do I choose which agencies help me?",
@@ -808,8 +808,8 @@
         "s2": "Document verification",
         "s2metaReviewing": "Being reviewed by CRMC",
         "s2metaDone": "{{verified}} document(s) verified",
-        "s3": "CRMC assessment interview",
-        "s3metaTBD": "To be scheduled",
+        "s3": "CRMC assessment",
+        "s3metaTBD": "Remote review by CRMC",
         "s4": "Endorsed to funding agencies",
         "s4meta": "CRMC forwards your request to the agencies",
         "s5": "Assistance released",
@@ -941,8 +941,8 @@
         "s2Desc": "CRMC verifies your documents and endorses your request to the agencies that can help fund it.",
         "s3Title": "Track Your Progress",
         "s3Desc": "Follow your request's status and funding coverage anytime.",
-        "s4Title": "Attend Your Interview",
-        "s4Desc": "Join your online assessment interview with CRMC.",
+        "s4Title": "CRMC Assessment",
+        "s4Desc": "A CRMC social worker assesses your case remotely and may message you if anything is unclear — no interview to attend.",
         "s5Title": "Receive your Guarantee Letter",
         "s5Desc": "Once agencies fund your care, get your Guarantee Letter to present at the named provider."
       }
@@ -983,9 +983,8 @@
         "submittedNote": "Your request and documents were submitted to CRMC.",
         "reviewLabel": "Under Review",
         "reviewNote": "CRMC is verifying your documents and your bill.",
-        "assessmentLabel": "Assessment & Interview",
-        "assessmentNote": "CRMC reviews your case and conducts your assessment interview.",
-        "assessmentCta": "View your interview details",
+        "assessmentLabel": "Assessment",
+        "assessmentNote": "A CRMC social worker assesses your case remotely and may message you if anything is unclear.",
         "endorsedLabel": "Endorsed to Agencies",
         "endorsedNote": "CRMC referred your request to one or more agencies to help cover your bill.",
         "endorsedCta": "Review the coverage plan",
@@ -1214,7 +1213,7 @@
           "s3": "Attach your billing statement (Statement of Account), confirm the declaration, and submit your request.",
           "s4": "CRMC reviews your request and endorses it to one or more agencies that can help cover your bill.",
           "s5": "Open Request Assistance to see your coverage plan, then tap Proceed to send it to those agencies.",
-          "s6": "Complete each agency's requirements and join any scheduled online interview.",
+          "s6": "Complete each agency's requirements and reply to any messages from your CRMC social worker.",
           "s7": "Once an agency approves, you will receive a Guarantee Letter to claim your assistance.",
           "note": "Important: You can have only one active request at a time. Track its progress anytime under My Application."
         },
@@ -1229,12 +1228,12 @@
         },
         "cofunding": {
           "title": "What is co-funding? Why do I see multiple agencies?",
-          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. CRMC verifies your documents and interviews you, then endorses your request to one or more partner agencies (DSWD, PCSO, Malasakit, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — CRMC routes the case for you.",
+          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. CRMC verifies your documents and assesses your case remotely, then endorses your request to one or more partner agencies (DSWD, PCSO, Malasakit, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — CRMC routes the case for you.",
           "note": "After CRMC endorses your request, you'll see a Coverage Plan listing each agency. Tap Proceed to confirm and start their reviews."
         },
         "intakeWizard": {
           "title": "What is the Household Intake Wizard?",
-          "content": "After CRMC starts reviewing your documents, you'll be asked to fill a 5-step household form covering your family, income, expenses, and medical situation. This is the factual part of the Unified Intake Sheet — CRMC adds the assessment portion during your interview. Your social worker uses this to recommend which agencies should fund your request.",
+          "content": "After CRMC starts reviewing your documents, you'll be asked to fill a 5-step household form covering your family, income, expenses, and medical situation. This is the factual part of the Unified Intake Sheet — your CRMC social worker adds the assessment portion while reviewing your case remotely. They use this to recommend which agencies should fund your request.",
           "s1": "Open Request Assistance and tap the Household Intake link, or go directly to /patient/request/<id>/intake.",
           "s2": "Step 1 — Household: list each family member living with you.",
           "s3": "Step 2-3 — Income and expenses: monthly income, employment, and household expenses.",
@@ -1250,7 +1249,7 @@
           "underReviewLabel": "Under Review",
           "underReviewDesc": "CRMC is verifying your documents. You may be asked to re-upload any unclear or rejected ones.",
           "assessmentLabel": "Assessment",
-          "assessmentDesc": "CRMC has scheduled your single assessment interview via Google Meet. After the interview, your social worker completes the Unified Intake Sheet.",
+          "assessmentDesc": "A CRMC social worker assesses your case remotely — they may message you if anything is unclear — then completes the Unified Intake Sheet. No interview to attend.",
           "endorsedLabel": "Endorsed",
           "endorsedDesc": "CRMC has routed your request to one or more agencies. Review the Coverage Plan on My Application and tap Proceed to start their reviews.",
           "partiallyFundedLabel": "Partially Funded",
@@ -1294,7 +1293,7 @@
         },
         "contact": {
           "title": "How do I contact the admin or agency?",
-          "content": "Go to Messages from the sidebar to view all your conversations. Tap the New Message button at the top right to start a new conversation with hospital staff or your assigned agency. You can message them directly if you have questions about your application, documents, or need to reschedule an interview."
+          "content": "Go to Messages from the sidebar to view all your conversations. Tap the New Message button at the top right to start a new conversation with hospital staff or your assigned agency. You can message them directly if you have questions about your application or documents, or to respond to your CRMC social worker's assessment."
         },
         "forgotPw": {
           "title": "I forgot my password. What do I do?",
@@ -1317,7 +1316,7 @@
       "interviewCta": "Your interview",
       "s0": { "title": "Request received", "sub": "CRMC will start reviewing your documents soon." },
       "s1": { "title": "Under review", "sub": "CRMC is checking your documents." },
-      "s2": { "title": "Your interview", "sub": "It's time for your assessment interview with CRMC." },
+      "s2": { "title": "Assessment", "sub": "A CRMC social worker is assessing your case and may message you." },
       "s3": { "title": "With the agencies", "sub": "CRMC endorsed your request to a funding agency." },
       "s4": { "title": "Partly approved", "sub": "An agency approved part of your request." }
     }
@@ -1443,7 +1442,7 @@
       },
       "s3": {
         "title": "Your 5-step journey",
-        "body": "Track your progress from upload → review → interview → approval → Guarantee Letter. Tap any step to jump in."
+        "body": "Track your progress from upload → review → assessment → approval → Guarantee Letter. Tap any step to jump in."
       },
       "s4": {
         "title": "Document status",
@@ -1456,7 +1455,7 @@
         },
         "s2": {
           "title": "Your request journey",
-          "body": "Six stages from Submitted to Fully Funded. The active stage is highlighted; CRMC moves you forward as documents verify, the interview happens, and agencies decide."
+          "body": "Six stages from Submitted to Fully Funded. The active stage is highlighted; CRMC moves you forward as documents verify, your case is assessed, and agencies decide."
         },
         "s3": {
           "title": "Agency cards",
