@@ -1,7 +1,7 @@
 import { MdCheck, MdLock } from 'react-icons/md'
 
 // Horizontal stage rail for the CRMC request workspace (redesign Phase 1).
-// Renders the verify → assess → interview → endorse progression from the
+// Renders the verify → assess → endorse progression from the
 // requestStage model, so an operator sees at a glance where a request is and
 // which step is current. Presentational — takes the already-derived `stage`
 // (from deriveRequestStage); terminal requests show no rail.

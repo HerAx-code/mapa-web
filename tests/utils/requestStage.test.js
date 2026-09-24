@@ -27,49 +27,42 @@ describe('deriveRequestStage', () => {
     expect(stageStatus({ status: 'under_review' }, verified).verify).toBe('done')
   })
 
-  it('advances to interview once docs + intake are done', () => {
-    const r = deriveRequestStage({ status: 'assessment', intakeSheet: completeIntake }, verified)
-    expect(r.intakeComplete).toBe(true)
-    expect(r.current).toBe('interview')
-  })
-
-  it('reaches endorse only when docs + intake + a COMPLETED interview are all done', () => {
-    const req = { status: 'assessment', intakeSheet: completeIntake, interviewOutcome: 'completed' }
+  it('reaches endorse once docs + intake are done (no interview step)', () => {
+    const req = { status: 'assessment', intakeSheet: completeIntake }
     const r = deriveRequestStage(req, verified)
+    expect(r.intakeComplete).toBe(true)
     expect(r.canEndorse).toBe(true)
     expect(r.current).toBe('endorse')
     expect(r.blockers).toEqual([])
     expect(stageStatus(req, verified).endorse).toBe('current')
   })
 
-  it('the gate is allVerified && intakeComplete && interviewOutcome === "completed"', () => {
-    // Missing just the interview outcome → still blocked.
-    const r = deriveRequestStage({ status: 'assessment', intakeSheet: completeIntake }, verified)
+  it('the gate is allVerified && intakeComplete', () => {
+    // Docs verified but intake incomplete → blocked at assess.
+    const r = deriveRequestStage({ status: 'assessment' }, verified)
     expect(r.canEndorse).toBe(false)
-    expect(r.blockers.map(b => b.key)).toEqual(['interview'])
+    expect(r.blockers.map(b => b.key)).toEqual(['assess'])
   })
 
-  it('a no-show or rescheduled interview does NOT unlock endorsement', () => {
-    // A recorded outcome that isn't "completed" means the assessment did not
-    // actually happen — it must keep the interview stage blocking.
-    for (const outcome of ['no_show', 'rescheduled']) {
+  it('a stale interviewOutcome on legacy data does not affect the gate', () => {
+    // The interview step is gone; the completed intake sheet is the only
+    // human-assessment gate. A leftover outcome field is simply ignored.
+    for (const outcome of ['no_show', 'rescheduled', 'completed']) {
       const req = { status: 'assessment', intakeSheet: completeIntake, interviewOutcome: outcome }
       const r = deriveRequestStage(req, verified)
-      expect(r.canEndorse).toBe(false)
-      expect(r.interviewDone).toBe(false)
-      expect(r.blockers.map(b => b.key)).toEqual(['interview'])
+      expect(r.canEndorse).toBe(true)
     }
   })
 
   it('lists the exact remaining blockers with jump targets', () => {
     const r = deriveRequestStage({ status: 'submitted' }, partial) // nothing done
-    expect(r.blockers.map(b => b.key)).toEqual(['verify', 'assess', 'interview'])
+    expect(r.blockers.map(b => b.key)).toEqual(['verify', 'assess'])
     expect(r.blockers[0]).toMatchObject({ key: 'verify', label: 'Verify documents', detail: '1/2 verified' })
   })
 
   it('reports no active stage for terminal requests', () => {
     for (const status of ['fully_funded', 'closed', 'rejected']) {
-      const r = deriveRequestStage({ status, intakeSheet: completeIntake, interviewOutcome: 'completed' }, verified)
+      const r = deriveRequestStage({ status, intakeSheet: completeIntake }, verified)
       expect(r.terminal).toBe(true)
       expect(r.current).toBeNull()
     }
@@ -81,7 +74,7 @@ describe('deriveRequestStage', () => {
     expect(r.stages.find(s => s.key === 'verify').detail).toBe('No documents')
   })
 
-  it('always returns the four stages in order', () => {
+  it('always returns the three stages in order', () => {
     const r = deriveRequestStage({ status: 'submitted' }, [])
     expect(r.stages.map(s => s.key)).toEqual(CRMC_STAGE_KEYS)
   })
