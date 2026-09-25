@@ -190,16 +190,23 @@ export default function RequestAssistance() {
     if (file) startOcr(typeName, file)
   }
 
+  // Rollout kill-switch: set VITE_ID_VERIFY_ENABLED=false to disable the whole
+  // on-device face check (no model download, no face-match/liveness). Default on.
+  // The feature is advisory + fails-null, so disabling it just falls back to the
+  // OCR-only flow. See docs/id-verification-plan.md §7.
+  const idVerifyEnabled = import.meta.env.VITE_ID_VERIFY_ENABLED !== 'false'
+
   // Fire the pairwise face check in the background whenever the ID + selfie
   // pair (patient or rep) becomes available or changes. runFacePair de-dupes
   // by file signature so the models load/run at most once per unique pair.
   useEffect(() => {
+    if (!idVerifyEnabled) return
     const idName     = reqDocTypes.find(t => isIdType(t.name))?.name
     const selfieName = reqDocTypes.find(t => isSelfieType(t.name))?.name
     runFacePair('patient', idName && pendingFiles[idName], selfieName && pendingFiles[selfieName])
     runFacePair('rep', filedByRep ? pendingFiles[REP_ID] : null, filedByRep ? pendingFiles[REP_SELFIE] : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingFiles, reqDocTypes, filedByRep])
+  }, [pendingFiles, reqDocTypes, filedByRep, idVerifyEnabled])
 
   const removeReq = (typeName) => {
     // Bump the token so any in-flight OCR for this slot is dropped on resolve.
@@ -1089,6 +1096,7 @@ export default function RequestAssistance() {
 
       {selfieFor && (
         <SelfieCaptureModal
+          liveness={idVerifyEnabled}
           onCapture={(file, meta) => setSelfie(selfieFor, file, meta)}
           onClose={() => setSelfieFor(null)}
         />

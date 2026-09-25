@@ -322,6 +322,25 @@ PSA clearance:
    chips. Gate is the CI test suite + `lint:i18n` for the new patient copy.
 5. Phase 2 stays flagged until PSA answers.
 
+### ✅ BUILT — Phase 1 (PR #229, branch `feat/id-verification-phase1`)
+Tasks 1–8 are implemented, tested (utils 161 · components 94 · rules 179 ·
+lint:i18n clean) and open for review. What shipped vs this plan:
+- **Model:** `@vladmandic/face-api` (maintained face-api.js fork; original breaks
+  under Vite — same API/model format), weights vendored in `public/models/`.
+- **Rollout kill-switch:** `VITE_ID_VERIFY_ENABLED` (default on; `false` disables
+  the whole check + model download → OCR-only fallback).
+- **Calibration data:** `faceMatchScore` / `livenessScore` are already persisted
+  per doc, so the scores to tune `FACE_MATCH_HI` / `LIVENESS_HI` accrue in
+  Firestore during the advisory-only period — no extra logging pipeline needed.
+- **DPIA:** recorded in `docs/threat-model.md` (A6a) — on-device, no templates,
+  consent, human-in-loop, kill-switch, retention pending.
+
+**Remaining before "trust the chips":**
+- Calibrate `FACE_MATCH_HI` / `LIVENESS_HI` on real logged scores (still
+  PROVISIONAL in `constants.js`).
+- Selfie-retention purge job (needs the window decision below).
+- Live device verification on the Vercel preview (CI can't drive the camera).
+
 ## 8. Decisions
 
 **Resolved (this pass):**

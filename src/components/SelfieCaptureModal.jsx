@@ -15,7 +15,7 @@ import { checkLiveness } from '../utils/faceCheck'
 // makes the final call, and an elderly/ill patient's poor camera must not lock
 // them out). The liveness result is handed up via onCapture and stamped on the
 // selfie doc as an advisory flag. See docs/id-verification-plan.md.
-export default function SelfieCaptureModal({ onCapture, onClose }) {
+export default function SelfieCaptureModal({ onCapture, onClose, liveness: livenessEnabled = true }) {
   const { t }      = useTranslation()
   const videoRef   = useRef(null)
   const streamRef  = useRef(null)
@@ -60,15 +60,16 @@ export default function SelfieCaptureModal({ onCapture, onClose }) {
     canvas.height = video.videoHeight || 480
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
     setPreview(canvas.toDataURL('image/jpeg', 0.85))
-    setLive({ status: 'checking' })
+    if (livenessEnabled) setLive({ status: 'checking' })
     canvas.toBlob(b => {
       setBlob(b)
       // Advisory on-device liveness on the captured still (never blocks).
-      if (b) {
+      // Skipped when the ID-verify feature flag is off (no model download).
+      if (livenessEnabled && b) {
         checkLiveness(new File([b], 'selfie.jpg', { type: 'image/jpeg' }))
           .then(r => setLive({ status: 'done', liveness: r.liveness, livenessScore: r.livenessScore }))
           .catch(() => setLive({ status: 'done', liveness: null, livenessScore: null }))
-      } else {
+      } else if (livenessEnabled) {
         setLive({ status: 'done', liveness: null, livenessScore: null })
       }
     }, 'image/jpeg', 0.85)
