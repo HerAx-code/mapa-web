@@ -694,6 +694,7 @@
       "ocrMatch": "✓ The name on your ID matches your account.",
       "ocrNoMatch": "We couldn't match the name automatically — CRMC will verify it. You can still submit.",
       "ocrUnreadable": "We couldn't read the ID automatically — CRMC will verify it. You can still submit.",
+      "ocrNotAnId": "⚠ This doesn't look like an ID — make sure it's a clear photo of your government ID. You can still submit.",
       "takeSelfie": "Take selfie",
       "selfieTitle": "Take a live selfie",
       "selfieHint": "Center your face in the frame. CRMC matches this photo to your ID.",

@@ -190,6 +190,23 @@ export async function compareFaces(idFile, selfieFile) {
   }
 }
 
+// Is there a detectable human face in this image? Used for the advisory
+// "doesn't look like an ID" nudge on the patient's ID upload — a real
+// government ID has a portrait, a chair/receipt/blank does not. Returns
+// true / false / null (couldn't run → don't warn). Fails null, never throws.
+export async function hasFace(file) {
+  if (!file) return null
+  try {
+    const faceapi = await getFaceApi()
+    const canvas = await toCanvas(file)
+    if (!canvas) return null
+    const res = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+    return !!res
+  } catch {
+    return null
+  }
+}
+
 // Passive liveness heuristic on a captured selfie still. Fails null.
 export async function checkLiveness(selfieFile) {
   const NEUTRAL = { liveness: null, livenessScore: null }
