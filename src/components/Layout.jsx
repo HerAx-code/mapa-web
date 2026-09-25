@@ -5,12 +5,12 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   MdMenu, MdClose, MdApps, MdMessage, MdNotifications,
   MdLogout, MdShield, MdDashboard, MdSearch, MdLocalHospital,
-  MdTimeline, MdFolder, MdVideoCall, MdMenuBook,
+  MdTimeline, MdFolder, MdMenuBook,
   MdInbox, MdDescription, MdBarChart, MdUpload,
   MdCardMembership, MdListAlt, MdBusiness,
   MdSupervisedUserCircle, MdFavorite, MdFactCheck,
   MdGroup, MdBadge, MdEmail, MdStar, MdCheckCircle,
-  MdInfo, MdCalendarToday, MdSend, MdEdit,
+  MdInfo, MdSend, MdEdit,
   MdSettings, MdHelp, MdFlag, MdChevronRight, MdLock, MdPerson, MdVerifiedUser,
   MdCancel, MdNotificationsNone, MdHistory, MdDownload,
   MdCampaign, MdBuildCircle, MdWarning, MdAttachMoney, MdReceiptLong, MdInsights,
@@ -59,7 +59,6 @@ const PATIENT_NAV = [
   { to: '/patient/programs',   icon: MdSearch,     labelKey: 'patient.nav.findPrograms'  },
   { to: '/patient/request',    icon: MdFavorite,   labelKey: 'patient.nav.requestAssistance' },
   { to: '/patient/status',     icon: MdTimeline,   labelKey: 'patient.nav.myApplication' },
-  { to: '/patient/interviews', icon: MdVideoCall,  labelKey: 'patient.nav.interviews'    },
   { to: '/patient/messages',   icon: MdMessage,    labelKey: 'patient.nav.messages'      },
   { to: '/patient/guide',      icon: MdMenuBook,   labelKey: 'patient.nav.userGuide'     },
 ]
@@ -96,7 +95,6 @@ const ADMIN_NAV = {
   ],
   operations: [
     { to: '/admin/requests',    icon: MdReceiptLong,  label: 'Requests' },
-    { to: '/admin/interviews',  icon: MdCalendarToday, label: 'Interviews' },
     { to: '/admin/analytics',   icon: MdInsights,  label: 'Analytics' },
     { to: '/admin/logs',        icon: MdListAlt,   label: 'App Logs' },
     { to: '/admin/patients',    icon: MdGroup,     label: 'Patients' },
@@ -115,10 +113,8 @@ const ADMIN_NAV = {
 const NOTIF_ICONS = {
   // Patient / application
   certificate_ready:  { icon: MdStar,          color: 'text-green-500',  bg: 'bg-green-50'  },
-  interview_approved: { icon: MdCheckCircle,   color: 'text-blue-500',   bg: 'bg-blue-50'   },
   doc_verified:       { icon: MdFolder,        color: 'text-brand-500',  bg: 'bg-brand-50'  },
   doc_rejected:       { icon: MdCancel,        color: 'text-red-500',    bg: 'bg-red-50'    },
-  interview_sched:    { icon: MdCalendarToday, color: 'text-purple-500', bg: 'bg-purple-50' },
   app_advanced:       { icon: MdInfo,          color: 'text-amber-500',  bg: 'bg-amber-50'  },
   app_submitted:      { icon: MdCheckCircle,   color: 'text-gray-500',   bg: 'bg-gray-50'   },
   // Agency
@@ -151,7 +147,7 @@ const NOTIF_CATEGORY = {
   doc_verified:        'Documents',   doc_rejected:        'Documents',
   doctype_added:       'Documents',   doctype_updated:     'Documents',   doctype_deleted:     'Documents',
   app_submitted:       'Applications', app_advanced:       'Applications',
-  interview_sched:     'Applications', interview_approved:  'Applications', certificate_ready:   'Applications',
+  certificate_ready:   'Applications',
   new_account:         'Accounts',   account_deactivated:  'Accounts',
   account_activated:   'Accounts',   account_deleted:      'Accounts',
   role_changed:        'Accounts',   password_reset_sent:  'Accounts',
@@ -677,7 +673,6 @@ const APPS = {
     { labelKey: 'patient.nav.medicalPrograms',  icon: MdLocalHospital, to: '/patient/programs'   },
     { labelKey: 'patient.nav.trackStatus',      icon: MdTimeline,      to: '/patient/status'     },
     { labelKey: 'patient.nav.requestAssistance', icon: MdFavorite,     to: '/patient/request'    },
-    { labelKey: 'patient.nav.interviews',       icon: MdVideoCall,     to: '/patient/interviews' },
   ],
   [ROLES.AGENCY]: [
     { label: 'Dashboard',     icon: MdDashboard,      to: '/agency/dashboard'    },
@@ -711,7 +706,6 @@ const APPS = {
     { label: 'Doc Types',      icon: MdDescription,          to: '/admin/doctypes'    },
     { label: 'Assistance',     icon: MdFavorite,             to: '/admin/assistance'  },
     { label: 'Requests',       icon: MdReceiptLong,          to: '/admin/requests'    },
-    { label: 'Interviews',     icon: MdCalendarToday,        to: '/admin/interviews'  },
     { label: 'App Logs',       icon: MdListAlt,              to: '/admin/logs'        },
     { label: 'Patients',       icon: MdGroup,                to: '/admin/patients'    },
     { label: 'Access Codes',   icon: MdBadge,                to: '/admin/hospitalids' },

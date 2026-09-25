@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   MdTimeline, MdHistory, MdDownload, MdMailOutline,
-  MdCalendarMonth, MdAssignment, MdCelebration, MdCheckCircle,
+  MdAssignment, MdCelebration, MdCheckCircle,
   MdInbox, MdCheck, MdWarning, MdChevronRight,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
@@ -50,10 +50,7 @@ const buildRequestStages = (request, t) => {
     // "CRMC Reviewing" row would land on a screen with nothing actionable.
     let path = null
     let cta  = null
-    if (active && s.key === 'assessment') {
-      path = '/patient/interviews'
-      cta  = t('patient.track.reqStages.assessmentCta')
-    } else if (active && s.key === 'endorsed') {
+    if (active && s.key === 'endorsed') {
       path = '/patient/request'
       cta  = t('patient.track.reqStages.endorsedCta')
     }
@@ -701,19 +698,6 @@ export default function TrackStatus() {
                             {proceedingId === app.id
                               ? t('patient.track.banner.proceeding')
                               : `${t('patient.track.banner.endorsedBtn')} →`}
-                          </button>
-                        </div>
-                      )}
-                      {app.status === 'interview' && (
-                        <div className="mb-4 bg-purple-50 border border-purple-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                          <p className="text-sm text-purple-700 font-medium flex items-start gap-2 flex-1">
-                            <MdCalendarMonth size={16} className="flex-shrink-0 mt-0.5" />
-                            <span>{t('patient.track.banner.interview')}</span>
-                          </p>
-                          <button
-                            className="flex-shrink-0 inline-flex items-center min-h-[44px] text-sm bg-purple-500 hover:bg-purple-600 text-white px-4 rounded-lg font-medium transition-colors"
-                            onClick={() => navigate('/patient/interviews')}>
-                            {t('patient.track.banner.interviewBtn')} →
                           </button>
                         </div>
                       )}

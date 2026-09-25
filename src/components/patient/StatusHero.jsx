@@ -17,13 +17,11 @@ export default function StatusHero({ request, nextAction, navigate }) {
   const key  = `s${Math.min(rank, 4)}`
   const pct  = Math.round((step / TOTAL) * 100)
 
-  // The single next action: the Dashboard's derived one (fix a doc / respond /
-  // join interview) wins; otherwise a stage-appropriate default.
+  // The single next action: the Dashboard's derived one (fix a doc / respond)
+  // wins; otherwise track the application.
   const cta = nextAction
     ? { label: nextAction.cta, onClick: nextAction.onClick }
-    : rank === 2
-      ? { label: t('patient.hero.interviewCta'), onClick: () => navigate('/patient/interviews') }
-      : { label: t('patient.hero.trackCta'),     onClick: () => navigate('/patient/status') }
+    : { label: t('patient.hero.trackCta'), onClick: () => navigate('/patient/status') }
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-brand-600 p-5 text-white shadow-lg shadow-brand-900/20">

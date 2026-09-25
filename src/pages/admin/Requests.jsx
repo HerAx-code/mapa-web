@@ -27,12 +27,11 @@ import DocViewerModal from '../../components/DocViewerModal'
 import CompareFacesModal from '../../components/admin/CompareFacesModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import StatusBadge from '../../components/ui/StatusBadge'
-import InterviewModal from '../../components/InterviewModal'
 import CaseTimeline from '../../components/CaseTimeline'
 import {
   MdClose, MdWarning, MdReceiptLong, MdLocalHospital, MdSend, MdCheck,
   MdPerson, MdAttachFile, MdBlock, MdCheckCircle,
-  MdVideoCall, MdEventRepeat, MdAssignment, MdArrowBack, MdSearch,
+  MdAssignment, MdArrowBack, MdSearch,
   MdGroups, MdThumbDown, MdWarningAmber,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
@@ -506,7 +505,6 @@ function RequestDetail({ request, agencies, onClose }) {
   // Side-by-side ID ↔ selfie face compare (advisory). { selfieDoc, idDoc }.
   const [comparing, setComparing]   = useState(null)
   const [showEndorse, setShowEndorse] = useState(false)
-  const [showInterview, setShowInterview] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showCloseModal, setShowCloseModal]   = useState(false)
   // Which document is being rejected (drives the doc-reject ConfirmModal). The
@@ -518,7 +516,6 @@ function RequestDetail({ request, agencies, onClose }) {
   // legitimate decision -- this action exists for accident recovery, not for
   // routine flow.
   const [unverifyingDoc, setUnverifyingDoc]   = useState(null)
-  const [outcomeNotes, setOutcomeNotes] = useState('')
   // PhilHealth-first coverage inputs (Order of Charging). Seeded from the
   // request and re-seeded when a different request is opened; local edits stay
   // until saved. See docs/philhealth-first-plan.md.
@@ -732,115 +729,10 @@ function RequestDetail({ request, agencies, onClose }) {
     } finally { setBusy(false) }
   }
 
-  // ② Assessment — schedule the single CRMC interview on the request, and
-  // record its outcome. Scheduling advances the request to 'assessment'.
-  const scheduleInterview = async (form) => {
-    setBusy(true)
-    try {
-      await updateDoc(doc(db, 'requests', request.id), {
-        interviewDate: form.date,
-        interviewTime: form.time,
-        meetLink:      form.link,
-        conductedBy:   form.conductedBy.trim(),
-        interviewOutcome: null,
-        status:        'assessment',
-        updatedAt:     serverTimestamp(),
-      })
-      logAudit(user, { action: 'interview_scheduled', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `${form.date} ${form.time}`, requestId: request.id, patientId: request.patientId })
-      await notify(request.patientId, {
-        type:  'interview_sched',
-        title: 'Assessment interview scheduled',
-        body:  `CRMC scheduled your assessment interview on ${form.date} at ${form.time}. Join via the Google Meet link in your dashboard.`,
-        // High-value + time-critical for phone-primary patients → also SMS.
-        // Minimal content (no link/PII) per RA-10173.
-        sms:     true,
-        smsText: `MAPA: Your CRMC assessment interview is on ${form.date} at ${form.time}. Open the MAPA app for details.`,
-      }).catch(() => {})
-      toast.success('Interview scheduled.')
-      setShowInterview(false)
-    } catch (err) { console.error(err); toast.error('Failed to schedule interview.') }
-    finally { setBusy(false) }
-  }
-
-  // Self-service booking: instead of CRMC assigning the time, open the gate so
-  // the patient picks a slot from published availability (canBookInterview()
-  // checks interviewBookingOpen; the onInterviewSlotWritten trigger fills
-  // interviewDate when they book). Coexists with Schedule directly — CRMC's call.
-  const openBooking = async () => {
-    setBusy(true)
-    try {
-      await updateDoc(doc(db, 'requests', request.id), {
-        interviewBookingOpen: true,
-        updatedAt:            serverTimestamp(),
-      })
-      logAudit(user, { action: 'interview_booking_opened', targetType: 'request', targetId: request.id, targetName: request.requestId, details: 'Opened self-booking', requestId: request.id, patientId: request.patientId })
-      await notify(request.patientId, {
-        type:  'interview_booking_open',
-        title: 'You can now book your interview',
-        body:  'CRMC has opened interview booking for your request. Open the Interviews page to pick a date and time.',
-      }).catch(() => {})
-      toast.success('Self-booking opened — the patient can now pick a time.')
-    } catch (err) { console.error(err); toast.error('Failed to open self-booking.') }
-    finally { setBusy(false) }
-  }
-
-  const closeBooking = async () => {
-    setBusy(true)
-    try {
-      await updateDoc(doc(db, 'requests', request.id), {
-        interviewBookingOpen: false,
-        updatedAt:            serverTimestamp(),
-      })
-      logAudit(user, { action: 'interview_booking_closed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: 'Closed self-booking', requestId: request.id, patientId: request.patientId })
-      toast.success('Self-booking closed.')
-    } catch (err) { console.error(err); toast.error('Failed to close self-booking.') }
-    finally { setBusy(false) }
-  }
-
-  const recordOutcome = async (outcome) => {
-    setBusy(true)
-    try {
-      await updateDoc(doc(db, 'requests', request.id), {
-        interviewOutcome: outcome,
-        interviewNotes:   outcomeNotes.trim() || null,
-        updatedAt:        serverTimestamp(),
-      })
-      logAudit(user, { action: 'interview_completed', targetType: 'request', targetId: request.id, targetName: request.requestId, details: `Outcome: ${outcome}`, requestId: request.id, patientId: request.patientId })
-      toast.success('Interview outcome recorded.')
-    } catch (err) { console.error(err); toast.error('Failed to record outcome.') }
-    finally { setBusy(false) }
-  }
-
-  // Recover from a non-completed interview outcome (no-show / rescheduled).
-  // Fix #2 (requestStage) correctly keeps such an outcome from unlocking
-  // endorsement, but the recorded outcome then leaves the request with a past
-  // interviewDate and no way forward — the assessment must be re-done. This
-  // clears the stale interview + outcome and re-opens self-booking so the
-  // patient can pick a new time (which onInterviewSlotWritten re-stamps and
-  // rolls the request back into 'assessment'). CRMC records 'completed' after
-  // the new interview to unlock endorsement.
-  const reopenInterview = async () => {
-    setBusy(true)
-    try {
-      await updateDoc(doc(db, 'requests', request.id), {
-        interviewBookingOpen: true,
-        interviewDate:        null,
-        interviewTime:        null,
-        meetLink:             '',
-        interviewOutcome:     null,
-        interviewNotes:       null,
-        updatedAt:            serverTimestamp(),
-      })
-      logAudit(user, { action: 'interview_booking_opened', targetType: 'request', targetId: request.id, targetName: request.requestId, details: 'Re-opened booking after a non-completed interview outcome', requestId: request.id, patientId: request.patientId })
-      await notify(request.patientId, {
-        type:  'interview_booking_open',
-        title: 'Please rebook your interview',
-        body:  'CRMC re-opened interview booking for your request. Open the Interviews page to pick a new date and time.',
-      }).catch(() => {})
-      toast.success('Booking re-opened — the patient can pick a new time.')
-    } catch (err) { console.error(err); toast.error('Failed to re-open booking.') }
-    finally { setBusy(false) }
-  }
+  // ② Assessment is async/remote now (no scheduled interview — see
+  // docs/remove-interview-scheduling-plan.md). CRMC assesses the patient from
+  // the submitted documents, messaging them (handleMessagePatient) for anything
+  // unclear, then completes the Unified Intake Sheet — which is the endorse gate.
 
   // PhilHealth-first: record the coverage applied before endorsement and
   // recompute the residual (amountNeeded) the agencies co-fund. Gated to
@@ -1009,16 +901,16 @@ function RequestDetail({ request, agencies, onClose }) {
             onCompare={(selfieDoc, idDoc) => setComparing({ selfieDoc, idDoc })}
           />
 
-          {/* ② Interview & assessment */}
+          {/* ② Assessment (async/remote — no scheduled interview) */}
           <div className="card p-4 sm:p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-                Interview &amp; assessment
+                Assessment
               </h3>
-              {request.interviewOutcome && (
-                <span className="badge badge-green text-xs">Outcome recorded</span>
-              )}
+              <span className={`badge text-xs ${intakeComplete ? 'badge-green' : 'badge-amber'}`}>
+                {intakeComplete ? 'Complete' : 'Pending'}
+              </span>
             </div>
             {/* Unified Intake Sheet — the structured case assessment */}
             <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100 mb-2">
@@ -1064,104 +956,29 @@ function RequestDetail({ request, agencies, onClose }) {
                   : <span className="text-xs text-gray-400 italic">Locked after endorsement</span>}
               </div>
             </div>
-            {!request.interviewDate ? (
-              <div className="p-3 rounded-lg border border-gray-100">
-                {!allVerified ? (
-                  <p className="text-xs text-gray-400 italic">Verify all documents first, then open the assessment interview.</p>
-                ) : request.interviewBookingOpen ? (
-                  <>
-                    <p className="text-xs text-gray-500 mb-2">
-                      <span className="font-medium text-brand-600">Self-booking open</span> — waiting for the patient to pick a time from published availability.
-                    </p>
-                    <div className="flex gap-2 flex-wrap">
-                      <button className="btn-secondary text-sm" disabled={busy} onClick={closeBooking}>Close booking</button>
-                      <button className="btn-secondary text-sm flex items-center gap-1.5" disabled={busy}
-                        onClick={() => setShowInterview(true)}>
-                        <MdVideoCall size={14} /> Schedule directly instead
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs text-gray-500 mb-2">Documents verified. Let the patient book a time, or schedule it directly.</p>
-                    <div className="flex gap-2 flex-wrap">
-                      <button className="btn-primary text-sm" disabled={busy} onClick={openBooking}>Open self-booking</button>
-                      <button className="btn-secondary text-sm flex items-center gap-1.5" disabled={busy}
-                        onClick={() => setShowInterview(true)}>
-                        <MdVideoCall size={14} /> Schedule directly
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div className="p-3 rounded-lg border border-gray-100 space-y-2">
-                <div className="text-xs text-gray-600 space-y-1">
-                  <p><span className="text-gray-400">When:</span> {request.interviewDate} at {request.interviewTime}</p>
-                  {request.conductedBy && <p><span className="text-gray-400">Conducted by:</span> {request.conductedBy}</p>}
-                  {request.meetLink && <p className="truncate"><span className="text-gray-400">Meet:</span> <a href={request.meetLink} target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline break-all">{request.meetLink}</a></p>}
+            {/* Async remote assessment — the completed Intake Sheet is the gate. */}
+            <div className="p-3 rounded-lg border border-gray-100">
+              {!allVerified ? (
+                <p className="text-xs text-gray-400 italic">Verify all documents first, then assess the patient and complete the Intake Sheet.</p>
+              ) : intakeComplete ? (
+                <p className="text-xs text-gray-500">Assessment complete — this request is ready to endorse.</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Documents verified. Assess the patient remotely — message them for anything unclear (share a Google Meet link if a live talk is needed), then complete the Unified Intake Sheet to unlock endorsement.
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link to={`/admin/requests/${request.id}/intake`} className="btn-primary text-sm">
+                      Complete Intake Sheet
+                    </Link>
+                    <button className="btn-secondary text-sm" disabled={messagingPatient}
+                      onClick={() => handleMessagePatient(`Re: Request ${request.requestId} — assessment`)}>
+                      Message patient
+                    </button>
+                  </div>
                 </div>
-                {request.interviewOutcome ? (
-                  <div className="text-xs text-gray-600">
-                    <span className="text-gray-400">Outcome:</span> <span className="font-medium">{request.interviewOutcome}</span>
-                    {request.interviewNotes && (
-                      <p className="text-gray-600 whitespace-pre-wrap mt-0.5">{request.interviewNotes}</p>
-                    )}
-                    {request.interviewOutcome !== 'completed' && (
-                      <div className="mt-2 space-y-1.5">
-                        <p className="text-amber-700">This interview wasn't completed — it must be re-done before the request can be endorsed.</p>
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            disabled={busy}
-                            onClick={reopenInterview}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
-                            <MdEventRepeat size={14} /> Re-open self-booking
-                          </button>
-                          <button
-                            disabled={busy}
-                            onClick={() => setShowInterview(true)}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
-                            <MdVideoCall size={14} /> Schedule directly
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <textarea className="input resize-none text-sm" rows={2} placeholder="Assessment notes (optional)…"
-                      value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} maxLength={300} />
-                    {/* Outcome buttons promoted from text-link styling --
-                        Completed gates endorsement, No-show notifies the
-                        patient. Both deserve real button affordance, not the
-                        same visual weight as a "View Details" inline link.
-                        Layout: Completed primary on the left (most common,
-                        positive outcome), No-show as destructive secondary,
-                        Reschedule as plain secondary. */}
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        disabled={busy}
-                        onClick={() => recordOutcome('completed')}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
-                        <MdCheckCircle size={14} /> Completed
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => recordOutcome('no_show')}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 hover:bg-red-50 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
-                        <MdBlock size={14} /> No-show
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => setShowInterview(true)}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg disabled:opacity-50 transition-colors">
-                        <MdEventRepeat size={14} /> Reschedule
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* ③ Endorse — slices */}
@@ -1271,9 +1088,6 @@ function RequestDetail({ request, agencies, onClose }) {
       )}
       {showEndorse && (
         <EndorseModal request={request} slices={slices} agencies={agencies} onClose={() => setShowEndorse(false)} />
-      )}
-      {showInterview && (
-        <InterviewModal app={request} agency={null} onConfirm={scheduleInterview} onClose={() => setShowInterview(false)} />
       )}
 
       <ConfirmModal

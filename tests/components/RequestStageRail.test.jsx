@@ -1,7 +1,7 @@
 /**
  * RequestStageRail smoke tests. The rail is the visible centrepiece of the
- * CRMC request-workspace redesign; it renders the verify → assess → interview
- * → endorse progression from the requestStage model. Pure component (no
+ * CRMC request-workspace redesign; it renders the verify → assess → endorse
+ * progression from the requestStage model. Pure component (no
  * router/auth/Firestore), so verifying it in jsdom stands in for a browser
  * screenshot while pinning the states that matter.
  */
@@ -17,9 +17,9 @@ const completeIntake = {
 const verified = [{ status: 'verified' }, { status: 'verified' }]
 
 describe('RequestStageRail', () => {
-  it('renders all four stages with their detail', () => {
+  it('renders all three stages with their detail', () => {
     render(<RequestStageRail stage={deriveRequestStage({ status: 'submitted' }, [{ status: 'pending' }])} />)
-    for (const label of ['Verify documents', 'Assess', 'Interview', 'Endorse']) {
+    for (const label of ['Verify documents', 'Assess', 'Endorse']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
     expect(screen.getByText('0/1 verified')).toBeInTheDocument()

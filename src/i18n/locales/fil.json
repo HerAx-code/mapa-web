@@ -175,7 +175,7 @@
       "stage1Label": "Na-file",
       "stage1Detail": "Nagsusumite kayo ng isang request kasama ang mga requirements.",
       "stage2Label": "Na-review at na-assess",
-      "stage2Detail": "Bini-verify ng CRMC ang inyong dokumento at may isang panayam.",
+      "stage2Detail": "Bini-verify ng CRMC ang inyong dokumento at sinusuri ang inyong kaso.",
       "stage3Label": "Na-endorso at naaprubahan",
       "stage3Detail": "Pinopondohan ito ng mga kasosyong ahensya at ini-issue ang Guarantee Letter.",
       "stage4Label": "Na-release",
@@ -205,8 +205,8 @@
       "s3Desc": "Buksan ang Request Assistance, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID gamit ang selfie.",
       "s4Title": "Veverifyin ng CRMC ang Inyong mga Dokumento",
       "s4Desc": "Susuriin ng social worker ng CRMC ang inyong mga dokumento upang siguraduhing ayos lahat.",
-      "s5Title": "Dumalo sa Inyong Assessment Interview",
-      "s5Desc": "Sumali sa online na assessment interview kasama ang CRMC sa pamamagitan ng Google Meet sa nakatakdang oras.",
+      "s5Title": "Sinusuri ng CRMC ang Inyong Kaso",
+      "s5Desc": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan at maaaring mag-message kung may kailangan — walang panayam na dadaluhan.",
       "s6Title": "Ma-endorso at Tanggapin ang Guarantee Letter",
       "s6Desc": "I-eendorso ng CRMC ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito. Kunin ang Guarantee Letter upang iharap sa pinangalanang provider.",
       "startBtn": "Magsimula sa Hakbang 1",
@@ -252,9 +252,9 @@
       "q3": "Maaari ba akong mag-apply para sa kapamilya?",
       "a3": "Oo. Maaaring mag-apply ang asawa, magulang, anak na nasa hustong gulang, o awtorisadong kinatawan para sa pasyente — karaniwan kapag naka-confine pa ang pasyente o hindi kayang gumamit ng telepono. Itatanong ang inyong relasyon sa pasyente, sarili ninyong valid ID, at authorization letter na nilagdaan ng pasyente o pamilya.",
       "q4": "Gaano katagal ang proseso?",
-      "a4": "Depende ito sa kakumpletuhan ng inyong dokumento at sa review at bakanteng slot ng bawat ahensya. Sinisikap ng CRMC na mabilis na masuri ang dokumento at ma-schedule ang assessment interview, at makikita ninyo ang bawat hakbang sa inyong account.",
-      "q5": "Paano kung hindi ako makakarating sa interview?",
-      "a5": "Sabihin sa inyong social worker at maaaring gawing online interview sa Google Meet. Ipapadala ang link sa inyong nakarehistrong email at mobile number, at tumatagal ito ng mga 15–20 minuto. Kung mahina ang signal, maaari rin itong gawin sa tawag.",
+      "a4": "Depende ito sa kakumpletuhan ng inyong dokumento at sa review at bakanteng slot ng bawat ahensya. Sinisikap ng CRMC na mabilis na masuri ang dokumento at masuri ang inyong kaso, at makikita ninyo ang bawat hakbang sa inyong account.",
+      "q5": "Kailangan ko bang pumunta sa CRMC para sa panayam?",
+      "a5": "Hindi. Ginagawa nang malayuan ang pagsusuri — sinusuri ng isang CRMC social worker ang inyong kaso online at magme-message sa inyo sa app kung may kailangan sila. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link. Walang naka-iskedyul na panayam sa opisina na dadaluhan.",
       "q6": "Ligtas ba ang aking impormasyon?",
       "a6": "Oo. Pinapatakbo ang MAPA ng CRMC at pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ahensyang pinagsumite ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras."
     },
@@ -480,7 +480,7 @@
       "useTitle": "Paano Ginagamit ang Inyong Datos",
       "use1": "Upang iproseso at i-track ang inyong medical assistance applications",
       "use2": "Upang i-verify ang pagiging karapat-dapat sa mga assistance program",
-      "use3": "Upang makipag-ugnayan sa inyo tungkol sa mga update at iskedyul ng interview",
+      "use3": "Upang makipag-ugnayan sa inyo tungkol sa mga update at sa inyong pagsusuri",
       "use4": "Upang gumawa ng opisyal na Guarantee Letters para sa naaprubahang tulong",
       "use5": "Upang sumunod sa mga regulasyon ng pamahalaan sa record-keeping",
       "accessTitle": "Sino ang May Access",
@@ -540,8 +540,8 @@
           "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — kapag in-endorso ng CRMC, kapag sinuri ng mga ahensya, at sa bawat aproba. Ipinapakita sa pahinang Humiling ng Tulong ang plano ng tulong at kung magkano na ang natipon tungo sa zero balance."
         },
         {
-          "q": "Paano sumali sa online interview?",
-          "a": "Kung mag-iskedyul ang ahensya ng interview, lalabas ang Google Meet link sa inyong Interviews at Dashboard. Pindutin ito ilang minuto bago ang inyong slot — walang i-install sa kasalukuyang browser."
+          "q": "Kailangan ko bang dumalo sa isang panayam?",
+          "a": "Hindi. Sinusuri ng CRMC ang inyong kaso nang malayuan — rine-review ng social worker ang inyong mga dokumento at magme-message sa inyo sa app kung may hindi malinaw. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link; walang naka-iskedyul na panayam na dadaluhan."
         },
         {
           "q": "Pinipili ko ba kung aling ahensya ang tutulong?",
@@ -808,8 +808,8 @@
         "s2": "Beripikasyon ng dokumento",
         "s2metaReviewing": "Sinusuri ng CRMC",
         "s2metaDone": "{{verified}} dokumento ang na-verify",
-        "s3": "Panayam sa pagtatasa ng CRMC",
-        "s3metaTBD": "Nakatakdang itakda",
+        "s3": "Pagsusuri ng CRMC",
+        "s3metaTBD": "Malayuang pagsusuri ng CRMC",
         "s4": "Na-endorso sa mga ahensya",
         "s4meta": "Ipinapasa ng CRMC ang inyong kahilingan sa mga ahensya",
         "s5": "Nailabas ang tulong",
@@ -941,8 +941,8 @@
         "s2Desc": "Veverifyin ng CRMC ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito.",
         "s3Title": "Subaybayan ang Inyong Progreso",
         "s3Desc": "Sundan ang status at funding coverage ng inyong kahilingan anumang oras.",
-        "s4Title": "Dumalo sa Inyong Panayam",
-        "s4Desc": "Sumali sa inyong online na assessment interview kasama ang CRMC.",
+        "s4Title": "Pagsusuri ng CRMC",
+        "s4Desc": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw — walang panayam na dadaluhan.",
         "s5Title": "Tanggapin ang Inyong Guarantee Letter",
         "s5Desc": "Kapag napondohan na ng mga ahensya ang inyong pangangailangan, kunin ang Guarantee Letter upang iharap sa pinangalanang provider."
       }
@@ -983,9 +983,8 @@
         "submittedNote": "Naisumite sa CRMC ang inyong kahilingan at mga dokumento.",
         "reviewLabel": "Sinusuri",
         "reviewNote": "Vine-verify ng CRMC ang inyong mga dokumento at bayarin.",
-        "assessmentLabel": "Pagsusuri at Panayam",
-        "assessmentNote": "Sinusuri ng CRMC ang inyong kaso at isinasagawa ang assessment interview.",
-        "assessmentCta": "Tingnan ang detalye ng inyong panayam",
+        "assessmentLabel": "Pagsusuri",
+        "assessmentNote": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw.",
         "endorsedLabel": "Na-endorso sa mga Ahensya",
         "endorsedNote": "Ini-refer ng CRMC ang inyong kahilingan sa isa o higit pang ahensya para tulungan ang inyong bayarin.",
         "endorsedCta": "Suriin ang plano sa pondo",
@@ -1214,7 +1213,7 @@
           "s3": "Ilakip ang inyong billing statement (Statement of Account), kumpirmahin ang deklarasyon, at isumite ang inyong kahilingan.",
           "s4": "Susuriin ng CRMC ang inyong kahilingan at ie-endorso ito sa isa o higit pang ahensyang makakatulong sa inyong bayarin.",
           "s5": "Buksan ang Humiling ng Tulong upang makita ang coverage plan, pagkatapos ay i-tap ang Magpatuloy upang ipadala ito sa mga ahensyang iyon.",
-          "s6": "Kumpletuhin ang mga kinakailangan ng bawat ahensya at sumali sa anumang nakatakdang online interview.",
+          "s6": "Kumpletuhin ang mga kinakailangan ng bawat ahensya at tumugon sa anumang mensahe mula sa inyong CRMC social worker.",
           "s7": "Kapag inaprubahan ng isang ahensya, makakatanggap kayo ng Guarantee Letter upang makuha ang inyong tulong.",
           "note": "Mahalaga: Isang aktibong kahilingan lamang ang pinapayagan sa isang pagkakataon. Subaybayan ang progreso nito anumang oras sa Aking Aplikasyon."
         },
@@ -1229,12 +1228,12 @@
         },
         "cofunding": {
           "title": "Ano ang co-funding? Bakit may maraming ahensya?",
-          "content": "Gumagamit ang MAPA ng co-funding model. Mag-file kayo ng IISANG kahilingan na may bayarin at halagang kailangan ninyo. Vine-verify ng CRMC ang inyong mga dokumento at magsasagawa ng panayam, pagkatapos ay ie-endorso ang inyong kahilingan sa isa o higit pang kasosyong ahensya (DSWD, PCSO, Malasakit, AMBaG) na magkakasamang tutulong sa inyong bayarin tungo sa zero balance. Ang bawat ahensya ay gumagawa ng sariling desisyon sa pagpopondo at nag-iisyu ng sariling Guarantee Letter para sa porsyong sinasakop nila. Hindi ninyo kailangang mag-apply sa bawat ahensya nang hiwalay — kino-coordinate ng CRMC ang lahat para sa inyo.",
+          "content": "Gumagamit ang MAPA ng co-funding model. Mag-file kayo ng IISANG kahilingan na may bayarin at halagang kailangan ninyo. Vine-verify ng CRMC ang inyong mga dokumento at sinusuri ang inyong kaso nang malayuan, pagkatapos ay ie-endorso ang inyong kahilingan sa isa o higit pang kasosyong ahensya (DSWD, PCSO, Malasakit, AMBaG) na magkakasamang tutulong sa inyong bayarin tungo sa zero balance. Ang bawat ahensya ay gumagawa ng sariling desisyon sa pagpopondo at nag-iisyu ng sariling Guarantee Letter para sa porsyong sinasakop nila. Hindi ninyo kailangang mag-apply sa bawat ahensya nang hiwalay — kino-coordinate ng CRMC ang lahat para sa inyo.",
           "note": "Pagkatapos i-endorso ng CRMC ang inyong kahilingan, makikita ninyo ang Coverage Plan na naglilista sa bawat ahensya. I-tap ang Magpatuloy para kumpirmahin at sa simulan ang kanilang pagsusuri."
         },
         "intakeWizard": {
           "title": "Ano ang Household Intake Wizard?",
-          "content": "Pagkatapos simulan ng CRMC ang pagsusuri sa inyong mga dokumento, hihilingin sa inyo na punan ang 5-hakbang na household form tungkol sa inyong pamilya, kita, gastusin, at kondisyong medikal. Ito ang factual na bahagi ng Unified Intake Sheet — idinaragdag ng CRMC ang assessment portion sa panahon ng inyong panayam. Ginagamit ito ng inyong social worker upang irekomenda kung aling mga ahensya ang dapat magpondo sa inyong kahilingan.",
+          "content": "Pagkatapos simulan ng CRMC ang pagsusuri sa inyong mga dokumento, hihilingin sa inyo na punan ang 5-hakbang na household form tungkol sa inyong pamilya, kita, gastusin, at kondisyong medikal. Ito ang factual na bahagi ng Unified Intake Sheet — idinaragdag ng inyong CRMC social worker ang assessment portion habang sinusuri ang inyong kaso nang malayuan. Ginagamit ito upang irekomenda kung aling mga ahensya ang dapat magpondo sa inyong kahilingan.",
           "s1": "Buksan ang Humiling ng Tulong at i-tap ang Household Intake link, o pumunta sa /patient/request/<id>/intake.",
           "s2": "Hakbang 1 — Sambahayan: ilista ang bawat miyembro ng pamilya na kasama ninyo.",
           "s3": "Hakbang 2-3 — Kita at gastusin: buwanang kita, trabaho, at gastusin ng tahanan.",
@@ -1249,8 +1248,8 @@
           "submittedDesc": "Na-file ninyo ang hiling. Sisimulan agad ng CRMC na suriin ang inyong mga nakalakip na dokumento.",
           "underReviewLabel": "Sinusuri",
           "underReviewDesc": "Vine-verify ng CRMC ang inyong mga dokumento. Maaaring hilingin sa inyo na muling mag-upload ng anumang malabo o tinanggihan.",
-          "assessmentLabel": "Assessment",
-          "assessmentDesc": "Naka-iskedyul na ng CRMC ang inyong iisang assessment interview sa Google Meet. Pagkatapos ng panayam, kumukumpleto ang inyong social worker ng Unified Intake Sheet.",
+          "assessmentLabel": "Pagsusuri",
+          "assessmentDesc": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan — maaaring mag-message kung may hindi malinaw — pagkatapos ay kumukumpleto ng Unified Intake Sheet. Walang panayam na dadaluhan.",
           "endorsedLabel": "Na-endorso",
           "endorsedDesc": "Na-route ng CRMC ang inyong hiling sa isa o higit pang ahensya. Tingnan ang Coverage Plan sa Aking Aplikasyon at i-tap ang Magpatuloy para simulan ang kanilang pagsusuri.",
           "partiallyFundedLabel": "Bahagyang Napondohan",
@@ -1294,7 +1293,7 @@
         },
         "contact": {
           "title": "Paano ako makikipag-ugnayan sa admin o ahensya?",
-          "content": "Pumunta sa Messages sa sidebar upang tingnan ang lahat ng inyong mga usapan. I-tap ang New Message button sa kanang itaas upang magsimula ng bagong usapan sa hospital staff o sa inyong itinalagang ahensya. Maaari ninyong direktang i-message ang mga ito kung may mga tanong tungkol sa aplikasyon, dokumento, o kung kailangang i-reschedule ang isang panayam."
+          "content": "Pumunta sa Messages sa sidebar upang tingnan ang lahat ng inyong mga usapan. I-tap ang New Message button sa kanang itaas upang magsimula ng bagong usapan sa hospital staff o sa inyong itinalagang ahensya. Maaari ninyong direktang i-message ang mga ito kung may mga tanong tungkol sa aplikasyon o dokumento, o upang tumugon sa pagsusuri ng inyong CRMC social worker."
         },
         "forgotPw": {
           "title": "Nakalimutan ko ang aking password. Ano ang gagawin ko?",
@@ -1317,7 +1316,7 @@
       "interviewCta": "Ang iyong panayam",
       "s0": { "title": "Natanggap ang kahilingan", "sub": "Sisimulan nang suriin ng CRMC ang iyong mga dokumento." },
       "s1": { "title": "Sinusuri", "sub": "Sinusuri ng CRMC ang iyong mga dokumento." },
-      "s2": { "title": "Ang iyong panayam", "sub": "Oras na para sa iyong panayam sa CRMC." },
+      "s2": { "title": "Pagsusuri", "sub": "Sinusuri ng isang CRMC social worker ang inyong kaso at maaaring mag-message sa inyo." },
       "s3": { "title": "Nasa mga ahensya", "sub": "Na-endorso ng CRMC ang iyong kahilingan sa ahensya." },
       "s4": { "title": "Bahagyang naaprubahan", "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan." }
     }
@@ -1443,7 +1442,7 @@
       },
       "s3": {
         "title": "Ang inyong 5-hakbang na paglalakbay",
-        "body": "Subaybayan ang inyong progreso: upload → review → panayam → pag-apruba → Guarantee Letter. I-tap ang anumang hakbang para magpatuloy."
+        "body": "Subaybayan ang inyong progreso: upload → review → pagsusuri → pag-apruba → Guarantee Letter. I-tap ang anumang hakbang para magpatuloy."
       },
       "s4": {
         "title": "Status ng dokumento",
@@ -1456,7 +1455,7 @@
         },
         "s2": {
           "title": "Ang paglalakbay ng hiling",
-          "body": "Anim na yugto mula Submitted hanggang Fully Funded. Naka-highlight ang kasalukuyang yugto; ina-advance ng CRMC ang inyong hiling habang nave-verify ang mga dokumento, naidaraos ang panayam, at nagdedesisyon ang mga ahensya."
+          "body": "Anim na yugto mula Submitted hanggang Fully Funded. Naka-highlight ang kasalukuyang yugto; ina-advance ng CRMC ang inyong hiling habang nave-verify ang mga dokumento, nasusuri ang inyong kaso, at nagdedesisyon ang mga ahensya."
         },
         "s3": {
           "title": "Mga agency card",

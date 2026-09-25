@@ -34,19 +34,15 @@ describe('bucketOf — pre-endorsement stages', () => {
       intakeSheet: null,
     }))).toBe('assess')
   })
-  it('interview: docs verified + intake complete, no outcome yet', () => {
+  it('endorse: docs verified + intake complete (no interview step)', () => {
     expect(bucketOf(req({
       attachedDocuments: docs('verified'),
       intakeSheet: completeIntake,
-      interviewOutcome: null,
-    }))).toBe('interview')
-  })
-  it('endorse: all prerequisites met but not yet endorsed', () => {
+    }))).toBe('endorse')
     expect(bucketOf(req({
       status: 'assessment',
       attachedDocuments: docs('verified', 'verified'),
       intakeSheet: completeIntake,
-      interviewOutcome: 'completed',
     }))).toBe('endorse')
   })
 })
@@ -93,7 +89,7 @@ describe('bucketCounts', () => {
     const list = [
       req({ attachedDocuments: docs('pending') }),                                   // verify
       req({ attachedDocuments: docs('verified'), intakeSheet: null }),               // assess
-      req({ attachedDocuments: docs('verified'), intakeSheet: completeIntake }),     // interview
+      req({ attachedDocuments: docs('verified'), intakeSheet: completeIntake }),     // endorse
       req({ status: 'endorsed' }),                                                   // endorsed
       req({ status: 'fully_funded' }),                                               // completed
       req({ status: 'closed' }),                                                     // completed
@@ -102,15 +98,14 @@ describe('bucketCounts', () => {
     expect(counts.all).toBe(6)
     expect(counts.verify).toBe(1)
     expect(counts.assess).toBe(1)
-    expect(counts.interview).toBe(1)
-    expect(counts.endorse).toBe(0)
+    expect(counts.endorse).toBe(1)
     expect(counts.endorsed).toBe(1)
     expect(counts.completed).toBe(2)
     // Every bucket key is represented in the counts.
     for (const key of QUEUE_BUCKETS) expect(counts).toHaveProperty(key)
   })
   it('empty list → all zeros', () => {
-    expect(bucketCounts([])).toEqual({ all: 0, verify: 0, assess: 0, interview: 0, endorse: 0, endorsed: 0, completed: 0 })
+    expect(bucketCounts([])).toEqual({ all: 0, verify: 0, assess: 0, endorse: 0, endorsed: 0, completed: 0 })
   })
 })
 

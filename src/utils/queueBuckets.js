@@ -11,9 +11,9 @@
 
 import { deriveRequestStage, TERMINAL_REQUEST_STATUSES } from './requestStage'
 
-// verify → assess → interview → endorse (the pre-endorsement stages), then
-// endorsed (awaiting agencies) and completed (terminal).
-export const QUEUE_BUCKETS = ['verify', 'assess', 'interview', 'endorse', 'endorsed', 'completed']
+// verify → assess → endorse (the pre-endorsement stages), then endorsed
+// (awaiting agencies) and completed (terminal).
+export const QUEUE_BUCKETS = ['verify', 'assess', 'endorse', 'endorsed', 'completed']
 
 // Post-endorsement, pre-terminal statuses — the request is out of CRMC's hands
 // and waiting on agencies. ('endorsing' is the brief transient at endorse time.)
@@ -22,7 +22,6 @@ const ENDORSED_STATUSES = ['endorsed', 'partially_funded', 'endorsing']
 export const BUCKET_LABELS = {
   verify:    'Needs verification',
   assess:    'Needs assessment',
-  interview: 'Needs interview',
   endorse:   'Ready to endorse',
   endorsed:  'Endorsed',
   completed: 'Completed',
@@ -44,7 +43,7 @@ export function bucketOf(request) {
   if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'completed'
   if (ENDORSED_STATUSES.includes(status)) return 'endorsed'
   // Pre-endorsement: the stage model's current stage IS the bucket
-  // (verify / assess / interview / endorse).
+  // (verify / assess / endorse).
   const stage = deriveRequestStage(request, requestDocs(request))
   return stage.current ?? 'verify'
 }
@@ -69,7 +68,7 @@ export function bucketCounts(requests = []) {
 
 // ── Coarse queue tabs (Magic Patterns adoption) ─────────────────────────────
 // The queue's top-level categorization is the coarser action-oriented set the
-// MP reference uses; the fine stage (verify/assess/interview/endorse above)
+// MP reference uses; the fine stage (verify/assess/endorse above)
 // still drives each ROW's stage chip. Default landing tab is 'needs_action' —
 // the work actually blocked on CRMC.
 
