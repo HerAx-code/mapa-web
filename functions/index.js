@@ -18,6 +18,7 @@ const { onInterviewSlotWritten } = require('./src/onInterviewSlotWritten')
 const { interviewReminders }     = require('./src/interviewReminders')
 const { deleteAuthUser }         = require('./src/deleteAuthUser')
 const { onAgencyWritten }        = require('./src/onAgencyWritten')
+const { purgeSelfieOnClose }     = require('./src/purgeSelfieOnClose')
 
 exports.resetAgencySlots        = resetAgencySlots
 exports.glExpirySweep           = glExpirySweep
@@ -27,3 +28,4 @@ exports.onInterviewSlotWritten  = onInterviewSlotWritten
 exports.interviewReminders      = interviewReminders
 exports.deleteAuthUser          = deleteAuthUser
 exports.onAgencyWritten         = onAgencyWritten
+exports.purgeSelfieOnClose      = purgeSelfieOnClose

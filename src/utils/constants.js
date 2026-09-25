@@ -265,3 +265,18 @@ export const isGLExpiringSoon = (app, withinDays = GL_EXPIRING_SOON_DAYS) => {
   const days = glDaysRemaining(app)
   return days != null && days >= 0 && days <= withinDays
 }
+
+// ── ID verification (advisory face-match + liveness) ───────────────────────
+// Thresholds for the on-device face-match / liveness check (src/utils/faceCheck).
+// Kept here (not hardcoded in components) so they can be tuned without touching
+// the UI. See docs/id-verification-plan.md §2 (verdict bands).
+//
+// PROVISIONAL — these MUST be calibrated on real logged scores before the chips
+// are trusted (plan §7). The whole feature is advisory: a verdict never blocks a
+// submission, and the social worker always makes the final call. Scores are
+// cosine similarity in [0, 1]; a same-person ID-portrait↔selfie pair typically
+// scores high, but the cross-domain (printed low-res ID vs live selfie) match is
+// harder than photo-to-photo benchmarks, so HI is set conservatively for
+// precision — a green "match" should be trustworthy; borderline falls to amber.
+export const FACE_MATCH_HI = 0.72   // cosine ≥ this → faceMatch 'pass', else 'unclear'
+export const LIVENESS_HI   = 0.55   // score  ≥ this → liveness  'pass', else 'unclear'

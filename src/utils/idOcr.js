@@ -44,6 +44,38 @@ export function nameMatches(text, expectedName) {
 // True for document-type names that look like an ID (so we only OCR those).
 export const isIdType = (name) => /\bid\b|identification/i.test(name || '')
 
+// True for the live-selfie document type (the face-match / liveness target).
+export const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
+
+// Advisory ID-type guess from the OCR text. The patient never picks a type —
+// they just upload any government ID into the one "Valid ID" slot; this reads
+// the type off the text as a hint the social worker confirms at review (see
+// docs/id-verification-plan.md, the no-picker decision). Ordered most- to
+// least-specific so a card that says "Unified Multi-Purpose ID" resolves to
+// UMID rather than a generic match. Returns a human label or null.
+const ID_TYPE_PATTERNS = [
+  [/\bUMID\b|unified\s*multi/i,                                   "UMID"],
+  [/driver'?s?\s*licen[sc]e|\bLTO\b/i,                            "Driver's License"],
+  [/phil\s*sys|philippine\s*identification|\bPSN\b|pambansang\s*pagkakakilanlan|national\s*id/i, "PhilSys / National ID"],
+  [/phil\s*health/i,                                              "PhilHealth ID"],
+  [/passport/i,                                                   "Passport"],
+  [/postal/i,                                                     "Postal ID"],
+  [/voter'?s?|comelec/i,                                          "Voter's ID"],
+  [/senior\s*citizen|\bOSCA\b/i,                                  "Senior Citizen ID"],
+  [/\bPWD\b|person'?s?\s*with\s*disab/i,                          "PWD ID"],
+  [/\bSSS\b|social\s*security/i,                                  "SSS ID"],
+  [/\bTIN\b|taxpayer|\bBIR\b/i,                                   "TIN ID"],
+  [/barangay/i,                                                   "Barangay ID"],
+]
+export function detectIdType(text) {
+  const t = (text || '').toString()
+  if (!t.trim()) return null
+  for (const [re, label] of ID_TYPE_PATTERNS) {
+    if (re.test(t)) return label
+  }
+  return null
+}
+
 // Decode an image File to a drawable source, preferring createImageBitmap
 // (GPU-resident, much lower JS-heap footprint than new Image() + URL.create-
 // ObjectURL). The Image() fallback is kept for older browsers without
@@ -160,7 +192,7 @@ async function getWorker() {
 // first OCR call doesn't pay both costs back-to-back -- on cold cache the
 // tesseract chunk + language data download can take a few seconds.
 export async function runIdOcr(file, expectedName = '') {
-  if (!file || !file.type?.startsWith('image/')) return { text: '', match: null }
+  if (!file || !file.type?.startsWith('image/')) return { text: '', match: null, idType: null }
   try {
     const [processed, worker] = await Promise.all([
       preprocessImage(file),
@@ -168,8 +200,8 @@ export async function runIdOcr(file, expectedName = '') {
     ])
     const { data } = await worker.recognize(processed)
     const text = (data?.text ?? '').trim()
-    return { text, match: nameMatches(text, expectedName) }
+    return { text, match: nameMatches(text, expectedName), idType: detectIdType(text) }
   } catch {
-    return { text: '', match: null }
+    return { text: '', match: null, idType: null }
   }
 }

@@ -346,14 +346,48 @@ case numbers are caught at intake by the social worker.
 
 Patients upload images of IDs / billing statements / certificates. OCR
 is advisory; visual verification is by social worker. Sophisticated
-forgeries that pass eye review will pass MAPA review.
+forgeries that pass eye review will pass MAPA review. Phase 1 adds an
+advisory on-device ID-type read (`idTypeDetected`) — a hint the worker
+confirms, not a gate.
 
 ### A7. Live selfie spoofing
 
 The "live selfie" capture is camera-only (no replay protection beyond
 the browser's getUserMedia API). A patient could hold up a photo of
-someone else. Caught by social worker compare-to-ID step at intake;
-not by automated biometrics.
+someone else. Caught by social worker compare-to-ID step at intake.
+Phase 1 (docs/id-verification-plan.md) adds two **advisory** on-device
+signals to speed that human check: a face-match (ID portrait ↔ selfie)
+and a **basic** liveness heuristic (single face, framing, sharpness).
+Neither is a certified presentation-attack check — a photo-of-a-photo or
+a screen replay can still pass, so a determined spoof remains an accepted
+risk pending a certified PAD model (Phase 1.5). Both are fail-null and
+never block; the social worker still makes the final call.
+
+### A6a. ID-verification privacy (RA 10173) — DPIA note
+
+The face-match / liveness feature processes a biometric (a face), which
+RA 10173 treats as **sensitive personal information**. Mitigations, by
+design:
+- **On-device only.** Detection, embedding, matching and liveness all run
+  in the patient's browser (`src/utils/faceCheck.js`); the ID and selfie
+  images never leave the device for this purpose beyond the existing
+  document upload the patient already consents to.
+- **No biometric templates stored.** Only non-biometric **flags + scores**
+  are persisted (`faceMatch`, `faceMatchScore`, `liveness`,
+  `livenessScore`, `idVerifyMethod`, `idTypeDetected`) — never a face
+  descriptor/template. Firestore rules bound each field.
+- **Explicit consent** at capture names the ID comparison
+  (`patient.request.selfieConsent`).
+- **Human-in-the-loop.** No solely-automated adverse decision — every
+  verdict is advisory and the social worker decides.
+- **Retention (follow-up).** The selfie image itself lives as base64 in
+  `documentContents/{docId}` (Spark plan, not Storage). A purge-after-
+  case-close job is a pending follow-up; the non-biometric verdict flags
+  may persist for audit. Retention window is an open decision.
+- **Kill-switch.** `VITE_ID_VERIFY_ENABLED=false` disables the whole
+  check (no model download) for a staged rollout.
+- Loop in the CRMC DPO before wider rollout; calibrate thresholds on
+  logged scores first (advisory-only until then).
 
 ### A8. AI-agent compromise via planted UI content
 

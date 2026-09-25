@@ -288,6 +288,21 @@ service cloud.firestore {
       // the viewer load attacker-chosen Storage objects under the docId).
       // The OCR text from uploadDocument.js is already sliced to 2000 chars
       // client-side; we bound it server-side too.
+      //
+      // Advisory ID-verification fields (idTypeDetected + on-device face-match /
+      // liveness flags & scores — see docs/id-verification-plan.md). These are
+      // hints for the CRMC verifier, never authoritative, but a hostile client
+      // must not be able to write junk into the audit trail, so bound each:
+      // verdicts to their enum (or null), scores to a number in [0,1] (or null),
+      // the detected type to a short string. NEVER a face template.
+      function verifyFieldsOk(d) {
+        return (!('idTypeDetected' in d) || (d.idTypeDetected is string && d.idTypeDetected.size() <= 100))
+          && (!('faceMatch' in d)      || d.faceMatch == null      || d.faceMatch in ['pass', 'unclear'])
+          && (!('liveness' in d)       || d.liveness == null       || d.liveness in ['pass', 'unclear'])
+          && (!('idVerifyMethod' in d) || d.idVerifyMethod == null  || d.idVerifyMethod in ['ocr', 'philid_qr'])
+          && (!('faceMatchScore' in d) || d.faceMatchScore == null || (d.faceMatchScore is number && d.faceMatchScore >= 0 && d.faceMatchScore <= 1))
+          && (!('livenessScore' in d)  || d.livenessScore == null  || (d.livenessScore is number && d.livenessScore >= 0 && d.livenessScore <= 1));
+      }
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
                        request.resource.data.status == 'pending' &&
@@ -295,7 +310,8 @@ service cloud.firestore {
                        !('storagePath' in request.resource.data) &&
                        (!('ocrText' in request.resource.data) ||
                         (request.resource.data.ocrText is string &&
-                         request.resource.data.ocrText.size() <= 4000));
+                         request.resource.data.ocrText.size() <= 4000)) &&
+                       verifyFieldsOk(request.resource.data);
       // CRMC-gateway redesign: document verification is CRMC's job (the single
       // intake gateway), so only admins verify/reject. Agencies keep READ for
       // the funding decision but no longer write document status. Patients may
@@ -324,10 +340,13 @@ service cloud.firestore {
                         request.resource.data.status == 'pending' &&
                         request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['status', 'fileName', 'type', 'size', 'date',
-                                    'reviewedBy', 'reviewedAt', 'ocrText', 'ocrMatch']) &&
+                                    'reviewedBy', 'reviewedAt', 'ocrText', 'ocrMatch',
+                                    'idTypeDetected', 'faceMatch', 'faceMatchScore',
+                                    'liveness', 'livenessScore', 'idVerifyMethod']) &&
                         (!('ocrText' in request.resource.data) ||
                          (request.resource.data.ocrText is string &&
-                          request.resource.data.ocrText.size() <= 4000)));
+                          request.resource.data.ocrText.size() <= 4000)) &&
+                        verifyFieldsOk(request.resource.data));
       // Patient deletes are narrowed to the rollback case. The only
       // patient-side deleteDoc on documents is uploadPatientDocument's
       // rollback when the content write fails -- at that point the doc is

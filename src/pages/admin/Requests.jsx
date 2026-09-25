@@ -24,6 +24,7 @@ import { getOrCreateConversation } from '../../utils/messages'
 import { tsToDate } from '../../utils/dates'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
+import CompareFacesModal from '../../components/admin/CompareFacesModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import StatusBadge from '../../components/ui/StatusBadge'
 import InterviewModal from '../../components/InterviewModal'
@@ -502,6 +503,8 @@ function RequestDetail({ request, agencies, onClose }) {
   const [messagingPatient, setMessagingPatient] = useState(false)
   const [patientDocs, setPatientDocs] = useState([])
   const [viewingDoc, setViewingDoc] = useState(null)
+  // Side-by-side ID ↔ selfie face compare (advisory). { selfieDoc, idDoc }.
+  const [comparing, setComparing]   = useState(null)
   const [showEndorse, setShowEndorse] = useState(false)
   const [showInterview, setShowInterview] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -1003,6 +1006,7 @@ function RequestDetail({ request, agencies, onClose }) {
             reqDocs={reqDocs} busy={busy} allVerified={allVerified} ocrExpanded={ocrExpanded}
             onBulkVerify={bulkVerifyPending} onReviewDoc={reviewDoc} onView={setViewingDoc}
             onReject={setRejectingDoc} onUnverify={setUnverifyingDoc} onToggleOcr={toggleOcrExpanded}
+            onCompare={(selfieDoc, idDoc) => setComparing({ selfieDoc, idDoc })}
           />
 
           {/* ② Interview & assessment */}
@@ -1259,6 +1263,9 @@ function RequestDetail({ request, agencies, onClose }) {
         </div>{/* /grid */}
       </div>{/* /workspace */}
 
+      {comparing && (
+        <CompareFacesModal selfieDoc={comparing.selfieDoc} idDoc={comparing.idDoc} onClose={() => setComparing(null)} />
+      )}
       {viewingDoc && (
         <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
       )}

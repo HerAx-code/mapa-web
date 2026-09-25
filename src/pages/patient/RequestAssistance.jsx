@@ -14,6 +14,7 @@ import {
 } from '../../utils/requests'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { runIdOcr, isIdType } from '../../utils/idOcr'
+import { compareFaces } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -88,6 +89,60 @@ export default function RequestAssistance() {
   // fresh OCR result could be overwritten by the older promise.
   const ocrTokens = useRef({})
 
+  // Advisory on-device face-match + liveness (docs/id-verification-plan.md).
+  // Unlike OCR (per-file at attach), the face check is PAIRWISE — it needs both
+  // the ID and the live selfie — so it runs as a background task keyed on the
+  // file pair and its result is read at submit onto the SELFIE doc. Two pairs
+  // are tracked: the patient's (ID ↔ selfie) and, when a rep files, the rep's.
+  // faceChecked remembers which exact file pair each result is for, so the
+  // ~6.6 MB models run once per unique pair, not on every render. Everything
+  // fails null and never blocks submission.
+  const faceResults    = useRef({ patient: null, rep: null }) // face-match (from the pair)
+  const selfieLiveness = useRef({ patient: null, rep: null }) // liveness (from the capture modal)
+  const faceChecked    = useRef({ patient: null, rep: null })
+  const [faceRunning, setFaceRunning] = useState({ patient: false, rep: false })
+
+  const fileSig = (f) => (f ? `${f.name}:${f.size}:${f.lastModified}` : '')
+
+  // Face MATCH is pairwise (ID ↔ selfie), so it runs here. Liveness needs only
+  // the selfie and is computed in SelfieCaptureModal at capture time (for the
+  // patient nudge) and handed up via onCapture — see setSelfie below.
+  const runFacePair = async (who, idFile, selfieFile) => {
+    if (!idFile || !selfieFile) { faceResults.current[who] = null; faceChecked.current[who] = null; return }
+    const sig = `${fileSig(idFile)}|${fileSig(selfieFile)}`
+    if (faceChecked.current[who] === sig) return // already ran for this exact pair
+    faceChecked.current[who] = sig
+    setFaceRunning(p => ({ ...p, [who]: true }))
+    try {
+      const match = await compareFaces(idFile, selfieFile)
+      if (faceChecked.current[who] !== sig) return // a newer pair superseded this run
+      faceResults.current[who] = match // { faceMatch, faceMatchScore }
+    } catch {
+      if (faceChecked.current[who] === sig) faceResults.current[who] = null
+    } finally {
+      if (faceChecked.current[who] === sig) setFaceRunning(p => ({ ...p, [who]: false }))
+    }
+  }
+
+  // The advisory verify payload stamped on a selfie doc at submit: face-match
+  // (pairwise) + liveness (from the capture modal). Null when neither ran.
+  const selfieVerify = (who) => {
+    const f = faceResults.current[who]
+    const l = selfieLiveness.current[who]
+    if (!f && !l) return null
+    return { ...(f ?? {}), ...(l ?? {}), method: 'ocr' }
+  }
+
+  // Store a captured selfie + its liveness result under the right pendingFiles
+  // key. `who` maps the rep-selfie sentinel to 'rep', everything else to 'patient'.
+  const setSelfie = (key, file, meta) => {
+    const who = key === REP_SELFIE ? 'rep' : 'patient'
+    selfieLiveness.current[who] = meta
+      ? { liveness: meta.liveness ?? null, livenessScore: meta.livenessScore ?? null }
+      : null
+    setPendingFiles(p => ({ ...p, [key]: file }))
+  }
+
   // Shared OCR launcher used by both the initial file attach and the retry
   // button. Skips non-ID document types. For rep ID, the OCR cross-checks
   // against repForm.name (the rep's own name); for everything else, against
@@ -134,6 +189,24 @@ export default function RequestAssistance() {
     const file = pendingFiles[typeName]
     if (file) startOcr(typeName, file)
   }
+
+  // Rollout kill-switch: set VITE_ID_VERIFY_ENABLED=false to disable the whole
+  // on-device face check (no model download, no face-match/liveness). Default on.
+  // The feature is advisory + fails-null, so disabling it just falls back to the
+  // OCR-only flow. See docs/id-verification-plan.md §7.
+  const idVerifyEnabled = import.meta.env.VITE_ID_VERIFY_ENABLED !== 'false'
+
+  // Fire the pairwise face check in the background whenever the ID + selfie
+  // pair (patient or rep) becomes available or changes. runFacePair de-dupes
+  // by file signature so the models load/run at most once per unique pair.
+  useEffect(() => {
+    if (!idVerifyEnabled) return
+    const idName     = reqDocTypes.find(t => isIdType(t.name))?.name
+    const selfieName = reqDocTypes.find(t => isSelfieType(t.name))?.name
+    runFacePair('patient', idName && pendingFiles[idName], selfieName && pendingFiles[selfieName])
+    runFacePair('rep', filedByRep ? pendingFiles[REP_ID] : null, filedByRep ? pendingFiles[REP_SELFIE] : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFiles, reqDocTypes, filedByRep, idVerifyEnabled])
 
   const removeReq = (typeName) => {
     // Bump the token so any in-flight OCR for this slot is dropped on resolve.
@@ -392,9 +465,13 @@ export default function RequestAssistance() {
         if (!file) continue
         const existing = docForType(tp.name)
         const ocr      = ocrResults[tp.name] ?? null
+        // Advisory verification: idTypeDetected onto the ID doc, the face-match +
+        // liveness result onto the selfie doc (see the pairwise check above).
+        const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null) : null
+        const verify         = isSelfieType(tp.name) ? selfieVerify('patient') : null
         try {
-          if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, user })
-          else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, user })
+          if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
+          else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
         } catch (uploadErr) {
           console.error('[request] doc upload failed:', tp.name, uploadErr)
           throw new Error(`UPLOAD_FAILED:${tp.name}`)
@@ -408,8 +485,8 @@ export default function RequestAssistance() {
         // advisory line they get on the patient's own ID. The OCR ran at
         // attach time against repForm.name (see attachReq).
         const repIdOcr     = ocrResults[REP_ID] ?? null
-        const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', ocr: repIdOcr, user })
-        const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', user })
+        const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', ocr: repIdOcr, idTypeDetected: repIdOcr?.idType ?? null, user })
+        const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', verify: selfieVerify('rep'), user })
         filedBy = {
           name:          repForm.name.trim(),
           relationship:  repForm.relationship.trim(),
@@ -1019,7 +1096,8 @@ export default function RequestAssistance() {
 
       {selfieFor && (
         <SelfieCaptureModal
-          onCapture={(file) => setPendingFiles(p => ({ ...p, [selfieFor]: file }))}
+          liveness={idVerifyEnabled}
+          onCapture={(file, meta) => setSelfie(selfieFor, file, meta)}
           onClose={() => setSelfieFor(null)}
         />
       )}
