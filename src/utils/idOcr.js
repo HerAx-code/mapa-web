@@ -44,6 +44,9 @@ export function nameMatches(text, expectedName) {
 // True for document-type names that look like an ID (so we only OCR those).
 export const isIdType = (name) => /\bid\b|identification/i.test(name || '')
 
+// True for the live-selfie document type (the face-match / liveness target).
+export const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
+
 // Advisory ID-type guess from the OCR text. The patient never picks a type —
 // they just upload any government ID into the one "Valid ID" slot; this reads
 // the type off the text as a hint the social worker confirms at review (see

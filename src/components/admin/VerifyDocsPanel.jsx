@@ -1,7 +1,11 @@
-import { MdCheckCircle, MdDescription, MdVisibility, MdBlock, MdRefresh } from 'react-icons/md'
-import { isIdType } from '../../utils/idOcr'
+import { MdCheckCircle, MdDescription, MdVisibility, MdBlock, MdRefresh, MdCompareArrows } from 'react-icons/md'
+import { isIdType, isSelfieType } from '../../utils/idOcr'
 import { tsToDate } from '../../utils/dates'
 import StatusBadge from '../ui/StatusBadge'
+
+// Advisory verdict → text colour, reusing the OCR line's green/amber/gray
+// pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
+const advisoryTone = (v) => v === 'pass' ? 'text-green-600' : v === 'unclear' ? 'text-amber-600' : 'text-gray-400'
 
 // ① Verify documents — the CRMC document-review panel, extracted verbatim from
 // admin/Requests.jsx (redesign Phase 0: decompose the 1,700-line file). Pure
@@ -15,8 +19,10 @@ const fmtDate = (ts) => {
 
 export default function VerifyDocsPanel({
   reqDocs, busy, allVerified, ocrExpanded,
-  onBulkVerify, onReviewDoc, onView, onReject, onUnverify, onToggleOcr,
+  onBulkVerify, onReviewDoc, onView, onReject, onUnverify, onToggleOcr, onCompare,
 }) {
+  // The ID doc a selfie's face-match is compared against (for the side-by-side).
+  const idDoc = reqDocs.find(x => isIdType(x.documentTypeName ?? x.name) && !x._missing) ?? null
   return (
     <div className="card p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
@@ -51,7 +57,12 @@ export default function VerifyDocsPanel({
       ) : (
         <div className="space-y-2">
           {reqDocs.map(d => {
-            const showOcr = isIdType(d.documentTypeName ?? d.name) && (d.ocrMatch != null || d.ocrText)
+            const isId     = isIdType(d.documentTypeName ?? d.name)
+            const isSelfie = isSelfieType(d.documentTypeName ?? d.name)
+            const showOcr  = isId && (d.ocrMatch != null || d.ocrText || d.idTypeDetected)
+            // Selfie face-match / liveness block: show once the on-device check
+            // has run (idVerifyMethod stamped), even if a verdict came back null.
+            const showFace = isSelfie && (d.idVerifyMethod != null || d.faceMatch !== undefined || d.liveness !== undefined)
             const reviewed = (d.status === 'verified' || d.status === 'rejected') && d.reviewedAt
             return (
               <div key={d.id} className="p-2.5 rounded-lg border border-gray-100">
@@ -91,11 +102,42 @@ export default function VerifyDocsPanel({
                         </button>
                       )}
                     </div>
+                    {d.idTypeDetected && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Detected type: <span className="font-medium text-gray-700">{d.idTypeDetected}</span>
+                        <span className="text-gray-400"> — confirm</span>
+                      </p>
+                    )}
                     {ocrExpanded.has(d.id) && d.ocrText && (
                       <pre className="mt-1.5 max-h-40 overflow-auto bg-gray-50 border border-gray-100 rounded-lg p-2 text-xs text-gray-600 font-mono whitespace-pre-wrap break-words">
                         {d.ocrText}
                       </pre>
                     )}
+                  </div>
+                )}
+                {showFace && (
+                  <div className="mt-1 pl-6 space-y-0.5">
+                    <p className={`text-xs ${advisoryTone(d.faceMatch)}`}>
+                      {d.faceMatch === 'pass' ? '✓ Face match: likely the same person'
+                        : d.faceMatch === 'unclear' ? '⚠ Face match: unclear — compare manually'
+                        : 'Face match: could not check — compare manually'}
+                      {typeof d.faceMatchScore === 'number' && <span className="text-gray-400"> · {d.faceMatchScore.toFixed(2)}</span>}
+                    </p>
+                    <p className={`text-xs ${advisoryTone(d.liveness)}`}>
+                      {d.liveness === 'pass' ? '✓ Liveness: looks like a live capture'
+                        : d.liveness === 'unclear' ? '⚠ Liveness: hard to confirm — compare manually'
+                        : 'Liveness: could not check'}
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                      {idDoc && !d._missing && (
+                        <button type="button"
+                          onClick={() => onCompare?.(d, idDoc)}
+                          className="text-xs text-brand-500 hover:text-brand-600 font-medium inline-flex items-center gap-1 underline underline-offset-2">
+                          <MdCompareArrows size={13} /> Compare with ID side-by-side
+                        </button>
+                      )}
+                      <span className="text-[11px] text-gray-400 italic">Advisory — you make the final call.</span>
+                    </div>
                   </div>
                 )}
                 <div className="flex gap-2 mt-2 pl-6 flex-wrap">
