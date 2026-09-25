@@ -14,7 +14,7 @@ import {
 } from '../../utils/requests'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { runIdOcr, isIdType } from '../../utils/idOcr'
-import { compareFaces } from '../../utils/faceCheck'
+import { compareFaces, hasFace } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -156,10 +156,18 @@ export default function RequestAssistance() {
     setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
     setOcrRunning(p => ({ ...p, [typeName]: true }))
     const expectedName = isRepId ? repForm.name : (user?.name ?? '')
-    runIdOcr(file, expectedName)
-      .then(res => {
+    // Also check for a face in the ID image (advisory): a real government ID
+    // has a portrait; a chair/receipt/blank doesn't. Combined with OCR it powers
+    // the soft "doesn't look like an ID" nudge. Gated by the ID-verify flag;
+    // fails null (→ no nudge) so a model-load failure never false-warns.
+    const wantFace = import.meta.env.VITE_ID_VERIFY_ENABLED !== 'false'
+    Promise.all([
+      runIdOcr(file, expectedName),
+      wantFace ? hasFace(file) : Promise.resolve(null),
+    ])
+      .then(([res, face]) => {
         if (ocrTokens.current[typeName] !== token) return // stale: dropped
-        setOcrResults(p => ({ ...p, [typeName]: res }))
+        setOcrResults(p => ({ ...p, [typeName]: { ...res, hasFace: face } }))
       })
       .finally(() => {
         if (ocrTokens.current[typeName] === token) {
@@ -900,7 +908,14 @@ export default function RequestAssistance() {
                         )
                       )}
                       {/* Advisory on-device ID name-check — never blocks submit. */}
-                      {isIdType(tp.name) && pending && (ocrBusy || ocr) && (
+                      {isIdType(tp.name) && pending && (ocrBusy || ocr) && (() => {
+                        // "Doesn't look like an ID": no ID-type keyword, no name
+                        // match, AND no face found in the image (a chair/receipt).
+                        // hasFace must be explicitly false — null (couldn't run)
+                        // never warns, so a blurry real ID isn't wrongly flagged.
+                        const notAnId = ocr && !ocrBusy && ocr.hasFace === false
+                          && ocr.idType == null && ocr.match !== true
+                        return (
                         <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
                           <p className={`text-xs ${
                             ocrBusy ? 'text-gray-500'
@@ -911,9 +926,11 @@ export default function RequestAssistance() {
                               ? t('patient.request.ocrChecking')
                               : ocr?.match === true
                                 ? t('patient.request.ocrMatch')
-                                : ocr?.match === false
-                                  ? t('patient.request.ocrNoMatch')
-                                  : t('patient.request.ocrUnreadable')}
+                                : notAnId
+                                  ? t('patient.request.ocrNotAnId')
+                                  : ocr?.match === false
+                                    ? t('patient.request.ocrNoMatch')
+                                    : t('patient.request.ocrUnreadable')}
                           </p>
                           {/* Hard-failure retry: OCR errored (no text + null match).
                               Skips retry if text was read but name didn't match --
@@ -925,7 +942,8 @@ export default function RequestAssistance() {
                             </button>
                           )}
                         </div>
-                      )}
+                        )
+                      })()}
                     </div>
                   )
                 })}

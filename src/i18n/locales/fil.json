@@ -694,6 +694,7 @@
       "ocrMatch": "✓ Tumutugma ang pangalan sa inyong ID sa inyong account.",
       "ocrNoMatch": "Hindi namin awtomatikong natugma ang pangalan — ive-verify ito ng CRMC. Maaari pa rin kayong magsumite.",
       "ocrUnreadable": "Hindi namin awtomatikong nabasa ang ID — ive-verify ito ng CRMC. Maaari pa rin kayong magsumite.",
+      "ocrNotAnId": "⚠ Mukhang hindi ito ID — siguraduhing malinaw na larawan ito ng inyong government ID. Maaari pa rin kayong magsumite.",
       "takeSelfie": "Kumuha ng selfie",
       "selfieTitle": "Kumuha ng live selfie",
       "selfieHint": "Itutok ang inyong mukha sa frame. Itinutugma ito ng CRMC sa inyong ID.",
