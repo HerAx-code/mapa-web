@@ -93,8 +93,23 @@ export default defineConfig({
             urlPattern: /^https:\/\/securetoken\.googleapis\.com\//,
             handler:    'NetworkOnly',
           },
+          {
+            // Face-match / liveness model weights (public/models). The 6.2 MB
+            // recognition model exceeds the precache cap below, so cache it at
+            // runtime instead (CacheFirst is exempt from that cap): first load
+            // pays the ~6.6 MB once, later visits are instant + offline-capable.
+            // See src/utils/faceCheck.js + public/models/README.md.
+            urlPattern: /\/models\/[^?]+\.(bin|json)$/,
+            handler:    'CacheFirst',
+            options: {
+              cacheName:  'face-models',
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
         // The PDF.js worker is 1MB; let it precache so docs load fast offline.
+        // (Intentionally NOT raised for the face models — those cache at runtime.)
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),

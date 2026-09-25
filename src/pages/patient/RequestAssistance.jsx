@@ -443,7 +443,7 @@ export default function RequestAssistance() {
         const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null)      : null
         const verify         = isSelfieType(tp.name) ? faceResults.current.patient : null
         try {
-          if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, user })
+          if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
           else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
         } catch (uploadErr) {
           console.error('[request] doc upload failed:', tp.name, uploadErr)

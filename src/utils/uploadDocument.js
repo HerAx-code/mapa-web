@@ -155,7 +155,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
 // slice that references it picks up the new file + reset status
 // without any snapshot rewrite. Resets status to 'pending' for
 // re-review.
-export async function replacePatientDocument({ docId, file, ocr = null, user }) {
+export async function replacePatientDocument({ docId, file, ocr = null, verify = null, idTypeDetected = null, user }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
   await setDoc(doc(db, 'documentContents', docId), {
@@ -170,6 +170,17 @@ export async function replacePatientDocument({ docId, file, ocr = null, user }) 
     reviewedBy: null,
     reviewedAt: null,
     ...(ocr ? { ocrText: (ocr.text ?? '').slice(0, 2000), ocrMatch: ocr.match ?? null } : {}),
+    // Refresh the advisory verification on a re-upload so the CRMC verifier sees
+    // the new file's result, not the rejected one's. Rules allow exactly these
+    // keys on a patient update (firestore.rules documents.update).
+    ...(idTypeDetected ? { idTypeDetected: String(idTypeDetected).slice(0, 100) } : {}),
+    ...(verify ? {
+      faceMatch:      verify.faceMatch ?? null,
+      faceMatchScore: typeof verify.faceMatchScore === 'number' ? verify.faceMatchScore : null,
+      liveness:       verify.liveness ?? null,
+      livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
+      idVerifyMethod: verify.method ?? 'ocr',
+    } : {}),
   })
 }
 
