@@ -91,7 +91,7 @@ const readContent = (file) => file.type?.startsWith('image/')
 // Writes metadata to documents/{docId} and the base64 content to
 // documentContents/{docId} (same id, kept separate so list queries
 // stay light).
-export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, user }) {
+export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, user }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
 
@@ -114,6 +114,19 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     // fuzzy name-match flag, surfaced to the CRMC verifier. Never
     // authoritative.
     ...(ocr ? { ocrText: (ocr.text ?? '').slice(0, 2000), ocrMatch: ocr.match ?? null } : {}),
+    // Advisory ID-type guess from OCR (ID docs). The patient never picks a
+    // type; the social worker confirms it at review. See faceCheck / idOcr.
+    ...(idTypeDetected ? { idTypeDetected: String(idTypeDetected).slice(0, 100) } : {}),
+    // Advisory on-device face-match + liveness (selfie docs). Flags + scores
+    // only, never a face template. All fail-null and never block submission —
+    // the CRMC social worker makes the final call. See docs/id-verification-plan.md.
+    ...(verify ? {
+      faceMatch:      verify.faceMatch ?? null,
+      faceMatchScore: typeof verify.faceMatchScore === 'number' ? verify.faceMatchScore : null,
+      liveness:       verify.liveness ?? null,
+      livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
+      idVerifyMethod: verify.method ?? 'ocr',
+    } : {}),
     createdAt:           serverTimestamp(),
   })
 
