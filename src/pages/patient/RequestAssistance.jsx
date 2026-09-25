@@ -14,7 +14,7 @@ import {
 } from '../../utils/requests'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { runIdOcr, isIdType } from '../../utils/idOcr'
-import { compareFaces, checkLiveness } from '../../utils/faceCheck'
+import { compareFaces } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -97,12 +97,16 @@ export default function RequestAssistance() {
   // faceChecked remembers which exact file pair each result is for, so the
   // ~6.6 MB models run once per unique pair, not on every render. Everything
   // fails null and never blocks submission.
-  const faceResults = useRef({ patient: null, rep: null })
-  const faceChecked = useRef({ patient: null, rep: null })
+  const faceResults    = useRef({ patient: null, rep: null }) // face-match (from the pair)
+  const selfieLiveness = useRef({ patient: null, rep: null }) // liveness (from the capture modal)
+  const faceChecked    = useRef({ patient: null, rep: null })
   const [faceRunning, setFaceRunning] = useState({ patient: false, rep: false })
 
   const fileSig = (f) => (f ? `${f.name}:${f.size}:${f.lastModified}` : '')
 
+  // Face MATCH is pairwise (ID ↔ selfie), so it runs here. Liveness needs only
+  // the selfie and is computed in SelfieCaptureModal at capture time (for the
+  // patient nudge) and handed up via onCapture — see setSelfie below.
   const runFacePair = async (who, idFile, selfieFile) => {
     if (!idFile || !selfieFile) { faceResults.current[who] = null; faceChecked.current[who] = null; return }
     const sig = `${fileSig(idFile)}|${fileSig(selfieFile)}`
@@ -110,17 +114,33 @@ export default function RequestAssistance() {
     faceChecked.current[who] = sig
     setFaceRunning(p => ({ ...p, [who]: true }))
     try {
-      const [match, live] = await Promise.all([
-        compareFaces(idFile, selfieFile),
-        checkLiveness(selfieFile),
-      ])
+      const match = await compareFaces(idFile, selfieFile)
       if (faceChecked.current[who] !== sig) return // a newer pair superseded this run
-      faceResults.current[who] = { ...match, ...live, method: 'ocr' }
+      faceResults.current[who] = match // { faceMatch, faceMatchScore }
     } catch {
       if (faceChecked.current[who] === sig) faceResults.current[who] = null
     } finally {
       if (faceChecked.current[who] === sig) setFaceRunning(p => ({ ...p, [who]: false }))
     }
+  }
+
+  // The advisory verify payload stamped on a selfie doc at submit: face-match
+  // (pairwise) + liveness (from the capture modal). Null when neither ran.
+  const selfieVerify = (who) => {
+    const f = faceResults.current[who]
+    const l = selfieLiveness.current[who]
+    if (!f && !l) return null
+    return { ...(f ?? {}), ...(l ?? {}), method: 'ocr' }
+  }
+
+  // Store a captured selfie + its liveness result under the right pendingFiles
+  // key. `who` maps the rep-selfie sentinel to 'rep', everything else to 'patient'.
+  const setSelfie = (key, file, meta) => {
+    const who = key === REP_SELFIE ? 'rep' : 'patient'
+    selfieLiveness.current[who] = meta
+      ? { liveness: meta.liveness ?? null, livenessScore: meta.livenessScore ?? null }
+      : null
+    setPendingFiles(p => ({ ...p, [key]: file }))
   }
 
   // Shared OCR launcher used by both the initial file attach and the retry
@@ -440,8 +460,8 @@ export default function RequestAssistance() {
         const ocr      = ocrResults[tp.name] ?? null
         // Advisory verification: idTypeDetected onto the ID doc, the face-match +
         // liveness result onto the selfie doc (see the pairwise check above).
-        const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null)      : null
-        const verify         = isSelfieType(tp.name) ? faceResults.current.patient : null
+        const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null) : null
+        const verify         = isSelfieType(tp.name) ? selfieVerify('patient') : null
         try {
           if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
           else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
@@ -459,7 +479,7 @@ export default function RequestAssistance() {
         // attach time against repForm.name (see attachReq).
         const repIdOcr     = ocrResults[REP_ID] ?? null
         const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', ocr: repIdOcr, idTypeDetected: repIdOcr?.idType ?? null, user })
-        const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', verify: faceResults.current.rep, user })
+        const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', verify: selfieVerify('rep'), user })
         filedBy = {
           name:          repForm.name.trim(),
           relationship:  repForm.relationship.trim(),
@@ -1069,7 +1089,7 @@ export default function RequestAssistance() {
 
       {selfieFor && (
         <SelfieCaptureModal
-          onCapture={(file) => setPendingFiles(p => ({ ...p, [selfieFor]: file }))}
+          onCapture={(file, meta) => setSelfie(selfieFor, file, meta)}
           onClose={() => setSelfieFor(null)}
         />
       )}
