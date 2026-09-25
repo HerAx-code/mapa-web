@@ -338,8 +338,9 @@ lint:i18n clean) and open for review. What shipped vs this plan:
 **Remaining before "trust the chips":**
 - Calibrate `FACE_MATCH_HI` / `LIVENESS_HI` on real logged scores (still
   PROVISIONAL in `constants.js`).
-- Selfie-retention purge job (needs the window decision below).
 - Live device verification on the Vercel preview (CI can't drive the camera).
+- **Deploy** `purgeSelfieOnClose` (Blaze, manual):
+  `firebase deploy --only functions:purgeSelfieOnClose --project mapa-crmc`.
 
 ## 8. Decisions
 
@@ -359,8 +360,12 @@ lint:i18n clean) and open for review. What shipped vs this plan:
 - ✅ **Liveness depth:** passive heuristic is the Phase-1 default; active blink
   challenge stays config-gated + off [2026-09-24].
 
-**Still need a call before building:**
-- **Selfie retention window:** purge on case close vs fixed N days.
+- ✅ **Selfie retention window:** purge on case close [2026-09-25] — built as the
+  `purgeSelfieOnClose` Cloud Function (deletes the selfie's documentContents when
+  a request goes terminal; keeps metadata + verdict flags, stamps
+  selfieContentPurgedAt). Needs a manual deploy.
+
+**Still need a call:**
 - **Certified PAD (Phase 1.5):** pursue only if pilot fraud data warrants.
 
 ---
