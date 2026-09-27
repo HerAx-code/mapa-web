@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { getOrCreateConversation } from '../../utils/messages'
 import { isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
+import { aging, AGING_TEXT } from '../../utils/aging'
 import {
   MdSearch, MdDescription, MdMessage, MdInbox,
   MdOpenInNew, MdClose,
@@ -248,13 +249,10 @@ export default function Inbox() {
                 const isDuplicate = duplicatePatientIds.has(app.patientId) &&
                   !['rejected','certificate'].includes(app.status)
                 const days = daysSince(app.submittedAt)
-                // null-safe: when days is null (no submittedAt), fall through
-                // to the gray-400 default rather than letting null >= N quietly
-                // evaluate to false.
-                const dayColor = days == null ? 'text-gray-400'
-                  : days >= 7 ? 'text-red-500'
-                  : days >= 3 ? 'text-amber-500'
-                  : 'text-gray-400'
+                // Color from the shared aging() vocabulary (warn ≥3d, over ≥7d)
+                // so this cue matches the CRMC queue's SLA semantics. null-safe:
+                // a missing submittedAt resolves to 'ok' (gray), never a false alarm.
+                const dayColor = AGING_TEXT[aging(app.submittedAt, { warnAt: 3, overAt: 7, unit: 'd' }).state]
                 return (
                   <tr key={app.id}
                     className={`cursor-pointer ${isDuplicate ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}

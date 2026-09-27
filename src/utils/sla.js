@@ -8,30 +8,21 @@
 // needed. The threshold is a single constant here — change it in one place.
 
 import { TERMINAL_REQUEST_STATUSES } from './requestStage'
+import { aging } from './aging'
 
 export const SLA_HOURS = 48
-
-// submittedAt can arrive as a Firestore Timestamp (.toDate), a raw { seconds }
-// object (how the queue already reads it — r.submittedAt?.seconds), a Date, or
-// an ISO string. Collapse all four to epoch-ms, or null.
-const toMs = (ts) => {
-  if (!ts) return null
-  if (typeof ts.toDate === 'function') return ts.toDate().getTime()
-  if (typeof ts.seconds === 'number') return ts.seconds * 1000
-  const d = new Date(ts)
-  return Number.isNaN(d.getTime()) ? null : d.getTime()
-}
+// due_soon opens 12h before the deadline → warn at (48 − 12) = 36h elapsed.
+const SLA_WARN_HOURS = SLA_HOURS - 12
 
 // 'ok' | 'due_soon' (<=12h left) | 'overdue' (past due). Resolved requests
-// carry no SLA pressure.
+// carry no SLA pressure. Delegates to the shared aging() primitive so the CRMC
+// queue and the agency inbox share one state model (different thresholds).
 export function slaState(request, now = Date.now()) {
   if (TERMINAL_REQUEST_STATUSES.includes(request?.status)) return 'ok'
-  const submittedMs = toMs(request?.submittedAt)
-  if (submittedMs == null) return 'ok'
-  const hoursLeft = (submittedMs + SLA_HOURS * 3_600_000 - now) / 3_600_000
-  if (hoursLeft < 0) return 'overdue'
-  if (hoursLeft <= 12) return 'due_soon'
-  return 'ok'
+  const { state } = aging(request?.submittedAt, {
+    warnAt: SLA_WARN_HOURS, overAt: SLA_HOURS, unit: 'h', now,
+  })
+  return state === 'over' ? 'overdue' : state === 'warn' ? 'due_soon' : 'ok'
 }
 
 // Short label for the WAITING column's SLA sub-line.
