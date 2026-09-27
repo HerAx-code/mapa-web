@@ -184,6 +184,37 @@ documents; content is base64 in Firestore.
 aggregation). Same race caveat as §3, same mitigation. Lower priority than 1–4.
 **Tests:** rule — create denied past CAP (with a seeded counter).
 
+**✅ BUILT:**
+- **Trigger** `onDocumentCountChanged` (NEW, `onDocumentWritten documents/{docId}`):
+  `handleDocumentCountChanged` maintains `users/{patientId}.documentCount` — +1 on
+  create, -1 on delete; an update (e.g. `replacePatientDocument`, same doc id)
+  does not change it.
+- **Rule** `documents.create`: added
+  `get(/users/$(uid())).data.get('documentCount', 0) < 60`. 60 is a generous
+  lifetime ceiling (~8–10 requests of checklist docs) — an abuse cap, not a tight
+  quota; a comment flags it as raisable.
+- **Same self-update hole as #3, closed:** pinned `documentCount` on the users
+  self-update clause (alongside `activeRequestId`) so a patient can't reset their
+  own counter to keep uploading past the cap.
+- **UI:** no client change — the only patient upload surfaces (the submission
+  checklist + rep docs, and agency-required compliance docs) are already bounded
+  by the checklist / agency requirement lists; there is no unbounded upload path,
+  so the server cap is the enforcement.
+- **Tests:** rules — `documents.create` denied at `documentCount == 60`, allowed
+  at 59; self-update resetting `documentCount` denied, unchanged allowed.
+  Functions — increment/absent-start/decrement/no-change-on-update/no-patient (5).
+- **Deploy:** needs a manual Blaze deploy of the NEW `onDocumentCountChanged`
+  function after merge.
+
+> **Backfill note (both #3 and #5):** existing patients created before these
+> triggers shipped have no `activeRequestId` / `documentCount` on their user doc.
+> `.get(field, default)` makes that permissive (a patient with none passes), and
+> the triggers self-heal on the next relevant write (`activeRequestId` backfills
+> whenever their active request is next written; `documentCount` starts counting
+> from their next upload/delete — so it under-counts historical docs, which only
+> ever gives a legit patient *more* headroom, never less). No migration script is
+> required for correctness of the guards; a one-time count backfill is optional.
+
 ---
 
 ## 6. Accepted risks (documented, not "fixed")

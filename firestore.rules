@@ -117,11 +117,13 @@ service cloud.firestore {
           request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
           (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null)) &&
-          // The one-active-request guard (abuse hardening #3) is server-owned:
-          // only the onRequestWritten trigger (Admin SDK, rules-bypassing) sets
-          // or clears it. Pin it on self-update so a patient can't null their
-          // own activeRequestId to unlock a second concurrent request.
-          request.resource.data.get('activeRequestId', null) == resource.data.get('activeRequestId', null)) ||
+          // Server-owned counters (abuse hardening #3 + #5): only the Admin SDK
+          // triggers (onRequestWritten / onDocumentCountChanged, rules-bypassing)
+          // write these. Pin them on self-update so a patient can't null their
+          // own activeRequestId to unlock a second concurrent request, nor reset
+          // documentCount to defeat the upload cap.
+          request.resource.data.get('activeRequestId', null) == resource.data.get('activeRequestId', null) &&
+          request.resource.data.get('documentCount', 0) == resource.data.get('documentCount', 0)) ||
         isAdmin() ||
         (isAgencyAdmin() &&
           resource.data.agencyId == userAgencyId() &&
@@ -325,6 +327,14 @@ service cloud.firestore {
           && (!('faceMatchScore' in d) || d.faceMatchScore == null || (d.faceMatchScore is number && d.faceMatchScore >= 0 && d.faceMatchScore <= 1))
           && (!('livenessScore' in d)  || d.livenessScore == null  || (d.livenessScore is number && d.livenessScore >= 0 && d.livenessScore <= 1));
       }
+      // Abuse hardening #5 — cap the NUMBER of documents a patient can upload.
+      // File size is already bounded (~650 KB); this bounds the count, since each
+      // doc's bytes live as base64 in documentContents. Rules can't count a
+      // collection, so onDocumentCountChanged mirrors the total into
+      // users/{uid}.documentCount (+1 create / -1 delete) and this reads it with
+      // one get(). 60 is a generous lifetime ceiling (~8-10 requests' worth of
+      // checklist docs) — an abuse cap, not a tight quota; raise if a real
+      // long-lived patient ever approaches it.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
                        request.resource.data.status == 'pending' &&
@@ -333,7 +343,9 @@ service cloud.firestore {
                        (!('ocrText' in request.resource.data) ||
                         (request.resource.data.ocrText is string &&
                          request.resource.data.ocrText.size() <= 4000)) &&
-                       verifyFieldsOk(request.resource.data);
+                       verifyFieldsOk(request.resource.data) &&
+                       get(/databases/$(database)/documents/users/$(uid()))
+                         .data.get('documentCount', 0) < 60;
       // CRMC-gateway redesign: document verification is CRMC's job (the single
       // intake gateway), so only admins verify/reject. Agencies keep READ for
       // the funding decision but no longer write document status. Patients may

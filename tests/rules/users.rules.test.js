@@ -241,6 +241,24 @@ describe('users.update — identity fields locked on self-update', () => {
       ...patient, activeRequestId: 'CRMC-2026-00001', contact: '09990001111',
     }))
   })
+
+  // Abuse hardening #5 — the document-count cap is server-owned; a patient must
+  // not reset their own documentCount to keep uploading past the cap.
+  it('rejects a patient resetting their own documentCount', async () => {
+    await seedUserDoc('patient-1', { ...patient, documentCount: 60 })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, documentCount: 0,
+    }))
+  })
+
+  it('allows a self-update that leaves documentCount unchanged', async () => {
+    await seedUserDoc('patient-1', { ...patient, documentCount: 12 })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, documentCount: 12, address: 'New Address',
+    }))
+  })
 })
 
 describe('users.update — admin & agency_admin bounds', () => {
