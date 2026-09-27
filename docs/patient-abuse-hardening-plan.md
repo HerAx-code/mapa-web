@@ -120,6 +120,33 @@ Documented as an accepted residual, not silently ignored.
 **Tests:** rules — create denied when `activeRequestId` set; utils — attach set
 equals only this submission's docs.
 
+**✅ BUILT (as designed, plus one hole found and closed):**
+- **Rule** `requests.create`: added `get(/users/$(uid())).data.get('activeRequestId', null) == null`.
+- **Trigger** `onRequestWritten` (extended, not a new function): `syncActiveRequest`
+  keeps `users/{patientId}.activeRequestId` in step — **set** while the request is
+  active (self-healing: reads first to avoid churn on ordinary status advances,
+  but backfills a pre-existing active request whose pointer was never set),
+  **cleared** on active→terminal / withdrawal / delete, but only when the pointer
+  still names *this* request (never clobbers another). Runs alongside the #1
+  notifications in the same handler.
+- **Hole found:** the #4 self-update clause pinned `hospitalId/patientId/name`
+  but **not** `activeRequestId` — a patient could null their own pointer and file
+  a second request, defeating the guard. **Fixed:** pinned `activeRequestId` on
+  self-update too (server-owned; only the Admin SDK trigger writes it).
+- **`attachedDocuments` scoped:** [RequestAssistance.jsx](../src/pages/patient/RequestAssistance.jsx)
+  now builds the snapshot from *this request's* checklist (uploaded/replaced +
+  reused-verified) plus rep docs, instead of re-querying every historical doc a
+  patient ever uploaded (which leaked prior/rejected/unrelated docs onto the new
+  request).
+- **UI guard:** already present (the `activeRequest` live query blocks the form
+  and `handleSubmit`), so no client change was needed for the immediate guard.
+- **Tests:** rules — `requests.create` denied when `activeRequestId` set, allowed
+  when absent; self-update nulling/re-pointing `activeRequestId` denied,
+  unchanged allowed. Functions — `syncActiveRequest` set/backfill/no-churn/
+  clear/clear-skipped/no-patient + handleRequestWritten runs both concerns (8).
+- **Deploy:** needs a manual Blaze redeploy of `onRequestWritten` (the trigger
+  body changed) after merge.
+
 ---
 
 ## 4. Lock identity-linking fields on self-update  *(confirmed hole)*

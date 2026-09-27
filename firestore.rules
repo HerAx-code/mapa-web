@@ -116,7 +116,12 @@ service cloud.firestore {
           // name is pinned for patients only, so staff can still self-rename.
           request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
-          (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null))) ||
+          (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null)) &&
+          // The one-active-request guard (abuse hardening #3) is server-owned:
+          // only the onRequestWritten trigger (Admin SDK, rules-bypassing) sets
+          // or clears it. Pin it on self-update so a patient can't null their
+          // own activeRequestId to unlock a second concurrent request.
+          request.resource.data.get('activeRequestId', null) == resource.data.get('activeRequestId', null)) ||
         isAdmin() ||
         (isAgencyAdmin() &&
           resource.data.agencyId == userAgencyId() &&
@@ -225,11 +230,20 @@ service cloud.firestore {
       // blocklists agencyIds. Verified against the only create site,
       // src/pages/patient/RequestAssistance.jsx, which sends exactly
       // status:'submitted', agencyIds:[], amountCommitted:0.
+      // Abuse hardening #3 — one active request per patient. A patient works
+      // one bill toward zero balance at a time, so block a new request while
+      // they already have a non-terminal one. Rules can't query/aggregate, so
+      // the onRequestWritten trigger mirrors the state into
+      // users/{uid}.activeRequestId and this rule reads it with a single get()
+      // (default null so a patient with none — the normal case — passes). The
+      // trigger clears the pointer when the request goes terminal/withdrawn.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
                        request.resource.data.status == 'submitted' &&
                        request.resource.data.agencyIds == [] &&
-                       request.resource.data.amountCommitted == 0;
+                       request.resource.data.amountCommitted == 0 &&
+                       get(/databases/$(database)/documents/users/$(uid()))
+                         .data.get('activeRequestId', null) == null;
       allow update: if isAdmin() ||
         (isPatient() && resource.data.patientId == uid() &&
           resource.data.status == 'submitted' &&
