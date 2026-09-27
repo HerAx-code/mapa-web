@@ -1339,14 +1339,30 @@ export default function Layout({ children, breadcrumb }) {
             request/intake forms — sat under the bar (MOB-1). The calc
             reserves the full bar height + safe area + a 1rem breathing
             gap; lg:pb-0 drops it once the sidebar layout takes over. */}
-        <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 print:overflow-visible print:block ${
+        {/* main is a BLOCK scroll container, NOT flex-col: Chromium drops the
+            padding-bottom of a column flex-box that is also a scroll container,
+            so as `flex flex-col` the tab-bar clearance padding below was ignored
+            and the last content sat under the fixed BottomTabBar even at max
+            scroll. The flex-col that full-height pages need lives on the inner
+            wrapper (min-h-full) instead. */}
+        <main className={`flex-1 overflow-y-auto overflow-x-clip min-w-0 print:overflow-visible print:block ${
           user?.role === ROLES.PATIENT ? 'pb-[calc(60px_+_env(safe-area-inset-bottom)_+_1rem)] lg:pb-0' : ''
         }`}>
           {/* Key on pathname so each navigation re-mounts this wrapper
               and re-triggers the fade-in animation. Subtle motion
               conveys 'this is a new screen' instead of the instant
-              teleport that makes the app feel webby. */}
-          <div key={location.pathname} className="animate-fade-in flex-1 flex flex-col min-h-0 motion-reduce:animate-none">
+              teleport that makes the app feel webby.
+
+              min-h-full (NOT flex-1 + min-h-0): a flex-grow child with a
+              zero basis is clamped to the scroll container's height, and
+              Chromium then does NOT extend `main`'s scrollable area to a
+              taller descendant's overflow — so long pages (e.g. the
+              Dashboard steps guide) were cut off and the last section sat
+              unreachable under the bottom tab bar. min-h-full keeps the
+              wrapper at least full height (so full-height flex pages still
+              fill) but lets it grow with content, so `main` scrolls the
+              whole page and the bottom padding clears the tab bar. */}
+          <div key={location.pathname} className="animate-fade-in flex flex-col min-h-full motion-reduce:animate-none">
             {children}
           </div>
         </main>
