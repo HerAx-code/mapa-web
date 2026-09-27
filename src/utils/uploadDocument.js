@@ -3,6 +3,7 @@ import {
 } from 'firebase/firestore'
 import { ref, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../firebase'
+import { compressImage } from './image'
 
 // Shared patient-document upload pipeline.
 //
@@ -40,31 +41,10 @@ import { db, storage } from '../firebase'
 export const PDF_MAX_BYTES = 650 * 1024
 export const FILE_MAX_BYTES = PDF_MAX_BYTES  // back-compat alias
 
-const compressImage = (file) => new Promise((resolve) => {
-  const img = new Image()
-  const url = URL.createObjectURL(file)
-  img.onload = () => {
-    URL.revokeObjectURL(url)
-    const canvas = document.createElement('canvas')
-    let { width, height } = img
-    const maxDim = 1200
-    if (width > maxDim || height > maxDim) {
-      if (width > height) { height = Math.round(height * maxDim / width); width = maxDim }
-      else                { width = Math.round(width * maxDim / height); height = maxDim }
-    }
-    canvas.width  = width
-    canvas.height = height
-    canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-    let quality = 0.85
-    let dataUrl = canvas.toDataURL('image/jpeg', quality)
-    while (dataUrl.length > 900_000 && quality > 0.3) {
-      quality -= 0.1
-      dataUrl = canvas.toDataURL('image/jpeg', quality)
-    }
-    resolve(dataUrl)
-  }
-  img.src = url
-})
+// Image compression lives in utils/image.js (compressImage + the pure,
+// unit-tested fitDimensions). It downscales to a legible long edge for OCR,
+// trades JPEG quality to fit the byte cap below, and rejects on a decode
+// failure so a corrupt photo never hangs the submit.
 
 // Returns an error string if the file is unacceptable, else null.
 export function validateDocFile(file) {
@@ -79,7 +59,7 @@ export function validateDocFile(file) {
 // Reads a file to a base64 data URL, compressing images to fit the
 // 1 MiB Firestore doc cap.
 const readContent = (file) => file.type?.startsWith('image/')
-  ? compressImage(file)
+  ? compressImage(file, PDF_MAX_BYTES)
   : new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload  = (e) => resolve(e.target.result)
