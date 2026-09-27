@@ -801,6 +801,15 @@
         "funded": "{{pct}}% funded",
         "remaining": "Remaining"
       },
+      "coverageBar": {
+        "title": "Who's covering your {{total}}",
+        "summary": "{{approved}} approved · {{review}} in review",
+        "toGo": "{{amount}} to go",
+        "agencies_one": "{{count}} agency",
+        "agencies_other": "{{count}} agencies",
+        "approved": "Approved",
+        "forFunding": "For funding"
+      },
       "timeline": {
         "title": "Your application",
         "completedOf": "{{done}} of {{total}} done",

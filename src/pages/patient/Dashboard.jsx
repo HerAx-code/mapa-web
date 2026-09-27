@@ -4,16 +4,13 @@ import { useTranslation } from 'react-i18next'
 import {
   MdUpload, MdCheckCircle, MdPending,
   MdArrowForward, MdExpandMore, MdExpandLess,
-  MdHourglassEmpty, MdAssignment, MdSchedule,
-  MdReceipt, MdCancel, MdLocalHospital,
-  MdCheck, MdClose, MdMenuBook, MdChatBubbleOutline,
+  MdAssignment, MdCancel, MdCheck, MdChatBubbleOutline,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
-import BalanceHero from '../../components/patient/BalanceHero'
 import JourneyStrip from '../../components/patient/JourneyStrip'
-import StatusHero from '../../components/patient/StatusHero'
+import PatientHero from '../../components/patient/PatientHero'
+import CoverageBar from '../../components/patient/CoverageBar'
 import InstallPrompt from '../../components/InstallPrompt'
-import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
 import { patientDashboardTour } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
@@ -22,94 +19,13 @@ import {
   collection, query, where, orderBy, onSnapshot,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
+import { isGLExpired } from '../../utils/constants'
 import { isSliceTerminal, computeFunding, REQ_RANK } from '../../utils/requests'
 import { peso } from '../../utils/format'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 
-// ── Plain-language status config ──────────────────────────────────────────
 
-// Icon + color choices per application status. Translatable strings
-// (label/desc/btn) live in the i18n locale files under
-// patient.dashboard.statusCard.<status> — read via t() at render time so
-// the dashboard supports Filipino + English without code changes.
-const STATUS_VISUAL = {
-  pending: {
-    icon:     MdHourglassEmpty,
-    iconBg:   'bg-blue-100 text-blue-600',
-    path:     '/patient/status',
-    border:   'border-blue-300',
-    bg:       'bg-blue-50',
-    text:     'text-blue-800',
-    subtext:  'text-blue-600',
-    btnClass: 'bg-blue-500 hover:bg-blue-600 text-white',
-  },
-  // R19: endorsed / reviewing / awaiting_info CTAs now point at the
-  // patient's Status page, not the new-request wizard. The previous
-  // /patient/request target relied on RequestAssistance detecting an
-  // active request and rendering its proceed view -- the detection
-  // failed when the parent-request lookup didn't match (test data,
-  // legacy slices, parent in terminal state) and patients landed on
-  // Step 1 of the new-request wizard with no obvious way back.
-  // /patient/status is now self-contained for the proceed action
-  // (see R16 inline handler) and surfaces awaiting_info messages too.
-  endorsed: {
-    icon:     MdReceipt,
-    iconBg:   'bg-purple-100 text-purple-600',
-    path:     '/patient/status',
-    border:   'border-purple-300',
-    bg:       'bg-purple-50',
-    text:     'text-purple-800',
-    subtext:  'text-purple-600',
-    btnClass: 'bg-purple-500 hover:bg-purple-600 text-white',
-  },
-  reviewing: {
-    icon:     MdAssignment,
-    iconBg:   'bg-amber-100 text-amber-600',
-    path:     '/patient/status',
-    border:   'border-amber-300',
-    bg:       'bg-amber-50',
-    text:     'text-amber-800',
-    subtext:  'text-amber-600',
-    btnClass: 'bg-amber-500 hover:bg-amber-600 text-white',
-  },
-  awaiting_info: {
-    icon:     MdSchedule,
-    iconBg:   'bg-orange-100 text-orange-600',
-    path:     '/patient/status',
-    border:   'border-orange-300',
-    bg:       'bg-orange-50',
-    text:     'text-orange-800',
-    subtext:  'text-orange-700',
-    btnClass: 'bg-orange-500 hover:bg-orange-600 text-white',
-  },
-  approved: {
-    icon:     MdCheckCircle,
-    iconBg:   'bg-green-100 text-green-600',
-    path:     '/patient/status',
-    border:   'border-green-300',
-    bg:       'bg-green-50',
-    text:     'text-green-800',
-    subtext:  'text-green-600',
-    btnClass: 'bg-green-500 hover:bg-green-600 text-white',
-  },
-  certificate: {
-    icon:     MdReceipt,
-    iconBg:   'bg-green-100 text-green-600',
-    path:     '/patient/status',
-    border:   'border-green-300',
-    bg:       'bg-green-50',
-    text:     'text-green-800',
-    subtext:  'text-green-600',
-    btnClass: 'bg-green-500 hover:bg-green-600 text-white',
-  },
-}
-
-const formatDate = (ts) => {
-  const d = tsToDate(ts)
-  return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
-}
 
 
 // Short "when" for the messages preview.
@@ -178,62 +94,6 @@ function CoverageCard({ request, t }) {
   )
 }
 
-// ── Application timeline ─────────────────────────────────────────────────────
-// A real event timeline driven by the request's own lifecycle rank (shared
-// REQ_RANK from utils/requests), with dates where they exist. Degrades
-// gracefully: future steps read "upcoming".
-function TimelineCard({ request, docStats, t }) {
-  const rank = REQ_RANK[request.status] ?? 0
-
-  const steps = [
-    { entry: 0, label: t('patient.dashboard.timeline.s1'), meta: formatDate(request.submittedAt) },
-    { entry: 1, label: t('patient.dashboard.timeline.s2'), meta: rank > 1 ? t('patient.dashboard.timeline.s2metaDone', { verified: docStats.verified }) : t('patient.dashboard.timeline.s2metaReviewing') },
-    { entry: 2, label: t('patient.dashboard.timeline.s3'), meta: t('patient.dashboard.timeline.s3metaTBD') },
-    { entry: 3, label: t('patient.dashboard.timeline.s4'), meta: t('patient.dashboard.timeline.s4meta') },
-    { entry: 4, label: t('patient.dashboard.timeline.s5'), meta: rank >= 5 ? t('patient.dashboard.timeline.s5metaDone') : t('patient.dashboard.timeline.s5metaAfter') },
-  ]
-  const doneCount = steps.filter(s => rank > s.entry).length
-
-  return (
-    <div className="card p-5">
-      <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-800">{t('patient.dashboard.timeline.title')}</h3>
-        <span className="text-xs text-gray-500">{t('patient.dashboard.timeline.completedOf', { done: doneCount, total: steps.length })}</span>
-      </div>
-      <ol>
-        {steps.map((s, i) => {
-          const status = rank > s.entry ? 'done' : rank === s.entry ? 'current' : 'upcoming'
-          const isLast = i === steps.length - 1
-          return (
-            <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
-              {!isLast && (
-                <span aria-hidden="true"
-                  className={`absolute left-[13px] top-7 bottom-0 w-px ${status === 'done' ? 'bg-brand-300' : 'bg-gray-200'}`} />
-              )}
-              <span aria-hidden="true"
-                className={`relative z-10 mt-0.5 flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                  status === 'done'    ? 'bg-brand-500 text-white'
-                  : status === 'current' ? 'bg-white text-brand-600 ring-2 ring-brand-500'
-                  : 'bg-white text-gray-500 ring-1 ring-gray-200'
-                }`}>
-                {status === 'done' ? <MdCheck size={15} /> : i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className={`text-sm ${status === 'upcoming' ? 'font-medium text-gray-500' : 'font-semibold text-gray-800'}`}>{s.label}</p>
-                  {status === 'current' && (
-                    <span className="badge badge-blue text-xs">{t('patient.dashboard.timeline.current')}</span>
-                  )}
-                </div>
-                <p className={`text-xs mt-0.5 ${status === 'upcoming' ? 'text-gray-500' : 'text-gray-500'}`}>{s.meta}</p>
-              </div>
-            </li>
-          )
-        })}
-      </ol>
-    </div>
-  )
-}
 
 // ── Itemized documents ──────────────────────────────────────────────────────
 function DocumentsList({ docs, t, navigate }) {
@@ -603,136 +463,18 @@ export default function PatientDashboard() {
             of the conditional branches is currently rendered (welcome
             hero / active request / status / rejected). */}
         <div data-tour-id="patient-hero">
-        {loading ? (
-          <div className="card p-6 animate-pulse">
-            <div className="h-6 bg-gray-100 rounded w-48 mb-3" />
-            <div className="h-4 bg-gray-100 rounded w-full mb-2" />
-            <div className="h-4 bg-gray-100 rounded w-3/4 mb-5" />
-            <div className="h-12 bg-gray-100 rounded-xl" />
-          </div>
-        ) : activeRequest && funding ? (
-            // Pre-funding stages (submitted → assessment) get the redesign's
-            // cohesive "Step X of 6 + one action" pine hero; once money is in
-            // play (endorsed onward) the balance/coverage hero is what matters.
-            (REQ_RANK[activeRequest.status] ?? 0) < 3
-              ? <StatusHero request={activeRequest} nextAction={nextAction} navigate={navigate} />
-              : <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
-        ) : activeApp && STATUS_VISUAL[activeApp.status] ? (() => {
-          const vis = STATUS_VISUAL[activeApp.status]
-          const txt = `patient.dashboard.statusCard.${activeApp.status}`
-          const isAwaiting  = activeApp.status === 'awaiting_info'
-          const Icon = vis.icon
-          return (
-            <div className={`card p-5 border-2 ${vis.border} ${vis.bg}`}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${vis.iconBg}`}>
-                  <Icon size={22} />
-                </div>
-                <h2 className={`text-lg font-bold ${vis.text}`}>{t(`${txt}.label`)}</h2>
-              </div>
-              <p className={`text-sm leading-relaxed mb-4 ${vis.subtext}`}>{t(`${txt}.desc`)}</p>
-
-              {/* awaiting_info: surface the agency's message */}
-              {isAwaiting && activeApp.awaitingInfoMessage && (
-                <div className="bg-white border border-orange-200 rounded-xl p-3 mb-4">
-                  <p className="text-xs font-semibold text-orange-700 mb-1">
-                    {t('patient.dashboard.statusCard.awaiting_info.messageFrom', { agency: activeApp.agencyName })}
-                  </p>
-                  <p className="text-sm text-gray-700 leading-relaxed">{activeApp.awaitingInfoMessage}</p>
-                </div>
-              )}
-
-              <button
-                className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${vis.btnClass}`}
-                onClick={() => navigate(vis.path)}>
-                {t(`${txt}.btn`)} →
-              </button>
-              <p className="text-xs text-center mt-2 text-gray-500">
-                {activeApp.appId} · {activeApp.agencyName} · {t('patient.dashboard.metadata.submittedOn', { date: formatDate(activeApp.submittedAt) })}
-              </p>
-            </div>
-          )
-        })() : appCount > 0 ? (
-          <div className="card p-5 border-2 border-red-200 bg-red-50">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 text-red-600">
-                <MdCancel size={22} />
-              </div>
-              <h2 className="text-lg font-bold text-red-800">{t('patient.dashboard.rejectedCard.title')}</h2>
-            </div>
-            <p className="text-sm text-red-700 leading-relaxed mb-4">
-              {appCount === 1
-                ? t('patient.dashboard.rejectedCard.descOne')
-                : t('patient.dashboard.rejectedCard.descMany', { count: appCount })}
-            </p>
-            <button
-              className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-              onClick={() => navigate('/patient/programs')}>
-              {t('patient.dashboard.rejectedCard.btn')} →
-            </button>
-          </div>
-        ) : (welcomeDismissed || docStats.verified > 0 || docStats.pending > 0) ? (
-          // Compact form: once the patient has any progress (uploaded a
-          // doc) or explicitly dismissed the hero, swap to a single-row
-          // link card. The Application Steps section below is now the
-          // primary action surface, and the full hero is overkill.
-          <button
-            className="w-full card p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors border border-brand-100"
-            onClick={() => navigate('/patient/guide')}>
-            <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-              <MdMenuBook size={20} className="text-brand-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.welcomeCard.newToMapa')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('patient.dashboard.welcomeCard.compactSub')}</p>
-            </div>
-            <MdArrowForward size={16} className="text-gray-300 flex-shrink-0" />
-          </button>
-        ) : (
-          <div className="card p-5 border-2 border-brand-200 bg-brand-50 relative">
-            {/* Dismiss button — once tapped, the hero collapses to the
-                compact link form on next render and stays that way. */}
-            <button
-              onClick={dismissWelcome}
-              aria-label={t('common.close')}
-              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-brand-400 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
-              <MdClose size={16} />
-            </button>
-            <div className="flex items-center gap-3 mb-3 pr-8">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-100 text-brand-600">
-                <MdLocalHospital size={22} />
-              </div>
-              <h2 className="text-lg font-bold text-brand-800">{t('patient.dashboard.welcomeCard.title')}</h2>
-            </div>
-            <p className="text-sm text-brand-700 leading-relaxed mb-3">
-              {t('patient.dashboard.welcomeCard.intro')}
-            </p>
-
-            {/* What you can get — concrete value preview so a first-time
-                patient knows what kinds of help exist before committing. */}
-            <div className="bg-white border border-brand-100 rounded-xl p-3 mb-4">
-              <p className="text-xs font-semibold text-brand-700 mb-2 uppercase tracking-wide">{t('patient.dashboard.welcomeCard.whatYouCanApplyFor')}</p>
-              <ul className="text-xs text-gray-700 space-y-1">
-                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.hospitalBills')}</li>
-                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.medicines')}</li>
-                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.labTests')}</li>
-                <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.chemotherapy')}</li>
-              </ul>
-              <p className="text-xs text-gray-500 mt-2">{t('patient.dashboard.welcomeCard.fromAgencies')}</p>
-            </div>
-
-            <button
-              className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-              onClick={() => navigate('/patient/request')}>
-              {t('patient.dashboard.welcomeCard.getStarted')} →
-            </button>
-            <button
-              className="w-full mt-2 min-h-[44px] inline-flex items-center justify-center text-sm text-brand-600 hover:text-brand-800 transition-colors"
-              onClick={() => navigate('/patient/guide')}>
-              {t('patient.dashboard.welcomeCard.newToMapa')} →
-            </button>
-          </div>
-        )}
+          <PatientHero
+            loading={loading}
+            activeRequest={activeRequest}
+            funding={funding}
+            nextAction={nextAction}
+            activeApp={activeApp}
+            appCount={appCount}
+            docStats={docStats}
+            welcomeDismissed={welcomeDismissed}
+            dismissWelcome={dismissWelcome}
+            navigate={navigate}
+          />
         </div>{/* /patient-hero wrapper */}
 
         {/* At-a-glance journey strip — the redesign's "where am I" answered
@@ -744,15 +486,26 @@ export default function PatientDashboard() {
           </div>
         )}
 
-        {/* Next action (when the ball is with the patient) + the real event
-            timeline. Coverage breakdown lives in the aside now. When the pine
+        {/* Per-agency path-to-zero — funding stage only. Makes co-funding
+            legible at a glance; sits right under the strip so it reads high on
+            mobile (matches the redesign mockup). */}
+        {activeRequest && funding && (REQ_RANK[activeRequest.status] ?? 0) >= 3 && reqSlices.length > 0 && (
+          <CoverageBar request={activeRequest} slices={reqSlices} />
+        )}
+
+        {/* Next action (when the ball is with the patient). When the pine
             StatusHero is showing it already carries this action as its CTA, so
-            we don't repeat it as a separate card. */}
+            we don't repeat it as a separate card. The old duplicate event
+            timeline (TimelineCard) was removed — the JourneyStrip (glance) +
+            the detail stepper on My Application are the one journey model now. */}
         {nextAction && !(activeRequest && funding && (REQ_RANK[activeRequest.status] ?? 0) < 3)
           && <NextActionCard action={nextAction} />}
-        {activeRequest && <TimelineCard request={activeRequest} docStats={docStats} t={t} />}
 
-        {/* Step guide — collapsible */}
+        {/* Step guide — first-run onboarding only. Once the patient has an
+            active request or application, the one journey model (the strip here
+            + the detail stepper on My Application) is the progress surface, so
+            this collapses out to keep a returning patient's dashboard action-first. */}
+        {!hasActivity && (
         <div data-tour-id="patient-steps" className="card overflow-hidden">
           <button
             className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
@@ -819,6 +572,7 @@ export default function PatientDashboard() {
             </div>
           )}
         </div>
+        )}
           </div>{/* /main column */}
 
           {/* Aside — coverage breakdown + itemized documents + messages. Stacks

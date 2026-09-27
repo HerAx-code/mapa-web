@@ -801,6 +801,15 @@
         "funded": "{{pct}}% natustusan",
         "remaining": "Natitira"
       },
+      "coverageBar": {
+        "title": "Sino ang tumutulong sa iyong {{total}}",
+        "summary": "{{approved}} naaprubahan · {{review}} sinusuri",
+        "toGo": "{{amount}} pa ang kailangan",
+        "agencies_one": "{{count}} ahensya",
+        "agencies_other": "{{count}} ahensya",
+        "approved": "Naaprubahan",
+        "forFunding": "Pinopondohan"
+      },
       "timeline": {
         "title": "Ang inyong aplikasyon",
         "completedOf": "{{done}} sa {{total}} tapos",
