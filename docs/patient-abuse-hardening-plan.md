@@ -90,9 +90,10 @@ the Track page (status), doc-reject/`awaiting_info` ("fix this"), and the Help
 page's contact info. If proactive questions later prove necessary, add a single
 "Ask CRMC about this request" that opens **one** case-scoped thread — but default
 to reply-only.
-**Tests:** rules — patient `conversations.create` **denied**, admin create
-allowed, patient reply allowed, second reply within 5s **denied**. Component —
-patient Messages shows no compose affordance; a CRMC-started thread is replyable.
+**Tests:** rules — patient `conversations.create` **denied**, staff create
+allowed, patient reply within 5s **denied** / after cooldown allowed, staff
+uncapped. Component — the deleted PatientComposeModal test is removed.
+**✅ BUILT** — in the security PR alongside #1/#4.
 
 ---
 

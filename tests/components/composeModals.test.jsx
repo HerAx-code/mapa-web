@@ -1,6 +1,6 @@
 /**
- * Compose-modal smoke tests for both PatientComposeModal +
- * AdminComposeModal (Phase 2.2 extractions).
+ * Compose-modal smoke tests for AdminComposeModal (Phase 2.2 extraction).
+ * (PatientComposeModal was removed in the reply-only messaging change.)
  *
  * Mocks the recipient-list query + the create-conversation + send-
  * message helpers. Pins the routing decisions (who gets to message
@@ -31,9 +31,8 @@ vi.mock('../../src/utils/messages', () => ({
 const mockToast = { success: vi.fn(), error: vi.fn() }
 vi.mock('react-hot-toast', () => ({ default: mockToast, ...mockToast }))
 
-let PatientComposeModal, AdminComposeModal
+let AdminComposeModal
 beforeAll(async () => {
-  PatientComposeModal = (await import('../../src/pages/admin/messages/PatientComposeModal')).default
   AdminComposeModal   = (await import('../../src/pages/admin/messages/AdminComposeModal')).default
 })
 
@@ -41,80 +40,11 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-const patientUser = { uid: 'patient-uid', name: 'Maria Santos', role: 'patient' }
 const adminUser   = { uid: 'admin-uid', name: 'Admin', role: 'super_admin' }
 
-// ── PatientComposeModal ────────────────────────────────────────────────
-
-describe('PatientComposeModal', () => {
-  it('shows loading state while recipients are loading', () => {
-    // Don't resolve the recipients query yet
-    mockGetDocs.mockImplementation(() => new Promise(() => {}))
-    render(<PatientComposeModal user={patientUser} onClose={vi.fn()} onCreated={vi.fn()} />)
-    expect(screen.getByText(/Loading recipients/i)).toBeInTheDocument()
-  })
-
-  it('shows error state when recipients query fails', async () => {
-    // First call (patient's applications) succeeds with empty
-    mockGetDocs.mockImplementationOnce(async () => ({ docs: [] }))
-    // Second call (recipients) fails
-    mockGetDocs.mockImplementationOnce(async () => { throw new Error('permission-denied') })
-    const errSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    render(<PatientComposeModal user={patientUser} onClose={vi.fn()} onCreated={vi.fn()} />)
-    expect(await screen.findByText(/Can't load recipients/i)).toBeInTheDocument()
-    errSpy.mockRestore()
-  })
-
-  it('REGRESSION GUARD: only shows agencies the patient has an application with', async () => {
-    // First call: patient's applications -- has slice with malasakit
-    mockGetDocs.mockImplementationOnce(async () => ({
-      docs: [{ data: () => ({ agencyId: 'malasakit' }) }],
-    }))
-    // Second call: all eligible recipients
-    mockGetDocs.mockImplementationOnce(async () => ({
-      docs: [
-        { id: 'admin-1',  data: () => ({ name: 'CRMC Admin',     role: 'super_admin' }) },
-        { id: 'coord-mal', data: () => ({ name: 'Mal Coord',     role: 'agency', agencyId: 'malasakit' }) },
-        { id: 'coord-pcso', data: () => ({ name: 'PCSO Coord',   role: 'agency', agencyId: 'pcso' }) },
-      ],
-    }))
-    render(<PatientComposeModal user={patientUser} onClose={vi.fn()} onCreated={vi.fn()} />)
-    await waitFor(() => expect(screen.getByText('CRMC Admin')).toBeInTheDocument())
-    expect(screen.getByText('Mal Coord')).toBeInTheDocument()
-    // PCSO must NOT appear — patient has no application there
-    expect(screen.queryByText('PCSO Coord')).not.toBeInTheDocument()
-  })
-
-  it('REGRESSION GUARD: getOrCreateConversation receives string id, calls sendMessage with same id', async () => {
-    // Earlier session fixed the bug where this site treated the
-    // return value as { id } instead of the bare string. Pin it.
-    mockGetDocs.mockImplementationOnce(async () => ({
-      docs: [{ data: () => ({ agencyId: 'malasakit' }) }],
-    }))
-    mockGetDocs.mockImplementationOnce(async () => ({
-      docs: [{ id: 'admin-1', data: () => ({ name: 'CRMC Admin', role: 'super_admin' }) }],
-    }))
-    const onCreated = vi.fn()
-    const user = userEvent.setup()
-    render(<PatientComposeModal user={patientUser} onClose={vi.fn()} onCreated={onCreated} />)
-    await waitFor(() => expect(screen.getByText('CRMC Admin')).toBeInTheDocument())
-
-    // Pick a recipient (click the row)
-    await user.click(screen.getByText('CRMC Admin'))
-
-    // Type a message
-    const textarea = screen.getByPlaceholderText(/Write your message/i)
-    await user.type(textarea, 'Hello CRMC')
-
-    // Send
-    await user.click(screen.getByRole('button', { name: /Send/i }))
-
-    await waitFor(() => expect(mockSendMessage).toHaveBeenCalled())
-    // sendMessage gets the string id, and onCreated also gets the string id
-    expect(mockSendMessage.mock.calls[0][0]).toBe('new-conv-id')
-    expect(onCreated).toHaveBeenCalledWith('new-conv-id')
-  })
-})
+// PatientComposeModal was removed in the reply-only messaging change (abuse
+// hardening #2) — patients can no longer start conversations, so there is no
+// patient compose modal to test.
 
 // ── AdminComposeModal ─────────────────────────────────────────────────
 

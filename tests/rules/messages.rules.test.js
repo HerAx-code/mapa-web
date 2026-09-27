@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -32,24 +32,64 @@ async function seedConversation(convId, participants) {
   })
 }
 
-// conversations.create from security pass 2 (commit 242c175): caller must
-// list themselves in participants. Without this, an attacker could spawn
-// unreadable conversations to pollute message indexes.
-describe('conversations.create — caller must be a participant', () => {
-  it('allows creating a conversation where the caller is a participant', async () => {
-    await seedUser('user-alice', 'patient')
-    const ctx = testEnv.authenticatedContext('user-alice')
+// conversations.create: caller must list themselves in participants, AND
+// (abuse hardening #2, reply-only) the caller must NOT be a patient — only
+// staff/agency start conversations; patients reply.
+describe('conversations.create — reply-only (patients cannot start)', () => {
+  it('allows a staff/agency participant to create a conversation', async () => {
+    await seedUser('agency-1', 'agency')
+    const ctx = testEnv.authenticatedContext('agency-1')
     await assertSucceeds(addDoc(collection(ctx.firestore(), 'conversations'), {
-      participants: ['user-alice', 'agency-1'],
+      participants: ['agency-1', 'patient-1'],
+    }))
+  })
+
+  it('rejects a PATIENT starting a conversation (reply-only)', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'conversations'), {
+      participants: ['patient-1', 'agency-1'],
     }))
   })
 
   it('rejects creating a conversation that excludes the caller', async () => {
-    await seedUser('user-alice', 'patient')
-    const ctx = testEnv.authenticatedContext('user-alice')
+    await seedUser('agency-1', 'agency')
+    const ctx = testEnv.authenticatedContext('agency-1')
     await assertFails(addDoc(collection(ctx.firestore(), 'conversations'), {
-      participants: ['user-bob', 'agency-1'],
+      participants: ['user-bob', 'agency-2'],
     }))
+  })
+})
+
+// Abuse hardening #2: reply-flood cooldown — a patient's message must be >= 5s
+// after the thread's last message; staff are uncapped.
+describe('messages.create — patient reply cooldown', () => {
+  async function seedConvWithLastAt(convId, participants, lastAt) {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'conversations', convId), { participants, lastAt })
+    })
+  }
+  const msg = (from) => ({ from, text: 'hi', createdAt: serverTimestamp() })
+
+  it('rejects a patient reply within 5s of the last message', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedConvWithLastAt('c1', ['patient-1', 'admin-1'], Timestamp.fromMillis(Date.now()))
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'conversations', 'c1', 'messages'), msg('patient-1')))
+  })
+
+  it('allows a patient reply once the cooldown has elapsed', async () => {
+    await seedUser('patient-1', 'patient')
+    await seedConvWithLastAt('c1', ['patient-1', 'admin-1'], Timestamp.fromMillis(Date.now() - 10_000))
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'conversations', 'c1', 'messages'), msg('patient-1')))
+  })
+
+  it('does NOT rate-limit staff (uncapped)', async () => {
+    await seedUser('admin-1', 'super_admin')
+    await seedConvWithLastAt('c1', ['patient-1', 'admin-1'], Timestamp.fromMillis(Date.now()))
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'conversations', 'c1', 'messages'), msg('admin-1')))
   })
 })
 
