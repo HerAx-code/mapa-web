@@ -1305,16 +1305,15 @@
     "journey": {
       "label": "Iyong progreso",
       "submitted": "Naisumite",
-      "verified": "Na-verify",
-      "interview": "Panayam",
+      "under_review": "Sinusuri",
+      "assessment": "Pagsusuri",
       "endorsed": "Na-endorso",
-      "approved": "Naaprubahan",
-      "letter": "Sulat"
+      "funding": "Pinopondohan",
+      "complete": "Kumpleto"
     },
     "hero": {
       "step": "Hakbang {{n}} ng {{total}}",
       "trackCta": "Tingnan ang kahilingan",
-      "interviewCta": "Ang iyong panayam",
       "s0": { "title": "Natanggap ang kahilingan", "sub": "Sisimulan nang suriin ng CRMC ang iyong mga dokumento." },
       "s1": { "title": "Sinusuri", "sub": "Sinusuri ng CRMC ang iyong mga dokumento." },
       "s2": { "title": "Pagsusuri", "sub": "Sinusuri ng isang CRMC social worker ang inyong kaso at maaaring mag-message sa inyo." },

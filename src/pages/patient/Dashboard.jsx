@@ -24,6 +24,7 @@ import {
 import { db } from '../../firebase'
 import { REQUEST_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { isSliceTerminal, computeFunding, REQ_RANK } from '../../utils/requests'
+import { peso } from '../../utils/format'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 
@@ -110,9 +111,6 @@ const formatDate = (ts) => {
   return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
 }
 
-// Local peso formatter — matches the per-page pattern used across the app
-// (RequestAssistance, TrackStatus, admin/Requests all define their own).
-const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
 // Short "when" for the messages preview.
 const formatWhen = (ts) => {
@@ -501,7 +499,7 @@ export default function PatientDashboard() {
       num: 3, title: t('patient.dashboard.steps.s3Title'),
       desc:   t('patient.dashboard.steps.s3Desc'),
       path:   '/patient/status',
-      done:   ['interview','approved','certificate'].includes(activeStatus),
+      done:   ['approved','certificate'].includes(activeStatus),
     },
     {
       num: 4, title: t('patient.dashboard.steps.s4Title'),

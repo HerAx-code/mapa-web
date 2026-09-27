@@ -10,14 +10,19 @@ import { REQ_RANK } from '../../utils/requests'
 // Ranks come from the shared REQ_RANK in utils/requests (the co-funding
 // lifecycle): submitted 0 · under_review 1 · assessment 2 · endorsed 3 ·
 // partially_funded 4 · fully_funded 5.
-
+//
+// Labels are the ONE canonical journey vocabulary (matches the request
+// lifecycle 1:1, no more "verified/interview/approved/letter" divergence).
+// The detail stepper on TrackStatus and the summary hero use the same six
+// stage names, so the patient sees one model everywhere. i18n:
+// patient.journey.<key>.
 const STAGES = [
-  { key: 'submitted', entry: 0 },
-  { key: 'verified',  entry: 1 },
-  { key: 'interview', entry: 2 },
-  { key: 'endorsed',  entry: 3 },
-  { key: 'approved',  entry: 4 },
-  { key: 'letter',    entry: 5 },
+  { key: 'submitted',    entry: 0 },
+  { key: 'under_review', entry: 1 },
+  { key: 'assessment',   entry: 2 },
+  { key: 'endorsed',     entry: 3 },
+  { key: 'funding',      entry: 4 },
+  { key: 'complete',     entry: 5 },
 ]
 
 export default function JourneyStrip({ status, className = '' }) {

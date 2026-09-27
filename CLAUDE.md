@@ -99,4 +99,6 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - docs/design-workflow.md — how to combine the design skills + Magic Patterns MCP for web UI work (read before non-trivial reskins)
 - docs/reskin-relayout-plan.md — the living tracker of which pages are reskinned/relaid out and what remains (check before touching any page)
 - docs/remove-interview-scheduling-plan.md — the interview-scheduling removal → async remote assessment (supersedes docs/appointment-system-plan.md)
+- docs/ux-research/ — end-to-end UX study (README + current-state inventory of every page/panel/modal, external benchmarks, and a phased improvement plan). Read docs/ux-research/README.md before any broad UX/reskin work.
+- docs/patient-abuse-hardening-plan.md — the patient-surface abuse hardening (#1–#5, all shipped); accepted risks recorded in docs/threat-model.md
 - (add others as you create them)

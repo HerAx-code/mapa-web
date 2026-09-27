@@ -282,17 +282,16 @@ function ComposeModal({ user, onClose }) {
   const [showDrop, setShowDrop] = useState(false)
 
   useEffect(() => {
+    // Reply-only messaging (abuse hardening #2): patients never initiate a
+    // conversation, so the shell composer and its staff-directory fetch are
+    // staff/agency-only. Guard the fetch so no patient session loads the
+    // user directory even if this modal is ever mounted for one.
+    if (user?.role === 'patient') return
     getDocs(collection(db, 'users'))
       .then(snap => setPatients(
         snap.docs
           .map(d => ({ uid: d.id, ...d.data() }))
-          .filter(u => {
-            if (u.uid === user?.uid || !u.name || !u.email) return false
-            // Patients can only message admins and agencies — not other patients
-            if (user?.role === 'patient')
-              return ['super_admin', 'staff_admin', 'agency'].includes(u.role)
-            return true
-          })
+          .filter(u => !(u.uid === user?.uid || !u.name || !u.email))
       ))
   }, [])
 
@@ -375,13 +374,11 @@ function ComposeModal({ user, onClose }) {
               <div className="flex-1 relative">
                 <input
                   className="input text-sm w-full"
-                  placeholder={user?.role === 'patient'
-                    ? t('shell.compose.searchPatient')
-                    : t('shell.compose.searchOther')}
+                  placeholder={t('shell.compose.searchOther')}
                   value={search} autoFocus
                   onChange={e => { setSearch(e.target.value); setShowDrop(true) }}
                   onFocus={() => setShowDrop(true)} />
-                {showDrop && (search || user?.role === 'patient') && (
+                {showDrop && search && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-10 max-h-44 overflow-y-auto mt-1">
                     {filtered.map(p => {
                       const roleLabel = { super_admin: 'Super Admin', staff_admin: 'Staff Admin', agency: 'Agency', patient: 'Patient' }[p.role] ?? p.role
@@ -406,15 +403,6 @@ function ComposeModal({ user, onClose }) {
               </div>
             )}
           </div>
-
-          {/* Patient guidance */}
-          {user?.role === 'patient' && !to && (
-            <div className="py-2 px-1">
-              <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                {t('shell.compose.patientGuidance')}
-              </p>
-            </div>
-          )}
 
           {/* Subject */}
           <div className="flex items-center gap-3 py-3">
