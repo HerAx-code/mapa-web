@@ -86,6 +86,73 @@ Last updated: 2026-06-01. **Current-state note: 2026-08-25.**
 > - **The rules-deploy CI gate is now proven in production** — a merged rules
 >   change ran the rules suite and auto-deployed `firestore.rules`. The
 >   "manual rule deploy" operational limit no longer applies to rules.
+>
+> ### Addendum — 2026-09-27 (interview removal + patient abuse-hardening sweep)
+> **Posture delta — interview scheduling removed.** The appointment/booking
+> system was **reversed** (assessment is now remote and asynchronous — a CRMC
+> social worker works a queue and reaches the patient through in-app messaging
+> with an on-demand Google Meet; see `docs/remove-interview-scheduling-plan.md`).
+> The **2026-09-03 and 2026-09-04 interview addenda above are obsolete**: the
+> `interviewSlots` collection + its rules, the `onInterviewSlotWritten` trigger,
+> and the `interviewReminders` scheduled function have been **deleted**. The
+> interview-slot capacity-leak mitigation (2026-09-06) is moot — there are no
+> slots. The endorse gate is now `docsVerified && intakeComplete` on the request.
+>
+> **Patient abuse-hardening sweep (PRs #231 + #232).** A senior-dev review of the
+> patient surface found five concrete abuse vectors; each is now closed with a
+> rule and/or Cloud Function trigger and rules/function tests. These extend the
+> Threats-addressed table:
+> - **T11. Patient notification spam / phishing into staff feeds.**
+>   `notifications/{userId}/items` create only checked `fromUid == uid()`, so a
+>   patient could drop unlimited notifications into any staff bell. **Fixed:** the
+>   create rule now requires `(!isPatient() || userId == uid())` — patients notify
+>   only themselves. The three legitimate patient→staff pings (new request,
+>   withdrawal, "proceed"→agency) moved server-side to `onRequestWritten` +
+>   `onSliceProceeded` (Admin SDK, unspoofable, `fromUid: null`). Extends **T8**.
+>   Tests: `tests/rules/notifications.rules.test.js`, `writeSinks.rules.test.js`,
+>   `tests/functions/onRequestWritten.test.js`, `onSliceProceeded.test.js`.
+> - **T12. Patient-initiated message spam + staff-directory leak (reply-only).**
+>   The patient compose modal fetched the **full staff/agency directory** to the
+>   patient client and let them DM anyone, with no rate limit. **Fixed:**
+>   messaging is now **reply-only** — `conversations.create` requires
+>   `!isPatient()` (only staff/agency start a thread; CRMC already initiates the
+>   assessment thread), the compose modal + its directory query were deleted, and
+>   `messages.create` adds a 5-second patient reply cooldown
+>   (`request.time >= conversation.lastAt + 5s`, `.get(,epoch)` so a thread with
+>   no `lastAt` is permissive). Extends **T6/T7**. Tests:
+>   `tests/rules/messages.rules.test.js`.
+> - **T13. Identity-linking field tampering on self-update.** The `users.update`
+>   self clause pinned `role/agencyId/active/rank` but not `hospitalId`,
+>   `patientId`, or `name` — a patient could re-point their record linkage or
+>   rename themselves. **Fixed:** `hospitalId`/`patientId` pinned for all
+>   self-updates (`.get(,null)`, a no-op for staff who lack them), `name` pinned
+>   for patients only (staff can still self-rename). Tests:
+>   `tests/rules/users.rules.test.js`.
+> - **T14. Unlimited concurrent requests + cross-request document leakage.**
+>   `requests.create` had no count limit, and the submit path built
+>   `attachedDocuments` from **every** document the patient ever uploaded (prior
+>   requests' rejected/unrelated docs leaked onto the new request). **Fixed:**
+>   one-active-request guard — `onRequestWritten` mirrors an active request into
+>   `users/{uid}.activeRequestId` (set while active, cleared on
+>   terminal/withdrawal/delete) and `requests.create` requires it to be null;
+>   `attachedDocuments` is now scoped to *this* request's checklist. The mirror is
+>   pinned on self-update so a patient can't null it. Tests:
+>   `tests/rules/writeSinks.rules.test.js`, `users.rules.test.js`,
+>   `tests/functions/onRequestWritten.test.js`.
+> - **T15. Document-quota abuse (base64-in-Firestore flood).** File size was
+>   bounded but not the number of documents. **Fixed:** `onDocumentCountChanged`
+>   mirrors a per-patient `users/{uid}.documentCount` (+1 create / −1 delete) and
+>   `documents.create` requires `documentCount < 60` (a generous lifetime abuse
+>   ceiling). The counter is pinned on self-update. Tests:
+>   `tests/rules/documents.rules.test.js`, `users.rules.test.js`,
+>   `tests/functions/onDocumentCountChanged.test.js`.
+>
+> **Newly-recorded accepted risks (see A9 + notes below):** means-test /
+> eligibility gaming (patient overstates need or understates income) and the
+> denormalised-counter create-burst race are accepted at pilot scale — the human
+> assessment and the generous ceilings absorb them. The other §6 risks were
+> already recorded: forged/wrong documents and "chair as an ID" → **A6**, live
+> selfie spoofing → **A7**, off-system GL reuse → **A4**.
 
 This document records what threats MAPA addresses, what threats it
 deliberately accepts (and why), and the mitigations in place for each.
@@ -388,6 +455,27 @@ design:
   check (no model download) for a staged rollout.
 - Loop in the CRMC DPO before wider rollout; calibrate thresholds on
   logged scores first (advisory-only until then).
+
+### A9. Means-test / eligibility gaming
+
+A patient can overstate their bill/need or understate household income on the
+request and the intake sheet. MAPA does not (and by design will not — no fraud
+engine, per CLAUDE.md) automatically detect this. Mitigation: the mandatory
+**human assessment** — a CRMC social worker completes the Unified Intake Sheet
+and is the eligibility gate before endorsement; the declared figures are
+cross-checked against the uploaded billing/SOA and indigency documents at that
+step. Accepted as human-judgment, not a system control.
+
+### A10. Denormalised-counter create-burst race (abuse hardening #3/#5)
+
+The one-active-request guard and the document cap rely on server-maintained
+mirror fields (`activeRequestId`, `documentCount`) that the trigger writes
+*after* the create the rule gated. Two near-simultaneous creates can both read
+the mirror as permissive before the trigger catches up, briefly exceeding the
+limit by one or two. Accepted at pilot volume: the client UI guard blocks the
+common path, the caps are ceilings rather than tight quotas, and a rare cleanup
+(or the terminal-clear) reconciles. Documented in
+`docs/patient-abuse-hardening-plan.md` §3/§5.
 
 ### A8. AI-agent compromise via planted UI content
 

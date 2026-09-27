@@ -221,7 +221,10 @@ aggregation). Same race caveat as §3, same mitigation. Lower priority than 1–
 Means-test gaming, forged/wrong documents, chair-as-ID, selfie spoofing, and
 off-system GL reuse remain **human-judgment / accepted** risks (social worker is
 the gate; no fraud engine, per CLAUDE.md). The advisory OCR/face + "doesn't look
-like an ID" nudge assist but never block. Record in `threat-model.md`.
+like an ID" nudge assist but never block. **Recorded** in
+[docs/threat-model.md](threat-model.md) — the 2026-09-27 addendum (T11–T15 for
+the hardening sweep) plus accepted risks A4/A6/A7 (docs, selfie, GL reuse), A9
+(means-test gaming) and A10 (counter race).
 
 ## 7. Already solid (no work)
 Access-code enumeration (`verifyAccessCode` per-uid + per-IP throttle),
