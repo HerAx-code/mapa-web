@@ -108,7 +108,15 @@ service cloud.firestore {
           request.resource.data.role == resource.data.role &&
           request.resource.data.agencyId == resource.data.agencyId &&
           request.resource.data.active == resource.data.active &&
-          request.resource.data.rank == resource.data.rank) ||
+          request.resource.data.rank == resource.data.rank &&
+          // Identity-linking fields are pinned on self-update (abuse hardening
+          // #4): a patient must not be able to re-point their hospitalId /
+          // patientId at another record, or rename themselves. .get(,null)
+          // tolerates roles that lack these fields (staff have no hospitalId).
+          // name is pinned for patients only, so staff can still self-rename.
+          request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
+          request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
+          (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null))) ||
         isAdmin() ||
         (isAgencyAdmin() &&
           resource.data.agencyId == userAgencyId() &&
@@ -565,8 +573,14 @@ service cloud.firestore {
       // their own and phish an admin. Closing it completely means moving
       // notification writes into a Cloud Function so clients never touch
       // this collection -- the functions codebase already exists.
+      // Abuse hardening #1: a PATIENT may only create a notification addressed to
+      // themselves — they can no longer drop notifications into staff feeds (the
+      // spam / phishing primitive). The one legitimate patient->staff signal (a
+      // new request submitted) is now produced server-side by the
+      // onRequestCreated Cloud Function. Staff/agency keep cross-user create.
       allow create: if isAuth() &&
                        request.resource.data.fromUid == uid() &&
+                       (!isPatient() || userId == uid()) &&
                        (!('title' in request.resource.data) ||
                         (request.resource.data.title is string &&
                          request.resource.data.title.size() <= 200)) &&
@@ -587,9 +601,15 @@ service cloud.firestore {
     // Admins can delete conversations (Messages page delete feature).
     match /conversations/{convId} {
       allow read:   if isAuth() && uid() in resource.data.participants;
+      // Abuse hardening #2 (reply-only messaging): patients cannot START a
+      // conversation — only staff/agency initiate (the admin "Message patient"
+      // action already does). Patients remain participants and keep read +
+      // messages.create (reply). Kills the patient compose spam + the
+      // recipient-picker "message anyone" surface.
       allow create: if isAuth() &&
                        request.resource.data.participants is list &&
-                       uid() in request.resource.data.participants;
+                       uid() in request.resource.data.participants &&
+                       !isPatient();
       // Phase 1.5: participants is now immutable via this path. The rule
       // let any participant rewrite the array, so one party could silently
       // add a third uid to a thread -- and the messages read rule grants
@@ -624,7 +644,14 @@ service cloud.firestore {
           // conversation's lastFrom / unread counters), so no client change.
           request.resource.data.from == uid() &&
           (!('text' in request.resource.data) ||
-           (request.resource.data.text is string && request.resource.data.text.size() <= 5000));
+           (request.resource.data.text is string && request.resource.data.text.size() <= 5000)) &&
+          // Abuse hardening #2: reply-flood cooldown for PATIENTS — a patient's
+          // message must be >= 5s after the thread's last message (lastAt, which
+          // sendMessage() stamps on every send). Staff are uncapped so their
+          // first message / rapid replies aren't blocked. .get(,epoch) so a
+          // conversation without lastAt is permissive rather than erroring.
+          (!isPatient() ||
+           request.time >= get(/databases/$(database)/documents/conversations/$(convId)).data.get('lastAt', timestamp.value(0)) + duration.value(5, 's'));
         allow delete: if isAdmin();
       }
     }

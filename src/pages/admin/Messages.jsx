@@ -10,7 +10,7 @@ import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   MdSearch, MdCheckCircle, MdDelete, MdDone,
-  MdMessage, MdAdd,
+  MdMessage,
 } from 'react-icons/md'
 
 // Phase 2.2 split: 4 inlined components + date helpers moved to
@@ -19,7 +19,6 @@ import {
 import { fmtDate } from './messages/helpers'
 import { useVisualViewport } from '../../hooks/useVisualViewport'
 import ConversationThread    from './messages/ConversationThread'
-import PatientComposeModal   from './messages/PatientComposeModal'
 import AdminComposeModal     from './messages/AdminComposeModal'
 
 // ── Main page ─────────────────────────────────────────────────────────────
@@ -242,19 +241,13 @@ export default function Messages() {
               <p className="text-base font-semibold text-gray-800 mb-2">
                 No messages yet
               </p>
-              <p className="text-sm text-gray-500 leading-relaxed mb-3 max-w-xs mx-auto">
-                Have a question about your assistance request? Reach out to
-                CRMC or any agency that&apos;s reviewing your application.
+              <p className="text-sm text-gray-500 leading-relaxed mb-2 max-w-xs mx-auto">
+                CRMC will message you here if they need anything about your
+                request — you&apos;ll be able to reply.
               </p>
-              <p className="text-xs text-gray-400 leading-relaxed mb-5 max-w-xs mx-auto">
-                You can message <strong className="text-gray-600">CRMC anytime</strong>.
-                Agencies become reachable once CRMC endorses your request to them.
+              <p className="text-xs text-gray-400 leading-relaxed max-w-xs mx-auto">
+                For other questions, visit CRMC Medical Social Services.
               </p>
-              <button
-                onClick={() => setShowCompose(true)}
-                className="btn-primary text-sm inline-flex items-center gap-1.5">
-                <MdAdd size={15} /> Start a Conversation
-              </button>
             </>
           ) : (
             <>
@@ -272,14 +265,11 @@ export default function Messages() {
     </>
   )
 
-  // ── Compose modal — patient only (admin compose renders inline in right panel) ──
-  const composeModal = showCompose && isPatient && (
-    <PatientComposeModal
-      user={user}
-      onClose={() => setShowCompose(false)}
-      onCreated={(convId) => { setShowCompose(false); setPendingOpenConvId(convId) }}
-    />
-  )
+  // Reply-only messaging (abuse hardening #2): patients can no longer START a
+  // conversation, so there is no patient compose modal. CRMC initiates the
+  // thread (admin "Message patient"); the patient reads + replies. Staff keep
+  // AdminComposeModal in the admin layout.
+  const composeModal = null
 
   // ──────────────────────────────────────────────────────────────────────
   // Patient layout — narrow centered card with modal overlay
@@ -335,24 +325,8 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* Bottom-right "+" FAB — the app-native "new conversation" affordance,
-            thumb-reachable and clearing the bottom tab bar (60px nav + iOS
-            safe area). Mobile-only (md:hidden, matching the mobile card) and
-            only when conversations exist — the empty state has its own CTA.
-            z-40 keeps it under the full-screen thread (z-200). */}
-        {conversations.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowCompose(true)}
-            aria-label="New message"
-            className="md:hidden fixed right-5 bottom-[calc(76px_+_env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg shadow-brand-900/25 transition-colors hover:bg-brand-600 active:bg-brand-700">
-            <MdAdd size={26} />
-          </button>
-        )}
-
-        {/* The compose flow is the same on both layouts -- the modal
-            renders itself when showCompose is true. */}
-        {composeModal}
+        {/* Reply-only: no patient "new conversation" FAB. CRMC starts the
+            thread; the patient replies from the conversation view. */}
 
         {/* Mobile-only full-screen thread. fixed inset-0 fills the phone
             screen at a STABLE height (no content-based resizing — the old
@@ -382,10 +356,7 @@ export default function Messages() {
                 <p className="text-sm font-semibold text-gray-900">Messages</p>
                 {unreadCount > 0 && <span className="badge badge-blue text-xs">{unreadCount} unread</span>}
               </div>
-              <button className="btn-primary text-xs flex items-center gap-1 px-3 py-1.5"
-                onClick={() => setShowCompose(true)}>
-                <MdMessage size={13} /> New Message
-              </button>
+              {/* Reply-only: patients don't start conversations. */}
             </div>
             {conversations.length > 0 && (
               <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0 bg-gray-50">
@@ -425,7 +396,7 @@ export default function Messages() {
                 </p>
                 <p className="text-xs text-gray-400 max-w-xs">
                   {conversations.length === 0
-                    ? 'Start a new conversation with CRMC or your assigned agency using the New Message button.'
+                    ? 'CRMC will message you here if they need anything about your request — you can reply from this page.'
                     : 'Pick a conversation on the left to read and reply.'}
                 </p>
               </div>

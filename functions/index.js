@@ -17,6 +17,8 @@ const { syncRequestFinancials }  = require('./src/syncRequestFinancials')
 const { deleteAuthUser }         = require('./src/deleteAuthUser')
 const { onAgencyWritten }        = require('./src/onAgencyWritten')
 const { purgeSelfieOnClose }     = require('./src/purgeSelfieOnClose')
+const { onRequestWritten }       = require('./src/onRequestWritten')
+const { onSliceProceeded }       = require('./src/onSliceProceeded')
 
 exports.resetAgencySlots        = resetAgencySlots
 exports.glExpirySweep           = glExpirySweep
@@ -25,3 +27,5 @@ exports.syncRequestFinancials   = syncRequestFinancials
 exports.deleteAuthUser          = deleteAuthUser
 exports.onAgencyWritten         = onAgencyWritten
 exports.purgeSelfieOnClose      = purgeSelfieOnClose
+exports.onRequestWritten        = onRequestWritten
+exports.onSliceProceeded        = onSliceProceeded
