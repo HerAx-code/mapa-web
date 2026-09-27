@@ -215,6 +215,50 @@ describe('users.update — identity fields locked on self-update', () => {
       role: 'staff_admin', agencyId: null, active: true, rank: 0, name: 'MSW A. Cruz', email: 's@crmc.gov.ph',
     }))
   })
+
+  // Abuse hardening #3 — the one-active-request guard is server-owned; a patient
+  // must not clear their own activeRequestId to unlock a second concurrent request.
+  it('rejects a patient nulling their own activeRequestId', async () => {
+    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'CRMC-2026-00001' })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, activeRequestId: null,
+    }))
+  })
+
+  it('rejects a patient re-pointing their activeRequestId', async () => {
+    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'CRMC-2026-00001' })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, activeRequestId: 'CRMC-2026-09999',
+    }))
+  })
+
+  it('allows a self-update that leaves activeRequestId unchanged', async () => {
+    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'CRMC-2026-00001' })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, activeRequestId: 'CRMC-2026-00001', contact: '09990001111',
+    }))
+  })
+
+  // Abuse hardening #5 — the document-count cap is server-owned; a patient must
+  // not reset their own documentCount to keep uploading past the cap.
+  it('rejects a patient resetting their own documentCount', async () => {
+    await seedUserDoc('patient-1', { ...patient, documentCount: 60 })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, documentCount: 0,
+    }))
+  })
+
+  it('allows a self-update that leaves documentCount unchanged', async () => {
+    await seedUserDoc('patient-1', { ...patient, documentCount: 12 })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, documentCount: 12, address: 'New Address',
+    }))
+  })
 })
 
 describe('users.update — admin & agency_admin bounds', () => {

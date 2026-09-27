@@ -445,21 +445,46 @@ export default function RequestAssistance() {
       // creating fresh duplicates. R26: per-doc try/catch so a failure
       // tells the patient WHICH document broke ("Failed to upload your
       // Medical Certificate") instead of a generic "submission failed."
+      // Build attachedDocuments from ONLY the documents that back THIS
+      // request's checklist — the freshly uploaded/replaced ones plus any
+      // reusable verified doc (e.g. Valid ID) carried over. The old code
+      // re-queried EVERY document the patient ever uploaded, so a prior
+      // request's rejected/unrelated docs leaked onto the new request's
+      // snapshot. uploadPatientDocument already returns the exact attachment
+      // shape; for a replace (same id) and for a reused doc we build it.
+      const today = new Date().toLocaleDateString()
+      const attachedDocuments = []
       for (const tp of reqDocTypes) {
-        const file = pendingFiles[tp.name]
-        if (!file) continue
+        const file     = pendingFiles[tp.name]
         const existing = docForType(tp.name)
-        const ocr      = ocrResults[tp.name] ?? null
-        // Advisory verification: idTypeDetected onto the ID doc, the face-match +
-        // liveness result onto the selfie doc (see the pairwise check above).
-        const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null) : null
-        const verify         = isSelfieType(tp.name) ? selfieVerify('patient') : null
-        try {
-          if (existing) await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
-          else          await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
-        } catch (uploadErr) {
-          console.error('[request] doc upload failed:', tp.name, uploadErr)
-          throw new Error(`UPLOAD_FAILED:${tp.name}`)
+        if (file) {
+          const ocr      = ocrResults[tp.name] ?? null
+          // Advisory verification: idTypeDetected onto the ID doc, the face-match +
+          // liveness result onto the selfie doc (see the pairwise check above).
+          const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null) : null
+          const verify         = isSelfieType(tp.name) ? selfieVerify('patient') : null
+          try {
+            if (existing) {
+              await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
+              attachedDocuments.push({ documentId: existing.id, name: tp.name, documentTypeName: tp.name, status: 'pending', date: today })
+            } else {
+              const ref = await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
+              attachedDocuments.push(ref)
+            }
+          } catch (uploadErr) {
+            console.error('[request] doc upload failed:', tp.name, uploadErr)
+            throw new Error(`UPLOAD_FAILED:${tp.name}`)
+          }
+        } else if (tp.reusable && existing && existing.status === 'verified') {
+          // Reusable type satisfied by a previously verified doc — attach it
+          // without re-upload (matches isSatisfied()).
+          attachedDocuments.push({
+            documentId:       existing.id,
+            name:             existing.name ?? tp.name,
+            documentTypeName: existing.documentTypeName ?? tp.name,
+            status:           existing.status ?? 'verified',
+            date:             existing.date ?? '',
+          })
         }
       }
 
@@ -479,16 +504,9 @@ export default function RequestAssistance() {
           repIdDocId:    repIdRef.documentId,
           repSelfieDocId: repSelfieRef.documentId,
         }
+        // The rep's ID + selfie are part of this submission's evidence.
+        attachedDocuments.push(repIdRef, repSelfieRef)
       }
-
-      const docsSnap = await getDocs(query(collection(db, 'documents'), where('patientId', '==', user.uid)))
-      const attachedDocuments = docsSnap.docs.map(d => ({
-        documentId:       d.id,
-        name:             d.data().name ?? '',
-        documentTypeName: d.data().documentTypeName ?? '',
-        status:           d.data().status ?? 'pending',
-        date:             d.data().date ?? '',
-      }))
 
       const requestId = generateRequestId()
       const reqRef    = doc(collection(db, 'requests'))
@@ -521,9 +539,10 @@ export default function RequestAssistance() {
       setSubmittedId(requestId)
 
       // Notifying CRMC admins of the new request is now done server-side by the
-      // onRequestCreated Cloud Function (abuse hardening #1): patients can no
+      // onRequestWritten Cloud Function (abuse hardening #1): patients can no
       // longer write into other users' notification feeds, so the client no
-      // longer fetches the admin roster or writes to it here.
+      // longer fetches the admin roster or writes to it here. That same trigger
+      // also stamps users/{uid}.activeRequestId for the one-active guard (#3).
     } catch (err) {
       console.error('[request] submit failed:', err?.code, err?.message, err)
       // R26: surface WHICH document failed so the patient knows what to

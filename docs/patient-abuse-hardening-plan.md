@@ -120,6 +120,33 @@ Documented as an accepted residual, not silently ignored.
 **Tests:** rules — create denied when `activeRequestId` set; utils — attach set
 equals only this submission's docs.
 
+**✅ BUILT (as designed, plus one hole found and closed):**
+- **Rule** `requests.create`: added `get(/users/$(uid())).data.get('activeRequestId', null) == null`.
+- **Trigger** `onRequestWritten` (extended, not a new function): `syncActiveRequest`
+  keeps `users/{patientId}.activeRequestId` in step — **set** while the request is
+  active (self-healing: reads first to avoid churn on ordinary status advances,
+  but backfills a pre-existing active request whose pointer was never set),
+  **cleared** on active→terminal / withdrawal / delete, but only when the pointer
+  still names *this* request (never clobbers another). Runs alongside the #1
+  notifications in the same handler.
+- **Hole found:** the #4 self-update clause pinned `hospitalId/patientId/name`
+  but **not** `activeRequestId` — a patient could null their own pointer and file
+  a second request, defeating the guard. **Fixed:** pinned `activeRequestId` on
+  self-update too (server-owned; only the Admin SDK trigger writes it).
+- **`attachedDocuments` scoped:** [RequestAssistance.jsx](../src/pages/patient/RequestAssistance.jsx)
+  now builds the snapshot from *this request's* checklist (uploaded/replaced +
+  reused-verified) plus rep docs, instead of re-querying every historical doc a
+  patient ever uploaded (which leaked prior/rejected/unrelated docs onto the new
+  request).
+- **UI guard:** already present (the `activeRequest` live query blocks the form
+  and `handleSubmit`), so no client change was needed for the immediate guard.
+- **Tests:** rules — `requests.create` denied when `activeRequestId` set, allowed
+  when absent; self-update nulling/re-pointing `activeRequestId` denied,
+  unchanged allowed. Functions — `syncActiveRequest` set/backfill/no-churn/
+  clear/clear-skipped/no-patient + handleRequestWritten runs both concerns (8).
+- **Deploy:** needs a manual Blaze redeploy of `onRequestWritten` (the trigger
+  body changed) after merge.
+
 ---
 
 ## 4. Lock identity-linking fields on self-update  *(confirmed hole)*
@@ -157,13 +184,47 @@ documents; content is base64 in Firestore.
 aggregation). Same race caveat as §3, same mitigation. Lower priority than 1–4.
 **Tests:** rule — create denied past CAP (with a seeded counter).
 
+**✅ BUILT:**
+- **Trigger** `onDocumentCountChanged` (NEW, `onDocumentWritten documents/{docId}`):
+  `handleDocumentCountChanged` maintains `users/{patientId}.documentCount` — +1 on
+  create, -1 on delete; an update (e.g. `replacePatientDocument`, same doc id)
+  does not change it.
+- **Rule** `documents.create`: added
+  `get(/users/$(uid())).data.get('documentCount', 0) < 60`. 60 is a generous
+  lifetime ceiling (~8–10 requests of checklist docs) — an abuse cap, not a tight
+  quota; a comment flags it as raisable.
+- **Same self-update hole as #3, closed:** pinned `documentCount` on the users
+  self-update clause (alongside `activeRequestId`) so a patient can't reset their
+  own counter to keep uploading past the cap.
+- **UI:** no client change — the only patient upload surfaces (the submission
+  checklist + rep docs, and agency-required compliance docs) are already bounded
+  by the checklist / agency requirement lists; there is no unbounded upload path,
+  so the server cap is the enforcement.
+- **Tests:** rules — `documents.create` denied at `documentCount == 60`, allowed
+  at 59; self-update resetting `documentCount` denied, unchanged allowed.
+  Functions — increment/absent-start/decrement/no-change-on-update/no-patient (5).
+- **Deploy:** needs a manual Blaze deploy of the NEW `onDocumentCountChanged`
+  function after merge.
+
+> **Backfill note (both #3 and #5):** existing patients created before these
+> triggers shipped have no `activeRequestId` / `documentCount` on their user doc.
+> `.get(field, default)` makes that permissive (a patient with none passes), and
+> the triggers self-heal on the next relevant write (`activeRequestId` backfills
+> whenever their active request is next written; `documentCount` starts counting
+> from their next upload/delete — so it under-counts historical docs, which only
+> ever gives a legit patient *more* headroom, never less). No migration script is
+> required for correctness of the guards; a one-time count backfill is optional.
+
 ---
 
 ## 6. Accepted risks (documented, not "fixed")
 Means-test gaming, forged/wrong documents, chair-as-ID, selfie spoofing, and
 off-system GL reuse remain **human-judgment / accepted** risks (social worker is
 the gate; no fraud engine, per CLAUDE.md). The advisory OCR/face + "doesn't look
-like an ID" nudge assist but never block. Record in `threat-model.md`.
+like an ID" nudge assist but never block. **Recorded** in
+[docs/threat-model.md](threat-model.md) — the 2026-09-27 addendum (T11–T15 for
+the hardening sweep) plus accepted risks A4/A6/A7 (docs, selfie, GL reuse), A9
+(means-test gaming) and A10 (counter race).
 
 ## 7. Already solid (no work)
 Access-code enumeration (`verifyAccessCode` per-uid + per-IP throttle),

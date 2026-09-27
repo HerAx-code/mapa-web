@@ -109,6 +109,26 @@ describe('documents.create — patient owns the write (rules-3)', () => {
     const ctx = testEnv.authenticatedContext('agency-1')
     await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('agency-1')))
   })
+
+  // Abuse hardening #5 — document upload cap. onDocumentCountChanged mirrors the
+  // count into users/{uid}.documentCount; the rule blocks a create at/over 60.
+  it('rejects a create when the patient is at the document cap (documentCount >= 60)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', 'patient-1'),
+        { role: 'patient', agencyId: null, documentCount: 60 })
+    })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1')))
+  })
+
+  it('allows a create just under the document cap (documentCount = 59)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', 'patient-1'),
+        { role: 'patient', agencyId: null, documentCount: 59 })
+    })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1')))
+  })
 })
 
 // Advisory ID-verification fields (docs/id-verification-plan.md §3b): verdict

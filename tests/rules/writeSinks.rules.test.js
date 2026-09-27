@@ -186,6 +186,24 @@ describe('requests.create — Phase 1.4 self-endorsement', () => {
     await assertFails(addDoc(collection(ctx.firestore(), 'requests'),
       req({ patientId: 'patient-2' })))
   })
+
+  // Abuse hardening #3 — one active request per patient. The onRequestWritten
+  // trigger mirrors an active request into users/{uid}.activeRequestId; the rule
+  // reads it and blocks a second create while it is set.
+  it('allows a create when the patient has no active request (activeRequestId absent)', async () => {
+    await seedUser('patient-1', 'patient') // no activeRequestId
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'requests'), req()))
+  })
+
+  it('rejects a second request while activeRequestId is set', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users', 'patient-1'),
+        { role: 'patient', agencyId: null, activeRequestId: 'CRMC-2026-00000' })
+    })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'requests'), req()))
+  })
 })
 
 // ── notifications.create ────────────────────────────────────────────────
