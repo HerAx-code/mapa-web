@@ -1339,7 +1339,13 @@ export default function Layout({ children, breadcrumb }) {
             request/intake forms — sat under the bar (MOB-1). The calc
             reserves the full bar height + safe area + a 1rem breathing
             gap; lg:pb-0 drops it once the sidebar layout takes over. */}
-        <main className={`flex-1 overflow-y-auto overflow-x-clip flex flex-col min-w-0 print:overflow-visible print:block ${
+        {/* main is a BLOCK scroll container, NOT flex-col: Chromium drops the
+            padding-bottom of a column flex-box that is also a scroll container,
+            so as `flex flex-col` the tab-bar clearance padding below was ignored
+            and the last content sat under the fixed BottomTabBar even at max
+            scroll. The flex-col that full-height pages need lives on the inner
+            wrapper (min-h-full) instead. */}
+        <main className={`flex-1 overflow-y-auto overflow-x-clip min-w-0 print:overflow-visible print:block ${
           user?.role === ROLES.PATIENT ? 'pb-[calc(60px_+_env(safe-area-inset-bottom)_+_1rem)] lg:pb-0' : ''
         }`}>
           {/* Key on pathname so each navigation re-mounts this wrapper
