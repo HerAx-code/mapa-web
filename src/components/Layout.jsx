@@ -1345,8 +1345,18 @@ export default function Layout({ children, breadcrumb }) {
           {/* Key on pathname so each navigation re-mounts this wrapper
               and re-triggers the fade-in animation. Subtle motion
               conveys 'this is a new screen' instead of the instant
-              teleport that makes the app feel webby. */}
-          <div key={location.pathname} className="animate-fade-in flex-1 flex flex-col min-h-0 motion-reduce:animate-none">
+              teleport that makes the app feel webby.
+
+              min-h-full (NOT flex-1 + min-h-0): a flex-grow child with a
+              zero basis is clamped to the scroll container's height, and
+              Chromium then does NOT extend `main`'s scrollable area to a
+              taller descendant's overflow — so long pages (e.g. the
+              Dashboard steps guide) were cut off and the last section sat
+              unreachable under the bottom tab bar. min-h-full keeps the
+              wrapper at least full height (so full-height flex pages still
+              fill) but lets it grow with content, so `main` scrolls the
+              whole page and the bottom padding clears the tab bar. */}
+          <div key={location.pathname} className="animate-fade-in flex flex-col min-h-full motion-reduce:animate-none">
             {children}
           </div>
         </main>
