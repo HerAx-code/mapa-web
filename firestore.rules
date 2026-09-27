@@ -108,7 +108,15 @@ service cloud.firestore {
           request.resource.data.role == resource.data.role &&
           request.resource.data.agencyId == resource.data.agencyId &&
           request.resource.data.active == resource.data.active &&
-          request.resource.data.rank == resource.data.rank) ||
+          request.resource.data.rank == resource.data.rank &&
+          // Identity-linking fields are pinned on self-update (abuse hardening
+          // #4): a patient must not be able to re-point their hospitalId /
+          // patientId at another record, or rename themselves. .get(,null)
+          // tolerates roles that lack these fields (staff have no hospitalId).
+          // name is pinned for patients only, so staff can still self-rename.
+          request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
+          request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
+          (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null))) ||
         isAdmin() ||
         (isAgencyAdmin() &&
           resource.data.agencyId == userAgencyId() &&
@@ -565,8 +573,14 @@ service cloud.firestore {
       // their own and phish an admin. Closing it completely means moving
       // notification writes into a Cloud Function so clients never touch
       // this collection -- the functions codebase already exists.
+      // Abuse hardening #1: a PATIENT may only create a notification addressed to
+      // themselves — they can no longer drop notifications into staff feeds (the
+      // spam / phishing primitive). The one legitimate patient->staff signal (a
+      // new request submitted) is now produced server-side by the
+      // onRequestCreated Cloud Function. Staff/agency keep cross-user create.
       allow create: if isAuth() &&
                        request.resource.data.fromUid == uid() &&
+                       (!isPatient() || userId == uid()) &&
                        (!('title' in request.resource.data) ||
                         (request.resource.data.title is string &&
                          request.resource.data.title.size() <= 200)) &&

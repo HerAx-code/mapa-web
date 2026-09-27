@@ -8,7 +8,6 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { notify } from '../../utils/notifications'
 import {
   generateRequestId, computeFunding,
 } from '../../utils/requests'
@@ -244,25 +243,9 @@ export default function RequestAssistance() {
       await batch.commit()
       toast.success(t('patient.request.proceedOk'))
 
-      // Notify agency coordinators that a new endorsed slice landed in their
-      // inbox. Awaited (with allSettled) so transient failures are logged
-      // but never block the patient's success path — the slices themselves
-      // already committed.
-      const notifyResults = await Promise.allSettled(toProceed.map(s =>
-        getDocs(query(collection(db, 'users'),
-          where('agencyId', '==', s.agencyId),
-          where('role', 'in', ['agency', 'agency_admin'])
-        )).then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
-          type:  'app_submitted',
-          title: 'New endorsed request',
-          body:  `${user.name} accepted the endorsement and submitted their request. Please review.`,
-        }))))
-      ))
-      const failed = notifyResults.filter(r => r.status === 'rejected')
-      if (failed.length > 0) {
-        console.error('[handleProceed] agency notify failures:',
-          failed.map(f => f.reason))
-      }
+      // Agency coordinators are notified server-side by the onSliceProceeded
+      // Cloud Function when each slice moves endorsed → reviewing (abuse
+      // hardening #1 — patients can no longer write into other users' feeds).
     } catch (err) {
       console.error('[handleProceed] batch commit failed:', err)
       toast.error(t('patient.request.proceedErr'))
@@ -284,15 +267,9 @@ export default function RequestAssistance() {
         closeReason: 'Withdrawn by applicant.',
         updatedAt:   serverTimestamp(),
       })
-      // Notify CRMC so the request disappears from their action queue and
-      // doesn't sit there as a stale "Needs action" row.
-      getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])))
-        .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
-          type:  'app_withdrawn',
-          title: 'Request withdrawn',
-          body:  `${user.name} withdrew their ${activeRequest.assistanceType} request (${activeRequest.requestId}).`,
-        }))))
-        .catch(err => console.error('[withdraw] admin notify failed:', err))
+      // CRMC is notified server-side by onRequestWritten when the request is
+      // closed as a withdrawal, so it leaves their action queue (abuse
+      // hardening #1 — patients no longer write into staff feeds).
       toast.success(t('patient.track.withdrawSuccess'))
       setConfirmWithdraw(false)
     } catch (err) {
@@ -543,18 +520,10 @@ export default function RequestAssistance() {
 
       setSubmittedId(requestId)
 
-      // Notify CRMC admins so they can pick up the request. The patient
-      // self-notification was dropped — they're literally on the success
-      // page already, the in-app toast it triggered was redundant chrome
-      // (and showed the same Request ID the success screen now displays
-      // in a more compact form).
-      getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])))
-        .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
-          type:  'app_submitted',
-          title: 'New assistance request',
-          body:  `${user.name} submitted a ${form.assistanceType} request — total bill ${peso(totalBill)}. ID: ${requestId}.`,
-        }))))
-        .catch(err => console.error('[request] admin notify failed:', err))
+      // Notifying CRMC admins of the new request is now done server-side by the
+      // onRequestCreated Cloud Function (abuse hardening #1): patients can no
+      // longer write into other users' notification feeds, so the client no
+      // longer fetches the admin roster or writes to it here.
     } catch (err) {
       console.error('[request] submit failed:', err?.code, err?.message, err)
       // R26: surface WHICH document failed so the patient knows what to

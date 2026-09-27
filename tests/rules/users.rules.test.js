@@ -136,11 +136,11 @@ describe('users.create — admin-elevated create', () => {
 describe('users.update — self-update cannot escalate', () => {
   const base = { role: 'patient', agencyId: null, active: true, rank: 0, name: 'Juan', email: 'j@example.com' }
 
-  it('allows a self profile edit that leaves role/agencyId/active/rank unchanged', async () => {
+  it('allows a self profile edit of contact/address (identity fields unchanged)', async () => {
     await seedUserDoc('patient-1', base)
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
-      ...base, name: 'Juan Dela Cruz', contact: '09171234567',
+      ...base, contact: '09171234567', address: 'Cotabato City',
     }))
   })
 
@@ -165,6 +165,54 @@ describe('users.update — self-update cannot escalate', () => {
     const ctx = testEnv.authenticatedContext('coord-1')
     await assertFails(setDoc(doc(ctx.firestore(), 'users', 'coord-1'), {
       ...base, role: 'agency', agencyId: 'malasakit', active: true,
+    }))
+  })
+})
+
+// Abuse hardening #4: identity-linking fields are pinned on self-update. A
+// patient must not be able to re-point hospitalId/patientId at another record
+// or rename themselves; staff (no hospitalId/patientId) can still self-rename.
+describe('users.update — identity fields locked on self-update', () => {
+  const patient = { role: 'patient', agencyId: null, active: true, rank: 0,
+    name: 'Juan', email: 'j@example.com', hospitalId: 'CRMC-2026-00001', patientId: 'PAT-001' }
+
+  it('rejects a patient re-pointing their hospitalId', async () => {
+    await seedUserDoc('patient-1', patient)
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, hospitalId: 'CRMC-2026-09999',
+    }))
+  })
+
+  it('rejects a patient changing their patientId', async () => {
+    await seedUserDoc('patient-1', patient)
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, patientId: 'PAT-999',
+    }))
+  })
+
+  it('rejects a patient renaming themselves', async () => {
+    await seedUserDoc('patient-1', patient)
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, name: 'Someone Else',
+    }))
+  })
+
+  it('still allows a patient to edit contact/address', async () => {
+    await seedUserDoc('patient-1', patient)
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
+      ...patient, contact: '09990001111', address: 'New Address',
+    }))
+  })
+
+  it('still allows a staff member to self-rename (name lock is patient-only)', async () => {
+    await seedUserDoc('staff-1', { role: 'staff_admin', agencyId: null, active: true, rank: 0, name: 'MSW Cruz', email: 's@crmc.gov.ph' })
+    const ctx = testEnv.authenticatedContext('staff-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'staff-1'), {
+      role: 'staff_admin', agencyId: null, active: true, rank: 0, name: 'MSW A. Cruz', email: 's@crmc.gov.ph',
     }))
   })
 })

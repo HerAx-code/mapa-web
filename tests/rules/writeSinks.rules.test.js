@@ -188,24 +188,32 @@ describe('requests.create — Phase 1.4 self-endorsement', () => {
   })
 })
 
-// ── Phase 1.4 — notifications.create ────────────────────────────────────
-// read/update/delete checked uid() == userId; create checked only
-// isAuth(), so any patient could write into a super_admin's feed with no
-// sender field. Cross-role writes must stay open, so the fix is mandatory
-// attribution rather than recipient-matching.
-describe('notifications.create — Phase 1.4 unattributed spoofing', () => {
+// ── notifications.create ────────────────────────────────────────────────
+// Phase 1.4 added mandatory sender attribution. Abuse hardening #1 (2026-09)
+// went further: a PATIENT may only notify themselves (patient→staff pings moved
+// server-side to onRequestWritten / onSliceProceeded), so the patient spam /
+// phishing surface is closed. Staff/agency keep cross-user create.
+describe('notifications.create — patient-notify lockdown + attribution', () => {
   const notif = (over = {}) => ({
     type: 'app_submitted', title: 'New assistance request',
     body: 'A patient submitted a request.', read: false,
     createdAt: serverTimestamp(), fromUid: 'patient-1', ...over,
   })
 
-  it('allows the real cross-role write: patient notifies an admin', async () => {
+  it('rejects a patient writing into an admin feed (now server-side only)', async () => {
     await seedUser('patient-1', 'patient')
     await seedUser('admin-1', 'super_admin')
     const ctx = testEnv.authenticatedContext('patient-1')
-    await assertSucceeds(
+    await assertFails(
       addDoc(collection(ctx.firestore(), 'notifications', 'admin-1', 'items'), notif())
+    )
+  })
+
+  it('allows a patient to notify themselves', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(
+      addDoc(collection(ctx.firestore(), 'notifications', 'patient-1', 'items'), notif())
     )
   })
 
