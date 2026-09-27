@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   generateRequestId, computeFunding,
 } from '../../utils/requests'
+import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { runIdOcr, isIdType } from '../../utils/idOcr'
 import { compareFaces, hasFace } from '../../utils/faceCheck'
@@ -27,7 +28,6 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
-const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
 
 // Active = anything not in a terminal state. A patient works one bill toward

@@ -16,12 +16,12 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { computeFunding, isSliceTerminal } from '../../utils/requests'
+import { peso } from '../../utils/format'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import Tour from '../../components/Tour'
 import { patientTrackStatusTour } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
 
-const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
 // Request-lifecycle stepper for the patient's single co-funding request.
 const buildRequestStages = (request, t) => {
@@ -135,7 +135,6 @@ const buildStages = (app, t) => {
     { key: 'submitted',   label: t('patient.track.stages.submittedLabel'),   note: t('patient.track.stages.submittedNote') },
     { key: 'docs',        label: t('patient.track.stages.docsLabel'),        note: t('patient.track.stages.docsNote') },
     { key: 'reviewing',   label: t('patient.track.stages.reviewingLabel'),   note: t('patient.track.stages.reviewingNote') },
-    { key: 'interview',   label: t('patient.track.stages.interviewLabel'),   note: t('patient.track.stages.interviewNote') },
     { key: 'approved',    label: t('patient.track.stages.approvedLabel'),    note: t('patient.track.stages.approvedNote') },
     { key: 'certificate', label: t('patient.track.stages.certificateLabel'), note: t('patient.track.stages.certificateNote') },
   ]
@@ -144,9 +143,11 @@ const buildStages = (app, t) => {
     pending:     ['submitted'],
     endorsed:    ['submitted', 'docs'],
     reviewing:   ['submitted', 'docs'],
-    interview:   ['submitted', 'docs', 'reviewing'],
-    approved:    ['submitted', 'docs', 'reviewing', 'interview'],
-    certificate: ['submitted', 'docs', 'reviewing', 'interview', 'approved'],
+    // 'interview' is a removed legacy status; treat it as 'reviewing' so any
+    // pre-redesign slice/app still renders a sensible in-review state.
+    interview:   ['submitted', 'docs'],
+    approved:    ['submitted', 'docs', 'reviewing'],
+    certificate: ['submitted', 'docs', 'reviewing', 'approved'],
     rejected:    ['submitted'],
   }
 
@@ -154,7 +155,7 @@ const buildStages = (app, t) => {
     pending:     'docs',
     endorsed:    'reviewing',
     reviewing:   'reviewing',
-    interview:   'interview',
+    interview:   'reviewing',   // legacy fallback (interview stage removed)
     approved:    'approved',
     certificate: 'certificate',
     rejected:    null,

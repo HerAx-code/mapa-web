@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
+import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
 import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
 import { overdueCount, isOverdue, slaState, slaLabel, SLA_HOURS } from '../../utils/sla'
@@ -36,7 +37,6 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
-const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
 
 const fmtDate = (ts) => {

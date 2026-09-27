@@ -1,12 +1,12 @@
 import { MdArrowForward } from 'react-icons/md'
 import StatusBadge from '../ui/StatusBadge'
+import { peso } from '../../utils/format'
 
 // Shared dark-teal "balance" hero — the signature centrepiece for an active
 // request, used on both the patient Dashboard and My Application (TrackStatus)
 // so the two read as one flow. All figures come from computeFunding over the
 // request's slices (committed + outstanding) against amountNeeded — the caller
 // passes the computed `funding` object so this component stays presentational.
-const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
 function HeroLegend({ swatch, label, value }) {
   return (
