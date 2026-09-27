@@ -19,6 +19,7 @@ import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
 import BalanceHero from '../../components/patient/BalanceHero'
+import TaskList from '../../components/patient/TaskList'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import {
@@ -605,12 +606,45 @@ export default function RequestAssistance() {
   // ── Active request — block new submission, show its state ─────────────────
   if (!loading && activeRequest) {
     const funding = computeFunding(activeRequest.amountNeeded, slices)
+
+    // Task-list orientation (GOV.UK pattern): derive the ordered tasks + the
+    // single next action from live data. The rows point into the detailed
+    // sections below (intake page, coverage section, documents) so "what do I
+    // do now" is unambiguous and the flow stays resumable.
+    const intakeDone     = isPatientIntakeComplete(activeRequest.intakeSheet)
+    const anyRejected    = myDocs.some(d => d.status === 'rejected')
+    const docsAllVerified = myDocs.length > 0 && myDocs.every(d => d.status === 'verified')
+    const hasEndorsed    = slices.some(s => s.status === 'endorsed')
+    const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const goIntake = () => navigate(`/patient/request/${activeRequest.id}/intake`)
+    const tasks = [
+      { key: 'docs', label: t('patient.request.tasks.docs'),
+        state: anyRejected ? 'action_needed' : docsAllVerified ? 'done' : 'in_progress',
+        onClick: () => scrollTo('req-docs-section') },
+      { key: 'intake', label: t('patient.request.tasks.intake'),
+        state: intakeDone ? 'done' : activeRequest.intakeSheet ? 'in_progress' : 'not_started',
+        onClick: goIntake },
+      ...(slices.length > 0 ? [{ key: 'coverage', label: t('patient.request.tasks.coverage'),
+        state: hasEndorsed ? 'action_needed' : 'in_progress',
+        onClick: () => scrollTo('coverage-section') }] : []),
+    ]
+    const nextAction = anyRejected
+      ? { label: t('patient.request.tasks.fixDocs'),        onClick: () => scrollTo('req-docs-section') }
+      : hasEndorsed
+        ? { label: t('patient.request.tasks.reviewCoverage'), onClick: () => scrollTo('coverage-section') }
+        : !intakeDone
+          ? { label: t('patient.request.tasks.completeIntake'), onClick: goIntake }
+          : null
+
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
         <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto space-y-4">
           {/* Shared balance hero — same centrepiece as the Dashboard + My
               Application, so a returning patient sees one consistent view. */}
           <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
+
+          {/* Task-list orientation — one clear next action + status rows. */}
+          <TaskList tasks={tasks} nextAction={nextAction} />
 
           <div className="card p-5 sm:p-6">
             <p className="text-sm text-gray-500 mb-4">{t('patient.request.activeDesc')}</p>
@@ -640,7 +674,7 @@ export default function RequestAssistance() {
             {/* Coverage plan — which agencies cover how much, their info,
                 procedure, and the requirements the patient must comply with. */}
             {slices.length > 0 && (
-              <div className="mt-4">
+              <div id="coverage-section" className="mt-4 scroll-mt-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('patient.request.coveragePlan')}</p>
                 <div className="space-y-3">
                   {slices.map(s => {
@@ -724,7 +758,7 @@ export default function RequestAssistance() {
                   ? { cls: 'badge-green', label: t('patient.request.docsVerified') }
                   : { cls: 'badge-amber', label: t('patient.request.docsUnderReview') }
               return (
-                <div className="mt-4">
+                <div id="req-docs-section" className="mt-4 scroll-mt-4">
                   <div className="flex items-center gap-2 p-3 rounded-xl border border-gray-100">
                     <MdDescription size={18} className="text-gray-500 flex-shrink-0" />
                     <p className="text-sm text-gray-700 flex-1 min-w-0">{t('patient.request.docsSummary', { count: myDocs.length })}</p>

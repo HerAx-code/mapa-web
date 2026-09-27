@@ -640,6 +640,21 @@
       "subtitle": "Tell us what you need. CRMC will review your request and endorse it to the agencies that can help.",
       "activeTitle": "You have an active request",
       "activeDesc": "CRMC is processing your request. You can submit a new one once this is completed.",
+      "tasks": {
+        "title": "What to do next",
+        "docs": "Your documents",
+        "intake": "Household Information Sheet",
+        "coverage": "Coverage plan",
+        "fixDocs": "Fix a rejected document",
+        "reviewCoverage": "Review your coverage plan and proceed",
+        "completeIntake": "Complete your Household Information Sheet",
+        "state": {
+          "done": "Completed",
+          "in_progress": "In progress",
+          "not_started": "Not started",
+          "action_needed": "Action needed"
+        }
+      },
       "typeLabel": "Type of assistance needed",
       "typePlaceholder": "Select assistance type",
       "amountLabel": "Amount you need help with (₱)",
