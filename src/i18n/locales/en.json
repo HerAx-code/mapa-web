@@ -1304,12 +1304,14 @@
     },
     "journey": {
       "label": "Your progress",
-      "submitted": "Submitted",
-      "under_review": "Under review",
-      "assessment": "Assessment",
-      "endorsed": "Endorsed",
-      "funding": "Funding",
-      "complete": "Complete"
+      "stage": {
+        "submitted":    { "label": "Submitted",    "now": "Your request and documents are in with CRMC.",                              "next": "CRMC will start reviewing them soon." },
+        "under_review": { "label": "Under review",  "now": "CRMC is verifying your documents and your bill.",                           "next": "Next, a social worker assesses your case." },
+        "assessment":   { "label": "Assessment",    "now": "A CRMC social worker is assessing your case and may message you.",          "next": "Next, CRMC endorses your request to agencies." },
+        "endorsed":     { "label": "Endorsed",      "now": "CRMC referred your request to one or more agencies.",                       "next": "Review your coverage plan and proceed." },
+        "funding":      { "label": "Funding",       "now": "Agencies are approving their share and issuing your Guarantee Letters.",    "next": "Next, your bill is fully covered." },
+        "complete":     { "label": "Complete",      "now": "Your bill is fully covered — claim your Guarantee Letters at the agency.",  "next": "" }
+      }
     },
     "hero": {
       "step": "Step {{n}} of {{total}}",

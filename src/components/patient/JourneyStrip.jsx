@@ -1,38 +1,22 @@
 import { useTranslation } from 'react-i18next'
 import { MdCheck } from 'react-icons/md'
-import { REQ_RANK } from '../../utils/requests'
+import { journeyState } from '../../utils/journey'
 
-// The request lifecycle as a compact, at-a-glance horizontal strip — the
-// signature element of the patient-mobile redesign: "where am I?" answered
-// without reading. Driven by the request's own status rank, so it stays in
-// lockstep with the server. Reused on the Dashboard and the Status screen.
-//
-// Ranks come from the shared REQ_RANK in utils/requests (the co-funding
-// lifecycle): submitted 0 · under_review 1 · assessment 2 · endorsed 3 ·
-// partially_funded 4 · fully_funded 5.
-//
-// Labels are the ONE canonical journey vocabulary (matches the request
-// lifecycle 1:1, no more "verified/interview/approved/letter" divergence).
-// The detail stepper on TrackStatus and the summary hero use the same six
-// stage names, so the patient sees one model everywhere. i18n:
-// patient.journey.<key>.
-const STAGES = [
-  { key: 'submitted',    entry: 0 },
-  { key: 'under_review', entry: 1 },
-  { key: 'assessment',   entry: 2 },
-  { key: 'endorsed',     entry: 3 },
-  { key: 'funding',      entry: 4 },
-  { key: 'complete',     entry: 5 },
-]
+// The GLANCE fidelity of the one canonical journey model (utils/journey.js) —
+// a compact horizontal strip that answers "where am I?" without reading. The
+// summary hero (PatientHero) and the detail stepper (JourneyStepper) render the
+// SAME six stages from the same source, so the patient sees one model
+// everywhere. Driven by request.status via journeyState, in lockstep with the
+// server. i18n labels: patient.journey.stage.<key>.label.
 
 export default function JourneyStrip({ status, className = '' }) {
   const { t } = useTranslation()
-  const rank = REQ_RANK[status] ?? 0
+  const { stages } = journeyState({ status })
 
   return (
     <div className={`flex items-start justify-between ${className}`} role="list" aria-label={t('patient.journey.label')}>
-      {STAGES.map((s, i) => {
-        const state = rank > s.entry ? 'done' : rank === s.entry ? 'current' : 'upcoming'
+      {stages.map((s, i) => {
+        const state = s.state
         return (
           <div key={s.key} role="listitem" aria-current={state === 'current' ? 'step' : undefined}
             className="relative flex flex-1 flex-col items-center gap-1.5 text-center">
@@ -54,7 +38,7 @@ export default function JourneyStrip({ status, className = '' }) {
               state === 'current' ? 'font-semibold text-amber-700'
               : state === 'done'  ? 'text-gray-600'
               : 'text-gray-400'
-            }`}>{t(`patient.journey.${s.key}`)}</span>
+            }`}>{t(`patient.journey.stage.${s.key}.label`)}</span>
           </div>
         )
       })}

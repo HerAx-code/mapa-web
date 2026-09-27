@@ -1304,12 +1304,14 @@
     },
     "journey": {
       "label": "Iyong progreso",
-      "submitted": "Naisumite",
-      "under_review": "Sinusuri",
-      "assessment": "Pagsusuri",
-      "endorsed": "Na-endorso",
-      "funding": "Pinopondohan",
-      "complete": "Kumpleto"
+      "stage": {
+        "submitted":    { "label": "Naisumite",    "now": "Naipasa na sa CRMC ang iyong kahilingan at mga dokumento.",                 "next": "Sisimulan itong suriin ng CRMC sa lalong madaling panahon." },
+        "under_review": { "label": "Sinusuri",     "now": "Bine-verify ng CRMC ang iyong mga dokumento at bill.",                       "next": "Susunod, susuriin ng social worker ang iyong kaso." },
+        "assessment":   { "label": "Pagsusuri",    "now": "Sinusuri ng social worker ng CRMC ang iyong kaso at maaaring mag-message.",  "next": "Susunod, ie-endorso ng CRMC ang kahilingan sa mga ahensya." },
+        "endorsed":     { "label": "Na-endorso",   "now": "In-endorso ng CRMC ang iyong kahilingan sa isa o higit pang ahensya.",       "next": "Suriin ang plano ng saklaw at magpatuloy." },
+        "funding":      { "label": "Pinopondohan", "now": "Inaaprubahan ng mga ahensya ang kanilang bahagi at gumagawa ng Guarantee Letter.", "next": "Susunod, ganap nang masasaklaw ang iyong bill." },
+        "complete":     { "label": "Kumpleto",     "now": "Ganap nang saklaw ang iyong bill — kunin ang Guarantee Letters sa ahensya.", "next": "" }
+      }
     },
     "hero": {
       "step": "Hakbang {{n}} ng {{total}}",
