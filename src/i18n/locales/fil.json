@@ -640,6 +640,21 @@
       "subtitle": "Sabihin sa amin ang inyong pangangailangan. Susuriin ng CRMC ang inyong kahilingan at ie-endorso ito sa mga ahensyang makakatulong.",
       "activeTitle": "May aktibong kahilingan kayo",
       "activeDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Maaari kayong magsumite ng bago kapag natapos na ito.",
+      "tasks": {
+        "title": "Ano ang susunod",
+        "docs": "Iyong mga dokumento",
+        "intake": "Household Information Sheet",
+        "coverage": "Plano ng saklaw",
+        "fixDocs": "Ayusin ang dokumentong tinanggihan",
+        "reviewCoverage": "Suriin ang plano ng saklaw at magpatuloy",
+        "completeIntake": "Kumpletuhin ang Household Information Sheet",
+        "state": {
+          "done": "Kumpleto",
+          "in_progress": "Kasalukuyan",
+          "not_started": "Hindi pa nasisimulan",
+          "action_needed": "May kailangang gawin"
+        }
+      },
       "typeLabel": "Uri ng tulong na kailangan",
       "typePlaceholder": "Pumili ng uri ng tulong",
       "amountLabel": "Halagang kailangan ninyong matulungan (₱)",
