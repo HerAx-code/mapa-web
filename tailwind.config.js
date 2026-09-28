@@ -7,6 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        // MAPA "pine" — the primary brand color. Roles, WCAG pairs, and the full
+        // identity system are documented in docs/visual-identity/03-identity-system.md.
         brand: {
           50:  '#E1F5EE',
           100: '#C3EBDd',

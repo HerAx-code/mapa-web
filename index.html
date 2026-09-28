@@ -2,6 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- SVG favicon (the MAPA "care-pin" mark) — modern browsers prefer it;
+         the PNG stays as the fallback for older ones. See public/brand/. -->
+    <link rel="icon" type="image/svg+xml" href="/brand/mapa-mark.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- interactive-widget=resizes-content: on Android Chrome/Edge the layout
@@ -27,6 +30,16 @@
 
     <!-- Description shown in Play Store / Add-to-Home-Screen previews. -->
     <meta name="description" content="Apply for medical financial assistance at Cotabato Regional Medical Center. Patient portal for documents, applications, and Guarantee Letters." />
+
+    <!-- Social / link previews. Uses the existing brand raster as a stopgap; a
+         dedicated 1200×630 og-image is a follow-up (see docs/visual-identity). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MAPA — Medical Assistance Portal Access | CRMC" />
+    <meta property="og:description" content="Apply for medical financial assistance at Cotabato Regional Medical Center." />
+    <meta property="og:image" content="/mapa-logo.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="MAPA — Medical Assistance Portal Access | CRMC" />
+    <meta name="twitter:description" content="Apply for medical financial assistance at Cotabato Regional Medical Center." />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
