@@ -14,6 +14,7 @@ import {
 import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { runIdOcr, isIdType } from '../../utils/idOcr'
+import { assessExposure } from '../../utils/imageQuality'
 import { compareFaces, hasFace } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
@@ -164,10 +165,13 @@ export default function RequestAssistance() {
     Promise.all([
       runIdOcr(file, expectedName),
       wantFace ? hasFace(file) : Promise.resolve(null),
+      // Advisory exposure check (glare / too-dark). On-device, fails null,
+      // never blocks — a gentle "retake in better light" nudge. See imageQuality.js.
+      assessExposure(file),
     ])
-      .then(([res, face]) => {
+      .then(([res, face, exposure]) => {
         if (ocrTokens.current[typeName] !== token) return // stale: dropped
-        setOcrResults(p => ({ ...p, [typeName]: { ...res, hasFace: face } }))
+        setOcrResults(p => ({ ...p, [typeName]: { ...res, hasFace: face, exposure: exposure?.verdict ?? null } }))
       })
       .finally(() => {
         if (ocrTokens.current[typeName] === token) {
@@ -938,6 +942,7 @@ export default function RequestAssistance() {
                         const notAnId = ocr && !ocrBusy && ocr.hasFace === false
                           && ocr.idType == null && ocr.match !== true
                         return (
+                        <>
                         <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
                           <p className={`text-xs ${
                             ocrBusy ? 'text-gray-500'
@@ -964,6 +969,15 @@ export default function RequestAssistance() {
                             </button>
                           )}
                         </div>
+                        {/* Advisory exposure nudge — glare / too dark. Never blocks. */}
+                        {!ocrBusy && ocr?.exposure && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            {ocr.exposure === 'glare'
+                              ? t('patient.request.exposureGlare')
+                              : t('patient.request.exposureDark')}
+                          </p>
+                        )}
+                        </>
                         )
                       })()}
                     </div>

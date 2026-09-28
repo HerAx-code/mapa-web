@@ -1081,7 +1081,11 @@ function RequestDetail({ request, agencies, onClose }) {
       </div>{/* /workspace */}
 
       {comparing && (
-        <CompareFacesModal selfieDoc={comparing.selfieDoc} idDoc={comparing.idDoc} onClose={() => setComparing(null)} />
+        <CompareFacesModal
+          selfieDoc={comparing.selfieDoc} idDoc={comparing.idDoc} busy={busy}
+          onVerify={(d) => reviewDoc(d, 'verified')}
+          onReject={(d) => { setComparing(null); setRejectingDoc(d) }}
+          onClose={() => setComparing(null)} />
       )}
       {viewingDoc && (
         <DocViewerModal docMeta={viewingDoc} onClose={() => setViewingDoc(null)} />
