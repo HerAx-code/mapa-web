@@ -58,13 +58,6 @@ export default defineConfig({
             url:        '/patient/request',
             icons:      [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
           },
-          {
-            name:       'My Interview',
-            short_name: 'Interview',
-            description: 'View scheduled assessment interview',
-            url:        '/patient/interviews',
-            icons:      [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
-          },
         ],
       },
       workbox: {
