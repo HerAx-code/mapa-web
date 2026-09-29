@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- SVG favicon (the MAPA "care-pin" mark) — modern browsers prefer it;
-         the PNG stays as the fallback for older ones. See public/brand/. -->
-    <link rel="icon" type="image/svg+xml" href="/brand/mapa-mark.svg" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Favicon: the MAPA logo mark (map-pin + cross over a caring hand), PNG
+         raster. The ?v cache-bust forces browsers past any previously cached
+         icon (bump it whenever the art changes). -->
+    <link rel="icon" type="image/png" href="/favicon.png?v=3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
     <!-- interactive-widget=resizes-content: on Android Chrome/Edge the layout
          viewport shrinks when the on-screen keyboard opens, so fixed/100dvh
          surfaces (e.g. the mobile message thread) end above the keyboard
@@ -31,19 +31,14 @@
     <!-- Description shown in Play Store / Add-to-Home-Screen previews. -->
     <meta name="description" content="Apply for medical financial assistance at Cotabato Regional Medical Center. Patient portal for documents, applications, and Guarantee Letters." />
 
-    <!-- Social / link previews. Dedicated 1200×630 card (the care-pin mark +
-         wordmark on pine), generated from public/brand/mapa-mark.svg. -->
+    <!-- Social / link previews. Uses the brand logo raster. -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="MAPA — Medical Assistance Portal Access | CRMC" />
     <meta property="og:description" content="Apply for medical financial assistance at Cotabato Regional Medical Center." />
-    <meta property="og:image" content="/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="MAPA — Medical Assistance Portal Access" />
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:image" content="/mapa-logo.png" />
+    <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="MAPA — Medical Assistance Portal Access | CRMC" />
     <meta name="twitter:description" content="Apply for medical financial assistance at Cotabato Regional Medical Center." />
-    <meta name="twitter:image" content="/og-image.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
