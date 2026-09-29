@@ -8,6 +8,7 @@ import Layout from '../../components/Layout'
 import BalanceHero from '../../components/patient/BalanceHero'
 import JourneyStrip from '../../components/patient/JourneyStrip'
 import JourneyStepper from '../../components/patient/JourneyStepper'
+import PatientPage from '../../components/patient/PatientPage'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -387,11 +388,10 @@ export default function TrackStatus() {
 
   return (
     <Layout breadcrumb={t('patient.track.title')}>
-      {/* Hard viewport cap (max-w-[100vw]) + overflow-x-clip so long
-          agency names, awaiting-info messages, or app IDs can't push
-          the page wider than the phone screen. Restores max-w-2xl
-          for centering on tablet+. */}
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
+      {/* Shared patient width (narrow: stepper + status cards). overflow-x-clip
+          is a hard cap so long agency names, awaiting-info messages, or app IDs
+          can't push the page wider than its column / the phone screen. */}
+      <PatientPage width="narrow" className="overflow-x-clip">
 
         <div className="w-full min-w-0">
 
@@ -892,7 +892,7 @@ export default function TrackStatus() {
         )}
 
         </div> {/* end inner content wrapper */}
-      </div>
+      </PatientPage>
 
       {/* First-visit guided tour. Auto-fires once per uid; spotlights
           the active/past tabs, the request lifecycle stepper, and the

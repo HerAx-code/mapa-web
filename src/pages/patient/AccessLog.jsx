@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import Layout from '../../components/Layout'
+import PatientPage from '../../components/patient/PatientPage'
 import PatientAccessLog from '../../components/patient/PatientAccessLog'
 
 /**
@@ -13,7 +14,7 @@ export default function PatientAccessLogPage() {
   const { t } = useTranslation()
   return (
     <Layout breadcrumb={t('shell.accessLog.title')}>
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-3xl">
+      <PatientPage width="narrow">
         <div className="mb-5">
           <h1 className="page-title">{t('shell.accessLog.title')}</h1>
           <p className="page-sub">
@@ -22,7 +23,7 @@ export default function PatientAccessLogPage() {
         </div>
 
         <PatientAccessLog />
-      </div>
+      </PatientPage>
     </Layout>
   )
 }

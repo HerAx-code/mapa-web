@@ -10,6 +10,7 @@ import Layout from '../../components/Layout'
 import JourneyStrip from '../../components/patient/JourneyStrip'
 import PatientHero from '../../components/patient/PatientHero'
 import CoverageBar from '../../components/patient/CoverageBar'
+import PatientPage from '../../components/patient/PatientPage'
 import InstallPrompt from '../../components/InstallPrompt'
 import Tour from '../../components/Tour'
 import { patientDashboardTour } from '../../utils/tours'
@@ -431,10 +432,10 @@ export default function PatientDashboard() {
 
   return (
     <Layout breadcrumb={t('patient.dashboard.title')}>
-      {/* Hard viewport cap so no descendant (long agency name, awaiting-
-          info message with a URL, etc.) can push the page wider than the
-          phone screen. overflow-x-clip is the strict version of -hidden. */}
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl lg:max-w-6xl overflow-x-clip space-y-4">
+      {/* Shared patient width (wide: dashboards/grids). overflow-x-clip is a
+          hard cap so no descendant (long agency name, awaiting-info URL, etc.)
+          can push the page wider than its column / the phone screen. */}
+      <PatientPage width="wide" className="overflow-x-clip space-y-4">
 
         {/* Compact greeting — banking-app pattern: the GREETING is a
             small line at the top, the STATUS card below is the hero.
@@ -595,7 +596,7 @@ export default function PatientDashboard() {
             unauthenticated visitors never see this. */}
         <InstallPrompt />
 
-      </div>
+      </PatientPage>
 
       {/* First-visit guided tour. Auto-fires once per user (localStorage-
           scoped to uid), four steps spotlighting the greeting, hero card,

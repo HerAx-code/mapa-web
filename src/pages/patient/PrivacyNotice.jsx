@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation, Trans } from 'react-i18next'
 import { MdArrowBack, MdHistory, MdChevronRight } from 'react-icons/md'
 import Layout from '../../components/Layout'
+import PatientPage from '../../components/patient/PatientPage'
 
 /**
  * Patient Privacy notice page (R-mobile-settings).
@@ -34,7 +35,7 @@ export default function PrivacyNotice() {
 
   return (
     <Layout breadcrumb={t('profile.privacy.title')}>
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-3xl">
+      <PatientPage width="narrow">
 
         {/* Header + back to More */}
         <div className="flex items-center gap-2 mb-5">
@@ -115,7 +116,7 @@ export default function PrivacyNotice() {
           </p>
         </div>
 
-      </div>
+      </PatientPage>
     </Layout>
   )
 }

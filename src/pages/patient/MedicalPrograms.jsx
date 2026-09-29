@@ -5,6 +5,7 @@ import {
   MdExpandMore, MdExpandLess, MdCheckCircle, MdArrowForward,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
+import PatientPage from '../../components/patient/PatientPage'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -79,7 +80,7 @@ export default function MedicalPrograms() {
 
   return (
     <Layout breadcrumb={t('patient.programs.breadcrumb')}>
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-5xl overflow-x-clip">
+      <PatientPage width="wide" className="overflow-x-clip">
 
         <div className="mb-5 w-full min-w-0">
           <p className="eyebrow">{t('patient.programs.eyebrow')}</p>
@@ -254,7 +255,7 @@ export default function MedicalPrograms() {
             )}
           </div>
         )}
-      </div>
+      </PatientPage>
     </Layout>
   )
 }
