@@ -33,6 +33,8 @@ import { computeSurface } from '../utils/announcements'
 import InstallNudge from './InstallNudge'
 import DesktopAppHint from './patient/DesktopAppHint'
 import { useDropdownPlacement } from '../hooks/useDropdownPlacement'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { tsToDate } from '../utils/dates'
 import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
@@ -285,6 +287,9 @@ function ComposeModal({ user, onClose }) {
   const recipientBoxRef = useRef(null)
   const { dropUp: recipientDropUp, maxHeight: recipientMaxH } =
     useDropdownPlacement(recipientBoxRef, showDrop && !!search, { maxHeight: 176 })
+  const panelRef = useRef(null)
+  useEscapeKey(handleClose)
+  useFocusTrap(panelRef, true)
 
   useEffect(() => {
     // Reply-only messaging (abuse hardening #2): patients never initiate a
@@ -333,7 +338,13 @@ function ComposeModal({ user, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[300] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && handleClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden relative">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="compose-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden relative outline-none">
 
         {/* Drag handle — mobile only */}
         <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -360,8 +371,8 @@ function ComposeModal({ user, onClose }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">{t('shell.compose.title')}</h2>
-          <button onClick={handleClose} className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="compose-modal-title" className="text-base font-semibold text-gray-900">{t('shell.compose.title')}</h2>
+          <button onClick={handleClose} aria-label={t('common.close', 'Close')} className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 pt-4 pb-2 space-y-0 divide-y divide-gray-100">

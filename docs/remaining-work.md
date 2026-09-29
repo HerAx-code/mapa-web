@@ -105,11 +105,12 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   WCAG 1.4.3): patient pages + patient components (#64) and the shared shell
   + auth entry pages (#65). **Dialog semantics + keyboard focus management**
   added: `useFocusTrap` hook + `role="dialog"`/`aria-modal`/`aria-labelledby`
-  on the shared `ConfirmModal` and `DocViewerModal` (focus enters the dialog,
-  Tab is trapped, focus restores on close; WCAG 2.4.3 / 2.1.2). ⬜ Still: a
-  **live screen-reader pass** on a low-end phone, rolling the same dialog
-  treatment out to the remaining inline modals, and optionally the staff-only
-  admin/agency pages.
+  on `ConfirmModal`, `DocViewerModal`, and the patient/shared modals
+  `SelfieCaptureModal`, `NotificationModal`, and the shell `ComposeModal`
+  (focus enters the dialog, Tab is trapped, Escape closes, focus restores on
+  close; WCAG 2.4.3 / 2.1.2). ⬜ Still: the same treatment on the **staff-only
+  admin/agency modals** (lower priority), and a **live screen-reader pass** on
+  a low-end phone.
 - 🟡 **Performance** **(code)** — chunking done, but Firebase is still ~659 KB
   and first paint on slow 3G is heavy; no performance budget or monitoring.
 

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MdClose, MdCameraAlt, MdRefresh, MdCheckCircle, MdWarning } from 'react-icons/md'
 import { checkLiveness } from '../utils/faceCheck'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 // Camera-only live selfie capture. Uses getUserMedia (front camera) so the
 // photo is a fresh capture, not a gallery pick — basic anti-spoofing. If no
@@ -19,6 +21,9 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
   const { t }      = useTranslation()
   const videoRef   = useRef(null)
   const streamRef  = useRef(null)
+  const panelRef   = useRef(null)
+  useEscapeKey(onClose)
+  useFocusTrap(panelRef, true)
   const [error,    setError]    = useState(false)
   const [preview,  setPreview]  = useState(null)   // dataURL of captured frame
   const [consent,  setConsent]  = useState(false)
@@ -95,10 +100,16 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
   return (
     <div className="fixed inset-0 bg-black/50 z-[200] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[92vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="selfie-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[92vh] flex flex-col overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">{t('patient.request.selfieTitle')}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="selfie-modal-title" className="text-base font-semibold text-gray-900">{t('patient.request.selfieTitle')}</h2>
+          <button onClick={onClose} aria-label={t('common.close', 'Close')} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-3 overflow-y-auto">
