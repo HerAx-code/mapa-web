@@ -585,7 +585,6 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
           <Logo size={28} />
           <div>
             <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
-            <p className="text-xs text-gray-500 leading-tight">CRMC</p>
           </div>
         </div>
         {/* Close button — mobile only */}

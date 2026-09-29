@@ -22,9 +22,11 @@ export function MapaMark({ size = 32, className = '', title = 'MAPA' }) {
 }
 
 /**
- * Brand lockup: mark + optional wordmark ("MAPA" in the display face + "CRMC"
- * attribution). Pass `reversed` on dark/pine surfaces (login column, card-hero,
- * PWA bounce). `size` is the mark height in px (default 32).
+ * Brand lockup: mark + optional wordmark ("MAPA" in the display face). Pass
+ * `reversed` on dark/pine surfaces (login column, card-hero, PWA bounce).
+ * `size` is the mark height in px (default 32). The wordmark is the standalone
+ * MAPA name — the operating institution (CRMC) is credited in content/legal
+ * copy, not baked into the lockup.
  */
 export default function Logo({ size = 32, withWordmark = false, reversed = false, className = '' }) {
   return (
@@ -33,7 +35,6 @@ export default function Logo({ size = 32, withWordmark = false, reversed = false
       {withWordmark && (
         <div className="leading-tight">
           <span className={`font-display text-sm font-bold tracking-tight ${reversed ? 'text-white' : 'text-gray-900'}`}>MAPA</span>
-          <span className={`text-xs ml-1 ${reversed ? 'text-brand-200' : 'text-gray-400'}`}>CRMC</span>
         </div>
       )}
     </div>
