@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { fetchDocumentContent } from '../utils/uploadDocument'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import {
   MdClose, MdDownload, MdZoomIn, MdInsertDriveFile,
   MdOpenInNew, MdRefresh,
@@ -219,22 +220,30 @@ export function DocPreview({ docMeta, className = '', onClose }) {
 
 export default function DocViewerModal({ docMeta, onClose }) {
   useEscapeKey(onClose)
+  const panelRef = useRef(null)
+  useFocusTrap(panelRef, true)
   return (
     <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="doc-viewer-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden outline-none">
         <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
         </div>
         <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <MdInsertDriveFile size={18} className="text-gray-400 flex-shrink-0" />
-            <h2 className="text-base font-semibold text-gray-900 truncate">{docMeta?.name ?? 'Document'}</h2>
+            <h2 id="doc-viewer-title" className="text-base font-semibold text-gray-900 truncate">{docMeta?.name ?? 'Document'}</h2>
             {docMeta?.status && (
               <StatusBadge status={docMeta.status} kind="doc" />
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>
         {docMeta?.documentTypeName && (
           <div className="px-5 py-2 border-b border-gray-50 text-xs text-gray-500 flex-shrink-0">Type: {docMeta.documentTypeName}</div>

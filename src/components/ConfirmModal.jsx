@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   MdClose, MdInfo, MdWarning, MdCheckCircle, MdBlock,
 } from 'react-icons/md'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 // Tone presets so call sites only pass `tone='danger'` etc. instead of
 // re-specifying icon + colors at every dialog.
@@ -78,6 +79,10 @@ export default function ConfirmModal({
 }) {
   const [reason, setReason] = useState('')
   const [busy, setBusy]     = useState(false)
+  const panelRef = useRef(null)
+
+  // Trap keyboard focus inside the dialog while open; restore it on close.
+  useFocusTrap(panelRef, open)
 
   // Reset transient state whenever the modal opens fresh.
   useEffect(() => {
@@ -126,15 +131,21 @@ export default function ConfirmModal({
     <div
       className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4 print:hidden"
       onClick={e => e.target === e.currentTarget && handleClose()}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden outline-none">
 
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-start gap-3">
           <div className={`w-9 h-9 ${cfg.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
             <Icon size={18} className={cfg.iconCls} />
           </div>
-          <h2 className="text-base font-semibold text-gray-900 flex-1 pt-1">{title}</h2>
-          <button onClick={handleClose} disabled={busy}
+          <h2 id="confirm-modal-title" className="text-base font-semibold text-gray-900 flex-1 pt-1">{title}</h2>
+          <button onClick={handleClose} disabled={busy} aria-label={cancelLabel}
             className="text-gray-400 hover:text-gray-600 disabled:opacity-50 flex-shrink-0">
             <MdClose size={20} />
           </button>
@@ -149,6 +160,7 @@ export default function ConfirmModal({
           {withReason && (
             <div>
               <textarea
+                data-autofocus
                 className="input resize-none text-sm"
                 rows={3}
                 placeholder={reasonPlaceholder}
@@ -169,7 +181,7 @@ export default function ConfirmModal({
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-50 bg-gray-50/60 flex gap-2 justify-end">
-          <button type="button" className="btn-secondary text-sm" disabled={busy} onClick={handleClose}>
+          <button type="button" data-autofocus className="btn-secondary text-sm" disabled={busy} onClick={handleClose}>
             {cancelLabel}
           </button>
           <button type="button"
