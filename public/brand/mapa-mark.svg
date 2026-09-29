@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" role="img" aria-label="MAPA">
   <!-- The "care pin": a map-pin ("mapa" = map; points patients to assistance) with a
        health cross carved as negative space (medical care). One closed shape with an
-       evenodd cut-out, fill=currentColor → single-color, reversible, favicon-legible. -->
-  <path fill="currentColor" fill-rule="evenodd" d="M32 3 C17 3 5 15 5 30 C5 48 32 77 32 77 C32 77 59 48 59 30 C59 15 47 3 32 3 Z M28 16 H36 V25 H45 V33 H36 V42 H28 V33 H19 V25 H28 Z"/>
+       evenodd cut-out. NOTE: this standalone file (favicon + asset source) uses an
+       EXPLICIT brand-pine fill, not currentColor — a favicon SVG renders with no CSS
+       color context, so currentColor would fall back to black. The inline logo in
+       src/components/ui/Logo.jsx keeps currentColor so it themes/reverses on pine. -->
+  <path fill="#0F6E56" fill-rule="evenodd" d="M32 3 C17 3 5 15 5 30 C5 48 32 77 32 77 C32 77 59 48 59 30 C59 15 47 3 32 3 Z M28 16 H36 V25 H45 V33 H36 V42 H28 V33 H19 V25 H28 Z"/>
 </svg>
