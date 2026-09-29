@@ -8,6 +8,7 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
+import PatientPage from '../../components/patient/PatientPage'
 import ProfileModals from '../../components/ProfileModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { resetTourFlag } from '../../utils/tours'
@@ -161,7 +162,7 @@ export default function PatientMore() {
         onSetModal={setActiveModal}
       />
 
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
+      <PatientPage width="narrow" className="overflow-x-clip">
 
         {/* Header */}
         <div className="mb-5">
@@ -229,7 +230,7 @@ export default function PatientMore() {
         <p className="text-center text-xs text-gray-500 mt-5">
           {t('shell.profile.footer')}
         </p>
-      </div>
+      </PatientPage>
     </Layout>
   )
 }

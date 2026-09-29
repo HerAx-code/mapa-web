@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import PatientPage from '../../components/patient/PatientPage'
 import { useTranslation } from 'react-i18next'
 import {
   MdExpandMore, MdExpandLess, MdCheckCircle,
@@ -234,7 +235,7 @@ export default function UserGuide() {
 
   return (
     <Layout breadcrumb={t('patient.guide.title')}>
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-[100vw] sm:max-w-3xl overflow-x-clip">
+      <PatientPage width="narrow" className="overflow-x-clip">
 
         {/* Header */}
         <div className="mb-6">
@@ -303,7 +304,7 @@ export default function UserGuide() {
         <div className="mt-6 card p-4 text-center">
           <p className="text-xs text-gray-500">{t('patient.guide.footer')}</p>
         </div>
-      </div>
+      </PatientPage>
     </Layout>
   )
 }

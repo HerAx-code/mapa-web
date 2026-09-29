@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MdArrowBack, MdEdit, MdLock, MdChevronRight } from 'react-icons/md'
 import Layout from '../../components/Layout'
+import PatientPage from '../../components/patient/PatientPage'
 import ProfileModals from '../../components/ProfileModals'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -32,7 +33,7 @@ export default function AccountSecurity() {
     <Layout breadcrumb={t('patient.account.title')}>
       <ProfileModals activeModal={modal} onSetModal={setModal} onClose={() => setModal(null)} />
 
-      <div className="px-3 py-4 sm:p-6 mx-auto w-full max-w-3xl">
+      <PatientPage width="narrow">
 
         {/* Header + back to More */}
         <div className="flex items-center gap-2 mb-5">
@@ -91,7 +92,7 @@ export default function AccountSecurity() {
             </button>
           </div>
         </div>
-      </div>
+      </PatientPage>
     </Layout>
   )
 }
