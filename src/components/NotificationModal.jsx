@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { tsToDate } from '../utils/dates'
@@ -114,6 +116,9 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
   const navigate = useNavigate()
   const { t }    = useTranslation()
   const notif    = notifications[currentIndex]
+  const panelRef = useRef(null)
+  useEscapeKey(onClose)
+  useFocusTrap(panelRef, true)
 
   // Mark as read when opened
   useEffect(() => {
@@ -147,7 +152,13 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
   return (
     <div className="fixed inset-0 bg-black/40 z-[300] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notif-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col overflow-hidden outline-none">
 
         {/* Drag handle — mobile only */}
         <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -156,8 +167,8 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{t('notif.header')}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <h2 id="notif-modal-title" className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{t('notif.header')}</h2>
+          <button onClick={onClose} aria-label={t('common.close', 'Close')} className="text-gray-400 hover:text-gray-600 transition-colors">
             <MdClose size={20} />
           </button>
         </div>
