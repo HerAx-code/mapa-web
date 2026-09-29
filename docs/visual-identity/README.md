@@ -3,6 +3,14 @@
 *Compiled 2026-09-28. The brand source-of-truth for MAPA: what the identity is, how it
 evolves, and the reusable brief that drives it. Companion to `docs/ux-research/`.*
 
+> **⚠️ As-built note (2026-09-29):** the **"care-pin" mark below was explored and
+> briefly shipped, then reverted** — the original logo (map-pin + medical cross over a
+> caring hand, `public/mapa-logo.png`) reads warmer and was retained by preference. So
+> the care-pin sections here are **aspirational/exploratory, not as-built**. What *did*
+> stick from this effort: the topbar wordmark is now **"MAPA" alone** (no "CRMC"
+> co-brand), and `public/brand/mapa-mark.svg` remains as the care-pin reference. The
+> pine palette / type / WCAG / iconography guidance is unaffected and still current.
+
 MAPA had a mature **design system** (pine tokens, Inter + Bricolage, a full component
 layer) but **no defined brand identity** — a placeholder raster logo with a generic
 shield fallback, raster-only icons with no source, and no documentation. This set
