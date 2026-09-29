@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../../firebase'
 import { sendMessage, getOrCreateConversation } from '../../../utils/messages'
+import { useDropdownPlacement } from '../../../hooks/useDropdownPlacement'
 import { MdClose, MdSend } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { MAX_CHARS } from './helpers'
@@ -32,6 +33,9 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
   const [text,            setText]            = useState('')
   const [sending,         setSending]         = useState(false)
   const [confirmClose,    setConfirmClose]    = useState(false)
+  const recipientBoxRef = useRef(null)
+  const { dropUp: recipientDropUp, maxHeight: recipientMaxH } =
+    useDropdownPlacement(recipientBoxRef, showDropdown && !!recipientSearch, { maxHeight: 192 })
 
   const hasUnsaved = !!text.trim() || !!subject.trim()
   const charsLeft  = MAX_CHARS - text.length
@@ -106,7 +110,7 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
         {/* To */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">To <span className="text-red-400">*</span></label>
-          <div className="relative">
+          <div className="relative" ref={recipientBoxRef}>
             {toUid ? (
               <div className="input flex items-center justify-between gap-2 py-2">
                 <span className="text-sm text-gray-800 truncate">{selectedName}</span>
@@ -126,7 +130,9 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
                   onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 />
                 {showDropdown && recipientSearch && (
-                  <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                  <div
+                    style={{ maxHeight: recipientMaxH }}
+                    className={`absolute left-0 right-0 z-10 bg-white border border-gray-200 rounded-xl shadow-lg overflow-y-auto ${recipientDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                     {filteredUsers.length > 0 ? (
                       filteredUsers.map(u => (
                         <button key={u.id} type="button"

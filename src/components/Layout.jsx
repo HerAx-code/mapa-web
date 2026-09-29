@@ -32,6 +32,7 @@ import AnnouncementBanner from './AnnouncementBanner'
 import { computeSurface } from '../utils/announcements'
 import InstallNudge from './InstallNudge'
 import DesktopAppHint from './patient/DesktopAppHint'
+import { useDropdownPlacement } from '../hooks/useDropdownPlacement'
 import { tsToDate } from '../utils/dates'
 import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
@@ -281,6 +282,9 @@ function ComposeModal({ user, onClose }) {
   const handleClose = () => hasUnsaved ? setConfirmClose(true) : onClose()
   const [sending, setSending] = useState(false)
   const [showDrop, setShowDrop] = useState(false)
+  const recipientBoxRef = useRef(null)
+  const { dropUp: recipientDropUp, maxHeight: recipientMaxH } =
+    useDropdownPlacement(recipientBoxRef, showDrop && !!search, { maxHeight: 176 })
 
   useEffect(() => {
     // Reply-only messaging (abuse hardening #2): patients never initiate a
@@ -372,7 +376,7 @@ function ComposeModal({ user, onClose }) {
                 </span>
               </div>
             ) : (
-              <div className="flex-1 relative">
+              <div className="flex-1 relative" ref={recipientBoxRef}>
                 <input
                   className="input text-sm w-full"
                   placeholder={t('shell.compose.searchOther')}
@@ -380,7 +384,9 @@ function ComposeModal({ user, onClose }) {
                   onChange={e => { setSearch(e.target.value); setShowDrop(true) }}
                   onFocus={() => setShowDrop(true)} />
                 {showDrop && search && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-10 max-h-44 overflow-y-auto mt-1">
+                  <div
+                    style={{ maxHeight: recipientMaxH }}
+                    className={`absolute left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-10 overflow-y-auto ${recipientDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                     {filtered.map(p => {
                       const roleLabel = { super_admin: 'Super Admin', staff_admin: 'Staff Admin', agency: 'Agency', patient: 'Patient' }[p.role] ?? p.role
                       return (

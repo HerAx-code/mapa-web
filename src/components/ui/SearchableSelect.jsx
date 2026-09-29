@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react'
 import { MdKeyboardArrowDown, MdSearch, MdCheck } from 'react-icons/md'
+import { useDropdownPlacement } from '../../hooks/useDropdownPlacement'
 
 /**
  * SearchableSelect — an accessible, mobile-friendly dropdown that replaces the
@@ -48,12 +49,6 @@ export default function SearchableSelect({
   const [open, setOpen]     = useState(false)
   const [query, setQuery]   = useState('')
   const [active, setActive] = useState(0)
-  // Placement: flip the popover above the trigger when there isn't room below
-  // (e.g. the field sits near the bottom of a scroll area), and cap the list to
-  // the space actually available so it's always fully reachable via its own
-  // internal scroll instead of running off-screen.
-  const [dropUp,   setDropUp]   = useState(false)
-  const [listMaxH, setListMaxH] = useState(240)
 
   const rootRef   = useRef(null)
   const searchRef = useRef(null)
@@ -91,27 +86,15 @@ export default function SearchableSelect({
     rootRef.current?.querySelector('button')?.focus()
   }, [onChange, close])
 
-  // Decide whether the popover opens up or down, and how tall its list may be,
-  // from the trigger's position in the viewport. Recomputed on open and while
-  // scrolling/resizing so it stays correct.
-  const computePlacement = useCallback(() => {
-    const el = rootRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const margin = 12
-    const spaceBelow = window.innerHeight - rect.bottom - margin
-    const spaceAbove = rect.top - margin
-    const up = spaceBelow < 240 && spaceAbove > spaceBelow
-    const searchH = showSearch ? 56 : 0
-    const avail = (up ? spaceAbove : spaceBelow) - searchH
-    setDropUp(up)
-    setListMaxH(Math.max(120, Math.min(240, avail)))
-  }, [showSearch])
+  // Flip above the trigger + cap the list height when there isn't room below
+  // (e.g. the field sits near the bottom of a scroll area). Shared with the
+  // other bespoke dropdowns so placement behaves identically everywhere.
+  const { dropUp, maxHeight: listMaxH } =
+    useDropdownPlacement(rootRef, open, { extraOffset: showSearch ? 56 : 0 })
 
   // Open the list: reset the filter and highlight the current selection.
   const openList = () => {
     if (disabled) return
-    computePlacement()
     setOpen(true)
     const idx = rows.findIndex(r => r.value === value)
     setActive(idx >= 0 ? idx : 0)
@@ -124,19 +107,6 @@ export default function SearchableSelect({
     document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open, close])
-
-  // Keep placement correct while open if the page scrolls or resizes. Capture
-  // phase so scrolling of an ancestor container (e.g. a facet sidebar) counts.
-  useEffect(() => {
-    if (!open) return
-    const onReflow = () => computePlacement()
-    window.addEventListener('resize', onReflow)
-    window.addEventListener('scroll', onReflow, true)
-    return () => {
-      window.removeEventListener('resize', onReflow)
-      window.removeEventListener('scroll', onReflow, true)
-    }
-  }, [open, computePlacement])
 
   // Focus the search box when the popover opens.
   useEffect(() => { if (open && showSearch) searchRef.current?.focus() }, [open, showSearch])
