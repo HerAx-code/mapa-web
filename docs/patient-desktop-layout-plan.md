@@ -117,7 +117,20 @@ and rolled out. Per-page results:
   desktop two-pane (list + thread) treatment is deferred to a follow-up (Phase 3
   polish) so this PR stays a pure patient-width rollout.
 
-**Deferred (Phase 3 polish, optional):** the dismissible "works best on your
-phone" desktop hint, and two-pane Messages on desktop.
+Verified: `npm run build` ✓ · component tests 90/90 ✓ · `lint:i18n` clean.
+
+## Status — Phase 3 polish (2026-09-29)
+- ✅ **Desktop "works best on your phone" hint** — `src/components/patient/
+  DesktopAppHint.jsx`: a subtle, dismissible (localStorage, 30-day) strip shown
+  only on `lg+` for patients. Self-suppresses when InstallNudge's prompt is armed
+  so the two never stack; hidden when standalone/installed. Bilingual
+  (`install.desktopHint.*`). Rendered in `Layout` next to `InstallNudge`.
+- ➖ **Two-pane Messages on desktop** — already implemented: `admin/Messages.jsx`
+  (the shared all-role messages surface, used by patients too) renders a
+  two-panel split at `md+` (list left, `ConversationThread` right) with a
+  separate mobile full-screen thread. No change needed.
+- ⬜ **Minor, optional:** per-page hero/image width caps + "card fills its column"
+  audit. Low value now that every page sits in a capped column; left as a
+  touch-only-on-complaint item.
 
 Verified: `npm run build` ✓ · component tests 90/90 ✓ · `lint:i18n` clean.

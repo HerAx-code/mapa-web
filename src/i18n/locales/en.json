@@ -17,6 +17,11 @@
       "desc": "Add MAPA to your home screen so you can open it like an app.",
       "cta": "Install",
       "dismiss": "Dismiss"
+    },
+    "desktopHint": {
+      "title": "MAPA works best on your phone",
+      "desc": "The mobile app is the easiest way to apply and get updates. You can keep using it here too.",
+      "dismiss": "Dismiss"
     }
   },
   "installPage": {

@@ -17,6 +17,11 @@
       "desc": "Idagdag ang MAPA sa inyong home screen para mabuksan tulad ng isang app.",
       "cta": "I-install",
       "dismiss": "Isara"
+    },
+    "desktopHint": {
+      "title": "Mas maganda ang MAPA sa inyong telepono",
+      "desc": "Ang mobile app ang pinakamadaling paraan para mag-apply at makatanggap ng update. Puwede rin ninyo itong gamitin dito.",
+      "dismiss": "Isara"
     }
   },
   "installPage": {

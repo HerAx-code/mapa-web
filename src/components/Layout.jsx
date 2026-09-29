@@ -31,6 +31,7 @@ import OfflineBanner from './OfflineBanner'
 import AnnouncementBanner from './AnnouncementBanner'
 import { computeSurface } from '../utils/announcements'
 import InstallNudge from './InstallNudge'
+import DesktopAppHint from './patient/DesktopAppHint'
 import { tsToDate } from '../utils/dates'
 import BottomTabBar from './BottomTabBar'
 import { useTranslation } from 'react-i18next'
@@ -1298,6 +1299,11 @@ export default function Layout({ children, breadcrumb }) {
             usually armed the prompt -- this is the moment to ask,
             not on a cold /install page visit. */}
         <div className="print:hidden"><InstallNudge /></div>
+
+        {/* Desktop-only expectation-setter (patient): the phone/app is the
+            primary channel; this web view is the fallback. Self-suppresses
+            when InstallNudge is armed so the two strips never stack. */}
+        <DesktopAppHint />
 
         {/* ── Announcement banners ───────────────────────────────────
             Uses the shared <AnnouncementBanner> so the live banner
