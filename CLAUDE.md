@@ -83,6 +83,7 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - **`npm test`** → utils (~3s). **`npm run test:components`** → component smoke tests (~15s). **`npm run test:rules`** → emulator + rules tests (~30s incl. boot). **`npm run test:all`** chains all three.
 - **Pre-commit hook** runs utils tests automatically before every commit. Bypass with `SKIP_SIMPLE_GIT_HOOKS=1 git commit ...` for trivial / WIP commits. Installed via `simple-git-hooks` on `npm install`.
 - **`npm run lint:i18n`** flags hardcoded JSX strings on patient-facing files. Warn-level by design; promote to error when baseline is 0.
+- **`npm run budget`** checks the gzipped production bundle against `bundle-budget.json` (run after `npm run build`); CI fails if a bundle grows past budget. First-load weight matters for indigent patients on slow connections — when growth is intended, bump the budget in the same PR and say why.
 - **GitHub Actions CI** runs build + utils + component tests + rules tests in parallel on every push to main and every PR. Vercel deploys independently; CI is a separate signal.
 
 ## How To Work With Me

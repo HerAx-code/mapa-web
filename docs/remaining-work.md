@@ -111,8 +111,11 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   close; WCAG 2.4.3 / 2.1.2). ⬜ Still: the same treatment on the **staff-only
   admin/agency modals** (lower priority), and a **live screen-reader pass** on
   a low-end phone.
-- 🟡 **Performance** **(code)** — chunking done, but Firebase is still ~659 KB
-  and first paint on slow 3G is heavy; no performance budget or monitoring.
+- 🟡 **Performance** **(code)** — chunking done; ✅ a **gzipped bundle budget**
+  now gates CI (`npm run budget` → `bundle-budget.json`), so first-load weight
+  can't drift up silently (baseline 2026-09-29: ~372 KB initial JS, ~962 KB
+  total JS, gzip). ⬜ Still: Firebase is irreducibly large and first paint on
+  slow 3G is heavy; no runtime perf monitoring (RUM/Web Vitals) yet.
 
 ---
 
