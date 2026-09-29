@@ -143,9 +143,14 @@ async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {
 }
 
 exports.handleSyncRequestFinancials = handleSyncRequestFinancials
-// Exported for tests + parity checks against src/utils/requests.js.
-exports.deriveRequestFinancials = deriveRequestFinancials
-exports.deriveRequestStatus     = deriveRequestStatus
+// Exported for tests + parity checks against src/utils/requests.js. The status
+// lists are exported too so the parity test can assert them directly, not just
+// transitively through fixtures (a list drift with no matching fixture would
+// otherwise slip through).
+exports.deriveRequestFinancials     = deriveRequestFinancials
+exports.deriveRequestStatus         = deriveRequestStatus
+exports.COMMITTED_SLICE_STATUSES    = COMMITTED_SLICE_STATUSES
+exports.OUTSTANDING_SLICE_STATUSES  = OUTSTANDING_SLICE_STATUSES
 
 exports.syncRequestFinancials = onDocumentWritten({
   document: 'applications/{appId}',

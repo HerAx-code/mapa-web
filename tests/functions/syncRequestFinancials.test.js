@@ -29,10 +29,13 @@ vi.mock('firebase-functions', () => ({ logger: { info: vi.fn(), error: vi.fn() }
 vi.mock('firebase-functions/v2/firestore', () => ({ onDocumentWritten: (opts, fn) => fn }))
 
 let handleSyncRequestFinancials, fnDeriveRequestFinancials
+let fnCommittedStatuses, fnOutstandingStatuses
 beforeAll(() => {
   const mod = require('../../functions/src/syncRequestFinancials')
   handleSyncRequestFinancials = mod.handleSyncRequestFinancials
   fnDeriveRequestFinancials   = mod.deriveRequestFinancials
+  fnCommittedStatuses         = mod.COMMITTED_SLICE_STATUSES
+  fnOutstandingStatuses       = mod.OUTSTANDING_SLICE_STATUSES
 })
 
 const serverTimestamp = () => 'MOCK_TS'
@@ -214,6 +217,7 @@ describe('parity with src/utils/requests.js', () => {
     { need: 25000, slices: [{ status: 'reviewing', amountRequested: 12500 }] },
     { need: 25000, slices: [{ status: 'awaiting_info', amountRequested: 12500 }] },
     { need: 25000, slices: [{ status: 'endorsed', amountRequested: 12500 }] },
+    { need: 25000, slices: [{ status: 'interview', amountRequested: 12500 }] },
     { need: 0,     slices: [{ status: 'approved', amountApproved: 100 }] },
     { need: 25000, slices: [
       { status: 'approved', amountApproved: 10000 },
@@ -227,5 +231,14 @@ describe('parity with src/utils/requests.js', () => {
       expect(fnDeriveRequestFinancials(slices, need))
         .toEqual(web.deriveRequestFinancials(slices, need))
     }
+  })
+
+  // Guard the mirror directly, not just transitively: a status added to or
+  // removed from one file's list with no matching fixture above would still
+  // silently drift the money maths otherwise.
+  it('mirrors the committed + outstanding status lists exactly', async () => {
+    const web = await import('../../src/utils/requests.js')
+    expect(fnCommittedStatuses).toEqual(web.COMMITTED_SLICE_STATUSES)
+    expect(fnOutstandingStatuses).toEqual(web.OUTSTANDING_SLICE_STATUSES)
   })
 })

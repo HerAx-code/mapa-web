@@ -68,8 +68,14 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   backup isn't a backup").
 - ⬜ **Functions error alerting** **(owner)** — they log to Cloud Logging, but
   nothing surfaces a failure. Optional `@sentry/node` in `functions/`.
-- ⬜ **`syncRequestFinancials` drift check** **(code/owner)** — the deployed
-  version may lag the repo; verify and redeploy if the funding maths changed.
+- 🟡 **`syncRequestFinancials` drift check** **(code/owner)** — ✅ **repo-side
+  parity is now guarded**: the function's funding maths is a mirror of
+  `src/utils/requests.js`, and `tests/functions/syncRequestFinancials.test.js`
+  now asserts `deriveRequestFinancials` parity over fixtures **and** compares the
+  `COMMITTED_/OUTSTANDING_SLICE_STATUSES` lists directly (runs in CI via
+  `test:functions`). Verified in sync as of 2026-09-29. ⬜ **(owner)** the
+  *deployed* function vs repo still needs a console check — the deployed version
+  may lag `main`; redeploy `functions/` if so (`--project mapa-crmc`, Blaze).
 
 ### 3. Governance & compliance (the real hospital go-live gates)
 - ⬜ **Project ownership + named maintenance owner** **(owner)** — still on a
