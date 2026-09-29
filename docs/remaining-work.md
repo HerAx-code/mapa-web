@@ -84,8 +84,9 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   CRMC domain before scaling.
 - 🟡 **Interview logistics are manual** **(by design, acceptable)** — Google
   Meet links pasted by hand; reminders email/in-app only.
-- ⬜ **Patient self-service data access** **(code)** — admins can export; a
-  patient can't download their own data (a DPA "right to access" nicety).
+- ✅ **Patient self-service data access** **(code)** — shipped (#213/#216):
+  "Download my data" (RA 10173 §16f) is now surfaced as its own row under
+  patient **More**, so a patient can export their own data, not just admins.
 
 ### 5. Quality assurance
 - 🟡 **End-to-end tests** **(code)** — ✅ a Playwright smoke suite now runs in
