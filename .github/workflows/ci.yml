@@ -77,6 +77,12 @@ jobs:
         # Vercel runs.
         run: npm run build
 
+      - name: Check bundle budget
+        # Fail if the gzipped bundle grew past bundle-budget.json — first-load
+        # weight matters for indigent patients on slow connections. Bump the
+        # budget deliberately in the same PR when growth is intended.
+        run: npm run budget
+
       - name: Run utils tests
         run: npm test
 
