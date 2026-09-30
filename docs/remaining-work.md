@@ -108,9 +108,13 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   on `ConfirmModal`, `DocViewerModal`, and the patient/shared modals
   `SelfieCaptureModal`, `NotificationModal`, and the shell `ComposeModal`
   (focus enters the dialog, Tab is trapped, Escape closes, focus restores on
-  close; WCAG 2.4.3 / 2.1.2). ⬜ Still: the same treatment on the **staff-only
-  admin/agency modals** (lower priority), and a **live screen-reader pass** on
-  a low-end phone.
+  close; WCAG 2.4.3 / 2.1.2). Extended to the standalone staff modals
+  (`MfaEnrollModal`, `SignedGLUploadModal`, `CompareFacesModal`,
+  `SuggestEndorsementModal`) and the agency workflow modals in
+  `ApplicationModals` (Reject / Approve / RequestInfo). ⬜ Still: the
+  **page-inline admin modals** (Accounts, Agencies, AgencyDetail, Announcements,
+  AssistanceTypes, DocTypes, HospitalIDs, Requests, agency Dashboard/GLViewer/
+  Team), and a **live screen-reader pass** on a low-end phone.
 - 🟡 **Performance** **(code)** — chunking done; ✅ a **gzipped bundle budget**
   now gates CI (`npm run budget` → `bundle-budget.json`), so first-load weight
   can't drift up silently (baseline 2026-09-29: ~372 KB initial JS, ~962 KB

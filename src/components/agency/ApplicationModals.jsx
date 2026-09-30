@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { tsToDate } from '../../utils/dates'
@@ -36,13 +38,22 @@ export const REJECT_TEMPLATES = [
 
 export function RejectModal({ app, onConfirm, onClose }) {
   const [reason, setReason] = useState('')
+  const panelRef = useRef(null)
+  useEscapeKey(onClose)
+  useFocusTrap(panelRef, true)
   return (
     <div className="fixed inset-0 bg-black/40 z-[300] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reject-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Reject Application</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="reject-modal-title" className="text-base font-semibold text-gray-900">Reject Application</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">
@@ -100,6 +111,9 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   const [purposes, setPurposes]           = useState(new Set())
   const [saving, setSaving]               = useState(false)
   const [priorApproval, setPriorApproval] = useState(null)
+  const panelRef = useRef(null)
+  useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
 
   useEffect(() => {
     if (!app?.patientId) return
@@ -205,13 +219,19 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   return (
     <div className="fixed inset-0 bg-black/40 z-[300] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approve-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Approve & Issue Guarantee Letter</h2>
+            <h2 id="approve-modal-title" className="text-base font-semibold text-gray-900">Approve & Issue Guarantee Letter</h2>
             <p className="text-xs text-gray-400 mt-0.5">{app.patientName} · {app.appId}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -413,17 +433,26 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
 export function RequestInfoModal({ app, onConfirm, onClose }) {
   const [message, setMessage] = useState('')
   const [saving, setSaving]   = useState(false)
+  const panelRef = useRef(null)
+  useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
 
   return (
     <div className="fixed inset-0 bg-black/40 z-[300] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="requestinfo-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <MdHourglassEmpty size={20} className="text-amber-500" />
-            <h2 className="text-base font-semibold text-gray-900">Request More Information</h2>
+            <h2 id="requestinfo-modal-title" className="text-base font-semibold text-gray-900">Request More Information</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">
