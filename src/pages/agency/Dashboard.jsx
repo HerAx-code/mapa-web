@@ -4,7 +4,7 @@ import BudgetHero from '../../components/agency/BudgetHero'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   MdWarning, MdCalendarToday, MdArrowForward,
   MdInbox, MdVideoCall, MdCardMembership, MdBarChart,
@@ -26,6 +26,7 @@ import Tour from '../../components/Tour'
 import { agencyDashboardTour, resetTourFlag } from '../../utils/tours'
 import { tsToDate, phTodayKey } from '../../utils/dates'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import toast from 'react-hot-toast'
 
 // Threshold below which the agency gets a one-shot "budget running low"
@@ -511,8 +512,10 @@ function BudgetTopUpModal({ agency, user, onClose }) {
   const [amount, setAmount]   = useState('')
   const [reason, setReason]   = useState('')
   const [saving, setSaving]   = useState(false)
+  const panelRef = useRef(null)
 
   useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
 
   const allocated = agency.budget?.allocated ?? 0
   const committed = agency.budget?.committed ?? 0
@@ -566,10 +569,16 @@ function BudgetTopUpModal({ agency, user, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="topup-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Request Budget Top-Up</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="topup-modal-title" className="text-base font-semibold text-gray-900">Request Budget Top-Up</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">

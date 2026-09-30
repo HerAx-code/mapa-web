@@ -1,6 +1,7 @@
 import Layout from '../../components/Layout'
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   collection, onSnapshot, addDoc, deleteDoc, updateDoc,
   doc, serverTimestamp, writeBatch, getDocs, query, where,
@@ -31,7 +32,9 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
     description:  type?.description  ?? '',
   })
   const [saving, setSaving] = useState(false)
+  const panelRef = useRef(null)
   useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
   const handleSave = async () => {
@@ -82,12 +85,18 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assistancetype-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 id="assistancetype-modal-title" className="text-base font-semibold text-gray-900">
             {isEdit ? 'Edit Assistance Type' : 'Add Assistance Type'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>

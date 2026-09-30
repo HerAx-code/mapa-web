@@ -1,5 +1,6 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useParams, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
@@ -38,6 +39,9 @@ function EditCoordinatorModal({ coordinator, onClose }) {
   const { user: currentUser } = useAuth()
   const [form, setForm]       = useState({ name: coordinator.name ?? '', contact: coordinator.contact ?? '' })
   const [saving, setSaving]   = useState(false)
+  const panelRef = useRef(null)
+  useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
   const handleSave = async () => {
@@ -61,10 +65,16 @@ function EditCoordinatorModal({ coordinator, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editcoord2-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Edit Coordinator</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="editcoord2-modal-title" className="text-base font-semibold text-gray-900">Edit Coordinator</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>
@@ -121,6 +131,8 @@ export default function AgencyDetail() {
   const [promoting,         setPromoting]         = useState(false)
   const [disabling,         setDisabling]         = useState(false)
   useEscapeKey(() => { if (!disabling) setShowDisableDialog(false) }, showDisableDialog)
+  const disableDialogRef = useRef(null)
+  useFocusTrap(disableDialogRef, showDisableDialog)
   const [deletingAgency,    setDeletingAgency]    = useState(false)
 
   // Slot editing
@@ -814,9 +826,15 @@ export default function AgencyDetail() {
       {showDisableDialog && (
         <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
           onClick={e => e.target === e.currentTarget && !disabling && setShowDisableDialog(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div
+            ref={disableDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="disable-modal-title"
+            tabIndex={-1}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">Disable {agency.name}?</h2>
+              <h2 id="disable-modal-title" className="text-base font-semibold text-gray-900">Disable {agency.name}?</h2>
               <p className="text-xs text-gray-500 mt-1">
                 {pendingApps.length === 0
                   ? 'No applications are currently in flight. Disabling will simply hide this agency from new applicants.'

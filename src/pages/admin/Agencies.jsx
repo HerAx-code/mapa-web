@@ -2,7 +2,9 @@ import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import AgencyCapacityOverview from '../../components/admin/AgencyCapacityOverview'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase'
@@ -91,6 +93,9 @@ export function AgencyModal({ agency, onClose, onSave }) {
   const [typesList,     setTypesList]     = useState([])
   const [docTypesList,  setDocTypesList]  = useState([])
   const [saving,        setSaving]        = useState(false)
+  const panelRef = useRef(null)
+  useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   useEffect(() => {
@@ -171,10 +176,16 @@ export function AgencyModal({ agency, onClose, onSave }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="agency-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">{isEdit ? 'Edit Agency' : 'Add New Agency'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="agency-modal-title" className="text-base font-semibold text-gray-900">{isEdit ? 'Edit Agency' : 'Add New Agency'}</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">

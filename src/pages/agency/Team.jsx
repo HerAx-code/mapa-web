@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   collection, query, where, onSnapshot, doc, setDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore'
@@ -44,7 +45,9 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const panelRef = useRef(null)
   useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
 
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
   const regeneratePw = () => setForm(p => ({ ...p, password: generateTempPassword() }))
@@ -113,10 +116,16 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="addcoord-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Add Coordinator</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="addcoord-modal-title" className="text-base font-semibold text-gray-900">Add Coordinator</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">
@@ -182,7 +191,9 @@ function EditCoordModal({ coord, currentUser, onClose }) {
   const [form, setForm]     = useState({ name: coord.name ?? '', contact: coord.contact ?? '' })
   const [saving, setSaving] = useState(false)
 
+  const panelRef = useRef(null)
   useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name cannot be empty.'); return }
@@ -212,10 +223,16 @@ function EditCoordModal({ coord, currentUser, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editcoord-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Edit Coordinator</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="editcoord-modal-title" className="text-base font-semibold text-gray-900">Edit Coordinator</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div>

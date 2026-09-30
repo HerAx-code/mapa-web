@@ -1,6 +1,7 @@
 import Layout from '../../components/Layout'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
@@ -27,7 +28,9 @@ const getNextNum = (ids) => {
 function BulkAddModal({ nextNum, onClose }) {
   const [count, setCount]   = useState(10)
   const [adding, setAdding] = useState(false)
+  const panelRef = useRef(null)
   useEscapeKey(onClose, !adding)
+  useFocusTrap(panelRef, true)
   const { user }            = useAuth()
   const year     = new Date().getFullYear()
   const startNum = nextNum
@@ -67,11 +70,17 @@ function BulkAddModal({ nextNum, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulkadd-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden outline-none">
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">Bulk Add Patient Access Codes</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <h2 id="bulkadd-modal-title" className="text-base font-semibold text-gray-900">Bulk Add Patient Access Codes</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
