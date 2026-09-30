@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { MdClose, MdInfoOutline, MdCheckCircle, MdBlock } from 'react-icons/md'
 import { DocPreview } from '../DocViewerModal'
 import StatusBadge from '../ui/StatusBadge'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 
 // Side-by-side ID-portrait ↔ live-selfie compare for the CRMC verifier — the
 // highest-value affordance of the ID-verification feature: it puts the two
@@ -51,6 +52,8 @@ function DocActions({ doc, decidedOverride, busy, onVerify, onReject }) {
 
 export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVerify, onReject, onClose }) {
   useEscapeKey(onClose)
+  const panelRef = useRef(null)
+  useFocusTrap(panelRef, true)
   // Local optimistic "just verified" state, keyed by doc id (Reject closes the
   // modal, so only Verify needs to reflect in place).
   const [verifiedLocal, setVerifiedLocal] = useState({})
@@ -81,13 +84,19 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
   return (
     <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="comparefaces-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[92vh] flex flex-col overflow-hidden outline-none">
         <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
         </div>
         <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-3">
-          <h2 className="text-base font-semibold text-gray-900">Compare: ID portrait ↔ live selfie</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
+          <h2 id="comparefaces-modal-title" className="text-base font-semibold text-gray-900">Compare: ID portrait ↔ live selfie</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>
 
         {/* Advisory readout */}

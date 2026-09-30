@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { notify } from '../utils/notifications'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { MdClose, MdUpload, MdPictureAsPdf, MdOpenInNew } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -55,7 +57,10 @@ const isPdfDataUrl = (s) => typeof s === 'string' && s.startsWith('data:applicat
 
 export default function SignedGLUploadModal({ app, existing, onClose }) {
   const fileRef             = useRef()
+  const panelRef            = useRef(null)
   const [uploading, setUploading] = useState(false)
+  useEscapeKey(onClose, !uploading)
+  useFocusTrap(panelRef, true)
   // The base64-encoded payload, ready to write. null = nothing new selected.
   const [pendingPayload, setPendingPayload] = useState(null)
   const [pendingName, setPendingName]       = useState(null)
@@ -169,14 +174,20 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && !uploading && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="signedgl-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Upload Signed Guarantee Letter</h2>
+            <h2 id="signedgl-modal-title" className="text-base font-semibold text-gray-900">Upload Signed Guarantee Letter</h2>
             <p className="text-xs text-gray-400 mt-0.5">{app.patientName} · {app.appId}</p>
           </div>
-          <button onClick={onClose} disabled={uploading}
+          <button onClick={onClose} disabled={uploading} aria-label="Close"
             className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
         </div>
 
