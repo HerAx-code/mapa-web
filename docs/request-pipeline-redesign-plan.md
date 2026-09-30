@@ -1,5 +1,27 @@
 # CRMC Request-Processing Redesign Plan
 
+> **❌ REJECTED / SUPERSEDED (2026-09-30).** The parts of this plan that were
+> worth doing already shipped, and the rest is now stale or speculative:
+> - ✅ The **stage rail + explicit blockers** (PR #70) and the tested
+>   **`requestStage` model** (PR #69) already deliver the "know the state and the
+>   next action at a glance" value that motivated the redesign.
+> - ✅ **`VerifyDocsPanel`** was extracted (Phase 0, partial).
+> - 🗑️ The plan's whole **"interview & assessment"** stage is **gone** —
+>   interview scheduling was removed in favour of async remote assessment
+>   (`docs/remove-interview-scheduling-plan.md`), so `InterviewPanel` and the
+>   "three sub-tasks lumped together" framing no longer apply.
+> - ⏸️ The remaining **"header band + focused work area"** one-stage-at-a-time
+>   redesign is a *speculative* layout change (the current stacked detail +
+>   stage rail works), and the **big-file split of `admin/Requests.jsx`** is
+>   explicitly deferred as high-regression-risk in
+>   `docs/recovery-and-hardening-plan.md` ("Still pending — genuinely
+>   post-defense"). Not worth the risk for the marginal gain at pilot scale.
+>
+> A future *pure, behaviour-preserving* extraction of `AssessPanel`/`EndorsePanel`
+> (mirroring how `VerifyDocsPanel` was lifted) remains available as a low-risk
+> maintainability task if the file becomes a real burden — but it is **not**
+> committed work. The rest of this document is kept for historical context only.
+
 *Scope: the **CRMC/admin** side of the request pipeline — the `/admin/requests`
 queue and the request **processing** surface (`RequestDetail` in
 `src/pages/admin/Requests.jsx`). Approach: **redesign the flow/IA first, then

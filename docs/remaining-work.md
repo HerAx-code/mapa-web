@@ -134,6 +134,24 @@ biometric verification**, **embedded video calling** (Google Meet links
 instead), **donor portal**, **fraud-detection engine**, **multi-hospital
 support**, **real-time IHOMIS integration**.
 
+### Rejected plans / plan-items (2026-09-30)
+
+Reviewed and closed as unnecessary so they stop reading as "unfinished":
+
+- **`request-pipeline-redesign-plan.md`** — ❌ superseded. Its value shipped
+  (stage rail #70, `requestStage` #69, `VerifyDocsPanel`); its interview stage is
+  gone (removed); the leftover "focused work area" redesign + `admin/Requests.jsx`
+  split are speculative/high-risk. A pure `AssessPanel`/`EndorsePanel` extraction
+  stays available as optional low-risk cleanup, not committed work.
+- **UX plan Phase 3.2 — shared queue components + stage board** — ❌ rejected. A
+  large, medium-risk rewrite of two working (reskinned) queues for marginal gain.
+- **Recovery plan §3.4 — cursor pagination on `admin/Requests`** — ❌ rejected.
+  The shipped `limit(500)` cap is sufficient for years of single-hospital scale.
+
+Still *deferred* (not rejected — genuine value if the codebase keeps growing):
+the big-file splits (Requests/Layout/RequestAssistance), `ApplicationDetail`
+handlers → hooks, `ProfileModalContext`. Left post-defense per the recovery plan.
+
 > **SMS is no longer out of scope — it is now built** via Semaphore (opt-in
 > per message, paid per segment, PII-free, reserved for high-value alerts).
 > It is not yet *live*: the Semaphore sender name "MAPA" is pending approval

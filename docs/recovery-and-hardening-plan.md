@@ -466,7 +466,13 @@ useEffect(() => {
 Then `TrackStatus.jsx:380` becomes one O(1) lookup instead of N
 getDocs.
 
-### 3.4 Pagination on `admin/Requests.jsx` (half day)
+### 3.4 Pagination on `admin/Requests.jsx` (half day) — ❌ REJECTED (2026-09-30)
+
+> **Rejected as unnecessary.** The `limit(500)` cap already shipped (Phase 0.5,
+> `224a6df`) is sufficient for years of single-hospital pilot volume, and CRMC is
+> single-hospital by design (no multi-hospital scope). Cursor pagination adds
+> real complexity (load-more state, snapshot-window juggling) for a scale this
+> system will not reach. Revisit only if request volume ever approaches the cap.
 
 Replace the unbounded listener with cursor-based pagination:
 - First page: `limit(50)` ordered by `createdAt desc`

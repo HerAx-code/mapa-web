@@ -128,7 +128,13 @@ One `utils/sla` vocabulary used by **both** queues (CRMC 48h SLA and agency "day
 waiting" become one on-track/due-soon/overdue scale with consistent color). Overdue-first
 triage sort available in both.
 
-### 3.2 Shared queue components + optional stage board — **L, medium risk**
+### 3.2 Shared queue components + optional stage board — **L, medium risk** — ❌ REJECTED (2026-09-30)
+> **Rejected as unnecessary.** Both operational queues were reskinned and work
+> well (see `docs/reskin-relayout-plan.md` — admin ✅, agency queue clear). This
+> is a large, medium-risk rewrite of two working surfaces (a shared `QueueTable`
+> + an optional kanban board) for marginal gain, and it touches the busiest
+> staff paths. Not worth the regression risk at single-hospital pilot scale.
+> Revisit only if a concrete operator need for a board view is actually reported.
 - **Change:** extract the CRMC `RequestsTable`/`QueueTabs` and the agency Inbox table
   into a shared `QueueTable` + `QueueFilters` (columns/filters configured per role).
   Add an **optional board/kanban view** of the CRMC queue by stage (verify → assess →
