@@ -103,9 +103,23 @@ and `Permissions-Policy`. Limits XSS blast radius + clickjacking.
 - **Done:** HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff,
   Referrer-Policy, and Permissions-Policy (camera=(self) so the ID selfie
   keeps working) are live. CSP ships in **Report-Only** mode.
-- **Remaining:** watch the browser console for CSP violations on real flows
-  (selfie/OCR worker, Firebase, fonts, agency logo URLs), tighten, then flip
-  `Content-Security-Policy-Report-Only` → `Content-Security-Policy`. Replacing
+- **Report-Only CSP audited + corrected (2026-09-30).** A static audit against
+  the code found three directives that would have **broken ID OCR** on a flip to
+  enforce, plus one latent gap — now fixed in the Report-Only policy:
+  - `script-src 'wasm-unsafe-eval'` — tesseract.js-core is WebAssembly; without
+    this, WASM instantiation is blocked.
+  - `connect-src https://cdn.jsdelivr.net` + `worker-src https://cdn.jsdelivr.net`
+    — `createWorker('eng+fil')` in `src/utils/idOcr.js` uses tesseract's default
+    paths, which fetch the worker + WASM core from jsdelivr at runtime.
+  - `connect-src https://tessdata.projectnaptha.com` — default language-data host.
+  - `connect-src https://*.sentry.io` — latent: Sentry (DSN-gated) posts events
+    there once activated.
+- **Remaining:** with the policy now matching the code, deploy and **watch real
+  Report-Only violation reports** across the live flows (selfie/OCR, Firebase,
+  fonts, agency logo URLs, App Check reCAPTCHA) for a spell, then flip
+  `Content-Security-Policy-Report-Only` → `Content-Security-Policy`. **Do not flip
+  blind** — there is no violation-report endpoint yet, so the flip needs either a
+  `report-to` sink or a period of manual console observation first. Replacing
   `script-src 'unsafe-inline'` with a nonce is the follow-up hardening.
 
 ### 2.4 Rules-deploy gate in CI  → closes "manual rule deploy"  — 🟢 live & proven (2026-09-06)
