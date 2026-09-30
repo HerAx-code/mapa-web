@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import QRCode from 'qrcode'
 import { MdClose, MdShield, MdCheckCircle, MdContentCopy, MdCheck, MdMailOutline } from 'react-icons/md'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import toast from 'react-hot-toast'
 import { sendEmailVerification } from 'firebase/auth'
 import { auth } from '../firebase'
@@ -15,6 +17,9 @@ import {
 export default function MfaEnrollModal({ onClose }) {
   const fbUser = auth.currentUser
   const alreadyEnrolled = isMfaEnrolled(fbUser)
+  const panelRef = useRef(null)
+  useEscapeKey(onClose)
+  useFocusTrap(panelRef, true)
 
   // steps: 'reauth' → 'setup' → 'done'; or 'manage' when already enrolled.
   const [step, setStep]       = useState(alreadyEnrolled ? 'manage' : 'reauth')
@@ -115,13 +120,19 @@ export default function MfaEnrollModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mfa-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <MdShield size={18} className="text-brand-500" />
-            <h2 className="text-base font-semibold text-gray-900">Two-step verification</h2>
+            <h2 id="mfa-modal-title" className="text-base font-semibold text-gray-900">Two-step verification</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-5">

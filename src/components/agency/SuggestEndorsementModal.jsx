@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import SearchableSelect from '../ui/SearchableSelect'
 import { useAuth } from '../../contexts/AuthContext'
+import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdSend, MdGroups } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -38,6 +40,9 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
   const [recommendedAmount, setRecommendedAmount] = useState('')
   const [urgency, setUrgency] = useState('medium')
   const [saving, setSaving] = useState(false)
+  const panelRef = useRef(null)
+  useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
   const [loadingAgencies, setLoadingAgencies] = useState(true)
 
   // Load all enabled agencies that aren't already on this case.
@@ -112,7 +117,13 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-end sm:items-center justify-center sm:p-4"
          onClick={e => e.target === e.currentTarget && !saving && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="suggest-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto outline-none">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
@@ -121,11 +132,11 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
               <MdGroups size={18} className="text-brand-500" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Suggest another agency</h2>
+              <h2 id="suggest-modal-title" className="text-base font-semibold text-gray-900">Suggest another agency</h2>
               <p className="text-xs text-gray-400 mt-0.5">{app.patientName} · {app.appId}</p>
             </div>
           </div>
-          <button onClick={onClose} disabled={saving}
+          <button onClick={onClose} disabled={saving} aria-label="Close"
                   className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
             <MdClose size={20} />
           </button>
