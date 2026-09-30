@@ -13,6 +13,7 @@ import Layout from '../../components/Layout'
 import GuaranteeLetter from '../../components/GuaranteeLetter'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 
 // This page renders the Guarantee Letter natively (browser layout engine)
 // so the on-screen view and the printed/saved-as-PDF output are pixel-identical.
@@ -34,6 +35,8 @@ export default function GLViewer() {
   // Escape closes the mark-issued confirm — but not mid-write, mirroring the
   // backdrop click's !markingIssued guard so the two dismissals behave alike.
   useEscapeKey(() => setShowConfirmIssued(false), showConfirmIssued && !markingIssued)
+  const confirmIssuedRef = useRef(null)
+  useFocusTrap(confirmIssuedRef, showConfirmIssued)
 
   // R28: only the FIRST snapshot's missing state counts as "not found";
   // subsequent missing states (Firestore offline replay, a transient
@@ -298,12 +301,18 @@ export default function GLViewer() {
       {showConfirmIssued && (
         <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4 print:hidden"
           onClick={e => e.target === e.currentTarget && !markingIssued && setShowConfirmIssued(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+          <div
+            ref={confirmIssuedRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="markissued-modal-title"
+            tabIndex={-1}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden outline-none">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
               <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
                 <MdCheckCircle size={18} className="text-amber-500" />
               </div>
-              <h2 className="text-base font-semibold text-gray-900">Mark Guarantee Letter as Issued?</h2>
+              <h2 id="markissued-modal-title" className="text-base font-semibold text-gray-900">Mark Guarantee Letter as Issued?</h2>
             </div>
             <div className="px-5 py-4 space-y-2">
               <p className="text-sm text-gray-600 leading-relaxed">

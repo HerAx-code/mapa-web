@@ -1,6 +1,7 @@
 import Layout from '../../components/Layout'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   collection, getDocs, addDoc, updateDoc, deleteDoc,
   doc, serverTimestamp, query, orderBy, Timestamp,
@@ -117,6 +118,9 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
   // Escape closes the dialog in modal mode only — in embedded mode it's an
   // inline panel, not an overlay, so Escape shouldn't wipe the form.
   useEscapeKey(onClose, !embedded && !saving)
+  // Trap focus only in modal mode (embedded is inline page content, not a dialog).
+  const panelRef = useRef(null)
+  useFocusTrap(panelRef, !embedded)
 
   // R38: surface + targetRoles. Promos are locked at 'feed' / ['patient']
   // (agency promotions never go in the top strip and only target patients).
@@ -349,7 +353,12 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
 
   if (embedded) return shell
   return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={isEdit ? 'Edit announcement' : 'New announcement'}
+      className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
       {shell}
     </div>

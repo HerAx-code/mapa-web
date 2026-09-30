@@ -111,10 +111,13 @@ CRMC/console access, not code · **(code)** fully doable in the repo.
   close; WCAG 2.4.3 / 2.1.2). Extended to the standalone staff modals
   (`MfaEnrollModal`, `SignedGLUploadModal`, `CompareFacesModal`,
   `SuggestEndorsementModal`) and the agency workflow modals in
-  `ApplicationModals` (Reject / Approve / RequestInfo). ⬜ Still: the
-  **page-inline admin modals** (Accounts, Agencies, AgencyDetail, Announcements,
-  AssistanceTypes, DocTypes, HospitalIDs, Requests, agency Dashboard/GLViewer/
-  Team), and a **live screen-reader pass** on a low-end phone.
+  `ApplicationModals` (Reject / Approve / RequestInfo), and the page-inline
+  admin/agency modals (Accounts, Agencies, AgencyDetail ×2, Announcements,
+  AssistanceTypes, DocTypes, HospitalIDs, Requests, agency Dashboard / GLViewer /
+  Team ×2). **Effectively every dialog in the app now has the treatment.** ⬜
+  Still: a **live screen-reader pass** on a low-end phone (the one truly manual
+  step). ConversationThread's `fixed inset-0` is a mobile full-screen pane with a
+  back button, not an overlay dialog, so it's intentionally left as-is.
 - 🟡 **Performance** **(code)** — chunking done; ✅ a **gzipped bundle budget**
   now gates CI (`npm run budget` → `bundle-budget.json`), so first-load weight
   can't drift up silently (baseline 2026-09-29: ~372 KB initial JS, ~962 KB

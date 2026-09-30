@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, updateDoc,
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
@@ -73,7 +74,9 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const [selected, setSelected] = useState(() => new Set())
   const [notes,    setNotes]    = useState('')
   const [saving,   setSaving]   = useState(false)
+  const panelRef = useRef(null)
   useEscapeKey(onClose, !saving)
+  useFocusTrap(panelRef, true)
 
   // R13: pre-endorse document existence check. The request snapshots
   // `attachedDocuments` at submission, but those Firestore docs can disappear
@@ -326,14 +329,20 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-[200] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && !saving && onClose()}>
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="endorse-modal-title"
+        tabIndex={-1}
+        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto outline-none">
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Endorse to agencies</h2>
+            <h2 id="endorse-modal-title" className="text-base font-semibold text-gray-900">Endorse to agencies</h2>
             <p className="text-xs text-gray-400 mt-0.5">{request.patientName} · {request.requestId}</p>
           </div>
-          <button onClick={onClose} disabled={saving}
+          <button onClick={onClose} disabled={saving} aria-label="Close"
             className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
         </div>
 
