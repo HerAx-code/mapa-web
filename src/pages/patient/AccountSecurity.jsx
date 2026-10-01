@@ -63,9 +63,9 @@ export default function AccountSecurity() {
           <div className="card divide-y divide-gray-50">
             {fields.map(f => (
               <div key={f.key} className="px-4 py-3">
-                <p className="text-xs text-gray-400">{t(`patient.account.${f.key}`)}</p>
+                <p className="text-xs text-gray-500">{t(`patient.account.${f.key}`)}</p>
                 <p className="text-sm font-medium text-gray-800 mt-0.5 break-words">
-                  {f.value || <span className="text-gray-400 font-normal">{t('patient.account.notSet')}</span>}
+                  {f.value || <span className="text-gray-500 font-normal">{t('patient.account.notSet')}</span>}
                 </p>
               </div>
             ))}
