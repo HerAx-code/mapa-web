@@ -52,7 +52,9 @@ export default function AppToaster() {
           background: '#1f2937',
           color: '#f9fafb',
           borderRadius: '10px',
-          fontSize: '13px',
+          // L4: 13px was below the patient 16px body standard. 15px reads
+          // comfortably for a transient toast without an oversized popup.
+          fontSize: '15px',
           maxWidth: '92vw',
         },
       }}
