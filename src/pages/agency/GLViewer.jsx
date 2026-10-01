@@ -146,7 +146,7 @@ export default function GLViewer() {
   if (loading || !app) return (
     <Layout breadcrumb="Guarantee Letter">
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-sm text-gray-400 animate-pulse">Loading Guarantee Letter…</div>
+        <div className="text-sm text-gray-500 animate-pulse">Loading Guarantee Letter…</div>
       </div>
     </Layout>
   )
@@ -164,7 +164,7 @@ export default function GLViewer() {
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium">
             <MdArrowBack size={16} /> Back to application
           </Link>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
             <span className="font-mono">{app.appId}</span>
             <span className="text-gray-300">·</span>
             <span>{app.patientName}</span>

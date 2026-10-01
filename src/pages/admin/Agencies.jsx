@@ -185,7 +185,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 id="agency-modal-title" className="text-base font-semibold text-gray-900">{isEdit ? 'Edit Agency' : 'Add New Agency'}</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -203,10 +203,10 @@ export function AgencyModal({ agency, onClose, onSave }) {
             />
             <div>
               <p className="text-sm font-semibold text-gray-800">{form.name || 'Agency Name'}</p>
-              <p className="text-xs text-gray-400">{derivedLocation || 'Location'}</p>
+              <p className="text-xs text-gray-500">{derivedLocation || 'Location'}</p>
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Basic Info</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Basic Info</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Agency Name <span className="text-red-400">*</span></label>
@@ -227,7 +227,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
             <textarea className="input resize-none" rows={2}
               placeholder="What the patient must do once endorsed (e.g. bring valid ID + this GL to the PCSO desk, window 3)..."
               value={form.procedure} onChange={set('procedure')} />
-            <p className="text-xs text-gray-400 mt-1">Shown to patients when they're endorsed to this agency.</p>
+            <p className="text-xs text-gray-500 mt-1">Shown to patients when they're endorsed to this agency.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Avatar Color</label>
@@ -239,27 +239,27 @@ export function AgencyModal({ agency, onClose, onSave }) {
                   title={c.label} />
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-1">Used as the avatar background when no logo is set.</p>
+            <p className="text-xs text-gray-500 mt-1">Used as the avatar background when no logo is set.</p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Logo URL <span className="text-gray-400 font-normal">— optional</span></label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Logo URL <span className="text-gray-500 font-normal">— optional</span></label>
             <input className="input" type="url" inputMode="url"
               placeholder="https://your-agency.gov.ph/logo.png"
               value={form.logoUrl} onChange={set('logoUrl')} />
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               HTTPS link to your official logo (PNG / SVG / JPG). Replaces the
               colored initials avatar everywhere. Leave blank to keep using
               initials. A broken URL automatically falls back to initials.
             </p>
           </div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Contact & Location</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Contact & Location</p>
           {/* R32 (refactored R39): shared AddressPicker -- same component
               the patient registration, Account Settings, and AddAgency
               forms now use. Barangay is intentionally hidden; the office's
               fine-grained location is the "Office / Building" field. */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
-              <MdLocationOn size={12} className="text-gray-400" /> Office Location <span className="text-red-400">*</span>
+              <MdLocationOn size={12} className="text-gray-500" /> Office Location <span className="text-red-400">*</span>
             </label>
             <AddressPicker
               showBarangay={false}
@@ -270,7 +270,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-400" /> Office / Building <span className="text-gray-400 font-normal">— optional</span></label>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-500" /> Office / Building <span className="text-gray-500 font-normal">— optional</span></label>
               <input className="input" placeholder="CRMC Ground Floor"
                 value={form.officeName} onChange={set('officeName')} />
               {/* On edit, surface the legacy free-text location so the
@@ -281,11 +281,11 @@ export function AgencyModal({ agency, onClose, onSave }) {
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdPhone size={12} className="text-gray-400" /> Phone</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdPhone size={12} className="text-gray-500" /> Phone</label>
               <input className="input" placeholder="064-421-2500" value={form.phone} onChange={set('phone')} />
             </div>
           </div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Operations</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Operations</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Processing Time</label>
@@ -302,7 +302,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Requirements</label>
             {docTypesList.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">
+              <p className="text-xs text-gray-500 italic">
                 No document types defined. Add them in the Document Types page first.
               </p>
             ) : (
@@ -322,7 +322,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Assistance Types</label>
             {typesList.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">
+              <p className="text-xs text-gray-500 italic">
                 No assistance types defined. Add them in the Assistance Types page first.
               </p>
             ) : (
@@ -573,7 +573,7 @@ export default function Agencies() {
             <button key={m.filterKey}
               className={`card p-4 text-left w-full transition-colors hover:bg-gray-50 ${statusFilter === m.filterKey ? 'ring-2 ring-brand-400' : ''}`}
               onClick={() => setStatusFilter(statusFilter === m.filterKey ? 'all' : m.filterKey)}>
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
+              <p className="text-xs text-gray-500 mb-1">{m.label}</p>
               <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
             </button>
           ))}
@@ -586,7 +586,7 @@ export default function Agencies() {
         {/* Search + Filter + Sort */}
         <div className="flex gap-3 mb-5 flex-wrap">
           <div className="relative flex-1 min-w-48">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <input className="input pl-9" placeholder="Search by name or location..."
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
@@ -678,7 +678,7 @@ export default function Agencies() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 flex-wrap">
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 flex-wrap">
                       <span className="flex items-center gap-1"><MdLocationOn size={11} />{agency.location}</span>
                       <span className="flex items-center gap-1"><MdPhone size={11} />{agency.phone}</span>
                       <span>· {agency.processingTime}</span>
@@ -690,7 +690,7 @@ export default function Agencies() {
                           <MdWarning size={12} /> No coordinator assigned
                         </span>
                       ) : activeCoord ? (
-                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <span className="flex items-center gap-1 text-xs text-gray-500">
                           <MdPerson size={12} />
                           {coordinators.length === 1
                             ? activeCoord.name
@@ -707,7 +707,7 @@ export default function Agencies() {
 
                   {/* Quick actions — stop propagation so row click doesn't also fire */}
                   <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <button className="p-1.5 text-gray-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
+                    <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
                       onClick={() => handleMessageAgency(agency)}><MdMessage size={16} /></button>
                     {isSuperAdmin && (
                       <>
@@ -716,7 +716,7 @@ export default function Agencies() {
                           onClick={() => toggleEnabled(agency)}>
                           {agency.enabled ? 'Disable' : 'Enable'}
                         </button>
-                        <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
+                        <button className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
                           onClick={() => setConfirmDelete(agency.id)}><MdDelete size={16} /></button>
                       </>
                     )}
@@ -751,7 +751,7 @@ export default function Agencies() {
               <p className="text-sm font-medium text-gray-600 mb-1">
                 {search || statusFilter !== 'all' ? 'No agencies match your filter' : 'No agencies yet'}
               </p>
-              <p className="text-xs text-gray-400 mb-4">
+              <p className="text-xs text-gray-500 mb-4">
                 {search || statusFilter !== 'all'
                   ? 'Try changing your search or filter.'
                   : 'Add your first agency or run the seed script.'}

@@ -200,9 +200,9 @@ export default function Messages() {
                 <p className={`text-sm truncate ${unread ? 'font-semibold text-gray-900' : isActive ? 'font-medium text-brand-700' : 'text-gray-700'}`}>
                   {name}
                 </p>
-                <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{fmtDate(c.lastAt)}</span>
+                <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">{fmtDate(c.lastAt)}</span>
               </div>
-              <p className={`text-xs truncate ${unread ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
+              <p className={`text-xs truncate ${unread ? 'font-medium text-gray-700' : 'text-gray-500'}`}>
                 {c.lastMessage
                   ? `${c.lastFrom === user.uid ? 'You: ' : ''}${c.lastMessage}`
                   : c.subject || '(no messages yet)'
@@ -245,7 +245,7 @@ export default function Messages() {
                 CRMC will message you here if they need anything about your
                 request — you&apos;ll be able to reply.
               </p>
-              <p className="text-xs text-gray-400 leading-relaxed max-w-xs mx-auto">
+              <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
                 For other questions, visit CRMC Medical Social Services.
               </p>
             </>
@@ -311,11 +311,11 @@ export default function Messages() {
                 <span className="text-xs text-gray-500 font-medium">
                   {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
                   {search && filtered.length !== conversations.length && (
-                    <span className="text-gray-400 font-normal"> of {conversations.length}</span>
+                    <span className="text-gray-500 font-normal"> of {conversations.length}</span>
                   )}
                 </span>
                 <div className="relative ml-auto">
-                  <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                  <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={15} />
                   <input className="input pl-8 py-1.5 text-sm w-52" placeholder="Search messages..."
                     value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
@@ -361,14 +361,14 @@ export default function Messages() {
             {conversations.length > 0 && (
               <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0 bg-gray-50">
                 <div className="relative">
-                  <MdSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                  <MdSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
                   <input className="input pl-8 py-1.5 text-sm w-full" placeholder="Search conversations..."
                     value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
                   {search && filtered.length !== conversations.length && (
-                    <span className="text-gray-400 font-normal"> of {conversations.length}</span>
+                    <span className="text-gray-500 font-normal"> of {conversations.length}</span>
                   )}
                 </p>
               </div>
@@ -394,7 +394,7 @@ export default function Messages() {
                 <p className="text-sm font-medium text-gray-600 mb-1">
                   {conversations.length === 0 ? 'No conversations yet' : 'No conversation selected'}
                 </p>
-                <p className="text-xs text-gray-400 max-w-xs">
+                <p className="text-xs text-gray-500 max-w-xs">
                   {conversations.length === 0
                     ? 'CRMC will message you here if they need anything about your request — you can reply from this page.'
                     : 'Pick a conversation on the left to read and reply.'}
@@ -474,13 +474,13 @@ export default function Messages() {
                   className="flex items-center gap-1 text-xs text-red-500 border border-red-200 bg-white px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
                   <MdDelete size={13} /> Delete
                 </button>
-                <span className="text-xs text-gray-400">{selected.size} selected</span>
+                <span className="text-xs text-gray-500">{selected.size} selected</span>
               </>
             ) : (
               <span className="text-xs text-gray-500">
                 {filtered.length} conversation{filtered.length !== 1 ? 's' : ''}
                 {search && filtered.length !== conversations.length && (
-                  <span className="text-gray-400"> of {conversations.length}</span>
+                  <span className="text-gray-500"> of {conversations.length}</span>
                 )}
               </span>
             )}
@@ -489,7 +489,7 @@ export default function Messages() {
           {/* Search */}
           <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0">
             <div className="relative">
-              <MdSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+              <MdSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
               <input className="input pl-8 py-1.5 text-sm w-full" placeholder="Search conversations..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
@@ -523,7 +523,7 @@ export default function Messages() {
                 <MdMessage size={28} className="text-brand-400" />
               </div>
               <p className="text-sm font-medium text-gray-600 mb-1">No conversation selected</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 Click a conversation on the left to start reading and replying
               </p>
             </div>

@@ -80,7 +80,7 @@ function BulkAddModal({ nextNum, onClose }) {
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 id="bulkadd-modal-title" className="text-base font-semibold text-gray-900">Bulk Add Patient Access Codes</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -94,14 +94,14 @@ function BulkAddModal({ nextNum, onClose }) {
               value={count}
               onChange={e => setCount(e.target.value)}
             />
-            <p className="text-xs text-gray-400 mt-1">Maximum 100 per batch.</p>
+            <p className="text-xs text-gray-500 mt-1">Maximum 100 per batch.</p>
           </div>
 
           {/* Preview */}
           <div className="bg-gray-50 rounded-xl p-3">
             <p className="text-xs font-medium text-gray-500 mb-1">Preview</p>
             <p className="text-sm font-mono text-gray-800">{preview}</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               {Number(count) || 0} ID{Number(count) !== 1 ? 's' : ''} will be created as <span className="font-medium text-green-600">Available</span>
             </p>
           </div>
@@ -432,18 +432,18 @@ export default function HospitalIDs() {
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Code or patient name" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Status</p>
               <ul className="-mx-1.5 space-y-px">
                 {[
                   ['all', 'All codes', hospitalIds.length],
@@ -456,7 +456,7 @@ export default function HospitalIDs() {
                       <button onClick={() => setStatusFilter(key)} aria-current={active ? 'true' : undefined}
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                         <span>{label}</span>
-                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-500'}`}>{n}</span>
                       </button>
                     </li>
                   )
@@ -466,7 +466,7 @@ export default function HospitalIDs() {
 
             {isSuperAdmin && (
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">Next code</p>
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Next code</p>
                 <p className="font-mono text-sm font-semibold text-gray-800">CRMC-{new Date().getFullYear()}-{String(nextNum).padStart(5, '0')}</p>
               </div>
             )}
@@ -479,7 +479,7 @@ export default function HospitalIDs() {
 
           {/* ── Code stream, grouped by status ── */}
           <div className="min-w-0">
-            <p className="text-xs text-gray-400 mb-3">{filtered.length} code{filtered.length !== 1 ? 's' : ''}{isFiltered ? ` of ${hospitalIds.length}` : ''}</p>
+            <p className="text-xs text-gray-500 mb-3">{filtered.length} code{filtered.length !== 1 ? 's' : ''}{isFiltered ? ` of ${hospitalIds.length}` : ''}</p>
 
             <div className="card overflow-hidden">
               {loading && (
@@ -496,8 +496,8 @@ export default function HospitalIDs() {
               {!loading && statusGroups.map(group => (
                 <section key={group.key}>
                   <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
-                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'code' : 'codes'}</span>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="ml-auto text-xs text-gray-500 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'code' : 'codes'}</span>
                   </div>
                   <ul className="divide-y divide-gray-50">
                     {group.entries.map(h => {
@@ -510,15 +510,15 @@ export default function HospitalIDs() {
                             <span className="font-mono text-sm text-gray-700 flex-shrink-0">{h.id}</span>
                             <span className={`badge text-xs flex-shrink-0 ${isUsed ? 'badge-blue' : 'badge-green'}`}>{isUsed ? 'Used' : 'Available'}</span>
                             <div className="flex-1 min-w-0 text-sm text-gray-600 truncate">
-                              {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-400">{h.patId}</span>}</> : <span className="text-gray-300">Unclaimed</span>}
+                              {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-500">{h.patId}</span>}</> : <span className="text-gray-300">Unclaimed</span>}
                             </div>
-                            <span className="text-xs text-gray-400 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
+                            <span className="text-xs text-gray-500 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
                             {isSuperAdmin ? (
                               <div className="flex items-center gap-0.5 flex-shrink-0">
                                 {isUsed && (
-                                  <button title="Reset to Available (revoke from current patient)" className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setConfirmRevoke(h)}><MdRefresh size={15} /></button>
+                                  <button title="Reset to Available (revoke from current patient)" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setConfirmRevoke(h)}><MdRefresh size={15} /></button>
                                 )}
-                                <button title="Delete code" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(h)}><MdDelete size={15} /></button>
+                                <button title="Delete code" className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(h)}><MdDelete size={15} /></button>
                               </div>
                             ) : <span className="text-xs text-gray-300 flex-shrink-0">View only</span>}
                           </div>
@@ -548,7 +548,7 @@ export default function HospitalIDs() {
               {!loading && filtered.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <MdSearch size={32} className="text-gray-200 mb-2" />
-                  <p className="text-sm text-gray-400">{search || statusFilter !== 'all' ? 'No codes match your filter.' : 'No access codes yet.'}</p>
+                  <p className="text-sm text-gray-500">{search || statusFilter !== 'all' ? 'No codes match your filter.' : 'No access codes yet.'}</p>
                   {(search || statusFilter !== 'all') ? (
                     <button onClick={() => { setSearch(''); setStatusFilter('all') }} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
                   ) : isSuperAdmin && (

@@ -364,7 +364,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               </Link>
               <span className="text-gray-300">/</span>
               <p className="text-sm font-semibold text-gray-800 truncate">{app.patientName}</p>
-              <span className="text-xs text-gray-400 truncate hidden sm:inline">· Unified Intake Sheet</span>
+              <span className="text-xs text-gray-500 truncate hidden sm:inline">· Unified Intake Sheet</span>
             </div>
             <div className="flex items-center gap-2">
               {/* Save state indicator */}
@@ -442,7 +442,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               <div className="card p-4">
                 <div className="flex items-baseline gap-2 mb-2">
                   <p className="text-2xl font-bold text-gray-800">{completedCount}</p>
-                  <p className="text-xs text-gray-400">of {required.length} required</p>
+                  <p className="text-xs text-gray-500">of {required.length} required</p>
                   {complete && (
                     <span className="ml-auto badge badge-green text-xs">Complete</span>
                   )}
@@ -465,7 +465,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                             ? 'bg-brand-50 text-brand-700 font-medium'
                             : 'text-gray-600 hover:bg-gray-50'
                         }`}>
-                        <Icon size={16} className={`flex-shrink-0 ${active ? 'text-brand-500' : 'text-gray-400'}`} />
+                        <Icon size={16} className={`flex-shrink-0 ${active ? 'text-brand-500' : 'text-gray-500'}`} />
                         <span className="flex-1 truncate">{s.label}</span>
                         {remaining > 0
                           ? <span className="text-xs text-amber-600 flex-shrink-0">{remaining} left</span>
@@ -512,7 +512,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 if (!src?.completedBy) return null
                 return (
                   <div className="card p-3">
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p className="text-xs text-gray-500 leading-relaxed">
                       Originally completed by <strong className="text-gray-700">{src.completedBy}</strong>.
                       {src.lastEditedBy && src.lastEditedBy !== src.completedBy && (
                         <> Last edited by <strong className="text-gray-700">{src.lastEditedBy}</strong>.</>
@@ -605,7 +605,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <Field label="Household Size" required>
                   <input type="number" className="input" min={1}
                     value={sheet.householdSize} onChange={set('householdSize')} disabled={!canEdit} />
-                  <p className="text-xs text-gray-400 mt-1 leading-snug">
+                  <p className="text-xs text-gray-500 mt-1 leading-snug">
                     {sheet.familyMembers.length} family member{sheet.familyMembers.length !== 1 ? 's' : ''} listed above.
                     Total household size includes the patient and any dependents not listed individually.
                   </p>
@@ -723,14 +723,14 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <textarea className="input resize-none" rows={4} maxLength={2000}
                     value={sheet.caseStudyNarrative}
                     onChange={set('caseStudyNarrative')} disabled={!canEdit} />
-                  <p className="text-xs text-gray-400 mt-0.5 text-right">{(sheet.caseStudyNarrative ?? '').length} / 2000</p>
+                  <p className="text-xs text-gray-500 mt-0.5 text-right">{(sheet.caseStudyNarrative ?? '').length} / 2000</p>
                 </Field>
                 <Field label="Recommendation" required
                   hint="Your professional recommendation for this case.">
                   <textarea className="input resize-none" rows={3} maxLength={1000}
                     value={sheet.recommendation}
                     onChange={set('recommendation')} disabled={!canEdit} />
-                  <p className="text-xs text-gray-400 mt-0.5 text-right">{(sheet.recommendation ?? '').length} / 1000</p>
+                  <p className="text-xs text-gray-500 mt-0.5 text-right">{(sheet.recommendation ?? '').length} / 1000</p>
                 </Field>
               </div>
             </section>

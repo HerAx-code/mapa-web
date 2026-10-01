@@ -133,7 +133,7 @@ function AuditDetails({ text }) {
   const isLong = text.length > DETAILS_PREVIEW_LIMIT
   const shown  = isLong && !expanded ? text.slice(0, DETAILS_PREVIEW_LIMIT) + '…' : text
   return (
-    <p className="text-xs text-gray-400 leading-relaxed">
+    <p className="text-xs text-gray-500 leading-relaxed">
       {shown}
       {isLong && (
         <button
@@ -309,21 +309,21 @@ export default function AuditLog() {
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             {/* Search */}
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Search actor, action, target"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             {/* Date — segmented control */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Date</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Date</p>
               <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
                 {DATE_FILTERS.map(f => (
                   <button key={f.key} onClick={() => setDateFilter(f.key)}
@@ -338,7 +338,7 @@ export default function AuditLog() {
 
             {/* Category — list with counts */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Category</p>
               <ul className="-mx-1.5 space-y-px">
                 {ACTION_CATEGORIES.map(c => {
                   const n = categoryCounts[c.key] ?? 0
@@ -353,7 +353,7 @@ export default function AuditLog() {
                           active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'
                         }`}>
                         <span className="truncate">{c.key === 'all' ? 'All categories' : c.label}</span>
-                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-400'}`}>{n}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-500'}`}>{n}</span>
                       </button>
                     </li>
                   )
@@ -363,7 +363,7 @@ export default function AuditLog() {
 
             {/* Actor */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Actor</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Actor</p>
               <SearchableSelect
                 triggerClassName="py-2"
                 value={actorFilter}
@@ -373,7 +373,7 @@ export default function AuditLog() {
                   { value: 'all', label: 'All actors' },
                   ...actors.map(a => ({ value: a.id, label: `${a.name}${a.role ? ` · ${ROLE_LABEL[a.role] ?? a.role}` : ''}` })),
                 ]} />
-              <p className="text-[10px] text-gray-300 mt-1">of {entries.length} loaded entries</p>
+              <p className="text-xs text-gray-300 mt-1">of {entries.length} loaded entries</p>
             </div>
 
             <button onClick={clearAll} disabled={!isFiltered}
@@ -387,7 +387,7 @@ export default function AuditLog() {
 
             {/* Result count + refresh */}
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}
                 {isFiltered && entries.length > 0 && ` (filtered from ${entries.length} loaded)`}
               </p>
@@ -423,9 +423,9 @@ export default function AuditLog() {
               {!loading && dayGroups.map(group => (
                 <section key={group.key}>
                   <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
-                    <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
-                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="text-xs text-gray-500 tabular-nums">{group.sub}</span>
+                    <span className="ml-auto text-xs text-gray-500 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
                   </div>
                   <ul className="divide-y divide-gray-50">
                     {group.entries.map(e => {
@@ -443,11 +443,11 @@ export default function AuditLog() {
                             <div className="flex items-start justify-between gap-4 mb-1.5">
                               <p className="text-sm font-semibold text-gray-800 leading-snug">
                                 {e.actorName ?? '—'}
-                                <span className="ml-1.5 text-xs font-normal text-gray-400">{ROLE_LABEL[e.actorRole] ?? e.actorRole ?? ''}</span>
+                                <span className="ml-1.5 text-xs font-normal text-gray-500">{ROLE_LABEL[e.actorRole] ?? e.actorRole ?? ''}</span>
                               </p>
                               <div className="text-right flex-shrink-0">
                                 <p className="text-xs text-gray-500 whitespace-nowrap">{fullDate(e.createdAt)}</p>
-                                {ago && <p className="text-xs text-gray-400">{ago}</p>}
+                                {ago && <p className="text-xs text-gray-500">{ago}</p>}
                               </div>
                             </div>
                             {/* Row 2: action badge + target */}
@@ -455,12 +455,12 @@ export default function AuditLog() {
                               {cfg ? (
                                 <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
                               ) : (
-                                <span className="text-xs text-gray-400 font-mono flex-shrink-0">{e.action ?? '—'}</span>
+                                <span className="text-xs text-gray-500 font-mono flex-shrink-0">{e.action ?? '—'}</span>
                               )}
                               {e.targetName && (
                                 <span className="text-sm text-gray-600 truncate">
                                   {e.targetName}
-                                  {e.targetType && <span className="ml-1 text-xs text-gray-400 capitalize">({e.targetType})</span>}
+                                  {e.targetType && <span className="ml-1 text-xs text-gray-500 capitalize">({e.targetType})</span>}
                                 </span>
                               )}
                             </div>
@@ -479,7 +479,7 @@ export default function AuditLog() {
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <MdHistory size={36} className="text-gray-200 mb-3" />
                   <p className="text-sm font-medium text-gray-500 mb-1">No entries found</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {isFiltered
                       ? 'No entries match your current filter. Try clearing the search or changing the category.'
                       : 'No audit log entries yet. Actions will be recorded here as admins use the portal.'}
@@ -502,9 +502,9 @@ export default function AuditLog() {
                     {loadingMore ? 'Loading…' : 'Load more entries'}
                   </button>
                 ) : (
-                  <p className="text-xs text-gray-400">End of the record for these filters.</p>
+                  <p className="text-xs text-gray-500">End of the record for these filters.</p>
                 )}
-                <p className="text-[11px] text-gray-400 tabular-nums">Showing {filtered.length} of {entries.length} loaded</p>
+                <p className="text-xs text-gray-500 tabular-nums">Showing {filtered.length} of {entries.length} loaded</p>
               </div>
             )}
 

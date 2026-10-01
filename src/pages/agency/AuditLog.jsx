@@ -252,19 +252,19 @@ export default function AgencyAuditLog() {
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Search actor, target, details"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Date</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Date</p>
               <div className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1">
                 {DATE_FILTERS.map(d => (
                   <button key={d.key} onClick={() => setDateFilter(d.key)}
@@ -278,7 +278,7 @@ export default function AgencyAuditLog() {
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Category</p>
               <ul className="-mx-1.5 space-y-px">
                 {ACTION_CATEGORIES.map(c => {
                   const n = categoryCounts[c.key] ?? 0
@@ -291,7 +291,7 @@ export default function AgencyAuditLog() {
                           active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'
                         }`}>
                         <span className="truncate">{c.key === 'all' ? 'All categories' : c.label}</span>
-                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-400'}`}>{n}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-500'}`}>{n}</span>
                       </button>
                     </li>
                   )
@@ -307,17 +307,17 @@ export default function AgencyAuditLog() {
 
           {/* ── Entry stream ── */}
           <div className="min-w-0">
-            <p className="text-xs text-gray-400 mb-3">{filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}{isFiltered && entries.length > 0 ? ` of ${entries.length} loaded` : ''}</p>
+            <p className="text-xs text-gray-500 mb-3">{filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}{isFiltered && entries.length > 0 ? ` of ${entries.length} loaded` : ''}</p>
 
             <div className="card overflow-hidden">
-              {loading && <div className="p-8 text-center text-sm text-gray-400">Loading audit log…</div>}
+              {loading && <div className="p-8 text-center text-sm text-gray-500">Loading audit log…</div>}
 
               {!loading && dayGroups.map(group => (
                 <section key={group.key}>
                   <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
-                    <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
-                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="text-xs text-gray-500 tabular-nums">{group.sub}</span>
+                    <span className="ml-auto text-xs text-gray-500 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
                   </div>
                   <ul className="divide-y divide-gray-50">
                     {group.entries.map(e => {
@@ -331,9 +331,9 @@ export default function AgencyAuditLog() {
                                 {e.targetName && <span className="text-sm font-medium text-gray-800 truncate">{e.targetName}</span>}
                               </div>
                               {e.details && <AuditDetails text={e.details} />}
-                              <p className="text-xs text-gray-400 mt-1">by <strong>{e.actorName ?? 'System'}</strong></p>
+                              <p className="text-xs text-gray-500 mt-1">by <strong>{e.actorName ?? 'System'}</strong></p>
                             </div>
-                            <div className="text-xs text-gray-400 flex-shrink-0 text-right" title={fullDate(e.createdAt)}>
+                            <div className="text-xs text-gray-500 flex-shrink-0 text-right" title={fullDate(e.createdAt)}>
                               <div>{timeAgo(e.createdAt)}</div>
                               <div className="text-gray-300">{fullDate(e.createdAt)}</div>
                             </div>
@@ -367,7 +367,7 @@ export default function AgencyAuditLog() {
           </div>{/* /entry stream */}
         </div>{/* /two-pane grid */}
 
-        <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+        <p className="text-xs text-gray-500 mt-4 leading-relaxed">
           <strong>Note —</strong> This log shows actions taken with your agency as the context. CRMC platform-level actions (account onboarding, doc verification across agencies) are visible only to the CRMC system administrator. Entries are append-only and immutable.
         </p>
 

@@ -8,7 +8,7 @@ export default function DeltaChip({ value, invert = false, className = '' }) {
   const up = value > 0
   const flat = value === 0
   const good = invert ? !up : up
-  const cls = flat ? 'text-gray-400 bg-gray-100'
+  const cls = flat ? 'text-gray-500 bg-gray-100'
     : good ? 'text-green-700 bg-green-50'
     : 'text-red-600 bg-red-50'
   const Icon = up ? MdArrowUpward : MdArrowDownward

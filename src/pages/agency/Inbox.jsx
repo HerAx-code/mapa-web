@@ -185,14 +185,14 @@ export default function Inbox() {
         {/* Search + sort */}
         <div className="flex gap-2 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <input className="input pl-9 pr-10" placeholder="Search by patient name, contact, or application ID..."
               value={search} onChange={e => setSearch(e.target.value)} />
             {search && (
               <button
                 onClick={() => setSearch('')}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                 <MdClose size={14} />
               </button>
             )}
@@ -271,7 +271,7 @@ export default function Inbox() {
                               </span>
                             )}
                           </p>
-                          <p className="text-xs text-gray-400">{app.patientContact}</p>
+                          <p className="text-xs text-gray-500">{app.patientContact}</p>
                         </div>
                       </div>
                     </td>
@@ -287,7 +287,7 @@ export default function Inbox() {
                     <td>
                       {app.attachedDocuments?.length > 0 ? (
                         <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <MdDescription size={13} className="text-gray-400" />
+                          <MdDescription size={13} className="text-gray-500" />
                           {app.attachedDocuments.length} doc{app.attachedDocuments.length !== 1 ? 's' : ''}
                         </span>
                       ) : (
@@ -323,7 +323,7 @@ export default function Inbox() {
                       <div className="flex items-center gap-1.5 justify-end">
                         <button
                           title="Message patient"
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-50"
+                          className="p-1.5 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-50"
                           onClick={() => handleMessagePatient(app)}
                           disabled={messaging === app.id}>
                           <MdMessage size={15} />
@@ -342,7 +342,7 @@ export default function Inbox() {
                 <tr>
                   <td colSpan={6} className="text-center py-12">
                     <MdInbox size={36} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-500">
                       {search || statusFilter !== 'all'
                         ? 'No applications match your filter.'
                         : 'No applications yet. They will appear here when CRMC endorses requests to your agency.'}

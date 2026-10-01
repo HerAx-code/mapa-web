@@ -104,7 +104,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
           <h2 id="doctype-modal-title" className="text-base font-semibold text-gray-900">
             {isEdit ? 'Edit Document Type' : 'Add Document Type'}
           </h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>
@@ -130,7 +130,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
               checked={form.reusable}
               onChange={e => setForm(p => ({ ...p, reusable: e.target.checked }))} />
             <span>Reusable across requests
-              <span className="block text-xs text-gray-400">Once verified, carries over to the patient's future requests (e.g. Valid ID). Leave off for per-request documents like a Billing Statement.</span>
+              <span className="block text-xs text-gray-500">Once verified, carries over to the patient's future requests (e.g. Valid ID). Leave off for per-request documents like a Billing Statement.</span>
             </span>
           </label>
         </div>
@@ -355,7 +355,7 @@ export default function DocTypes() {
             { label: 'Optional',    value: types.filter(t => !t.required).length, color: 'text-gray-500' },
           ].map((m, i) => (
             <div key={i} className="card p-4">
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
+              <p className="text-xs text-gray-500 mb-1">{m.label}</p>
               <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
             </div>
           ))}
@@ -382,7 +382,7 @@ export default function DocTypes() {
         {/* Search + Filter */}
         <div className="flex gap-3 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-48">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <input className="input pl-9" placeholder="Search document types..."
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
@@ -417,7 +417,7 @@ export default function DocTypes() {
 
         {/* Reorder hint */}
         {!search && reqFilter === 'all' && types.length > 1 && (
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-500 mb-3">
             Use ▲ ▼ to reorder how document types appear to patients.
           </p>
         )}
@@ -483,10 +483,10 @@ export default function DocTypes() {
                         <div className="flex flex-col gap-0.5">
                           <button disabled={isFirst || !canReorder}
                             onClick={() => handleMove(i, 'up')}
-                            className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▲</button>
+                            className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▲</button>
                           <button disabled={isLast || !canReorder}
                             onClick={() => handleMove(i, 'down')}
-                            className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▼</button>
+                            className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▼</button>
                         </div>
                       </td>
 
@@ -531,12 +531,12 @@ export default function DocTypes() {
                         {isSuperAdmin ? (
                           <div className="flex items-center gap-1">
                             <button title="Edit"
-                              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                               onClick={() => { setEditingType(t); setShowForm(true) }}>
                               <MdEdit size={15} />
                             </button>
                             <button title="Delete"
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                               onClick={() => setConfirmDelete(t)}>
                               <MdDelete size={15} />
                             </button>
@@ -579,7 +579,7 @@ export default function DocTypes() {
                 <tr>
                   <td colSpan={7} className="text-center py-12">
                     <MdDescription size={36} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-500">
                       {search || reqFilter !== 'all'
                         ? 'No document types match your filter.'
                         : 'No document types yet. Click "Add Type" to create one.'}

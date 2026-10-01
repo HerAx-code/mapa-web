@@ -96,7 +96,7 @@ function TypeForm({ type, maxOrder, allTypes, onClose }) {
           <h2 id="assistancetype-modal-title" className="text-base font-semibold text-gray-900">
             {isEdit ? 'Edit Assistance Type' : 'Add Assistance Type'}
           </h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>
@@ -348,10 +348,10 @@ export default function AssistanceTypes() {
           {[
             { label: 'Total Types',  value: types.length,   color: 'text-gray-800'  },
             { label: 'Covered',      value: coveredCount,   color: 'text-green-600' },
-            { label: 'No Coverage',  value: uncoveredCount, color: uncoveredCount > 0 ? 'text-red-500' : 'text-gray-400' },
+            { label: 'No Coverage',  value: uncoveredCount, color: uncoveredCount > 0 ? 'text-red-500' : 'text-gray-500' },
           ].map((m, i) => (
             <div key={i} className="card p-4">
-              <p className="text-xs text-gray-400 mb-1">{m.label}</p>
+              <p className="text-xs text-gray-500 mb-1">{m.label}</p>
               <p className={`text-3xl font-semibold ${m.color}`}>{m.value}</p>
             </div>
           ))}
@@ -391,7 +391,7 @@ export default function AssistanceTypes() {
         {/* Search + Filter */}
         <div className="flex gap-3 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-48">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
             <input className="input pl-9" placeholder="Search assistance types..."
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
@@ -426,7 +426,7 @@ export default function AssistanceTypes() {
 
         {/* Reorder hint */}
         {!search && coverageFilter === 'all' && types.length > 1 && (
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-500 mb-3">
             Use ▲ ▼ to reorder how assistance types appear to patients during screening.
           </p>
         )}
@@ -491,10 +491,10 @@ export default function AssistanceTypes() {
                         <div className="flex flex-col gap-0.5">
                           <button disabled={isFirst || !canReorder}
                             onClick={() => handleMove(i, 'up')}
-                            className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▲</button>
+                            className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▲</button>
                           <button disabled={isLast || !canReorder}
                             onClick={() => handleMove(i, 'down')}
-                            className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▼</button>
+                            className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1">▼</button>
                         </div>
                       </td>
 
@@ -533,12 +533,12 @@ export default function AssistanceTypes() {
                         {isSuperAdmin ? (
                           <div className="flex items-center gap-1">
                             <button title="Edit"
-                              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                               onClick={() => { setEditingType(t); setShowForm(true) }}>
                               <MdEdit size={15} />
                             </button>
                             <button title="Delete"
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                               onClick={() => setConfirmDelete(t)}>
                               <MdDelete size={15} />
                             </button>
@@ -581,7 +581,7 @@ export default function AssistanceTypes() {
                 <tr>
                   <td colSpan={6} className="text-center py-12">
                     <MdFavorite size={36} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-500">
                       {search || coverageFilter !== 'all'
                         ? 'No assistance types match your filter.'
                         : 'No assistance types yet. Click "Add Type" to create one.'}

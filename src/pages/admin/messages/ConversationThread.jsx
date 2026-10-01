@@ -139,7 +139,7 @@ export default function ConversationThread({ conversation, user, text, setText, 
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">No messages yet</p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 Send the first message to start the conversation with {oName}.
               </p>
             </div>
@@ -161,12 +161,12 @@ export default function ConversationThread({ conversation, user, text, setText, 
               {showSep && (
                 <div className="flex items-center gap-3 my-1">
                   <div className="flex-1 h-px bg-gray-100" />
-                  <span className="text-xs text-gray-400 font-medium px-1">{dateLabel}</span>
+                  <span className="text-xs text-gray-500 font-medium px-1">{dateLabel}</span>
                   <div className="flex-1 h-px bg-gray-100" />
                 </div>
               )}
               <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                <p className="text-xs text-gray-400 mb-0.5">
+                <p className="text-xs text-gray-500 mb-0.5">
                   {isMe ? 'You' : m.fromName} · {fmtFull(m.createdAt)}
                 </p>
                 <div className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap
@@ -179,7 +179,7 @@ export default function ConversationThread({ conversation, user, text, setText, 
         })}
 
         {!loadingMsgs && showSeen && (
-          <p className="text-xs text-gray-400 text-right">Seen by {oName}</p>
+          <p className="text-xs text-gray-500 text-right">Seen by {oName}</p>
         )}
 
         <div ref={bottomRef} />
@@ -209,7 +209,7 @@ export default function ConversationThread({ conversation, user, text, setText, 
           </button>
         </div>
         {text.length > MAX_CHARS * 0.8 && (
-          <p className={`text-xs mt-1 text-right ${charsLeft < 50 ? 'text-red-500' : 'text-gray-400'}`}>
+          <p className={`text-xs mt-1 text-right ${charsLeft < 50 ? 'text-red-500' : 'text-gray-500'}`}>
             {charsLeft} characters remaining
           </p>
         )}

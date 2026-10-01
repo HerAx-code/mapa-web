@@ -185,10 +185,10 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
             <h2 id="signedgl-modal-title" className="text-base font-semibold text-gray-900">Upload Signed Guarantee Letter</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{app.patientName} · {app.appId}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{app.patientName} · {app.appId}</p>
           </div>
           <button onClick={onClose} disabled={uploading} aria-label="Close"
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
+            className="text-gray-500 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -201,7 +201,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{fileName ?? 'signed-gl.pdf'}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       PDF document · {showingPending ? 'ready to upload' : 'currently uploaded'}
                     </p>
                   </div>
@@ -214,7 +214,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
                 </div>
                 {showingPending && (
                   <button
-                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center text-gray-400 hover:text-red-500"
+                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center text-gray-500 hover:text-red-500"
                     onClick={clearPending}>
                     <MdClose size={14} />
                   </button>
@@ -226,7 +226,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
                   className="w-full rounded-xl border border-gray-100 object-contain max-h-64" />
                 {showingPending && (
                   <button
-                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center text-gray-400 hover:text-red-500"
+                    className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center text-gray-500 hover:text-red-500"
                     onClick={clearPending}>
                     <MdClose size={14} />
                   </button>
@@ -239,7 +239,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
               onClick={() => fileRef.current?.click()}>
               <MdUpload size={28} className="text-gray-300" />
               <p className="text-sm text-gray-500 font-medium">Click to select file</p>
-              <p className="text-xs text-gray-400">JPG, PNG, or PDF · Max 4 MB image / 700 KB PDF</p>
+              <p className="text-xs text-gray-500">JPG, PNG, or PDF · Max 4 MB image / 700 KB PDF</p>
             </button>
           )}
 
@@ -263,7 +263,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
           )}
 
           {showingPending && !previewIsPdf && fileName && (
-            <p className="text-xs text-gray-400 text-center">{fileName}</p>
+            <p className="text-xs text-gray-500 text-center">{fileName}</p>
           )}
         </div>
 

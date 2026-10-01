@@ -332,7 +332,7 @@ export default function ExportPreview() {
         <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
           <MdSearch className="mx-auto mb-3 text-gray-300" size={32} />
           <p className="text-sm font-medium text-gray-700 mb-1">Unknown export type</p>
-          <p className="text-xs text-gray-400 mb-5">The export type "{type}" does not exist.</p>
+          <p className="text-xs text-gray-500 mb-5">The export type "{type}" does not exist.</p>
           <button className="btn-secondary text-sm" onClick={() => navigate('/admin/export')}>
             Back to Export
           </button>
@@ -363,7 +363,7 @@ export default function ExportPreview() {
           </button>
           <div className="h-4 w-px bg-gray-200 flex-shrink-0" />
           <p className="text-sm font-semibold text-gray-900 flex-1 truncate">{config.title}</p>
-          <p className="text-xs text-gray-400 flex-shrink-0">
+          <p className="text-xs text-gray-500 flex-shrink-0">
             {loading ? '—' : `${docs.length} record${docs.length !== 1 ? 's' : ''} loaded`}
           </p>
           <button className="btn-secondary text-sm flex items-center gap-1.5 flex-shrink-0"
@@ -395,7 +395,7 @@ export default function ExportPreview() {
           {/* Client filter chips (e.g. category on audit log) */}
           {config.clientFilters?.map(cf => (
             <div key={cf.key} className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-400 flex-shrink-0">{cf.label}</span>
+              <span className="text-xs text-gray-500 flex-shrink-0">{cf.label}</span>
               {cf.options.map(opt => {
                 const active = (clientFilterVals[cf.key] ?? 'all') === opt.key
                 return (
@@ -416,7 +416,7 @@ export default function ExportPreview() {
           {/* Search + date filter toggle */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-48">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 py-1.5 text-sm" placeholder="Search records…"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
@@ -424,23 +424,23 @@ export default function ExportPreview() {
             {/* Date range — collapsed by default */}
             {!showDateFilter && !hasDateRange ? (
               <button
-                className="text-xs text-gray-400 hover:text-brand-500 transition-colors flex-shrink-0"
+                className="text-xs text-gray-500 hover:text-brand-500 transition-colors flex-shrink-0"
                 onClick={() => setShowDateFilter(true)}>
                 + Add date filter
               </button>
             ) : (
               <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                 <div className="flex items-center gap-1.5">
-                  <label className="text-xs text-gray-400">From</label>
+                  <label className="text-xs text-gray-500">From</label>
                   <input type="date" className="input py-1 text-xs w-36"
                     value={startDate} onChange={e => setStartDate(e.target.value)} />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <label className="text-xs text-gray-400">To</label>
+                  <label className="text-xs text-gray-500">To</label>
                   <input type="date" className="input py-1 text-xs w-36"
                     value={endDate} onChange={e => setEndDate(e.target.value)} />
                 </div>
-                <button className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                <button className="text-xs text-gray-500 hover:text-red-500 transition-colors"
                   onClick={clearDates}>
                   <MdClose size={14} />
                 </button>
@@ -448,7 +448,7 @@ export default function ExportPreview() {
             )}
 
             {search && (
-              <p className="text-xs text-gray-400 flex-shrink-0">
+              <p className="text-xs text-gray-500 flex-shrink-0">
                 {filtered.length} of {docs.length} shown
               </p>
             )}
@@ -472,7 +472,7 @@ export default function ExportPreview() {
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
               <MdSearch className="mx-auto mb-3 text-gray-300" size={32} />
               <p className="text-sm font-medium text-gray-600 mb-1">No records found</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {search
                   ? 'No records match your search. Try clearing the search.'
                   : hasDateRange
@@ -530,7 +530,7 @@ export default function ExportPreview() {
             {selectedCount > 0 ? (
               <p className="text-sm font-medium text-brand-600">
                 {selectedCount} row{selectedCount !== 1 ? 's' : ''} selected
-                <button className="ml-2 text-xs text-gray-400 hover:text-gray-600 font-normal"
+                <button className="ml-2 text-xs text-gray-500 hover:text-gray-600 font-normal"
                   onClick={() => setCheckedIds(new Set())}>
                   Clear
                 </button>
@@ -541,7 +541,7 @@ export default function ExportPreview() {
                 {search && ` matching "${search}"`}
               </p>
             )}
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               All exported files are protected under RA 10173 — handle with care.
             </p>
           </div>

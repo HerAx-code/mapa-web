@@ -100,7 +100,7 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
       {/* Panel header */}
       <div className="px-5 py-3.5 border-b border-gray-100 flex-shrink-0 flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-900">New Message</p>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-600">
           <MdClose size={18} />
         </button>
       </div>
@@ -115,7 +115,7 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
               <div className="input flex items-center justify-between gap-2 py-2">
                 <span className="text-sm text-gray-800 truncate">{selectedName}</span>
                 <button type="button" onClick={clearRecipient}
-                  className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                  className="text-gray-500 hover:text-gray-600 flex-shrink-0">
                   <MdClose size={16} />
                 </button>
               </div>
@@ -139,11 +139,11 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
                           className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                           onMouseDown={() => selectRecipient(u)}>
                           <p className="text-sm text-gray-800">{u.name}</p>
-                          <p className="text-xs text-gray-400">{ROLE_LABEL[u.role] ?? u.role}</p>
+                          <p className="text-xs text-gray-500">{ROLE_LABEL[u.role] ?? u.role}</p>
                         </button>
                       ))
                     ) : (
-                      <p className="px-4 py-3 text-sm text-gray-400">No users match "{recipientSearch}".</p>
+                      <p className="px-4 py-3 text-sm text-gray-500">No users match "{recipientSearch}".</p>
                     )}
                   </div>
                 )}
@@ -168,7 +168,7 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
             placeholder="Write your message..."
             value={text} onChange={e => setText(e.target.value)} maxLength={MAX_CHARS} />
           {text.length > MAX_CHARS * 0.8 && (
-            <p className={`text-xs mt-1 text-right ${charsLeft < 50 ? 'text-red-500' : 'text-gray-400'}`}>
+            <p className={`text-xs mt-1 text-right ${charsLeft < 50 ? 'text-red-500' : 'text-gray-500'}`}>
               {charsLeft} characters remaining
             </p>
           )}

@@ -125,7 +125,7 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 id="addcoord-modal-title" className="text-base font-semibold text-gray-900">Add Coordinator</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">
@@ -144,29 +144,29 @@ function AddCoordModal({ agencyId, agencyName, onClose }) {
             <input className="input" placeholder="09XXXXXXXXX" value={form.contact} onChange={set('contact')} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-400 font-normal">(auto-generated)</span></label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-500 font-normal">(auto-generated)</span></label>
             <div className="relative">
               <input type={showPw ? 'text' : 'password'} readOnly
                 className="input pr-24 font-mono tracking-wide" value={form.password} />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 <button type="button" title="Show / hide"
-                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                  className="p-1.5 text-gray-500 hover:text-gray-600"
                   onClick={() => setShowPw(p => !p)}>
                   {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                 </button>
                 <button type="button" title="Copy"
-                  className="p-1.5 text-gray-400 hover:text-brand-500"
+                  className="p-1.5 text-gray-500 hover:text-brand-500"
                   onClick={copyPw}>
                   <MdContentCopy size={15} />
                 </button>
                 <button type="button" title="Generate a new one"
-                  className="p-1.5 text-gray-400 hover:text-brand-500"
+                  className="p-1.5 text-gray-500 hover:text-brand-500"
                   onClick={regeneratePw}>
                   <MdRefresh size={16} />
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Auto-generated. The reset email below lets them set their own.</p>
+            <p className="text-xs text-gray-500 mt-1">Auto-generated. The reset email below lets them set their own.</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
             <input type="checkbox" className="w-4 h-4 accent-brand-500"
@@ -232,7 +232,7 @@ function EditCoordModal({ coord, currentUser, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 id="editcoord-modal-title" className="text-base font-semibold text-gray-900">Edit Coordinator</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div>
@@ -440,22 +440,22 @@ export default function AgencyTeam() {
         {/* Summary */}
         <div className="grid grid-cols-3 gap-4 mb-5">
           <div className="card p-4">
-            <p className="text-xs text-gray-400 mb-1">Total Members</p>
+            <p className="text-xs text-gray-500 mb-1">Total Members</p>
             <p className="text-3xl font-semibold text-gray-800">{loading ? '—' : team.length}</p>
           </div>
           <div className="card p-4">
-            <p className="text-xs text-gray-400 mb-1">Agency Administrators</p>
+            <p className="text-xs text-gray-500 mb-1">Agency Administrators</p>
             <p className="text-3xl font-semibold text-purple-600">{loading ? '—' : admins}</p>
           </div>
           <div className="card p-4">
-            <p className="text-xs text-gray-400 mb-1">Coordinators</p>
+            <p className="text-xs text-gray-500 mb-1">Coordinators</p>
             <p className="text-3xl font-semibold text-green-600">{loading ? '—' : coords}</p>
           </div>
         </div>
 
         {/* Member list — a 2-column card grid so the team fills the width */}
         {loading ? (
-          <div className="card p-8 text-center text-sm text-gray-400">Loading team…</div>
+          <div className="card p-8 text-center text-sm text-gray-500">Loading team…</div>
         ) : team.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-sm text-gray-500 mb-3">No team members yet.</p>
@@ -478,7 +478,7 @@ export default function AgencyTeam() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-gray-800">{coord.name} {isYou && <span className="text-xs text-gray-400">(you)</span>}</p>
+                        <p className="text-sm font-medium text-gray-800">{coord.name} {isYou && <span className="text-xs text-gray-500">(you)</span>}</p>
                         <span className={`badge text-xs ${isActive ? 'badge-green' : 'badge-red'}`}>
                           {isActive ? 'Active' : 'Deactivated'}
                         </span>
@@ -488,29 +488,29 @@ export default function AgencyTeam() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400">{coord.email}</p>
-                      {coord.contact && <p className="text-xs text-gray-400">{coord.contact}</p>}
+                      <p className="text-xs text-gray-500">{coord.email}</p>
+                      {coord.contact && <p className="text-xs text-gray-500">{coord.contact}</p>}
                       <p className="text-xs text-gray-300 mt-0.5">Added {formatDate(coord.createdAt)}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button title="Edit profile"
-                        className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                         onClick={() => setEditing(coord)}>
                         <MdEdit size={15} />
                       </button>
                       <button title={coord.role === 'agency_admin' ? 'Demote to Coordinator' : 'Promote to Agency Admin'}
-                        className={`p-1.5 rounded-lg transition-colors ${coord.role === 'agency_admin' ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                        className={`p-1.5 rounded-lg transition-colors ${coord.role === 'agency_admin' ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' : 'text-gray-500 hover:text-amber-500 hover:bg-amber-50'}`}
                         onClick={() => handleTogglePromotion(coord)}>
                         {coord.role === 'agency_admin' ? <MdStar size={15} /> : <MdStarOutline size={15} />}
                       </button>
                       <button title="Reset password"
-                        className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
                         onClick={() => handleResetPassword(coord)}>
                         <MdKey size={15} />
                       </button>
                       {!isYou && (
                         <button title={isActive ? 'Deactivate' : 'Reactivate'}
-                          className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-400 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}
+                          className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-500 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-500 hover:text-green-500 hover:bg-green-50'}`}
                           onClick={() => handleToggleActive(coord)}>
                           {isActive ? <MdLock size={15} /> : <MdLockOpen size={15} />}
                         </button>
@@ -522,7 +522,7 @@ export default function AgencyTeam() {
           </div>
         )}
 
-        <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+        <p className="text-xs text-gray-500 mt-4 leading-relaxed">
           <strong>Note —</strong> Deleting a coordinator account requires CRMC system administration. To permanently remove someone, deactivate them here and contact CRMC. Coordinators you add will receive a password reset email (if checked) and must set their password before logging in.
         </p>
 

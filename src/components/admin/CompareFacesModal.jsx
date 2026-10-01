@@ -79,7 +79,7 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
     : idDoc?.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
     : idDoc && (idDoc.ocrText || idDoc.idTypeDetected) ? 'OCR: could not auto-read — verify manually'
     : null
-  const ocrCls = idDoc?.ocrMatch === true ? 'text-green-600' : idDoc?.ocrMatch === false ? 'text-amber-600' : 'text-gray-400'
+  const ocrCls = idDoc?.ocrMatch === true ? 'text-green-600' : idDoc?.ocrMatch === false ? 'text-amber-600' : 'text-gray-500'
 
   return (
     <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
@@ -96,7 +96,7 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
         </div>
         <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-3">
           <h2 id="comparefaces-modal-title" className="text-base font-semibold text-gray-900">Compare: ID portrait ↔ live selfie</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>
 
         {/* Advisory readout */}
@@ -107,7 +107,7 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
           <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${lv.chip}`}>
             {lv.icon} Liveness: {lvLabel}
           </span>
-          <span className="inline-flex items-center gap-1 text-xs text-gray-400 ml-auto">
+          <span className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
             <MdInfoOutline size={13} /> Advisory — you make the final call
           </span>
         </div>
@@ -115,11 +115,11 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
         <div className="flex-1 overflow-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 min-h-0">
           <div className="flex flex-col min-h-0">
             <p className="text-xs font-semibold text-gray-500 mb-1.5 px-1">ID portrait
-              {idDoc?.idTypeDetected && <span className="font-normal text-gray-400"> · {idDoc.idTypeDetected}</span>}
+              {idDoc?.idTypeDetected && <span className="font-normal text-gray-500"> · {idDoc.idTypeDetected}</span>}
             </p>
             {idDoc
               ? <DocPreview docMeta={idDoc} className="flex-1 border border-gray-100 rounded-lg overflow-hidden" />
-              : <p className="text-sm text-gray-400 italic p-4">No ID document attached.</p>}
+              : <p className="text-sm text-gray-500 italic p-4">No ID document attached.</p>}
             {ocrLabel && <p className={`mt-1.5 px-1 text-xs ${ocrCls}`}>{ocrLabel}</p>}
             {hasActions && idDoc && (
               <DocActions doc={idDoc} decidedOverride={verifiedLocal[idDoc.id]} busy={busy}

@@ -292,7 +292,7 @@ export default function AddAgency() {
         {/* ── Section 1: Agency Details ── */}
         <div className="card p-6 space-y-5">
 
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Agency Details</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Agency Details</p>
 
           {/* Live preview */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -302,7 +302,7 @@ export default function AddAgency() {
             />
             <div>
               <p className="text-sm font-semibold text-gray-800">{agency.name || 'Agency Name'}</p>
-              <p className="text-xs text-gray-400">{derivedLocation || 'Location'}</p>
+              <p className="text-xs text-gray-500">{derivedLocation || 'Location'}</p>
             </div>
           </div>
 
@@ -338,7 +338,7 @@ export default function AddAgency() {
             </div>
           </div>
 
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest pt-1">Contact & Location</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest pt-1">Contact & Location</p>
 
           {/* R32 (refactored R39): Province + City use the shared
               AddressPicker -- same component the patient registration
@@ -350,7 +350,7 @@ export default function AddAgency() {
               regional offices) without changing the schema. */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
-              <MdLocationOn size={12} className="text-gray-400" /> Office Location <span className="text-red-400">*</span>
+              <MdLocationOn size={12} className="text-gray-500" /> Office Location <span className="text-red-400">*</span>
             </label>
             <AddressPicker
               showBarangay={false}
@@ -363,22 +363,22 @@ export default function AddAgency() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                <MdLocationOn size={12} className="text-gray-400" /> Office / Building Name <span className="text-gray-400 font-normal">— optional</span>
+                <MdLocationOn size={12} className="text-gray-500" /> Office / Building Name <span className="text-gray-500 font-normal">— optional</span>
               </label>
               <input className="input" placeholder="CRMC Ground Floor"
                 value={agency.officeName} onChange={setA('officeName')} />
-              <p className="text-xs text-gray-400 mt-0.5">Specific office, floor, or department.</p>
+              <p className="text-xs text-gray-500 mt-0.5">Specific office, floor, or department.</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                <MdPhone size={12} className="text-gray-400" /> Phone
+                <MdPhone size={12} className="text-gray-500" /> Phone
               </label>
               <input className="input" placeholder="064-421-2500"
                 value={agency.phone} onChange={setA('phone')} />
             </div>
           </div>
 
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest pt-1">Operations</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest pt-1">Operations</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -398,7 +398,7 @@ export default function AddAgency() {
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Requirements</label>
             {docTypesList.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No document types defined yet.</p>
+              <p className="text-xs text-gray-500 italic">No document types defined yet.</p>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 {docTypesList.map(t => (
@@ -417,7 +417,7 @@ export default function AddAgency() {
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Assistance Types</label>
             {typesList.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No assistance types defined yet.</p>
+              <p className="text-xs text-gray-500 italic">No assistance types defined yet.</p>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 {typesList.map(t => (
@@ -438,8 +438,8 @@ export default function AddAgency() {
         <div className="lg:sticky lg:top-[68px]">
         <div className="card p-6">
           <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">First Agency Administrator <span className="text-red-400">*</span></p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">First Agency Administrator <span className="text-red-400">*</span></p>
+            <p className="text-xs text-gray-500 mt-1">
               Required. The senior officer at this agency — they control budget allocation, approve top-up requests, manage their own audit slice, and add coordinators from the agency portal's Team page. Every agency needs one to be usable.
             </p>
           </div>
@@ -458,37 +458,37 @@ export default function AddAgency() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-400 font-normal">(auto-generated)</span></label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Temporary Password <span className="text-gray-500 font-normal">(auto-generated)</span></label>
               <div className="relative">
                 <input type={showPw ? 'text' : 'password'} readOnly
                   className="input pr-24 font-mono tracking-wide"
                   value={coord.password} />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                   <button type="button" title="Show / hide"
-                    className="p-1.5 text-gray-400 hover:text-gray-600"
+                    className="p-1.5 text-gray-500 hover:text-gray-600"
                     onClick={() => setShowPw(p => !p)}>
                     {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
                   <button type="button" title="Copy"
-                    className="p-1.5 text-gray-400 hover:text-brand-500"
+                    className="p-1.5 text-gray-500 hover:text-brand-500"
                     onClick={copyPw}>
                     <MdContentCopy size={15} />
                   </button>
                   <button type="button" title="Generate a new one"
-                    className="p-1.5 text-gray-400 hover:text-brand-500"
+                    className="p-1.5 text-gray-500 hover:text-brand-500"
                     onClick={regeneratePw}>
                     <MdRefresh size={16} />
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Auto-generated and secure. The reset email below lets them set their own — copy this only if you'll hand it over in person.</p>
+              <p className="text-xs text-gray-500 mt-1">Auto-generated and secure. The reset email below lets them set their own — copy this only if you'll hand it over in person.</p>
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
               <input type="checkbox" className="w-4 h-4 accent-brand-500"
                 checked={sendReset} onChange={e => setSendReset(e.target.checked)} />
               Send password reset email to the Agency Administrator
             </label>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               After creation, this person can add their own coordinators and set the agency's budget allocation.
             </p>
           </div>

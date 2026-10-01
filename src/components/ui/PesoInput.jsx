@@ -30,7 +30,7 @@ export default function PesoInput({
 }) {
   return (
     <div className={`relative ${wrapperClassName}`}>
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none select-none">₱</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none select-none">₱</span>
       <input
         type="number"
         inputMode="numeric"

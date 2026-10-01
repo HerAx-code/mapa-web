@@ -340,18 +340,18 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
           <div>
             <h2 id="endorse-modal-title" className="text-base font-semibold text-gray-900">Endorse to agencies</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{request.patientName} · {request.requestId}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{request.patientName} · {request.requestId}</p>
           </div>
           <button onClick={onClose} disabled={saving} aria-label="Close"
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
+            className="text-gray-500 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           {/* Funding summary */}
           <div className="bg-gray-50 rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
-            <div><p className="text-xs text-gray-400">Needed</p><p className="text-sm font-semibold text-gray-800">{peso(request.amountNeeded)}</p></div>
-            <div><p className="text-xs text-gray-400">Secured</p><p className="text-sm font-semibold text-green-600">{peso(committed)}</p></div>
-            <div><p className="text-xs text-gray-400">Endorsable</p><p className="text-sm font-semibold text-brand-600">{peso(headroom)}</p></div>
+            <div><p className="text-xs text-gray-500">Needed</p><p className="text-sm font-semibold text-gray-800">{peso(request.amountNeeded)}</p></div>
+            <div><p className="text-xs text-gray-500">Secured</p><p className="text-sm font-semibold text-green-600">{peso(committed)}</p></div>
+            <div><p className="text-xs text-gray-500">Endorsable</p><p className="text-sm font-semibold text-brand-600">{peso(headroom)}</p></div>
           </div>
 
           {/* R13: missing-document warning. Banner color escalates with severity. */}
@@ -439,14 +439,14 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-1.5 flex-wrap">
                             <p className="text-sm font-medium text-gray-800 truncate">{a.name}</p>
-                            {a.matches && <span className="text-[10px] text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">Best fit</span>}
+                            {a.matches && <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">Best fit</span>}
                             {!a.matches && (
-                              <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium" title={`Does not list "${request.assistanceType}"`}>
+                              <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium" title={`Does not list "${request.assistanceType}"`}>
                                 Type mismatch
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-500">
                             {a.slots?.remaining ?? 0} slots · {budgetTxt}
                             {perCap > 0 && <> · max {peso(perCap)}/applicant</>}
                           </p>
@@ -467,7 +467,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
               {/* Optional notes — shown to agencies in their ApproveModal */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Notes for the agencies <span className="text-gray-400 font-normal">— optional</span>
+                  Notes for the agencies <span className="text-gray-500 font-normal">— optional</span>
                 </label>
                 <textarea
                   className="input resize-none text-sm"
@@ -478,7 +478,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                   disabled={saving}
                   onChange={e => setNotes(e.target.value)}
                 />
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   Shown to each agency's coordinator when they open the Approve dialog. Doesn't enforce anything — just communicates context.
                 </p>
               </div>
@@ -811,7 +811,7 @@ function RequestDetail({ request, agencies, onClose }) {
           <span className="text-gray-300">/</span>
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-gray-900 truncate">{request.patientName}</h2>
-            <p className="text-xs text-gray-400">{request.requestId} · {request.assistanceType}</p>
+            <p className="text-xs text-gray-500">{request.requestId} · {request.assistanceType}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -844,16 +844,16 @@ function RequestDetail({ request, agencies, onClose }) {
               <div className="min-w-0">
                 <p className="eyebrow">Amount needed</p>
                 <p className="mt-1 text-3xl font-bold tracking-tight text-brand-700 tabular-nums leading-none">{peso(request.amountNeeded)}</p>
-                <p className="mt-1.5 text-[11px] text-gray-400">Verify against the billing statement</p>
+                <p className="mt-1.5 text-xs text-gray-500">Verify against the billing statement</p>
               </div>
               <div className="text-right flex-shrink-0">
                 <p className={`text-2xl font-semibold tabular-nums leading-none ${funding.balance > 0 ? 'text-gray-900' : 'text-green-600'}`}>{peso(funding.balance)}</p>
-                <p className="mt-1.5 text-[11px] text-gray-400">{funding.balance > 0 ? 'still to raise' : 'fully covered'}</p>
+                <p className="mt-1.5 text-xs text-gray-500">{funding.balance > 0 ? 'still to raise' : 'fully covered'}</p>
               </div>
             </div>
 
             <div>
-              <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
                 <span>{peso(funding.committed)} secured · {peso(funding.outstanding)} pending</span>
                 <span className="tabular-nums">{funding.pct}% covered</span>
               </div>
@@ -864,18 +864,18 @@ function RequestDetail({ request, agencies, onClose }) {
 
             <div className="pt-3 border-t border-gray-50 space-y-1.5 text-xs text-gray-500">
               {request.description && (
-                <p><span className="text-gray-400">Description: </span><span className="text-gray-600 whitespace-pre-wrap">{request.description}</span></p>
+                <p><span className="text-gray-500">Description: </span><span className="text-gray-600 whitespace-pre-wrap">{request.description}</span></p>
               )}
-              <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-400 flex-shrink-0" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
-              <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-400 flex-shrink-0" /> submitted {fmtDate(request.submittedAt)}</p>
+              <p className="flex items-center gap-1.5"><MdPerson size={13} className="text-gray-500 flex-shrink-0" /> {request.patientContact || 'No contact'} · {request.patientAddress || 'No address'}</p>
+              <p className="flex items-center gap-1.5"><MdAttachFile size={13} className="text-gray-500 flex-shrink-0" /> submitted {fmtDate(request.submittedAt)}</p>
               {/* Case facts (MP detail): who's handling it + how it sits against
                   the 48-hour SLA — read-only, derived from submittedAt. */}
               <p className="flex items-center gap-1.5">
-                <MdAssignment size={13} className="text-gray-400 flex-shrink-0" />
+                <MdAssignment size={13} className="text-gray-500 flex-shrink-0" />
                 Officer: <span className={request.assignee ? 'text-gray-700 font-medium' : 'text-amber-700 font-medium'}>{request.assignee ?? 'Unassigned'}</span>
                 {!terminal && (() => {
                   const sla = slaState(request)
-                  return <span className={`ml-1 ${sla === 'overdue' ? 'text-red-600' : sla === 'due_soon' ? 'text-amber-600' : 'text-gray-400'}`}>· {slaLabel(sla)} ({SLA_HOURS}h SLA)</span>
+                  return <span className={`ml-1 ${sla === 'overdue' ? 'text-red-600' : sla === 'due_soon' ? 'text-amber-600' : 'text-gray-500'}`}>· {slaLabel(sla)} ({SLA_HOURS}h SLA)</span>
                 })()}
               </p>
             </div>
@@ -923,7 +923,7 @@ function RequestDetail({ request, agencies, onClose }) {
             </div>
             {/* Unified Intake Sheet — the structured case assessment */}
             <div className="flex items-center gap-2 p-2.5 rounded-lg border border-gray-100 mb-2">
-              <MdAssignment size={16} className="text-gray-400 flex-shrink-0" />
+              <MdAssignment size={16} className="text-gray-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 truncate">Unified Intake Sheet</p>
               </div>
@@ -941,7 +941,7 @@ function RequestDetail({ request, agencies, onClose }) {
             <div className="p-3 rounded-lg border border-gray-100 mb-2 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-700">Coverage applied first</p>
-                <span className="text-xs text-gray-400">Bill {peso(billBase)}</span>
+                <span className="text-xs text-gray-500">Bill {peso(billBase)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
@@ -962,13 +962,13 @@ function RequestDetail({ request, agencies, onClose }) {
                   <span className="font-semibold text-gray-800">{peso(previewNeeded)}</span></p>
                 {coverageEditable
                   ? <button className="btn-secondary text-xs py-1.5" disabled={busy} onClick={saveCoverage}>Save coverage</button>
-                  : <span className="text-xs text-gray-400 italic">Locked after endorsement</span>}
+                  : <span className="text-xs text-gray-500 italic">Locked after endorsement</span>}
               </div>
             </div>
             {/* Async remote assessment — the completed Intake Sheet is the gate. */}
             <div className="p-3 rounded-lg border border-gray-100">
               {!allVerified ? (
-                <p className="text-xs text-gray-400 italic">Verify all documents first, then assess the patient and complete the Intake Sheet.</p>
+                <p className="text-xs text-gray-500 italic">Verify all documents first, then assess the patient and complete the Intake Sheet.</p>
               ) : intakeComplete ? (
                 <p className="text-xs text-gray-500">Assessment complete — this request is ready to endorse.</p>
               ) : (
@@ -997,7 +997,7 @@ function RequestDetail({ request, agencies, onClose }) {
               Endorsed agencies
             </h3>
             {slices.length === 0 ? (
-              <p className="text-sm text-gray-400 italic">Not yet endorsed to any agency.</p>
+              <p className="text-sm text-gray-500 italic">Not yet endorsed to any agency.</p>
             ) : (
               <div className="space-y-2">
                 {slices.map(s => {
@@ -1018,7 +1018,7 @@ function RequestDetail({ request, agencies, onClose }) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{s.agencyName}</p>
-                        <p className="text-xs text-gray-400">Asked {peso(s.amountRequested)}{s.amountApproved > 0 ? ` · approved ${peso(s.amountApproved)}` : ''}</p>
+                        <p className="text-xs text-gray-500">Asked {peso(s.amountRequested)}{s.amountApproved > 0 ? ` · approved ${peso(s.amountApproved)}` : ''}</p>
                         {stale && (
                           <div className="text-xs text-amber-700 mt-0.5">
                             <p>Awaiting patient acceptance · {daysSinceEndorsed}d.</p>
@@ -1593,7 +1593,7 @@ export default function Requests() {
         {/* Filter bar */}
         <div className="card px-3 py-2.5 mb-3 flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
             <input className="input pl-9 py-1.5" placeholder="Request ID, patient, or type…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
@@ -1645,11 +1645,11 @@ export default function Requests() {
           <div className="card p-10 text-center">
             <MdLocalHospital size={32} className="text-gray-300 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600 mb-1">No assistance requests yet</p>
-            <p className="text-xs text-gray-400">Patient requests will appear here for endorsement.</p>
+            <p className="text-xs text-gray-500">Patient requests will appear here for endorsement.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="card p-10 text-center">
-            <p className="text-sm text-gray-400">No requests match your search or filter.</p>
+            <p className="text-sm text-gray-500">No requests match your search or filter.</p>
             <button
               onClick={() => { setSearch(''); setFilter('all'); setCategory('all'); setAssignee('all'); setOverdueOnly(false) }}
               className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">

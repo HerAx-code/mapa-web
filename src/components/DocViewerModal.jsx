@@ -125,7 +125,7 @@ export function DocPreview({ docMeta, className = '', onClose }) {
         {loading && (
           <div className="text-center">
             <MdRefresh size={28} className="text-gray-300 mx-auto mb-2 animate-spin" />
-            <p className="text-sm text-gray-400">Loading document…</p>
+            <p className="text-sm text-gray-500">Loading document…</p>
           </div>
         )}
 
@@ -169,10 +169,10 @@ export function DocPreview({ docMeta, className = '', onClose }) {
               <div className="p-6 text-center">
                 <MdInsertDriveFile size={36} className="text-gray-300 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 font-medium mb-1">PDF preview isn't available in this browser</p>
-                <p className="text-xs text-gray-400">Your browser is set to download PDFs. Use <strong>Open in new tab</strong> or <strong>Download</strong> below.</p>
+                <p className="text-xs text-gray-500">Your browser is set to download PDFs. Use <strong>Open in new tab</strong> or <strong>Download</strong> below.</p>
               </div>
             </object>
-            <p className="text-xs text-gray-400 mt-2 text-center">
+            <p className="text-xs text-gray-500 mt-2 text-center">
               Not showing? <button onClick={handleOpenInNewTab} className="text-brand-600 hover:underline font-medium">Open in a new tab</button>.
             </p>
           </div>
@@ -182,7 +182,7 @@ export function DocPreview({ docMeta, className = '', onClose }) {
           <div className="text-center max-w-sm">
             <MdInsertDriveFile size={36} className="text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-600 font-medium mb-1">PDF document</p>
-            <p className="text-xs text-gray-400">Use Open in new tab or Download below.</p>
+            <p className="text-xs text-gray-500">Use Open in new tab or Download below.</p>
           </div>
         )}
 
@@ -190,7 +190,7 @@ export function DocPreview({ docMeta, className = '', onClose }) {
           <div className="text-center max-w-sm">
             <MdInsertDriveFile size={36} className="text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-600 font-medium mb-1">Preview not available for this file type</p>
-            <p className="text-xs text-gray-400">You can still download or open it in a new tab.</p>
+            <p className="text-xs text-gray-500">You can still download or open it in a new tab.</p>
           </div>
         )}
       </div>
@@ -237,13 +237,13 @@ export default function DocViewerModal({ docMeta, onClose }) {
         </div>
         <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <MdInsertDriveFile size={18} className="text-gray-400 flex-shrink-0" />
+            <MdInsertDriveFile size={18} className="text-gray-500 flex-shrink-0" />
             <h2 id="doc-viewer-title" className="text-base font-semibold text-gray-900 truncate">{docMeta?.name ?? 'Document'}</h2>
             {docMeta?.status && (
               <StatusBadge status={docMeta.status} kind="doc" />
             )}
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600 flex-shrink-0"><MdClose size={20} /></button>
         </div>
         {docMeta?.documentTypeName && (
           <div className="px-5 py-2 border-b border-gray-50 text-xs text-gray-500 flex-shrink-0">Type: {docMeta.documentTypeName}</div>

@@ -185,7 +185,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
             <span className={`badge text-xs ${stateTag.cls}`}>{stateTag.label}</span>
           </div>
           {!canReplace && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
+            <span className="text-xs text-gray-500 flex items-center gap-1">
               <MdLock size={11} /> Read-only
             </span>
           )}
@@ -219,7 +219,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
             ) : (
               <div className="w-full aspect-[3/4] rounded-lg border border-dashed border-gray-200 bg-gray-50/60 flex flex-col items-center justify-center gap-2 p-4 text-center">
                 <MdCardMembership size={28} className="text-gray-300" />
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-500">
                   {!loaded ? 'Loading…' : 'No signed scan uploaded yet'}
                 </p>
               </div>
@@ -229,29 +229,29 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
           {/* Info + actions */}
           <div className="sm:col-span-2 space-y-2">
             <div className="bg-gray-50 rounded-lg px-3 py-2">
-              <p className="text-xs text-gray-400">Approved Amount</p>
+              <p className="text-xs text-gray-500">Approved Amount</p>
               <p className="text-sm font-semibold text-gray-800">₱{Number(app.approvedAmount ?? 0).toLocaleString()}</p>
             </div>
             {app.purposeOfAssistance?.length > 0 && (
               <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <p className="text-xs text-gray-400">For</p>
+                <p className="text-xs text-gray-500">For</p>
                 <p className="text-sm text-gray-800">{app.purposeOfAssistance.join(', ')}</p>
               </div>
             )}
             {app.payableTo && (
               <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <p className="text-xs text-gray-400">Payable To</p>
+                <p className="text-xs text-gray-500">Payable To</p>
                 <p className="text-sm text-gray-800">{app.payableTo}</p>
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <p className="text-xs text-gray-400">Approved</p>
+                <p className="text-xs text-gray-500">Approved</p>
                 <p className="text-xs text-gray-700">{formatDate(app.approvedAt)}</p>
               </div>
               {hasSigned && (
                 <div className="bg-gray-50 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-400">Scan uploaded</p>
+                  <p className="text-xs text-gray-500">Scan uploaded</p>
                   <p className="text-xs text-gray-700">{formatDate(signedScan.uploadedAt)}</p>
                 </div>
               )}
@@ -298,7 +298,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
             </div>
 
             {canReplace && (
-              <p className="text-xs text-gray-400 leading-relaxed pt-2">
+              <p className="text-xs text-gray-500 leading-relaxed pt-2">
                 <strong>Workflow:</strong> Click <strong>Open Guarantee Letter</strong> to view, then Print (for wet-signing) or Save as PDF from the viewer page. After signing on paper, scan it and click <strong>Upload Signed Scan</strong> so the patient can download the signed copy.
               </p>
             )}

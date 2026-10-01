@@ -168,7 +168,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
           <h2 id="notif-modal-title" className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{t('notif.header')}</h2>
-          <button onClick={onClose} aria-label={t('common.close', 'Close')} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} aria-label={t('common.close', 'Close')} className="text-gray-500 hover:text-gray-600 transition-colors">
             <MdClose size={20} />
           </button>
         </div>
@@ -181,7 +181,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">{t('notif.sender')}</p>
-              <p className="text-xs text-gray-400">@ {fmtFull(notif.createdAt)}</p>
+              <p className="text-xs text-gray-500">@ {fmtFull(notif.createdAt)}</p>
             </div>
             {!notif.read && (
               <span className="ml-auto badge badge-blue text-xs">{t('notif.newBadge')}</span>
@@ -213,7 +213,7 @@ export default function NotificationModal({ notifications, currentIndex, uid, us
               className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
               <MdChevronLeft size={20} />
             </button>
-            <span className="text-xs text-gray-400 w-16 text-center">
+            <span className="text-xs text-gray-500 w-16 text-center">
               {t('notif.ofCount', { current: currentIndex + 1, total: notifications.length })}
             </span>
             <button

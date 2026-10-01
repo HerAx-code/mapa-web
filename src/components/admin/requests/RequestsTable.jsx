@@ -144,12 +144,12 @@ export default function RequestsTable({
                       <CoverageBar funding={funding} />
                       <span className="tabular-nums text-[11px] text-gray-600">{funding.pct}%</span>
                     </div>
-                    <span className="tabular-nums mt-0.5 block text-[11px] text-gray-400">{peso(funding.committed)} committed</span>
+                    <span className="tabular-nums mt-0.5 block text-[11px] text-gray-500">{peso(funding.committed)} committed</span>
                   </td>
 
                   <td className="px-3 py-3">
                     <span className={`tabular-nums inline-flex items-center gap-1 text-[11px] font-medium ${dc.blocking ? 'text-red-600' : 'text-gray-600'}`}>
-                      {dc.blocking ? <MdWarningAmber size={13} /> : <MdDescription size={13} className="text-gray-400" />}
+                      {dc.blocking ? <MdWarningAmber size={13} /> : <MdDescription size={13} className="text-gray-500" />}
                       {dc.verified}/{dc.total}
                     </span>
                   </td>
@@ -180,7 +180,7 @@ export default function RequestsTable({
 
                   <td className="whitespace-nowrap px-3 py-3 text-right">
                     <span className={`tabular-nums block text-sm font-medium ${SLA_TEXT[sla]}`}>{waitingLabel(r.submittedAt)}</span>
-                    <span className={`block text-[11px] ${sla === 'overdue' ? 'text-red-600' : sla === 'due_soon' ? 'text-amber-600' : 'text-gray-400'}`}>
+                    <span className={`block text-[11px] ${sla === 'overdue' ? 'text-red-600' : sla === 'due_soon' ? 'text-amber-600' : 'text-gray-500'}`}>
                       {sla === 'overdue' && <MdWarningAmber size={11} className="inline mb-0.5" />} {slaLabel(sla)}
                     </span>
                   </td>
@@ -203,14 +203,14 @@ export default function RequestsTable({
                 <p className="text-sm font-semibold text-gray-800 truncate">{r.patientName}{r.filedBy && <span className="ml-1 text-xs text-amber-600">(rep)</span>}</p>
                 <StatusBadge status={r.status} kind="request" className="flex-shrink-0" />
               </div>
-              <p className="text-xs text-gray-400 mb-2">{r.requestId} · {r.assistanceType}</p>
+              <p className="text-xs text-gray-500 mb-2">{r.requestId} · {r.assistanceType}</p>
               <div className="flex items-center justify-between text-xs mb-2">
-                <span className="text-gray-400">Balance <span className="tabular-nums font-semibold text-gray-700">{peso(funding.balance)}</span></span>
+                <span className="text-gray-500">Balance <span className="tabular-nums font-semibold text-gray-700">{peso(funding.balance)}</span></span>
                 <span className="text-[11px] text-gray-500">{r.assignee ?? 'Unassigned'}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2"><CoverageBar funding={funding} /><span className="tabular-nums text-[11px] text-gray-600">{funding.pct}%</span></div>
-                <span className={`tabular-nums text-[11px] font-medium ${dc.blocking ? 'text-red-600' : 'text-gray-400'}`}>docs {dc.verified}/{dc.total}</span>
+                <span className={`tabular-nums text-[11px] font-medium ${dc.blocking ? 'text-red-600' : 'text-gray-500'}`}>docs {dc.verified}/{dc.total}</span>
               </div>
               {warning && <div className="mt-2"><span className={`inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded ${warning.cls}`}>{warning.label}</span></div>}
               {mismatch && <div className="mt-2"><span className="inline-block whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">⚠ data check — only {peso(funding.committed)} secured</span></div>}

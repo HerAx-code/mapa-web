@@ -87,7 +87,7 @@ export default function CommandPalette({ items = [], queryActions }) {
         className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
 
         <div className="flex items-center gap-2.5 border-b border-gray-100 px-4">
-          <MdSearch size={18} className="flex-shrink-0 text-gray-400" />
+          <MdSearch size={18} className="flex-shrink-0 text-gray-500" />
           <input
             ref={inputRef}
             value={query}
@@ -95,14 +95,14 @@ export default function CommandPalette({ items = [], queryActions }) {
             onKeyDown={onKeyDown}
             placeholder="Jump to a page…"
             aria-label="Search commands"
-            className="flex-1 bg-transparent py-3.5 text-sm text-gray-800 outline-none placeholder:text-gray-400"
+            className="flex-1 bg-transparent py-3.5 text-sm text-gray-800 outline-none placeholder:text-gray-500"
           />
-          <kbd className="flex-shrink-0 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">Esc</kbd>
+          <kbd className="flex-shrink-0 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">Esc</kbd>
         </div>
 
         <ul ref={listRef} role="listbox" className="max-h-[52vh] overflow-y-auto py-1.5">
           {results.length === 0 && (
-            <li className="px-4 py-8 text-center text-sm text-gray-400">No matches for “{query}”.</li>
+            <li className="px-4 py-8 text-center text-sm text-gray-500">No matches for “{query}”.</li>
           )}
           {results.map((it, i) => {
             const isActive = i === active
@@ -112,7 +112,7 @@ export default function CommandPalette({ items = [], queryActions }) {
             return (
               <li key={it.key}>
                 {showSection && (
-                  <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{it.section}</p>
+                  <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">{it.section}</p>
                 )}
                 <button
                   type="button"
@@ -124,9 +124,9 @@ export default function CommandPalette({ items = [], queryActions }) {
                   className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
                     isActive ? 'bg-brand-50 text-brand-800' : 'text-gray-700'
                   }`}>
-                  {Icon && <Icon size={16} className={isActive ? 'text-brand-600' : 'text-gray-400'} />}
+                  {Icon && <Icon size={16} className={isActive ? 'text-brand-600' : 'text-gray-500'} />}
                   <span className="flex-1 truncate">{it.label}</span>
-                  {it.hint && <span className="text-xs text-gray-400">{it.hint}</span>}
+                  {it.hint && <span className="text-xs text-gray-500">{it.hint}</span>}
                 </button>
               </li>
             )

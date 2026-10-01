@@ -34,7 +34,7 @@ export default function CompactStepper({ app }) {
             <p className={`text-xs mt-1 font-medium whitespace-nowrap ${
               s.done ? 'text-gray-700'
               : s.active ? 'text-amber-700'
-              : 'text-gray-400'
+              : 'text-gray-500'
             }`}>{s.label}</p>
           </div>
           {i < steps.length - 1 && (

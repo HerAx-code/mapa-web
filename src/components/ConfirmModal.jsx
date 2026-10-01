@@ -146,7 +146,7 @@ export default function ConfirmModal({
           </div>
           <h2 id="confirm-modal-title" className="text-base font-semibold text-gray-900 flex-1 pt-1">{title}</h2>
           <button onClick={handleClose} disabled={busy} aria-label={cancelLabel}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50 flex-shrink-0">
+            className="text-gray-500 hover:text-gray-600 disabled:opacity-50 flex-shrink-0">
             <MdClose size={20} />
           </button>
         </div>
@@ -173,7 +173,7 @@ export default function ConfirmModal({
                 <span className={`${reasonRequired && reason.trim().length === 0 ? 'text-red-400' : 'text-transparent'}`}>
                   Reason required
                 </span>
-                <span className="text-gray-400">{reason.length} / {reasonMaxLength}</span>
+                <span className="text-gray-500">{reason.length} / {reasonMaxLength}</span>
               </div>
             </div>
           )}

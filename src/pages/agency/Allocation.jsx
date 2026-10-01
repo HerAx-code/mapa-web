@@ -375,37 +375,37 @@ export default function AgencyAllocation() {
         {/* Current budget snapshot */}
         <div className="card p-5 mb-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               {PERIOD_ADJECTIVE[budget.period] ?? 'Current'} Budget
             </p>
             {periodStart && (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 Period started {periodStart.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div>
-              <p className="text-xs text-gray-400">Allocated</p>
+              <p className="text-xs text-gray-500">Allocated</p>
               <p className="text-xl font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Committed</p>
+              <p className="text-xs text-gray-500">Committed</p>
               <p className="text-xl font-semibold text-amber-600">₱{committed.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Disbursed</p>
+              <p className="text-xs text-gray-500">Disbursed</p>
               <p className="text-xl font-semibold text-purple-600">₱{disbursed.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Remaining</p>
+              <p className="text-xs text-gray-500">Remaining</p>
               <p className="text-xl font-semibold text-green-600">₱{remaining.toLocaleString()}</p>
             </div>
           </div>
           <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
             <div className={`h-full rounded-full transition-all ${bar}`} style={{ width: `${Math.min(utilization, 100)}%` }} />
           </div>
-          <p className="text-xs text-gray-400">{utilization}% utilized</p>
+          <p className="text-xs text-gray-500">{utilization}% utilized</p>
         </div>
 
         {/* Allocation editor */}
@@ -413,7 +413,7 @@ export default function AgencyAllocation() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-semibold text-gray-800">Allocation</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 The total budget for this {PERIOD_NOUN[budget.period] ?? 'period'}. Approved Guarantee Letters draw from this.
               </p>
             </div>
@@ -428,13 +428,13 @@ export default function AgencyAllocation() {
           {!editing ? (
             <div>
               <div className="flex items-center gap-3">
-                <MdAttachMoney size={20} className="text-gray-400" />
+                <MdAttachMoney size={20} className="text-gray-500" />
                 <p className="text-2xl font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
-                <span className="text-xs text-gray-400">per {PERIOD_NOUN[budget.period] ?? 'period'}</span>
+                <span className="text-xs text-gray-500">per {PERIOD_NOUN[budget.period] ?? 'period'}</span>
               </div>
               {budget.fundSource ? (
                 <div className="mt-3 pt-3 border-t border-gray-50">
-                  <p className="text-xs text-gray-400 mb-0.5">Fund source</p>
+                  <p className="text-xs text-gray-500 mb-0.5">Fund source</p>
                   <p className="text-sm font-medium text-gray-700">{budget.fundSource}</p>
                   {budget.fundSourceNotes && (
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{budget.fundSourceNotes}</p>
@@ -451,7 +451,7 @@ export default function AgencyAllocation() {
                   agency admins see the current policy at a glance, even
                   when it's "no cap". */}
               <div className="mt-3 pt-3 border-t border-gray-50">
-                <p className="text-xs text-gray-400 mb-0.5">Per-applicant cap</p>
+                <p className="text-xs text-gray-500 mb-0.5">Per-applicant cap</p>
                 {agency.maxPerApplicant != null && agency.maxPerApplicant > 0 ? (
                   <p className="text-sm font-medium text-gray-700">
                     ₱{Number(agency.maxPerApplicant).toLocaleString()} maximum per case
@@ -504,13 +504,13 @@ export default function AgencyAllocation() {
                   placeholder="e.g. PCSO Resolution #2026-15, DOH SAA Q1-2026"
                   value={newFundSource}
                   onChange={e => setNewFundSource(e.target.value)} />
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   The authorizing document or program that funded this allocation. Required when allocation &gt; 0.
                 </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Maximum per Applicant (₱) <span className="text-gray-400 font-normal">— optional</span>
+                  Maximum per Applicant (₱) <span className="text-gray-500 font-normal">— optional</span>
                 </label>
                 <input type="number" min={0} step={1} className="input"
                   placeholder="e.g. 25000 (PCSO ceiling). Leave blank for no cap."
@@ -522,7 +522,7 @@ export default function AgencyAllocation() {
                     const n = Number(v)
                     setNewMaxPerApplicant(Number.isFinite(n) && n >= 0 ? String(Math.floor(n)) : '')
                   }} />
-                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                   The most this agency may approve for a single case. PCSO uses ₱25,000; DSWD AICS varies by tier; Malasakit Center is based on case assessment. Leave blank if your agency has no per-case ceiling. CRMC sees a soft warning at endorsement; the agency's Approve modal hard-blocks any approval above this.
                 </p>
               </div>
@@ -568,7 +568,7 @@ export default function AgencyAllocation() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800">Start a New Period</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-500">
                   Resets disbursed back to ₱0 and restarts the period clock. Allocation is preserved.
                 </p>
                 {committed > 0 && (
@@ -592,7 +592,7 @@ export default function AgencyAllocation() {
         {openRequests.length > 0 && (
           <div className="card p-5 mb-5">
             <p className="text-sm font-semibold text-gray-800 mb-1">Open Top-Up Requests</p>
-            <p className="text-xs text-gray-400 mb-3">
+            <p className="text-xs text-gray-500 mb-3">
               Coordinators on your team have requested budget increases. Review and adjust allocation above.
             </p>
             <div className="space-y-2">
@@ -621,7 +621,7 @@ export default function AgencyAllocation() {
         <div className="card p-5 mb-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <MdHistory size={16} className="text-gray-400" />
+              <MdHistory size={16} className="text-gray-500" />
               <p className="text-sm font-semibold text-gray-800">Allocation History</p>
             </div>
             <button
@@ -631,9 +631,9 @@ export default function AgencyAllocation() {
             </button>
           </div>
           {historyLoading ? (
-            <p className="text-xs text-gray-400 py-3 text-center">Loading…</p>
+            <p className="text-xs text-gray-500 py-3 text-center">Loading…</p>
           ) : history.length === 0 ? (
-            <p className="text-xs text-gray-400 py-3 text-center">
+            <p className="text-xs text-gray-500 py-3 text-center">
               No allocation changes recorded yet. Set the allocation above to start the trail.
             </p>
           ) : (
@@ -652,7 +652,7 @@ export default function AgencyAllocation() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-700 leading-snug">{e.details ?? '—'}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         by <strong>{e.actorName ?? 'System'}</strong>
                         {when && <> · {when.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</>}
                       </p>
@@ -666,7 +666,7 @@ export default function AgencyAllocation() {
           </aside>{/* /history column */}
         </div>{/* /split grid */}
 
-        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+        <p className="text-xs text-gray-500 mt-2 leading-relaxed">
           <strong>Accountability —</strong> Changes here are recorded in your agency's audit log. As Agency Administrator, you are accountable to your funding source (PCSO / DOH / DSWD / etc.) for how the allocation is set and spent. CRMC operates the platform but does not control your agency's budget.
         </p>
 
@@ -704,7 +704,7 @@ export default function AgencyAllocation() {
                 onChange={e => setRestartPeriodClock(e.target.checked)}
               />
               <span>
-                Restart the period clock now <span className="text-gray-400">(recommended — otherwise the new {newPeriod} rule applies to your old period start date and may immediately fire "stale period").</span>
+                Restart the period clock now <span className="text-gray-500">(recommended — otherwise the new {newPeriod} rule applies to your old period start date and may immediately fire "stale period").</span>
               </span>
             </label>
           </div>

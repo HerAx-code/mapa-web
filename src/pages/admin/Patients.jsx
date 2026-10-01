@@ -86,11 +86,11 @@ function ProfileModal({ patient, onClose, onMessage }) {
               <div className="min-w-0">
                 <p className="eyebrow">Patient profile</p>
                 <h2 className="mt-0.5 text-lg font-semibold text-gray-900 truncate leading-tight">{patient.name}</h2>
-                <p className="text-xs text-gray-400 truncate">{patient.email}</p>
+                <p className="text-xs text-gray-500 truncate">{patient.email}</p>
               </div>
             </div>
             <button onClick={onClose} aria-label="Close profile"
-              className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+              className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700">
               <MdClose size={18} />
             </button>
           </div>
@@ -424,22 +424,22 @@ export default function Patients() {
               {[
                 { label: 'Total',  value: patients.length, color: 'text-gray-800'  },
                 { label: 'Active', value: activeCount,     color: 'text-green-600' },
-                { label: 'Marked', value: deletionCount,   color: deletionCount ? 'text-red-500' : 'text-gray-400' },
+                { label: 'Marked', value: deletionCount,   color: deletionCount ? 'text-red-500' : 'text-gray-500' },
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Name, email, or contact" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Status</p>
               <ul className="-mx-1.5 space-y-px">
                 {[
                   ['all', 'All patients', patients.length],
@@ -452,7 +452,7 @@ export default function Patients() {
                       <button onClick={() => setTab(key)} aria-current={active ? 'true' : undefined}
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                         <span className="truncate">{label}</span>
-                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : 'text-gray-500'}`}>{n}</span>
                       </button>
                     </li>
                   )
@@ -468,7 +468,7 @@ export default function Patients() {
 
           {/* ── Roster ── */}
           <div className="min-w-0">
-            <p className="text-xs text-gray-400 mb-3">{filtered.length} patient{filtered.length !== 1 ? 's' : ''}{(search || tab !== 'all') ? ' shown' : ''}</p>
+            <p className="text-xs text-gray-500 mb-3">{filtered.length} patient{filtered.length !== 1 ? 's' : ''}{(search || tab !== 'all') ? ' shown' : ''}</p>
 
         {/* Table */}
         <div className="card overflow-hidden">
@@ -534,47 +534,47 @@ export default function Patients() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400 truncate">{p.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{p.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="font-mono text-xs text-gray-600 whitespace-nowrap">{p.hospitalId || '—'}</td>
                   <td className="text-xs text-gray-500">{p.contact ? p.contact : '—'}</td>
-                  <td className="text-xs text-gray-400">{formatDate(p.createdAt)}</td>
+                  <td className="text-xs text-gray-500">{formatDate(p.createdAt)}</td>
                   <td>
                     {p.cooldown > 0
                       ? <span className="badge badge-amber text-xs">Holding Period Active</span>
-                      : <span className="text-xs text-gray-400">—</span>
+                      : <span className="text-xs text-gray-500">—</span>
                     }
                   </td>
                   <td onClick={e => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <button title="Send Message"
-                        className="p-1.5 text-gray-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
                         onClick={() => handleMessage(p)}>
                         <MdMessage size={15} />
                       </button>
                       <button title={p.cooldown > 0 ? 'Remove Holding Period' : 'Apply Holding Period'}
-                        className={`p-1.5 rounded-lg transition-colors ${confirmHolding?.uid === p.uid ? 'text-amber-600 bg-amber-50' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                        className={`p-1.5 rounded-lg transition-colors ${confirmHolding?.uid === p.uid ? 'text-amber-600 bg-amber-50' : 'text-gray-500 hover:text-amber-500 hover:bg-amber-50'}`}
                         onClick={() => setConfirmHolding(confirmHolding?.uid === p.uid ? null : p)}>
                         <MdSchedule size={15} />
                       </button>
                       {p.deletion ? (
                         <button title="Restore Account"
-                          className={`p-1.5 rounded-lg transition-colors ${confirmDeletion?.uid === p.uid ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                          className={`p-1.5 rounded-lg transition-colors ${confirmDeletion?.uid === p.uid ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-green-600 hover:bg-green-50'}`}
                           onClick={() => setConfirmDeletion(confirmDeletion?.uid === p.uid ? null : p)}>
                           <MdRestoreFromTrash size={15} />
                         </button>
                       ) : (
                         <button title="Mark for Deletion"
-                          className={`p-1.5 rounded-lg transition-colors ${confirmDeletion?.uid === p.uid ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}
+                          className={`p-1.5 rounded-lg transition-colors ${confirmDeletion?.uid === p.uid ? 'text-red-500 bg-red-50' : 'text-gray-500 hover:text-red-500 hover:bg-red-50'}`}
                           onClick={() => setConfirmDeletion(confirmDeletion?.uid === p.uid ? null : p)}>
                           <MdDelete size={15} />
                         </button>
                       )}
                       {isSuperAdmin && p.deletion && (
                         <button title="Delete Permanently"
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           onClick={() => setConfirmDeletePatient(p)}>
                           <MdDeleteForever size={15} />
                         </button>
@@ -633,7 +633,7 @@ export default function Patients() {
               {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-8">
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-500">
                       {search
                         ? 'No patients match your search.'
                         : tab === 'deletion'

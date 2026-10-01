@@ -44,9 +44,9 @@ function EditableField({ icon: Icon, label, value, placeholder, onSave, multilin
 
   return (
     <div className="bg-gray-50 rounded-xl px-4 py-3 flex items-start gap-3">
-      {Icon && <Icon size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />}
+      {Icon && <Icon size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />}
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
+        <p className="text-xs text-gray-500 mb-1">{label}</p>
         {!editing ? (
           <p className="text-sm text-gray-800 break-words">
             {value?.trim() ? value : <span className="text-gray-300 italic">{placeholder ?? 'Not set'}</span>}
@@ -90,14 +90,14 @@ function EditableField({ icon: Icon, label, value, placeholder, onSave, multilin
 function ReadOnlyField({ icon: Icon, label, value, hint }) {
   return (
     <div className="bg-gray-50/60 rounded-xl px-4 py-3 flex items-start gap-3 border border-gray-100">
-      {Icon && <Icon size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />}
+      {Icon && <Icon size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />}
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
           {label}
           <MdLock size={10} className="text-gray-300" />
         </p>
         <p className="text-sm text-gray-700 break-words">{value || <span className="text-gray-300 italic">—</span>}</p>
-        {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
       </div>
     </div>
   )
@@ -120,7 +120,7 @@ function PatientPreview({ agency }) {
       <div className="flex items-center gap-2 mb-3">
         <MdVisibility size={16} className="text-purple-500" />
         <p className="text-sm font-semibold text-gray-800">Patient's view</p>
-        <span className="text-xs text-gray-400">— exactly what patients see on Medical Programs</span>
+        <span className="text-xs text-gray-500">— exactly what patients see on Medical Programs</span>
       </div>
 
       {/* Mock patient-side program card */}
@@ -155,7 +155,7 @@ function PatientPreview({ agency }) {
 
             {agency.assistanceTypes?.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs text-gray-400 mb-1">Assistance types:</p>
+                <p className="text-xs text-gray-500 mb-1">Assistance types:</p>
                 <div className="flex flex-wrap gap-1">
                   {agency.assistanceTypes.map((t, i) => (
                     <span key={i} className="badge badge-blue text-xs">{t}</span>
@@ -166,7 +166,7 @@ function PatientPreview({ agency }) {
 
             {agency.requirements?.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs text-gray-400 mb-1">Required documents:</p>
+                <p className="text-xs text-gray-500 mb-1">Required documents:</p>
                 <ul className="space-y-0.5">
                   {agency.requirements.map((r, i) => (
                     <li key={i} className="flex items-start gap-1 text-xs text-gray-600">
@@ -254,7 +254,7 @@ export default function AgencyProfile() {
 
   if (!agency) return (
     <Layout breadcrumb="Agency Profile">
-      <div className="p-4 sm:p-6 text-center text-sm text-gray-400">
+      <div className="p-4 sm:p-6 text-center text-sm text-gray-500">
         No agency profile found. Contact the administrator.
       </div>
     </Layout>
@@ -289,9 +289,9 @@ export default function AgencyProfile() {
         {/* Agency identity card (read-only — admin sets) */}
         <div className="card p-5 mb-5">
           <div className="flex items-center gap-2 mb-4">
-            <MdInfo size={16} className="text-gray-400" />
+            <MdInfo size={16} className="text-gray-500" />
             <p className="text-sm font-semibold text-gray-800">Identity</p>
-            <span className="text-xs text-gray-400">— set by system administrator</span>
+            <span className="text-xs text-gray-500">— set by system administrator</span>
           </div>
           <div className="flex items-center gap-4 mb-4">
             <AgencyAvatar agency={agency} className="w-14 h-14 rounded-2xl text-lg" />
@@ -302,7 +302,7 @@ export default function AgencyProfile() {
                   {agency.enabled ? 'Active' : 'Disabled'}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 Agency name, branding, and active status can only be changed by the administrator.
               </p>
             </div>
@@ -315,10 +315,10 @@ export default function AgencyProfile() {
             <div className="flex items-center gap-2">
               <MdEdit size={16} className="text-brand-500" />
               <p className="text-sm font-semibold text-gray-800">Public information</p>
-              <span className="text-xs text-gray-400">— you can edit this</span>
+              <span className="text-xs text-gray-500">— you can edit this</span>
             </div>
             {agency.profileUpdatedAt && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 Last edited {agency.profileUpdatedBy ? `by ${agency.profileUpdatedBy} ` : ''}on {formatDate(agency.profileUpdatedAt)}
               </span>
             )}
@@ -384,9 +384,9 @@ export default function AgencyProfile() {
         {/* Read-only: System-managed catalog */}
         <div className="card p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <MdLock size={14} className="text-gray-400" />
+            <MdLock size={14} className="text-gray-500" />
             <p className="text-sm font-semibold text-gray-800">System-managed catalog</p>
-            <span className="text-xs text-gray-400">— set by administrator</span>
+            <span className="text-xs text-gray-500">— set by administrator</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -409,7 +409,7 @@ export default function AgencyProfile() {
               }
             />
           </div>
-          <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+          <p className="text-xs text-gray-500 mt-3 leading-relaxed">
             To change document requirements or assistance types, ask the administrator. These tie into the patient application form and certificate templates.
           </p>
         </div>
@@ -417,12 +417,12 @@ export default function AgencyProfile() {
         {/* Coordinators (read-only) */}
         <div className="card p-5 mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <MdGroup size={16} className="text-gray-400" />
+            <MdGroup size={16} className="text-gray-500" />
             <p className="text-sm font-semibold text-gray-800">Coordinators</p>
-            <span className="text-xs text-gray-400">{coordinators.length} linked account{coordinators.length === 1 ? '' : 's'}</span>
+            <span className="text-xs text-gray-500">{coordinators.length} linked account{coordinators.length === 1 ? '' : 's'}</span>
           </div>
           {coordinators.length === 0 ? (
-            <p className="text-xs text-gray-400 italic">No coordinator accounts linked to this agency.</p>
+            <p className="text-xs text-gray-500 italic">No coordinator accounts linked to this agency.</p>
           ) : (
             <div className="space-y-2">
               {coordinators.map(c => {
@@ -435,9 +435,9 @@ export default function AgencyProfile() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800">
-                        {c.name} {isMe && <span className="text-xs text-gray-400">(you)</span>}
+                        {c.name} {isMe && <span className="text-xs text-gray-500">(you)</span>}
                       </p>
-                      <p className="text-xs text-gray-400 truncate">{c.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{c.email}</p>
                     </div>
                     {!isActive && <span className="badge badge-red text-xs">Deactivated</span>}
                   </div>

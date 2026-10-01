@@ -359,20 +359,20 @@ export default function CertificateGenerator() {
           </div>
           <div className="card px-4 py-2 text-center">
             <p className="text-2xl font-bold text-green-600">{loading ? '—' : apps.length}</p>
-            <p className="text-xs text-gray-400">Awaiting Guarantee Letter</p>
+            <p className="text-xs text-gray-500">Awaiting Guarantee Letter</p>
           </div>
         </div>
 
         {/* Search */}
         <div className="relative mb-4">
-          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input className="input pl-9 pr-10" placeholder="Search by patient name or application ID..."
             value={search} onChange={e => setSearch(e.target.value)} />
           {search && (
             <button
               onClick={() => setSearch('')}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
               <MdClose size={14} />
             </button>
           )}
@@ -405,7 +405,7 @@ export default function CertificateGenerator() {
         ) : filtered.length === 0 ? (
           <div className="card p-12 text-center">
             <MdCheckCircle size={40} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-sm text-gray-400 font-medium">
+            <p className="text-sm text-gray-500 font-medium">
               {search ? 'No approved applications match your search.' : 'No applications awaiting Guarantee Letters.'}
             </p>
             {!search && (
@@ -454,7 +454,7 @@ export default function CertificateGenerator() {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800">{app.patientName}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         <span className="font-mono">{app.appId}</span>
                         <span className="mx-1.5 text-gray-200">·</span>
                         ₱{Number(app.approvedAmount ?? 0).toLocaleString()}

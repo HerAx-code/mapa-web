@@ -14,7 +14,7 @@ const SLICE_STATE = {
   reviewing:    { label: 'pending',  cls: 'text-amber-700' },
   endorsed:     { label: 'pending',  cls: 'text-amber-700' },
   awaiting_info:{ label: 'needs info', cls: 'text-amber-700' },
-  rejected:     { label: 'declined', cls: 'text-gray-400' },
+  rejected:     { label: 'declined', cls: 'text-gray-500' },
 }
 
 export default function PathToZeroBalance({ request, slices = [], agencies = [], funding }) {
@@ -33,11 +33,11 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
 
   const Row = ({ label, sub, amount, sign = '', strong = false, top = false, muted = false }) => (
     <li className={`flex items-center justify-between gap-3 py-2 ${top ? 'border-t border-gray-100' : ''}`}>
-      <span className={`min-w-0 ${strong ? 'font-semibold text-gray-900' : muted ? 'text-gray-400' : 'text-gray-700'}`}>
+      <span className={`min-w-0 ${strong ? 'font-semibold text-gray-900' : muted ? 'text-gray-500' : 'text-gray-700'}`}>
         <span className="truncate">{label}</span>
         {sub && <span className="ml-1.5 text-[11px] font-medium">{sub}</span>}
       </span>
-      <span className={`tabular-nums whitespace-nowrap ${strong ? 'font-semibold text-gray-900' : muted ? 'text-gray-400' : 'text-gray-700'}`}>
+      <span className={`tabular-nums whitespace-nowrap ${strong ? 'font-semibold text-gray-900' : muted ? 'text-gray-500' : 'text-gray-700'}`}>
         {sign}{peso(amount)}
       </span>
     </li>
@@ -47,7 +47,7 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
     <div className="card p-4 sm:p-5">
       <div className="flex items-center justify-between gap-2 mb-1">
         <h3 className="text-sm font-semibold text-gray-800">Path to zero balance</h3>
-        <span className="tabular-nums text-xs text-gray-400">{coveredPct}% of {peso(totalBill)} covered</span>
+        <span className="tabular-nums text-xs text-gray-500">{coveredPct}% of {peso(totalBill)} covered</span>
       </div>
 
       <ul className="text-sm divide-y-0">
@@ -57,10 +57,10 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
         <Row label="Needed from agencies" amount={needed} top strong={false} muted />
 
         {sliceRows.length === 0 && (
-          <li className="py-2 text-sm text-gray-400 border-t border-gray-100">No agency endorsed yet.</li>
+          <li className="py-2 text-sm text-gray-500 border-t border-gray-100">No agency endorsed yet.</li>
         )}
         {sliceRows.map(s => {
-          const st = SLICE_STATE[s.status] ?? { label: s.status, cls: 'text-gray-400' }
+          const st = SLICE_STATE[s.status] ?? { label: s.status, cls: 'text-gray-500' }
           const amount = s.amountApproved ?? s.amountRequested ?? 0
           // Only APPROVED funding actually reduces the balance (balance =
           // needed − committed). Pending is a reserved cap, declined is nothing
