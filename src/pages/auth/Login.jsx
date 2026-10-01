@@ -6,7 +6,6 @@ import Logo from '../../components/ui/Logo'
 import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning, MdShield } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
-import { firstGivenName } from '../../utils/names'
 import { sendPasswordResetEmail } from 'firebase/auth'
 import { auth, db } from '../../firebase'
 import { isMfaChallenge, resolverFor, resolveTotpSignIn } from '../../utils/mfa'
@@ -129,11 +128,9 @@ export default function Login() {
     try {
       const loggedIn = await login(form.email, form.password)
       setLoginError(false)
-      // Greet with first name only so the toast fits on a phone screen
-      // (full name like "Juan Dela Cruz Jr." overflows mobile toasts).
-      // firstGivenName skips honorific prefixes so the greeting reads
-      // "Welcome back, Roberto" rather than "Welcome back, Dr.!".
-      toast.success(t('auth.toast.welcomeBack', { name: firstGivenName(loggedIn.name) }))
+      // M9: no "Welcome back" toast on login — it was noise on every sign-in and
+      // (desktop, bottom-right) overlapped dashboard content. The dashboard's own
+      // greeting + status is the welcome; toasts are reserved for action results.
       navigate(DASHBOARD[loggedIn.role] ?? '/patient/dashboard')
     } catch (err) {
       const code = err.code ?? ''
