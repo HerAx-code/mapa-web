@@ -48,9 +48,16 @@
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
-import { USERS } from './demo-accounts.js'
+import { USERS, requireDemoPassword, detectProjectId, assertNotProduction } from './demo-accounts.js'
 
 const DRY_RUN = process.argv.includes('--dry-run')
+
+// C1: this script force-resets EVERY demo account's password, so it is the most
+// dangerous of the seed scripts. Refuse to run without a strong DEMO_ACCOUNT_
+// PASSWORD, and refuse to touch production (mapa-crmc) without --allow-production.
+// (--dry-run still requires the password so the diff reflects the real value.)
+requireDemoPassword()
+assertNotProduction(detectProjectId())
 
 initializeApp({ credential: applicationDefault() })
 const auth = getAuth()

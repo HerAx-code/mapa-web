@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 
 // #10 — Notification failures should never break a user-facing action
@@ -57,10 +57,12 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
     }
   }
 
-  // 2. Secondary channels — email (always, if on file) + SMS (opt-in). Both
-  //    go through Vercel /api/* relays that verify a Firebase ID token, and
-  //    both are best-effort: a failure here never touches the in-app write
-  //    above. Wrapped so a network blip / misconfig can't break the caller.
+  // 2. Secondary channels — email (always) + SMS (opt-in). Both go through
+  //    Vercel /api/* relays. C2: the browser sends only the recipient UID +
+  //    subject/text (or message); the SERVER verifies the caller, authorizes by
+  //    role, and resolves the email/phone from users/{uid}. The client never
+  //    chooses the address or the HTML. Best-effort: a failure here never
+  //    touches the in-app write above.
   try {
     if (!uid) return result
     // R10: /api/* isn't served by the Vite dev server, so skip in dev to
@@ -68,8 +70,6 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
     const isViteDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV === true
     if (isViteDev) return result
 
-    const userSnap = await getDoc(doc(db, 'users', uid))
-    const udata    = userSnap.exists() ? userSnap.data() : null
     // Both relays require a valid Firebase ID token; without a signed-in user
     // we can't authenticate either send (the in-app notification landed already).
     const token = auth.currentUser
@@ -77,34 +77,23 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
       : null
     if (!token) return result
 
-    // ── Email (if the user has one on file) ──
-    const email = udata?.email
-    if (email) {
-      const plain = `${body ?? ''}\n\n— MAPA · Cotabato Regional Medical Center`
-      const html = [
-        '<div style="font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111827;">',
-        `<h2 style="margin:0 0 12px;color:#111827;font-size:18px;">${escapeHtml(title ?? '')}</h2>`,
-        `<p style="margin:0 0 16px;color:#374151;line-height:1.5;font-size:14px;">${escapeHtml(body ?? '').replace(/\n/g, '<br>')}</p>`,
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;">',
-        '<p style="margin:0;color:#9ca3af;font-size:12px;">MAPA · Cotabato Regional Medical Center · Sinsuat Avenue, Cotabato City</p>',
-        '</div>',
-      ].join('')
-      // Fire-and-forget so a slow SMTP server doesn't drag down the UX.
-      fetch('/api/send-email', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ to: email, subject: title || 'MAPA notification', text: plain, html }),
-      }).catch(err => console.warn('[notify] email POST failed:', err?.message))
-    }
+    // ── Email ── server resolves the recipient address + builds the HTML.
+    const plain = `${body ?? ''}`
+    fetch('/api/send-email', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body:    JSON.stringify({ uid, subject: title || 'MAPA notification', text: plain }),
+    }).catch(err => console.warn('[notify] email POST failed:', err?.message))
 
     // ── SMS (opt-in via sms:true; paid, so high-value messages only) ──
     // Minimal content — smsText, else the title — never the full body, so no
-    // financial/medical detail rides an SMS (RA-10173). Needs a phone on file.
-    if (sms === true && udata?.contact) {
+    // financial/medical detail rides an SMS (RA-10173). The server resolves the
+    // phone from users/{uid}.contact and allows staff/agency callers only.
+    if (sms === true) {
       fetch('/api/send-sms', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ to: udata.contact, message: (smsText || title || '').slice(0, 300) }),
+        body:    JSON.stringify({ uid, message: (smsText || title || '').slice(0, 300) }),
       }).catch(err => console.warn('[notify] sms POST failed:', err?.message))
     }
   } catch (chErr) {
@@ -112,17 +101,4 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
   }
 
   return result
-}
-
-// Minimal HTML escape for email body. The serverless route does not
-// sanitize input; without this, agency-supplied free text in
-// awaitingInfoMessage or rejection reasons could break out of the
-// surrounding markup.
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
