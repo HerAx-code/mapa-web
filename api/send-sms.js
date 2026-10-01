@@ -1,63 +1,27 @@
 // Vercel serverless function — Semaphore SMS relay (Philippines).
 //
-// The SMS analog of api/send-email.js. Same Firebase ID-token gate, then
-// dispatches through Semaphore (semaphore.co) so the API key never reaches
-// the patient's browser. Called by src/utils/notifications.js notify() when a
-// call opts in with `sms: true` — reserved for high-value, time-critical
-// messages (interview reminders, approvals, GL ready), since SMS is paid per
-// 160-char segment.
+// The SMS analog of api/send-email.js. Called by src/utils/notifications.js
+// notify() when a call opts in with `sms: true` (paid per segment → high-value,
+// time-critical messages only).
 //
-// Required Vercel env vars (Project Settings → Environment Variables):
-//   SEMAPHORE_API_KEY   — your Semaphore API key
-//   SEMAPHORE_SENDER    — (optional) a registered sender name; omit to use
-//                         Semaphore's default sender
-//   FIREBASE_PROJECT_ID — the same public project id api/send-email.js uses
+// C2 (open-relay fix): the browser sends only { uid, message } — the recipient
+// UID, NOT a phone number. The server verifies the caller, allows ONLY staff /
+// agency roles (see api/_lib/auth.js authorizeSend), resolves the recipient's
+// phone from users/{uid}.contact using the CALLER's token (firestore.rules
+// govern the read), normalizes it, then sends. This removes the previous ability
+// for any signed-in user to spend SMS credits to any PH number.
 //
-// Auth: every request must carry a valid Firebase ID token from THIS project
-// (`Authorization: Bearer <idToken>`), verified against Google's public keys
-// via `jose`. Anonymous tokens are rejected. Without a valid token the route
-// fails closed (401) — SMS is a secondary channel, so failing closed is safe.
+// Required Vercel env vars:
+//   SEMAPHORE_API_KEY, SEMAPHORE_SENDER (optional), FIREBASE_PROJECT_ID.
+// Rate limiting is a follow-up (needs a shared store).
 
-import { jwtVerify, createRemoteJWKSet } from 'jose'
+import { verifyCaller, getUserDoc, authorizeSend, callerUidOf } from './_lib/auth.js'
 
 const MAX_MESSAGE_LEN = 320  // ~2 SMS segments; a runaway body can't fan out cost
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID
-// NOTE: the path is /jwk/ (singular). The /jwks/ (plural) variant 404s (returns
-// an HTML error page), which made createRemoteJWKSet fail and jwtVerify throw —
-// rejecting EVERY valid token with 401. That silently broke both the SMS and
-// email relays in production. The singular /jwk/ endpoint returns real JWKS.
-const JWKS = createRemoteJWKSet(new URL(
-  'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
-))
-
-async function verifyCaller(req) {
-  const m = /^Bearer (.+)$/.exec(req.headers.authorization || '')
-  if (!m) return null
-  if (!PROJECT_ID) {
-    console.error('[send-sms] FIREBASE_PROJECT_ID env var is not set — rejecting.')
-    return null
-  }
-  try {
-    const { payload } = await jwtVerify(m[1], JWKS, {
-      issuer:   `https://securetoken.google.com/${PROJECT_ID}`,
-      audience: PROJECT_ID,
-    })
-    if (payload.firebase?.sign_in_provider === 'anonymous') {
-      console.warn('[send-sms] rejected anonymous token')
-      return null
-    }
-    return payload
-  } catch (err) {
-    console.warn('[send-sms] token verification failed:', err?.code || err?.message)
-    return null
-  }
-}
-
 // Normalize a PH mobile number to the local 09XXXXXXXXX form Semaphore expects.
-// Accepts 09…, +639…, 639…; returns null for anything that isn't a plausible
-// PH mobile number so we never spend a credit on a malformed send.
-// Exported for unit testing (tests/utils/sendSms.test.js).
+// Accepts 09…, +639…, 639…; returns null for anything implausible so we never
+// spend a credit on a malformed send. Exported for unit testing.
 export function normalizePhone(raw) {
   let d = String(raw || '').replace(/\D/g, '')
   if (d.startsWith('63') && d.length >= 12) d = '0' + d.slice(2)
@@ -76,18 +40,34 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end()
   if (req.method !== 'POST')    return res.status(405).json({ error: 'Method not allowed' })
 
-  const caller = await verifyCaller(req)
-  if (!caller) return res.status(401).json({ error: 'Unauthorized' })
+  const verified = await verifyCaller(req)
+  if (!verified) return res.status(401).json({ error: 'Unauthorized' })
+  const { payload, token } = verified
+  const callerUid = callerUidOf(payload)
 
-  const { to, message } = req.body ?? {}
-  const number = normalizePhone(to)
-  if (!number)  return res.status(400).json({ error: 'Invalid or missing PH mobile number' })
+  const body = req.body ?? {}
+  // New contract: the client no longer picks the recipient number.
+  if ('to' in body || 'number' in body) {
+    return res.status(400).json({ error: 'Unsupported field: send { uid, message } only' })
+  }
+  const { uid, message } = body
+  if (!uid) return res.status(400).json({ error: 'Missing required field: uid' })
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'Missing message' })
   }
   if (message.length > MAX_MESSAGE_LEN) {
     return res.status(400).json({ error: `Message too long (max ${MAX_MESSAGE_LEN} chars)` })
   }
+
+  // Authorize (staff/agency only), then resolve the recipient's phone.
+  const caller = await getUserDoc(callerUid, token)
+  const decision = authorizeSend({ callerUid, caller, targetUid: uid, channel: 'sms' })
+  if (!decision.ok) return res.status(decision.status).json({ error: 'Forbidden' })
+
+  const recipient = await getUserDoc(uid, token)
+  const number = normalizePhone(recipient?.contact)
+  // No usable phone on file → nothing to send. Succeed quietly (SMS is secondary).
+  if (!number) return res.status(200).json({ ok: true, skipped: 'no-recipient-phone' })
 
   const API_KEY = process.env.SEMAPHORE_API_KEY
   if (!API_KEY) {
@@ -104,24 +84,19 @@ export default async function handler(req, res) {
       body:    params.toString(),
     })
     const data = await r.json().catch(() => null)
-    // Semaphore returns a JSON array of message objects on success; an error
-    // object (e.g. { sendername: ["..."] }) otherwise.
     const ok = r.ok && Array.isArray(data) && data.length > 0
     return { ok, status: r.status, data }
   }
 
   try {
     let resp = await trySend(true)
-    // A custom SEMAPHORE_SENDER that isn't registered/approved makes Semaphore
-    // reject the send. Fall back to the default sender so delivery still
-    // succeeds instead of hard-failing on a sender-name misconfig.
+    // A custom SEMAPHORE_SENDER that isn't approved makes Semaphore reject the
+    // send; fall back to the default sender so delivery still succeeds.
     if (!resp.ok && process.env.SEMAPHORE_SENDER) {
       console.warn('[send-sms] custom-sender send failed', resp.status, JSON.stringify(resp.data), '— retrying with default sender')
       resp = await trySend(false)
     }
     if (!resp.ok) {
-      // Full Semaphore error → server log only; client gets a generic message
-      // (don't leak gateway internals to callers).
       console.error('[send-sms] semaphore error', resp.status, JSON.stringify(resp.data))
       return res.status(502).json({ error: 'SMS gateway error' })
     }
