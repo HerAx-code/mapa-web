@@ -254,41 +254,47 @@ export default function AdminDashboard() {
 
   // Action-first: an operator's live workload (open requests, docs to verify)
   // leads; program totals (patients, agencies) follow.
+  // M11: KPI numbers are neutral — these are workload counts, not statuses.
+  // Colour is reserved for the "Needs attention" alerts below (red/amber/orange),
+  // so a coloured number always means something.
   const METRICS = [
     {
       label: 'Open Requests',   value: openRequests,
-      Icon: MdListAlt, valueCls: 'text-brand-600', bg: 'bg-brand-50', iconCls: 'text-brand-600', path: '/admin/requests',
+      Icon: MdListAlt, path: '/admin/requests',
     },
     {
       label: 'Pending Docs',    value: pendingDocs,
-      Icon: MdDescription, valueCls: 'text-amber-600', bg: 'bg-amber-50', iconCls: 'text-amber-600', path: '/admin/requests',
+      Icon: MdDescription, path: '/admin/requests',
     },
     {
       label: 'Total Patients',  value: patientCount,
-      Icon: MdGroup, valueCls: 'text-gray-900', bg: 'bg-blue-50', iconCls: 'text-blue-600', path: '/admin/patients',
+      Icon: MdGroup, path: '/admin/patients',
     },
     {
       label: 'Active Agencies', value: agencyCount,
-      Icon: MdLocalHospital, valueCls: 'text-green-600', bg: 'bg-green-50', iconCls: 'text-green-600', path: '/admin/agencies',
+      Icon: MdLocalHospital, path: '/admin/agencies',
     },
   ]
 
+  // M11: shortcut tiles are navigation, not status — neutral icons (one grey
+  // treatment) instead of a rainbow of unrelated hues. Colour on this dashboard
+  // means status, and lives in the "Needs attention" alerts.
   const MANAGE_ACTIONS = [
-    { label: 'Agencies',     icon: MdBusiness,             color: 'bg-green-50  text-green-600',  path: '/admin/agencies',     forAll: true },
-    isSuperAdmin && { label: 'Accounts', icon: MdSupervisedUserCircle, color: 'bg-purple-50 text-purple-600', path: '/admin/accounts' },
-    { label: 'Doc Types',    icon: MdDescription,          color: 'bg-blue-50   text-blue-600',   path: '/admin/doctypes',     forAll: true },
-    { label: 'Assistance',   icon: MdFavorite,             color: 'bg-pink-50   text-pink-600',   path: '/admin/assistance',   forAll: true },
-    { label: 'Patients',     icon: MdGroup,                color: 'bg-red-50    text-red-600',    path: '/admin/patients',     forAll: true },
+    { label: 'Agencies',     icon: MdBusiness,             path: '/admin/agencies',     forAll: true },
+    isSuperAdmin && { label: 'Accounts', icon: MdSupervisedUserCircle, path: '/admin/accounts' },
+    { label: 'Doc Types',    icon: MdDescription,          path: '/admin/doctypes',     forAll: true },
+    { label: 'Assistance',   icon: MdFavorite,             path: '/admin/assistance',   forAll: true },
+    { label: 'Patients',     icon: MdGroup,                path: '/admin/patients',     forAll: true },
   ].filter(Boolean)
 
   const REVIEW_ACTIONS = [
-    { label: 'Requests',    icon: MdFactCheck, color: 'bg-brand-50  text-brand-600',  path: '/admin/requests',     forAll: true },
-    { label: 'App Logs',    icon: MdListAlt,  color: 'bg-teal-50   text-teal-600',   path: '/admin/logs',         forAll: true },
-    { label: 'Messages',    icon: MdMessage,  color: 'bg-cyan-50   text-cyan-600',   path: '/admin/messages',     forAll: true },
-    { label: 'Reports',     icon: MdFlag,     color: 'bg-orange-50 text-orange-600', path: '/admin/reports',      forAll: true },
-    { label: 'Export',      icon: MdDownload, color: 'bg-brand-50  text-brand-600',  path: '/admin/export',       forAll: true },
-    { label: 'Announcements', icon: MdCampaign, color: 'bg-yellow-50 text-yellow-700', path: '/admin/announcements', forAll: true },
-    isSuperAdmin && { label: 'Audit Log',  icon: MdHistory,  color: 'bg-gray-50   text-gray-600',   path: '/admin/auditlog' },
+    { label: 'Requests',    icon: MdFactCheck, path: '/admin/requests',     forAll: true },
+    { label: 'App Logs',    icon: MdListAlt,  path: '/admin/logs',         forAll: true },
+    { label: 'Messages',    icon: MdMessage,  path: '/admin/messages',     forAll: true },
+    { label: 'Reports',     icon: MdFlag,     path: '/admin/reports',      forAll: true },
+    { label: 'Export',      icon: MdDownload, path: '/admin/export',       forAll: true },
+    { label: 'Announcements', icon: MdCampaign, path: '/admin/announcements', forAll: true },
+    isSuperAdmin && { label: 'Audit Log',  icon: MdHistory,  path: '/admin/auditlog' },
   ].filter(Boolean)
 
   const handleActivityClick = (item) => {
@@ -380,10 +386,10 @@ export default function AdminDashboard() {
             <button key={i} onClick={() => navigate(m.path)}
               className="stat-tile text-left hover:shadow-md transition-all">
               <div className="flex items-center justify-between">
-                <div className={`w-9 h-9 ${m.bg} rounded-xl flex items-center justify-center`}>
-                  <m.Icon className={m.iconCls} size={20} />
+                <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center">
+                  <m.Icon className="text-gray-500" size={20} />
                 </div>
-                <p className={`stat-num ${m.valueCls}`}>{m.value}</p>
+                <p className="stat-num text-gray-900">{m.value}</p>
               </div>
               <p className="stat-label mt-2">{m.label}</p>
             </button>
@@ -430,7 +436,7 @@ export default function AdminDashboard() {
                 {MANAGE_ACTIONS.map((qa, i) => (
                   <button key={i} onClick={() => navigate(qa.path)}
                     className="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 hover:shadow-sm transition-all text-center">
-                    <div className={`w-8 h-8 ${qa.color} rounded-lg flex items-center justify-center`}><qa.icon size={17} /></div>
+                    <div className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center"><qa.icon size={17} /></div>
                     <p className="text-[11px] text-gray-600 font-medium leading-tight">{qa.label}</p>
                   </button>
                 ))}
@@ -440,7 +446,7 @@ export default function AdminDashboard() {
                 {REVIEW_ACTIONS.map((qa, i) => (
                   <button key={i} onClick={() => navigate(qa.path)}
                     className="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 hover:shadow-sm transition-all text-center">
-                    <div className={`w-8 h-8 ${qa.color} rounded-lg flex items-center justify-center`}><qa.icon size={17} /></div>
+                    <div className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center"><qa.icon size={17} /></div>
                     <p className="text-[11px] text-gray-600 font-medium leading-tight">{qa.label}</p>
                   </button>
                 ))}

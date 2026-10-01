@@ -143,7 +143,13 @@ export default function PatientHero({
     )
   }
 
-  // 7. brand-new patient → welcome hero
+  // 7. brand-new patient → focused "next step" card.
+  //    M10: this is NOT a second greeting (the dashboard h1 already greets) and
+  //    no longer nests a white card + tiny bulleted list inside the green card.
+  //    It leads with the one action a new patient needs — start the application —
+  //    with a single plain-language line of what MAPA funds. The old
+  //    greeting/"what you can apply for" content moved to the Guide (linked below)
+  //    and the Find Programs tab.
   return (
     <div className="card p-5 border-2 border-brand-200 bg-brand-50 relative">
       <button
@@ -152,23 +158,13 @@ export default function PatientHero({
         className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-brand-400 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
         <MdClose size={16} />
       </button>
-      <div className="flex items-center gap-3 mb-3 pr-8">
+      <div className="flex items-center gap-3 mb-2 pr-8">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-100 text-brand-600">
           <MdLocalHospital size={22} />
         </div>
-        <h2 className="text-lg font-bold text-brand-800">{t('patient.dashboard.welcomeCard.title')}</h2>
+        <h2 className="text-lg font-bold text-brand-800 leading-tight min-w-0">{t('patient.dashboard.welcomeCard.startTitle')}</h2>
       </div>
-      <p className="text-sm text-brand-700 leading-relaxed mb-3">{t('patient.dashboard.welcomeCard.intro')}</p>
-      <div className="bg-white border border-brand-100 rounded-xl p-3 mb-4">
-        <p className="text-xs font-semibold text-brand-700 mb-2 uppercase tracking-wide">{t('patient.dashboard.welcomeCard.whatYouCanApplyFor')}</p>
-        <ul className="text-xs text-gray-700 space-y-1">
-          <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.hospitalBills')}</li>
-          <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.medicines')}</li>
-          <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.labTests')}</li>
-          <li className="flex items-start gap-2"><span className="text-brand-500 flex-shrink-0">•</span>{t('patient.dashboard.welcomeCard.chemotherapy')}</li>
-        </ul>
-        <p className="text-xs text-gray-500 mt-2">{t('patient.dashboard.welcomeCard.fromAgencies')}</p>
-      </div>
+      <p className="text-sm text-brand-700 leading-relaxed mb-4">{t('patient.dashboard.welcomeCard.applyForLine')}</p>
       <button
         className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
         onClick={() => navigate('/patient/request')}>

@@ -67,13 +67,16 @@ function FieldError({ msg }) {
 // Step labels come from i18n at render time.
 
 function StepIndicator({ current, steps, onJump }) {
+  const { t } = useTranslation()
+  const currentLabel = steps.find(s => s.num === current)?.label ?? ''
   return (
-    // Each step is an equal-width (flex-1) column with the circle centered and
-    // the connector absolutely positioned across the gap. This keeps the
-    // circles evenly spaced no matter how long a (translated) label is —
-    // whitespace-nowrap + in-flow connectors previously let a long Filipino
-    // label widen one column and skew the whole row.
-    <div className="flex items-start mb-6 max-w-md mx-auto">
+   <div className="mb-6">
+    {/* Each step is an equal-width (flex-1) column with the circle centered and
+        the connector absolutely positioned across the gap. This keeps the
+        circles evenly spaced no matter how long a (translated) label is —
+        whitespace-nowrap + in-flow connectors previously let a long Filipino
+        label widen one column and skew the whole row. */}
+    <div className="flex items-start max-w-md mx-auto">
       {steps.map((s, i) => {
         // Past steps are clickable for in-place edits; current and future
         // steps are not (future steps would skip validation).
@@ -111,6 +114,12 @@ function StepIndicator({ current, steps, onJump }) {
         )
       })}
     </div>
+    {/* L3: on mobile the per-step labels are hidden (numbers only), so name the
+        current step here. Hidden on sm+ where the labels under each circle show. */}
+    <p className="sm:hidden mt-2 text-center text-sm font-medium text-brand-600">
+      {t('register.stepProgress', { current, total: steps.length, label: currentLabel })}
+    </p>
+   </div>
   )
 }
 

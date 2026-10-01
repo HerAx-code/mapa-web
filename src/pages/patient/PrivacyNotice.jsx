@@ -49,7 +49,7 @@ export default function PrivacyNotice() {
             <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 leading-tight">
               {t('profile.privacy.title')}
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">{t('profile.privacy.updated')}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{t('profile.privacy.updated')}</p>
           </div>
         </div>
 
