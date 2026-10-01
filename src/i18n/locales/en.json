@@ -1374,6 +1374,7 @@
     "stepPersonal": "Personal Info",
     "stepAccount": "Account Setup",
     "stepCode": "Access Code",
+    "stepProgress": "Step {{current}} of {{total}} · {{label}}",
     "step1": {
       "sectionTitle": "Personal Information",
       "sectionDesc": "Enter your name and contact details as they appear on your official ID.",

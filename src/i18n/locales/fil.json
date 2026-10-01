@@ -1374,6 +1374,7 @@
     "stepPersonal": "Personal na Impormasyon",
     "stepAccount": "Pag-setup ng Account",
     "stepCode": "Access Code",
+    "stepProgress": "Hakbang {{current}} ng {{total}} · {{label}}",
     "step1": {
       "sectionTitle": "Personal na Impormasyon",
       "sectionDesc": "Ipasok ang inyong pangalan at impormasyon sa pakikipag-ugnayan ayon sa nakasaad sa inyong opisyal na ID.",
