@@ -35,7 +35,12 @@
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
-import { USERS } from './demo-accounts.js'
+import { USERS, requireDemoPassword, detectProjectId, assertNotProduction } from './demo-accounts.js'
+
+// C1: refuse to run without a strong demo password, and refuse to touch the
+// production project unless explicitly allowed. Guards run before any Auth call.
+requireDemoPassword()
+assertNotProduction(detectProjectId())
 
 initializeApp({ credential: applicationDefault() })
 const auth = getAuth()

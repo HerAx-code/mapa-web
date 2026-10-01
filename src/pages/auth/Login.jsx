@@ -388,35 +388,39 @@ export default function Login() {
               </Link>
             </p>
 
-            {/* Fix 1 — Demo accounts only in development */}
-            {import.meta.env.VITE_ENABLE_SEED === 'true' && (
+            {/* Demo accounts: DEV only, and never against the production project
+                (C1). Passwords are NOT shown or shipped — a click fills the
+                EMAIL only; type the password you set via the seed scripts
+                (DEMO_ACCOUNT_PASSWORD). The previous hard-coded demo passwords
+                were public in the repo and are treated as leaked. */}
+            {import.meta.env.DEV && import.meta.env.VITE_FIREBASE_PROJECT_ID !== 'mapa-crmc' && (
               <div className="mt-8 card p-4 border border-amber-200 bg-amber-50">
                 <p className="text-xs font-medium text-amber-700 mb-3 uppercase tracking-wide flex items-center gap-1.5">
                   <MdWarning size={13} /> {t('auth.devOnly')}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
-                    { label: 'Super Admin',            email: 'admin@crmc.gov.ph',            password: 'admin123',   note: null     },
-                    { label: 'Staff Admin',            email: 'staff@crmc.gov.ph',            password: 'staff123',   note: null     },
+                    { label: 'Patient',                email: 'patient@gmail.com',            note: null     },
+                    { label: 'Super Admin',            email: 'admin@crmc.gov.ph',            note: null     },
+                    { label: 'Staff Admin',            email: 'staff@crmc.gov.ph',            note: null     },
                     // Malasakit (coordination hub) and PhilHealth (modelled as the
                     // first-charge coverage that REDUCES the bill, not an endorsable
                     // GL-issuing funder — see docs/philhealth-first-plan.md) are
                     // both deactivated as agencies, so their logins are not shown.
                     // The GL-issuing funders are DOH-MAIP, PCSO, DSWD and AMBaG.
-                    { label: 'DOH · Admin',            email: 'admin@doh.gov.ph',             password: 'agency123',  note: 'Admin'  },
-                    { label: 'DOH · Coordinator',      email: 'coordinator@doh.gov.ph',       password: 'agency123',  note: 'Active' },
-                    { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           password: 'agency123',  note: 'Admin'  },
-                    { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     password: 'agency123',  note: 'Active' },
-                    { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            password: 'agency123',  note: 'Admin'  },
-                    { label: 'PCSO · Coordinator',     email: 'coordinator@pcso.gov.ph',      password: 'agency123',  note: 'Active' },
-                    { label: 'DSWD · Admin',           email: 'admin@dswd.gov.ph',            password: 'agency123',  note: 'Admin'  },
-                    { label: 'DSWD · Coordinator',     email: 'coordinator@dswd.gov.ph',      password: 'agency123',  note: 'Active' },
+                    { label: 'DOH · Admin',            email: 'admin@doh.gov.ph',             note: 'Admin'  },
+                    { label: 'DOH · Coordinator',      email: 'coordinator@doh.gov.ph',       note: 'Active' },
+                    { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           note: 'Admin'  },
+                    { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     note: 'Active' },
+                    { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            note: 'Admin'  },
+                    { label: 'PCSO · Coordinator',     email: 'coordinator@pcso.gov.ph',      note: 'Active' },
+                    { label: 'DSWD · Admin',           email: 'admin@dswd.gov.ph',            note: 'Admin'  },
+                    { label: 'DSWD · Coordinator',     email: 'coordinator@dswd.gov.ph',      note: 'Active' },
                   ].map(acc => (
                     <button
                       key={acc.label}
                       className="text-left px-3 py-2 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-600 transition-colors text-xs border border-amber-100"
-                      onClick={() => setForm({ email: acc.email, password: acc.password })}>
+                      onClick={() => setForm(f => ({ ...f, email: acc.email }))}>
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-medium truncate">{acc.label}</p>
                         {acc.note && (

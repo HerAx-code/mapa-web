@@ -25,9 +25,13 @@ const DIR = 'docs/manuscript/appendix-d'
 const PHONE = { width: 390, height: 844 }
 const DESK  = { width: 1440, height: 900 }
 
-const PATIENT = { email: 'patient@gmail.com',                 pw: 'patient123' }
-const STAFF   = { email: 'admin@crmc.gov.ph',                 pw: 'admin123'   }
-const COORD   = { email: 'coordinator@malasakit.gov.ph',      pw: 'agency123'  }
+// C1: credentials come from the environment, never hard-coded. Set
+// DEMO_ACCOUNT_PASSWORD (the same value the seed scripts used) before running.
+const PW = process.env.DEMO_ACCOUNT_PASSWORD
+if (!PW) throw new Error('Set DEMO_ACCOUNT_PASSWORD to run the Appendix D capture.')
+const PATIENT = { email: 'patient@gmail.com',                 pw: PW }
+const STAFF   = { email: 'admin@crmc.gov.ph',                 pw: PW }
+const COORD   = { email: 'coordinator@malasakit.gov.ph',      pw: PW }
 
 test.beforeAll(() => { fs.mkdirSync(DIR, { recursive: true }) })
 
