@@ -939,6 +939,8 @@
       },
       "welcomeCard": {
         "title": "Maligayang pagdating sa MAPA!",
+        "startTitle": "Simulan ang inyong aplikasyon",
+        "applyForLine": "Mag-apply para sa bayarin sa ospital, gamot, lab test, at paggamot — pinopondohan ng mga kasosyong ahensya.",
         "intro": "Tinutulungan kayo ng MAPA na makakuha ng tulong pinansiyal mula sa mga kasosyong ahensya — sa isang lugar lamang, nang hindi na kinakailangang pumila sa maraming opisina.",
         "whatYouCanApplyFor": "ANG MAAARI NINYONG I-APPLY",
         "hospitalBills": "Mga bayarin sa ospital at pagpapaopital",

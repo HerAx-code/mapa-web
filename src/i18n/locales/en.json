@@ -939,6 +939,8 @@
       },
       "welcomeCard": {
         "title": "Welcome to MAPA!",
+        "startTitle": "Start your application",
+        "applyForLine": "Apply for hospital bills, medicines, lab tests, and treatments — funded by partner agencies.",
         "intro": "MAPA helps you get financial assistance from partner agencies — all in one place, without lining up at multiple offices.",
         "whatYouCanApplyFor": "WHAT YOU CAN APPLY FOR",
         "hospitalBills": "Hospital bills & hospitalization",
