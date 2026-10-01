@@ -306,10 +306,13 @@ export default function AgencyDashboard() {
           </div>
           <div className="stat-tile">
             <div className="flex items-center gap-2 mb-1">
-              <MdCalendarToday size={16} className="text-brand-500" />
+              {/* M11: neutral — a slot count is informational, not a status.
+                  Colour on this dashboard is reserved for the amber "awaiting
+                  decision" queue above (the agency's actual work-to-do). */}
+              <MdCalendarToday size={16} className="text-gray-500" />
               <span className="stat-label mt-0">Available slots today</span>
             </div>
-            <p className="stat-num text-brand-600">
+            <p className="stat-num text-gray-900">
               {slots.remaining} <span className="text-base font-normal text-gray-400">/ {slots.total}</span>
             </p>
           </div>
@@ -387,13 +390,16 @@ export default function AgencyDashboard() {
         <div data-tour-id="agency-actions" className="mb-5">
           <p className="eyebrow mb-2">Quick Actions</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            {/* M11: neutral shortcut icons (one grey treatment) — these are
+                navigation, not status. The red count badge on Inbox still flags
+                work waiting; colour meaning stays with status, not decoration. */}
             {[
-              { label: 'Inbox',          icon: MdInbox,          path: '/agency/inbox',       badge: pendingApps.length, color: 'bg-amber-50  text-amber-600'  },
-              { label: 'GL Letters',     icon: MdCardMembership, path: '/agency/generator',                               color: 'bg-green-50  text-green-600'  },
-              { label: 'Slot Mgmt',      icon: MdBarChart,       path: '/agency/slots',                                   color: 'bg-brand-50  text-brand-600'  },
-              { label: 'App Logs',       icon: MdListAlt,        path: '/agency/logs',                                    color: 'bg-teal-50   text-teal-600'   },
-              { label: 'Messages',       icon: MdMessage,        path: '/agency/messages',                                color: 'bg-cyan-50   text-cyan-600'   },
-              { label: 'Agency Profile', icon: MdDescription,    path: '/agency/program',                                 color: 'bg-blue-50   text-blue-600'   },
+              { label: 'Inbox',          icon: MdInbox,          path: '/agency/inbox',       badge: pendingApps.length },
+              { label: 'GL Letters',     icon: MdCardMembership, path: '/agency/generator'    },
+              { label: 'Slot Mgmt',      icon: MdBarChart,       path: '/agency/slots'        },
+              { label: 'App Logs',       icon: MdListAlt,        path: '/agency/logs'         },
+              { label: 'Messages',       icon: MdMessage,        path: '/agency/messages'     },
+              { label: 'Agency Profile', icon: MdDescription,    path: '/agency/program'      },
             ].map((qa, i) => (
               <button key={i}
                 onClick={() => navigate(qa.path)}
@@ -403,7 +409,7 @@ export default function AgencyDashboard() {
                     {qa.badge > 99 ? '99+' : qa.badge}
                   </span>
                 )}
-                <div className={`w-9 h-9 ${qa.color} rounded-xl flex items-center justify-center`}>
+                <div className="w-9 h-9 bg-gray-100 text-gray-500 rounded-xl flex items-center justify-center">
                   <qa.icon size={18} />
                 </div>
                 <p className="text-xs text-gray-600 font-medium leading-tight">{qa.label}</p>
