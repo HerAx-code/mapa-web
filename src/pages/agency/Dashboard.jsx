@@ -302,7 +302,7 @@ export default function AgencyDashboard() {
               <span className="stat-label mt-0">Awaiting funding decision</span>
             </div>
             <p className="stat-num text-amber-600">{pendingApps.length}</p>
-            <p className="text-xs text-gray-400 mt-1">endorsed to you</p>
+            <p className="text-xs text-gray-500 mt-1">endorsed to you</p>
           </div>
           <div className="stat-tile">
             <div className="flex items-center gap-2 mb-1">
@@ -313,7 +313,7 @@ export default function AgencyDashboard() {
               <span className="stat-label mt-0">Available slots today</span>
             </div>
             <p className="stat-num text-gray-900">
-              {slots.remaining} <span className="text-base font-normal text-gray-400">/ {slots.total}</span>
+              {slots.remaining} <span className="text-base font-normal text-gray-500">/ {slots.total}</span>
             </p>
           </div>
           <div className="stat-tile">
@@ -333,12 +333,12 @@ export default function AgencyDashboard() {
         <div data-tour-id="agency-slots" className="card p-4 mb-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Today's Slot Usage</span>
-            <span className="text-xs text-gray-400">Resets midnight</span>
+            <span className="text-xs text-gray-500">Resets midnight</span>
           </div>
           <div className="w-full h-2.5 bg-gray-100 rounded-full mb-1">
             <div className="h-2.5 bg-brand-500 rounded-full transition-all" style={{ width: `${slotPct}%` }} />
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             {slots.total - slots.remaining} used · {slots.remaining} remaining · resets midnight
           </p>
         </div>
@@ -433,10 +433,10 @@ export default function AgencyDashboard() {
         </div>
 
         {loading ? (
-          <div className="card p-8 text-center text-sm text-gray-400">Loading applications...</div>
+          <div className="card p-8 text-center text-sm text-gray-500">Loading applications...</div>
         ) : pendingApps.length === 0 ? (
           <div className="card p-8 text-center">
-            <p className="text-sm text-gray-400">No pending applications.</p>
+            <p className="text-sm text-gray-500">No pending applications.</p>
             <p className="text-xs text-gray-300 mt-1">New applications will appear here when CRMC endorses requests to your agency.</p>
           </div>
         ) : (
@@ -456,10 +456,10 @@ export default function AgencyDashboard() {
                   <tr key={app.id}>
                     <td>
                       <p className="font-medium text-gray-800">{app.patientName}</p>
-                      <p className="text-xs text-gray-400">{app.patientContact}</p>
+                      <p className="text-xs text-gray-500">{app.patientContact}</p>
                     </td>
-                    <td className="text-gray-400 text-xs font-mono">{app.appId}</td>
-                    <td className="text-gray-400 text-xs">{formatDate(app.submittedAt)}</td>
+                    <td className="text-gray-500 text-xs font-mono">{app.appId}</td>
+                    <td className="text-gray-500 text-xs">{formatDate(app.submittedAt)}</td>
                     <td>
                       <StatusBadge status={app.status} />
                     </td>
@@ -487,7 +487,7 @@ export default function AgencyDashboard() {
               // gate on mount. Simpler than wiring an external trigger.
               window.location.reload()
             }}
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors">
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand-600 transition-colors">
             <MdTour size={14} /> Show welcome tour again
           </button>
         </div>
@@ -584,13 +584,13 @@ function BudgetTopUpModal({ agency, user, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 id="topup-modal-title" className="text-base font-semibold text-gray-900">Request Budget Top-Up</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
             <p className="text-xs text-gray-500 mb-1">Current budget — {agency.name}</p>
             <p className="text-sm font-semibold text-gray-800">₱{remaining.toLocaleString()} remaining</p>
-            <p className="text-xs text-gray-400">of ₱{allocated.toLocaleString()} allocated</p>
+            <p className="text-xs text-gray-500">of ₱{allocated.toLocaleString()} allocated</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -608,7 +608,7 @@ function BudgetTopUpModal({ agency, user, onClose }) {
               placeholder="Why does the agency need this top-up? Be specific so the administrator can assess quickly."
               value={reason} onChange={e => setReason(e.target.value)} />
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500">
             This sends a request to the administrators. They'll review and either top up your allocation directly or contact you for more details.
           </p>
         </div>

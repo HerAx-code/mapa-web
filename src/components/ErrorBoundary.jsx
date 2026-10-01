@@ -47,7 +47,7 @@ export default class ErrorBoundary extends React.Component {
           </p>
           {this.state.error?.message && (
             <details className="text-left mb-4">
-              <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+              <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-600">
                 Technical details
               </summary>
               <pre className="mt-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap">
@@ -65,7 +65,7 @@ export default class ErrorBoundary extends React.Component {
               Reload Page
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-4">
+          <p className="text-xs text-gray-500 mt-4">
             If this keeps happening, contact your system administrator and mention the technical details above.
           </p>
         </div>

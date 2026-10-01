@@ -328,8 +328,8 @@ function SectionCard({ section, open, onToggle }) {
         <Icon className="text-brand-500 flex-shrink-0" size={20} aria-hidden="true" />
         <span className="text-sm font-semibold text-gray-800 flex-1">{title}</span>
         {open
-          ? <MdExpandLess size={20} className="text-gray-400 flex-shrink-0" />
-          : <MdExpandMore size={20} className="text-gray-400 flex-shrink-0" />}
+          ? <MdExpandLess size={20} className="text-gray-500 flex-shrink-0" />
+          : <MdExpandMore size={20} className="text-gray-500 flex-shrink-0" />}
       </button>
       {open && (
         <div className="px-5 pb-5 pt-3 border-t border-gray-50 space-y-3">
@@ -417,12 +417,12 @@ export default function AgencyGuide() {
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agency User Guide</h1>
             <p className="text-sm text-gray-500 mt-1">Step-by-step instructions for funding endorsed application slices under the CRMC-gateway model.</p>
           </div>
-          <span className="text-xs text-gray-400">Last updated {LAST_UPDATED}</span>
+          <span className="text-xs text-gray-500">Last updated {LAST_UPDATED}</span>
         </div>
 
         {/* ── Quick Links (one card) ── */}
         <div className="card p-5 mb-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Quick Links</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Quick Links</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {QUICK_LINKS.map((link, i) => (
               <button key={i}
@@ -437,7 +437,7 @@ export default function AgencyGuide() {
 
         {/* ── Workflow strip (one card) ── */}
         <div className="card p-5 mb-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Workflow at a glance</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Workflow at a glance</p>
           <div className="flex items-center gap-1 flex-wrap text-xs">
             {WORKFLOW.map((s, i) => (
               <span key={i} className="flex items-center gap-1">
@@ -452,7 +452,7 @@ export default function AgencyGuide() {
         <div className="card p-5 mb-5">
           <div className="flex gap-2 items-stretch">
             <div className="relative flex-1">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
               <input
                 className="input pl-9"
                 placeholder="Search the guide…"
@@ -471,7 +471,7 @@ export default function AgencyGuide() {
             </button>
           </div>
           {search.trim() && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-gray-500 mt-2">
               {filtered.length} section{filtered.length === 1 ? '' : 's'} match — all expanded
             </p>
           )}
@@ -484,7 +484,7 @@ export default function AgencyGuide() {
           return (
             <div key={group} className="mb-5">
               <div className="flex items-center gap-3 mb-2.5">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">{group}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{group}</p>
                 <div className="flex-1 h-px bg-gray-100" />
                 <span className="text-xs text-gray-300">{groupSections.length}</span>
               </div>
@@ -504,7 +504,7 @@ export default function AgencyGuide() {
 
         {filtered.length === 0 && (
           <div className="card p-8 text-center">
-            <p className="text-sm text-gray-400">No sections match "{search}". Try a different keyword.</p>
+            <p className="text-sm text-gray-500">No sections match "{search}". Try a different keyword.</p>
           </div>
         )}
 

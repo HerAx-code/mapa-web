@@ -207,18 +207,18 @@ export default function Reports() {
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Search reports" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Status</p>
               <ul className="-mx-1.5 space-y-px">
                 {[
                   ['all', 'All reports', reports.length],
@@ -232,7 +232,7 @@ export default function Reports() {
                       <button onClick={() => setStatusFilter(key)} aria-current={active ? 'true' : undefined}
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                         <span>{label}</span>
-                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-500'}`}>{n}</span>
                       </button>
                     </li>
                   )
@@ -242,7 +242,7 @@ export default function Reports() {
 
             {categories.length > 0 && (
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Category</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Category</p>
                 <SearchableSelect
                   triggerClassName="py-2"
                   value={catFilter}
@@ -253,7 +253,7 @@ export default function Reports() {
 
             {roles.length > 1 && (
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Reporter</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Reporter</p>
                 <SearchableSelect
                   triggerClassName="py-2"
                   value={roleFilter}
@@ -270,7 +270,7 @@ export default function Reports() {
 
           {/* ── Report stream ── */}
           <div className="min-w-0">
-            <p className="text-xs text-gray-400 mb-3">{filtered.length} report{filtered.length !== 1 ? 's' : ''}{isFiltered && reports.length > 0 ? ` of ${reports.length}` : ''}</p>
+            <p className="text-xs text-gray-500 mb-3">{filtered.length} report{filtered.length !== 1 ? 's' : ''}{isFiltered && reports.length > 0 ? ` of ${reports.length}` : ''}</p>
 
         {/* ── Cards ── */}
         {loading ? (
@@ -306,7 +306,7 @@ export default function Reports() {
           <div className="card p-12 flex flex-col items-center text-center">
             <MdFlag size={36} className="text-gray-200 mb-3" />
             <p className="text-sm font-medium text-gray-500 mb-1">No reports found</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               {isFiltered
                 ? 'No reports match your current filter.'
                 : 'No reports yet. Reports submitted by users will appear here.'}
@@ -325,9 +325,9 @@ export default function Reports() {
             {dayGroups.map(group => (
               <section key={group.key}>
                 <div className="mb-2.5 flex items-baseline gap-2">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
-                  <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
-                  <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'report' : 'reports'}</span>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                  <span className="text-xs text-gray-500 tabular-nums">{group.sub}</span>
+                  <span className="ml-auto text-xs text-gray-500 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'report' : 'reports'}</span>
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
                   {group.entries.map(r => {
@@ -351,7 +351,7 @@ export default function Reports() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-800 truncate">{r.reporterName ?? '—'}</p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-500">
                             {ROLE_LABEL[rRole] ?? rRole} · {formatDate(r.createdAt)}
                           </p>
                         </div>
@@ -398,7 +398,7 @@ export default function Reports() {
                           </button>
                         )}
                         <button
-                          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 bg-white hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors ml-auto"
+                          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 bg-white hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors ml-auto"
                           onClick={() => openAction(r.id, 'delete')}>
                           <MdDelete size={14} /> Delete
                         </button>

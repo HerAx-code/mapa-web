@@ -1118,7 +1118,7 @@ export default function ApplicationDetail() {
                   title="Previous in queue">
                   <MdArrowBack size={16} />
                 </button>
-                <span className="text-xs text-gray-400 whitespace-nowrap">
+                <span className="text-xs text-gray-500 whitespace-nowrap">
                   {queueIndex >= 0 ? `${queueIndex + 1} of ${queueIds.length}` : '—'}
                 </span>
                 <button disabled={!nextId} onClick={() => nextId && goTo(nextId)}
@@ -1231,7 +1231,7 @@ export default function ApplicationDetail() {
                         ? 'bg-brand-50 text-brand-700 font-medium'
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}>
-                    <s.icon size={15} className={active ? 'text-brand-500' : 'text-gray-400'} />
+                    <s.icon size={15} className={active ? 'text-brand-500' : 'text-gray-500'} />
                     <span className="flex-1 truncate">{s.label}</span>
                     {meta != null && (
                       <span className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -1289,26 +1289,26 @@ export default function ApplicationDetail() {
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs text-gray-400 mb-0.5">Total bill</p>
+                          <p className="text-xs text-gray-500 mb-0.5">Total bill</p>
                           <p className="text-sm font-semibold text-gray-800">{peso(need)}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs text-gray-400 mb-0.5">Committed</p>
+                          <p className="text-xs text-gray-500 mb-0.5">Committed</p>
                           <p className="text-sm font-semibold text-green-700">{peso(committed)}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs text-gray-400 mb-0.5">In review</p>
+                          <p className="text-xs text-gray-500 mb-0.5">In review</p>
                           <p className="text-sm font-semibold text-amber-600">{peso(outstanding)}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-xs text-gray-400 mb-0.5">Still open</p>
+                          <p className="text-xs text-gray-500 mb-0.5">Still open</p>
                           <p className="text-sm font-semibold text-gray-800">{peso(headroom)}</p>
                         </div>
                       </div>
                       <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div className="h-full bg-green-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
                       </div>
-                      <p className="text-xs text-gray-400 mt-2 mb-3">
+                      <p className="text-xs text-gray-500 mt-2 mb-3">
                         {siblings.length} {siblings.length === 1 ? 'agency' : 'agencies'} on this bill · {pct}% committed toward zero balance
                       </p>
                       <div className="space-y-2">
@@ -1325,7 +1325,7 @@ export default function ApplicationDetail() {
                                 <p className="text-sm font-medium text-gray-800 truncate">
                                   {s.agencyName ?? 'Agency'}{isMine && <span className="text-brand-500 font-normal"> · You</span>}
                                 </p>
-                                <p className="text-xs text-gray-400">{peso(amt)}</p>
+                                <p className="text-xs text-gray-500">{peso(amt)}</p>
                               </div>
                               <StatusBadge status={s.status} className="flex-shrink-0" />
                             </div>
@@ -1346,7 +1346,7 @@ export default function ApplicationDetail() {
                       { label: 'Access Code', value: patientProfile?.hospitalId || '—' },
                     ].map((r, i) => (
                       <div key={i} className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 mb-0.5">{r.label}</p>
+                        <p className="text-xs text-gray-500 mb-0.5">{r.label}</p>
                         <p className="text-sm font-medium text-gray-800 break-words">{r.value}</p>
                       </div>
                     ))}
@@ -1368,13 +1368,13 @@ export default function ApplicationDetail() {
                     <p className="text-2xl font-bold text-gray-900 mb-2">₱{Number(app.approvedAmount).toLocaleString()}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       {app.purposeOfAssistance?.length > 0 && (
-                        <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-400">For</p><p className="text-gray-700">{app.purposeOfAssistance.join(', ')}</p></div>
+                        <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-500">For</p><p className="text-gray-700">{app.purposeOfAssistance.join(', ')}</p></div>
                       )}
                       {app.payableTo && (
-                        <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-400">Payable to</p><p className="text-gray-700">{app.payableTo}</p></div>
+                        <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-500">Payable to</p><p className="text-gray-700">{app.payableTo}</p></div>
                       )}
                       {app.approvedBy && (
-                        <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-xs text-gray-400">Approved by</p><p className="text-gray-700">{app.approvedBy} · {formatDate(app.approvedAt)}</p></div>
+                        <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-xs text-gray-500">Approved by</p><p className="text-gray-700">{app.approvedBy} · {formatDate(app.approvedAt)}</p></div>
                       )}
                     </div>
                   </div>
@@ -1391,7 +1391,7 @@ export default function ApplicationDetail() {
                     intakeReady ? 'bg-green-50' : effectiveIntake ? 'bg-amber-50' : 'bg-gray-100'
                   }`}>
                     <MdAssignment size={18} className={
-                      intakeReady ? 'text-green-600' : effectiveIntake ? 'text-amber-600' : 'text-gray-400'
+                      intakeReady ? 'text-green-600' : effectiveIntake ? 'text-amber-600' : 'text-gray-500'
                     } />
                   </div>
                   <div className="flex-1">
@@ -1445,13 +1445,13 @@ export default function ApplicationDetail() {
 
                 {intakeReady && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Means-Test Category</p><p className="font-medium text-gray-800 capitalize">{effectiveIntake.meansTestCategory?.replace('_', ' ')}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Household Size</p><p className="font-medium text-gray-800">{effectiveIntake.householdSize ?? '—'}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Monthly Income</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.monthlyIncome ?? 0).toLocaleString()}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-400">Estimated Cost</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.estimatedTotalCost ?? 0).toLocaleString()}</p></div>
-                    <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Diagnosis</p><p className="font-medium text-gray-800">{effectiveIntake.diagnosis || '—'}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Means-Test Category</p><p className="font-medium text-gray-800 capitalize">{effectiveIntake.meansTestCategory?.replace('_', ' ')}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Household Size</p><p className="font-medium text-gray-800">{effectiveIntake.householdSize ?? '—'}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Monthly Income</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.monthlyIncome ?? 0).toLocaleString()}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Estimated Cost</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.estimatedTotalCost ?? 0).toLocaleString()}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-500">Diagnosis</p><p className="font-medium text-gray-800">{effectiveIntake.diagnosis || '—'}</p></div>
                     {effectiveIntake.recommendation && (
-                      <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-400">Recommendation</p><p className="text-gray-800 italic">"{effectiveIntake.recommendation}"</p></div>
+                      <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-500">Recommendation</p><p className="text-gray-800 italic">"{effectiveIntake.recommendation}"</p></div>
                     )}
                   </div>
                 )}
@@ -1473,7 +1473,7 @@ export default function ApplicationDetail() {
                 {patientDocs.length === 0 ? (
                   <div className="text-center py-8">
                     <MdDescription size={32} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">No documents submitted with this application.</p>
+                    <p className="text-sm text-gray-500">No documents submitted with this application.</p>
                   </div>
                 ) : (
                   <div className="space-y-1.5">
@@ -1493,7 +1493,7 @@ export default function ApplicationDetail() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{d.documentTypeName || d.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <p className="text-xs text-gray-400">{d.date}</p>
+                            <p className="text-xs text-gray-500">{d.date}</p>
                             {d.updatedAfterSubmission && (
                               <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">
                                 Updated after submission
@@ -1512,9 +1512,9 @@ export default function ApplicationDetail() {
                       </div>
                     ))}
                     {patientDocs.some(d => d.updatedAfterSubmission || d.status === 'pending') ? (
-                      <p className="text-xs text-gray-400 mt-2 italic">CRMC verified these documents before endorsement; any documents the patient re-uploaded since are pending re-verification.</p>
+                      <p className="text-xs text-gray-500 mt-2 italic">CRMC verified these documents before endorsement; any documents the patient re-uploaded since are pending re-verification.</p>
                     ) : (
-                      <p className="text-xs text-gray-400 mt-2 italic">CRMC verified these documents before endorsing. Click a document to view it.</p>
+                      <p className="text-xs text-gray-500 mt-2 italic">CRMC verified these documents before endorsing. Click a document to view it.</p>
                     )}
                   </div>
                 )}
@@ -1591,7 +1591,7 @@ export default function ApplicationDetail() {
                           {s.done ? '✓' : i + 1}
                         </div>
                         <div>
-                          <p className={`text-sm font-medium ${s.done ? 'text-gray-800' : s.active ? 'text-amber-700' : 'text-gray-400'}`}>
+                          <p className={`text-sm font-medium ${s.done ? 'text-gray-800' : s.active ? 'text-amber-700' : 'text-gray-500'}`}>
                             {s.label} {s.active && <span className="badge badge-amber text-xs ml-1">Current</span>}
                           </p>
                         </div>
@@ -1605,14 +1605,14 @@ export default function ApplicationDetail() {
                     <MdNote size={13} /> Case Notes ({(app.caseNotes ?? []).length})
                   </p>
                   {(app.caseNotes ?? []).length === 0 ? (
-                    <p className="text-sm text-gray-400 italic mb-3">No case notes yet. Add the first one below.</p>
+                    <p className="text-sm text-gray-500 italic mb-3">No case notes yet. Add the first one below.</p>
                   ) : (
                     <div className="space-y-2 mb-3">
                       {[...(app.caseNotes ?? [])].reverse().map((n, i) => (
                         <div key={i} className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-baseline justify-between gap-2 mb-1">
                             <p className="text-xs font-medium text-gray-700">{n.author}</p>
-                            <p className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-xs text-gray-500">{new Date(n.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                           </div>
                           <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{n.text}</p>
                         </div>

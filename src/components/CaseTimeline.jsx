@@ -74,7 +74,7 @@ export default function CaseTimeline({ events = [], loading = false }) {
 
   return (
     <div className="card p-5">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
         <MdEvent size={13} /> Case Timeline
       </p>
 
@@ -93,7 +93,7 @@ export default function CaseTimeline({ events = [], loading = false }) {
       )}
 
       {!loading && ordered.length === 0 && (
-        <p className="text-sm text-gray-400 py-4">
+        <p className="text-sm text-gray-500 py-4">
           No timeline events recorded yet for this request.
         </p>
       )}
@@ -114,7 +114,7 @@ export default function CaseTimeline({ events = [], loading = false }) {
                   <Icon size={15} />
                 </div>
                 <div className="flex-1 min-w-0 pb-1">
-                  <p className="text-xs text-gray-400">{formatStamp(e.createdAt)} · {e.actorName ?? 'System'}</p>
+                  <p className="text-xs text-gray-500">{formatStamp(e.createdAt)} · {e.actorName ?? 'System'}</p>
                   <p className="text-sm text-gray-800">
                     <span className="font-medium">{visual.label}</span>
                     {e.details && <span className="text-gray-600"> — {e.details}</span>}

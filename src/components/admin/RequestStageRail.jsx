@@ -26,7 +26,7 @@ export default function RequestStageRail({ stage }) {
             <span className={`relative z-10 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
               s.status === 'done'     ? 'bg-brand-500 text-white'
               : s.status === 'current' ? 'bg-brand-500 text-white ring-4 ring-brand-100'
-              : 'bg-gray-100 text-gray-400'
+              : 'bg-gray-100 text-gray-500'
             }`}>
               {s.status === 'done' ? <MdCheck size={15} aria-label="done" />
                 : s.status === 'blocked' ? <MdLock size={13} aria-label="blocked" />
@@ -35,9 +35,9 @@ export default function RequestStageRail({ stage }) {
             <p className={`mt-1.5 text-center text-xs font-semibold leading-tight ${
               s.status === 'current' ? 'text-brand-700'
               : s.status === 'done'  ? 'text-gray-800'
-              : 'text-gray-400'
+              : 'text-gray-500'
             }`}>{s.label}</p>
-            <p className="mt-0.5 max-w-full truncate text-center text-[11px] text-gray-400">{s.detail}</p>
+            <p className="mt-0.5 max-w-full truncate text-center text-[11px] text-gray-500">{s.detail}</p>
           </div>
         ))}
       </div>

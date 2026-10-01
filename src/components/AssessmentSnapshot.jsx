@@ -43,7 +43,7 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
   return (
     <div className="card overflow-hidden p-0">
       <div className="flex items-baseline justify-between border-b border-gray-100 px-4 py-3">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500">
           <MdInsights size={13} /> Financial snapshot
         </p>
         <span className="text-[11px] font-medium text-gray-300">Auto-computed</span>
@@ -52,16 +52,16 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
       {/* Income per person vs the poverty line */}
       {perCapita != null && (
         <div className="px-4 py-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Income per person</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Income per person</p>
           <div className="mt-1 flex items-end gap-1.5">
             <p className="text-2xl font-semibold leading-none text-gray-900 tabular-nums">{peso(perCapita)}</p>
-            <p className="pb-0.5 text-xs text-gray-400">/ month</p>
+            <p className="pb-0.5 text-xs text-gray-500">/ month</p>
           </div>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
             <div className={`h-full rounded-full ${belowLine ? 'bg-red-500' : 'bg-brand-500'}`}
               style={{ width: `${Math.max(povertyRatio * 100, 4)}%` }} />
           </div>
-          <p className="mt-2 text-xs text-gray-400 tabular-nums">Poverty line {peso(POVERTY_LINE_PER_CAPITA)} per person</p>
+          <p className="mt-2 text-xs text-gray-500 tabular-nums">Poverty line {peso(POVERTY_LINE_PER_CAPITA)} per person</p>
           {belowLine && (
             <p className="mt-3 inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-100 tabular-nums">
               Below poverty line — {gapPct}% under
@@ -73,7 +73,7 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
       {/* Expenses vs income */}
       {(income > 0 || totalExpenses > 0) && (
         <div className="border-t border-gray-100 px-4 py-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Expenses vs income</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Expenses vs income</p>
           <dl className="mt-2.5 space-y-1.5">
             <div className="flex items-baseline justify-between text-xs">
               <dt className="text-gray-500">Household income</dt>
@@ -92,7 +92,7 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
                 style={{ left: `${(income / scale) * 100}%` }} aria-hidden="true" />
             )}
           </div>
-          <p className="mt-2 text-[11px] text-gray-400">
+          <p className="mt-2 text-[11px] text-gray-500">
             {income > 0 ? 'Marker shows income level' : 'No monthly income recorded'}
           </p>
           {overBudget && (
@@ -107,14 +107,14 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
       {/* Advisory means-test category */}
       {showMeansTest && suggestion && (
         <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Suggested means-test</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Suggested means-test</p>
           <div className="mt-1.5 flex items-baseline justify-between gap-2">
             <span className="text-sm font-semibold text-gray-900">{shortLabel(suggestion.category)}</span>
             {/* Floor to a tenth so the displayed multiple never rounds up across
                 a band boundary (e.g. 0.96 shows 0.9×, not 1.0×, beside Indigent). */}
-            <span className="tabular-nums text-xs text-gray-400">{(Math.floor(suggestion.ratio * 10) / 10).toFixed(1)}× line</span>
+            <span className="tabular-nums text-xs text-gray-500">{(Math.floor(suggestion.ratio * 10) / 10).toFixed(1)}× line</span>
           </div>
-          <p className="mt-1.5 text-[11px] leading-4 text-gray-400">Advisory only — from income ÷ household size. You confirm the category.</p>
+          <p className="mt-1.5 text-[11px] leading-4 text-gray-500">Advisory only — from income ÷ household size. You confirm the category.</p>
           {canEdit && current !== suggestion.category && (
             <button type="button" onClick={() => onApplyMeansTest?.(suggestion.category)}
               className="mt-3 inline-flex h-9 items-center gap-1 rounded-md border border-brand-200 bg-white px-3 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50">

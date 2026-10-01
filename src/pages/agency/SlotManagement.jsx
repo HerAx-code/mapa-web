@@ -233,7 +233,7 @@ export default function SlotManagement() {
                 <div className="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center"><MdConfirmationNumber className="text-brand-500" size={20} /></div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">Default Slot Capacity</p>
-                  <p className="text-xs text-gray-400">Max 100 per day</p>
+                  <p className="text-xs text-gray-500">Max 100 per day</p>
                 </div>
               </div>
               {editing ? (
@@ -255,7 +255,7 @@ export default function SlotManagement() {
               ) : (
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <span className="text-2xl font-bold text-brand-600">{slots.total}</span>
-                  <span className="text-xs text-gray-400">slots/day</span>
+                  <span className="text-xs text-gray-500">slots/day</span>
                   <button className="btn-secondary text-xs flex items-center gap-1"
                     onClick={() => setEditing(true)}>
                     <MdEdit size={13} /> Edit
@@ -268,9 +268,9 @@ export default function SlotManagement() {
           {/* Today's usage */}
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <MdCalendarToday size={14} className="text-gray-400" />
+              <MdCalendarToday size={14} className="text-gray-500" />
               <span className="text-sm font-medium text-gray-700">Today's Slots</span>
-              <span className="text-xs text-gray-400">· {today}</span>
+              <span className="text-xs text-gray-500">· {today}</span>
               {resetPending && (
                 <span className="text-xs bg-amber-50 text-amber-700 border border-amber-100 px-1.5 py-0.5 rounded-full">
                   Pending reset
@@ -279,10 +279,10 @@ export default function SlotManagement() {
             </div>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-4xl font-bold text-gray-900">{slots.remaining}</span>
-              <span className="text-base text-gray-400">/ {slots.total} remaining</span>
+              <span className="text-base text-gray-500">/ {slots.total} remaining</span>
               <span className={`ml-auto text-sm font-bold ${statusColor[status]}`}>{status}</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
               <span>Usage</span>
               <span>{used} used · {slots.remaining} remaining</span>
             </div>
@@ -302,13 +302,13 @@ export default function SlotManagement() {
                   {' '}
                   {slots.remaining < backlog
                     ? <span className="text-red-500 font-medium">(exceeds remaining slots)</span>
-                    : <span className="text-gray-400">— enough remaining slots</span>}
+                    : <span className="text-gray-500">— enough remaining slots</span>}
                 </span>
               </div>
             )}
 
             {/* Reset clarity */}
-            <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+            <p className="text-xs text-gray-500 mt-3 leading-relaxed">
               Slots reset to the default capacity at the start of each new day — the reset is applied automatically when the first coordinator opens the workspace. {resetPending && <span className="text-amber-600 font-medium">Today's reset hasn't run yet; refresh the Dashboard to trigger it.</span>}
             </p>
           </div>
@@ -320,9 +320,9 @@ export default function SlotManagement() {
                 <MdAttachMoney size={18} className="text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-400">Remaining {budget.period} budget</p>
+                <p className="text-xs text-gray-500">Remaining {budget.period} budget</p>
                 <p className="text-sm font-semibold text-gray-800">
-                  ₱{budgetRemaining.toLocaleString()} <span className="text-xs font-normal text-gray-400">of ₱{(budget.allocated ?? 0).toLocaleString()}</span>
+                  ₱{budgetRemaining.toLocaleString()} <span className="text-xs font-normal text-gray-500">of ₱{(budget.allocated ?? 0).toLocaleString()}</span>
                 </p>
               </div>
               <button className="text-xs text-brand-500 hover:text-brand-600 font-medium flex-shrink-0"
@@ -339,7 +339,7 @@ export default function SlotManagement() {
           {/* Manual adjustment */}
           <div className="card p-5">
             <p className="text-sm font-medium text-gray-800 mb-1">Manual Adjustment</p>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-gray-500 mb-4">
               Add or deduct slots for today only — does not change the default capacity. Each change is audited.
             </p>
             <div className="flex items-center gap-3 flex-wrap mb-3">
@@ -386,11 +386,11 @@ export default function SlotManagement() {
           <aside className="lg:sticky lg:top-[68px]">
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-3">
-              <MdHistory size={14} className="text-gray-400" />
+              <MdHistory size={14} className="text-gray-500" />
               <p className="text-sm font-medium text-gray-800">Recent Adjustments</p>
             </div>
             {recentAdjustments.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">No manual adjustments yet.</p>
+              <p className="text-xs text-gray-500 italic">No manual adjustments yet.</p>
             ) : (
               <div className="space-y-1.5">
                 {recentAdjustments.map((a, i) => {
@@ -405,9 +405,9 @@ export default function SlotManagement() {
                           {isCap
                             ? <>Capacity changed to <strong>{a.delta}</strong></>
                             : <>{a.type === 'add' ? 'Added' : 'Deducted'} <strong>{a.delta}</strong> slot{a.delta === 1 ? '' : 's'}</>}
-                          {a.reason && <span className="text-gray-400"> · {a.reason}</span>}
+                          {a.reason && <span className="text-gray-500"> · {a.reason}</span>}
                         </p>
-                        <p className="text-gray-400">
+                        <p className="text-gray-500">
                           {a.by} · {fmtISOTime(a.at)}
                         </p>
                       </div>

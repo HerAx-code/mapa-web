@@ -373,7 +373,7 @@ export default function AdminDashboard() {
               ].map(h => (
                 <div key={h.label} className="rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-center min-w-[74px]">
                   <p className="text-sm font-semibold text-gray-800 tabular-nums leading-none">{h.value}</p>
-                  <p className="text-[11px] text-gray-400 mt-1">{h.label}</p>
+                  <p className="text-xs text-gray-500 mt-1">{h.label}</p>
                 </div>
               ))}
             </div>
@@ -407,7 +407,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <MdWarning size={16} className="text-amber-500" />
                   <p className="text-sm font-semibold text-gray-800">Needs attention</p>
-                  <span className="text-xs text-gray-400">{alerts.length} item{alerts.length === 1 ? '' : 's'}</span>
+                  <span className="text-xs text-gray-500">{alerts.length} item{alerts.length === 1 ? '' : 's'}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {alerts.map(a => (
@@ -437,7 +437,7 @@ export default function AdminDashboard() {
                   <button key={i} onClick={() => navigate(qa.path)}
                     className="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 hover:shadow-sm transition-all text-center">
                     <div className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center"><qa.icon size={17} /></div>
-                    <p className="text-[11px] text-gray-600 font-medium leading-tight">{qa.label}</p>
+                    <p className="text-xs text-gray-600 font-medium leading-tight">{qa.label}</p>
                   </button>
                 ))}
               </div>
@@ -447,7 +447,7 @@ export default function AdminDashboard() {
                   <button key={i} onClick={() => navigate(qa.path)}
                     className="flex flex-col items-center gap-1.5 rounded-lg border border-gray-100 p-2.5 hover:bg-gray-50 hover:shadow-sm transition-all text-center">
                     <div className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center"><qa.icon size={17} /></div>
-                    <p className="text-[11px] text-gray-600 font-medium leading-tight">{qa.label}</p>
+                    <p className="text-xs text-gray-600 font-medium leading-tight">{qa.label}</p>
                   </button>
                 ))}
               </div>
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
               {activityFeed.length === 0 ? (
                 <div className="py-8 text-center">
                   <MdInbox className="mx-auto mb-2 text-gray-300" size={30} />
-                  <p className="text-sm text-gray-400">No recent activity yet</p>
+                  <p className="text-sm text-gray-500">No recent activity yet</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-50">
@@ -477,9 +477,9 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-gray-700">{cfg.label}</p>
-                          <p className="text-xs text-gray-400 truncate">{item.body}</p>
+                          <p className="text-xs text-gray-500 truncate">{item.body}</p>
                         </div>
-                        <span className="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap">{timeAgo(item.createdAt)}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap">{timeAgo(item.createdAt)}</span>
                       </button>
                     )
                   })}
@@ -493,7 +493,7 @@ export default function AdminDashboard() {
         <div className="mt-6 text-center">
           <button
             onClick={() => { resetTourFlag('admin-dashboard', user?.uid); window.location.reload() }}
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-brand-600 transition-colors">
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand-600 transition-colors">
             <MdTour size={14} /> Show welcome tour again
           </button>
         </div>

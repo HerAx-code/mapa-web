@@ -86,7 +86,7 @@ function ModalCard({ title, onClose, children, footer }) {
       </div>
       <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0">
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-600 transition-colors">
           <MdClose size={20} />
         </button>
       </div>
@@ -261,7 +261,7 @@ function AccountSettingsModal({ onClose }) {
         </div>
 
         <p className="text-sm font-semibold text-gray-800">{form.name || '—'}</p>
-        <p className="text-xs text-gray-400 mb-3">{user?.email}</p>
+        <p className="text-xs text-gray-500 mb-3">{user?.email}</p>
 
         {!isPatient && (
           <div className="flex gap-2">
@@ -283,18 +283,18 @@ function AccountSettingsModal({ onClose }) {
         )}
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
         {!isPatient && (
-          <p className="text-xs text-gray-400 mt-1.5">{t('profile.account.photoHint')}</p>
+          <p className="text-xs text-gray-500 mt-1.5">{t('profile.account.photoHint')}</p>
         )}
       </div>
 
       <div className="border-t border-gray-100 mb-4" />
 
       {/* ── Personal Info ── */}
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{t('profile.account.personalInfo')}</p>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">{t('profile.account.personalInfo')}</p>
       <div className="space-y-3 mb-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdPerson size={13} className="text-gray-400" /> {t('profile.account.fullName')}
+            <MdPerson size={13} className="text-gray-500" /> {t('profile.account.fullName')}
           </label>
           {isPatient ? (
             <div className="space-y-1">
@@ -302,7 +302,7 @@ function AccountSettingsModal({ onClose }) {
                 <span>{user?.name}</span>
                 <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">{t('profile.account.lockedTag')}</span>
               </div>
-              <p className="text-xs text-gray-400">{t('profile.account.nameLockedHint')}</p>
+              <p className="text-xs text-gray-500">{t('profile.account.nameLockedHint')}</p>
             </div>
           ) : (
             <input className="input" value={form.name} onChange={set('name')} placeholder={t('profile.account.fullNamePlaceholder')} />
@@ -310,15 +310,15 @@ function AccountSettingsModal({ onClose }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdPhone size={13} className="text-gray-400" /> {t('profile.account.contactNumber')}
+            <MdPhone size={13} className="text-gray-500" /> {t('profile.account.contactNumber')}
           </label>
           <input className="input" value={form.contact} onChange={set('contact')} placeholder={t('profile.account.contactPlaceholder')} />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdHome size={13} className="text-gray-400" />
+            <MdHome size={13} className="text-gray-500" />
             {isPatient ? t('profile.account.homeAddress') : t('profile.account.officeAddress')}
-            {!isPatient && <span className="text-xs text-gray-400 font-normal ml-1">{t('profile.account.addressOptional')}</span>}
+            {!isPatient && <span className="text-xs text-gray-500 font-normal ml-1">{t('profile.account.addressOptional')}</span>}
           </label>
           {/* R39: cascading Province → City → Barangay dropdown with an
               "Other (not listed)" free-text fallback for addresses outside
@@ -330,19 +330,19 @@ function AccountSettingsModal({ onClose }) {
               setForm(prev => ({ ...prev, province, city, barangay }))}
           />
           {isPatient && (
-            <p className="text-xs text-gray-400 mt-1">{t('profile.account.addressGLHint')}</p>
+            <p className="text-xs text-gray-500 mt-1">{t('profile.account.addressGLHint')}</p>
           )}
         </div>
       </div>
 
       {/* ── Account Info ── */}
       <div className="border-t border-gray-100 mb-4" />
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{t('profile.account.accountInfo')}</p>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">{t('profile.account.accountInfo')}</p>
       <div className="space-y-3">
         {/* Role — shown for all non-patient roles, plus a quiet "Patient" badge for patients */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdPerson size={13} className="text-gray-400" /> {t('profile.account.role')}
+            <MdPerson size={13} className="text-gray-500" /> {t('profile.account.role')}
           </label>
           <div className="input bg-gray-50 text-gray-600 flex items-center justify-between cursor-not-allowed">
             <span>{ROLE_LABEL[user?.role] || user?.role?.replace('_', ' ')}</span>
@@ -354,7 +354,7 @@ function AccountSettingsModal({ onClose }) {
         {isAgency && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <MdCheckCircle size={13} className="text-gray-400" /> {t('profile.account.agency')}
+              <MdCheckCircle size={13} className="text-gray-500" /> {t('profile.account.agency')}
             </label>
             <div className="input bg-gray-50 text-gray-600 flex items-center justify-between cursor-not-allowed">
               <span>{agencyName || (user?.agencyId ? t('profile.account.agencyLoading') : t('profile.account.agencyNotLinked'))}</span>
@@ -367,7 +367,7 @@ function AccountSettingsModal({ onClose }) {
         {user?.hospitalId && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <MdCheckCircle size={13} className="text-gray-400" /> {t('profile.account.accessCode')}
+              <MdCheckCircle size={13} className="text-gray-500" /> {t('profile.account.accessCode')}
             </label>
             <div className="input bg-gray-50 text-gray-600 flex items-center justify-between cursor-not-allowed font-mono">
               <span>{user.hospitalId}</span>
@@ -378,14 +378,14 @@ function AccountSettingsModal({ onClose }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <MdEmail size={13} className="text-gray-400" /> {t('profile.account.emailAddress')}
+            <MdEmail size={13} className="text-gray-500" /> {t('profile.account.emailAddress')}
           </label>
           <div className="input bg-gray-50 text-gray-500 flex items-center justify-between cursor-not-allowed gap-2">
             <span className="truncate min-w-0 flex-1">{user?.email}</span>
             <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full flex-shrink-0">{t('profile.account.lockedTag')}</span>
           </div>
           {!isPatient && (
-            <p className="text-xs text-gray-400 mt-0.5">{t('profile.account.emailLockedHint')}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{t('profile.account.emailLockedHint')}</p>
           )}
         </div>
       </div>
@@ -452,7 +452,7 @@ function ChangePasswordModal({ onClose }) {
           autoComplete={field === 'current' ? 'current-password' : 'new-password'}
         />
         <button type="button"
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
           onClick={() => toggle(field)}>
           {show[field] ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
         </button>
@@ -479,7 +479,7 @@ function ChangePasswordModal({ onClose }) {
         {renderField(t('profile.password.current'), 'current')}
         <div>
           {renderField(t('profile.password.new'), 'newPw')}
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             {t('profile.password.rules')}
           </p>
           {s && (
@@ -557,7 +557,7 @@ function SettingsModal({ onClose }) {
           <p className="text-sm text-gray-500 mb-1">
             <Trans i18nKey="profile.privacy.intro" components={{ b: <strong className="text-gray-700" /> }} />
           </p>
-          <p className="text-xs text-gray-400">{t('profile.privacy.updated')}</p>
+          <p className="text-xs text-gray-500">{t('profile.privacy.updated')}</p>
         </div>
 
         {/* Sections */}
@@ -686,7 +686,7 @@ function HelpModal({ onClose, onOpenReport }) {
               className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
               onClick={() => setOpen(open === i ? null : i)}>
               <span className="text-sm font-medium text-gray-800">{faq.q}</span>
-              <span className="text-gray-400 text-lg flex-shrink-0 ml-2">{open === i ? '−' : '+'}</span>
+              <span className="text-gray-500 text-lg flex-shrink-0 ml-2">{open === i ? '−' : '+'}</span>
             </button>
             {open === i && (
               <div className="px-4 pb-3 text-sm text-gray-500 leading-relaxed border-t border-gray-50">{faq.a}</div>
@@ -709,7 +709,7 @@ function HelpModal({ onClose, onOpenReport }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800">{t('profile.help.emailSupport')}</p>
-            <p className="text-xs text-gray-400">support@crmc.gov.ph</p>
+            <p className="text-xs text-gray-500">support@crmc.gov.ph</p>
           </div>
           <span className="text-xs text-blue-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
         </button>
@@ -724,7 +724,7 @@ function HelpModal({ onClose, onOpenReport }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800">{t('profile.help.submitTicket')}</p>
-            <p className="text-xs text-gray-400">{t('profile.help.submitTicketDesc')}</p>
+            <p className="text-xs text-gray-500">{t('profile.help.submitTicketDesc')}</p>
           </div>
           <span className="text-xs text-amber-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
         </button>
@@ -820,7 +820,7 @@ function ReportModal({ onClose }) {
             value={form.description}
             onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} />
         </div>
-        <p className="text-xs text-gray-400">{t('profile.report.submittedAs', { name: user?.name, email: user?.email })}</p>
+        <p className="text-xs text-gray-500">{t('profile.report.submittedAs', { name: user?.name, email: user?.email })}</p>
       </div>
     </ModalCard>
   )

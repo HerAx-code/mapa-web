@@ -167,7 +167,7 @@ function AccountModal({ account, onClose }) {
           <h2 id="account-modal-title" className="text-base font-semibold text-gray-900">
             {isEdit ? 'Edit Account' : 'Add New Account'}
           </h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -197,7 +197,7 @@ function AccountModal({ account, onClose }) {
                 { value: 'super_admin', label: 'Super Admin' },
                 { value: 'staff_admin', label: 'Staff Admin' },
               ]} />
-            <p className="text-xs text-gray-400 mt-1">Agency staff are managed under each agency.</p>
+            <p className="text-xs text-gray-500 mt-1">Agency staff are managed under each agency.</p>
           </div>
 
           {!isEdit && (
@@ -213,7 +213,7 @@ function AccountModal({ account, onClose }) {
                     onChange={set('password')}
                   />
                   <button type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600"
                     onClick={() => setShowPw(p => !p)}>
                     {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -380,23 +380,23 @@ export default function Accounts() {
               {[
                 { label: 'Super', value: superCount, color: 'text-purple-600' },
                 { label: 'Staff', value: staffCount, color: 'text-blue-600'   },
-                { label: 'Off',   value: offCount,   color: offCount ? 'text-red-500' : 'text-gray-400' },
+                { label: 'Off',   value: offCount,   color: offCount ? 'text-red-500' : 'text-gray-500' },
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Name or email"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Role</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Role</p>
               <ul className="-mx-1.5 space-y-px">
                 {[
                   ['all', 'All roles', accounts.length],
@@ -409,7 +409,7 @@ export default function Accounts() {
                       <button onClick={() => setRoleFilter(key)} aria-current={active ? 'true' : undefined}
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                         <span>{label}</span>
-                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-400'}`}>{n}</span>
+                        <span className={`tabular-nums text-xs ${active ? 'text-brand-600' : 'text-gray-500'}`}>{n}</span>
                       </button>
                     </li>
                   )
@@ -418,7 +418,7 @@ export default function Accounts() {
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Status</p>
               <div className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
                 {[['all', 'All'], ['active', 'Active'], ['deactivated', 'Off']].map(([k, l]) => (
                   <button key={k} onClick={() => setStatusFilter(k)}
@@ -438,7 +438,7 @@ export default function Accounts() {
           {/* ── Roster, grouped by role ── */}
           <div className="min-w-0">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400">{filtered.length} account{filtered.length !== 1 ? 's' : ''}{isFiltered ? ` of ${accounts.length}` : ''}</p>
+              <p className="text-xs text-gray-500">{filtered.length} account{filtered.length !== 1 ? 's' : ''}{isFiltered ? ` of ${accounts.length}` : ''}</p>
             </div>
 
             <div className="card overflow-hidden">
@@ -457,8 +457,8 @@ export default function Accounts() {
               {!loading && roleGroups.map(group => (
                 <section key={group.role}>
                   <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
-                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.members.length} {group.members.length === 1 ? 'account' : 'accounts'}</span>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="ml-auto text-xs text-gray-500 tabular-nums">{group.members.length} {group.members.length === 1 ? 'account' : 'accounts'}</span>
                   </div>
                   <ul className="divide-y divide-gray-50">
                     {group.members.map(a => {
@@ -473,24 +473,24 @@ export default function Accounts() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-800 truncate">
-                                {a.name} {isSelf && <span className="text-xs font-normal text-gray-400">· you</span>}
+                                {a.name} {isSelf && <span className="text-xs font-normal text-gray-500">· you</span>}
                               </p>
-                              <p className="text-xs text-gray-400 truncate">{a.email}{a.contact ? ` · ${a.contact}` : ''}</p>
+                              <p className="text-xs text-gray-500 truncate">{a.email}{a.contact ? ` · ${a.contact}` : ''}</p>
                             </div>
                             <span className={`badge text-xs flex-shrink-0 ${isActive ? 'badge-green' : 'badge-red'}`}>{isActive ? 'Active' : 'Off'}</span>
-                            <span className="text-xs text-gray-400 flex-shrink-0 w-20 text-right hidden sm:block">{formatDate(a.createdAt)}</span>
+                            <span className="text-xs text-gray-500 flex-shrink-0 w-20 text-right hidden sm:block">{formatDate(a.createdAt)}</span>
                             <div className="flex items-center gap-0.5 flex-shrink-0">
-                              <button title="Edit account" className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" onClick={() => setModal(a)}><MdEdit size={15} /></button>
-                              <button title="Send password reset email" className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => handleResetPassword(a)}><MdKey size={15} /></button>
+                              <button title="Edit account" className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" onClick={() => setModal(a)}><MdEdit size={15} /></button>
+                              <button title="Send password reset email" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => handleResetPassword(a)}><MdKey size={15} /></button>
                               {!isSelf && (
                                 <button title={isActive ? 'Deactivate account' : 'Reactivate account'}
-                                  className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-400 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}
+                                  className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-500 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-500 hover:text-green-500 hover:bg-green-50'}`}
                                   onClick={() => handleToggleActive(a)}>
                                   {isActive ? <MdLock size={15} /> : <MdLockOpen size={15} />}
                                 </button>
                               )}
                               {!isSelf && (
-                                <button title="Delete account" className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(a)}><MdDelete size={15} /></button>
+                                <button title="Delete account" className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(a)}><MdDelete size={15} /></button>
                               )}
                             </div>
                           </div>
@@ -515,7 +515,7 @@ export default function Accounts() {
               {!loading && filtered.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                   <MdSupervisedUserCircle size={36} className="text-gray-200 mb-2" />
-                  <p className="text-sm text-gray-400">{isFiltered ? 'No accounts match your filter.' : 'No accounts found.'}</p>
+                  <p className="text-sm text-gray-500">{isFiltered ? 'No accounts match your filter.' : 'No accounts found.'}</p>
                   {isFiltered ? (
                     <button onClick={clearAll} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
                   ) : (

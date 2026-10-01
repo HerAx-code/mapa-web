@@ -16,7 +16,7 @@ function ExportRow({ icon: Icon, iconBg, title, description, slug }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900">{title}</p>
-        <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{description}</p>
+        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{description}</p>
       </div>
       <MdChevronRight size={20} className="text-gray-300 flex-shrink-0" />
     </button>

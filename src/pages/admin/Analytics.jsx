@@ -180,22 +180,22 @@ export default function Analytics() {
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0"><MdTimer size={18} className="text-brand-500" /></div>
                   <div>
-                    <p className="text-xs text-gray-400">Average agency turnaround</p>
+                    <p className="text-xs text-gray-500">Average agency turnaround</p>
                     <p className="text-xl font-semibold text-gray-800 tabular-nums">{a.avgTurnaroundDays != null ? `${a.avgTurnaroundDays.toFixed(1)} days` : '—'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0"><MdHealthAndSafety size={18} className="text-green-600" /></div>
                   <div>
-                    <p className="text-xs text-gray-400">PhilHealth share of bills</p>
+                    <p className="text-xs text-gray-500">PhilHealth share of bills</p>
                     <p className="text-xl font-semibold text-gray-800 tabular-nums">{a.philhealthShare != null ? `${a.philhealthShare}%` : '—'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0"><MdWorkspacePremium size={18} className="text-purple-600" /></div>
                   <div>
-                    <p className="text-xs text-gray-400">Guarantee Letters redeemed</p>
-                    <p className="text-xl font-semibold text-gray-800 tabular-nums">{a.glsRedeemed} <span className="text-sm font-normal text-gray-400">of {a.glsIssued}</span></p>
+                    <p className="text-xs text-gray-500">Guarantee Letters redeemed</p>
+                    <p className="text-xl font-semibold text-gray-800 tabular-nums">{a.glsRedeemed} <span className="text-sm font-normal text-gray-500">of {a.glsIssued}</span></p>
                   </div>
                 </div>
               </div>

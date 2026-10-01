@@ -22,7 +22,7 @@ export default function BarList({ data = [], valueKey = 'amount', max, format = 
               <span className="text-sm text-gray-700 truncate">{d.label}</span>
               <span className="text-sm font-semibold text-gray-900 tabular-nums whitespace-nowrap">
                 {format(v)}
-                {d.count != null && <span className="text-gray-400 font-normal"> · {d.count}</span>}
+                {d.count != null && <span className="text-gray-500 font-normal"> · {d.count}</span>}
               </span>
             </div>
             <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">

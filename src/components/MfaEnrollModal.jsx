@@ -132,7 +132,7 @@ export default function MfaEnrollModal({ onClose }) {
             <MdShield size={18} className="text-brand-500" />
             <h2 id="mfa-modal-title" className="text-base font-semibold text-gray-900">Two-step verification</h2>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto px-5 py-5">
@@ -187,10 +187,10 @@ export default function MfaEnrollModal({ onClose }) {
                   : <div className="h-48 w-48 rounded-lg bg-gray-50 animate-pulse" />}
               </div>
               <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Manual entry key</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Manual entry key</p>
                 <div className="mt-1 flex items-center gap-2">
                   <code className="flex-1 break-all font-mono text-sm text-gray-800">{sharedKey}</code>
-                  <button type="button" onClick={copyKey} className="text-gray-400 hover:text-brand-600">
+                  <button type="button" onClick={copyKey} className="text-gray-500 hover:text-brand-600">
                     {copied ? <MdCheck size={16} className="text-brand-500" /> : <MdContentCopy size={16} />}
                   </button>
                 </div>

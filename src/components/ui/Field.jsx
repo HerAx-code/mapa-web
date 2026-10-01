@@ -26,7 +26,7 @@ export default function Field({ label, required, children, hint, colSpan }) {
         {label} {required && <span className="text-red-400">*</span>}
       </label>
       {children}
-      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
     </div>
   )
 }

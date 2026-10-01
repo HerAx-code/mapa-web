@@ -5,7 +5,7 @@ import StatusBadge from '../ui/StatusBadge'
 
 // Advisory verdict → text colour, reusing the OCR line's green/amber/gray
 // pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
-const advisoryTone = (v) => v === 'pass' ? 'text-green-600' : v === 'unclear' ? 'text-amber-600' : 'text-gray-400'
+const advisoryTone = (v) => v === 'pass' ? 'text-green-600' : v === 'unclear' ? 'text-amber-600' : 'text-gray-500'
 
 // ① Verify documents — the CRMC document-review panel, extracted verbatim from
 // admin/Requests.jsx (redesign Phase 0: decompose the 1,700-line file). Pure
@@ -53,7 +53,7 @@ export default function VerifyDocsPanel({
         </div>
       </div>
       {reqDocs.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">No documents attached.</p>
+        <p className="text-sm text-gray-500 italic">No documents attached.</p>
       ) : (
         <div className="space-y-2">
           {reqDocs.map(d => {
@@ -67,17 +67,17 @@ export default function VerifyDocsPanel({
             return (
               <div key={d.id} className="p-2.5 rounded-lg border border-gray-100">
                 <div className="flex items-center gap-2">
-                  <MdDescription size={16} className="text-gray-400 flex-shrink-0" />
+                  <MdDescription size={16} className="text-gray-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-700 truncate">{d.documentTypeName || d.name}</p>
                     {reviewed && (
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-xs text-gray-500 truncate">
                         {d.status === 'verified' ? 'Verified' : 'Rejected'} by {d.reviewedBy ?? 'CRMC'} · {fmtDate(d.reviewedAt)}
                       </p>
                     )}
                   </div>
                   <StatusBadge status={d.status ?? 'pending'} kind="doc" className="flex-shrink-0" />
-                  <button title="View" className="text-gray-400 hover:text-brand-600 flex-shrink-0"
+                  <button title="View" className="text-gray-500 hover:text-brand-600 flex-shrink-0"
                     onClick={() => !d._missing && onView(d)}>
                     <MdVisibility size={16} />
                   </button>
@@ -85,7 +85,7 @@ export default function VerifyDocsPanel({
                 {showOcr && (
                   <div className="mt-1 pl-6">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className={`text-xs ${d.ocrMatch === true ? 'text-green-600' : d.ocrMatch === false ? 'text-amber-600' : 'text-gray-400'}`}>
+                      <p className={`text-xs ${d.ocrMatch === true ? 'text-green-600' : d.ocrMatch === false ? 'text-amber-600' : 'text-gray-500'}`}>
                         {d.ocrMatch === true ? '✓ OCR: ID name matches the account'
                           : d.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
                           : 'OCR: could not auto-read — verify manually'}
@@ -105,7 +105,7 @@ export default function VerifyDocsPanel({
                     {d.idTypeDetected && (
                       <p className="text-xs text-gray-500 mt-0.5">
                         Detected type: <span className="font-medium text-gray-700">{d.idTypeDetected}</span>
-                        <span className="text-gray-400"> — confirm</span>
+                        <span className="text-gray-500"> — confirm</span>
                       </p>
                     )}
                     {ocrExpanded.has(d.id) && d.ocrText && (
@@ -121,7 +121,7 @@ export default function VerifyDocsPanel({
                       {d.faceMatch === 'pass' ? '✓ Face match: likely the same person'
                         : d.faceMatch === 'unclear' ? '⚠ Face match: unclear — compare manually'
                         : 'Face match: could not check — compare manually'}
-                      {typeof d.faceMatchScore === 'number' && <span className="text-gray-400"> · {d.faceMatchScore.toFixed(2)}</span>}
+                      {typeof d.faceMatchScore === 'number' && <span className="text-gray-500"> · {d.faceMatchScore.toFixed(2)}</span>}
                     </p>
                     <p className={`text-xs ${advisoryTone(d.liveness)}`}>
                       {d.liveness === 'pass' ? '✓ Liveness: looks like a live capture'
@@ -136,7 +136,7 @@ export default function VerifyDocsPanel({
                           <MdCompareArrows size={13} /> Compare with ID side-by-side
                         </button>
                       )}
-                      <span className="text-[11px] text-gray-400 italic">Advisory — you make the final call.</span>
+                      <span className="text-[11px] text-gray-500 italic">Advisory — you make the final call.</span>
                     </div>
                   </div>
                 )}

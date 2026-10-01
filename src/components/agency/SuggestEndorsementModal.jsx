@@ -133,11 +133,11 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
             </div>
             <div>
               <h2 id="suggest-modal-title" className="text-base font-semibold text-gray-900">Suggest another agency</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{app.patientName} · {app.appId}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{app.patientName} · {app.appId}</p>
             </div>
           </div>
           <button onClick={onClose} disabled={saving} aria-label="Close"
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                  className="text-gray-500 hover:text-gray-600 disabled:opacity-50">
             <MdClose size={20} />
           </button>
         </div>
@@ -181,7 +181,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
               value={reason}
               onChange={e => setReason(e.target.value)}
             />
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               {reason.length}/1000
               {reason.trim().length > 0 && reason.trim().length < 10 && (
                 <span className="text-amber-600 ml-2">(minimum 10 characters)</span>
@@ -192,7 +192,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
           {/* Recommended amount (optional) */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Recommended amount (₱) <span className="text-gray-400 font-normal">— optional</span>
+              Recommended amount (₱) <span className="text-gray-500 font-normal">— optional</span>
             </label>
             <input
               type="number"
@@ -202,7 +202,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
               value={recommendedAmount}
               onChange={e => setRecommendedAmount(e.target.value)}
             />
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Hint for CRMC. The receiving agency makes their own funding decision.
             </p>
           </div>

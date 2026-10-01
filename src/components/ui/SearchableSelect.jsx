@@ -156,12 +156,12 @@ export default function SearchableSelect({
         disabled={disabled}
         onClick={() => (open ? close() : openList())}
         className={triggerCls}>
-        <span className={`truncate ${selected ? 'text-gray-900' : 'text-gray-400'}`}>
+        <span className={`truncate ${selected ? 'text-gray-900' : 'text-gray-500'}`}>
           {selected ? selected.label : placeholder}
         </span>
         <MdKeyboardArrowDown
           size={18}
-          className={`flex-shrink-0 text-gray-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+          className={`flex-shrink-0 text-gray-500 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
           aria-hidden="true" />
       </button>
 
@@ -170,7 +170,7 @@ export default function SearchableSelect({
           {showSearch && (
             <div className="p-2 border-b border-gray-100">
               <div className="relative">
-                <MdSearch size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+                <MdSearch size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" aria-hidden="true" />
                 <input
                   ref={searchRef}
                   type="text"
@@ -190,7 +190,7 @@ export default function SearchableSelect({
 
           <ul id={listId} role="listbox" style={{ maxHeight: listMaxH }} className="overflow-y-auto py-1">
             {rows.length === 0 && (
-              <li className="px-3 py-2.5 text-sm text-gray-400 select-none">{emptyText}</li>
+              <li className="px-3 py-2.5 text-sm text-gray-500 select-none">{emptyText}</li>
             )}
             {rows.map((row, i) => {
               const isSel    = row.value === value

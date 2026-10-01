@@ -160,7 +160,7 @@ export default function Tour({ steps, storageKey, onComplete }) {
           </span>
           <button
             onClick={() => finish(false)}
-            className="text-gray-400 hover:text-gray-600 -mr-1"
+            className="text-gray-500 hover:text-gray-600 -mr-1"
             aria-label="Skip tour">
             <MdClose size={18} />
           </button>
@@ -173,7 +173,7 @@ export default function Tour({ steps, storageKey, onComplete }) {
               <MdArrowBack size={14} /> Back
             </button>
           ) : (
-            <button onClick={() => finish(false)} className="text-xs text-gray-400 hover:text-gray-600">
+            <button onClick={() => finish(false)} className="text-xs text-gray-500 hover:text-gray-600">
               Skip
             </button>
           )}

@@ -47,7 +47,7 @@ export default function AgencyCapacityOverview({ agencies = [] }) {
           </div>
           <div className="text-right flex-shrink-0">
             <p className="text-2xl font-semibold text-gray-800 tabular-nums">{used}%</p>
-            <p className="text-xs text-gray-400">committed</p>
+            <p className="text-xs text-gray-500">committed</p>
           </div>
         </div>
         <div className="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
@@ -66,11 +66,11 @@ export default function AgencyCapacityOverview({ agencies = [] }) {
         <div className="card p-4 grid grid-cols-2 gap-3">
           <div>
             <p className="text-xl font-semibold text-gray-900 tabular-nums">{activeCount}</p>
-            <p className="mt-0.5 text-xs text-gray-400">Active agencies</p>
+            <p className="mt-0.5 text-xs text-gray-500">Active agencies</p>
           </div>
           <div className="border-l border-gray-100 pl-3">
-            <p className="text-xl font-semibold text-gray-900 tabular-nums">{slotsRemaining}<span className="text-sm font-normal text-gray-400">/{slotsTotal}</span></p>
-            <p className="mt-0.5 text-xs text-gray-400">Slots left today</p>
+            <p className="text-xl font-semibold text-gray-900 tabular-nums">{slotsRemaining}<span className="text-sm font-normal text-gray-500">/{slotsTotal}</span></p>
+            <p className="mt-0.5 text-xs text-gray-500">Slots left today</p>
           </div>
         </div>
         <div className="card p-4 border-amber-200">
@@ -78,14 +78,14 @@ export default function AgencyCapacityOverview({ agencies = [] }) {
             <MdWarningAmber size={14} /> Near depletion
           </p>
           {atRisk.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-400">No agency funds are running low.</p>
+            <p className="mt-2 text-sm text-gray-500">No agency funds are running low.</p>
           ) : (
             <ul className="mt-2.5 space-y-1.5">
               {atRisk.slice(0, 3).map(({ a, u }) => (
                 <li key={a.id} className="flex items-center gap-3">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-gray-800">{a.name}</span>
-                    <span className="block text-xs text-gray-400 tabular-nums">
+                    <span className="block text-xs text-gray-500 tabular-nums">
                       {peso(Math.max(0, (Number(a.budget?.allocated) || 0) - (Number(a.budget?.committed) || 0)))} left
                     </span>
                   </span>

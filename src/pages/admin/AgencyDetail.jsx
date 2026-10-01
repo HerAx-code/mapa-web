@@ -74,7 +74,7 @@ function EditCoordinatorModal({ coordinator, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 id="editcoord2-modal-title" className="text-base font-semibold text-gray-900">Edit Coordinator</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-4">
           <div>
@@ -87,8 +87,8 @@ function EditCoordinatorModal({ coordinator, onClose }) {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Email Address</label>
-            <input className="input bg-gray-50 text-gray-400 cursor-not-allowed" value={coordinator.email} disabled />
-            <p className="text-xs text-gray-400 mt-1">Email cannot be changed after account creation.</p>
+            <input className="input bg-gray-50 text-gray-500 cursor-not-allowed" value={coordinator.email} disabled />
+            <p className="text-xs text-gray-500 mt-1">Email cannot be changed after account creation.</p>
           </div>
         </div>
         <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
@@ -474,7 +474,7 @@ export default function AgencyDetail() {
                   {agency.enabled ? 'Active' : 'Disabled'}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+              <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                 {agency.location && <span className="flex items-center gap-1"><MdLocationOn size={11} />{agency.location}</span>}
                 {agency.phone    && <span className="flex items-center gap-1"><MdPhone size={11} />{agency.phone}</span>}
                 {agency.processingTime && <span>· {agency.processingTime}</span>}
@@ -486,18 +486,18 @@ export default function AgencyDetail() {
 
             {/* Quick actions */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button className="p-1.5 text-gray-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
+              <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
                 onClick={handleMessage}><MdMessage size={16} /></button>
               {isSuperAdmin && (
                 <>
-                  <button className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"
+                  <button className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"
                     onClick={() => setShowEdit(true)}><MdEdit size={16} /></button>
                   <button
                     className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${agency.enabled ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
                     onClick={() => agency.enabled ? setShowDisableDialog(true) : handleReEnable()}>
                     {agency.enabled ? 'Disable' : 'Enable'}
                   </button>
-                  <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
+                  <button className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
                     onClick={() => setConfirmDelete(true)}><MdDelete size={16} /></button>
                 </>
               )}
@@ -511,7 +511,7 @@ export default function AgencyDetail() {
 
           {/* Requirements */}
           <div className="card p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Requirements</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Requirements</p>
             {agency.requirements?.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {agency.requirements.map((r, i) => (
@@ -519,13 +519,13 @@ export default function AgencyDetail() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 italic">No requirements listed.</p>
+              <p className="text-xs text-gray-500 italic">No requirements listed.</p>
             )}
           </div>
 
           {/* Assistance Types */}
           <div className="card p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Assistance Types</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Assistance Types</p>
             {agency.assistanceTypes?.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {agency.assistanceTypes.map((t, i) => (
@@ -533,13 +533,13 @@ export default function AgencyDetail() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 italic">No assistance types listed.</p>
+              <p className="text-xs text-gray-500 italic">No assistance types listed.</p>
             )}
           </div>
 
           {/* Application stats */}
           <div className="card p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Applications</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Applications</p>
             {appStats ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -549,17 +549,17 @@ export default function AgencyDetail() {
                   { label: 'Rejected', value: appStats.rejected, color: 'text-red-500'   },
                 ].map((s, i) => (
                   <div key={i}>
-                    <p className="text-xs text-gray-400">{s.label}</p>
+                    <p className="text-xs text-gray-500">{s.label}</p>
                     <p className={`text-xl font-semibold ${s.color}`}>{s.value}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400">No applications yet.</p>
+              <p className="text-xs text-gray-500">No applications yet.</p>
             )}
             {approvalRate !== null && (
               <div className="mt-3 pt-3 border-t border-gray-50">
-                <p className="text-xs text-gray-400 mb-1">Approval rate</p>
+                <p className="text-xs text-gray-500 mb-1">Approval rate</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full bg-green-400 rounded-full" style={{ width: `${approvalRate}%` }} />
@@ -573,7 +573,7 @@ export default function AgencyDetail() {
           {/* Slot management */}
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Today's Slots</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Today's Slots</p>
               {isSuperAdmin && !editSlots && (
                 <div className="flex items-center gap-2">
                   <button className="text-xs text-brand-500 hover:text-brand-600 font-medium"
@@ -581,7 +581,7 @@ export default function AgencyDetail() {
                     Edit capacity ({agency.slots?.total ?? 0})
                   </button>
                   <span className="text-gray-200">·</span>
-                  <button className="flex items-center gap-0.5 text-xs text-gray-400 hover:text-gray-600"
+                  <button className="flex items-center gap-0.5 text-xs text-gray-500 hover:text-gray-600"
                     onClick={handleResetSlots}>
                     <MdRefresh size={12} /> Reset
                   </button>
@@ -590,7 +590,7 @@ export default function AgencyDetail() {
             </div>
             <div className="flex items-center gap-3 mb-2">
               <p className="text-2xl font-semibold text-gray-800">{agency.slots?.remaining ?? 0}</p>
-              <p className="text-xs text-gray-400">of {agency.slots?.total ?? 0} remaining · {usedSlots} used</p>
+              <p className="text-xs text-gray-500">of {agency.slots?.total ?? 0} remaining · {usedSlots} used</p>
             </div>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(slotPct, 100)}%` }} />
@@ -640,45 +640,45 @@ export default function AgencyDetail() {
             <div className="card p-4 mb-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <MdAttachMoney size={16} className="text-gray-400" />
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  <MdAttachMoney size={16} className="text-gray-500" />
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     {PERIOD_ADJECTIVE[budget.period] ?? 'Current'} Budget
                   </p>
                   <span className="badge badge-gray text-xs">Read-only</span>
                 </div>
                 {budget.periodStart && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     Period started {tsToDate(budget.periodStart)?.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                 <div>
-                  <p className="text-xs text-gray-400">Allocated</p>
+                  <p className="text-xs text-gray-500">Allocated</p>
                   <p className="text-lg font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Committed</p>
+                  <p className="text-xs text-gray-500">Committed</p>
                   <p className="text-lg font-semibold text-amber-600">₱{committed.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Disbursed</p>
+                  <p className="text-xs text-gray-500">Disbursed</p>
                   <p className="text-lg font-semibold text-purple-600">₱{disbursed.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Remaining</p>
+                  <p className="text-xs text-gray-500">Remaining</p>
                   <p className="text-lg font-semibold text-green-600">₱{remaining.toLocaleString()}</p>
                 </div>
               </div>
               <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
                 <div className={`h-full rounded-full transition-all ${bar}`} style={{ width: `${Math.min(utilization, 100)}%` }} />
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {utilization}% utilized · the agency administrator manages this allocation from <code>/agency/allocation</code>
               </p>
               {budget.fundSource && (
                 <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-400 mb-0.5">Fund source</p>
+                  <p className="text-xs text-gray-500 mb-0.5">Fund source</p>
                   <p className="text-sm font-medium text-gray-700">{budget.fundSource}</p>
                   {budget.fundSourceNotes && (
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{budget.fundSourceNotes}</p>
@@ -700,20 +700,20 @@ export default function AgencyDetail() {
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <div>
               <p className="text-sm font-semibold text-gray-800">Team Accounts</p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {coordinators.length === 0
                   ? 'No one can log in to process applications for this agency.'
                   : `${adminCount} admin${adminCount !== 1 ? 's' : ''} · ${coordCount} coordinator${coordCount !== 1 ? 's' : ''}`}
               </p>
             </div>
-            <span className="text-xs text-gray-400 flex-shrink-0">Managed by the Agency Administrator</span>
+            <span className="text-xs text-gray-500 flex-shrink-0">Managed by the Agency Administrator</span>
           </div>
 
           {coordinators.length === 0 ? (
             <div className="px-5 py-6 flex flex-col items-center text-center">
               <MdWarning size={28} className="text-amber-300 mb-2" />
               <p className="text-sm font-medium text-gray-600 mb-1">No one assigned</p>
-              <p className="text-xs text-gray-400 mb-4 max-w-xs">
+              <p className="text-xs text-gray-500 mb-4 max-w-xs">
                 This agency has no team accounts. The first Agency Administrator is created when the agency is set up; after that, the Agency Administrator adds coordinators from their own Team page.
               </p>
             </div>
@@ -746,8 +746,8 @@ export default function AgencyDetail() {
                             <span className="badge badge-red text-xs">Deactivated</span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400">{coord.email}</p>
-                        {coord.contact && <p className="text-xs text-gray-400">{coord.contact}</p>}
+                        <p className="text-xs text-gray-500">{coord.email}</p>
+                        {coord.contact && <p className="text-xs text-gray-500">{coord.contact}</p>}
                         <p className="text-xs text-gray-300 mt-0.5">Added {fmtDate(coord.createdAt)}</p>
                       </div>
                       {isSuperAdmin && (
@@ -762,25 +762,25 @@ export default function AgencyDetail() {
                               isAdmin && onlyAdmin
                                 ? 'text-gray-200 cursor-not-allowed'
                                 : isAdmin
-                                  ? 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
-                                  : 'text-gray-400 hover:text-purple-500 hover:bg-purple-50'
+                                  ? 'text-gray-500 hover:text-amber-500 hover:bg-amber-50'
+                                  : 'text-gray-500 hover:text-purple-500 hover:bg-purple-50'
                             }`}>
                             {isAdmin ? <MdArrowDownward size={15} /> : <MdArrowUpward size={15} />}
                           </button>
                           <button title="Edit" onClick={() => setEditCoord(coord)}
-                            className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                            className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                             <MdEdit size={15} />
                           </button>
                           <button title="Reset password" onClick={() => handleResetPassword(coord)}
-                            className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors">
+                            className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors">
                             <MdKey size={15} />
                           </button>
                           <button title={isActive ? 'Deactivate' : 'Reactivate'} onClick={() => handleToggleCoord(coord)}
-                            className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-400 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-400 hover:text-green-500 hover:bg-green-50'}`}>
+                            className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-500 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-500 hover:text-green-500 hover:bg-green-50'}`}>
                             {isActive ? <MdLock size={15} /> : <MdLockOpen size={15} />}
                           </button>
                           <button title="Delete" onClick={() => setConfirmCoord(coord)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                             <MdDelete size={15} />
                           </button>
                         </div>

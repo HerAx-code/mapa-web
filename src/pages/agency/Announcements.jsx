@@ -159,14 +159,14 @@ export default function AgencyAnnouncements() {
                 <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">UPCOMING</span>
               )}
               {status === 'expired' && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Expired</span>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Expired</span>
               )}
               {status === 'inactive' && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
               )}
             </div>
             <p className="text-xs text-gray-500 mb-1">{ann.message}</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               <MdSchedule size={11} className="inline mr-0.5" />
               {fmtDt(ann.startAt)} – {fmtDt(ann.endAt)}
             </p>
@@ -178,25 +178,25 @@ export default function AgencyAnnouncements() {
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <button title="Edit"
-              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
               onClick={() => setEditing(ann)}>
               <MdEdit size={15} />
             </button>
             {ann.active ? (
               <button title="Deactivate"
-                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
                 onClick={() => handleToggleActive(ann)}>
                 <MdClose size={15} />
               </button>
             ) : (
               <button title="Activate"
-                className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                className="p-1.5 text-gray-500 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
                 onClick={() => handleToggleActive(ann)}>
                 <MdCheckCircle size={15} />
               </button>
             )}
             <button title="Delete"
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
               onClick={() => setConfirmDelete(ann)}>
               <MdDelete size={15} />
             </button>
@@ -279,7 +279,7 @@ export default function AgencyAnnouncements() {
           <div className="card p-10 text-center">
             <MdCampaign size={32} className="text-gray-300 mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-600 mb-1">No promotions yet</p>
-            <p className="text-xs text-gray-400 mb-4">Post one to show your programs on the patient Find Programs page.</p>
+            <p className="text-xs text-gray-500 mb-4">Post one to show your programs on the patient Find Programs page.</p>
             <button
               onClick={() => setEditing(null)}
               className="btn-primary text-sm inline-flex items-center gap-1.5">

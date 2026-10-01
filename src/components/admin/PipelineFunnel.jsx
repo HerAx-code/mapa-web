@@ -24,7 +24,7 @@ export default function PipelineFunnel({ stages = [], onOpenQueue, totalLabel = 
       </div>
 
       {total === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-6">No active requests in the pipeline.</p>
+        <p className="text-sm text-gray-500 text-center py-6">No active requests in the pipeline.</p>
       ) : (
         <ol className="space-y-3">
           {stages.map((s, i) => (

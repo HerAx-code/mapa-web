@@ -109,7 +109,7 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
         className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[92vh] flex flex-col overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h2 id="selfie-modal-title" className="text-base font-semibold text-gray-900">{t('patient.request.selfieTitle')}</h2>
-          <button onClick={onClose} aria-label={t('common.close', 'Close')} className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label={t('common.close', 'Close')} className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="px-5 py-4 space-y-3 overflow-y-auto">

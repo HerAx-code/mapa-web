@@ -240,40 +240,40 @@ export default function AgencyFunds() {
         ) : (
           <div className="card p-5 mb-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 {PERIOD_ADJECTIVE[budget.period] ?? 'Current'} Budget
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 Period started {formatDate(budget.periodStart)}
               </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <div>
-                <p className="text-xs text-gray-400">Allocated</p>
+                <p className="text-xs text-gray-500">Allocated</p>
                 <p className="text-xl font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Committed</p>
+                <p className="text-xs text-gray-500">Committed</p>
                 <p className="text-xl font-semibold text-amber-600">₱{committed.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Disbursed</p>
+                <p className="text-xs text-gray-500">Disbursed</p>
                 <p className="text-xl font-semibold text-purple-600">₱{disbursed.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Remaining</p>
+                <p className="text-xs text-gray-500">Remaining</p>
                 <p className="text-xl font-semibold text-green-600">₱{remaining.toLocaleString()}</p>
               </div>
             </div>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
               <div className={`h-full rounded-full transition-all ${bar}`} style={{ width: `${Math.min(utilization, 100)}%` }} />
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               {utilization}% utilized · committed = sum of issued-but-not-redeemed GLs · disbursed = redeemed GLs · remaining = what new approvals can draw from
             </p>
             {budget.fundSource && (
               <div className="mt-3 pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-0.5">Fund source</p>
+                <p className="text-xs text-gray-500 mb-0.5">Fund source</p>
                 <p className="text-sm font-medium text-gray-700">{budget.fundSource}</p>
                 {budget.fundSourceNotes && (
                   <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{budget.fundSourceNotes}</p>
@@ -297,7 +297,7 @@ export default function AgencyFunds() {
               <button key={m.key}
                 onClick={() => setTypeFilter(active && m.key !== 'all' ? 'all' : m.key)}
                 className={`card p-3 text-left transition-all hover:shadow-md ${active ? 'ring-2 ring-brand-300' : ''}`}>
-                <p className="text-xs text-gray-400 mb-1">{m.label}</p>
+                <p className="text-xs text-gray-500 mb-1">{m.label}</p>
                 <p className={`text-lg font-semibold ${m.color}`}>{loading ? '—' : m.value}</p>
               </button>
             )
@@ -308,13 +308,13 @@ export default function AgencyFunds() {
         <div className="card p-4 mb-4 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[240px]">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
               <input className="input pl-9"
                 placeholder="Search by patient name or application ID..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <div className="flex items-center gap-2">
-              <MdFilterList size={14} className="text-gray-400 flex-shrink-0" />
+              <MdFilterList size={14} className="text-gray-500 flex-shrink-0" />
               <label className="text-xs text-gray-500">From</label>
               <input type="date" className="input text-sm py-1.5"
                 value={startDate} onChange={e => setStartDate(e.target.value)} />
@@ -333,7 +333,7 @@ export default function AgencyFunds() {
         {/* Event list */}
         <div className="card overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-sm text-gray-400">Loading events…</div>
+            <div className="p-8 text-center text-sm text-gray-500">Loading events…</div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
               <MdReceipt size={32} className="text-gray-300 mx-auto mb-2" />
@@ -390,7 +390,7 @@ export default function AgencyFunds() {
                         </td>
                         <td>
                           <p className="text-sm text-gray-800">{e.patient ?? '—'}</p>
-                          <p className="text-xs text-gray-400 font-mono">{e.appCode ?? e.appId.slice(0, 8)}</p>
+                          <p className="text-xs text-gray-500 font-mono">{e.appCode ?? e.appId.slice(0, 8)}</p>
                         </td>
                         <td className="text-sm text-gray-600">{formatDateTime(e.date)}</td>
                         <td className="text-right">
@@ -399,7 +399,7 @@ export default function AgencyFunds() {
                               {meta.sign} ₱{e.amount.toLocaleString()}
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400 italic" title={e.note ?? e.reason ?? ''}>amount n/a</span>
+                            <span className="text-xs text-gray-500 italic" title={e.note ?? e.reason ?? ''}>amount n/a</span>
                           )}
                         </td>
                         <td className="text-xs text-gray-500">{meta.desc}</td>
@@ -439,7 +439,7 @@ export default function AgencyFunds() {
           )}
         </div>
 
-        <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+        <p className="text-xs text-gray-500 mt-4 leading-relaxed">
           <strong>Note —</strong> Events are derived from each application's current state. Legacy reversals (made before this version) may show "amount n/a"; new reversals preserve the original amount. Hover any row for the actor and other context.{' '}
           {user?.role === 'agency_admin' && (
             <>The full agency audit trail lives in the{' '}

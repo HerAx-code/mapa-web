@@ -53,7 +53,7 @@ export function RejectModal({ app, onConfirm, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden outline-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 id="reject-modal-title" className="text-base font-semibold text-gray-900">Reject Application</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">
@@ -229,9 +229,9 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <div>
             <h2 id="approve-modal-title" className="text-base font-semibold text-gray-900">Approve & Issue Guarantee Letter</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{app.patientName} · {app.appId}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{app.patientName} · {app.appId}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -276,13 +276,13 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
               <p className="text-xs text-gray-500 mb-1">Agency budget this period</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-sm font-semibold text-gray-800">₱{remaining.toLocaleString()}</span>
-                <span className="text-xs text-gray-400">remaining of ₱{allocated.toLocaleString()}</span>
+                <span className="text-xs text-gray-500">remaining of ₱{allocated.toLocaleString()}</span>
               </div>
               <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
                 <div className={`h-full rounded-full ${committed / allocated > 0.9 ? 'bg-red-400' : committed / allocated > 0.7 ? 'bg-amber-400' : 'bg-green-400'}`}
                   style={{ width: `${Math.min(100, (committed / allocated) * 100)}%` }} />
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 ₱{committed.toLocaleString()} committed · ₱{disbursed.toLocaleString()} disbursed
               </p>
             </div>
@@ -346,10 +346,10 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
               placeholder="e.g. 5000"
               value={amount} onChange={e => setAmount(e.target.value)} />
             {isSlice && sliceCap > 0 && !exceedsRequested && (
-              <p className="text-xs text-gray-400 mt-1">Bill total: ₱{sliceCap.toLocaleString()} — approve what your agency can.</p>
+              <p className="text-xs text-gray-500 mt-1">Bill total: ₱{sliceCap.toLocaleString()} — approve what your agency can.</p>
             )}
             {perApplicantCap > 0 && !exceedsPerCap && (
-              <p className="text-xs text-gray-400 mt-1">Per-applicant cap: ₱{perApplicantCap.toLocaleString()}.</p>
+              <p className="text-xs text-gray-500 mt-1">Per-applicant cap: ₱{perApplicantCap.toLocaleString()}.</p>
             )}
             {exceedsRequested && (
               <p className="text-xs text-red-500 mt-1">
@@ -403,7 +403,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
             <input className="input"
               placeholder="e.g. CRMC Billing Department, Mercury Drug Cotabato"
               value={payableTo} onChange={e => setPayableTo(e.target.value)} />
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Provider/department that will redeem this Guarantee Letter.
             </p>
           </div>
@@ -452,7 +452,7 @@ export function RequestInfoModal({ app, onConfirm, onClose }) {
             <MdHourglassEmpty size={20} className="text-amber-500" />
             <h2 id="requestinfo-modal-title" className="text-base font-semibold text-gray-900">Request More Information</h2>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600"><MdClose size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
           <p className="text-xs text-gray-500">

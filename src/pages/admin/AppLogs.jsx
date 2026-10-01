@@ -134,25 +134,25 @@ export default function AppLogs() {
               ].map((m, i) => (
                 <div key={i} className="px-2 py-2.5">
                   <p className={`text-lg font-semibold tabular-nums ${m.color}`}>{m.value}</p>
-                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{m.label}</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mt-0.5">{m.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
               <input className="input pl-9 text-sm" placeholder="Patient, agency, or app ID"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Status</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Status</p>
               <ul className="-mx-1.5 space-y-px">
                 <li>
                   <button onClick={() => setFilter('all')} aria-current={filter === 'all' ? 'true' : undefined}
                     className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${filter === 'all' ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <span>All statuses</span>
-                    <span className={`tabular-nums text-xs ${filter === 'all' ? 'text-brand-600' : 'text-gray-400'}`}>{counts.total ?? ''}</span>
+                    <span className={`tabular-nums text-xs ${filter === 'all' ? 'text-brand-600' : 'text-gray-500'}`}>{counts.total ?? ''}</span>
                   </button>
                 </li>
                 {STATUS_ROWS.map(([key, label]) => {
@@ -164,7 +164,7 @@ export default function AppLogs() {
                       <button onClick={() => setFilter(key)} aria-current={active ? 'true' : undefined}
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] transition-colors ${active ? 'bg-brand-50 font-semibold text-brand-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                         <span className="truncate">{label}</span>
-                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-400'}`}>{n ?? ''}</span>
+                        <span className={`tabular-nums text-xs flex-shrink-0 ${active ? 'text-brand-600' : n === 0 ? 'text-gray-300' : 'text-gray-500'}`}>{n ?? ''}</span>
                       </button>
                     </li>
                   )
@@ -173,18 +173,18 @@ export default function AppLogs() {
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Agency</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Agency</p>
               <SearchableSelect
                 triggerClassName="py-2"
                 value={agencyFilter}
                 onChange={setAgencyFilter}
                 searchPlaceholder="Search agencies…"
                 options={[{ value: 'all', label: 'All agencies' }, ...agencies.map(a => ({ value: a, label: a }))]} />
-              <p className="text-[10px] text-gray-300 mt-1">of {apps.length} loaded</p>
+              <p className="text-xs text-gray-300 mt-1">of {apps.length} loaded</p>
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Date</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Date</p>
               <div className="grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
                 {[['all', 'All'], ['week', 'Week'], ['month', 'Month']].map(([k, l]) => (
                   <button key={k} onClick={() => setDateFilter(k)}
@@ -205,7 +205,7 @@ export default function AppLogs() {
           <div className="min-w-0">
 
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {filtered.length} application{filtered.length !== 1 ? 's' : ''}
                 {isFiltered && apps.length > 0 && ` (filtered from ${apps.length} loaded)`}
               </p>
@@ -231,9 +231,9 @@ export default function AppLogs() {
               {!loading && dayGroups.map(group => (
                 <section key={group.key}>
                   <div className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-gray-100 bg-gray-50/95 px-4 py-2 backdrop-blur">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
-                    <span className="text-[11px] text-gray-400 tabular-nums">{group.sub}</span>
-                    <span className="ml-auto text-[11px] text-gray-400 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-700">{group.label}</h3>
+                    <span className="text-xs text-gray-500 tabular-nums">{group.sub}</span>
+                    <span className="ml-auto text-xs text-gray-500 tabular-nums">{group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}</span>
                   </div>
                   <ul className="divide-y divide-gray-50">
                     {group.entries.map(a => (
@@ -244,13 +244,13 @@ export default function AppLogs() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">
                             {a.patientName || '—'}
-                            <span className="ml-2 font-mono text-[11px] font-normal text-gray-400">{a.appId || a.id.slice(0, 12)}</span>
+                            <span className="ml-2 font-mono text-xs font-normal text-gray-500">{a.appId || a.id.slice(0, 12)}</span>
                           </p>
-                          <p className="text-xs text-gray-400 truncate">{a.agencyName || 'No agency'}</p>
+                          <p className="text-xs text-gray-500 truncate">{a.agencyName || 'No agency'}</p>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <StatusBadge status={a.status} />
-                          <span className="text-xs text-gray-400 tabular-nums w-14 text-right">{fmtTime(a.submittedAt)}</span>
+                          <span className="text-xs text-gray-500 tabular-nums w-14 text-right">{fmtTime(a.submittedAt)}</span>
                         </div>
                       </li>
                     ))}
@@ -262,7 +262,7 @@ export default function AppLogs() {
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <MdSearch size={34} className="text-gray-200 mb-3" />
                   <p className="text-sm font-medium text-gray-500 mb-1">No applications found</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {isFiltered ? 'No applications match your filters in the loaded set.' : 'No applications yet.'}
                   </p>
                   {isFiltered && (
@@ -282,9 +282,9 @@ export default function AppLogs() {
                     {loadingMore ? 'Loading…' : 'Load more applications'}
                   </button>
                 ) : apps.length > 0 && (
-                  <p className="text-xs text-gray-400">End of the loaded record.</p>
+                  <p className="text-xs text-gray-500">End of the loaded record.</p>
                 )}
-                <p className="text-[11px] text-gray-400 tabular-nums">
+                <p className="text-xs text-gray-500 tabular-nums">
                   {apps.length} loaded{isFiltered ? ` · ${filtered.length} shown` : ''}
                 </p>
               </div>

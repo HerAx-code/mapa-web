@@ -190,7 +190,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
           </h2>
           {/* In embedded mode the X clears any in-progress edit back to a fresh
               "new" form; in modal mode it closes the dialog. */}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" title={isEdit ? 'Cancel edit' : 'Close'}><MdClose size={20} /></button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600" title={isEdit ? 'Cancel edit' : 'Close'}><MdClose size={20} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -222,7 +222,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-sm font-medium text-gray-700">Title <span className="text-red-400">*</span></label>
-              <span className="text-xs text-gray-400">{title.length}/60</span>
+              <span className="text-xs text-gray-500">{title.length}/60</span>
             </div>
             <input className="input" placeholder={promo ? 'e.g. Free chemotherapy medicines available' : 'e.g. Scheduled System Maintenance'}
               value={title} onChange={e => setTitle(e.target.value.slice(0, 60))} />
@@ -232,7 +232,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-sm font-medium text-gray-700">Message <span className="text-red-400">*</span></label>
-              <span className="text-xs text-gray-400">{message.length}/300</span>
+              <span className="text-xs text-gray-500">{message.length}/300</span>
             </div>
             <textarea className="input resize-none" rows={3}
               placeholder={promo ? 'Describe the program or offer patients should know about…' : 'Describe what users should expect during this period…'}
@@ -242,12 +242,12 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
           {/* Live preview — placed high so operators see the banner update
               as they type the title and message, rather than below the fold. */}
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Preview</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Preview</p>
             <BannerPreview
               type={type} title={title} message={message}
               startAt={previewStartAt} endAt={previewEndAt}
             />
-            <p className="text-xs text-gray-400 mt-1.5">
+            <p className="text-xs text-gray-500 mt-1.5">
               This is how the banner will appear to {audienceNote ?? 'all users'}.
             </p>
           </div>
@@ -279,7 +279,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
                         }`}
                       >
                         <p className={`font-medium ${active ? 'text-brand-700' : 'text-gray-700'}`}>{opt.label}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">{opt.hint}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{opt.hint}</p>
                       </button>
                     )
                   })}
@@ -314,7 +314,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
                     )
                   })}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   Audience is a UX filter on who sees this. It does not restrict who can read the document.
                 </p>
               </div>
@@ -496,14 +496,14 @@ export default function Announcements() {
                 </span>
               )}
               {status === 'expired' && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Expired</span>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Expired</span>
               )}
               {status === 'inactive' && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Inactive</span>
               )}
             </div>
             <p className="text-xs text-gray-500 mb-1">{ann.message}</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500">
               <MdSchedule size={11} className="inline mr-0.5" />
               {fmtDt(ann.startAt)} – {fmtDt(ann.endAt)}
             </p>
@@ -512,32 +512,32 @@ export default function Announcements() {
                 {isLive ? `Ends in ${countdown}` : `Starts in ${countdown}`}
               </p>
             )}
-            <p className="text-xs text-gray-400 mt-1">Created by {ann.createdBy}</p>
+            <p className="text-xs text-gray-500 mt-1">Created by {ann.createdBy}</p>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
             <button title="Edit"
-              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
               onClick={() => setEditing(ann)}>
               <MdEdit size={15} />
             </button>
             {(status === 'active' || status === 'upcoming') && ann.active && (
               <button title="Deactivate"
-                className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
                 onClick={() => handleToggleActive(ann)}>
                 <MdClose size={15} />
               </button>
             )}
             {!ann.active && (
               <button title="Activate"
-                className="p-1.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                className="p-1.5 text-gray-500 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
                 onClick={() => handleToggleActive(ann)}>
                 <MdCheckCircle size={15} />
               </button>
             )}
             <button title="Delete"
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
               onClick={() => setConfirmDelete(ann)}>
               <MdDelete size={15} />
             </button>
@@ -567,14 +567,14 @@ export default function Announcements() {
 
   const renderSection = (label, items, emptyText) => (
     <div>
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
         {label}
         {items.length > 0 && (
           <span className="text-gray-300 font-normal normal-case tracking-normal">({items.length})</span>
         )}
       </p>
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-4 py-6 flex items-center gap-3 text-gray-400">
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-4 py-6 flex items-center gap-3 text-gray-500">
           <MdCampaign size={18} className="flex-shrink-0" />
           <p className="text-sm">{emptyText}</p>
         </div>
@@ -607,8 +607,8 @@ export default function Announcements() {
         {/* Summary */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { label: 'Active Now',  value: totalActive,              color: totalActive > 0 ? 'text-green-600' : 'text-gray-400' },
-            { label: 'Upcoming',    value: totalUpcoming,            color: totalUpcoming > 0 ? 'text-blue-600' : 'text-gray-400' },
+            { label: 'Active Now',  value: totalActive,              color: totalActive > 0 ? 'text-green-600' : 'text-gray-500' },
+            { label: 'Upcoming',    value: totalUpcoming,            color: totalUpcoming > 0 ? 'text-blue-600' : 'text-gray-500' },
             { label: 'Total',       value: announcements.length,     color: 'text-gray-800' },
           ].map((m, i) => (
             <div key={i} className="stat-tile">
