@@ -691,6 +691,14 @@
       "proceedErr": "Hindi naituloy. Pakisubukan muli.",
       "procedure": "Susunod na hakbang",
       "agencyRequirements": "Mga kinakailangang isumite sa ahensyang ito",
+      "docCard": {
+        "nOfMReady": "{{done}} sa {{total}} handa na",
+        "ready": "Handa na",
+        "reused": "Ginamit muli mula sa huling kahilingan · na-verify {{date}}",
+        "saving": "Sine-save…",
+        "uploadFailed": "Hindi na-save — itatago namin at susubukang muli",
+        "retakePhoto": "Kumuhang muli"
+      },
       "documentsTitle": "Mga kinakailangang dokumento",
       "documentsHint": "Ilakip ang mga dokumento sa ibaba. Sinusuri ng CRMC ang mga ito bago i-endorso ang inyong kahilingan. Ang ilan (tulad ng Valid ID) ay magagamit muli kapag na-verify na; ang inyong Billing Statement ay kailangan sa bawat kahilingan.",
       "documentsNone": "Walang naka-set up na kinakailangang dokumento. Makipag-ugnayan sa CRMC.",

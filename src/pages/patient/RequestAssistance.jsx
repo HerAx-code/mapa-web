@@ -21,6 +21,7 @@ import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
 import BalanceHero from '../../components/patient/BalanceHero'
 import TaskList from '../../components/patient/TaskList'
+import DocChecklist from '../../components/patient/DocChecklist'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import {
@@ -48,6 +49,10 @@ export default function RequestAssistance() {
   const [myDocs,        setMyDocs]        = useState([])
   const [agencyMap,     setAgencyMap]     = useState({})
   const [pendingFiles,  setPendingFiles]  = useState({})
+  // Per-document upload state during submit ({ [typeName]: 'saving' | 'error' }),
+  // so the checklist cards show an honest saving/retry state as each base64 doc
+  // is written. Cleared on success. See DocChecklist.jsx.
+  const [uploadState,   setUploadState]   = useState({})
   const [ocrResults,    setOcrResults]    = useState({})
   const [ocrRunning,    setOcrRunning]    = useState({})
   const [selfieFor,     setSelfieFor]     = useState(null)
@@ -468,6 +473,7 @@ export default function RequestAssistance() {
           // liveness result onto the selfie doc (see the pairwise check above).
           const idTypeDetected = isIdType(tp.name)     ? (ocr?.idType ?? null) : null
           const verify         = isSelfieType(tp.name) ? selfieVerify('patient') : null
+          setUploadState(s => ({ ...s, [tp.name]: 'saving' }))
           try {
             if (existing) {
               await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
@@ -476,7 +482,9 @@ export default function RequestAssistance() {
               const ref = await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
               attachedDocuments.push(ref)
             }
+            setUploadState(s => { const n = { ...s }; delete n[tp.name]; return n })
           } catch (uploadErr) {
+            setUploadState(s => ({ ...s, [tp.name]: 'error' }))
             console.error('[request] doc upload failed:', tp.name, uploadErr)
             throw new Error(`UPLOAD_FAILED:${tp.name}`)
           }
@@ -886,107 +894,24 @@ export default function RequestAssistance() {
           </div>
           </>)}
 
-          {step === 1 && (<>
-          {/* Required documents — the standard checklist (same for every
-              request). CRMC verifies them; reusable ones (e.g. Valid ID) carry
-              over once verified, while per-request ones (Billing/SOA) are
-              re-submitted each time. */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('patient.request.documentsTitle')}</p>
-            <p className="text-xs text-gray-500 mb-2">{t('patient.request.documentsHint')}</p>
-            {reqDocTypes.length === 0 ? (
-              <p className="text-xs text-gray-500 italic">{t('patient.request.documentsNone')}</p>
-            ) : (
-              <div className="space-y-2">
-                {reqDocTypes.map(tp => {
-                  const pending  = pendingFiles[tp.name]
-                  const onFile   = tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase())
-                  const ocr      = ocrResults[tp.name]
-                  const ocrBusy  = ocrRunning[tp.name]
-                  return (
-                    <div key={tp.id} className="p-3 rounded-lg border border-gray-100">
-                      <div className="flex items-start gap-2">
-                        <MdDescription size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700">{tp.name} <span className="text-red-400">*</span></p>
-                          {pending
-                            ? <p className="text-xs text-green-600 break-all">{pending.name}</p>
-                            : onFile && <p className="text-xs text-green-600">{t('patient.request.billingOnFile')}</p>}
-                        </div>
-                        {pending && (
-                          <button type="button" className="text-gray-500 hover:text-red-500 flex-shrink-0 p-1" onClick={() => removeReq(tp.name)}>
-                            <MdClose size={18} />
-                          </button>
-                        )}
-                      </div>
-                      {/* Full-width action — never clips on narrow screens. */}
-                      {!pending && (
-                        isSelfieType(tp.name) ? (
-                          <button type="button" onClick={() => setSelfieFor(tp.name)}
-                            className="mt-2 w-full py-2.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium flex items-center justify-center gap-1.5">
-                            <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
-                          </button>
-                        ) : (
-                          <label className="mt-2 w-full py-2.5 rounded-lg border border-brand-200 text-brand-600 text-sm font-medium flex items-center justify-center gap-1.5 cursor-pointer">
-                            <MdUploadFile size={16} /> {onFile ? t('patient.request.replace') : t('patient.request.docAttach')}
-                            <input type="file" accept="image/*,application/pdf" className="hidden" onChange={attachReq(tp.name)} />
-                          </label>
-                        )
-                      )}
-                      {/* Advisory on-device ID name-check — never blocks submit. */}
-                      {isIdType(tp.name) && pending && (ocrBusy || ocr) && (() => {
-                        // "Doesn't look like an ID": no ID-type keyword, no name
-                        // match, AND no face found in the image (a chair/receipt).
-                        // hasFace must be explicitly false — null (couldn't run)
-                        // never warns, so a blurry real ID isn't wrongly flagged.
-                        const notAnId = ocr && !ocrBusy && ocr.hasFace === false
-                          && ocr.idType == null && ocr.match !== true
-                        return (
-                        <>
-                        <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
-                          <p className={`text-xs ${
-                            ocrBusy ? 'text-gray-500'
-                            : ocr?.match === true ? 'text-green-600'
-                            : 'text-amber-600' /* no-match AND unreadable both warn -- patient should look */
-                          }`}>
-                            {ocrBusy
-                              ? t('patient.request.ocrChecking')
-                              : ocr?.match === true
-                                ? t('patient.request.ocrMatch')
-                                : notAnId
-                                  ? t('patient.request.ocrNotAnId')
-                                  : ocr?.match === false
-                                    ? t('patient.request.ocrNoMatch')
-                                    : t('patient.request.ocrUnreadable')}
-                          </p>
-                          {/* Hard-failure retry: OCR errored (no text + null match).
-                              Skips retry if text was read but name didn't match --
-                              same file would just produce the same result. */}
-                          {!ocrBusy && ocr && ocr.match == null && !ocr.text && (
-                            <button type="button" onClick={() => retryOcr(tp.name)}
-                              className="text-xs text-brand-500 hover:text-brand-600 font-medium underline underline-offset-2">
-                              {t('shell.common.tryAgain')}
-                            </button>
-                          )}
-                        </div>
-                        {/* Advisory exposure nudge — glare / too dark. Never blocks. */}
-                        {!ocrBusy && ocr?.exposure && (
-                          <p className="text-xs text-amber-600 mt-1">
-                            {ocr.exposure === 'glare'
-                              ? t('patient.request.exposureGlare')
-                              : t('patient.request.exposureDark')}
-                          </p>
-                        )}
-                        </>
-                        )
-                      })()}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-          </>)}
+          {step === 1 && (
+            <DocChecklist
+              docTypes={reqDocTypes}
+              pendingFiles={pendingFiles}
+              docForType={docForType}
+              verifiedTypeNames={verifiedTypeNames}
+              ocrResults={ocrResults}
+              ocrRunning={ocrRunning}
+              uploadState={uploadState}
+              isIdType={isIdType}
+              isSelfieType={isSelfieType}
+              onAttach={attachReq}
+              onSelfie={setSelfieFor}
+              onRemove={removeReq}
+              onRetryOcr={retryOcr}
+              t={t}
+            />
+          )}
 
           {step === 2 && (<>
           {/* Filed by a representative */}
