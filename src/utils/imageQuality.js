@@ -44,6 +44,53 @@ export function exposureVerdict(stats) {
   return null
 }
 
+// ── Sharpness (ADVISORY — added for guided ID capture, Phase 2) ──────────────
+// The original module deliberately omitted blur detection because a hard blur
+// gate false-warns on cheap cameras. This is used ONLY as an auto-capture HINT
+// in GuidedIdCapture: the manual Capture + Upload paths never require it, so a
+// low-end-camera user is never blocked. Threshold is PROVISIONAL + tunable, and
+// errs LOW so it only flags an obviously-blurry frame. Pure + unit-tested.
+
+// Mean absolute luma gradient (right + down neighbour). A focused photo has
+// strong edges (high gradient); a blurry one is smooth (low gradient).
+export function sharpnessStats(data, width) {
+  if (!data || !width) return { gradient: 0 }
+  const lumAt = (i) => 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+  const h = Math.floor((data.length / 4) / width)
+  let sum = 0, n = 0
+  for (let y = 0; y < h - 1; y++) {
+    for (let x = 0; x < width - 1; x++) {
+      const i = (y * width + x) * 4
+      const l = lumAt(i)
+      sum += Math.abs(l - lumAt(i + 4)) + Math.abs(l - lumAt(i + width * 4))
+      n++
+    }
+  }
+  return { gradient: n ? sum / n : 0 }
+}
+
+// Below this mean-gradient the frame reads as blurry. Deliberately low so only an
+// obviously out-of-focus frame fails; tune on real device frames before trusting.
+export const SHARP_MIN = 5
+
+export function sharpnessVerdict(stats) {
+  if (!stats) return null
+  return stats.gradient < SHARP_MIN ? 'blurry' : null
+}
+
+// Combined live-frame assessment for guided capture: the three chips shown on
+// screen (sharp / bright enough / glare) from one pass over RGBA bytes.
+export function assessFrame(data, width) {
+  const exp = exposureStats(data)
+  const shp = sharpnessStats(data, width)
+  return {
+    sharp:  shp.gradient >= SHARP_MIN,
+    bright: exp.meanLum >= DARK_MEAN,
+    glare:  exp.brightFrac > GLARE_FRACTION,
+    stats:  { ...exp, ...shp },
+  }
+}
+
 // Assess an image File on-device. Downscales to a small canvas (exposure is a
 // global statistic, so full resolution is wasted work) and returns
 // { verdict: 'glare'|'dark'|null, ...stats } or null on any failure.
