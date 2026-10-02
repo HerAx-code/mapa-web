@@ -30,6 +30,7 @@ export default function DocChecklist({
   isSelfieType,
   onAttach,
   onSelfie,
+  onGuidedCapture,
   onRemove,
   onRetryOcr,
   t,
@@ -65,6 +66,7 @@ export default function DocChecklist({
               isSelfie={isSelfieType(tp.name)}
               onAttach={onAttach}
               onSelfie={onSelfie}
+              onGuidedCapture={onGuidedCapture}
               onRemove={onRemove}
               onRetryOcr={onRetryOcr}
               t={t}
@@ -76,7 +78,7 @@ export default function DocChecklist({
   )
 }
 
-function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, onAttach, onSelfie, onRemove, onRetryOcr, t }) {
+function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, onAttach, onSelfie, onGuidedCapture, onRemove, onRetryOcr, t }) {
   // "Doesn't look like an ID": no ID keyword, no name match, no face found.
   // hasFace must be explicitly false (null = couldn't run → no warn).
   const notAnId     = isId && ocr && !ocrBusy && ocr.hasFace === false && ocr.idType == null && ocr.match !== true
@@ -158,13 +160,24 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
         </div>
       )}
 
-      {/* Primary action — attach / take selfie (todo), or Retake (needs-retake). */}
+      {/* Primary action — attach / take selfie / guided ID photo (todo). */}
       {!pending && !reusedDoc && (
         isSelfie ? (
           <button type="button" onClick={() => onSelfie(tp.name)}
             className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
             <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
           </button>
+        ) : isId && onGuidedCapture ? (
+          <>
+            <button type="button" onClick={() => onGuidedCapture(tp.name)}
+              className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
+              <MdCameraAlt size={16} /> {t('patient.request.guidedId.takeIdPhoto')}
+            </button>
+            <label className="self-center text-xs text-gray-500 underline underline-offset-2 min-h-[44px] inline-flex items-center cursor-pointer">
+              {t('patient.request.guidedId.orUpload')}
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
+            </label>
+          </>
         ) : (
           <label className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer">
             <MdUploadFile size={16} /> {t('patient.request.docAttach')}
@@ -176,6 +189,11 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
       {needsRetake && (
         isSelfie ? (
           <button type="button" onClick={() => onSelfie(tp.name)}
+            className="w-full min-h-[44px] rounded-xl bg-amber-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5">
+            <MdCameraAlt size={16} /> {t('patient.request.docCard.retakePhoto')}
+          </button>
+        ) : isId && onGuidedCapture ? (
+          <button type="button" onClick={() => onGuidedCapture(tp.name)}
             className="w-full min-h-[44px] rounded-xl bg-amber-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5">
             <MdCameraAlt size={16} /> {t('patient.request.docCard.retakePhoto')}
           </button>
