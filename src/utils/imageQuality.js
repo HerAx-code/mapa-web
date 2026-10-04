@@ -12,14 +12,21 @@
 // liveness signals this is ADVISORY and fails null — it never blocks submit and
 // the social worker always makes the final call (CLAUDE.md).
 
+// Field-tunable thresholds. These are reasoned defaults (no real CRMC ID-photo
+// corpus exists yet to calibrate against), so they're overridable per deploy via
+// VITE_IDQ_* env vars — CRMC can adjust them against real traffic with a Vercel
+// setting + redeploy, no code change. Each is read by its literal name so Vite
+// inlines it; a missing/invalid value falls back to the default. See .env.example.
+const envNum = (v, fallback) => { const n = Number(v); return Number.isFinite(n) ? n : fallback }
+
 // Fraction of pixels brighter than this counts as "blown out" (glare).
 const BRIGHT = 245
 // Fraction of pixels darker than this counts as "crushed" (too dark).
 const DARK = 20
 // Thresholds chosen conservatively so a normal photo never trips them:
 // >35% blown-out = strong glare; mean luminance <45 = genuinely dark.
-export const GLARE_FRACTION = 0.35
-export const DARK_MEAN = 45
+export const GLARE_FRACTION = envNum(import.meta.env?.VITE_IDQ_GLARE_FRACTION, 0.35)
+export const DARK_MEAN = envNum(import.meta.env?.VITE_IDQ_DARK_MEAN, 45)
 
 // Pure: given RGBA pixel bytes, return exposure stats. Unit-tested in isolation.
 export function exposureStats(data) {
@@ -71,7 +78,7 @@ export function sharpnessStats(data, width) {
 
 // Below this mean-gradient the frame reads as blurry. Deliberately low so only an
 // obviously out-of-focus frame fails; tune on real device frames before trusting.
-export const SHARP_MIN = 5
+export const SHARP_MIN = envNum(import.meta.env?.VITE_IDQ_SHARP_MIN, 5)
 
 export function sharpnessVerdict(stats) {
   if (!stats) return null
@@ -101,7 +108,7 @@ export function assessFrame(data, width) {
 // An ID photo whose long edge is below this reads as too low-resolution to be
 // reliably legible. Phone cameras produce >1000px; this only trips a thumbnail
 // or a heavily-cropped gallery pick.
-export const MIN_LONG_EDGE = 600
+export const MIN_LONG_EDGE = envNum(import.meta.env?.VITE_IDQ_MIN_LONG_EDGE, 600)
 
 // Classify combined stats into a single advisory verdict, worst-first:
 // 'small' | 'dark' | 'glare' | 'blurry' | null (ok). Resolution is checked first

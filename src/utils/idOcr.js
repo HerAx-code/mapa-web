@@ -186,10 +186,12 @@ async function getWorker() {
 }
 
 // Below this overall OCR confidence (0–100, from tesseract) the read is shaky
-// enough to warrant a "text hard to read — retake?" nudge. Advisory + tunable.
-// Only used as a hint; a clean name-match overrides it (if we matched the name,
-// the read was good enough regardless of the aggregate score).
-export const LOW_OCR_CONFIDENCE = 55
+// enough to warrant a "text hard to read — retake?" nudge. Advisory; a clean
+// name-match overrides it (if we matched the name, the read was good enough
+// regardless of the aggregate score). Field-tunable per deploy via
+// VITE_IDQ_LOW_OCR_CONFIDENCE (no corpus to calibrate against yet) — see .env.example.
+const _lowConf = Number(import.meta.env?.VITE_IDQ_LOW_OCR_CONFIDENCE)
+export const LOW_OCR_CONFIDENCE = Number.isFinite(_lowConf) ? _lowConf : 55
 
 // Runs OCR on an image File. Returns { text, match, idType, confidence } where
 // match is the fuzzy name-check and confidence is tesseract's overall 0–100 score
