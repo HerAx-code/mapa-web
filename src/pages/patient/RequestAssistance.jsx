@@ -110,6 +110,9 @@ export default function RequestAssistance() {
   // faceChecked remembers which exact file pair each result is for, so the
   // ~6.6 MB models run once per unique pair, not on every render. Everything
   // fails null and never blocks submission.
+  // Remembers the rep ID/selfie doc ids created during a submit so a retry after
+  // a partial failure REPLACES them instead of creating duplicate rep docs.
+  const repDocsRef     = useRef({ id: null, selfie: null })
   const faceResults    = useRef({ patient: null, rep: null }) // face-match (from the pair)
   const selfieLiveness = useRef({ patient: null, rep: null }) // liveness (from the capture modal)
   const faceChecked    = useRef({ patient: null, rep: null })
@@ -585,18 +588,36 @@ export default function RequestAssistance() {
         // Persist the rep-ID OCR result so the CRMC verifier sees the same
         // advisory line they get on the patient's own ID. The OCR ran at
         // attach time against repForm.name (see attachReq).
-        const repIdOcr     = ocrResults[REP_ID] ?? null
-        const repIdRef     = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', ocr: repIdOcr, idTypeDetected: repIdOcr?.idType ?? null, user })
-        const repSelfieRef = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', verify: selfieVerify('rep'), user })
+        const repIdOcr = ocrResults[REP_ID] ?? null
+        // Idempotent across retries: replace a previously-created rep doc in place
+        // (same id) instead of adding a duplicate when an earlier submit failed
+        // partway. Mirrors the main checklist loop's replace-on-retry behaviour.
+        let repIdId = repDocsRef.current.id
+        if (repIdId) {
+          await replacePatientDocument({ docId: repIdId, file: pendingFiles[REP_ID], ocr: repIdOcr, idTypeDetected: repIdOcr?.idType ?? null, user })
+        } else {
+          const ref = await uploadPatientDocument({ file: pendingFiles[REP_ID], typeName: 'Representative ID', ocr: repIdOcr, idTypeDetected: repIdOcr?.idType ?? null, user })
+          repIdId = ref.documentId; repDocsRef.current.id = repIdId
+        }
+        let repSelfieId = repDocsRef.current.selfie
+        if (repSelfieId) {
+          await replacePatientDocument({ docId: repSelfieId, file: pendingFiles[REP_SELFIE], verify: selfieVerify('rep'), user })
+        } else {
+          const ref = await uploadPatientDocument({ file: pendingFiles[REP_SELFIE], typeName: 'Representative Selfie', verify: selfieVerify('rep'), user })
+          repSelfieId = ref.documentId; repDocsRef.current.selfie = repSelfieId
+        }
         filedBy = {
           name:          repForm.name.trim(),
           relationship:  repForm.relationship.trim(),
           authorized:    true,
-          repIdDocId:    repIdRef.documentId,
-          repSelfieDocId: repSelfieRef.documentId,
+          repIdDocId:    repIdId,
+          repSelfieDocId: repSelfieId,
         }
         // The rep's ID + selfie are part of this submission's evidence.
-        attachedDocuments.push(repIdRef, repSelfieRef)
+        attachedDocuments.push(
+          { documentId: repIdId,     name: 'Representative ID',     documentTypeName: 'Representative ID',     status: 'pending', date: today },
+          { documentId: repSelfieId, name: 'Representative Selfie', documentTypeName: 'Representative Selfie', status: 'pending', date: today },
+        )
       }
 
       const requestId = generateRequestId()
