@@ -232,7 +232,61 @@ identity, no ID at all). Introduce **NIDAS eVerify** (if a relying party) or a
 
 ---
 
+## 9. CONFIRMED (2026-10-04) — National ID eVerify is live, and we built it
+
+The "legal/eligibility unknown" caveats on Options 2 & 3 above are now **resolved**.
+CRMC created an eVerify relying-party account and we validated the API end-to-end
+against the live sandbox. Built in **PR #270** (`feat(idv-6)`), dormant behind
+`EVERIFY_*` env vars.
+
+**eVerify is an official DICT/PSA API** (National ID Authentication Services /
+NIDAS), server-to-server, free for government relying parties.
+
+- **Base URLs:** sandbox `https://ws.everify.gov.ph/api/dev` · production
+  `https://ws.everify.gov.ph/api`.
+- **Auth:** `POST /auth { client_id, client_secret }` → `{ data: { access_token,
+  token_type:"Bearer", expires_at } }` (30-min token).
+- **Endpoints (all `Authorization: Bearer`):**
+  - `POST /query/qr/check { value }` → `{ data:{ pcn|digital_id|… }, meta:{ qr_type } }`
+    — **validates + parses the QR; NO face-liveness needed.** ← what MAPA uses (Tier I).
+  - `POST /query/qr { value, face_liveness_session_id }` — QR + Tier II face match.
+  - `POST /query { first_name, …, birth_date, face_liveness_session_id }` — demographics.
+  - Tier II face paths need the **Face Liveness JS SDK** (`startLiveness()` → `session_id`);
+    `result_grade` legend: 0 none · 1 success · 2 failed face · 3 failed fingerprint ·
+    4 failed iris · 7 success fingerprint.
+- **Verified live** (sandbox, Tier I creds `tier-1-client-id` / `tier-1-client-secret`):
+  `1234123412341234` → `{pcn:"1234-1234-1234-1234", qr_type:"Philsys Card Number"}`;
+  `AAA000` → `{digital_id:"AAA000", qr_type:"Digital ID"}`.
+
+**Tiers:** Tier I = Verified/Not + registered name. Tier II = demographics + the
+**registration portrait** (for selfie matching). MAPA registered **Tier I**.
+
+**Onboarding (government RP, free):** ① Regulatory — Letter of Intent + business-
+process map (~7–10 wd). ② Technical — 30-day sandbox key, then a **VAPT pentest
+certificate** before clearance. ③ Go-live — subscription contract signed by both
+DPOs (1–3 yr) → Certificate to Go Live. Tech vendors can't register alone; CRMC is
+the eligible RP.
+
+**What we built (PR #270):** `api/everify.js` (serverless proxy, Firebase-gated,
+holds the secret, token cache, `/query/qr/check`) + `src/utils/everify.js`
+(`everifyQrCheck`, fail-null). `IdentityStep` shows authoritative "Confirmed genuine
+by PSA eVerify" (falls back to the on-device signature), stamps `idVerifyMethod:
+'everify_qr'` + `everifyVerified` + `everifyQrType`; staff card shows "PSA eVerify
+confirmed". Bounded in `firestore.rules`. **Deferred:** Tier II face-liveness (needs
+their JS SDK); MAPA keeps on-device selfie↔ID match.
+
+**Production caveats:** (1) eVerify **production allowlists IPs** — Vercel egress is
+dynamic, so go-live needs a **static-IP/NAT** path (sandbox has no allowlist).
+(2) The **VAPT** is a real prerequisite. (3) Privacy: consent-per-transaction,
+data minimization, PSA stores no responses (RA-10173 aligned).
+
+**To activate:** set `EVERIFY_CLIENT_ID` / `EVERIFY_CLIENT_SECRET` (+ optional
+`EVERIFY_BASE_URL`) in Vercel and redeploy. Unset = dormant (on-device fallback).
+
+---
+
 ## Sources
+- National ID eVerify — official eGov API catalog (DICT): https://platforms.e.gov.ph/api-catalogs/everify · service site https://everify.gov.ph/ · relying-party onboarding/tiers https://www.regtech.com/news/philippines-national-id-everify-relying-party-onboarding
 - PhilSys NIDAS (eVerify + National ID Check / QR): https://www.kairos.com/post/national-id-authentication-services-nidas-what-it-is-how-it-works-and-where-kairos-fits · official portal https://verify.philsys.gov.ph/ · eGovPH https://e.gov.ph/
 - Open-source PhilSys verification (QR decode + signature): https://github.com/bettergovph/openverify
 - Passive / on-device liveness & PAD (ISO 30107-3): https://www.miteksystems.com/products/face-liveness-detection · https://faceapi.regulaforensics.com/ · https://github.com/kby-ai/Face-Liveness-Detection-SDK · https://github.com/topics/liveness-detection
