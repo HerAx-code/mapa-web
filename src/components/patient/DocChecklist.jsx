@@ -31,6 +31,7 @@ export default function DocChecklist({
   onAttach,
   onSelfie,
   onGuidedCapture,
+  onScanId,
   onRemove,
   onRetryOcr,
   t,
@@ -67,6 +68,7 @@ export default function DocChecklist({
               onAttach={onAttach}
               onSelfie={onSelfie}
               onGuidedCapture={onGuidedCapture}
+              onScanId={onScanId}
               onRemove={onRemove}
               onRetryOcr={onRetryOcr}
               t={t}
@@ -78,7 +80,7 @@ export default function DocChecklist({
   )
 }
 
-function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, onAttach, onSelfie, onGuidedCapture, onRemove, onRetryOcr, t }) {
+function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, onAttach, onSelfie, onGuidedCapture, onScanId, onRemove, onRetryOcr, t }) {
   // "Doesn't look like an ID": no ID keyword, no name match, no face found.
   // hasFace must be explicitly false (null = couldn't run → no warn).
   const notAnId     = isId && ocr && !ocrBusy && ocr.hasFace === false && ocr.idType == null && ocr.match !== true
@@ -167,6 +169,19 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
             className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
             <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
           </button>
+        ) : isId && onScanId ? (
+          // Flag-on (VITE_PHILID_QR_ENABLED): one CTA opens the identity step,
+          // which itself offers Scan National ID / Use another ID / type PCN.
+          <>
+            <button type="button" onClick={() => onScanId(tp.name)}
+              className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
+              <MdCameraAlt size={16} /> {t('patient.request.identity.verifyCta')}
+            </button>
+            <label className="self-center text-xs text-gray-500 underline underline-offset-2 min-h-[44px] inline-flex items-center cursor-pointer">
+              {t('patient.request.guidedId.orUpload')}
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
+            </label>
+          </>
         ) : isId && onGuidedCapture ? (
           <>
             <button type="button" onClick={() => onGuidedCapture(tp.name)}

@@ -1,0 +1,4 @@
+{
+  "_README": "PSA PhilSys Ed25519 PUBLIC key(s) for on-device National-ID QR signature verification. EMPTY ON PURPOSE. Do NOT invent a key. Only CRMC, AFTER obtaining PSA/NIDAS relying-party clearance (see docs/id-verification-research.md §4-5), drops PSA's real public key hex string(s) into the `ed25519` array below. Until then, signature verification returns 'unverified' (never a false pass) and the whole QR path stays behind VITE_PHILID_QR_ENABLED=false.",
+  "ed25519": []
+}
