@@ -341,7 +341,8 @@ service cloud.firestore {
           && (!('pcnFingerprint' in d) || d.pcnFingerprint == null || (d.pcnFingerprint is string && d.pcnFingerprint.size() <= 64))
           && (!('philIdName' in d)     || d.philIdName == null     || (d.philIdName is string && d.philIdName.size() <= 200))
           && (!('philIdDob' in d)      || d.philIdDob == null      || (d.philIdDob is string && d.philIdDob.size() <= 40))
-          && (!('philIdSigValid' in d) || d.philIdSigValid == null || d.philIdSigValid is bool);
+          && (!('philIdSigValid' in d) || d.philIdSigValid == null || d.philIdSigValid is bool)
+          && (!('ocrConfidence' in d)  || d.ocrConfidence == null  || (d.ocrConfidence is number && d.ocrConfidence >= 0 && d.ocrConfidence <= 100));
       }
       // Abuse hardening #5 — cap the NUMBER of documents a patient can upload.
       // File size is already bounded (~650 KB); this bounds the count, since each
@@ -390,7 +391,7 @@ service cloud.firestore {
                         request.resource.data.status == 'pending' &&
                         request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['status', 'fileName', 'type', 'size', 'date',
-                                    'reviewedBy', 'reviewedAt', 'ocrText', 'ocrMatch',
+                                    'reviewedBy', 'reviewedAt', 'ocrText', 'ocrMatch', 'ocrConfidence',
                                     'idTypeDetected', 'faceMatch', 'faceMatchScore',
                                     'liveness', 'livenessScore', 'idVerifyMethod',
                                     'pcnLast4', 'pcnFingerprint', 'philIdName',

@@ -93,7 +93,13 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     // Advisory on-device OCR result (ID docs only): extracted text + a
     // fuzzy name-match flag, surfaced to the CRMC verifier. Never
     // authoritative.
-    ...(ocr ? { ocrText: (ocr.text ?? '').slice(0, 2000), ocrMatch: ocr.match ?? null } : {}),
+    ...(ocr ? {
+      ocrText: (ocr.text ?? '').slice(0, 2000),
+      ocrMatch: ocr.match ?? null,
+      // Advisory OCR confidence (0–100) — how legible the read was. Lets the CRMC
+      // verifier weigh a no-match (shaky scan vs genuinely wrong ID).
+      ocrConfidence: typeof ocr.confidence === 'number' ? ocr.confidence : null,
+    } : {}),
     // Advisory ID-type guess from OCR (ID docs). The patient never picks a
     // type; the social worker confirms it at review. See faceCheck / idOcr.
     ...(idTypeDetected ? { idTypeDetected: String(idTypeDetected).slice(0, 100) } : {}),
@@ -161,7 +167,11 @@ export async function replacePatientDocument({ docId, file, ocr = null, verify =
     date:       new Date().toLocaleDateString(),
     reviewedBy: null,
     reviewedAt: null,
-    ...(ocr ? { ocrText: (ocr.text ?? '').slice(0, 2000), ocrMatch: ocr.match ?? null } : {}),
+    ...(ocr ? {
+      ocrText: (ocr.text ?? '').slice(0, 2000),
+      ocrMatch: ocr.match ?? null,
+      ocrConfidence: typeof ocr.confidence === 'number' ? ocr.confidence : null,
+    } : {}),
     // Refresh the advisory verification on a re-upload so the CRMC verifier sees
     // the new file's result, not the rejected one's. Rules allow exactly these
     // keys on a patient update (firestore.rules documents.update).

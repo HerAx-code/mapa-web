@@ -5,7 +5,7 @@
  * photo must resolve to null (no nudge).
  */
 import { describe, it, expect } from 'vitest'
-import { exposureStats, exposureVerdict, sharpnessStats, sharpnessVerdict, assessFrame, SHARP_MIN } from '../../src/utils/imageQuality.js'
+import { exposureStats, exposureVerdict, sharpnessStats, sharpnessVerdict, assessFrame, SHARP_MIN, qualityVerdict, MIN_LONG_EDGE } from '../../src/utils/imageQuality.js'
 
 // Build an RGBA buffer of `n` pixels all at luminance `v` (gray).
 const gray = (v, n = 100) => {
@@ -95,5 +95,29 @@ describe('assessFrame (live chips: sharp / bright / glare)', () => {
   })
   it('very dark flat → not bright', () => {
     expect(assessFrame(gray(10, 100), 10).bright).toBe(false)
+  })
+})
+
+// qualityVerdict — the single advisory verdict behind the explicit-override ID
+// quality gate. Worst-first: resolution, then exposure, then sharpness. Pure.
+describe('qualityVerdict', () => {
+  const ok = { longEdge: 1200, meanLum: 128, brightFrac: 0.01, gradient: 20 }
+  it('returns null for a good photo', () => {
+    expect(qualityVerdict(ok)).toBe(null)
+  })
+  it('flags a too-small image first (resolution before other stats)', () => {
+    expect(qualityVerdict({ ...ok, longEdge: MIN_LONG_EDGE - 1, meanLum: 5, gradient: 0 })).toBe('small')
+  })
+  it('flags a dark image', () => {
+    expect(qualityVerdict({ ...ok, meanLum: 10 })).toBe('dark')
+  })
+  it('flags a glary image', () => {
+    expect(qualityVerdict({ ...ok, brightFrac: 0.9 })).toBe('glare')
+  })
+  it('flags a blurry image', () => {
+    expect(qualityVerdict({ ...ok, gradient: 0 })).toBe('blurry')
+  })
+  it('accepts an image exactly at the resolution floor', () => {
+    expect(qualityVerdict({ ...ok, longEdge: MIN_LONG_EDGE })).toBe(null)
   })
 })

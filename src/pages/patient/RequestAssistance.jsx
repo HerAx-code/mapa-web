@@ -13,8 +13,8 @@ import {
 } from '../../utils/requests'
 import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
-import { runIdOcr, isIdType } from '../../utils/idOcr'
-import { assessExposure } from '../../utils/imageQuality'
+import { runIdOcr, isIdType, LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
+import { assessImageQuality } from '../../utils/imageQuality'
 import { compareFaces, hasFace } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
@@ -58,6 +58,10 @@ export default function RequestAssistance() {
   const [uploadState,   setUploadState]   = useState({})
   const [ocrResults,    setOcrResults]    = useState({})
   const [ocrRunning,    setOcrRunning]    = useState({})
+  // ID types where the patient tapped "Use it anyway" past a poor-quality nudge.
+  // The quality check is advisory (CLAUDE.md: never lock out a poor-camera
+  // patient), so a deliberate ack always unblocks submit.
+  const [qualityAck,    setQualityAck]    = useState({})
   const [selfieFor,     setSelfieFor]     = useState(null)
   const [replacing,     setReplacing]     = useState(null)
   const [proceeding,    setProceeding]    = useState(false)
@@ -173,13 +177,20 @@ export default function RequestAssistance() {
     Promise.all([
       runIdOcr(file, expectedName),
       wantFace ? hasFace(file) : Promise.resolve(null),
-      // Advisory exposure check (glare / too-dark). On-device, fails null,
-      // never blocks — a gentle "retake in better light" nudge. See imageQuality.js.
-      assessExposure(file),
+      // Advisory capture-quality check (exposure + sharpness + resolution).
+      // On-device, fails null, never blocks — drives the "retake?" nudge (which
+      // the patient can override). See imageQuality.assessImageQuality.
+      assessImageQuality(file),
     ])
-      .then(([res, face, exposure]) => {
+      .then(([res, face, quality]) => {
         if (ocrTokens.current[typeName] !== token) return // stale: dropped
-        setOcrResults(p => ({ ...p, [typeName]: { ...res, hasFace: face, exposure: exposure?.verdict ?? null } }))
+        const q = quality?.verdict ?? null
+        setOcrResults(p => ({ ...p, [typeName]: {
+          ...res, hasFace: face,
+          quality: q,
+          // Back-compat: keep `exposure` as the glare/dark subset some views read.
+          exposure: (q === 'glare' || q === 'dark') ? q : null,
+        } }))
       })
       .finally(() => {
         if (ocrTokens.current[typeName] === token) {
@@ -196,10 +207,15 @@ export default function RequestAssistance() {
     const err = validateDocFile(file)
     if (err) { toast.error(err); return }
     setPendingFiles(p => ({ ...p, [typeName]: file }))
+    // A fresh photo must be re-judged on its own merits, so drop any prior
+    // "use it anyway" acknowledgement for this slot.
+    setQualityAck(m => { const n = { ...m }; delete n[typeName]; return n })
     // ID documents (including the rep-ID sentinel) get an advisory
     // on-device OCR name-check. Never blocks the submission.
     startOcr(typeName, file)
   }
+
+  const ackQuality = (typeName) => setQualityAck(m => ({ ...m, [typeName]: true }))
 
   const attachReq = (typeName) => (e) => {
     const file = e.target.files?.[0]
@@ -459,6 +475,21 @@ export default function RequestAssistance() {
     !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
   const missingDocs = reqDocTypes.filter(tp => !isSatisfied(tp))
 
+  // Advisory ID capture-quality gate (explicit-override model): an attached ID
+  // photo whose on-device check came back poor (too small/dark/glary/blurry, or
+  // OCR text too shaky to read) blocks submit UNTIL the patient either retakes it
+  // or taps "Use it anyway" (qualityAck). A clean name-match overrides a low
+  // confidence score. Never a hard lock — the ack path is always available.
+  const isIdQualityPoor = (ocr) =>
+    !!ocr && (
+      ocr.quality != null ||
+      (typeof ocr.confidence === 'number' && ocr.confidence < LOW_OCR_CONFIDENCE && ocr.match !== true)
+    )
+  const qualityBlockedDocs = reqDocTypes.filter(tp =>
+    isIdType(tp.name) && !!pendingFiles[tp.name] && !ocrRunning[tp.name] &&
+    isIdQualityPoor(ocrResults[tp.name]) && !qualityAck[tp.name]
+  )
+
   // The patient declares their total hospital bill. Coverage (PhilHealth first,
   // then any other prior coverage) is unknown at submission — it is computed by
   // CRMC at assessment — so the residual `amountNeeded` starts equal to the full
@@ -472,6 +503,7 @@ export default function RequestAssistance() {
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
     if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
+    if (qualityBlockedDocs.length) { toast.error(t('patient.request.errIdQuality')); return }
     if (filedByRep && (!repForm.name.trim() || !repForm.relationship.trim() || !pendingFiles[REP_ID] || !pendingFiles[REP_SELFIE] || !repAuthorized)) {
       toast.error(t('patient.request.errRep')); return
     }
@@ -951,6 +983,8 @@ export default function RequestAssistance() {
               uploadState={uploadState}
               isIdType={isIdType}
               isSelfieType={isSelfieType}
+              qualityAck={qualityAck}
+              onAckQuality={ackQuality}
               onAttach={attachReq}
               onSelfie={setSelfieFor}
               onGuidedCapture={setGuidedFor}
