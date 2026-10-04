@@ -103,6 +103,17 @@ describe('VerifyDocsPanel — Identity review card', () => {
     expect(onRequestRedo).toHaveBeenCalledWith(expect.objectContaining({ id: 'sf-1' }), 'Selfie too dark / blurry')
   })
 
+  it('shows the authoritative PSA eVerify line when the QR was server-verified', () => {
+    const reqDocs = [
+      { id: 'id-1', documentTypeName: 'National ID', status: 'pending',
+        idVerifyMethod: 'everify_qr', everifyVerified: true, everifyQrType: 'Digital ID',
+        pcnLast4: '•••• •••• •••• 3456' },
+      { id: 'sf-1', documentTypeName: 'Live Selfie', status: 'pending', faceMatch: 'pass', liveness: 'pass' },
+    ]
+    render(<VerifyDocsPanel {...idProps} reqDocs={reqDocs} />)
+    expect(screen.getByText(/PSA eVerify confirmed \(Digital ID\)/)).toBeInTheDocument()
+  })
+
   it('shows "Identity confirmed" once the ID + selfie docs are verified', () => {
     const reqDocs = [
       { id: 'id-1', documentTypeName: 'National ID', status: 'verified', idVerifyMethod: 'philid_qr', philIdSigValid: true },

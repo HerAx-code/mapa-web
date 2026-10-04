@@ -334,14 +334,16 @@ service cloud.firestore {
         return (!('idTypeDetected' in d) || (d.idTypeDetected is string && d.idTypeDetected.size() <= 100))
           && (!('faceMatch' in d)      || d.faceMatch == null      || d.faceMatch in ['pass', 'unclear'])
           && (!('liveness' in d)       || d.liveness == null       || d.liveness in ['pass', 'unclear'])
-          && (!('idVerifyMethod' in d) || d.idVerifyMethod == null  || d.idVerifyMethod in ['ocr', 'philid_qr', 'pcn_manual'])
+          && (!('idVerifyMethod' in d) || d.idVerifyMethod == null  || d.idVerifyMethod in ['ocr', 'philid_qr', 'pcn_manual', 'everify_qr'])
           && (!('faceMatchScore' in d) || d.faceMatchScore == null || (d.faceMatchScore is number && d.faceMatchScore >= 0 && d.faceMatchScore <= 1))
           && (!('livenessScore' in d)  || d.livenessScore == null  || (d.livenessScore is number && d.livenessScore >= 0 && d.livenessScore <= 1))
           && (!('pcnLast4' in d)       || d.pcnLast4 == null       || (d.pcnLast4 is string && d.pcnLast4.size() <= 24))
           && (!('pcnFingerprint' in d) || d.pcnFingerprint == null || (d.pcnFingerprint is string && d.pcnFingerprint.size() <= 64))
           && (!('philIdName' in d)     || d.philIdName == null     || (d.philIdName is string && d.philIdName.size() <= 200))
           && (!('philIdDob' in d)      || d.philIdDob == null      || (d.philIdDob is string && d.philIdDob.size() <= 40))
-          && (!('philIdSigValid' in d) || d.philIdSigValid == null || d.philIdSigValid is bool);
+          && (!('philIdSigValid' in d) || d.philIdSigValid == null || d.philIdSigValid is bool)
+          && (!('everifyVerified' in d) || d.everifyVerified == null || d.everifyVerified is bool)
+          && (!('everifyQrType' in d)   || d.everifyQrType == null   || (d.everifyQrType is string && d.everifyQrType.size() <= 60));
       }
       // Abuse hardening #5 — cap the NUMBER of documents a patient can upload.
       // File size is already bounded (~650 KB); this bounds the count, since each
@@ -394,7 +396,8 @@ service cloud.firestore {
                                     'idTypeDetected', 'faceMatch', 'faceMatchScore',
                                     'liveness', 'livenessScore', 'idVerifyMethod',
                                     'pcnLast4', 'pcnFingerprint', 'philIdName',
-                                    'philIdDob', 'philIdSigValid']) &&
+                                    'philIdDob', 'philIdSigValid',
+                                    'everifyVerified', 'everifyQrType']) &&
                         (!('ocrText' in request.resource.data) ||
                          (request.resource.data.ocrText is string &&
                           request.resource.data.ocrText.size() <= 4000)) &&

@@ -273,6 +273,32 @@ describe('documents — PhilSys / National-ID field bounds', () => {
       status: 'pending', pcnFingerprint: 'a'.repeat(65),
     }))
   })
+
+  // eVerify (api/everify → PSA /query/qr/check): the authoritative QR check.
+  it('accepts an everify_qr record with a confirmed QR type', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      idVerifyMethod: 'everify_qr', everifyVerified: true, everifyQrType: 'Digital ID',
+      pcnLast4: '3456', pcnFingerprint: 'c'.repeat(64),
+    })))
+  })
+
+  it('rejects a non-boolean everifyVerified', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      idVerifyMethod: 'everify_qr', everifyVerified: 'yes', everifyQrType: 'Digital ID',
+    })))
+  })
+
+  it('rejects an oversized everifyQrType (>60 chars)', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      idVerifyMethod: 'everify_qr', everifyVerified: true, everifyQrType: 'x'.repeat(61),
+    })))
+  })
 })
 
 // documentContents/create from rules-3

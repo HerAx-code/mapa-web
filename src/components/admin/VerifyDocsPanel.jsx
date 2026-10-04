@@ -201,6 +201,11 @@ function idSourceCheck(idDoc) {
   if (!idDoc) return { label: 'No ID uploaded yet', tone: 'text-gray-500' }
   const m = idDoc.idVerifyMethod
   const pcn = idDoc.pcnLast4 ? ` · PCN ${idDoc.pcnLast4}` : ''
+  // Authoritative: PSA eVerify confirmed the QR server-side (api/everify).
+  if (m === 'everify_qr') {
+    const type = idDoc.everifyQrType ? ` (${idDoc.everifyQrType})` : ''
+    return { label: `National ID · PSA eVerify confirmed${type}${pcn}`, tone: 'text-green-600' }
+  }
   if (m === 'philid_qr') {
     return idDoc.philIdSigValid === true
       ? { label: `National ID · PSA signature valid${pcn}`, tone: 'text-green-600' }

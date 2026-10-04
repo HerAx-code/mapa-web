@@ -118,6 +118,10 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
       philIdName:     idMeta.philIdName ? String(idMeta.philIdName).slice(0, 200) : null,
       philIdDob:      idMeta.philIdDob ? String(idMeta.philIdDob).slice(0, 40) : null,
       philIdSigValid: typeof idMeta.signatureValid === 'boolean' ? idMeta.signatureValid : null,
+      // Authoritative PSA eVerify result (api/everify → /query/qr/check). Advisory
+      // like the rest; confirms the scanned QR is a genuine PhilSys code + its type.
+      everifyVerified: typeof idMeta.everifyVerified === 'boolean' ? idMeta.everifyVerified : null,
+      everifyQrType:   idMeta.everifyQrType ? String(idMeta.everifyQrType).slice(0, 60) : null,
     } : {}),
     createdAt:           serverTimestamp(),
   })

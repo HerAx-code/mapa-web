@@ -15,6 +15,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k) => k }) }))
+// IdentityStep → utils/everify → src/firebase. Stub it (no real init); a null
+// currentUser makes everifyQrCheck no-op, which is the correct fail-safe path.
+vi.mock('../../src/firebase', () => ({ auth: { currentUser: null } }))
 
 import IdentityStep from '../../src/components/patient/IdentityStep'
 

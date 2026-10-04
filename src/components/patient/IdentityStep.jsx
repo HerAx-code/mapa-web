@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MdClose, MdQrCodeScanner, MdBadge, MdCheckCircle, MdWarningAmber, MdLock } from 'react-icons/md'
 import { decodeQrFromImageData, parsePhilId, maskPcn, pcnFingerprint, normalizePcn } from '../../utils/philIdQr'
+import { everifyQrCheck } from '../../utils/everify'
 // NOTE: pcnFingerprint is async (WebCrypto HMAC) — both the QR-result and the
 // typed-PCN continue handlers await it, so the stored fingerprint is never the
 // raw PCN, only a keyed one-way hash. See docs/id-verification-plan.md §5.3.
@@ -26,10 +27,23 @@ export default function IdentityStep({ accountName = '', onScanned, onPcn, onUse
   const { t } = useTranslation()
   const [view, setView] = useState('choice')   // choice | scan | result | pcn
   const [parsed, setParsed] = useState(null)
+  const [everify, setEverify] = useState(null) // null=checking | {verified,qrType} | false(=offline/skip)
   const [pcnInput, setPcnInput] = useState('')
   const panelRef = useRef(null)
   useEscapeKey(onClose)
   useFocusTrap(panelRef, true)
+
+  // When a QR is decoded on-device, also ask PSA eVerify (via api/everify) to
+  // confirm it's a genuine PhilSys QR — the authoritative check. Fail-safe:
+  // null result (route dormant / offline) just leaves us on the on-device
+  // signature verdict. Never blocks the Continue button.
+  const handleDecoded = async (p) => {
+    setParsed(p)
+    setEverify(null)      // "checking…"
+    setView('result')
+    const r = await everifyQrCheck(p?._raw)
+    setEverify(r ?? false)
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[200] flex items-end sm:items-center justify-center sm:p-4"
@@ -47,21 +61,25 @@ export default function IdentityStep({ accountName = '', onScanned, onPcn, onUse
           )}
           {view === 'scan' && (
             <QrScan t={t}
-              onDecoded={(p) => { setParsed(p); setView('result') }}
+              onDecoded={handleDecoded}
               onPcn={() => setView('pcn')}
               onUseOther={onUseOther} />
           )}
           {view === 'result' && parsed && (
-            <QrResult t={t} parsed={parsed} accountName={accountName}
+            <QrResult t={t} parsed={parsed} accountName={accountName} everify={everify}
               onContinue={async (idFile) => onScanned(idFile, {
-                idVerifyMethod: 'philid_qr',
+                // PSA eVerify is authoritative when it confirms the QR; otherwise
+                // fall back to the on-device signature result.
+                idVerifyMethod: everify?.verified ? 'everify_qr' : 'philid_qr',
+                everifyVerified: everify?.verified ?? null,
+                everifyQrType: everify?.qrType ?? null,
                 philIdName: parsed.name ?? null,
                 philIdDob: parsed.dob ?? null,
                 pcnLast4: parsed.pcn ? maskPcn(parsed.pcn) : null,
                 pcnFingerprint: parsed.pcn ? await pcnFingerprint(parsed.pcn) : null,
                 signatureValid: parsed.signatureValid ?? null,
               })}
-              onRescan={() => { setParsed(null); setView('scan') }} />
+              onRescan={() => { setParsed(null); setEverify(null); setView('scan') }} />
           )}
           {view === 'pcn' && (
             <PcnManual t={t} value={pcnInput} onChange={setPcnInput}
@@ -99,6 +117,9 @@ function IdChoice({ t, onScan, onUseOther }) {
       </button>
       <p className="text-xs text-gray-500 inline-flex items-start gap-1.5">
         <MdLock size={14} className="flex-shrink-0 mt-0.5" /> {t('patient.request.identity.psnNever')}
+      </p>
+      <p className="text-xs text-gray-500 inline-flex items-start gap-1.5">
+        <MdLock size={14} className="flex-shrink-0 mt-0.5" /> {t('patient.request.identity.everifyConsent')}
       </p>
     </>
   )
@@ -139,6 +160,9 @@ function QrScan({ t, onDecoded, onPcn, onUseOther }) {
         if (str) {
           const parsed = await parsePhilId(str)
           if (parsed) {
+            // Keep the raw QR string so the result step can send it to PSA
+            // eVerify for the authoritative authenticity check.
+            parsed._raw = str
             // Capture the current frame as the "ID photo" that backs this scan.
             cv.toBlob(b => {
               parsed._file = b ? new File([b], `philid-${Date.now()}.jpg`, { type: 'image/jpeg' }) : null
@@ -180,19 +204,33 @@ function QrScan({ t, onDecoded, onPcn, onUseOther }) {
   )
 }
 
-function QrResult({ t, parsed, accountName, onContinue, onRescan }) {
-  const verified = parsed.signatureValid === true
+function QrResult({ t, parsed, accountName, everify, onContinue, onRescan }) {
+  // PSA eVerify is authoritative. While it's in flight (everify === null) show
+  // "checking"; if it confirmed, that wins; otherwise fall back to the on-device
+  // signature verdict.
+  const everifyChecking  = everify === null
+  const everifyConfirmed = everify?.verified === true
+  const sigValid = parsed.signatureValid === true
+  const confirmed = everifyConfirmed || sigValid
   const nameMatches = !!parsed.name && !!accountName &&
     parsed.name.toLowerCase().replace(/[^a-z]/g, '').includes(accountName.toLowerCase().split(' ')[0].replace(/[^a-z]/g, ''))
   return (
     <>
       <div className="flex items-center gap-2">
-        <MdCheckCircle size={22} className={verified ? 'text-brand-600' : 'text-gray-400'} />
+        <MdCheckCircle size={22} className={confirmed ? 'text-brand-600' : 'text-gray-400'} />
         <p className="text-base font-semibold text-gray-900">{t('patient.request.identity.resultTitle')}</p>
       </div>
-      <p className={`text-xs ${verified ? 'text-brand-600' : 'text-amber-700'}`}>
-        {verified ? t('patient.request.identity.sigValid') : t('patient.request.identity.sigUnverified')}
-      </p>
+      {everifyChecking ? (
+        <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
+          <MdCheckCircle size={13} className="text-gray-300" /> {t('patient.request.identity.everifyChecking')}
+        </p>
+      ) : everifyConfirmed ? (
+        <p className="text-xs text-brand-600 font-medium">{t('patient.request.identity.everifyConfirmed')}</p>
+      ) : (
+        <p className={`text-xs ${sigValid ? 'text-brand-600' : 'text-amber-700'}`}>
+          {sigValid ? t('patient.request.identity.sigValid') : t('patient.request.identity.sigUnverified')}
+        </p>
+      )}
       <div className="rounded-xl border border-gray-200 p-3 space-y-2">
         <Field t={t} label={t('patient.request.identity.name')} value={parsed.name} match={nameMatches} />
         <Field t={t} label={t('patient.request.identity.dob')} value={parsed.dob} />
