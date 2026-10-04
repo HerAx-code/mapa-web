@@ -23,6 +23,8 @@ import BalanceHero from '../../components/patient/BalanceHero'
 import TaskList from '../../components/patient/TaskList'
 import DocChecklist from '../../components/patient/DocChecklist'
 import GuidedIdCapture from '../../components/patient/GuidedIdCapture'
+import IdentityStep from '../../components/patient/IdentityStep'
+import { PHILID_QR_ENABLED } from '../../utils/philIdQr'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import {
@@ -218,6 +220,14 @@ export default function RequestAssistance() {
       return n
     })
   }
+
+  // PhilSys identity accelerator (Phase 3, flag-gated). Opened from the ID card;
+  // a scan feeds the ID photo + identity metadata (masked PCN, fingerprint, name)
+  // which persists on the ID doc at submit. Falls back to guided capture for the
+  // PCN-typed path and the "use another ID" path.
+  const [identityFor, setIdentityFor] = useState(null)
+  const [idMetaByType, setIdMetaByType] = useState({})
+  const setIdMeta = (typeName, meta) => setIdMetaByType(m => ({ ...m, [typeName]: meta }))
 
   // Re-runs OCR on the already-attached file. Surfaced via a "Try again"
   // button next to the OCR advisory when the previous attempt failed
@@ -501,7 +511,8 @@ export default function RequestAssistance() {
               await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
               attachedDocuments.push({ documentId: existing.id, name: tp.name, documentTypeName: tp.name, status: 'pending', date: today })
             } else {
-              const ref = await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, user })
+              const idMeta = isIdType(tp.name) ? (idMetaByType[tp.name] ?? null) : null
+              const ref = await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, idMeta, user })
               attachedDocuments.push(ref)
             }
             setUploadState(s => { const n = { ...s }; delete n[tp.name]; return n })
@@ -943,6 +954,7 @@ export default function RequestAssistance() {
               onAttach={attachReq}
               onSelfie={setSelfieFor}
               onGuidedCapture={setGuidedFor}
+              onScanId={PHILID_QR_ENABLED ? setIdentityFor : undefined}
               onRemove={removeReq}
               onRetryOcr={retryOcr}
               t={t}
@@ -1121,6 +1133,15 @@ export default function RequestAssistance() {
           wantBack
           onCapture={handleGuided(guidedFor)}
           onClose={() => setGuidedFor(null)}
+        />
+      )}
+      {identityFor && (
+        <IdentityStep
+          accountName={user?.name ?? ''}
+          onScanned={(idFile, meta) => { if (idFile) attachFile(identityFor, idFile); setIdMeta(identityFor, meta); setIdentityFor(null) }}
+          onPcn={(meta) => { const tn = identityFor; setIdMeta(tn, meta); setIdentityFor(null); setGuidedFor(tn) }}
+          onUseOther={() => { const tn = identityFor; setIdentityFor(null); setGuidedFor(tn) }}
+          onClose={() => setIdentityFor(null)}
         />
       )}
     </Layout>

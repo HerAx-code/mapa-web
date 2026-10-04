@@ -199,6 +199,82 @@ describe('documents — advisory ID-verification field bounds', () => {
   })
 })
 
+// Phase 3 (PhilSys-first identity, docs/id-verification-plan.md §5.3): advisory
+// National-ID metadata on the ID doc. NEVER the raw PCN/PSN — only a masked
+// last-4, a keyed HMAC fingerprint, the QR-read name/DOB, and a signature-valid
+// flag. Bounded so a hostile client can't write junk; null always allowed.
+describe('documents — PhilSys / National-ID field bounds', () => {
+  const PHILID = {
+    idVerifyMethod: 'philid_qr',
+    pcnLast4: '3456',
+    pcnFingerprint: 'a'.repeat(64),
+    philIdName: 'Juan Dela Cruz',
+    philIdDob: '1990-01-15',
+    philIdSigValid: true,
+  }
+
+  it('accepts a valid philid_qr identity record on create', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', PHILID)))
+  })
+
+  it('accepts the pcn_manual fallback method with an unverified signature', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      idVerifyMethod: 'pcn_manual', pcnLast4: '3456', pcnFingerprint: 'b'.repeat(64),
+      philIdName: null, philIdDob: null, philIdSigValid: null,
+    })))
+  })
+
+  it('rejects an oversized pcnFingerprint (>64 chars)', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      ...PHILID, pcnFingerprint: 'a'.repeat(65),
+    })))
+  })
+
+  it('rejects an oversized philIdName (>200 chars)', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      ...PHILID, philIdName: 'x'.repeat(201),
+    })))
+  })
+
+  it('rejects a non-boolean philIdSigValid', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', {
+      ...PHILID, philIdSigValid: 'yes',
+    })))
+  })
+
+  it('lets a patient refresh the identity fields on their own pending doc', async () => {
+    await seedUser('patient-1', 'patient')
+    await testEnv.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), 'documents', 'doc-1'), docPayload('patient-1'))
+    })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', ...PHILID,
+    }))
+  })
+
+  it('rejects a patient update with an oversized pcnFingerprint', async () => {
+    await seedUser('patient-1', 'patient')
+    await testEnv.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), 'documents', 'doc-1'), docPayload('patient-1'))
+    })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', pcnFingerprint: 'a'.repeat(65),
+    }))
+  })
+})
+
 // documentContents/create from rules-3
 describe('documentContents.create — patient owns the content', () => {
   // Phase 1.3: creating content now also requires the parent

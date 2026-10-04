@@ -71,7 +71,7 @@ const readContent = (file) => file.type?.startsWith('image/')
 // Writes metadata to documents/{docId} and the base64 content to
 // documentContents/{docId} (same id, kept separate so list queries
 // stay light).
-export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, user }) {
+export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, idMeta = null, user }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
 
@@ -106,6 +106,18 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
       liveness:       verify.liveness ?? null,
       livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
       idVerifyMethod: verify.method ?? 'ocr',
+    } : {}),
+    // Advisory PhilSys / National-ID metadata on the ID doc (Phase 3). NEVER the
+    // raw PCN/PSN: only a masked PCN (last 4), a keyed fingerprint, the exact
+    // name/DOB read from the QR, and how it was verified. All flag-gated +
+    // advisory; the social worker confirms. See utils/philIdQr.js.
+    ...(idMeta ? {
+      idVerifyMethod: idMeta.idVerifyMethod ?? null,
+      pcnLast4:       idMeta.pcnLast4 ? String(idMeta.pcnLast4).slice(0, 24) : null,
+      pcnFingerprint: idMeta.pcnFingerprint ? String(idMeta.pcnFingerprint).slice(0, 64) : null,
+      philIdName:     idMeta.philIdName ? String(idMeta.philIdName).slice(0, 200) : null,
+      philIdDob:      idMeta.philIdDob ? String(idMeta.philIdDob).slice(0, 40) : null,
+      philIdSigValid: typeof idMeta.signatureValid === 'boolean' ? idMeta.signatureValid : null,
     } : {}),
     createdAt:           serverTimestamp(),
   })
