@@ -691,6 +691,27 @@ function RequestDetail({ request, agencies, onClose }) {
     } finally { setBusy(false) }
   }
 
+  // Confirm identity (ID-verification Phase 5) — the social-worker's single
+  // "this is the right person" action from the Identity review card. Verifying
+  // the ID + selfie documents IS the identity confirmation in MAPA's model
+  // (both are checklist docs, and the endorse gate is docsVerified &&
+  // intakeComplete). Reuses the audited reviewDoc path per doc, then adds one
+  // 'identity_confirmed' audit entry for the review itself.
+  const confirmIdentity = async (idDoc, selfieDoc) => {
+    const toVerify = [idDoc, selfieDoc].filter(d => d && d.status !== 'verified')
+    for (const d of toVerify) {
+      // eslint-disable-next-line no-await-in-loop
+      await reviewDoc(d, 'verified')
+    }
+    logAudit(user, {
+      action: 'identity_confirmed',
+      targetType: 'request', targetId: request.id, targetName: request.requestId,
+      details: `Identity confirmed for ${request.patientName}`,
+      requestId: request.id, patientId: request.patientId,
+    })
+    toast.success('Identity confirmed.')
+  }
+
   // Bulk-verify every pending doc on this request in a single Firestore batch.
   // Saves clicks on the common case where the operator has read all the docs
   // and they all look fine. Only the safe (verified) direction is bulked --
@@ -905,9 +926,12 @@ function RequestDetail({ request, agencies, onClose }) {
           {/* ① Verify documents — extracted to VerifyDocsPanel (Phase 0). */}
           <VerifyDocsPanel
             reqDocs={reqDocs} busy={busy} allVerified={allVerified} ocrExpanded={ocrExpanded}
+            accountName={request.patientName}
             onBulkVerify={bulkVerifyPending} onReviewDoc={reviewDoc} onView={setViewingDoc}
             onReject={setRejectingDoc} onUnverify={setUnverifyingDoc} onToggleOcr={toggleOcrExpanded}
             onCompare={(selfieDoc, idDoc) => setComparing({ selfieDoc, idDoc })}
+            onConfirmIdentity={confirmIdentity}
+            onRequestRedo={(docItem, reason) => reviewDoc(docItem, 'rejected', reason)}
           />
 
           {/* ② Assessment (async/remote — no scheduled interview) */}
