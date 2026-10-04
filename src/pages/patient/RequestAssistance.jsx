@@ -22,6 +22,7 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import BalanceHero from '../../components/patient/BalanceHero'
 import TaskList from '../../components/patient/TaskList'
 import DocChecklist from '../../components/patient/DocChecklist'
+import GuidedIdCapture from '../../components/patient/GuidedIdCapture'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import {
@@ -185,9 +186,10 @@ export default function RequestAssistance() {
       })
   }
 
-  const attachReq = (typeName) => (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
+  // Core attach: validate + stash the File + fire the advisory OCR. Shared by the
+  // <input> path (attachReq) and the guided camera (GuidedIdCapture), which hands
+  // us a File directly rather than a change event.
+  const attachFile = (typeName, file) => {
     if (!file) return
     const err = validateDocFile(file)
     if (err) { toast.error(err); return }
@@ -195,6 +197,26 @@ export default function RequestAssistance() {
     // ID documents (including the rep-ID sentinel) get an advisory
     // on-device OCR name-check. Never blocks the submission.
     startOcr(typeName, file)
+  }
+
+  const attachReq = (typeName) => (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    attachFile(typeName, file)
+  }
+
+  // Guided ID capture (Phase 2): opens GuidedIdCapture for an ID-type document.
+  // onCapture gives us the FRONT (into the normal pipeline) + an OPTIONAL BACK
+  // (stashed per ID type; uploaded as a sibling "— Back" doc at submit).
+  const [guidedFor,   setGuidedFor]   = useState(null)
+  const [idBackFiles, setIdBackFiles] = useState({})
+  const handleGuided = (typeName) => (front, back) => {
+    if (front) attachFile(typeName, front)
+    setIdBackFiles(m => {
+      const n = { ...m }
+      if (back) n[typeName] = back; else delete n[typeName]
+      return n
+    })
   }
 
   // Re-runs OCR on the already-attached file. Surfaced via a "Try again"
@@ -498,6 +520,19 @@ export default function RequestAssistance() {
             status:           existing.status ?? 'verified',
             date:             existing.date ?? '',
           })
+        }
+      }
+
+      // Optional ID BACK photos (guided capture, Phase 2 / 2A). Non-blocking:
+      // the back is a nice-to-have for the social worker, so a failure here never
+      // fails the submission.
+      for (const [idName, backFile] of Object.entries(idBackFiles)) {
+        if (!backFile) continue
+        try {
+          const ref = await uploadPatientDocument({ file: backFile, typeName: `${idName} — Back`, user })
+          attachedDocuments.push(ref)
+        } catch (backErr) {
+          console.warn('[request] ID back photo upload failed (non-blocking):', idName, backErr)
         }
       }
 
@@ -907,6 +942,7 @@ export default function RequestAssistance() {
               isSelfieType={isSelfieType}
               onAttach={attachReq}
               onSelfie={setSelfieFor}
+              onGuidedCapture={setGuidedFor}
               onRemove={removeReq}
               onRetryOcr={retryOcr}
               t={t}
@@ -1078,6 +1114,13 @@ export default function RequestAssistance() {
           liveness={idVerifyEnabled}
           onCapture={(file, meta) => setSelfie(selfieFor, file, meta)}
           onClose={() => setSelfieFor(null)}
+        />
+      )}
+      {guidedFor && (
+        <GuidedIdCapture
+          wantBack
+          onCapture={handleGuided(guidedFor)}
+          onClose={() => setGuidedFor(null)}
         />
       )}
     </Layout>
