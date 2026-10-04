@@ -122,6 +122,12 @@ export default function VerifyDocsPanel({
                         <span className="text-gray-500"> — confirm</span>
                       </p>
                     )}
+                    {typeof d.ocrConfidence === 'number' && (
+                      <p className={`text-xs mt-0.5 ${d.ocrConfidence < 55 ? 'text-amber-600' : 'text-gray-500'}`}>
+                        OCR read confidence: <span className="font-medium">{d.ocrConfidence}%</span>
+                        {d.ocrConfidence < 55 && <span> — low, the photo may be blurry/dark</span>}
+                      </p>
+                    )}
                     {ocrExpanded.has(d.id) && d.ocrText && (
                       <pre className="mt-1.5 max-h-40 overflow-auto bg-gray-50 border border-gray-100 rounded-lg p-2 text-xs text-gray-600 font-mono whitespace-pre-wrap break-words">
                         {d.ocrText}

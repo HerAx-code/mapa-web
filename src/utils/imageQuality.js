@@ -91,6 +91,77 @@ export function assessFrame(data, width) {
   }
 }
 
+// ── Combined capture quality (ID hardening) ─────────────────────────────────
+// Broadens the advisory check beyond exposure to also catch an out-of-focus or
+// too-small ID photo — the three things that most often make an ID unreadable
+// for OCR and the CRMC verifier. Still ADVISORY: it drives a "retake?" nudge the
+// patient can override, never a hard reject (CLAUDE.md: don't lock out indigent
+// patients on poor cameras).
+
+// An ID photo whose long edge is below this reads as too low-resolution to be
+// reliably legible. Phone cameras produce >1000px; this only trips a thumbnail
+// or a heavily-cropped gallery pick.
+export const MIN_LONG_EDGE = 600
+
+// Classify combined stats into a single advisory verdict, worst-first:
+// 'small' | 'dark' | 'glare' | 'blurry' | null (ok). Resolution is checked first
+// because the other stats are unreliable on a tiny image.
+export function qualityVerdict({ longEdge, meanLum, brightFrac, gradient } = {}) {
+  if (typeof longEdge === 'number' && longEdge < MIN_LONG_EDGE) return 'small'
+  if (typeof meanLum === 'number' && meanLum < DARK_MEAN) return 'dark'
+  if (typeof brightFrac === 'number' && brightFrac > GLARE_FRACTION) return 'glare'
+  if (typeof gradient === 'number' && gradient < SHARP_MIN) return 'blurry'
+  return null
+}
+
+// Memory-safe decode preferring createImageBitmap (GPU-resident) over new Image()
+// so a 12MP phone photo doesn't materialize ~48 MB in JS heap on a low-RAM phone.
+async function loadBitmap(file) {
+  if (typeof createImageBitmap === 'function') {
+    try { return await createImageBitmap(file) } catch { /* fall through */ }
+  }
+  return await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const i = new Image()
+    i.onload = () => { URL.revokeObjectURL(url); resolve(i) }
+    i.onerror = (e) => { URL.revokeObjectURL(url); reject(e) }
+    i.src = url
+  })
+}
+
+// Assess an image File for capture quality (exposure + sharpness + resolution).
+// Stats are measured on a centre crop so a dark border / background around the
+// card doesn't skew exposure or sharpness. Returns
+// { verdict, longEdge, meanLum, brightFrac, darkFrac, gradient } or null on any
+// failure (which, being advisory, simply shows no nudge).
+export async function assessImageQuality(file) {
+  if (typeof document === 'undefined' || !file?.type?.startsWith('image/')) return null
+  try {
+    const img = await loadBitmap(file)
+    const srcW = img.width || 0, srcH = img.height || 0
+    const longEdge = Math.max(srcW, srcH)
+    const S = 200
+    const scale = Math.min(1, S / Math.max(srcW || S, srcH || S))
+    const w = Math.max(1, Math.round((srcW || S) * scale))
+    const h = Math.max(1, Math.round((srcH || S) * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w; canvas.height = h
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(img, 0, 0, w, h)
+    img.close?.()
+    // Centre crop (inset 8%) so the card, not its surroundings, drives the stats.
+    const cx = Math.round(w * 0.08), cy = Math.round(h * 0.08)
+    const cw = Math.max(1, w - cx * 2), ch = Math.max(1, h - cy * 2)
+    const d = ctx.getImageData(cx, cy, cw, ch).data
+    const exp = exposureStats(d)
+    const shp = sharpnessStats(d, cw)
+    const stats = { longEdge, ...exp, ...shp }
+    return { verdict: qualityVerdict(stats), ...stats }
+  } catch {
+    return null
+  }
+}
+
 // Assess an image File on-device. Downscales to a small canvas (exposure is a
 // global statistic, so full resolution is wasted work) and returns
 // { verdict: 'glare'|'dark'|null, ...stats } or null on any failure.

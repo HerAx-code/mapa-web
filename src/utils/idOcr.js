@@ -185,14 +185,21 @@ async function getWorker() {
   return _workerPromise
 }
 
-// Runs OCR on an image File. Returns { text, match } where match is the
-// fuzzy name-check result. Images only (PDFs are skipped → { match: null }).
+// Below this overall OCR confidence (0–100, from tesseract) the read is shaky
+// enough to warrant a "text hard to read — retake?" nudge. Advisory + tunable.
+// Only used as a hint; a clean name-match overrides it (if we matched the name,
+// the read was good enough regardless of the aggregate score).
+export const LOW_OCR_CONFIDENCE = 55
+
+// Runs OCR on an image File. Returns { text, match, idType, confidence } where
+// match is the fuzzy name-check and confidence is tesseract's overall 0–100 score
+// (null if unavailable). Images only (PDFs are skipped → { match: null }).
 //
 // Preprocessing and the (lazy) tesseract worker init run in parallel so the
 // first OCR call doesn't pay both costs back-to-back -- on cold cache the
 // tesseract chunk + language data download can take a few seconds.
 export async function runIdOcr(file, expectedName = '') {
-  if (!file || !file.type?.startsWith('image/')) return { text: '', match: null, idType: null }
+  if (!file || !file.type?.startsWith('image/')) return { text: '', match: null, idType: null, confidence: null }
   try {
     const [processed, worker] = await Promise.all([
       preprocessImage(file),
@@ -200,8 +207,9 @@ export async function runIdOcr(file, expectedName = '') {
     ])
     const { data } = await worker.recognize(processed)
     const text = (data?.text ?? '').trim()
-    return { text, match: nameMatches(text, expectedName), idType: detectIdType(text) }
+    const confidence = typeof data?.confidence === 'number' ? Math.round(data.confidence) : null
+    return { text, match: nameMatches(text, expectedName), idType: detectIdType(text), confidence }
   } catch {
-    return { text: '', match: null, idType: null }
+    return { text: '', match: null, idType: null, confidence: null }
   }
 }

@@ -176,6 +176,14 @@ describe('documents — advisory ID-verification field bounds', () => {
     await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', { idTypeDetected: 'x'.repeat(101) })))
   })
 
+  it('accepts a valid ocrConfidence (0–100) and rejects out-of-range', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', { ocrConfidence: 87 })))
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', { ocrConfidence: 101 })))
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', { ocrConfidence: -1 })))
+  })
+
   it('lets a patient refresh these fields on their own pending doc (re-upload)', async () => {
     await seedUser('patient-1', 'patient')
     await testEnv.withSecurityRulesDisabled(async (c) => {

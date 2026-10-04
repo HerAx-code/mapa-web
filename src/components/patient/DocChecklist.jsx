@@ -1,4 +1,5 @@
 import { MdCameraAlt, MdUploadFile, MdClose, MdCheckCircle, MdDescription, MdWarningAmber, MdAutorenew } from 'react-icons/md'
+import { LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 
 /**
  * DocChecklist — the patient's required-documents step, as a clean card list
@@ -28,6 +29,8 @@ export default function DocChecklist({
   uploadState = {},
   isIdType,
   isSelfieType,
+  qualityAck = {},
+  onAckQuality,
   onAttach,
   onSelfie,
   onGuidedCapture,
@@ -65,6 +68,8 @@ export default function DocChecklist({
               upload={uploadState[tp.name]}
               isId={isIdType(tp.name)}
               isSelfie={isSelfieType(tp.name)}
+              acked={!!qualityAck[tp.name]}
+              onAckQuality={onAckQuality}
               onAttach={onAttach}
               onSelfie={onSelfie}
               onGuidedCapture={onGuidedCapture}
@@ -80,21 +85,35 @@ export default function DocChecklist({
   )
 }
 
-function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, onAttach, onSelfie, onGuidedCapture, onScanId, onRemove, onRetryOcr, t }) {
+function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, acked, onAckQuality, onAttach, onSelfie, onGuidedCapture, onScanId, onRemove, onRetryOcr, t }) {
   // "Doesn't look like an ID": no ID keyword, no name match, no face found.
   // hasFace must be explicitly false (null = couldn't run → no warn).
   const notAnId     = isId && ocr && !ocrBusy && ocr.hasFace === false && ocr.idType == null && ocr.match !== true
   const unreadable  = isId && ocr && !ocrBusy && ocr.match == null && !ocr.text
-  const badExposure = ocr && !ocrBusy && (ocr.exposure === 'glare' || ocr.exposure === 'dark')
-  const needsRetake = !!pending && (notAnId || unreadable || badExposure)
+  // Combined capture quality: too small / dark / glary / blurry (imageQuality).
+  const badQuality  = ocr && !ocrBusy && ocr.quality != null
+  // OCR text too shaky to trust — unless the name matched, which means the read
+  // was good enough regardless of the aggregate score.
+  const lowConf     = isId && ocr && !ocrBusy && typeof ocr.confidence === 'number'
+                      && ocr.confidence < LOW_OCR_CONFIDENCE && ocr.match !== true
+  const poorPhoto   = !!pending && (notAnId || unreadable || badQuality || lowConf)
+  // Explicit-override model: a poor photo flags for retake and BLOCKS submit
+  // (parent mirrors this) until the patient retakes or taps "Use it anyway".
+  const needsRetake = poorPhoto && !acked
 
   const retakeReason = notAnId
     ? t('patient.request.ocrNotAnId')
     : unreadable
       ? t('patient.request.ocrUnreadable')
-      : ocr?.exposure === 'glare'
-        ? t('patient.request.exposureGlare')
-        : t('patient.request.exposureDark')
+      : ocr?.quality === 'small'
+        ? t('patient.request.qualitySmall')
+        : ocr?.quality === 'blurry'
+          ? t('patient.request.qualityBlurry')
+          : ocr?.quality === 'glare'
+            ? t('patient.request.exposureGlare')
+            : ocr?.quality === 'dark'
+              ? t('patient.request.exposureDark')
+              : t('patient.request.ocrLowConfidence')
 
   const cardCls = needsRetake
     ? 'border-2 border-amber-600'
@@ -114,6 +133,9 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
     statusLine = <span className="text-red-600 font-medium">{t('patient.request.docCard.uploadFailed')}</span>
   } else if (needsRetake) {
     statusLine = <span className="text-amber-800 font-medium">{retakeReason}</span>
+  } else if (poorPhoto && acked) {
+    // Overridden: keep an honest note that the photo was flagged.
+    statusLine = <span className="text-gray-500">{t('patient.request.qualityUsingAnyway')}</span>
   } else if (pending) {
     statusLine = ocrBusy
       ? <span className="text-gray-500">{t('patient.request.ocrChecking')}</span>
@@ -218,6 +240,16 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
           </label>
         )
+      )}
+
+      {/* Explicit override — advisory quality is never a hard block (CLAUDE.md:
+          don't lock out a poor-camera patient). A deliberate tap proceeds with
+          the flagged photo and unblocks submit. */}
+      {needsRetake && onAckQuality && (
+        <button type="button" onClick={() => onAckQuality(tp.name)}
+          className="self-center text-xs text-gray-500 underline underline-offset-2 min-h-[44px] inline-flex items-center">
+          {t('patient.request.qualityUseAnyway')}
+        </button>
       )}
 
       {/* Hard-failure OCR retry (errored: no text + null match) — keep the

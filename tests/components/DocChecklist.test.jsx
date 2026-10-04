@@ -72,4 +72,45 @@ describe('DocChecklist', () => {
       pendingFiles={{ A: new File(['x'], 'a.jpg') }} />)
     expect(screen.getByText('1/2 ready')).toBeInTheDocument()
   })
+
+  // Explicit-override quality gate (ID hardening).
+  it('flags a blurry ID photo with a retake reason + "use anyway" override', () => {
+    render(<DocChecklist {...baseProps}
+      docTypes={[{ id: '1', name: 'Valid ID' }]}
+      pendingFiles={{ 'Valid ID': new File(['x'], 'id.jpg') }}
+      onAckQuality={vi.fn()}
+      ocrResults={{ 'Valid ID': { match: true, text: 'JUAN', quality: 'blurry' } }} />)
+    expect(screen.getByText('patient.request.qualityBlurry')).toBeInTheDocument()
+    expect(screen.getByText('patient.request.qualityUseAnyway')).toBeInTheDocument()
+  })
+
+  it('flags low OCR confidence (no name match) as hard-to-read', () => {
+    render(<DocChecklist {...baseProps}
+      docTypes={[{ id: '1', name: 'Valid ID' }]}
+      pendingFiles={{ 'Valid ID': new File(['x'], 'id.jpg') }}
+      onAckQuality={vi.fn()}
+      ocrResults={{ 'Valid ID': { match: false, text: 'xx', confidence: 30 } }} />)
+    expect(screen.getByText('patient.request.ocrLowConfidence')).toBeInTheDocument()
+  })
+
+  it('once "use anyway" is acknowledged, shows the using-anyway note (not the block)', () => {
+    render(<DocChecklist {...baseProps}
+      docTypes={[{ id: '1', name: 'Valid ID' }]}
+      pendingFiles={{ 'Valid ID': new File(['x'], 'id.jpg') }}
+      qualityAck={{ 'Valid ID': true }}
+      onAckQuality={vi.fn()}
+      ocrResults={{ 'Valid ID': { match: true, text: 'JUAN', quality: 'blurry' } }} />)
+    expect(screen.getByText('patient.request.qualityUsingAnyway')).toBeInTheDocument()
+    expect(screen.queryByText('patient.request.qualityUseAnyway')).toBeNull()
+  })
+
+  it('does not flag quality when the photo is good', () => {
+    render(<DocChecklist {...baseProps}
+      docTypes={[{ id: '1', name: 'Valid ID' }]}
+      pendingFiles={{ 'Valid ID': new File(['x'], 'id.jpg') }}
+      onAckQuality={vi.fn()}
+      ocrResults={{ 'Valid ID': { match: true, text: 'JUAN', quality: null, confidence: 90 } }} />)
+    expect(screen.queryByText('patient.request.qualityUseAnyway')).toBeNull()
+    expect(screen.getByText('patient.request.ocrMatch')).toBeInTheDocument()
+  })
 })
