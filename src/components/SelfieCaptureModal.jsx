@@ -221,11 +221,19 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
               <p className="text-[13px] text-gray-700 leading-relaxed">{t('patient.request.selfieReassure')}</p>
 
               {preview && (
-                <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer select-none">
-                  <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
-                    checked={consent} onChange={e => setConsent(e.target.checked)} />
-                  <span>{t('patient.request.selfieConsent')}</span>
-                </label>
+                <>
+                  {/* Review gate — the photo is never used until the patient
+                      confirms it (consent + Use); Retake is always available. */}
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
+                    <MdWarning size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-[13px] text-amber-800">{t('patient.request.selfieReviewHint')}</p>
+                  </div>
+                  <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer select-none">
+                    <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
+                      checked={consent} onChange={e => setConsent(e.target.checked)} />
+                    <span>{t('patient.request.selfieConsent')}</span>
+                  </label>
+                </>
               )}
 
               <div className="flex gap-2 justify-end">

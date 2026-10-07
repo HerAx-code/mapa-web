@@ -10,23 +10,22 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
  * (docs/mockups/id-verification/project/GuidedCapture.dc.html).
  *
  * Rear camera + a card frame; a live loop reads sharp / bright / glare off the
- * preview (utils/imageQuality.assessFrame) and shows three chips. It
- * auto-captures when all three hold for ~1s — but a manual Capture and an
- * "Upload a photo instead" fallback are always available, so a low-end camera
- * (or a denied camera permission) never blocks the patient. Captures the ID
- * FRONT (fed into the existing OCR/face-match pipeline) and an OPTIONAL BACK.
+ * preview (utils/imageQuality.assessFrame) and shows three chips as guidance.
+ * The photo is taken only when the patient taps Capture — never automatically —
+ * and the captured shot always lands on a review step (Retake / Use) so nothing
+ * is accepted without the patient confirming it. An "Upload a photo instead"
+ * fallback is always available, so a low-end camera (or a denied camera
+ * permission) never blocks the patient. Captures the ID FRONT (fed into the
+ * existing OCR/face-match pipeline) and an OPTIONAL BACK.
  *
  * Advisory only, on-device: nothing is auto-rejected; the quality chips just
  * help the patient take a readable photo. onCapture(frontFile, backFile|null).
  */
-const GOOD_TICKS_TO_CAPTURE = 5  // ~1.1s of consecutive good frames at 220ms/tick
-
 export default function GuidedIdCapture({ wantBack = true, onCapture, onClose }) {
   const { t } = useTranslation()
   const videoRef  = useRef(null)
   const streamRef = useRef(null)
   const sampleRef = useRef(null)
-  const goodRef   = useRef(0)
   const panelRef  = useRef(null)
   const [error, setError] = useState(false)
   const [step,  setStep]  = useState('front')               // 'front' | 'back'
@@ -72,11 +71,10 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
       cv.width = w; cv.height = h
       const cx = cv.getContext('2d', { willReadFrequently: true })
       cx.drawImage(v, 0, 0, w, h)
+      // Chips are guidance only — the patient decides when to tap Capture.
+      // (No auto-capture: a photo is never taken without a deliberate tap.)
       const f = assessFrame(cx.getImageData(0, 0, w, h).data, w)
       setLive({ sharp: f.sharp, bright: f.bright, glare: f.glare })
-      const allGood = f.sharp && f.bright && !f.glare
-      goodRef.current = allGood ? goodRef.current + 1 : 0
-      if (goodRef.current >= GOOD_TICKS_TO_CAPTURE) { goodRef.current = 0; capture() }
     }, 220)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,7 +95,6 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
     const c = shots[step]
     if (c?.url) URL.revokeObjectURL(c.url)
     setShots(s => ({ ...s, [step]: null }))
-    goodRef.current = 0
   }
 
   const onUpload = (e) => {
@@ -151,8 +148,13 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
                 )}
             </>
           ) : current ? (
-            // Captured preview for this step.
+            // Captured preview — the patient must review and confirm before the
+            // photo is used (nothing is accepted automatically).
             <>
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
+                <MdWarning size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">{t('patient.request.guidedId.reviewHint')}</p>
+              </div>
               <img src={current.url} alt="" className="w-full rounded-xl border border-gray-200" />
               <button type="button" onClick={retake}
                 className="w-full min-h-[44px] rounded-xl border border-gray-300 text-gray-700 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
@@ -172,7 +174,7 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
                   {live.glare && <Chip warn label={t('patient.request.guidedId.glare')} />}
                 </div>
               </div>
-              <p className="text-xs text-gray-500">{t('patient.request.guidedId.autoHint')}</p>
+              <p className="text-xs text-gray-500">{t('patient.request.guidedId.captureHint')}</p>
               <button type="button" onClick={capture}
                 className="w-full min-h-[48px] rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5">
                 <MdCameraAlt size={18} /> {t('patient.request.guidedId.capture')}
