@@ -26,6 +26,10 @@ export default function VerifyDocsPanel({
   // The ID doc a selfie's face-match is compared against (for the side-by-side).
   const idDoc     = reqDocs.find(x => isIdType(x.documentTypeName ?? x.name) && !x._missing) ?? null
   const selfieDoc = reqDocs.find(x => isSelfieType(x.documentTypeName ?? x.name) && !x._missing) ?? null
+  // Batch "Verify all" commits every pending doc in one tap, so it confirms
+  // first (single-doc Verify stays one-click for a fast review queue).
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const pendingDocs = reqDocs.filter(d => d.status === 'pending' && !d._missing)
   return (
     <div className="space-y-4">
     {/* ⓘ Identity review (ID-verification Phase 5) — the social-worker identity
@@ -44,21 +48,28 @@ export default function VerifyDocsPanel({
           <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
           Verify documents
         </h3>
-        <div className="flex items-center gap-2">
-          {(() => {
-            const pendingDocs = reqDocs.filter(d => d.status === 'pending' && !d._missing)
-            if (pendingDocs.length < 2) return null
-            return (
+        <div className="flex items-center gap-2 flex-wrap">
+          {pendingDocs.length >= 2 && (
+            confirmBulk ? (
+              <span className="inline-flex items-center gap-1.5 text-xs">
+                <span className="text-gray-600">Verify all {pendingDocs.length} pending?</span>
+                <button type="button" onClick={() => setConfirmBulk(false)}
+                  className="text-gray-500 border border-gray-200 bg-white px-2 py-1 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="button" disabled={busy}
+                  onClick={() => { setConfirmBulk(false); onBulkVerify(pendingDocs) }}
+                  className="text-white bg-green-600 px-2.5 py-1 rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50">Verify all</button>
+              </span>
+            ) : (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => onBulkVerify(pendingDocs)}
+                onClick={() => setConfirmBulk(true)}
                 className="text-xs font-medium text-green-700 hover:text-green-800 inline-flex items-center gap-1 disabled:opacity-50"
                 title="Mark every Pending document on this request as Verified">
                 <MdCheckCircle size={14} /> Verify all pending ({pendingDocs.length})
               </button>
             )
-          })()}
+          )}
           {reqDocs.length > 0 && (
             <span className={`badge text-xs ${allVerified ? 'badge-green' : 'badge-amber'}`}>
               {reqDocs.filter(d => d.status === 'verified').length}/{reqDocs.length} verified
@@ -249,6 +260,8 @@ function PhotoTile({ label, doc, icon, onView }) {
 
 function IdentityReview({ idDoc, selfieDoc, accountName, busy, onView, onCompare, onConfirmIdentity, onRequestRedo }) {
   const [reason, setReason] = useState('')
+  // "Confirm identity" verifies the ID + selfie docs in one tap, so it confirms first.
+  const [confirmId, setConfirmId] = useState(false)
   const src = idSourceCheck(idDoc)
 
   const nameCheck = idDoc?.ocrMatch === true
@@ -319,9 +332,20 @@ function IdentityReview({ idDoc, selfieDoc, accountName, busy, onView, onCompare
           <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700">
             <MdCheckCircle size={16} /> Identity confirmed
           </span>
+        ) : confirmId ? (
+          <span className="inline-flex items-center gap-2 text-sm flex-wrap">
+            <span className="text-gray-700">Confirm identity? This verifies the ID and selfie.</span>
+            <button type="button" onClick={() => setConfirmId(false)}
+              className="min-h-[44px] px-3 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">Cancel</button>
+            <button type="button" disabled={busy || !onConfirmIdentity}
+              onClick={() => { setConfirmId(false); onConfirmIdentity?.(idDoc, selfieDoc) }}
+              className="min-h-[44px] px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-50">
+              Yes, confirm
+            </button>
+          </span>
         ) : (
           <button type="button" disabled={busy || !onConfirmIdentity}
-            onClick={() => onConfirmIdentity?.(idDoc, selfieDoc)}
+            onClick={() => setConfirmId(true)}
             className="min-h-[44px] px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-50">
             Confirm identity
           </button>
