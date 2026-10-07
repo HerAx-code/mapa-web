@@ -59,6 +59,19 @@ describe('VerifyDocsPanel — advisory verification chips', () => {
     render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} />)
     expect(screen.queryByText(/Face match|Liveness|Detected type/)).toBeNull()
   })
+
+  it('"Verify all pending" confirms before bulk-verifying', () => {
+    const onBulkVerify = vi.fn()
+    const reqDocs = [
+      { id: 'a', documentTypeName: 'Billing Statement', status: 'pending' },
+      { id: 'b', documentTypeName: 'Medical Abstract', status: 'pending' },
+    ]
+    render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} onBulkVerify={onBulkVerify} />)
+    fireEvent.click(screen.getByText(/Verify all pending/))
+    expect(onBulkVerify).not.toHaveBeenCalled()      // first tap only reveals the confirm
+    fireEvent.click(screen.getByText('Verify all'))
+    expect(onBulkVerify).toHaveBeenCalled()
+  })
 })
 
 // ID-verification Phase 5 — the social-worker Identity review card. Only renders
@@ -92,7 +105,11 @@ describe('VerifyDocsPanel — Identity review card', () => {
     ]
     render(<VerifyDocsPanel {...idProps} reqDocs={reqDocs} onConfirmIdentity={onConfirmIdentity} onRequestRedo={onRequestRedo} />)
 
+    // Confirm identity is a two-step confirm (it verifies ID + selfie in one go):
+    // first tap reveals the prompt, "Yes, confirm" commits.
     fireEvent.click(screen.getByText('Confirm identity'))
+    expect(onConfirmIdentity).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Yes, confirm'))
     expect(onConfirmIdentity).toHaveBeenCalled()
 
     // Redo is inert until a reason is chosen, then routes a doc + the reason up.
