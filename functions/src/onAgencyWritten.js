@@ -36,13 +36,17 @@ const admin = require('firebase-admin')
  */
 
 // The exact public projection. Keep this minimal — anything added here becomes
-// world-readable. Landing renders name + slots.{total,remaining}; `enabled`
-// drives the query filter.
+// world-readable (so never budget / fundSource / contacts). Landing renders
+// name + initials + color + location + slots.{total,remaining}; `enabled` drives
+// the query filter.
 function projectPublicAgency(data = {}) {
   const slots = data.slots ?? {}
   return {
-    name:    data.name ?? '',
-    enabled: data.enabled !== false, // default-enabled unless explicitly false
+    name:     data.name ?? '',
+    initials: data.initials ?? '',
+    color:    data.color ?? '',
+    location: data.location ?? '',
+    enabled:  data.enabled !== false, // default-enabled unless explicitly false
     slots: {
       total:     Number(slots.total) || 0,
       remaining: Number(slots.remaining) || 0,

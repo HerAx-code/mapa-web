@@ -34,8 +34,11 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 function projectPublicAgency(data = {}) {
   const slots = data.slots ?? {}
   return {
-    name:    data.name ?? '',
-    enabled: data.enabled !== false,
+    name:     data.name ?? '',
+    initials: data.initials ?? '',
+    color:    data.color ?? '',
+    location: data.location ?? '',
+    enabled:  data.enabled !== false,
     slots: {
       total:     Number(slots.total) || 0,
       remaining: Number(slots.remaining) || 0,

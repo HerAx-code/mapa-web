@@ -50,14 +50,26 @@ describe('agencies — read requires auth (SEC-3 closed)', () => {
   })
 })
 
-// ── agenciesPublic projection — world-readable, client-write denied ───────
-// Maintained only by the onAgencyWritten Cloud Function (Admin SDK, bypasses
-// rules). No client — not even an admin — may write it directly.
-describe('agenciesPublic — public read, no client write', () => {
+// ── agenciesPublic projection — world-readable, privileged client-write ───
+// The onAgencyWritten Cloud Function is the authoritative writer, but it is NOT
+// deployed on the live project, so the client mirrors this projection from the
+// agency-write paths (src/utils/agenciesPublic.js). Writes are therefore
+// allowed for the exact principals who may edit the source agencies/{id} doc
+// (CRMC admin, or any agency role on its OWN agency) — but ONLY the projected
+// fields (name/initials/color/location/enabled/slots), so it can never become a
+// budget/contact leak.
+describe('agenciesPublic — public read, field-pinned privileged write', () => {
+  const VALID = { name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC', enabled: true, slots: { total: 10, remaining: 9 } }
+
   beforeEach(async () => {
     await seed('agenciesPublic', 'pcso', {
       name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 },
     })
+    // Role/agency bindings the rules read via userRole() / userAgencyId().
+    await seed('users', 'admin-uid',    { role: 'super_admin' })
+    await seed('users', 'aadmin-pcso',  { role: 'agency_admin', agencyId: 'pcso' })
+    await seed('users', 'coord-other',  { role: 'agency',       agencyId: 'dswd' })
+    await seed('users', 'patient-uid',  { role: 'patient' })
   })
 
   it('allows an unauthenticated client to read the public projection (Landing)', async () => {
@@ -65,22 +77,44 @@ describe('agenciesPublic — public read, no client write', () => {
     await assertSucceeds(getDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso')))
   })
 
-  it('denies a client write, even authenticated', async () => {
+  it('denies an unauthenticated write', async () => {
+    const ctx = testEnv.unauthenticatedContext()
+    await assertFails(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  })
+
+  it('denies a non-privileged authenticated write (patient)', async () => {
+    const ctx = testEnv.authenticatedContext('patient-uid')
+    await assertFails(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  })
+
+  it('allows a CRMC admin to write the projection (valid shape)', async () => {
+    const ctx = testEnv.authenticatedContext('admin-uid')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  })
+
+  it('allows an agency_admin to write its OWN agency projection', async () => {
+    const ctx = testEnv.authenticatedContext('aadmin-pcso')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  })
+
+  it("denies an agency coordinator writing a DIFFERENT agency's projection", async () => {
+    const ctx = testEnv.authenticatedContext('coord-other') // bound to 'dswd'
+    await assertFails(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  })
+
+  it('denies an admin write that smuggles a non-projected field (budget leak guard)', async () => {
     const ctx = testEnv.authenticatedContext('admin-uid')
     await assertFails(setDoc(
       doc(ctx.firestore(), 'agenciesPublic', 'pcso'),
-      { name: 'PCSO', enabled: true, slots: { total: 10, remaining: 9 } },
+      { ...VALID, budget: { allocated: 999999 } },
     ))
   })
 
-  it('the public projection carries no sensitive fields (documents the contract)', async () => {
-    // Not a rules assertion — a guard that the seeded shape (mirroring the
-    // function's projection) never includes budget/fundSource/contacts.
-    const ctx = testEnv.unauthenticatedContext()
-    const snap = await getDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'))
-    const data = snap.data()
-    if (data.budget || data.fundSource || data.contact) {
-      throw new Error('agenciesPublic must not carry sensitive fields')
-    }
+  it('denies an admin write whose slots carry an extra key', async () => {
+    const ctx = testEnv.authenticatedContext('admin-uid')
+    await assertFails(setDoc(
+      doc(ctx.firestore(), 'agenciesPublic', 'pcso'),
+      { ...VALID, slots: { total: 10, remaining: 9, secret: 1 } },
+    ))
   })
 })

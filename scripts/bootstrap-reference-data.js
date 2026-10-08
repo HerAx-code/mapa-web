@@ -107,10 +107,13 @@ const SEED_AGENCIES = [
     processingTime:  'Same Day',
     enabled:         true,
   },
-  // PhilHealth NHIF -- RA 11463 funder, #1 in the Order of Charging.
-  // Caveat: NHIF operationally REDUCES the bill rather than issuing a GL;
-  // modelled as an agency per stakeholder decision (2026-07-24) for
-  // Order-of-Charging visibility. Disable to revert (same as malasakit).
+  // PhilHealth NHIF -- #1 in the RA 11463 Order of Charging, but NHIF
+  // operationally REDUCES the bill rather than issuing a GL (first charge,
+  // recorded at assessment -- see philhealth-first-plan.md). It was briefly
+  // surfaced as an enabled agency (2026-07-24) for Order-of-Charging
+  // visibility, but that made it appear as a fake endorsable "Available
+  // Program" with slots on the public Landing page. Now disabled (same as
+  // malasakit); re-enable only if PhilHealth ever issues GLs through MAPA.
   {
     id:              'philhealth',
     name:            'PhilHealth',
@@ -127,7 +130,12 @@ const SEED_AGENCIES = [
     requirements:    ['PhilHealth ID','Valid ID'],
     assistanceTypes: ['Hospital Bills / Hospitalization'],
     processingTime:  'Same Day',
-    enabled:         true,
+    // NOT a Guarantee-Letter funder: under philhealth-first-plan.md PhilHealth
+    // is a first-charge DEDUCTION recorded at assessment, never an endorsement
+    // slice. Disabled (same as malasakit) so it never appears as an endorsable
+    // "Available Program" on the public Landing page. Order-of-Charging context
+    // belongs in dedicated informational copy, not a fake program with slots.
+    enabled:         false,
   },
   {
     id:              'ambag',

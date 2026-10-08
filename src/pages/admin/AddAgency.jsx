@@ -14,6 +14,7 @@ import { initializeApp, getApps } from 'firebase/app'
 import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
+import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { notify } from '../../utils/notifications'
 import { generateTempPassword } from '../../utils/password'
 import AddressPicker from '../../components/AddressPicker'
@@ -198,6 +199,9 @@ export default function AddAgency() {
           enabled:        true,
           createdAt:      serverTimestamp(),
         })
+        // Mirror into the public Landing projection (the onAgencyWritten Cloud
+        // Function that normally does this isn't deployed). Best-effort.
+        await syncAgencyPublic(agencyRef.id, { name: agency.name.trim(), enabled: true, slots: { total: slots, remaining: slots } })
         // Now stamp the admin's profile with the agencyId.
         await setDoc(doc(db, 'users', adminUid), { agencyId: agencyRef.id }, { merge: true })
       } catch (agencyErr) {
