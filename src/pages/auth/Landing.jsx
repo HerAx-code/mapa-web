@@ -6,7 +6,7 @@ import { ROLES } from '../../utils/constants'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import {
-  MdShield, MdArrowForward, MdDownload, MdClose,
+  MdShield, MdArrowForward, MdDownload, MdClose, MdLogin,
   // Professional line icons replacing the emoji (a govt/medical portal
   // reads as amateur with emoji — matches CLAUDE.md "civic, professional").
   MdBadge, MdMailOutline, MdSmartphone, MdLocationOn,
@@ -124,11 +124,13 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-[#FBFAF8] text-gray-800">
       {/* Topbar — one compact, seated row (not a stack of full-width buttons).
-          Brand left; language + install are icon actions and there's a single
-          primary auth button on the right. Install is an icon here because the
-          InstallNudge banner only shows inside the signed-in shell, not on this
-          public page; Register isn't duplicated here — it's the hero's CTA. A
-          near-solid ground + hairline keeps the bar seated rather than floating. */}
+          Brand left; language + install are icon actions on the right. Install is
+          an icon here because the InstallNudge banner only shows inside the
+          signed-in shell, not on this public page (hidden under 400px so the auth
+          buttons always fit). Auth: logged-out shows Register (primary) + Log In
+          (secondary, collapses to an icon on the narrowest phones); logged-in
+          shows a single Dashboard button. A near-solid ground + hairline keeps the
+          bar seated rather than floating. */}
       <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-[#FBFAF8]/95 backdrop-blur px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
         <Logo size={30} withWordmark />
         <div className="flex items-center gap-1">
@@ -137,15 +139,36 @@ export default function Landing() {
             type="button"
             aria-label={t('landing.header.downloadApp')}
             title={t('landing.header.downloadApp')}
-            className="flex items-center justify-center w-11 h-11 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="hidden min-[400px]:flex items-center justify-center w-11 h-11 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
             onClick={() => navigate('/install')}>
             <MdDownload size={18} />
           </button>
-          <button
-            className="btn-primary text-sm whitespace-nowrap ml-1"
-            onClick={() => user ? navigate(DASHBOARD[user.role] ?? '/') : navigate('/login')}>
-            {user ? t('landing.header.dashboard') : t('landing.header.login')}
-          </button>
+          {user ? (
+            <button
+              className="btn-primary text-sm whitespace-nowrap ml-1"
+              onClick={() => navigate(DASHBOARD[user.role] ?? '/')}>
+              {t('landing.header.dashboard')}
+            </button>
+          ) : (
+            <>
+              {/* Returning users: secondary action. Collapses to a labelled icon
+                  on the narrowest phones so the primary Register CTA always fits
+                  the single-row bar without horizontal scroll. */}
+              <button
+                className="btn-secondary text-sm whitespace-nowrap px-3 sm:px-4"
+                aria-label={t('landing.header.login')}
+                onClick={() => navigate('/login')}>
+                <MdLogin size={18} className="sm:hidden" />
+                <span className="hidden sm:inline">{t('landing.header.login')}</span>
+              </button>
+              {/* Primary action: self-register with a Patient Access Code. */}
+              <button
+                className="btn-primary text-sm whitespace-nowrap px-3 sm:px-4"
+                onClick={() => navigate('/register')}>
+                {t('landing.header.register')}
+              </button>
+            </>
+          )}
         </div>
       </header>
 

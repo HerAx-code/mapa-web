@@ -7,6 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
@@ -365,6 +366,7 @@ export default function Agencies() {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [editSlots, setEditSlots]       = useState(null)
   const [newTotal, setNewTotal]         = useState(0)
+  const [resyncing, setResyncing]       = useState(false)
   const [search, setSearch]             = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy]             = useState('name')
@@ -421,6 +423,7 @@ export default function Agencies() {
     try {
       const nowEnabled = !agency.enabled
       await updateDoc(doc(db, 'agencies', agency.id), { enabled: nowEnabled })
+      await syncAgencyPublic(agency.id, { ...agency, enabled: nowEnabled })
       await notifyAgencyUser(agency.id, {
         type:  nowEnabled ? 'agency_enabled' : 'agency_disabled',
         title: nowEnabled ? 'Agency Enabled' : 'Agency Disabled',
@@ -437,6 +440,7 @@ export default function Agencies() {
     if (newTotal < 1) { toast.error('Must be at least 1.'); return }
     try {
       await updateDoc(doc(db, 'agencies', agency.id), { 'slots.total': newTotal })
+      await syncAgencyPublic(agency.id, { ...agency, slots: { ...agency.slots, total: newTotal } })
       await notifyAgencyUser(agency.id, {
         type: 'agency_updated', title: 'Slot Capacity Updated',
         body: `Daily slot capacity updated from ${agency.slots?.total ?? '?'} to ${newTotal} by the administrator.`,
@@ -451,6 +455,7 @@ export default function Agencies() {
     try {
       const total = agency.slots?.total ?? 25
       await updateDoc(doc(db, 'agencies', agency.id), { 'slots.remaining': total })
+      await syncAgencyPublic(agency.id, { ...agency, slots: { ...agency.slots, remaining: total } })
       await notifyAgencyUser(agency.id, {
         type: 'agency_updated', title: 'Slots Manually Reset',
         body: `Slots for ${agency.name} were manually reset to ${total} outside the normal midnight cycle.`,
@@ -463,6 +468,7 @@ export default function Agencies() {
     try {
       const agency = agencies.find(a => a.id === id)
       await deleteDoc(doc(db, 'agencies', id))
+      await deleteDoc(doc(db, 'agenciesPublic', id)).catch(() => {})
       await notifyAllAdmins({
         type: 'agency_deleted', title: 'Agency Deleted',
         body: `"${agency?.name}" has been permanently deleted from the portal.`,
@@ -476,15 +482,33 @@ export default function Agencies() {
   const handleSaveAgency = async (data) => {
     if (typeof modal === 'object' && modal !== null) {
       await updateDoc(doc(db, 'agencies', modal.id), { ...data, updatedAt: serverTimestamp() })
+      await syncAgencyPublic(modal.id, { ...modal, ...data })
       logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: modal.id, targetName: data.name, details: 'Agency details updated' })
     } else {
       const ref = await addDoc(collection(db, 'agencies'), { ...data, createdAt: serverTimestamp() })
+      await syncAgencyPublic(ref.id, data)
       await notifyAllAdmins({
         type: 'new_agency', title: 'New Agency Added',
         body: `"${data.name}" has been registered as a new medical assistance agency.`,
       })
       logAudit(user, { action: 'agency_created', targetType: 'agency', targetId: ref.id, targetName: data.name, details: 'New agency registered' })
     }
+  }
+
+  // Reconcile the public Landing projection (agenciesPublic) with the live
+  // agency set in one pass: rewrite every current agency AND prune orphans left
+  // behind by deleted agencies (whose mirror delete may have been blocked by
+  // not-yet-deployed rules, so they keep showing on the Landing). Needed because
+  // the authoritative onAgencyWritten Cloud Function isn't deployed; no
+  // service-account creds required. Safe to run any time.
+  const handleResyncPublic = async () => {
+    setResyncing(true)
+    try {
+      const { ok, pruned, failed } = await reconcileAgenciesPublic(agencies)
+      logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: 'agenciesPublic', targetName: 'Public programs', details: `Resynced public projection (${ok} synced, ${pruned} pruned, ${failed} failed)` })
+      if (failed) toast.error(`Resynced ${ok}, pruned ${pruned}; ${failed} failed (see console).`)
+      else        toast.success(`Public programs resynced (${ok} synced${pruned ? `, ${pruned} removed` : ''}).`)
+    } finally { setResyncing(false) }
   }
 
   const handleMessageAgency = async (agency) => {
@@ -555,11 +579,21 @@ export default function Agencies() {
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agencies</h1>
             <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered medical assistance agencies.</p>
           </div>
-          {isSuperAdmin && (
-            <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate('/admin/agencies/new')}>
-              <MdAdd size={16} /> Add Agency
+          <div className="flex items-center gap-2">
+            <button
+              className="btn-secondary flex items-center gap-1.5 disabled:opacity-60"
+              onClick={handleResyncPublic}
+              disabled={resyncing || agencies.length === 0}
+              title="Rebuild the public Landing page's program list from the current agencies">
+              <MdRefresh size={16} className={resyncing ? 'animate-spin' : ''} />
+              {resyncing ? 'Resyncing…' : 'Resync public'}
             </button>
-          )}
+            {isSuperAdmin && (
+              <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate('/admin/agencies/new')}>
+                <MdAdd size={16} /> Add Agency
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Summary */}

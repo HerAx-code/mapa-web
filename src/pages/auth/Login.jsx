@@ -241,9 +241,21 @@ export default function Login() {
 
       {/* ── Right: form column ── */}
       <main className="flex min-h-screen flex-col bg-white lg:min-h-0">
-        <header className="flex items-center justify-between gap-4 px-6 py-6 sm:px-10">
-          {/* Logo shown on mobile (the brand panel carries it on desktop). */}
-          <Logo size={36} withWordmark className="lg:invisible" />
+        <header className="flex items-center justify-between gap-3 px-6 py-6 sm:px-10">
+          {/* Back-to-home moved up here (was a hard-to-find link at the bottom).
+              Hidden in standalone PWA mode — the marketing landing is redirected
+              away there, so the link would just bounce back to Login. */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {!isStandalone && (
+              <Link
+                to="/"
+                className="inline-flex items-center min-h-[44px] -ml-3 rounded-lg px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900">
+                {t('auth.backHome')}
+              </Link>
+            )}
+            {/* Logo shown on mobile (the brand panel carries it on desktop). */}
+            <Logo size={36} withWordmark className="lg:invisible" />
+          </div>
           <LanguageToggle />
         </header>
 
@@ -431,13 +443,6 @@ export default function Login() {
               </div>
             )}
 
-            {!isStandalone && (
-              <p className="mt-8 border-t border-gray-100 pt-6 text-sm">
-                <Link to="/" className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors">
-                  {t('auth.backHome')}
-                </Link>
-              </p>
-            )}
           </div>
         </div>
       </main>

@@ -54,7 +54,8 @@ const run = (before, after, agencyId = 'ag-1') => {
 }
 
 const RICH_AGENCY = {
-  name: 'PCSO', initials: 'PCSO', enabled: true,
+  name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC Social Services',
+  enabled: true,
   slots: { total: 10, remaining: 4 },
   budget: { allocated: 500000, committed: 120000, disbursed: 30000 },
   fundSource: 'PCSO Board Resolution #2026-15',
@@ -62,9 +63,12 @@ const RICH_AGENCY = {
 }
 
 describe('projectPublicAgency', () => {
-  it('copies ONLY name + enabled + slots — never budget/fundSource/contacts', () => {
+  it('copies ONLY name/initials/color/location/enabled/slots — never budget/fundSource/contacts', () => {
     const pub = projectPublicAgency(RICH_AGENCY)
-    expect(pub).toEqual({ name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 } })
+    expect(pub).toEqual({
+      name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC Social Services',
+      enabled: true, slots: { total: 10, remaining: 4 },
+    })
     expect(pub).not.toHaveProperty('budget')
     expect(pub).not.toHaveProperty('fundSource')
     expect(pub).not.toHaveProperty('contact')

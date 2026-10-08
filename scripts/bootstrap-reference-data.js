@@ -101,14 +101,19 @@ const SEED_AGENCIES = [
     phone:           '064-421-2800',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID'],
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'],
+    // Payer of last resort under RA 11463; covers hospitalization, medicines,
+    // dialysis, surgery and labs after PhilHealth. See docs research 2026-10.
+    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Dialysis','Surgery / Medical Procedures','Chemotherapy'],
     processingTime:  'Same Day',
     enabled:         true,
   },
-  // PhilHealth NHIF -- RA 11463 funder, #1 in the Order of Charging.
-  // Caveat: NHIF operationally REDUCES the bill rather than issuing a GL;
-  // modelled as an agency per stakeholder decision (2026-07-24) for
-  // Order-of-Charging visibility. Disable to revert (same as malasakit).
+  // PhilHealth NHIF -- #1 in the RA 11463 Order of Charging, but NHIF
+  // operationally REDUCES the bill rather than issuing a GL (first charge,
+  // recorded at assessment -- see philhealth-first-plan.md). It was briefly
+  // surfaced as an enabled agency (2026-07-24) for Order-of-Charging
+  // visibility, but that made it appear as a fake endorsable "Available
+  // Program" with slots on the public Landing page. Now disabled (same as
+  // malasakit); re-enable only if PhilHealth ever issues GLs through MAPA.
   {
     id:              'philhealth',
     name:            'PhilHealth',
@@ -125,7 +130,12 @@ const SEED_AGENCIES = [
     requirements:    ['PhilHealth ID','Valid ID'],
     assistanceTypes: ['Hospital Bills / Hospitalization'],
     processingTime:  'Same Day',
-    enabled:         true,
+    // NOT a Guarantee-Letter funder: under philhealth-first-plan.md PhilHealth
+    // is a first-charge DEDUCTION recorded at assessment, never an endorsement
+    // slice. Disabled (same as malasakit) so it never appears as an endorsable
+    // "Available Program" on the public Landing page. Order-of-Charging context
+    // belongs in dedicated informational copy, not a fake program with slots.
+    enabled:         false,
   },
   {
     id:              'ambag',
@@ -141,7 +151,9 @@ const SEED_AGENCIES = [
     phone:           '064-421-3000',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','PhilHealth ID','Valid ID'],
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines'],
+    // BARMM OCM program; broad advanced-service coverage (confinement, meds,
+    // dialysis, chemo/radiation, surgery, implants, labs). See docs research 2026-10.
+    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Dialysis','Chemotherapy','Laboratory Tests','Surgery / Medical Procedures'],
     processingTime:  '3–5 Days',
     enabled:         true,
   },
@@ -151,15 +163,16 @@ const SEED_AGENCIES = [
     initials:        'PC',
     color:           'bg-red-600',
     logoUrl:         null,
-    description:     'Issues guarantee letters covering chemotherapy, radiation therapy, and essential medicines.',
+    description:     'Issues guarantee letters covering hospital confinement, dialysis, chemotherapy/radiation, surgery and implants, essential medicines, and laboratory/diagnostic procedures.',
     province:        'Cotabato City',
     city:            'Cotabato City',
     officeName:      'Social Services Department, CRMC',
     location:        'Social Services Department, CRMC',
     phone:           '064-421-2600',
-    slots:           { total: 20, remaining: 20 },
     requirements:    ['Medical Certificate','Laboratory Results','PhilHealth ID','Valid ID'],
-    assistanceTypes: ['Chemotherapy','Medicines','Laboratory Tests'],
+    slots:           { total: 20, remaining: 20 },
+    // Broad coverage incl. dialysis, surgery and confinement. See docs research 2026-10.
+    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Chemotherapy','Dialysis','Laboratory Tests','Surgery / Medical Procedures'],
     processingTime:  '5–7 Days',
     enabled:         true,
   },
@@ -169,7 +182,7 @@ const SEED_AGENCIES = [
     initials:        'DS',
     color:           'bg-blue-600',
     logoUrl:         null,
-    description:     'Cash assistance and medicine vouchers for individuals in crisis situations through community social workers.',
+    description:     'Assistance to Individuals in Crisis Situations (AICS): guarantee letters to hospitals and funeral homes covering hospital bills, medicines, laboratory/diagnostics, emergency medical needs, and burial assistance.',
     province:        'Cotabato City',
     city:            'Cotabato City',
     officeName:      'Social Welfare Office, CRMC',
@@ -177,7 +190,8 @@ const SEED_AGENCIES = [
     phone:           '064-421-2700',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','Valid ID','Crisis Documentation'],
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Emergency Medical Assistance'],
+    // AICS covers medical AND burial/funeral assistance. See docs research 2026-10.
+    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Emergency Medical Assistance','Burial Assistance'],
     processingTime:  'Same Day',
     enabled:         true,
   },

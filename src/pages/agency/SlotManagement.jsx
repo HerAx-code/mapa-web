@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
+import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { phTodayKey } from '../../utils/dates'
 import toast from 'react-hot-toast'
 
@@ -148,6 +149,11 @@ export default function SlotManagement() {
         tx.update(ref, { 'slots.remaining': next })
       })
       await recordAdjustment({ type: 'add', delta: adjust, reason: reason.trim() || null })
+      // Best-effort mirror of the public Landing projection AFTER the slot tx
+      // commits — never inside it, so a denied/stale mirror can't roll back the
+      // real slot write. Authoritative sync is the onAgencyWritten CF (not
+      // deployed); the Resync action and daily reset reconcile any drift.
+      syncAgencyPublic(agency.id, { ...agency, slots: { total: slots.total, remaining: Math.min(slots.remaining + adjust, slots.total) } })
       setReason('')
       toast.success(`${adjust} slot${adjust !== 1 ? 's' : ''} added.`)
     } catch { toast.error('Failed to update slots.') }
@@ -163,11 +169,12 @@ export default function SlotManagement() {
       await runTransaction(db, async (tx) => {
         const snap = await tx.get(ref)
         if (!snap.exists()) throw new Error('GONE')
-        const cur  = snap.data()?.slots?.remaining ?? 0
-        const next = Math.max(0, cur - adjust)
+        const cur   = snap.data()?.slots?.remaining ?? 0
+        const next  = Math.max(0, cur - adjust)
         tx.update(ref, { 'slots.remaining': next })
       })
       await recordAdjustment({ type: 'deduct', delta: adjust, reason: reason.trim() || null })
+      syncAgencyPublic(agency.id, { ...agency, slots: { total: slots.total, remaining: Math.max(0, slots.remaining - adjust) } })
       setReason('')
       toast.success(`${adjust} slot${adjust !== 1 ? 's' : ''} deducted.`)
     } catch { toast.error('Failed to update slots.') }
@@ -192,12 +199,15 @@ export default function SlotManagement() {
         // a slot, pushing usedNow past newTotal. In that case we
         // refuse the change rather than silently set remaining<0.
         if (newTotal < usedNow) throw new Error('USED_EXCEEDS_NEW_TOTAL')
+        const nextRemaining = Math.max(0, newTotal - usedNow)
         tx.update(ref, {
           'slots.total':     newTotal,
-          'slots.remaining': Math.max(0, newTotal - usedNow),
+          'slots.remaining': nextRemaining,
         })
       })
       await recordAdjustment({ type: 'capacity', delta: newTotal, oldDelta: oldTotal, reason: 'Capacity edit' })
+      // Best-effort mirror after the tx commits (see handleAdd).
+      syncAgencyPublic(agency.id, { ...agency, slots: { total: newTotal, remaining: Math.max(0, newTotal - used) } })
       setEditing(false)
       toast.success('Daily capacity updated.')
     } catch (err) {

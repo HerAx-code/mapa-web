@@ -477,14 +477,25 @@ service cloud.firestore {
     }
 
     // ── agenciesPublic ──────────────────────────────────────────────────────────
-    // A non-sensitive projection of each agency (name + slots + enabled only),
-    // maintained by the onAgencyWritten Cloud Function. World-readable so the
-    // public Landing page can show its live programs teaser without exposing the
-    // rich `agencies` doc (budget / fundSource / contacts / signatories). No
-    // client ever writes here — only the function (Admin SDK, bypasses rules).
+    // A non-sensitive projection of each agency (name + slots + enabled only).
+    // World-readable so the public Landing page can show its live programs teaser
+    // without exposing the rich `agencies` doc (budget / fundSource / contacts /
+    // signatories).
+    //
+    // Authoritative writer is the onAgencyWritten Cloud Function (Admin SDK,
+    // bypasses rules) — but it is NOT deployed on the live project, so the client
+    // mirrors this projection from every agency-write path (src/utils/
+    // agenciesPublic.js), the same belt-and-suspenders pattern as the client-side
+    // daily slot reset. Writers are therefore the exact principals allowed to
+    // edit the source agencies/{id} doc (CRMC admin, or any agency role on its
+    // own agency), and the payload is pinned to ONLY the four projected fields —
+    // so this can never become a budget/contact leak even from a hostile client.
     match /agenciesPublic/{agencyId} {
       allow read:  if true;
-      allow write: if false;
+      allow write: if (isAdmin() || (isAgency() && userAgencyId() == agencyId))
+                      && request.resource.data.keys().hasOnly(['name', 'initials', 'color', 'location', 'enabled', 'slots', 'updatedAt'])
+                      && request.resource.data.slots.keys().hasOnly(['total', 'remaining']);
+      allow delete: if isAdmin();
     }
 
     // ── documentTypes ─────────────────────────────────────────────────────────
