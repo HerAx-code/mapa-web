@@ -43,6 +43,15 @@ export function exposureStats(data) {
   return { meanLum: sum / n, brightFrac: bright / n, darkFrac: dark / n }
 }
 
+// True if an RGBA buffer is essentially black — a failed/blank capture (mobile
+// drawImage(video) can return a black frame before the video has painted). A
+// real photo, even a dark one, is never this close to zero luminance. Used to
+// reject-and-retry a capture. Pure + unit-tested.
+export function isBlackFrame(data) {
+  if (!data || data.length === 0) return false
+  return exposureStats(data).meanLum < 4
+}
+
 // Classify stats into an advisory verdict. Returns 'glare' | 'dark' | null.
 export function exposureVerdict(stats) {
   if (!stats) return null

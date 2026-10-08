@@ -5,7 +5,7 @@
  * photo must resolve to null (no nudge).
  */
 import { describe, it, expect } from 'vitest'
-import { exposureStats, exposureVerdict, sharpnessStats, sharpnessVerdict, assessFrame, SHARP_MIN, qualityVerdict, MIN_LONG_EDGE } from '../../src/utils/imageQuality.js'
+import { exposureStats, exposureVerdict, sharpnessStats, sharpnessVerdict, assessFrame, SHARP_MIN, qualityVerdict, MIN_LONG_EDGE, isBlackFrame } from '../../src/utils/imageQuality.js'
 
 // Build an RGBA buffer of `n` pixels all at luminance `v` (gray).
 const gray = (v, n = 100) => {
@@ -119,5 +119,24 @@ describe('qualityVerdict', () => {
   })
   it('accepts an image exactly at the resolution floor', () => {
     expect(qualityVerdict({ ...ok, longEdge: MIN_LONG_EDGE })).toBe(null)
+  })
+})
+
+// isBlackFrame — rejects a failed/blank capture (mobile drawImage-before-paint).
+describe('isBlackFrame', () => {
+  it('is true for an all-black buffer', () => {
+    expect(isBlackFrame(gray(0, 100))).toBe(true)
+  })
+  it('is true for a near-black buffer (< 4 mean luma)', () => {
+    expect(isBlackFrame(gray(3, 100))).toBe(true)
+  })
+  it('is false for a normal photo', () => {
+    expect(isBlackFrame(gray(128, 100))).toBe(false)
+  })
+  it('is false for a dim-but-real photo', () => {
+    expect(isBlackFrame(gray(10, 100))).toBe(false)
+  })
+  it('is false for an empty buffer (do not block the capture)', () => {
+    expect(isBlackFrame(new Uint8ClampedArray(0))).toBe(false)
   })
 })
