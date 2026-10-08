@@ -51,6 +51,7 @@ async function main() {
   const db = getFirestore()
 
   const snap = await db.collection('agencies').get()
+  const liveIds = new Set(snap.docs.map(d => d.id))
   console.log(`Found ${snap.size} agencies. Writing public projections…`)
 
   let written = 0
@@ -65,9 +66,21 @@ async function main() {
     written++
     console.log(`  · ${d.id} → ${pub.name} (enabled=${pub.enabled}, slots ${pub.slots.remaining}/${pub.slots.total})`)
   })
+
+  // Prune orphans: agenciesPublic docs whose agency no longer exists (deleted).
+  // Otherwise they keep showing on the public Landing teaser forever.
+  const pubSnap = await db.collection('agenciesPublic').get()
+  let pruned = 0
+  pubSnap.docs.forEach(d => {
+    if (liveIds.has(d.id)) return
+    batch.delete(db.collection('agenciesPublic').doc(d.id))
+    pruned++
+    console.log(`  ✗ ${d.id} → orphan (agency deleted) — pruning`)
+  })
+
   await batch.commit()
 
-  console.log(`\nDone. ${written} agenciesPublic docs written.`)
+  console.log(`\nDone. ${written} agenciesPublic docs written, ${pruned} orphans pruned.`)
   process.exit(0)
 }
 

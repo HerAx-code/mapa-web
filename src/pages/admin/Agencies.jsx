@@ -7,7 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
-import { syncAgencyPublic, syncAllAgenciesPublic } from '../../utils/agenciesPublic'
+import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
@@ -495,17 +495,19 @@ export default function Agencies() {
     }
   }
 
-  // Repair the public Landing projection (agenciesPublic) for every agency in
-  // one pass. Needed because the authoritative onAgencyWritten Cloud Function
-  // isn't deployed — this rebuilds the mirror from the current agencies without
-  // service-account creds or the backfill script. Safe to run any time.
+  // Reconcile the public Landing projection (agenciesPublic) with the live
+  // agency set in one pass: rewrite every current agency AND prune orphans left
+  // behind by deleted agencies (whose mirror delete may have been blocked by
+  // not-yet-deployed rules, so they keep showing on the Landing). Needed because
+  // the authoritative onAgencyWritten Cloud Function isn't deployed; no
+  // service-account creds required. Safe to run any time.
   const handleResyncPublic = async () => {
     setResyncing(true)
     try {
-      const { ok, failed } = await syncAllAgenciesPublic(agencies)
-      logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: 'agenciesPublic', targetName: 'Public programs', details: `Resynced public projection (${ok} ok, ${failed} failed)` })
-      if (failed) toast.error(`Resynced ${ok}; ${failed} failed (see console).`)
-      else        toast.success(`Public programs resynced (${ok}).`)
+      const { ok, pruned, failed } = await reconcileAgenciesPublic(agencies)
+      logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: 'agenciesPublic', targetName: 'Public programs', details: `Resynced public projection (${ok} synced, ${pruned} pruned, ${failed} failed)` })
+      if (failed) toast.error(`Resynced ${ok}, pruned ${pruned}; ${failed} failed (see console).`)
+      else        toast.success(`Public programs resynced (${ok} synced${pruned ? `, ${pruned} removed` : ''}).`)
     } finally { setResyncing(false) }
   }
 

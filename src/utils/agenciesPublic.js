@@ -1,4 +1,4 @@
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, deleteDoc, getDocs, collection, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 
 /**
@@ -90,4 +90,36 @@ export async function syncAllAgenciesPublic(agencies = []) {
     }
   }
   return { ok, failed }
+}
+
+/**
+ * Full reconcile of the public projection against the live agency set. Writes a
+ * projection for every current agency AND deletes any agenciesPublic doc whose
+ * agency no longer exists (an orphan left behind when an agency is deleted — its
+ * mirror delete may have been blocked by not-yet-deployed rules, so it keeps
+ * showing on the public Landing). Backs the admin "Resync public" action.
+ * Returns { ok, pruned, failed }. Never throws.
+ */
+export async function reconcileAgenciesPublic(agencies = []) {
+  const { ok, failed } = await syncAllAgenciesPublic(agencies)
+  let pruned = 0
+  let pruneFailed = 0
+  try {
+    const liveIds = new Set(agencies.map(a => a.id))
+    const snap = await getDocs(collection(db, 'agenciesPublic'))
+    for (const d of snap.docs) {
+      if (liveIds.has(d.id)) continue
+      try {
+        await deleteDoc(doc(db, 'agenciesPublic', d.id))
+        pruned++
+      } catch (err) {
+        console.error('[reconcileAgenciesPublic] prune failed for', d.id, err)
+        pruneFailed++
+      }
+    }
+  } catch (err) {
+    // Can't read the projection to find orphans — writes still happened.
+    console.error('[reconcileAgenciesPublic] orphan scan failed', err)
+  }
+  return { ok, pruned, failed: failed + pruneFailed }
 }
