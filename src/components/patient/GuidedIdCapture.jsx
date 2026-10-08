@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MdClose, MdCameraAlt, MdWarning, MdCheckCircle, MdUploadFile, MdRefresh } from 'react-icons/md'
-import { assessFrame } from '../../utils/imageQuality'
+import { assessFrame, isBlackFrame } from '../../utils/imageQuality'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 
@@ -80,12 +80,38 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [error, current, step])
 
-  const capture = () => {
+  // Capture a still from the live video. On mobile, drawImage(video) can return
+  // an all-black frame if the video hasn't actually painted a decodable frame
+  // yet (videoWidth is set before readyState reaches HAVE_CURRENT_DATA, and iOS
+  // composites the first frames late). So we require a ready frame, cap the
+  // canvas to a safe size, and if the drawn frame is essentially black we retry
+  // on the next frames (up to ~1.5s) before accepting it. See the "black capture"
+  // bug report.
+  const capture = (attempt = 0) => {
     const v = videoRef.current
-    if (!v || !v.videoWidth) return
+    if (!v || !v.videoWidth || v.readyState < 2) {
+      if (attempt < 12) setTimeout(() => capture(attempt + 1), 120)
+      return
+    }
+    const MAX = 1920
+    const scale = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight))
+    const w = Math.max(1, Math.round(v.videoWidth * scale))
+    const h = Math.max(1, Math.round(v.videoHeight * scale))
     const canvas = document.createElement('canvas')
-    canvas.width = v.videoWidth; canvas.height = v.videoHeight
-    canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
+    canvas.width = w; canvas.height = h
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(v, 0, 0, w, h)
+    // Reject an all-black frame and retry on the next frames.
+    let black = false
+    try {
+      const cd = ctx.getImageData(Math.round(w * 0.25), Math.round(h * 0.25),
+        Math.max(1, Math.round(w * 0.5)), Math.max(1, Math.round(h * 0.5))).data
+      black = isBlackFrame(cd)
+    } catch { /* can't read → don't block the capture */ }
+    if (black && attempt < 12) {
+      setTimeout(() => capture(attempt + 1), 120)
+      return
+    }
     canvas.toBlob(b => {
       if (b) setShots(s => ({ ...s, [step]: { blob: b, url: URL.createObjectURL(b) } }))
     }, 'image/jpeg', 0.85)

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MdClose, MdCameraAlt, MdRefresh, MdCheckCircle, MdWarning, MdRadioButtonUnchecked } from 'react-icons/md'
 import { checkLiveness } from '../utils/faceCheck'
-import { assessFrame } from '../utils/imageQuality'
+import { assessFrame, isBlackFrame } from '../utils/imageQuality'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 
@@ -88,13 +88,35 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
 
   const stopStream = () => streamRef.current?.getTracks().forEach(tk => tk.stop())
 
-  const capture = () => {
+  // On mobile, drawImage(video) can return an all-black frame before the video
+  // has painted a decodable frame (videoWidth is set before readyState reaches
+  // HAVE_CURRENT_DATA; iOS composites the first frames late). Require a ready
+  // frame and retry on an all-black capture before accepting it, and only stop
+  // the camera stream AFTER a good frame — otherwise a retry would have no video.
+  const capture = (attempt = 0) => {
     const video = videoRef.current
-    if (!video) return
+    if (!video || !video.videoWidth || video.readyState < 2) {
+      if (attempt < 12) setTimeout(() => capture(attempt + 1), 120)
+      return
+    }
+    const MAX = 1920
+    const scale = Math.min(1, MAX / Math.max(video.videoWidth, video.videoHeight))
+    const cw = Math.max(1, Math.round(video.videoWidth * scale))
+    const ch = Math.max(1, Math.round(video.videoHeight * scale))
     const canvas = document.createElement('canvas')
-    canvas.width  = video.videoWidth  || 640
-    canvas.height = video.videoHeight || 480
-    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+    canvas.width = cw; canvas.height = ch
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(video, 0, 0, cw, ch)
+    let black = false
+    try {
+      const d = ctx.getImageData(Math.round(cw * 0.25), Math.round(ch * 0.25),
+        Math.max(1, Math.round(cw * 0.5)), Math.max(1, Math.round(ch * 0.5))).data
+      black = isBlackFrame(d)
+    } catch { /* can't read → don't block */ }
+    if (black && attempt < 12) {
+      setTimeout(() => capture(attempt + 1), 120)
+      return
+    }
     setPreview(canvas.toDataURL('image/jpeg', 0.85))
     if (livenessEnabled) setLive({ status: 'checking' })
     canvas.toBlob(b => {
