@@ -154,7 +154,7 @@ export default function RequestAssistance() {
   const setSelfie = (key, file, meta) => {
     const who = key === REP_SELFIE ? 'rep' : 'patient'
     selfieLiveness.current[who] = meta
-      ? { liveness: meta.liveness ?? null, livenessScore: meta.livenessScore ?? null }
+      ? { liveness: meta.liveness ?? null, livenessScore: meta.livenessScore ?? null, appearanceNote: meta.appearanceNote ?? null }
       : null
     setPendingFiles(p => ({ ...p, [key]: file }))
   }

@@ -184,6 +184,33 @@ describe('documents — advisory ID-verification field bounds', () => {
     await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', { ocrConfidence: -1 })))
   })
 
+  it('accepts an appearanceNote within bounds, and null, on create', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { appearanceNote: 'Face bandaged after surgery' })))
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { appearanceNote: null })))
+  })
+
+  it('rejects an oversized appearanceNote (>500 chars)', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { appearanceNote: 'x'.repeat(501) })))
+  })
+
+  it('lets a patient set appearanceNote on their own pending doc (re-upload)', async () => {
+    await seedUser('patient-1', 'patient')
+    await testEnv.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), 'documents', 'doc-1'), docPayload('patient-1'))
+    })
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'documents', 'doc-1'), {
+      status: 'pending', appearanceNote: 'Recovering from an accident',
+    }))
+  })
+
   it('lets a patient refresh these fields on their own pending doc (re-upload)', async () => {
     await seedUser('patient-1', 'patient')
     await testEnv.withSecurityRulesDisabled(async (c) => {
