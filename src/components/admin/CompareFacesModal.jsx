@@ -112,6 +112,26 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
           </span>
         </div>
 
+        {/* Dignity context: a face that doesn't match can be a legitimate medical
+            appearance change. Surface the patient's own note prominently, and when
+            the match isn't a clean pass, remind the verifier to weigh the medical
+            record rather than read a mismatch as fraud. */}
+        {selfieDoc?.appearanceNote && (
+          <div className="px-5 pt-3 flex-shrink-0">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 flex items-start gap-2">
+              <MdInfoOutline size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-900"><span className="font-semibold">Patient’s note on their appearance:</span> {selfieDoc.appearanceNote}</p>
+            </div>
+          </div>
+        )}
+        {selfieDoc?.faceMatch !== 'pass' && (
+          <div className="px-5 pt-2 flex-shrink-0">
+            <p className="text-xs text-gray-500">
+              A non-matching or unclear face can be a legitimate appearance change (recent surgery, injury, illness, bandages). Check the medical documents before deciding.
+            </p>
+          </div>
+        )}
+
         <div className="flex-1 overflow-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 min-h-0">
           <div className="flex flex-col min-h-0">
             <p className="text-xs font-semibold text-gray-500 mb-1.5 px-1">ID portrait

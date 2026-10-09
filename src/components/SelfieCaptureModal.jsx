@@ -35,6 +35,12 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
   const [preview,  setPreview]  = useState(null)   // dataURL of captured frame
   const [consent,  setConsent]  = useState(false)
   const [blob,     setBlob]     = useState(null)
+  // Optional dignity note: a patient whose face looks different from their ID
+  // (recent surgery, injury, bandages, illness) can explain why, so a
+  // non-matching selfie is read as context by the social worker, not suspicion.
+  // Advisory only — never blocks, never required. Handed up via onCapture meta.
+  const [note,     setNote]     = useState('')
+  const [showNote, setShowNote] = useState(false)
   const [live,     setLive]     = useState(null)   // { status:'checking'|'done', liveness, livenessScore }
   const [light,    setLight]    = useState(null)   // live exposure hint { bright, glare }
 
@@ -142,7 +148,11 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
   const use = () => {
     if (!blob || !consent) return
     const file = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' })
-    onCapture(file, { liveness: live?.liveness ?? null, livenessScore: live?.livenessScore ?? null })
+    onCapture(file, {
+      liveness: live?.liveness ?? null,
+      livenessScore: live?.livenessScore ?? null,
+      appearanceNote: note.trim() ? note.trim().slice(0, 500) : null,
+    })
     onClose()
   }
 
@@ -250,6 +260,26 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
                     <MdWarning size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-[13px] text-amber-800">{t('patient.request.selfieReviewHint')}</p>
                   </div>
+                  {/* Optional, never required: explain an appearance change so a
+                      non-matching selfie is read as context, not suspicion. */}
+                  {!showNote ? (
+                    <button type="button" onClick={() => setShowNote(true)}
+                      className="text-left text-xs font-medium text-brand-600 hover:underline underline-offset-2 min-h-[36px]">
+                      {t('patient.request.selfieDiffToggle')}
+                    </button>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-gray-600">{t('patient.request.selfieDiffHint')}</p>
+                      <textarea
+                        value={note}
+                        onChange={e => setNote(e.target.value.slice(0, 500))}
+                        maxLength={500}
+                        rows={2}
+                        placeholder={t('patient.request.selfieDiffPlaceholder')}
+                        aria-label={t('patient.request.selfieDiffToggle')}
+                        className="input w-full text-sm resize-none" />
+                    </div>
+                  )}
                   <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer select-none">
                     <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
                       checked={consent} onChange={e => setConsent(e.target.checked)} />

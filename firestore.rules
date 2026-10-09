@@ -342,7 +342,12 @@ service cloud.firestore {
           && (!('philIdName' in d)     || d.philIdName == null     || (d.philIdName is string && d.philIdName.size() <= 200))
           && (!('philIdDob' in d)      || d.philIdDob == null      || (d.philIdDob is string && d.philIdDob.size() <= 40))
           && (!('philIdSigValid' in d) || d.philIdSigValid == null || d.philIdSigValid is bool)
-          && (!('ocrConfidence' in d)  || d.ocrConfidence == null  || (d.ocrConfidence is number && d.ocrConfidence >= 0 && d.ocrConfidence <= 100));
+          && (!('ocrConfidence' in d)  || d.ocrConfidence == null  || (d.ocrConfidence is number && d.ocrConfidence >= 0 && d.ocrConfidence <= 100))
+          // appearanceNote: an OPTIONAL patient-written note explaining why their
+          // live selfie may not match the ID (recent surgery, injury, bandages,
+          // illness). Advisory context for the social worker, never a gate. Bound
+          // the free text so a hostile client can't write junk into the record.
+          && (!('appearanceNote' in d) || d.appearanceNote == null || (d.appearanceNote is string && d.appearanceNote.size() <= 500));
       }
       // Abuse hardening #5 — cap the NUMBER of documents a patient can upload.
       // File size is already bounded (~650 KB); this bounds the count, since each
@@ -395,7 +400,7 @@ service cloud.firestore {
                                     'idTypeDetected', 'faceMatch', 'faceMatchScore',
                                     'liveness', 'livenessScore', 'idVerifyMethod',
                                     'pcnLast4', 'pcnFingerprint', 'philIdName',
-                                    'philIdDob', 'philIdSigValid']) &&
+                                    'philIdDob', 'philIdSigValid', 'appearanceNote']) &&
                         (!('ocrText' in request.resource.data) ||
                          (request.resource.data.ocrText is string &&
                           request.resource.data.ocrText.size() <= 4000)) &&

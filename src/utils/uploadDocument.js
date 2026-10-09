@@ -112,6 +112,9 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
       liveness:       verify.liveness ?? null,
       livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
       idVerifyMethod: verify.method ?? 'ocr',
+      // Optional patient note explaining an appearance change (surgery, injury,
+      // bandages) so a non-matching selfie isn't read as fraud. Bounded.
+      appearanceNote: verify.appearanceNote ? String(verify.appearanceNote).slice(0, 500) : null,
     } : {}),
     // Advisory PhilSys / National-ID metadata on the ID doc (Phase 3). NEVER the
     // raw PCN/PSN: only a masked PCN (last 4), a keyed fingerprint, the exact
@@ -182,6 +185,7 @@ export async function replacePatientDocument({ docId, file, ocr = null, verify =
       liveness:       verify.liveness ?? null,
       livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
       idVerifyMethod: verify.method ?? 'ocr',
+      appearanceNote: verify.appearanceNote ? String(verify.appearanceNote).slice(0, 500) : null,
     } : {}),
   })
 }
