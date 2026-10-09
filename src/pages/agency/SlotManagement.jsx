@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { MdEdit, MdAdd, MdRemove, MdInfo, MdCalendarToday, MdHistory, MdAttachMoney, MdConfirmationNumber } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, updateDoc, increment } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
@@ -123,15 +123,18 @@ export default function SlotManagement() {
     })
   }
 
-  // R5 fix: all three slot mutations now run inside runTransaction so a
-  // concurrent endorsement decrement (admin/Requests EndorseModal does
-  // `slots.remaining -= 1` inside its own tx) can't be silently overwritten
-  // by an operator clicking +5 or -3 in this page. Lost-update race
-  // previously possible because the handlers read slots.remaining from
-  // React state and wrote that value back -- they have no idea another
-  // tx just landed.
+  // Slot mutations use atomic / plain writes, NOT runTransaction.
   //
-  // 2026-06-03 end-to-end review (R5).
+  // WHY NOT A TRANSACTION (reversed the 2026-06-03 "R5" fix): the agency client
+  // runs with persistentLocalCache + the multi-tab manager (see firebase.js),
+  // and runTransaction writes to the agency doc were silently NOT persisting in
+  // that setup — the plain-updateDoc adjustment-log write in the very same
+  // handler committed fine while the transaction's slots write never landed, so
+  // capacity edits recorded an adjustment but slots.total never moved. The
+  // original R5 concern (a concurrent endorsement `slots.remaining -= 1` being
+  // lost) is still handled WITHOUT a transaction: add/deduct use atomic
+  // FieldValue.increment(), which can't clobber a concurrent decrement. Capacity
+  // is an infrequent last-write-wins update; the UI guards below keep it sane.
 
   const handleAdd = async () => {
     if (slots.remaining + adjust > slots.total) {
@@ -139,20 +142,12 @@ export default function SlotManagement() {
       return
     }
     try {
-      const ref = doc(db, 'agencies', agency.id)
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref)
-        if (!snap.exists()) throw new Error('GONE')
-        const cur   = snap.data()?.slots?.remaining ?? 0
-        const total = snap.data()?.slots?.total    ?? 0
-        const next  = Math.min(cur + adjust, total)
-        tx.update(ref, { 'slots.remaining': next })
-      })
+      // Atomic server-side add — immune to the cache/transaction issue above
+      // and to lost updates from a concurrent endorsement decrement.
+      await updateDoc(doc(db, 'agencies', agency.id), { 'slots.remaining': increment(adjust) })
       await recordAdjustment({ type: 'add', delta: adjust, reason: reason.trim() || null })
-      // Best-effort mirror of the public Landing projection AFTER the slot tx
-      // commits — never inside it, so a denied/stale mirror can't roll back the
-      // real slot write. Authoritative sync is the onAgencyWritten CF (not
-      // deployed); the Resync action and daily reset reconcile any drift.
+      // Best-effort mirror of the public Landing projection (authoritative sync
+      // is the onAgencyWritten CF, not deployed; Resync / daily reset reconcile).
       syncAgencyPublic(agency.id, { ...agency, slots: { total: slots.total, remaining: Math.min(slots.remaining + adjust, slots.total) } })
       setReason('')
       toast.success(`${adjust} slot${adjust !== 1 ? 's' : ''} added.`)
@@ -165,14 +160,7 @@ export default function SlotManagement() {
       return
     }
     try {
-      const ref = doc(db, 'agencies', agency.id)
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref)
-        if (!snap.exists()) throw new Error('GONE')
-        const cur   = snap.data()?.slots?.remaining ?? 0
-        const next  = Math.max(0, cur - adjust)
-        tx.update(ref, { 'slots.remaining': next })
-      })
+      await updateDoc(doc(db, 'agencies', agency.id), { 'slots.remaining': increment(-adjust) })
       await recordAdjustment({ type: 'deduct', delta: adjust, reason: reason.trim() || null })
       syncAgencyPublic(agency.id, { ...agency, slots: { total: slots.total, remaining: Math.max(0, slots.remaining - adjust) } })
       setReason('')
@@ -186,36 +174,20 @@ export default function SlotManagement() {
     if (newTotal < used)         { toast.error(`Cannot set total below already-used slots (${used}).`); return }
     setSaving(true)
     try {
-      const ref = doc(db, 'agencies', agency.id)
-      let oldTotal = slots.total ?? 0
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref)
-        if (!snap.exists()) throw new Error('GONE')
-        const cur   = snap.data()?.slots ?? {}
-        oldTotal    = cur.total ?? oldTotal
-        const usedNow = (cur.total ?? 0) - (cur.remaining ?? 0)
-        // Re-check the post-transactional consumption budget. Between
-        // the UI guard above and now another tx could have consumed
-        // a slot, pushing usedNow past newTotal. In that case we
-        // refuse the change rather than silently set remaining<0.
-        if (newTotal < usedNow) throw new Error('USED_EXCEEDS_NEW_TOTAL')
-        const nextRemaining = Math.max(0, newTotal - usedNow)
-        tx.update(ref, {
-          'slots.total':     newTotal,
-          'slots.remaining': nextRemaining,
-        })
+      const oldTotal      = slots.total ?? 0
+      const nextRemaining = Math.max(0, newTotal - used)
+      // Plain update (last-write-wins). Capacity edits are infrequent and the
+      // guards above already prevent setting total below what's in use.
+      await updateDoc(doc(db, 'agencies', agency.id), {
+        'slots.total':     newTotal,
+        'slots.remaining': nextRemaining,
       })
       await recordAdjustment({ type: 'capacity', delta: newTotal, oldDelta: oldTotal, reason: 'Capacity edit' })
-      // Best-effort mirror after the tx commits (see handleAdd).
-      syncAgencyPublic(agency.id, { ...agency, slots: { total: newTotal, remaining: Math.max(0, newTotal - used) } })
+      syncAgencyPublic(agency.id, { ...agency, slots: { total: newTotal, remaining: nextRemaining } })
       setEditing(false)
       toast.success('Daily capacity updated.')
-    } catch (err) {
-      if (String(err.message) === 'USED_EXCEEDS_NEW_TOTAL') {
-        toast.error('Another change just landed -- used slots now exceed the new capacity. Re-check the page and try again.')
-      } else {
-        toast.error('Failed to update capacity.')
-      }
+    } catch {
+      toast.error('Failed to update capacity.')
     }
     finally { setSaving(false) }
   }
