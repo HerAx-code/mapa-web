@@ -25,8 +25,16 @@
 // flow proceeds unaided — the advisory contract, never blocking care.
 
 import { FACE_MATCH_HI, LIVENESS_HI } from './constants'
+import { withTimeout, modelTimeoutMs } from './withTimeout'
 
 const MODEL_URL = '/models'
+
+// Bound the model load + each detection so a stalled weights download (~6.6 MB,
+// can hang without erroring on a weak mobile network) can't leave a face check,
+// and its spinner (selfie "Checking…", submit "Verifying…"), pending forever.
+// On timeout the call resolves to its neutral null result, same as any failure.
+// Field-tunable (VITE_IDQ_MODEL_TIMEOUT_MS); default 20s.
+const MODEL_TIMEOUT_MS = modelTimeoutMs(import.meta.env?.VITE_IDQ_MODEL_TIMEOUT_MS)
 
 // ── Pure, testable helpers ─────────────────────────────────────────────────
 
@@ -87,7 +95,7 @@ export function computeLivenessScore({ faceCount, faceAreaRatio = 0, sharpness =
 let _faceApiPromise = null
 async function getFaceApi() {
   if (_faceApiPromise) return _faceApiPromise
-  _faceApiPromise = (async () => {
+  _faceApiPromise = withTimeout((async () => {
     const faceapi = await import('@vladmandic/face-api')
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -95,7 +103,7 @@ async function getFaceApi() {
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ])
     return faceapi
-  })().catch((err) => { _faceApiPromise = null; throw err })
+  })(), MODEL_TIMEOUT_MS, 'faceapi-load').catch((err) => { _faceApiPromise = null; throw err })
   return _faceApiPromise
 }
 
@@ -177,10 +185,10 @@ export async function compareFaces(idFile, selfieFile) {
     const [idCanvas, selfieCanvas] = await Promise.all([toCanvas(idFile), toCanvas(selfieFile)])
     if (!idCanvas || !selfieCanvas) return NEUTRAL
     const opts = new faceapi.TinyFaceDetectorOptions()
-    const [idFace, selfieFace] = await Promise.all([
+    const [idFace, selfieFace] = await withTimeout(Promise.all([
       faceapi.detectSingleFace(idCanvas, opts).withFaceLandmarks().withFaceDescriptor(),
       faceapi.detectSingleFace(selfieCanvas, opts).withFaceLandmarks().withFaceDescriptor(),
-    ])
+    ]), MODEL_TIMEOUT_MS, 'face-compare')
     if (!idFace || !selfieFace) return NEUTRAL
     const raw = cosineSimilarity(idFace.descriptor, selfieFace.descriptor)
     const score = raw == null ? null : clamp01(raw)
@@ -200,7 +208,9 @@ export async function hasFace(file) {
     const faceapi = await getFaceApi()
     const canvas = await toCanvas(file)
     if (!canvas) return null
-    const res = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+    const res = await withTimeout(
+      faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()),
+      MODEL_TIMEOUT_MS, 'face-hasface')
     return !!res
   } catch {
     return null
@@ -215,7 +225,9 @@ export async function checkLiveness(selfieFile) {
     const faceapi = await getFaceApi()
     const canvas = await toCanvas(selfieFile)
     if (!canvas) return NEUTRAL
-    const faces = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions())
+    const faces = await withTimeout(
+      faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions()),
+      MODEL_TIMEOUT_MS, 'face-liveness')
     const frameArea = canvas.width * canvas.height
     let faceAreaRatio = 0
     if (faces.length === 1 && frameArea > 0) {
