@@ -140,7 +140,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
   } else if (upload === 'error') {
     statusLine = <span className="text-red-600 font-medium">{t('patient.request.docCard.uploadFailed')}</span>
   } else if (repWaived) {
-    statusLine = <span className="text-brand-600 font-medium inline-flex items-center gap-1"><MdCheckCircle size={13} /> {t('patient.request.selfieRepActive')}</span>
+    statusLine = <span className="text-brand-600 font-medium inline-flex items-start gap-1"><MdCheckCircle size={13} className="flex-shrink-0 mt-0.5" /> {t('patient.request.selfieRepActive')}</span>
   } else if (needsRetake) {
     statusLine = <span className="text-amber-800 font-medium">{retakeReason}</span>
   } else if (poorPhoto && acked) {
