@@ -1,3 +1,5 @@
+import { withTimeout, modelTimeoutMs } from './withTimeout'
+
 // On-device ID OCR — advisory only.
 //
 // Reads the text off an uploaded ID image with tesseract.js (lazy-loaded so
@@ -164,10 +166,17 @@ async function preprocessImage(file) {
 // The worker is created lazily on first call. _workerPromise caches the
 // in-flight initialization so concurrent first calls share one create()
 // rather than racing two.
+// Bound the worker load + each recognize() so a stalled language-data download
+// (common on weak mobile networks — the ~10 MB pack can hang without erroring)
+// can't leave OCR, and its "Reading ID…" spinner, pending forever. On timeout
+// the call resolves to the neutral advisory result, same as any other failure.
+// Field-tunable per deploy (VITE_IDQ_MODEL_TIMEOUT_MS); default 20s.
+const MODEL_TIMEOUT_MS = modelTimeoutMs(import.meta.env?.VITE_IDQ_MODEL_TIMEOUT_MS)
+
 let _workerPromise = null
 async function getWorker() {
   if (_workerPromise) return _workerPromise
-  _workerPromise = (async () => {
+  _workerPromise = withTimeout((async () => {
     const mod = await import('tesseract.js')
     const createWorker = mod.createWorker || mod.default?.createWorker
     if (!createWorker) throw new Error('tesseract.js createWorker not available')
@@ -176,9 +185,9 @@ async function getWorker() {
     // government IDs and improves name recognition for Filipino-script
     // contexts. English alone misses some characters and word boundaries.
     return await createWorker('eng+fil')
-  })().catch((err) => {
-    // Reset so a future call can retry from scratch instead of inheriting
-    // the failed promise forever.
+  })(), MODEL_TIMEOUT_MS, 'ocr-worker-load').catch((err) => {
+    // Reset so a future call can retry from scratch (e.g. on better signal)
+    // instead of inheriting the failed/timed-out promise forever.
     _workerPromise = null
     throw err
   })
@@ -207,7 +216,7 @@ export async function runIdOcr(file, expectedName = '') {
       preprocessImage(file),
       getWorker(),
     ])
-    const { data } = await worker.recognize(processed)
+    const { data } = await withTimeout(worker.recognize(processed), MODEL_TIMEOUT_MS, 'ocr-recognize')
     const text = (data?.text ?? '').trim()
     const confidence = typeof data?.confidence === 'number' ? Math.round(data.confidence) : null
     return { text, match: nameMatches(text, expectedName), idType: detectIdType(text), confidence }
