@@ -29,6 +29,8 @@ export default function DocChecklist({
   uploadState = {},
   isIdType,
   isSelfieType,
+  filedByRep = false,
+  onRepFiling,
   qualityAck = {},
   onAckQuality,
   onAttach,
@@ -40,6 +42,7 @@ export default function DocChecklist({
   t,
 }) {
   const readyCount = docTypes.filter(tp =>
+    (filedByRep && isSelfieType(tp.name)) ||
     !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
   ).length
 
@@ -68,6 +71,8 @@ export default function DocChecklist({
               upload={uploadState[tp.name]}
               isId={isIdType(tp.name)}
               isSelfie={isSelfieType(tp.name)}
+              filedByRep={filedByRep}
+              onRepFiling={onRepFiling}
               acked={!!qualityAck[tp.name]}
               onAckQuality={onAckQuality}
               onAttach={onAttach}
@@ -85,7 +90,10 @@ export default function DocChecklist({
   )
 }
 
-function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, acked, onAckQuality, onAttach, onSelfie, onGuidedCapture, onScanId, onRemove, onRetryOcr, t }) {
+function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie, filedByRep, onRepFiling, acked, onAckQuality, onAttach, onSelfie, onGuidedCapture, onScanId, onRemove, onRetryOcr, t }) {
+  // The patient's own live selfie is waived when a representative is filing
+  // (they can't self-capture). The card shows a satisfied, reassuring state.
+  const repWaived = isSelfie && filedByRep && !pending
   // "Doesn't look like an ID": no ID keyword, no name match, no face found.
   // hasFace must be explicitly false (null = couldn't run → no warn).
   const notAnId     = isId && ocr && !ocrBusy && ocr.hasFace === false && ocr.idType == null && ocr.match !== true
@@ -120,7 +128,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
     : 'border border-gray-200'
   const tileCls = needsRetake
     ? 'bg-amber-200 text-amber-800'
-    : pending || reusedDoc
+    : pending || reusedDoc || repWaived
       ? 'bg-brand-50 text-brand-600'
       : 'bg-gray-100 text-gray-400'
   const TileIcon = isSelfie ? MdCameraAlt : MdDescription
@@ -131,6 +139,8 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
     statusLine = <span className="text-brand-600 font-medium inline-flex items-center gap-1"><MdAutorenew size={13} className="animate-spin" /> {t('patient.request.docCard.saving')}</span>
   } else if (upload === 'error') {
     statusLine = <span className="text-red-600 font-medium">{t('patient.request.docCard.uploadFailed')}</span>
+  } else if (repWaived) {
+    statusLine = <span className="text-brand-600 font-medium inline-flex items-center gap-1"><MdCheckCircle size={13} /> {t('patient.request.selfieRepActive')}</span>
   } else if (needsRetake) {
     statusLine = <span className="text-amber-800 font-medium">{retakeReason}</span>
   } else if (poorPhoto && acked) {
@@ -154,7 +164,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[15px] font-semibold text-gray-900">
-            {tp.name}{!pending && !reusedDoc && <span className="text-red-400"> *</span>}
+            {tp.name}{!pending && !reusedDoc && !repWaived && <span className="text-red-400"> *</span>}
           </p>
           {statusLine && <p className="text-[13px] mt-0.5 break-words">{statusLine}</p>}
         </div>
@@ -185,12 +195,22 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
       )}
 
       {/* Primary action — attach / take selfie / guided ID photo (todo). */}
-      {!pending && !reusedDoc && (
+      {!pending && !reusedDoc && !repWaived && (
         isSelfie ? (
-          <button type="button" onClick={() => onSelfie(tp.name)}
-            className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
-            <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
-          </button>
+          <>
+            <button type="button" onClick={() => onSelfie(tp.name)}
+              className="w-full min-h-[44px] rounded-xl border border-brand-200 text-brand-600 text-sm font-semibold inline-flex items-center justify-center gap-1.5">
+              <MdCameraAlt size={16} /> {t('patient.request.takeSelfie')}
+            </button>
+            {/* Dignity path: a patient who can't take a selfie (bedridden,
+                injury, bandages) can have a representative file for them. */}
+            {onRepFiling && (
+              <button type="button" onClick={() => onRepFiling(true)}
+                className="self-center text-xs text-gray-500 underline underline-offset-2 min-h-[44px] inline-flex items-center text-center">
+                {t('patient.request.selfieRepLink')}
+              </button>
+            )}
+          </>
         ) : isId && onScanId ? (
           // Flag-on (VITE_PHILID_QR_ENABLED): one CTA opens the identity step,
           // which itself offers Scan National ID / Use another ID / type PCN.
@@ -221,6 +241,14 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
           </label>
         )
+      )}
+
+      {/* Waived selfie (representative filing) — let the patient switch back. */}
+      {repWaived && onRepFiling && (
+        <button type="button" onClick={() => onRepFiling(false)}
+          className="self-center text-xs text-gray-500 underline underline-offset-2 min-h-[44px] inline-flex items-center">
+          {t('patient.request.selfieRepUndo')}
+        </button>
       )}
 
       {needsRetake && (

@@ -474,7 +474,15 @@ export default function RequestAssistance() {
     myDocs.filter(d => d.status === 'verified').map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase())
   )
   const docForType = (name) => myDocs.find(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase())
+  // When a representative files for a patient who can't take their own live
+  // selfie (bedridden, hospitalised, face/hands bandaged), the patient's own
+  // selfie is exempt — the rep instead proves THEIR identity (rep ID + rep
+  // selfie + signed authorization, gated in step 2) and photographs the
+  // patient's physical ID. The patient's Valid ID stays required; only the
+  // self-captured selfie is waived. This is a higher bar than a selfie, not a
+  // bypass, and the social worker still verifies identity before endorsing.
   const isSatisfied = (tp) =>
+    (filedByRep && isSelfieType(tp.name)) ||
     !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
   const missingDocs = reqDocTypes.filter(tp => !isSatisfied(tp))
 
@@ -1004,6 +1012,8 @@ export default function RequestAssistance() {
               uploadState={uploadState}
               isIdType={isIdType}
               isSelfieType={isSelfieType}
+              filedByRep={filedByRep}
+              onRepFiling={setFiledByRep}
               qualityAck={qualityAck}
               onAckQuality={ackQuality}
               onAttach={attachReq}
