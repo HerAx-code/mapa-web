@@ -697,7 +697,8 @@
         "reused": "Reused from your last request · verified {{date}}",
         "saving": "Saving…",
         "uploadFailed": "Couldn't save — we'll keep it and retry",
-        "retakePhoto": "Retake photo"
+        "retakePhoto": "Retake photo",
+        "accepts": "Photo or PDF · PDF up to 650 KB"
       },
       "guidedId": {
         "titleFront": "Photo of your ID · Front",
@@ -754,6 +755,9 @@
       },
       "documentsTitle": "Required documents",
       "documentsHint": "Attach the documents below. CRMC verifies them before endorsing your request. Some (like a Valid ID) carry over once verified; your Billing Statement is needed each time.",
+      "identitySection": "Verify your identity",
+      "identitySectionHint": "Your ID and a live selfie, so CRMC can confirm it's really you.",
+      "docsSection": "Supporting documents",
       "documentsNone": "No required documents are configured. Contact CRMC.",
       "intakeTitle": "Household Information Sheet",
       "intakeTodo": "Fill in your family, income, and medical details so CRMC can assess your request.",
@@ -1128,6 +1132,11 @@
         "fundingNote": "The agency is reviewing the funding decision for your share."
       },
       "waitingDays": "Waiting {{count}}d",
+      "docsNeedFix": {
+        "title": "Action needed: re-upload a document",
+        "intro": "CRMC returned the following so they can verify your request:",
+        "btn": "Re-upload now"
+      },
       "banner": {
         "pending": "Your application has been received. The agency will review it soon — no action needed right now.",
         "interview": "You have an interview scheduled. Tap to see the details.",

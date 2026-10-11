@@ -697,7 +697,8 @@
         "reused": "Ginamit muli mula sa huling kahilingan · na-verify {{date}}",
         "saving": "Sine-save…",
         "uploadFailed": "Hindi na-save — itatago namin at susubukang muli",
-        "retakePhoto": "Kumuhang muli"
+        "retakePhoto": "Kumuhang muli",
+        "accepts": "Larawan o PDF · PDF hanggang 650 KB"
       },
       "guidedId": {
         "titleFront": "Litrato ng ID · Harap",
@@ -754,6 +755,9 @@
       },
       "documentsTitle": "Mga kinakailangang dokumento",
       "documentsHint": "Ilakip ang mga dokumento sa ibaba. Sinusuri ng CRMC ang mga ito bago i-endorso ang inyong kahilingan. Ang ilan (tulad ng Valid ID) ay magagamit muli kapag na-verify na; ang inyong Billing Statement ay kailangan sa bawat kahilingan.",
+      "identitySection": "I-verify ang iyong pagkakakilanlan",
+      "identitySectionHint": "Ang iyong ID at isang live na selfie, para makumpirma ng CRMC na ikaw nga.",
+      "docsSection": "Mga karagdagang dokumento",
       "documentsNone": "Walang naka-set up na kinakailangang dokumento. Makipag-ugnayan sa CRMC.",
       "intakeTitle": "Household Information Sheet",
       "intakeTodo": "Punan ang detalye ng inyong pamilya, kita, at medikal upang masuri ng CRMC ang inyong kahilingan.",
@@ -1128,6 +1132,11 @@
         "fundingNote": "Sinusuri ng ahensya ang desisyon sa pondo para sa inyong bahagi."
       },
       "waitingDays": "Naghihintay {{count}}d",
+      "docsNeedFix": {
+        "title": "Kailangan ng aksyon: mag-upload muli ng dokumento",
+        "intro": "Ibinalik ng CRMC ang mga sumusunod para ma-verify ang iyong hiling:",
+        "btn": "Mag-upload muli"
+      },
       "banner": {
         "pending": "Natanggap na ang inyong aplikasyon. Susuriin ito ng ahensya sa lalong madaling panahon — walang kailangang gawin sa ngayon.",
         "interview": "May naka-iskedyul kayong panayam. I-tap para tingnan ang mga detalye.",

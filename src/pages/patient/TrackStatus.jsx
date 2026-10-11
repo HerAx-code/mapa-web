@@ -343,6 +343,21 @@ export default function TrackStatus() {
     return unsub
   }, [activeRequest?.id])
 
+  // Documents on the active request — so we can flag any CRMC returned for a fix
+  // (status 'rejected') with its reason and a one-tap re-upload CTA, instead of
+  // the generic "being reviewed" banner.
+  const [reqDocs, setReqDocs] = useState([])
+  useEffect(() => {
+    const attachedIds = new Set((activeRequest?.attachedDocuments ?? []).map(a => a?.documentId).filter(Boolean))
+    if (!user || attachedIds.size === 0) { setReqDocs([]); return }
+    const unsub = onSnapshot(
+      query(collection(db, 'documents'), where('patientId', '==', user.uid)),
+      snap => setReqDocs(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => attachedIds.has(d.id))),
+      () => {},
+    )
+    return unsub
+  }, [user, activeRequest?.id])
+
   // R17/R18: shared isSliceTerminal lives in utils/requests so the
   // Dashboard's activeApp picker uses the same definition of "done".
   const activeApps = applications.filter(a => !isSliceTerminal(a, { isGLExpired }))
@@ -463,8 +478,33 @@ export default function TrackStatus() {
         {!loading && tab === 'active' && activeRequest && (() => {
           const funding = computeFunding(activeRequest.amountNeeded, reqSlices)
           const { committed, balance, pct } = funding
+          const rejectedReqDocs = reqDocs.filter(d => d.status === 'rejected')
           return (
             <div data-tour-id="track-request" className="space-y-5 mb-5">
+              {/* Action-first: if CRMC returned any document for a fix, surface
+                  exactly which one(s) + the reason + a one-tap re-upload, above
+                  everything else — it's the one thing the patient must do. */}
+              {rejectedReqDocs.length > 0 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-orange-800 flex items-center gap-2">
+                    <MdWarning size={16} className="flex-shrink-0" /> {t('patient.track.docsNeedFix.title')}
+                  </p>
+                  <p className="text-xs text-orange-700 mt-1">{t('patient.track.docsNeedFix.intro')}</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {rejectedReqDocs.map(d => (
+                      <li key={d.id} className="text-sm text-orange-900 leading-snug">
+                        <span className="font-medium">{d.documentTypeName || d.name}</span>
+                        {d.rejectionReason && <span className="text-orange-700"> — {d.rejectionReason}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="mt-3 inline-flex items-center min-h-[44px] bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 rounded-lg transition-colors"
+                    onClick={() => navigate('/patient/request')}>
+                    {t('patient.track.docsNeedFix.btn')} →
+                  </button>
+                </div>
+              )}
               {/* Glance-first: the same journey strip the Dashboard leads
                   with, so tapping through to Status keeps the "where am I"
                   anchor in view before the money + detailed stepper below. */}

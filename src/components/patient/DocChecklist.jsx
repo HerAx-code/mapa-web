@@ -1,5 +1,28 @@
-import { MdCameraAlt, MdUploadFile, MdClose, MdCheckCircle, MdDescription, MdWarningAmber, MdAutorenew } from 'react-icons/md'
+import { useEffect, useState } from 'react'
+import { MdCameraAlt, MdUploadFile, MdClose, MdCheckCircle, MdDescription, MdPictureAsPdf, MdWarningAmber, MdAutorenew, MdVerifiedUser, MdFolderOpen } from 'react-icons/md'
 import { LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
+
+// Object-URL preview for an attached image File, revoked on change/unmount so a
+// patient re-picking files on a phone doesn't leak blobs. null for PDFs / none.
+function useImagePreview(file) {
+  const [url, setUrl] = useState(null)
+  useEffect(() => {
+    if (file && file.type?.startsWith('image/')) {
+      const u = URL.createObjectURL(file)
+      setUrl(u)
+      return () => URL.revokeObjectURL(u)
+    }
+    setUrl(null)
+  }, [file])
+  return url
+}
+
+// Human file size: "0.4 MB" / "640 KB".
+function fmtSize(bytes) {
+  const b = Number(bytes) || 0
+  if (b >= 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`
+  return `${Math.max(1, Math.round(b / 1024))} KB`
+}
 
 /**
  * DocChecklist — the patient's required-documents step, as a clean card list
@@ -46,6 +69,36 @@ export default function DocChecklist({
     !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
   ).length
 
+  // Group the checklist the way the pros do: a cohesive "Verify your identity"
+  // step (your ID + a live selfie) separated from the supporting documents.
+  const identityTypes = docTypes.filter(tp => isIdType(tp.name) || isSelfieType(tp.name))
+  const otherTypes    = docTypes.filter(tp => !isIdType(tp.name) && !isSelfieType(tp.name))
+
+  const renderCard = (tp) => (
+    <DocCard
+      key={tp.id}
+      tp={tp}
+      pending={pendingFiles[tp.name]}
+      reusedDoc={tp.reusable && !pendingFiles[tp.name] && verifiedTypeNames.has(tp.name.toLowerCase()) ? docForType(tp.name) : null}
+      ocr={ocrResults[tp.name]}
+      ocrBusy={!!ocrRunning[tp.name]}
+      upload={uploadState[tp.name]}
+      isId={isIdType(tp.name)}
+      isSelfie={isSelfieType(tp.name)}
+      filedByRep={filedByRep}
+      onRepFiling={onRepFiling}
+      acked={!!qualityAck[tp.name]}
+      onAckQuality={onAckQuality}
+      onAttach={onAttach}
+      onSelfie={onSelfie}
+      onGuidedCapture={onGuidedCapture}
+      onScanId={onScanId}
+      onRemove={onRemove}
+      onRetryOcr={onRetryOcr}
+      t={t}
+    />
+  )
+
   return (
     <div>
       {/* Progress header — "N of M ready". The full wizard step bar is owned by
@@ -59,31 +112,24 @@ export default function DocChecklist({
       {docTypes.length === 0 ? (
         <p className="text-xs text-gray-500 italic">{t('patient.request.documentsNone')}</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {docTypes.map(tp => (
-            <DocCard
-              key={tp.id}
-              tp={tp}
-              pending={pendingFiles[tp.name]}
-              reusedDoc={tp.reusable && !pendingFiles[tp.name] && verifiedTypeNames.has(tp.name.toLowerCase()) ? docForType(tp.name) : null}
-              ocr={ocrResults[tp.name]}
-              ocrBusy={!!ocrRunning[tp.name]}
-              upload={uploadState[tp.name]}
-              isId={isIdType(tp.name)}
-              isSelfie={isSelfieType(tp.name)}
-              filedByRep={filedByRep}
-              onRepFiling={onRepFiling}
-              acked={!!qualityAck[tp.name]}
-              onAckQuality={onAckQuality}
-              onAttach={onAttach}
-              onSelfie={onSelfie}
-              onGuidedCapture={onGuidedCapture}
-              onScanId={onScanId}
-              onRemove={onRemove}
-              onRetryOcr={onRetryOcr}
-              t={t}
-            />
-          ))}
+        <div className="flex flex-col gap-5">
+          {identityTypes.length > 0 && (
+            <section>
+              <p className="text-[13px] font-semibold text-gray-800 flex items-center gap-1.5">
+                <MdVerifiedUser size={15} className="text-brand-600 flex-shrink-0" /> {t('patient.request.identitySection')}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5 mb-2.5">{t('patient.request.identitySectionHint')}</p>
+              <div className="flex flex-col gap-3">{identityTypes.map(renderCard)}</div>
+            </section>
+          )}
+          {otherTypes.length > 0 && (
+            <section>
+              <p className="text-[13px] font-semibold text-gray-800 flex items-center gap-1.5 mb-2.5">
+                <MdFolderOpen size={15} className="text-gray-500 flex-shrink-0" /> {t('patient.request.docsSection')}
+              </p>
+              <div className="flex flex-col gap-3">{otherTypes.map(renderCard)}</div>
+            </section>
+          )}
         </div>
       )}
     </div>
@@ -94,6 +140,8 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
   // The patient's own live selfie is waived when a representative is filing
   // (they can't self-capture). The card shows a satisfied, reassuring state.
   const repWaived = isSelfie && filedByRep && !pending
+  const previewUrl = useImagePreview(pending)
+  const isPdf = pending?.type === 'application/pdf'
   // "Doesn't look like an ID": no ID keyword, no name match, no face found.
   // hasFace must be explicitly false (null = couldn't run → no warn).
   const notAnId     = isId && ocr && !ocrBusy && ocr.hasFace === false && ocr.idType == null && ocr.match !== true
@@ -159,14 +207,27 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
   return (
     <div className={`bg-white rounded-2xl p-3 flex flex-col gap-2.5 ${cardCls}`}>
       <div className="flex items-center gap-3">
-        <div className={`w-13 h-13 flex-shrink-0 rounded-lg flex items-center justify-center ${tileCls}`} style={{ width: 52, height: 52 }}>
-          {needsRetake ? <MdWarningAmber size={24} /> : <TileIcon size={22} />}
+        {/* Thumbnail preview of the attached photo so the patient can confirm
+            they picked the right document; PDF icon for PDFs; warning/type icon
+            otherwise. */}
+        <div className={`w-13 h-13 flex-shrink-0 rounded-lg overflow-hidden flex items-center justify-center ${previewUrl ? 'bg-gray-100' : tileCls}`} style={{ width: 52, height: 52 }}>
+          {previewUrl
+            ? <img src={previewUrl} alt="" className="w-full h-full object-cover" />
+            : needsRetake ? <MdWarningAmber size={24} />
+            : isPdf ? <MdPictureAsPdf size={22} />
+            : <TileIcon size={22} />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[15px] font-semibold text-gray-900">
             {tp.name}{!pending && !reusedDoc && !repWaived && <span className="text-red-400"> *</span>}
           </p>
-          {statusLine && <p className="text-[13px] mt-0.5 break-words">{statusLine}</p>}
+          {/* aria-live so a screen reader announces ready / saving / error. */}
+          {statusLine && <p className="text-[13px] mt-0.5 break-words" aria-live="polite">{statusLine}</p>}
+          {/* Confirm-the-file line for PDFs (images are confirmed by the
+              thumbnail; captured photos have noisy auto-generated names). */}
+          {isPdf && pending?.name && (
+            <p className="text-[11px] text-gray-400 truncate">{pending.name} · {fmtSize(pending.size)}</p>
+          )}
         </div>
         {/* Right-aligned secondary action on ready/reused cards */}
         {pending && !needsRetake && upload == null && (
@@ -241,6 +302,11 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
             <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
           </label>
         )
+      )}
+
+      {/* Accepted formats, shown up front (not only on a failure toast). */}
+      {!pending && !reusedDoc && !repWaived && !isSelfie && (
+        <p className="text-[11px] text-gray-400 text-center">{t('patient.request.docCard.accepts')}</p>
       )}
 
       {/* Waived selfie (representative filing) — let the patient switch back. */}
