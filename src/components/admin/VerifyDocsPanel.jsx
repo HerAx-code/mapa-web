@@ -80,7 +80,9 @@ export default function VerifyDocsPanel({
       {reqDocs.length === 0 ? (
         <p className="text-sm text-gray-500 italic">No documents attached.</p>
       ) : (
-        <div className="space-y-2">
+        /* One bordered list with hairline dividers, not a stack of individually
+           boxed cards — reads as a scannable list instead of clutter. */
+        <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">
           {reqDocs.map(d => {
             const isId     = isIdType(d.documentTypeName ?? d.name)
             const isSelfie = isSelfieType(d.documentTypeName ?? d.name)
@@ -90,7 +92,7 @@ export default function VerifyDocsPanel({
             const showFace = isSelfie && (d.idVerifyMethod != null || d.faceMatch !== undefined || d.liveness !== undefined)
             const reviewed = (d.status === 'verified' || d.status === 'rejected') && d.reviewedAt
             return (
-              <div key={d.id} className="p-2.5 rounded-lg border border-gray-100">
+              <div key={d.id} className="p-3">
                 <div className="flex items-center gap-2">
                   <MdDescription size={16} className="text-gray-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -243,14 +245,14 @@ function PhotoTile({ label, doc, icon, onView }) {
       <div className="text-[13px] font-semibold text-gray-700">{label}</div>
       {doc ? (
         <button type="button" onClick={() => onView?.(doc)}
-          className="group relative h-44 rounded-xl bg-gray-100 border border-gray-200 hover:border-brand-300 flex flex-col items-center justify-center gap-1.5 text-gray-400">
+          className="group relative h-32 rounded-xl bg-gray-100 border border-gray-200 hover:border-brand-300 flex flex-col items-center justify-center gap-1.5 text-gray-400">
           <Icon size={40} />
           <span className="text-xs font-medium text-brand-600 inline-flex items-center gap-1">
             <MdOpenInNew size={13} /> View
           </span>
         </button>
       ) : (
-        <div className="h-44 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-400 text-center px-3">
+        <div className="h-32 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-400 text-center px-3">
           Not provided yet
         </div>
       )}
@@ -303,19 +305,27 @@ function IdentityReview({ idDoc, selfieDoc, accountName, busy, onView, onCompare
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
-        <PhotoTile label="Photo from ID" doc={idDoc} icon={MdBadge} onView={onView} />
-        <PhotoTile label="Live selfie" doc={selfieDoc} icon={MdFace} onView={onView} />
-        <div className="flex flex-col gap-2.5">
-          <div className="text-[13px] font-semibold text-gray-700">Checks</div>
-          <CheckRow label="ID source" value={src.label} tone={src.tone} />
-          <CheckRow label="Name vs account" value={nameCheck.value} tone={nameCheck.tone} />
-          <CheckRow label="Face match" value={faceCheck.value} tone={faceCheck.tone} />
-          <CheckRow label="Liveness" value={liveCheck.value} tone={liveCheck.tone} />
-          {idDoc?.pcnFingerprint && (
-            <CheckRow label="Card used by another account" value="No automatic cross-check — verify at counter" tone="text-gray-500" />
-          )}
-          <CheckRow label="Access code" value="Issued in person · ID seen at counter" last />
+      {/* Compact thumbnails (launchers for View / the side-by-side compare) on
+          the left; the advisory checks get the remaining width on the right so
+          their values read on one line instead of wrapping into fragments the
+          old cramped third column produced ("Not auto-/matched —/check"). */}
+      <div className="mt-3 flex flex-col sm:flex-row gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:w-64 flex-shrink-0">
+          <PhotoTile label="Photo from ID" doc={idDoc} icon={MdBadge} onView={onView} />
+          <PhotoTile label="Live selfie" doc={selfieDoc} icon={MdFace} onView={onView} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[13px] font-semibold text-gray-700 mb-2">Checks</div>
+          <div className="flex flex-col gap-2">
+            <CheckRow label="ID source" value={src.label} tone={src.tone} />
+            <CheckRow label="Name vs account" value={nameCheck.value} tone={nameCheck.tone} />
+            <CheckRow label="Face match" value={faceCheck.value} tone={faceCheck.tone} />
+            <CheckRow label="Liveness" value={liveCheck.value} tone={liveCheck.tone} />
+            {idDoc?.pcnFingerprint && (
+              <CheckRow label="Card used by another account" value="No automatic cross-check — verify at counter" tone="text-gray-500" />
+            )}
+            <CheckRow label="Access code" value="Issued in person · ID seen at counter" last />
+          </div>
         </div>
       </div>
 
