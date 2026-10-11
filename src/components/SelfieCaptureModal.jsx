@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { MdClose, MdCameraAlt, MdRefresh, MdCheckCircle, MdWarning, MdRadioButtonUnchecked } from 'react-icons/md'
 import { checkLiveness } from '../utils/faceCheck'
 import { assessFrame, isBlackFrame } from '../utils/imageQuality'
+import CaptureHint from './capture/CaptureHint'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 
@@ -212,13 +213,14 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
             <div className="px-6 pb-4 flex flex-col gap-2 flex-shrink-0 min-h-[64px]">
               {!preview ? (
                 lightState && (
-                  <div className="flex items-center gap-2.5 text-sm">
-                    {lightState === 'good'
-                      ? <span className="w-[22px] h-[22px] rounded-full bg-[#0F6E56] flex items-center justify-center flex-shrink-0"><MdCheckCircle size={14} /></span>
-                      : <span className="w-[22px] h-[22px] rounded-full bg-amber-500/90 flex items-center justify-center flex-shrink-0"><MdWarning size={13} /></span>}
-                    {lightState === 'good'
-                      ? t('patient.request.selfieLightGood')
-                      : lightState === 'glare' ? t('patient.request.exposureGlare') : t('patient.request.exposureDark')}
+                  // Shared capture-hint pill (same language as the ID capture).
+                  <div className="flex">
+                    <CaptureHint
+                      ok={lightState === 'good'}
+                      warn={lightState !== 'good'}
+                      label={lightState === 'good'
+                        ? t('patient.request.selfieLightGood')
+                        : lightState === 'glare' ? t('patient.request.exposureGlare') : t('patient.request.exposureDark')} />
                   </div>
                 )
               ) : livenessEnabled ? (
