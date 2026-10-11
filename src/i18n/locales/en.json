@@ -697,7 +697,8 @@
         "reused": "Reused from your last request · verified {{date}}",
         "saving": "Saving…",
         "uploadFailed": "Couldn't save — we'll keep it and retry",
-        "retakePhoto": "Retake photo"
+        "retakePhoto": "Retake photo",
+        "accepts": "Photo or PDF · PDF up to 650 KB"
       },
       "guidedId": {
         "titleFront": "Photo of your ID · Front",

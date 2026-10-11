@@ -697,7 +697,8 @@
         "reused": "Ginamit muli mula sa huling kahilingan · na-verify {{date}}",
         "saving": "Sine-save…",
         "uploadFailed": "Hindi na-save — itatago namin at susubukang muli",
-        "retakePhoto": "Kumuhang muli"
+        "retakePhoto": "Kumuhang muli",
+        "accepts": "Larawan o PDF · PDF hanggang 650 KB"
       },
       "guidedId": {
         "titleFront": "Litrato ng ID · Harap",
