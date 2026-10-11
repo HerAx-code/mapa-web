@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MdCameraAlt, MdUploadFile, MdClose, MdCheckCircle, MdDescription, MdPictureAsPdf, MdWarningAmber, MdAutorenew } from 'react-icons/md'
+import { MdCameraAlt, MdUploadFile, MdClose, MdCheckCircle, MdDescription, MdPictureAsPdf, MdWarningAmber, MdAutorenew, MdVerifiedUser, MdFolderOpen } from 'react-icons/md'
 import { LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 
 // Object-URL preview for an attached image File, revoked on change/unmount so a
@@ -69,6 +69,36 @@ export default function DocChecklist({
     !!pendingFiles[tp.name] || (tp.reusable && verifiedTypeNames.has(tp.name.toLowerCase()))
   ).length
 
+  // Group the checklist the way the pros do: a cohesive "Verify your identity"
+  // step (your ID + a live selfie) separated from the supporting documents.
+  const identityTypes = docTypes.filter(tp => isIdType(tp.name) || isSelfieType(tp.name))
+  const otherTypes    = docTypes.filter(tp => !isIdType(tp.name) && !isSelfieType(tp.name))
+
+  const renderCard = (tp) => (
+    <DocCard
+      key={tp.id}
+      tp={tp}
+      pending={pendingFiles[tp.name]}
+      reusedDoc={tp.reusable && !pendingFiles[tp.name] && verifiedTypeNames.has(tp.name.toLowerCase()) ? docForType(tp.name) : null}
+      ocr={ocrResults[tp.name]}
+      ocrBusy={!!ocrRunning[tp.name]}
+      upload={uploadState[tp.name]}
+      isId={isIdType(tp.name)}
+      isSelfie={isSelfieType(tp.name)}
+      filedByRep={filedByRep}
+      onRepFiling={onRepFiling}
+      acked={!!qualityAck[tp.name]}
+      onAckQuality={onAckQuality}
+      onAttach={onAttach}
+      onSelfie={onSelfie}
+      onGuidedCapture={onGuidedCapture}
+      onScanId={onScanId}
+      onRemove={onRemove}
+      onRetryOcr={onRetryOcr}
+      t={t}
+    />
+  )
+
   return (
     <div>
       {/* Progress header — "N of M ready". The full wizard step bar is owned by
@@ -82,31 +112,24 @@ export default function DocChecklist({
       {docTypes.length === 0 ? (
         <p className="text-xs text-gray-500 italic">{t('patient.request.documentsNone')}</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {docTypes.map(tp => (
-            <DocCard
-              key={tp.id}
-              tp={tp}
-              pending={pendingFiles[tp.name]}
-              reusedDoc={tp.reusable && !pendingFiles[tp.name] && verifiedTypeNames.has(tp.name.toLowerCase()) ? docForType(tp.name) : null}
-              ocr={ocrResults[tp.name]}
-              ocrBusy={!!ocrRunning[tp.name]}
-              upload={uploadState[tp.name]}
-              isId={isIdType(tp.name)}
-              isSelfie={isSelfieType(tp.name)}
-              filedByRep={filedByRep}
-              onRepFiling={onRepFiling}
-              acked={!!qualityAck[tp.name]}
-              onAckQuality={onAckQuality}
-              onAttach={onAttach}
-              onSelfie={onSelfie}
-              onGuidedCapture={onGuidedCapture}
-              onScanId={onScanId}
-              onRemove={onRemove}
-              onRetryOcr={onRetryOcr}
-              t={t}
-            />
-          ))}
+        <div className="flex flex-col gap-5">
+          {identityTypes.length > 0 && (
+            <section>
+              <p className="text-[13px] font-semibold text-gray-800 flex items-center gap-1.5">
+                <MdVerifiedUser size={15} className="text-brand-600 flex-shrink-0" /> {t('patient.request.identitySection')}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5 mb-2.5">{t('patient.request.identitySectionHint')}</p>
+              <div className="flex flex-col gap-3">{identityTypes.map(renderCard)}</div>
+            </section>
+          )}
+          {otherTypes.length > 0 && (
+            <section>
+              <p className="text-[13px] font-semibold text-gray-800 flex items-center gap-1.5 mb-2.5">
+                <MdFolderOpen size={15} className="text-gray-500 flex-shrink-0" /> {t('patient.request.docsSection')}
+              </p>
+              <div className="flex flex-col gap-3">{otherTypes.map(renderCard)}</div>
+            </section>
+          )}
         </div>
       )}
     </div>
