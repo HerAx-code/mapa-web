@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MdClose, MdCameraAlt, MdWarning, MdCheckCircle, MdUploadFile, MdRefresh } from 'react-icons/md'
+import { MdClose, MdCameraAlt, MdWarning, MdUploadFile, MdRefresh } from 'react-icons/md'
 import { assessFrame, isBlackFrame } from '../../utils/imageQuality'
+import CaptureHint from '../capture/CaptureHint'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 
@@ -136,14 +137,6 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
     onClose()
   }
 
-  const Chip = ({ ok, warn, label }) => (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-      warn ? 'bg-amber-100 text-amber-800' : ok ? 'bg-brand-50 text-brand-700' : 'bg-white/80 text-gray-500'
-    }`}>
-      {warn ? <MdWarning size={13} /> : ok ? <MdCheckCircle size={13} /> : null}{label}
-    </span>
-  )
-
   return (
     <div className="fixed inset-0 bg-black/60 z-[200] flex items-end sm:items-center justify-center sm:p-4"
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -195,9 +188,9 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
                 <video ref={videoRef} playsInline muted className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-3 rounded-lg border-2 border-white/80 pointer-events-none" />
                 <div className="absolute left-2 right-2 bottom-2 flex flex-wrap gap-1.5">
-                  <Chip ok={live.sharp}  label={t('patient.request.guidedId.sharp')} />
-                  <Chip ok={live.bright} label={t('patient.request.guidedId.bright')} />
-                  {live.glare && <Chip warn label={t('patient.request.guidedId.glare')} />}
+                  <CaptureHint ok={live.sharp}  label={t('patient.request.guidedId.sharp')} />
+                  <CaptureHint ok={live.bright} label={t('patient.request.guidedId.bright')} />
+                  {live.glare && <CaptureHint warn label={t('patient.request.guidedId.glare')} />}
                 </div>
               </div>
               <p className="text-xs text-gray-500">{t('patient.request.guidedId.captureHint')}</p>
