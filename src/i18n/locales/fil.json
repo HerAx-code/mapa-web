@@ -1129,6 +1129,11 @@
         "fundingNote": "Sinusuri ng ahensya ang desisyon sa pondo para sa inyong bahagi."
       },
       "waitingDays": "Naghihintay {{count}}d",
+      "docsNeedFix": {
+        "title": "Kailangan ng aksyon: mag-upload muli ng dokumento",
+        "intro": "Ibinalik ng CRMC ang mga sumusunod para ma-verify ang iyong hiling:",
+        "btn": "Mag-upload muli"
+      },
       "banner": {
         "pending": "Natanggap na ang inyong aplikasyon. Susuriin ito ng ahensya sa lalong madaling panahon — walang kailangang gawin sa ngayon.",
         "interview": "May naka-iskedyul kayong panayam. I-tap para tingnan ang mga detalye.",

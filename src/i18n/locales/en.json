@@ -1129,6 +1129,11 @@
         "fundingNote": "The agency is reviewing the funding decision for your share."
       },
       "waitingDays": "Waiting {{count}}d",
+      "docsNeedFix": {
+        "title": "Action needed: re-upload a document",
+        "intro": "CRMC returned the following so they can verify your request:",
+        "btn": "Re-upload now"
+      },
       "banner": {
         "pending": "Your application has been received. The agency will review it soon — no action needed right now.",
         "interview": "You have an interview scheduled. Tap to see the details.",
