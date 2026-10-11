@@ -80,7 +80,9 @@ export default function VerifyDocsPanel({
       {reqDocs.length === 0 ? (
         <p className="text-sm text-gray-500 italic">No documents attached.</p>
       ) : (
-        <div className="space-y-2">
+        /* One bordered list with hairline dividers, not a stack of individually
+           boxed cards — reads as a scannable list instead of clutter. */
+        <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">
           {reqDocs.map(d => {
             const isId     = isIdType(d.documentTypeName ?? d.name)
             const isSelfie = isSelfieType(d.documentTypeName ?? d.name)
@@ -90,7 +92,7 @@ export default function VerifyDocsPanel({
             const showFace = isSelfie && (d.idVerifyMethod != null || d.faceMatch !== undefined || d.liveness !== undefined)
             const reviewed = (d.status === 'verified' || d.status === 'rejected') && d.reviewedAt
             return (
-              <div key={d.id} className="p-2.5 rounded-lg border border-gray-100">
+              <div key={d.id} className="p-3">
                 <div className="flex items-center gap-2">
                   <MdDescription size={16} className="text-gray-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
