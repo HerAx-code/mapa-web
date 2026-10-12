@@ -8,7 +8,7 @@
  *   - agencies          (6: 5 funders + Malasakit as a disabled hub)
  *   - documentTypes     (8 patient-uploadable document categories)
  *   - assistanceTypes   (8 categories of medical assistance)
- *   - hospitalIds       (20 demo CRMC Access Codes)
+ *   - hospitalIds       (20 demo Patient Access Codes)
  *
  * This used to live inside src/pages/Seed.jsx and ran in the browser
  * with a super_admin session. That flow stayed compatible after the
@@ -40,6 +40,9 @@
 
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+// Single source of truth for the doc + assistance catalogs (shared with the app
+// and src/pages/Seed.jsx). Agencies stay inline here for now (separate cleanup).
+import { DOCUMENT_TYPES, ASSISTANCE_TYPES, CORE_DOC_IDS } from '../src/data/referenceData.js'
 
 // ── Canonical reference data ─────────────────────────────────────
 // Kept in sync with src/pages/Seed.jsx by convention. If a row drifts
@@ -62,7 +65,7 @@ const SEED_AGENCIES = [
   // where DOH, DSWD, PCSO and PhilHealth receive and process requests. It
   // holds no appropriation for direct patient assistance -- its budget
   // line is personnel + facilities only. In MAPA that hub function is
-  // performed by the CRMC gateway role itself, so this entry is seeded
+  // performed by the gateway role itself, so this entry is seeded
   // DISABLED and exists for historical records, not new endorsements.
   // Citation trail: docs/malasakit-center-research-2026-07-23.md.
   {
@@ -71,12 +74,12 @@ const SEED_AGENCIES = [
     initials:        'MC',
     color:           'bg-brand-500',
     logoUrl:         null,
-    description:     'Coordination hub, not a funding source. Under RA 11463 and JAO 2020-0001 the Malasakit Center is a co-located one-stop shop where DOH, DSWD, PCSO and PhilHealth receive and process requests; it holds no appropriation for direct patient assistance. In MAPA this function is performed by the CRMC gateway role itself, so the Center is retained here for historical records only and is not available for new endorsements.',
+    description:     'Coordination hub, not a funding source. Under RA 11463 and JAO 2020-0001 the Malasakit Center is a co-located one-stop shop where DOH, DSWD, PCSO and PhilHealth receive and process requests; it holds no appropriation for direct patient assistance. In MAPA this function is performed by the gateway role itself, so the Center is retained here for historical records only and is not available for new endorsements.',
     // R32: structured location (BARMM cascading dropdowns).
     province:        'Cotabato City',
     city:            'Cotabato City',
-    officeName:      'CRMC Ground Floor',
-    location:        'CRMC Ground Floor, Cotabato City',
+    officeName:      'Hospital Ground Floor',
+    location:        'Hospital Ground Floor, Cotabato City',
     phone:           '064-421-2500',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID','Medical Abstract'],
@@ -96,8 +99,8 @@ const SEED_AGENCIES = [
     description:     'Medical Assistance for Indigent and Financially-Incapacitated Patients (MAIP), charged to the Department of Health under RA 11463.',
     province:        'Cotabato City',
     city:            'Cotabato City',
-    officeName:      'DOH Desk, CRMC Ground Floor',
-    location:        'DOH Desk, CRMC Ground Floor, Cotabato City',
+    officeName:      'DOH Desk, Hospital Ground Floor',
+    location:        'DOH Desk, Hospital Ground Floor, Cotabato City',
     phone:           '064-421-2800',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID'],
@@ -123,8 +126,8 @@ const SEED_AGENCIES = [
     description:     'National Health Insurance Fund (NHIF). Under RA 11463 Order of Charging, PhilHealth coverage is applied FIRST to reduce the bill before other agencies fund the balance.',
     province:        'Cotabato City',
     city:            'Cotabato City',
-    officeName:      'PhilHealth Desk, CRMC Ground Floor',
-    location:        'PhilHealth Desk, CRMC Ground Floor, Cotabato City',
+    officeName:      'PhilHealth Desk, Hospital Ground Floor',
+    location:        'PhilHealth Desk, Hospital Ground Floor, Cotabato City',
     phone:           '064-421-2900',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['PhilHealth ID','Valid ID'],
@@ -143,7 +146,7 @@ const SEED_AGENCIES = [
     initials:        'AM',
     color:           'bg-purple-600',
     logoUrl:         null,
-    description:     'Zero balance billing for marginalized patients at CRMC and partner hospitals under the BARMM government.',
+    description:     'Zero balance billing for marginalized patients at partner hospitals under the BARMM government.',
     province:        'Cotabato City',
     city:            'Cotabato City',
     officeName:      'BARMM Admin Building',
@@ -166,8 +169,8 @@ const SEED_AGENCIES = [
     description:     'Issues guarantee letters covering hospital confinement, dialysis, chemotherapy/radiation, surgery and implants, essential medicines, and laboratory/diagnostic procedures.',
     province:        'Cotabato City',
     city:            'Cotabato City',
-    officeName:      'Social Services Department, CRMC',
-    location:        'Social Services Department, CRMC',
+    officeName:      'Social Services Department',
+    location:        'Social Services Department',
     phone:           '064-421-2600',
     requirements:    ['Medical Certificate','Laboratory Results','PhilHealth ID','Valid ID'],
     slots:           { total: 20, remaining: 20 },
@@ -185,8 +188,8 @@ const SEED_AGENCIES = [
     description:     'Assistance to Individuals in Crisis Situations (AICS): guarantee letters to hospitals and funeral homes covering hospital bills, medicines, laboratory/diagnostics, emergency medical needs, and burial assistance.',
     province:        'Cotabato City',
     city:            'Cotabato City',
-    officeName:      'Social Welfare Office, CRMC',
-    location:        'Social Welfare Office, CRMC',
+    officeName:      'Social Welfare Office',
+    location:        'Social Welfare Office',
     phone:           '064-421-2700',
     slots:           { total: 25, remaining: 25 },
     requirements:    ['Barangay Certificate of Indigency','Valid ID','Crisis Documentation'],
@@ -197,43 +200,22 @@ const SEED_AGENCIES = [
   },
 ]
 
-const SEED_DOC_TYPES = [
-  { name: 'Valid ID',                          description: 'Any government-issued ID',                    required: true,  order: 0 },
-  { name: 'Barangay Certificate of Indigency', description: 'Issued by the barangay',                      required: true,  order: 1 },
-  { name: 'Hospital Billing Statement',        description: 'Statement of account from the hospital',       required: true,  order: 2 },
-  { name: 'Medical Abstract',                  description: 'Summary of medical condition and treatment',   required: false, order: 3 },
-  { name: 'PhilHealth ID',                     description: 'PhilHealth membership card',                   required: false, order: 4 },
-  { name: 'Medical Certificate',               description: 'Certified by a licensed physician',            required: false, order: 5 },
-  { name: 'Laboratory Results',                description: 'Latest diagnostic or lab results',             required: false, order: 6 },
-  { name: 'Crisis Documentation',              description: 'Documentation proving crisis situation',        required: false, order: 7 },
-]
+// Document + assistance catalogs come from src/data/referenceData.js (imported
+// above) — no inline copies here. The legacy flat checklist still needs a
+// `required` flag + `order`, derived from the canonical core set + array order.
 
-const SEED_ASSISTANCE_TYPES = [
-  { name: 'Hospital Bills / Hospitalization', description: 'Financial assistance for hospital confinement and related expenses', order: 0 },
-  { name: 'Medicines',                        description: 'Support for prescription medications',                               order: 1 },
-  { name: 'Chemotherapy',                     description: 'Support for cancer treatment and chemotherapy sessions',             order: 2 },
-  { name: 'Dialysis',                         description: 'Assistance for kidney dialysis treatments',                         order: 3 },
-  { name: 'Laboratory Tests',                 description: 'Coverage for diagnostic tests and laboratory procedures',            order: 4 },
-  { name: 'Surgery / Medical Procedures',     description: 'Financial support for surgical operations',                         order: 5 },
-  { name: 'Emergency Medical Assistance',     description: 'Immediate support for emergency medical situations',                 order: 6 },
-  { name: 'Burial Assistance',                description: 'Financial support for funeral and burial expenses',                  order: 7 },
-]
-
-const SEED_IDS = [
-  'CRMC-2026-00001', 'CRMC-2026-00002', 'CRMC-2026-00003',
-  'CRMC-2026-00004', 'CRMC-2026-00005', 'CRMC-2026-00006',
-  'CRMC-2026-00007', 'CRMC-2026-00008', 'CRMC-2026-00009',
-  'CRMC-2026-00010', 'CRMC-2026-00011', 'CRMC-2026-00012',
-  'CRMC-2026-00013', 'CRMC-2026-00014', 'CRMC-2026-00015',
-  'CRMC-2026-00016', 'CRMC-2026-00017', 'CRMC-2026-00018',
-  'CRMC-2026-00019', 'CRMC-2026-00020',
-]
+// 20 demo access codes under the active issuing prefix (MAPA-YYYY-NNNNN).
+const CODE_PREFIX = process.env.ACCESS_CODE_PREFIX || 'MAPA'
+const CODE_YEAR = new Date().getFullYear()
+const SEED_IDS = Array.from({ length: 20 }, (_, i) =>
+  `${CODE_PREFIX}-${CODE_YEAR}-${String(i + 1).padStart(5, '0')}`
+)
 
 initializeApp({ credential: applicationDefault() })
 const db = getFirestore()
 
-// Slugify a name into a deterministic doc id so re-running is idempotent.
-const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+// Doc ids are the canonical slugs defined in referenceData.js; agency ids are
+// explicit. No local slug helper needed.
 
 async function seedAgencies() {
   let written = 0
@@ -255,11 +237,16 @@ async function seedAgencies() {
 
 async function seedDocTypes() {
   let written = 0
-  for (const dt of SEED_DOC_TYPES) {
-    const id = slug(dt.name)
-    await db.doc(`documentTypes/${id}`).set({
-      ...dt,
-      createdAt: FieldValue.serverTimestamp(),
+  // Derive the legacy flat-checklist fields from the canonical catalog:
+  // core docs are `required: true`, order follows the array.
+  for (const [i, dt] of DOCUMENT_TYPES.entries()) {
+    await db.doc(`documentTypes/${dt.id}`).set({
+      name:        dt.name,
+      description: dt.description,
+      reusable:    !!dt.reusable,
+      required:    CORE_DOC_IDS.includes(dt.id),
+      order:       i,
+      createdAt:   FieldValue.serverTimestamp(),
     }, { merge: true })
     written++
   }
@@ -269,11 +256,12 @@ async function seedDocTypes() {
 
 async function seedAssistanceTypes() {
   let written = 0
-  for (const at of SEED_ASSISTANCE_TYPES) {
-    const id = slug(at.name)
-    await db.doc(`assistanceTypes/${id}`).set({
-      ...at,
-      createdAt: FieldValue.serverTimestamp(),
+  for (const at of ASSISTANCE_TYPES) {
+    await db.doc(`assistanceTypes/${at.id}`).set({
+      name:        at.name,
+      description: at.description,
+      order:       at.order,
+      createdAt:   FieldValue.serverTimestamp(),
     }, { merge: true })
     written++
   }

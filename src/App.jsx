@@ -63,8 +63,6 @@ const Patients         = lazy(() => import('./pages/admin/Patients'))
 const HospitalIDs      = lazy(() => import('./pages/admin/HospitalIDs'))
 const Agencies         = lazy(() => import('./pages/admin/Agencies'))
 const Accounts         = lazy(() => import('./pages/admin/Accounts'))
-const DocTypes         = lazy(() => import('./pages/admin/DocTypes'))
-const AssistanceTypes  = lazy(() => import('./pages/admin/AssistanceTypes'))
 const AppLogs          = lazy(() => import('./pages/admin/AppLogs'))
 const AdminMessages    = lazy(() => import('./pages/admin/Messages'))
 const Reports          = lazy(() => import('./pages/admin/Reports'))
@@ -160,8 +158,7 @@ export default function App() {
               under /admin/agencies/:id. Redirect handles any stale bookmarks. */}
           <Route path="/admin/coordinators" element={<Navigate to="/admin/agencies" replace />} />
           <Route path="/admin/accounts"   element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><Accounts /></PrivateRoute>} />
-          <Route path="/admin/doctypes"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><DocTypes /></PrivateRoute>} />
-          <Route path="/admin/assistance" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AssistanceTypes /></PrivateRoute>} />
+          {/* Assistance Types + Document Types are now seeded config (src/data/referenceData.js), not live-editable; their admin pages were removed. */}
           <Route path="/admin/logs"       element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AppLogs /></PrivateRoute>} />
           <Route path="/admin/export"             element={<PrivateRoute allowedRoles={ADMIN_ROLES}><ExportPage /></PrivateRoute>} />
           <Route path="/admin/export/:type"       element={<PrivateRoute allowedRoles={ADMIN_ROLES}><ExportPreview /></PrivateRoute>} />

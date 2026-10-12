@@ -304,7 +304,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
             <label className="block text-xs font-medium text-gray-700 mb-2">Requirements</label>
             {docTypesList.length === 0 ? (
               <p className="text-xs text-gray-500 italic">
-                No document types defined. Add them in the Document Types page first.
+                No document types available yet. They are seeded by the system.
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
@@ -324,7 +324,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
             <label className="block text-xs font-medium text-gray-700 mb-2">Assistance Types</label>
             {typesList.length === 0 ? (
               <p className="text-xs text-gray-500 italic">
-                No assistance types defined. Add them in the Assistance Types page first.
+                No assistance types available yet. They are seeded by the system.
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">

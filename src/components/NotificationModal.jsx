@@ -87,12 +87,14 @@ export const getNotifRoute = (type, role) => {
     agency_enabled:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
     agency_disabled:         isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
     agency_deleted:          isAdmin   ? '/admin/agencies'     : null,
-    doctype_added:           isAdmin   ? '/admin/doctypes'     : null,
-    doctype_updated:         isAdmin   ? '/admin/doctypes'     : null,
-    doctype_deleted:         isAdmin   ? '/admin/doctypes'     : null,
-    assistance_added:        isAdmin   ? '/admin/assistance'   : null,
-    assistance_updated:      isAdmin   ? '/admin/assistance'   : null,
-    assistance_deleted:      isAdmin   ? '/admin/assistance'   : null,
+    // Assistance/Document Types admin pages were removed (now seeded config);
+    // these legacy notification types no longer deep-link anywhere.
+    doctype_added:           null,
+    doctype_updated:         null,
+    doctype_deleted:         null,
+    assistance_added:        null,
+    assistance_updated:      null,
+    assistance_deleted:      null,
 
     // ── Misc ──
     report_submitted:        isAdmin   ? '/admin/reports'      : null,
