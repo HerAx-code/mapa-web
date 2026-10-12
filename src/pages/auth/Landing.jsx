@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
+import { accessCodePrefixFor } from '../../config/org'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import {
@@ -293,7 +294,7 @@ export default function Landing() {
                 <p className="mt-2 text-sm leading-relaxed text-gray-600">{t('landing.eligibility.codeBody')}</p>
                 <div className="mt-5 rounded-xl border border-dashed border-amber-400 bg-white px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{t('landing.eligibility.codeSample')}</p>
-                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">CRMC-2026-00042</p>
+                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">{accessCodePrefixFor(new Date().getFullYear())}00042</p>
                 </div>
                 <a href="#help" className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
                   {t('landing.eligibility.codeCta')} <MdChevronRight size={16} />

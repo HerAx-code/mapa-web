@@ -14,6 +14,7 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from 'firebase/auth'
+import { ORG } from '../config/org'
 
 // Roles for which MFA is expected. Patients are intentionally absent.
 export const MFA_ROLES = ['super_admin', 'staff_admin', 'agency_admin', 'agency']
@@ -44,7 +45,7 @@ export async function reauthWithPassword(fbUser, password) {
 
 // Begin TOTP enrollment: returns the secret (kept by the caller for the verify
 // step), an otpauth:// URL to render as a QR, and the manual-entry key.
-export async function startTotpEnrollment(fbUser, { issuer = 'MAPA (CRMC)' } = {}) {
+export async function startTotpEnrollment(fbUser, { issuer = ORG.name } = {}) {
   const session = await multiFactor(fbUser).getSession()
   const secret = await TotpMultiFactorGenerator.generateSecret(session)
   const qrUrl = secret.generateQrCodeUrl(fbUser.email ?? 'MAPA account', issuer)

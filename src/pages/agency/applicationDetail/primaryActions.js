@@ -35,7 +35,7 @@ export function getPrimaryActions(ctx) {
 
   if (app.status === 'reviewing') {
     return {
-      hint: 'CRMC verified the documents and completed the assessment. Approve your share and issue the GL, request more info, or reject.',
+      hint: 'The documents were verified and the assessment completed. Approve your share and issue the GL, request more info, or reject.',
       tone: 'brand',
       actions: [
         { label: 'Approve & Issue GL', icon: MdCheckCircle,     variant: 'primary-green', onClick: () => handlers.setShowApprove(true) },

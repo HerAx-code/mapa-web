@@ -10,6 +10,7 @@ import {
 import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
+import { ORG } from '../../config/org'
 import { tsToDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
@@ -284,7 +285,7 @@ export default function Patients() {
         type:  newDeletion ? 'account_deactivated' : 'account_activated',
         title: newDeletion ? 'Account marked for deletion' : 'Account restored',
         body:  newDeletion
-          ? 'Your account has been marked for deletion by the administrator. Contact CRMC for assistance.'
+          ? `Your account has been marked for deletion by the administrator. Contact ${ORG.gatewayName} for assistance.`
           : 'Your account has been restored and is now active.',
       })
       logAudit(adminUser, { action: newDeletion ? 'patient_marked' : 'patient_unmarked', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newDeletion ? 'Marked for deletion' : 'Restored to active' })

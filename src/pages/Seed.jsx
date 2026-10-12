@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { doc, setDoc, collection, getDocs, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
+import { accessCodePrefixFor } from '../config/org'
 
 const SEED_AGENCIES = [
-  { id: 'malasakit', name: 'Malasakit Center',  initials: 'MC', color: 'bg-brand-500',  description: 'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.', location: 'CRMC Ground Floor, Cotabato City', phone: '064-421-2500', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID','Medical Abstract'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'], processingTime: 'Same Day', enabled: true },
-  { id: 'ambag',     name: 'AMBaG Program',      initials: 'AM', color: 'bg-purple-600', description: 'Zero balance billing for marginalized patients at CRMC and partner hospitals under the BARMM government.', location: 'BARMM Admin Building, Cotabato City', phone: '064-421-3000', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','PhilHealth ID','Valid ID'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Dialysis','Chemotherapy','Laboratory Tests','Surgery / Medical Procedures'], processingTime: '3–5 Days', enabled: true },
-  { id: 'pcso',      name: 'PCSO MAP',            initials: 'PC', color: 'bg-red-600',    description: 'Issues guarantee letters covering hospital confinement, dialysis, chemotherapy/radiation, surgery and implants, essential medicines, and laboratory/diagnostic procedures.', location: 'Social Services Department, CRMC', phone: '064-421-2600', slots: { total: 20, remaining: 20 }, requirements: ['Medical Certificate','Laboratory Results','PhilHealth ID','Valid ID'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Chemotherapy','Dialysis','Laboratory Tests','Surgery / Medical Procedures'], processingTime: '5–7 Days', enabled: true },
-  { id: 'dswd',      name: 'DSWD AICS',           initials: 'DS', color: 'bg-blue-600',   description: 'Assistance to Individuals in Crisis Situations (AICS): guarantee letters to hospitals and funeral homes covering hospital bills, medicines, laboratory/diagnostics, emergency medical needs, and burial assistance.', location: 'Social Welfare Office, CRMC', phone: '064-421-2700', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','Valid ID','Crisis Documentation'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Emergency Medical Assistance','Burial Assistance'], processingTime: 'Same Day', enabled: true },
+  { id: 'malasakit', name: 'Malasakit Center',  initials: 'MC', color: 'bg-brand-500',  description: 'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.', location: 'Hospital Ground Floor, Cotabato City', phone: '064-421-2500', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID','Medical Abstract'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'], processingTime: 'Same Day', enabled: true },
+  { id: 'ambag',     name: 'AMBaG Program',      initials: 'AM', color: 'bg-purple-600', description: 'Zero balance billing for marginalized patients at partner hospitals under the BARMM government.', location: 'BARMM Admin Building, Cotabato City', phone: '064-421-3000', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','PhilHealth ID','Valid ID'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Dialysis','Chemotherapy','Laboratory Tests','Surgery / Medical Procedures'], processingTime: '3–5 Days', enabled: true },
+  { id: 'pcso',      name: 'PCSO MAP',            initials: 'PC', color: 'bg-red-600',    description: 'Issues guarantee letters covering hospital confinement, dialysis, chemotherapy/radiation, surgery and implants, essential medicines, and laboratory/diagnostic procedures.', location: 'Social Services Department', phone: '064-421-2600', slots: { total: 20, remaining: 20 }, requirements: ['Medical Certificate','Laboratory Results','PhilHealth ID','Valid ID'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Chemotherapy','Dialysis','Laboratory Tests','Surgery / Medical Procedures'], processingTime: '5–7 Days', enabled: true },
+  { id: 'dswd',      name: 'DSWD AICS',           initials: 'DS', color: 'bg-blue-600',   description: 'Assistance to Individuals in Crisis Situations (AICS): guarantee letters to hospitals and funeral homes covering hospital bills, medicines, laboratory/diagnostics, emergency medical needs, and burial assistance.', location: 'Social Welfare Office', phone: '064-421-2700', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','Valid ID','Crisis Documentation'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Emergency Medical Assistance','Burial Assistance'], processingTime: 'Same Day', enabled: true },
 ]
 
 const SEED_DOC_TYPES = [
@@ -40,17 +41,13 @@ const SEED_ASSISTANCE_TYPES = [
 // Before re-seeding the reference data below, run:
 //   GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
 //     node scripts/bootstrap-users.js
-// then sign in as admin@crmc.gov.ph and click Seed Database here.
+// then sign in as the admin account and click Seed Database here.
 
-const SEED_IDS = [
-  'CRMC-2026-00001', 'CRMC-2026-00002', 'CRMC-2026-00003',
-  'CRMC-2026-00004', 'CRMC-2026-00005', 'CRMC-2026-00006',
-  'CRMC-2026-00007', 'CRMC-2026-00008', 'CRMC-2026-00009',
-  'CRMC-2026-00010', 'CRMC-2026-00011', 'CRMC-2026-00012',
-  'CRMC-2026-00013', 'CRMC-2026-00014', 'CRMC-2026-00015',
-  'CRMC-2026-00016', 'CRMC-2026-00017', 'CRMC-2026-00018',
-  'CRMC-2026-00019', 'CRMC-2026-00020',
-]
+// 20 demo access codes under the active issuing prefix, e.g. MAPA-2026-00001.
+const SEED_ID_PREFIX = accessCodePrefixFor(new Date().getFullYear())
+const SEED_IDS = Array.from({ length: 20 }, (_, i) =>
+  `${SEED_ID_PREFIX}${String(i + 1).padStart(5, '0')}`
+)
 
 export default function Seed() {
   if (import.meta.env.VITE_ENABLE_SEED !== 'true') {
@@ -143,7 +140,7 @@ export default function Seed() {
     //    creation is now scripts/bootstrap-users.js (admin-SDK); this
     //    page only seeds reference data + runs migrations.
     if (!auth.currentUser) {
-      push('❌ Not signed in. Run scripts/bootstrap-users.js first, then sign in as admin@crmc.gov.ph and re-open this page.')
+      push('❌ Not signed in. Run scripts/bootstrap-users.js first, then sign in as the admin account and re-open this page.')
       setRunning(false)
       return
     }

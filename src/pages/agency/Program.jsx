@@ -334,7 +334,7 @@ export default function AgencyProfile() {
             <EditableField
               icon={MdLocationOn} label="Location"
               value={agency.location}
-              placeholder="e.g. CRMC Ground Floor, Cotabato City"
+              placeholder="e.g. Hospital Ground Floor, Cotabato City"
               onSave={handleSaveField('location', 'Location')}
             />
             <EditableField

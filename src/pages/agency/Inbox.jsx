@@ -345,7 +345,7 @@ export default function Inbox() {
                     <p className="text-sm text-gray-500">
                       {search || statusFilter !== 'all'
                         ? 'No applications match your filter.'
-                        : 'No applications yet. They will appear here when CRMC endorses requests to your agency.'}
+                        : 'No applications yet. They will appear here when a request is endorsed to your agency.'}
                     </p>
                     {(search || statusFilter !== 'all') && (
                       <button

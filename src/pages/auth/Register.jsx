@@ -16,14 +16,16 @@ import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
 import AddressPicker from '../../components/AddressPicker'
 import { hasReservedToken } from '../../utils/names'
+import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes } from '../../config/org'
 import toast from 'react-hot-toast'
 
 const CURRENT_YEAR        = new Date().getFullYear()
-const HOSPITAL_PREFIX     = `CRMC-${CURRENT_YEAR}-`
-const ACCESS_CODE_RE      = /^CRMC-\d{4}-\d{5}$/
-// Match any CRMC-YYYY- prefix the patient types — codes issued in a prior
-// calendar year must remain enterable.
-const ACCESS_CODE_PREFIX_RE = /^CRMC-(\d{4})-/
+const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
+const ACCESS_CODE_RE      = accessCodeRe()
+// Match any accepted prefix + YYYY- the patient types — codes issued in a
+// prior calendar year (or under a legacy prefix) must remain enterable.
+// Group 1 = the prefix actually typed, group 2 = the year.
+const ACCESS_CODE_PREFIX_RE = new RegExp(`^(${acceptedAccessCodePrefixes().join('|')})-(\\d{4})-`)
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
 const SUFFIXES        = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
@@ -233,11 +235,11 @@ export default function Register() {
 
   const handleHospitalIdChange = (e) => {
     const val = e.target.value.toUpperCase()
-    // Honor whatever year the patient typed — codes from prior years are
-    // still valid. Fall back to the current-year prefix only if the input
-    // doesn't yet contain a parseable CRMC-YYYY- prefix.
+    // Honor whatever prefix + year the patient typed — codes from prior years
+    // or a legacy prefix are still valid. Fall back to the current issuing
+    // prefix only if the input doesn't yet contain a parseable <PREFIX>-YYYY-.
     const prefixMatch = val.match(ACCESS_CODE_PREFIX_RE)
-    const prefix      = prefixMatch ? `CRMC-${prefixMatch[1]}-` : HOSPITAL_PREFIX
+    const prefix      = prefixMatch ? `${prefixMatch[1]}-${prefixMatch[2]}-` : HOSPITAL_PREFIX
     const suffix      = val.slice(prefix.length).replace(/\D/g, '').slice(0, 5)
     setForm(prev => ({ ...prev, hospitalId: prefix + suffix }))
     setHospitalVerified(false)
@@ -328,7 +330,7 @@ export default function Register() {
   // ── Hospital ID verify ──────────────────────────────────────────────────
 
   // #17 — Per-session rate limit on Verify. Without throttle, a script
-  // could iterate CRMC-YYYY-00001..99999 to enumerate which codes are
+  // could iterate <PREFIX>-YYYY-00001..99999 to enumerate which codes are
   // claimed (and by side effect, leak the names of registered patients).
   // This is a SOFT layer: a determined attacker can clear sessionStorage
   // or open many tabs. A proper fix would be a Cloud Function with per-IP
@@ -805,15 +807,15 @@ export default function Register() {
               <div>
                 <label htmlFor="reg-accessCode" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
                 {/* Stack vertically on mobile so the input has room to show
-                    "CRMC-YYYY-NNNNN" without truncation. Verify uses the
-                    secondary button style — it's a sub-action, not the page
-                    goal (Create Account is). */}
+                    the full "<PREFIX>-YYYY-NNNNN" code without truncation.
+                    Verify uses the secondary button style — it's a sub-action,
+                    not the page goal (Create Account is). */}
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     id="reg-accessCode"
                     data-field="hospitalId"
                     className={`${inputCls('hospitalId')} flex-1 font-mono ${hospitalVerified ? 'border-green-400 bg-green-50' : ''}`}
-                    placeholder={`CRMC-${CURRENT_YEAR}-00001`}
+                    placeholder={`${HOSPITAL_PREFIX}00001`}
                     value={form.hospitalId}
                     onChange={handleHospitalIdChange}
                     inputMode="numeric"
@@ -856,7 +858,7 @@ export default function Register() {
                     <p className="text-xs text-amber-700 mb-2">
                       {t('register.step3.codeUsedRecovery')}
                     </p>
-                    <a href={`mailto:mss@crmc.gov.ph?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                    <a href={`mailto:${ORG.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
                       className="text-xs text-amber-700 font-semibold underline underline-offset-2">
                       {t('register.step3.codeUsedRecoveryAction')} →
                     </a>
