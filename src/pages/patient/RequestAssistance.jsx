@@ -17,6 +17,7 @@ import { runIdOcr, isIdType, LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 import { assessImageQuality } from '../../utils/imageQuality'
 import { compareFaces, hasFace } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
+import { requiredDocsFor } from '../../data/referenceData'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
 import BalanceHero from '../../components/patient/BalanceHero'
@@ -35,6 +36,13 @@ import {
 import toast from 'react-hot-toast'
 
 const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
+
+// Per-assistance-type document checklists (coverage-model redesign). OFF by
+// default: production keeps the flat `required: true` documentTypes list until
+// CRMC confirms the real per-type document sets (src/data/referenceData.js).
+// Flip VITE_PER_TYPE_DOCS=true (e.g. on a preview deploy) to drive the checklist
+// from the assistance type the patient selects.
+const PER_TYPE_DOCS = import.meta.env.VITE_PER_TYPE_DOCS === 'true'
 
 // Active = anything not in a terminal state. A patient works one bill toward
 // zero balance at a time, so an active request blocks a new submission.
@@ -384,10 +392,24 @@ export default function RequestAssistance() {
       .catch(() => {})
   }, [])
 
-  // The standard required-documents checklist — the same for every request
-  // (a `required` flag on document types, not per-assistance-type). Sorted by
-  // the admin-defined order. Reusable types carry over once verified.
+  // The required-documents checklist.
+  //
+  // PER_TYPE_DOCS on → resolved per assistance type from the seeded catalog
+  //   (core docs + the selected type's extras), recomputed when the patient
+  //   changes the type. See src/data/referenceData.js.
+  // PER_TYPE_DOCS off (default) → the legacy flat list: every documentType with
+  //   `required: true`, identical for every request, sorted by admin order.
+  // Both branches produce the same [{id,name,reusable,order}] shape.
   useEffect(() => {
+    if (!PER_TYPE_DOCS) return
+    // Pass the in-progress bill so attribute conditions resolve (e.g. a Social
+    // Case Study Report appears once the amount crosses the threshold).
+    setReqDocTypes(requiredDocsFor(form.assistanceType, { amountNeeded: Number(form.totalBill) || 0 }))
+  }, [form.assistanceType, form.totalBill])
+
+  // Legacy flat path: loaded once, unaffected by the type selection.
+  useEffect(() => {
+    if (PER_TYPE_DOCS) return
     getDocs(query(collection(db, 'documentTypes'), where('required', '==', true)))
       .then(snap => setReqDocTypes(
         snap.docs
