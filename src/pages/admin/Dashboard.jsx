@@ -282,8 +282,6 @@ export default function AdminDashboard() {
   const MANAGE_ACTIONS = [
     { label: 'Agencies',     icon: MdBusiness,             path: '/admin/agencies',     forAll: true },
     isSuperAdmin && { label: 'Accounts', icon: MdSupervisedUserCircle, path: '/admin/accounts' },
-    { label: 'Doc Types',    icon: MdDescription,          path: '/admin/doctypes',     forAll: true },
-    { label: 'Assistance',   icon: MdFavorite,             path: '/admin/assistance',   forAll: true },
     { label: 'Patients',     icon: MdGroup,                path: '/admin/patients',     forAll: true },
   ].filter(Boolean)
 

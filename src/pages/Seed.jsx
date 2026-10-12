@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { doc, setDoc, collection, getDocs, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { accessCodePrefixFor } from '../config/org'
+// Single source of truth for the doc + assistance catalogs (shared with the app
+// and scripts/bootstrap-reference-data.js).
+import { DOCUMENT_TYPES, ASSISTANCE_TYPES, CORE_DOC_IDS } from '../data/referenceData'
 
 const SEED_AGENCIES = [
   { id: 'malasakit', name: 'Malasakit Center',  initials: 'MC', color: 'bg-brand-500',  description: 'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.', location: 'Hospital Ground Floor, Cotabato City', phone: '064-421-2500', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID','Medical Abstract'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'], processingTime: 'Same Day', enabled: true },
@@ -10,27 +13,9 @@ const SEED_AGENCIES = [
   { id: 'dswd',      name: 'DSWD AICS',           initials: 'DS', color: 'bg-blue-600',   description: 'Assistance to Individuals in Crisis Situations (AICS): guarantee letters to hospitals and funeral homes covering hospital bills, medicines, laboratory/diagnostics, emergency medical needs, and burial assistance.', location: 'Social Welfare Office', phone: '064-421-2700', slots: { total: 25, remaining: 25 }, requirements: ['Barangay Certificate of Indigency','Valid ID','Crisis Documentation'], assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Emergency Medical Assistance','Burial Assistance'], processingTime: 'Same Day', enabled: true },
 ]
 
-const SEED_DOC_TYPES = [
-  { name: 'Valid ID',                          description: 'Any government-issued ID',                    required: true,  order: 0 },
-  { name: 'Barangay Certificate of Indigency', description: 'Issued by the barangay',                      required: true,  order: 1 },
-  { name: 'Hospital Billing Statement',        description: 'Statement of account from the hospital',       required: true,  order: 2 },
-  { name: 'Medical Abstract',                  description: 'Summary of medical condition and treatment',   required: false, order: 3 },
-  { name: 'PhilHealth ID',                     description: 'PhilHealth membership card',                   required: false, order: 4 },
-  { name: 'Medical Certificate',               description: 'Certified by a licensed physician',            required: false, order: 5 },
-  { name: 'Laboratory Results',                description: 'Latest diagnostic or lab results',             required: false, order: 6 },
-  { name: 'Crisis Documentation',              description: 'Documentation proving crisis situation',        required: false, order: 7 },
-]
-
-const SEED_ASSISTANCE_TYPES = [
-  { name: 'Hospital Bills / Hospitalization', description: 'Financial assistance for hospital confinement and related expenses', order: 0 },
-  { name: 'Medicines',                        description: 'Support for prescription medications',                               order: 1 },
-  { name: 'Chemotherapy',                     description: 'Support for cancer treatment and chemotherapy sessions',             order: 2 },
-  { name: 'Dialysis',                         description: 'Assistance for kidney dialysis treatments',                         order: 3 },
-  { name: 'Laboratory Tests',                 description: 'Coverage for diagnostic tests and laboratory procedures',            order: 4 },
-  { name: 'Surgery / Medical Procedures',     description: 'Financial support for surgical operations',                         order: 5 },
-  { name: 'Emergency Medical Assistance',     description: 'Immediate support for emergency medical situations',                 order: 6 },
-  { name: 'Burial Assistance',                description: 'Financial support for funeral and burial expenses',                  order: 7 },
-]
+// Document + assistance catalogs are imported from src/data/referenceData.js
+// (single source of truth). The legacy flat checklist still needs a `required`
+// flag + `order`, derived from the canonical core set + array order below.
 
 // SEED_USERS moved to scripts/bootstrap-users.js — the tightened
 // users/create rule (allowing self-create only with role=='patient')
@@ -197,27 +182,30 @@ export default function Seed() {
       push('✅ Cleared existing document types and assistance types')
     } catch (e) { push(`⚠️ Clear skipped: ${e.message}`) }
 
-    // 4. Seed Document Types (deterministic IDs — safe to re-run)
-    for (const dt of SEED_DOC_TYPES) {
+    // 4. Seed Document Types (ids from referenceData; core docs → required:true)
+    for (const [i, dt] of DOCUMENT_TYPES.entries()) {
       try {
-        const id = dt.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
-        await setDoc(doc(db, 'documentTypes', id), { ...dt, createdAt: new Date() }, { merge: true })
+        await setDoc(doc(db, 'documentTypes', dt.id), {
+          name: dt.name, description: dt.description, reusable: !!dt.reusable,
+          required: CORE_DOC_IDS.includes(dt.id), order: i, createdAt: new Date(),
+        }, { merge: true })
       } catch (err) {
         push(`❌ Failed doc type ${dt.name}: ${err.message}`)
       }
     }
-    push(`✅ Seeded ${SEED_DOC_TYPES.length} Document Types`)
+    push(`✅ Seeded ${DOCUMENT_TYPES.length} Document Types`)
 
-    // 5. Seed Assistance Types (deterministic IDs — safe to re-run)
-    for (const at of SEED_ASSISTANCE_TYPES) {
+    // 5. Seed Assistance Types (ids from referenceData — safe to re-run)
+    for (const at of ASSISTANCE_TYPES) {
       try {
-        const id = at.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')
-        await setDoc(doc(db, 'assistanceTypes', id), { ...at, createdAt: new Date() }, { merge: true })
+        await setDoc(doc(db, 'assistanceTypes', at.id), {
+          name: at.name, description: at.description, order: at.order, createdAt: new Date(),
+        }, { merge: true })
       } catch (err) {
         push(`❌ Failed assistance type ${at.name}: ${err.message}`)
       }
     }
-    push(`✅ Seeded ${SEED_ASSISTANCE_TYPES.length} Assistance Types`)
+    push(`✅ Seeded ${ASSISTANCE_TYPES.length} Assistance Types`)
 
 
     setRunning(false)
