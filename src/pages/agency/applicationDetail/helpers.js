@@ -40,7 +40,7 @@ export const buildTimelineStages = (app) => {
   const status = app?.status
   if (app?.requestId) {
     const SLICE_DEFS = [
-      { key: 'endorsed',    label: 'Endorsed by CRMC' },
+      { key: 'endorsed',    label: 'Endorsed' },
       { key: 'reviewing',   label: 'Under Funding Review' },
       { key: 'approved',    label: 'Approved' },
       { key: 'certificate', label: 'Guarantee Letter Issued' },

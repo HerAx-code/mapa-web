@@ -24,7 +24,7 @@ import { tsToDate } from '../utils/dates'
 // get plumbed through logAudit().
 const ACTION_VISUAL = {
   request_endorsed:   { Icon: MdAssignment,      cls: 'bg-purple-50 text-purple-600 border-purple-200',
-                        label: 'CRMC Endorsed' },
+                        label: 'Endorsed' },
   patient_proceeded:  { Icon: MdPerson,          cls: 'bg-brand-50 text-brand-600 border-brand-200',
                         label: 'Patient Proceeded' },
   slice_advanced:     { Icon: MdAutorenew,       cls: 'bg-blue-50 text-blue-600 border-blue-200',

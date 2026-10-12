@@ -18,7 +18,7 @@ export default defineConfig({
       manifest: {
         name:             'MAPA — Medical Assistance Portal Access',
         short_name:       'MAPA',
-        description:      'Apply for medical financial assistance at Cotabato Regional Medical Center.',
+        description:      'Apply for medical financial assistance.',
         start_url:        '/patient/dashboard',
         scope:            '/',
         display:          'standalone',
@@ -38,7 +38,7 @@ export default defineConfig({
         // requirement is satisfied.
         screenshots: [
           { src: '/screenshots/01-dashboard.png', sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'See your application status at a glance' },
-          { src: '/screenshots/02-status.png',    sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'Track your request through CRMC and partner agencies' },
+          { src: '/screenshots/02-status.png',    sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'Track your request through partner agencies' },
           { src: '/screenshots/03-request.png',   sizes: '375x667', type: 'image/png', form_factor: 'narrow', label: 'Submit a medical assistance request in minutes' },
         ],
         // Long-press the installed icon to jump straight into the most

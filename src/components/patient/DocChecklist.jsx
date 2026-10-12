@@ -204,9 +204,29 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
     statusLine = <span className="text-gray-600">{t('patient.request.docCard.reused', { date: reusedDoc.date ?? '' })}</span>
   }
 
+  // Scannable status tag (GOV.UK task-list pattern): a short colored pill at the
+  // row's right, complementing the detailed status line under the title.
+  let tag
+  if (upload === 'saving')      tag = { label: t('patient.request.docCard.tagSaving'),   cls: 'bg-brand-50 text-brand-700' }
+  else if (upload === 'error')  tag = { label: t('patient.request.docCard.tagFailed'),   cls: 'bg-red-100 text-red-700' }
+  else if (repWaived)           tag = { label: t('patient.request.docCard.tagWaived'),   cls: 'bg-gray-100 text-gray-600' }
+  else if (needsRetake)         tag = { label: t('patient.request.docCard.tagRetake'),   cls: 'bg-amber-100 text-amber-800' }
+  else if (poorPhoto && acked)  tag = { label: t('patient.request.docCard.tagFlagged'),  cls: 'bg-amber-50 text-amber-700' }
+  else if (pending)             tag = ocrBusy
+                                  ? { label: t('patient.request.docCard.tagChecking'), cls: 'bg-brand-50 text-brand-700' }
+                                  : { label: t('patient.request.docCard.tagReady'),    cls: 'bg-green-100 text-green-700' }
+  else if (reusedDoc)           tag = { label: t('patient.request.docCard.tagOnFile'),   cls: 'bg-green-100 text-green-700' }
+  else                          tag = { label: t('patient.request.docCard.tagTodo'),     cls: 'bg-gray-100 text-gray-600' }
+
+  // Hint text (GOV.UK task-list): what this document is + any required quantity.
+  const hint = [
+    tp.description,
+    tp.quantity ? t('patient.request.docCard.qtyNeeded', { n: tp.quantity }) : null,
+  ].filter(Boolean).join(' · ')
+
   return (
     <div className={`bg-white rounded-2xl p-3 flex flex-col gap-2.5 ${cardCls}`}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         {/* Thumbnail preview of the attached photo so the patient can confirm
             they picked the right document; PDF icon for PDFs; warning/type icon
             otherwise. */}
@@ -221,6 +241,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
           <p className="text-[15px] font-semibold text-gray-900">
             {tp.name}{!pending && !reusedDoc && !repWaived && <span className="text-red-400"> *</span>}
           </p>
+          {hint && <p className="text-[12px] text-gray-500 mt-0.5 break-words">{hint}</p>}
           {/* aria-live so a screen reader announces ready / saving / error. */}
           {statusLine && <p className="text-[13px] mt-0.5 break-words" aria-live="polite">{statusLine}</p>}
           {/* Confirm-the-file line for PDFs (images are confirmed by the
@@ -229,22 +250,29 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
             <p className="text-[11px] text-gray-400 truncate">{pending.name} · {fmtSize(pending.size)}</p>
           )}
         </div>
-        {/* Right-aligned secondary action on ready/reused cards */}
-        {pending && !needsRetake && upload == null && (
-          <button type="button" onClick={() => onRemove(tp.name)}
-            aria-label={t('shell.common.remove', 'Remove')}
-            className="flex-shrink-0 min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-gray-400 hover:text-red-500">
-            <MdClose size={20} />
-          </button>
-        )}
-        {reusedDoc && (
-          isSelfie
-            ? <button type="button" onClick={() => onSelfie(tp.name)} className="flex-shrink-0 min-h-[44px] px-3 text-brand-600 font-semibold text-sm">{t('patient.request.replace')}</button>
-            : <label className="flex-shrink-0 min-h-[44px] px-3 inline-flex items-center text-brand-600 font-semibold text-sm cursor-pointer">
-                {t('patient.request.replace')}
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
-              </label>
-        )}
+        {/* Right column: scannable status tag + any secondary action. */}
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          {tag && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${tag.cls}`}>
+              {tag.label}
+            </span>
+          )}
+          {pending && !needsRetake && upload == null && (
+            <button type="button" onClick={() => onRemove(tp.name)}
+              aria-label={t('shell.common.remove', 'Remove')}
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-gray-400 hover:text-red-500">
+              <MdClose size={20} />
+            </button>
+          )}
+          {reusedDoc && (
+            isSelfie
+              ? <button type="button" onClick={() => onSelfie(tp.name)} className="min-h-[44px] px-3 text-brand-600 font-semibold text-sm">{t('patient.request.replace')}</button>
+              : <label className="min-h-[44px] px-3 inline-flex items-center text-brand-600 font-semibold text-sm cursor-pointer">
+                  {t('patient.request.replace')}
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onAttach(tp.name)} />
+                </label>
+          )}
+        </div>
       </div>
 
       {/* Upload progress bar — shown while this doc is being written at submit.

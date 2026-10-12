@@ -8,6 +8,7 @@ import {
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -245,7 +246,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             updatedAt:         serverTimestamp(),
             attachedDocuments: r.attachedDocuments ?? [],
             endorsedById:      user.uid,
-            endorsedBy:        user.name ?? 'CRMC',
+            endorsedBy:        user.name ?? ORG.gatewayName,
             endorsedAt:        serverTimestamp(),
             // Optional free-text note from CRMC, shown in the agency's
             // ApproveModal so the operator sees the referral context.
@@ -320,7 +321,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       notify(request.patientId, {
         type:  'app_advanced',
         title: 'Your request was endorsed',
-        body:  `CRMC referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.`,
+        body:  `${ORG.gatewayName} referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.`,
       }).catch(() => {})
 
       toast.success(`Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}.`)
@@ -540,9 +541,9 @@ function RequestDetail({ request, agencies, onClose }) {
   // legitimate decision -- this action exists for accident recovery, not for
   // routine flow.
   const [unverifyingDoc, setUnverifyingDoc]   = useState(null)
-  // PhilHealth-first coverage inputs (Order of Charging). Seeded from the
-  // request and re-seeded when a different request is opened; local edits stay
-  // until saved. See docs/philhealth-first-plan.md.
+  // Optional prior-coverage inputs (PhilHealth/insurance + other aid) the social
+  // worker records at assessment. Seeded from the request and re-seeded when a
+  // different request is opened; local edits stay until saved.
   const [coverage, setCoverage] = useState({ ph: '', other: '' })
   const [busy, setBusy] = useState(false)
   const [timeline, setTimeline] = useState([])
@@ -625,8 +626,8 @@ function RequestDetail({ request, agencies, onClose }) {
 
   const funding = computeFunding(request.amountNeeded, slices)
   const terminal = ['fully_funded', 'closed', 'rejected'].includes(request.status)
-  // PhilHealth-first coverage: the bill base falls back to amountNeeded for
-  // legacy requests with no totalBill. Coverage is editable only before
+  // Prior coverage: the bill base falls back to amountNeeded for legacy
+  // requests with no totalBill. Coverage is optional and editable only before
   // endorsement (slices freeze amountRequested at endorse time).
   const billBase       = Number(request.totalBill ?? request.amountNeeded) || 0
   const previewNeeded  = computeAmountNeeded({
@@ -664,7 +665,7 @@ function RequestDetail({ request, agencies, onClose }) {
       const isPending = newStatus === 'pending'
       await updateDoc(doc(db, 'documents', docItem.id), {
         status: newStatus,
-        reviewedBy: isPending ? null : (user.name ?? 'CRMC'),
+        reviewedBy: isPending ? null : (user.name ?? ORG.gatewayName),
         reviewedAt: isPending ? null : serverTimestamp(),
         // Persist the rejection reason so the doc viewer / audit trail
         // can surface it. Clear it on re-verify or un-verify.
@@ -691,7 +692,7 @@ function RequestDetail({ request, agencies, onClose }) {
         await notify(request.patientId, {
           type:  'doc_rejected',
           title: 'A document needs attention',
-          body:  `CRMC marked your "${docItem.name}" document for correction. Please re-upload it.`
+          body:  `${ORG.gatewayName} marked your "${docItem.name}" document for correction. Please re-upload it.`
             + (cleanReason ? ` Reason: ${cleanReason}` : ''),
         }).catch(() => {})
       }
@@ -738,7 +739,7 @@ function RequestDetail({ request, agencies, onClose }) {
     try {
       const batch = writeBatch(db)
       const now = serverTimestamp()
-      const reviewer = user.name ?? 'CRMC'
+      const reviewer = user.name ?? ORG.gatewayName
       pendingDocs.forEach(d => {
         batch.update(doc(db, 'documents', d.id), {
           status: 'verified',
@@ -779,11 +780,11 @@ function RequestDetail({ request, agencies, onClose }) {
   // the submitted documents, messaging them (handleMessagePatient) for anything
   // unclear, then completes the Unified Intake Sheet — which is the endorse gate.
 
-  // PhilHealth-first: record the coverage applied before endorsement and
-  // recompute the residual (amountNeeded) the agencies co-fund. Gated to
-  // pre-endorsement in the UI because the endorse transaction freezes
-  // amountRequested = amountNeeded onto each slice (see EndorseModal); editing
-  // it afterwards would desync the slices. See docs/philhealth-first-plan.md.
+  // Record any optional prior coverage applied before endorsement and recompute
+  // the residual (amountNeeded) the agencies co-fund. Gated to pre-endorsement
+  // in the UI because the endorse transaction freezes amountRequested =
+  // amountNeeded onto each slice (see EndorseModal); editing it afterwards would
+  // desync the slices.
   const saveCoverage = async () => {
     setBusy(true)
     try {
@@ -974,17 +975,17 @@ function RequestDetail({ request, agencies, onClose }) {
                 Open
               </Link>
             </div>
-            {/* Coverage applied first (Order of Charging, JAO 2020-0001):
-                PhilHealth reduces the bill, then any other prior aid; the
-                remaining balance is what CRMC endorses to funding agencies. */}
+            {/* Optional prior coverage already applied to the bill (insurance /
+                PhilHealth / discount), recorded by the social worker at
+                assessment; the remainder is what gets endorsed to agencies. */}
             <div className="p-3 rounded-lg border border-gray-100 mb-2 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-700">Coverage applied first</p>
+                <p className="text-sm text-gray-700">Coverage already applied <span className="text-gray-400 font-normal">(optional)</span></p>
                 <span className="text-xs text-gray-500">Bill {peso(billBase)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="text-xs text-gray-500">PhilHealth (₱)</span>
+                  <span className="text-xs text-gray-500">PhilHealth / insurance (₱)</span>
                   <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
                     disabled={!coverageEditable || busy}
                     value={coverage.ph} onChange={e => setCoverage(c => ({ ...c, ph: e.target.value }))} />
@@ -1488,11 +1489,11 @@ export default function Requests() {
     setBulkBusy(true)
     try {
       await Promise.all(rows.map(r => updateDoc(doc(db, 'requests', r.id), {
-        assignee: user.name ?? 'CRMC', assigneeUid: user.uid, updatedAt: serverTimestamp(),
+        assignee: user.name ?? ORG.gatewayName, assigneeUid: user.uid, updatedAt: serverTimestamp(),
       })))
       rows.forEach(r => logAudit(user, {
         action: 'request_assigned', targetType: 'request', targetId: r.id, targetName: r.requestId,
-        details: `Assigned to ${user.name ?? 'CRMC'}`, requestId: r.id, patientId: r.patientId,
+        details: `Assigned to ${user.name ?? ORG.gatewayName}`, requestId: r.id, patientId: r.patientId,
       }))
       toast.success(`Assigned ${rows.length} request${rows.length === 1 ? '' : 's'} to you.`)
       clearSelection()
@@ -1506,8 +1507,8 @@ export default function Requests() {
     setBulkBusy(true)
     try {
       await Promise.all(rows.map(r => notify(r.patientId, {
-        type: 'docs_requested', title: 'CRMC needs more documents',
-        body: `CRMC has requested additional documents for your request ${r.requestId}. Please review your requirements and upload what's missing.`,
+        type: 'docs_requested', title: `${ORG.gatewayName} needs more documents`,
+        body: `${ORG.gatewayName} has requested additional documents for your request ${r.requestId}. Please review your requirements and upload what's missing.`,
       }).catch(() => {})))
       // All admin actions must call logAudit() (CLAUDE.md).
       rows.forEach(r => logAudit(user, {
@@ -1541,10 +1542,10 @@ export default function Requests() {
     <Layout breadcrumb="Assistance Requests">
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
         <div className="mb-5">
-          <p className="eyebrow">CRMC gateway</p>
+          <p className="eyebrow">{ORG.gatewayName} gateway</p>
           <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Requests</h1>
           <p className="text-sm text-gray-500 mt-1">
-            <span className="tabular-nums font-medium text-gray-700">{counts.all}</span> request{counts.all === 1 ? '' : 's'} at CRMC
+            <span className="tabular-nums font-medium text-gray-700">{counts.all}</span> request{counts.all === 1 ? '' : 's'} in the queue
             {' · '}
             <span className="tabular-nums font-medium text-gray-700">{counts.needs_action}</span> waiting on your team
           </p>

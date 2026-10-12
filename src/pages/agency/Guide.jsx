@@ -23,12 +23,12 @@ const SECTIONS = [
     Icon: MdMenuBook,
     title: 'How MAPA works for your agency',
     content:
-      `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for CRMC. ` +
-      `Under the co-funding model, CRMC is the single intake gateway: patients submit ONE request for their full bill, ` +
-      `CRMC verifies the documents, conducts the assessment interview, and fills the Unified Intake Sheet. CRMC then ` +
+      `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for Medical Social Services. ` +
+      `Under the co-funding model, Medical Social Services is the single intake gateway: patients submit ONE request for their full bill, ` +
+      `Medical Social Services verifies the documents, conducts the assessment interview, and fills the Unified Intake Sheet. Medical Social Services then ` +
       `endorses the request to one or more agencies — each endorsement is a "slice" toward zero balance.\n\n` +
       `Your job as an agency coordinator is the funding decision only. You do NOT re-verify documents and you do NOT ` +
-      `re-interview the patient. You read CRMC's assessment, decide whether to approve your slice (and for how much), ` +
+      `re-interview the patient. You read the Medical Social Services' assessment, decide whether to approve your slice (and for how much), ` +
       `and issue the Guarantee Letter that the named provider redeems with your agency.\n\n` +
       `MAPA does not move money — it records commitments. Actual settlement happens off-system between your ` +
       `agency and the provider.`,
@@ -39,8 +39,8 @@ const SECTIONS = [
     Icon: MdSync,
     title: 'Slice lifecycle',
     items: [
-      { label: 'Endorsed',     desc: 'CRMC routed a slice of the patient\'s request to your agency. Waiting on the patient to confirm they want to proceed with your share.' },
-      { label: 'For Funding',  desc: 'Patient confirmed. The slice is in your queue for a funding decision. CRMC has already verified docs and done the assessment — you decide approve / needs info / reject.' },
+      { label: 'Endorsed',     desc: 'Medical Social Services routed a slice of the patient\'s request to your agency. Waiting on the patient to confirm they want to proceed with your share.' },
+      { label: 'For Funding',  desc: 'Patient confirmed. The slice is in your queue for a funding decision. Medical Social Services has already verified docs and done the assessment — you decide approve / needs info / reject.' },
       { label: 'Needs Info',   desc: 'You requested clarification from the patient. They\'ve been notified; the slice waits in your queue with the amber chip until they respond.' },
       { label: 'Approved',     desc: 'You issued the approval with amount, purpose, and payable-to. GL status: Issued. Committed budget incremented. Patient notified.' },
       { label: 'Certificate',  desc: 'GL has been printed and confirmed. Upload the wet-signed scan so the patient can download it.' },
@@ -53,12 +53,12 @@ const SECTIONS = [
     Icon: MdImportContacts,
     title: 'Glossary — key terms',
     items: [
-      { label: 'Patient Access Code',   desc: 'CRMC-YYYY-NNNNN code issued by Medical Social Services. Patients must enter it to register.' },
-      { label: 'Request',               desc: 'The patient\'s top-level ask — one bill, one amount needed. Owned by CRMC after submission. The parent of one or more agency slices.' },
-      { label: 'Application slice',     desc: 'Your agency\'s portion of a patient request. Created when CRMC endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or needs_info / rejected).' },
-      { label: 'Endorsement',           desc: 'CRMC\'s decision to route part of a verified request to your agency. Endorsement carries CRMC\'s assessment + verified documents — you do not re-do that work.' },
-      { label: 'CRMC Assessment',       desc: 'The Unified Intake Sheet that CRMC fills during their single assessment interview. You see it read-only on each slice. Replaces the agency-side Case Assessment that existed before the redesign.' },
-      { label: 'Means-Test Category',   desc: 'Manual classification recorded by CRMC: Indigent / Marginalized / Low Income / Above Threshold.' },
+      { label: 'Patient Access Code',   desc: 'MAPA-YYYY-NNNNN code issued by Medical Social Services. Patients must enter it to register.' },
+      { label: 'Request',               desc: 'The patient\'s top-level ask — one bill, one amount needed. Owned by Medical Social Services after submission. The parent of one or more agency slices.' },
+      { label: 'Application slice',     desc: 'Your agency\'s portion of a patient request. Created when Medical Social Services endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or needs_info / rejected).' },
+      { label: 'Endorsement',           desc: 'Medical Social Services\'s decision to route part of a verified request to your agency. Endorsement carries Medical Social Services\'s assessment + verified documents — you do not re-do that work.' },
+      { label: 'Intake Assessment',       desc: 'The Unified Intake Sheet that Medical Social Services fills during their single assessment interview. You see it read-only on each slice. Replaces the agency-side Case Assessment that existed before the redesign.' },
+      { label: 'Means-Test Category',   desc: 'Manual classification recorded by Medical Social Services: Indigent / Marginalized / Low Income / Above Threshold.' },
       { label: 'Guarantee Letter (GL)', desc: 'The official document issued to an approved patient. States the guaranteed amount, the purpose, and the provider that will be billed.' },
       { label: 'GL Status',             desc: 'Issued (just approved), Redeemed (provider billed back), or Expired (30-day window passed).' },
       { label: 'Committed Budget',      desc: 'Total money approved but not yet redeemed. Subtracted from your allocation.' },
@@ -76,11 +76,11 @@ const SECTIONS = [
     steps: [
       'Open Application Inbox from the sidebar. The badge shows slices waiting on you (For Funding + Needs Info).',
       'Each row shows: patient name, slice ID, days since endorsement, document count, and a status chip.',
-      'Click a row to open the four-tab detail view: Overview, CRMC Assessment (read-only), Documents (read-only), Timeline & Notes.',
+      'Click a row to open the four-tab detail view: Overview, Intake Assessment (read-only), Documents (read-only), Timeline & Notes.',
       'The Message icon opens a chat with the patient. The blue action button reads "Review" or "View" depending on status.',
       'Summary cards at the top filter the list by status — click "For Funding" to focus your decision queue.',
     ],
-    note: 'Days-since-endorsement turns amber at 3+ days and red at 7+ days. Tackle red rows first — patients are waiting on your funding decision after CRMC has already done their part.',
+    note: 'Days-since-endorsement turns amber at 3+ days and red at 7+ days. Tackle red rows first — patients are waiting on your funding decision after Medical Social Services has already done their part.',
   },
   {
     id: 'review-endorsement',
@@ -88,16 +88,16 @@ const SECTIONS = [
     Icon: MdPlayCircle,
     title: 'Reviewing an endorsed slice',
     content:
-      `When a slice reaches "For Funding," CRMC has already verified the patient's documents, conducted the assessment ` +
+      `When a slice reaches "For Funding," Medical Social Services has already verified the patient's documents, conducted the assessment ` +
       `interview, and filled the Unified Intake Sheet. Your review is a funding judgment, not a re-verification.`,
     steps: [
       'Click a "For Funding" row → the application detail opens on the Overview tab.',
-      'Read the CRMC Assessment tab to see household composition, income, expenses, diagnosis, social case narrative, and CRMC\'s recommendation. This is the same Unified Intake Sheet CRMC used; you cannot edit it.',
+      'Read the Intake Assessment tab to see household composition, income, expenses, diagnosis, social case narrative, and Medical Social Services\'s recommendation. This is the same Unified Intake Sheet Medical Social Services used; you cannot edit it.',
       'Open the Documents tab to view the patient\'s attached files (also read-only on your side).',
       'Check the request context — your slice is part of a larger ask; the page shows what other agencies have already approved toward zero balance.',
       'Choose one of three actions: Approve & Issue GL, Request More Info, or Reject.',
     ],
-    note: 'If something in CRMC\'s assessment looks wrong or incomplete, use Request More Info (sends a question to the patient) or Reject with a clear reason — do not edit CRMC\'s sheet.',
+    note: 'If something in Medical Social Services\'s assessment looks wrong or incomplete, use Request More Info (sends a question to the patient) or Reject with a clear reason — do not edit Medical Social Services\'s sheet.',
   },
   {
     id: 'needs-info',
@@ -105,7 +105,7 @@ const SECTIONS = [
     Icon: MdHelpOutline,
     title: 'Requesting more info from the patient',
     content:
-      `If CRMC\'s assessment is missing something your agency specifically needs — proof of address for a province-locked ` +
+      `If Medical Social Services\'s assessment is missing something your agency specifically needs — proof of address for a province-locked ` +
       `program, a more recent billing statement, etc. — you can pause the slice and request it from the patient ` +
       `directly without rejecting.`,
     steps: [
@@ -115,7 +115,7 @@ const SECTIONS = [
       'When the patient responds, the slice returns to your queue with the original For Funding chip.',
       'Click Resume Review to continue, or Update Request to ask a follow-up.',
     ],
-    note: 'Use Request More Info sparingly — CRMC already did the standard verification. This is for agency-specific extras.',
+    note: 'Use Request More Info sparingly — Medical Social Services already did the standard verification. This is for agency-specific extras.',
   },
 
   // ── Approval and GL ────────────────────────────────────────────
@@ -128,14 +128,14 @@ const SECTIONS = [
       `The Approve & Issue GL action captures three pieces of information: the guaranteed amount, the purpose, ` +
       `and the provider (Payable To). The slice moves to Approved, your agency's committed budget increases ` +
       `by the approved amount, and the patient is notified. There is no separate "complete the assessment first" ` +
-      `prerequisite under the co-funding redesign — CRMC has already completed that on the parent request.`,
+      `prerequisite under the co-funding redesign — Medical Social Services has already completed that on the parent request.`,
     steps: [
       'Open the slice → click Approve & Issue GL (available once status is "For Funding").',
       'Review the budget remaining banner — your approval cannot exceed this amount.',
       'If a cooldown warning appears (a recent approval for the same patient by any agency), decide whether to proceed.',
       'Enter the approved amount in pesos. Validation blocks amounts exceeding the remaining budget OR the slice\'s outstanding balance on the parent request.',
       'Pick one or more purposes from your agency\'s assistance types.',
-      'Enter the provider name (Payable To) — e.g. "CRMC Billing Department", "Mercury Drug Cotabato".',
+      'Enter the provider name (Payable To) — e.g. "Medical Social Services Billing Department", "Mercury Drug Cotabato".',
       'Click Approve & Issue GL. The committed budget increments and the patient is notified.',
     ],
     note: 'Approve only what your agency can actually fund. The budget enforcement is real — exceeding it is blocked. You can approve LESS than the slice asks for; the remaining balance stays open for other agencies to fund.',
@@ -151,7 +151,7 @@ const SECTIONS = [
       'Click Confirm Reject. The patient is notified with the exact reason.',
       'If the slice was endorsed today, the slot is automatically restored.',
     ],
-    note: 'Be specific so the patient knows whether to appeal, ask CRMC for re-endorsement to another agency, or correct something for next time. Rejecting one slice does not close the parent request — other agency slices continue independently.',
+    note: 'Be specific so the patient knows whether to appeal, ask Medical Social Services for re-endorsement to another agency, or correct something for next time. Rejecting one slice does not close the parent request — other agency slices continue independently.',
   },
   {
     id: 'print-upload',
@@ -197,8 +197,8 @@ const SECTIONS = [
     title: 'Daily slot management',
     content:
       `Slots represent your agency's daily processing capacity. Under the co-funding redesign, slots are consumed when ` +
-      `CRMC endorses a slice to your agency (not when a patient submits an application). If your slots are full for ` +
-      `the day, CRMC's endorse modal warns the staff member and they can choose a different agency or hold the request ` +
+      `Medical Social Services endorses a slice to your agency (not when a patient submits an application). If your slots are full for ` +
+      `the day, the Medical Social Services' endorse modal warns the staff member and they can choose a different agency or hold the request ` +
       `for tomorrow.`,
     steps: [
       'Open Slot Management from the sidebar.',
@@ -218,7 +218,7 @@ const SECTIONS = [
     content:
       `Your agency has a budget allocation set by your Agency Administrator. The Approve modal validates each ` +
       `approved amount against it, so over-approval is impossible. The Dashboard and Funds pages show your ` +
-      `remaining budget in real time. CRMC operates the platform but does not control your agency's budget.`,
+      `remaining budget in real time. Medical Social Services operates the platform but does not control your agency's budget.`,
     items: [
       { label: 'Allocated',    desc: 'Total budget for the period (monthly, quarterly, or yearly). Set by your Agency Administrator on /agency/allocation.' },
       { label: 'Committed',    desc: 'Sum of all approved-but-not-redeemed GL amounts. Decreases when a GL is redeemed, expired, or reversed.' },
@@ -249,12 +249,12 @@ const SECTIONS = [
     content:
       `Case notes are an append-only log on the slice. Use them for your own ongoing observations: ` +
       `"Called patient on 5/19, voicemail" or "Provider confirmed receipt of GL". They are NOT how you record an ` +
-      `assessment — CRMC owns the Unified Intake Sheet under the redesign.`,
+      `assessment — Medical Social Services owns the Unified Intake Sheet under the redesign.`,
     steps: [
       'Open the slice → Timeline & Notes tab.',
       'Type your note in the textarea (up to 500 characters).',
       'Click Add. The note is permanent (no edit/delete).',
-      'Notes are visible to your agency\'s coordinators and to CRMC admins for audit.',
+      'Notes are visible to your agency\'s coordinators and to Medical Social Services admins for audit.',
     ],
   },
   {
@@ -278,15 +278,15 @@ const SECTIONS = [
     Icon: MdHelpOutline,
     title: 'Common problems',
     items: [
-      { label: 'The Approve button is disabled',     desc: 'Slice is not yet at "For Funding" — the patient may not have confirmed they want to proceed with your share, or CRMC hasn\'t finalized the endorsement. Check the status chip on the slice.' },
-      { label: 'CRMC\'s assessment looks incomplete', desc: 'You cannot edit it from your side. Use Request More Info to ask the patient directly, or message CRMC via the admin Messages flow if the gap is on CRMC\'s side.' },
+      { label: 'The Approve button is disabled',     desc: 'Slice is not yet at "For Funding" — the patient may not have confirmed they want to proceed with your share, or Medical Social Services hasn\'t finalized the endorsement. Check the status chip on the slice.' },
+      { label: 'Medical Social Services\'s assessment looks incomplete', desc: 'You cannot edit it from your side. Use Request More Info to ask the patient directly, or message Medical Social Services via the admin Messages flow if the gap is on Medical Social Services\'s side.' },
       { label: 'My approval was blocked',            desc: 'Either you tried to approve more than the agency\'s remaining budget, OR more than the slice\'s outstanding balance on the parent request. Lower the amount or ask the admin to increase the allocation.' },
       { label: 'I see "GL Expired (action needed)"', desc: 'A GL passed its 30-day validity window. Open the slice and click Mark GL Expired to release the committed budget.' },
       { label: 'A patient says they didn\'t get the notification', desc: 'Check Messages and send a direct message. The patient may not have logged in to the portal yet.' },
       { label: 'I approved by mistake',              desc: 'Open the slice → click Reverse Approval. The committed budget is released and the slice returns to For Funding.' },
       { label: 'The print window cancelled',         desc: 'Answer "Not yet" on the confirmation prompt. The slice stays at Approved so you can retry.' },
-      { label: 'No budget allocated message',        desc: 'Ask your Agency Administrator to set a budget on /agency/allocation, or the CRMC system administrator if your agency has none on file.' },
-      { label: 'Why don\'t I schedule interviews anymore', desc: 'Under the co-funding redesign, CRMC conducts a single assessment interview on the parent request and shares the result with all endorsed agencies. Your agency makes a funding decision based on that — no per-agency interview.' },
+      { label: 'No budget allocated message',        desc: 'Ask your Agency Administrator to set a budget on /agency/allocation, or the Medical Social Services system administrator if your agency has none on file.' },
+      { label: 'Why don\'t I schedule interviews anymore', desc: 'Under the co-funding redesign, Medical Social Services conducts a single assessment interview on the parent request and shares the result with all endorsed agencies. Your agency makes a funding decision based on that — no per-agency interview.' },
     ],
   },
   {
@@ -415,7 +415,7 @@ export default function AgencyGuide() {
           <div>
             <p className="eyebrow">Help</p>
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agency User Guide</h1>
-            <p className="text-sm text-gray-500 mt-1">Step-by-step instructions for funding endorsed application slices under the CRMC-gateway model.</p>
+            <p className="text-sm text-gray-500 mt-1">Step-by-step instructions for funding endorsed application slices under the co-funding model.</p>
           </div>
           <span className="text-xs text-gray-500">Last updated {LAST_UPDATED}</span>
         </div>

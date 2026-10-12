@@ -5,6 +5,7 @@ import {
   doc, updateDoc, deleteDoc, serverTimestamp, getDocs, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -242,11 +243,11 @@ export default function Messages() {
                 No messages yet
               </p>
               <p className="text-sm text-gray-500 leading-relaxed mb-2 max-w-xs mx-auto">
-                CRMC will message you here if they need anything about your
+                {ORG.gatewayName} will message you here if they need anything about your
                 request — you&apos;ll be able to reply.
               </p>
               <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
-                For other questions, visit CRMC Medical Social Services.
+                For other questions, visit {ORG.gatewayName}.
               </p>
             </>
           ) : (
@@ -396,7 +397,7 @@ export default function Messages() {
                 </p>
                 <p className="text-xs text-gray-500 max-w-xs">
                   {conversations.length === 0
-                    ? 'CRMC will message you here if they need anything about your request — you can reply from this page.'
+                    ? `${ORG.gatewayName} will message you here if they need anything about your request — you can reply from this page.`
                     : 'Pick a conversation on the left to read and reply.'}
                 </p>
               </div>

@@ -96,7 +96,7 @@ export default function ExportPage() {
           <p className="text-xs text-gray-500 text-center">
             All exported files contain personal data protected under{' '}
             <strong>Republic Act No. 10173</strong> (Data Privacy Act of 2012).
-            Handle exported files in accordance with CRMC data privacy policy.
+            Handle exported files in accordance with your organization's data privacy policy.
             Do not share or distribute without proper authorization.
           </p>
         </div>

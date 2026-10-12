@@ -368,7 +368,7 @@ export default function AgencyAuditLog() {
         </div>{/* /two-pane grid */}
 
         <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-          <strong>Note —</strong> This log shows actions taken with your agency as the context. CRMC platform-level actions (account onboarding, doc verification across agencies) are visible only to the CRMC system administrator. Entries are append-only and immutable.
+          <strong>Note —</strong> This log shows actions taken with your agency as the context. Platform-level actions (account onboarding, doc verification across agencies) are visible only to the system administrator. Entries are append-only and immutable.
         </p>
 
       </div>

@@ -369,7 +369,7 @@ export default function AddAgency() {
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                 <MdLocationOn size={12} className="text-gray-500" /> Office / Building Name <span className="text-gray-500 font-normal">— optional</span>
               </label>
-              <input className="input" placeholder="CRMC Ground Floor"
+              <input className="input" placeholder="Hospital Ground Floor"
                 value={agency.officeName} onChange={setA('officeName')} />
               <p className="text-xs text-gray-500 mt-0.5">Specific office, floor, or department.</p>
             </div>

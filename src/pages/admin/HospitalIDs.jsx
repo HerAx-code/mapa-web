@@ -8,6 +8,7 @@ import { logAudit } from '../../utils/auditLog'
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { tsToDate } from '../../utils/dates'
+import { accessCodePrefixFor } from '../../config/org'
 import QRCode from 'qrcode'
 import toast from 'react-hot-toast'
 
@@ -33,9 +34,10 @@ function BulkAddModal({ nextNum, onClose }) {
   useFocusTrap(panelRef, true)
   const { user }            = useAuth()
   const year     = new Date().getFullYear()
+  const prefix   = accessCodePrefixFor(year)   // e.g. "MAPA-2026-"
   const startNum = nextNum
   const endNum   = nextNum + Math.max(count, 1) - 1
-  const preview  = `CRMC-${year}-${String(startNum).padStart(5, '0')} → CRMC-${year}-${String(endNum).padStart(5, '0')}`
+  const preview  = `${prefix}${String(startNum).padStart(5, '0')} → ${prefix}${String(endNum).padStart(5, '0')}`
 
   const handleAdd = async () => {
     const n = Number(count)
@@ -46,7 +48,7 @@ function BulkAddModal({ nextNum, onClose }) {
       const batch = writeBatch(db)
       for (let i = 0; i < n; i++) {
         const num   = String(startNum + i).padStart(5, '0')
-        const newId = `CRMC-${year}-${num}`
+        const newId = `${prefix}${num}`
         batch.set(doc(db, 'hospitalIds', newId), {
           // Phase 0.3: parent doc no longer carries usedBy (PII moved
           // to /privateInfo/details on claim).
@@ -58,8 +60,8 @@ function BulkAddModal({ nextNum, onClose }) {
         })
       }
       await batch.commit()
-      const first = `CRMC-${year}-${String(startNum).padStart(5, '0')}`
-      const last  = `CRMC-${year}-${String(endNum).padStart(5, '0')}`
+      const first = `${prefix}${String(startNum).padStart(5, '0')}`
+      const last  = `${prefix}${String(endNum).padStart(5, '0')}`
       logAudit(user, { action: 'hospitalid_bulk', targetType: 'hospitalId', targetName: `${first} → ${last}`, details: `Bulk added ${n} hospital ID${n !== 1 ? 's' : ''}` })
       toast.success(`${n} Hospital ID${n !== 1 ? 's' : ''} added.`)
       onClose()
@@ -203,7 +205,7 @@ export default function HospitalIDs() {
     try {
       const year  = new Date().getFullYear()
       const num   = String(nextNum).padStart(5, '0')
-      const newId = `CRMC-${year}-${num}`
+      const newId = `${accessCodePrefixFor(year)}${num}`
       await setDoc(doc(db, 'hospitalIds', newId), {
         // Phase 0.3: usedBy no longer lives on the parent doc; it's
         // created in /privateInfo/details by the claim transaction in
@@ -269,7 +271,7 @@ export default function HospitalIDs() {
     const escape = (s) => String(s).replace(/[&<>"']/g, c => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     ))
-    // One QR per code, encoding the prefill link (…/register?code=CRMC-…) so a
+    // One QR per code, encoding the prefill link (…/register?code=<PREFIX>-…) so a
     // scan from the slip/card/wristband lands on Register with the code filled
     // and verified. SVG stays crisp at any print size. Falls back to the
     // printed code + URL below if a QR can't be generated. The code is still
@@ -467,7 +469,7 @@ export default function HospitalIDs() {
             {isSuperAdmin && (
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
                 <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Next code</p>
-                <p className="font-mono text-sm font-semibold text-gray-800">CRMC-{new Date().getFullYear()}-{String(nextNum).padStart(5, '0')}</p>
+                <p className="font-mono text-sm font-semibold text-gray-800">{accessCodePrefixFor(new Date().getFullYear())}{String(nextNum).padStart(5, '0')}</p>
               </div>
             )}
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
+import { ORG } from '../config/org'
 
 const AuthContext = createContext(null)
 
@@ -74,7 +75,7 @@ export function AuthProvider({ children }) {
       // re-register with the same email instead of being permanently
       // locked out by "email already in use".
       await handleOrphanAuth(cred.user)
-      throw new Error('Account anomaly detected. Please re-register or contact CRMC Medical Social Services.')
+      throw new Error(`Account anomaly detected. Please re-register or contact ${ORG.gatewayName}.`)
     }
     const data = snap.data()
     if (data.active === false) {
@@ -88,7 +89,7 @@ export function AuthProvider({ children }) {
     // Discovered during the 2026-06-03 end-to-end review (R1).
     if (data.deletion === true) {
       await signOut(auth)
-      throw new Error('This account is marked for deletion. Contact CRMC Medical Social Services to restore it.')
+      throw new Error(`This account is marked for deletion. Contact ${ORG.gatewayName} to restore it.`)
     }
     const userData = { uid: cred.user.uid, email, ...data }
     setUser(userData)

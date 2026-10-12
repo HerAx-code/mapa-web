@@ -242,7 +242,7 @@ export default function AgencyAnnouncements() {
           <p className="text-xs text-brand-700">
             Your promotions appear on the patient <strong>Find Programs</strong> page under your agency while within the
             scheduled window, then auto-hide after the end time. They're informational — patients still submit one request
-            to CRMC, which routes it to the right agencies.
+            to the coordinating office, which routes it to the right agencies.
           </p>
         </div>
 

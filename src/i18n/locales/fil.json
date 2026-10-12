@@ -106,7 +106,7 @@
       "a1title": "Isang kahilingan lamang",
       "a1desc": "Mag-apply nang isang beses kasama ang inyong mga dokumento at live selfie — hindi na kailangang ulit-ulitin para sa bawat ahensya.",
       "a2title": "Tinutustusan tungo sa zero balance",
-      "a2desc": "Nauuna ang PhilHealth; sinasaklaw ng mga kasosyong ahensya ang natitira hanggang maging zero ang inyong bayarin sa ospital.",
+      "a2desc": "Ang anumang insurance o naunang saklaw na mayroon kayo, tulad ng PhilHealth, ay inilalapat muna sa inyong bayarin; sinasaklaw ng mga kasosyong ahensya ang natitira hanggang maging zero ito.",
       "a3title": "Ang inyong datos, ang inyong karapatan",
       "a3desc": "I-download ang inyong mga rekord, tingnan kung sino ang nag-access, at humiling ng pagbura — protektado sa ilalim ng RA 10173.",
       "trust": "Protektado sa ilalim ng Data Privacy Act ng Pilipinas (RA 10173). Naka-encrypt ang inyong health data at hindi kailanman ibinebenta."
@@ -156,7 +156,7 @@
   "landing": {
     "header": {
       "downloadApp": "I-install ang App",
-      "mobileToast": "Malapit nang ilunsad ang MAPA mobile app. Sundan ang CRMC para sa updates.",
+      "mobileToast": "Malapit nang ilunsad ang MAPA mobile app. Sundan ang {{org}} para sa updates.",
       "register": "Mag-register",
       "login": "Mag-login →",
       "dashboard": "Dashboard →"
@@ -164,11 +164,11 @@
     "hero": {
       "badge": "Opisyal na portal ng Cotabato Regional Medical Center",
       "location": "Sinsuat Avenue, Cotabato City",
-      "tagline": "Pinapasimple ang pag-access sa mga medical financial assistance program sa CRMC para sa mga pasyente, ahensya, at administrator.",
+      "tagline": "Pinapasimple ang pag-access sa mga medical financial assistance program sa {{facility}} para sa mga pasyente, ahensya, at administrator.",
       "ctaPatient": "Mag-apply para sa Patient Account",
       "ctaDashboard": "Pumunta sa Dashboard",
       "learnMore": "Alamin Pa ↓",
-      "headline": "Tulong medikal sa CRMC — isang aplikasyon, mula sa inyong telepono.",
+      "headline": "Tulong medikal sa {{facility}} — isang aplikasyon, mula sa inyong telepono.",
       "proof1Value": "Isa",
       "proof1Label": "aplikasyon para sa lahat ng kasosyong ahensya",
       "proof2Value": "Libre",
@@ -180,7 +180,7 @@
       "stage1Label": "Na-file",
       "stage1Detail": "Nagsusumite kayo ng isang request kasama ang mga requirements.",
       "stage2Label": "Na-review at na-assess",
-      "stage2Detail": "Bini-verify ng CRMC ang inyong dokumento at sinusuri ang inyong kaso.",
+      "stage2Detail": "Bini-verify ng {{gateway}} ang inyong dokumento at sinusuri ang inyong kaso.",
       "stage3Label": "Na-endorso at naaprubahan",
       "stage3Detail": "Pinopondohan ito ng mga kasosyong ahensya at ini-issue ang Guarantee Letter.",
       "stage4Label": "Na-release",
@@ -189,7 +189,7 @@
     "prepare": {
       "heading": "Bago mag-register, ihanda ang sumusunod",
       "codeTitle": "Patient Access Code",
-      "codeDesc": "Ang inyong CRMC Patient Access Code (CRMC-YYYY-XXXXX). Kunin ito sa CRMC Medical Social Services.",
+      "codeDesc": "Ang inyong Patient Access Code ({{codeFormat}}). Kunin ito sa {{gateway}}.",
       "emailTitle": "Email Address",
       "emailDesc": "Isang gumaganang email address para sa account login, abiso, at password recovery.",
       "mobileTitle": "Mobile Number",
@@ -201,25 +201,25 @@
     },
     "steps": {
       "heading": "Paano Kumuha ng Tulong Medikal",
-      "subtitle": "Sundin ang mga hakbang na ito upang magsumite at makatanggap ng tulong medikal sa CRMC.",
+      "subtitle": "Sundin ang mga hakbang na ito upang magsumite at makatanggap ng tulong medikal sa {{facility}}.",
       "s1Title": "Kunin ang inyong Patient Access Code",
-      "s1Desc": "Bisitahin ang CRMC Medical Social Services upang masuri at makakuha ng inyong Patient Access Code.",
+      "s1Desc": "Bisitahin ang {{gateway}} upang masuri at makakuha ng inyong Patient Access Code.",
       "s2Title": "Gumawa ng Patient Account",
       "s2Desc": "Mag-register online gamit ang inyong Hospital ID, email address, contact number, at tirahan.",
       "s3Title": "Isumite ang Inyong Kahilingan",
       "s3Desc": "Buksan ang Request Assistance, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID gamit ang selfie.",
-      "s4Title": "Veverifyin ng CRMC ang Inyong mga Dokumento",
-      "s4Desc": "Susuriin ng social worker ng CRMC ang inyong mga dokumento upang siguraduhing ayos lahat.",
-      "s5Title": "Sinusuri ng CRMC ang Inyong Kaso",
-      "s5Desc": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan at maaaring mag-message kung may kailangan — walang panayam na dadaluhan.",
+      "s4Title": "Veverifyin ng {{gateway}} ang Inyong mga Dokumento",
+      "s4Desc": "Susuriin ng social worker ang inyong mga dokumento upang siguraduhing ayos lahat.",
+      "s5Title": "Sinusuri ng {{gateway}} ang Inyong Kaso",
+      "s5Desc": "Sinusuri ng isang social worker ang inyong kaso nang malayuan at maaaring mag-message kung may kailangan — walang panayam na dadaluhan.",
       "s6Title": "Ma-endorso at Tanggapin ang Guarantee Letter",
-      "s6Desc": "I-eendorso ng CRMC ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito. Kunin ang Guarantee Letter upang iharap sa pinangalanang provider.",
+      "s6Desc": "I-eendorso ng {{gateway}} ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito. Kunin ang Guarantee Letter upang iharap sa pinangalanang provider.",
       "startBtn": "Magsimula sa Hakbang 1",
-      "footer": "Libre · Walang babayaran · Pinapatakbo ng CRMC"
+      "footer": "Libre · Walang babayaran · Pinapatakbo ng {{gateway}}"
     },
     "programs": {
       "heading": "Mga Available na Programa",
-      "subtitle": "Tingnan ang mga aktibong medical assistance program sa CRMC. Nire-reset araw-araw sa hatinggabi ang mga slot.",
+      "subtitle": "Tingnan ang mga aktibong medical assistance program sa {{facility}}. Nire-reset araw-araw sa hatinggabi ang mga slot.",
       "applyNow": "Mag-apply Na →",
       "goToDashboard": "Pumunta sa Dashboard →",
       "full": "Puno",
@@ -232,18 +232,18 @@
       "point1": "Walang bayad sa pagrehistro",
       "point2": "Walang processing fee",
       "point3": "Walang fixer o tagapamagitan",
-      "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-CRMC. Isumbong agad sa Malasakit Center."
+      "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-{{gateway}}. Isumbong agad sa Malasakit Center."
     },
     "eligibility": {
       "title": "Sino ang maaaring mag-apply",
-      "intro": "Para sa mga pasyente ng CRMC na hindi kayang bayaran ang bill. Hindi kailangang marunong sa computer — maikli ang form, at may staff na maaaring tumulong sa inyo.",
+      "intro": "Para sa mga pasyente ng {{facility}} na hindi kayang bayaran ang bill. Hindi kailangang marunong sa computer — maikli ang form, at may staff na maaaring tumulong sa inyo.",
       "qualifyHeading": "Maaari kayong mag-apply kung…",
-      "q1": "Kayo ay naka-admit o ginamot sa CRMC.",
+      "q1": "Kayo ay naka-admit o ginamot sa {{facility}}.",
       "q2": "May hindi pa bayad na bill o billing statement.",
-      "q3": "Naitala kayong indigent patient ng social worker ng CRMC.",
+      "q3": "Naitala kayong indigent patient ng social worker.",
       "q4": "Kayo ang pasyente, o kapamilyang nag-aapply para sa kanya.",
       "codeHeading": "Kailangan ng Patient Access Code",
-      "codeBody": "Naka-print ito at ibinibigay nang personal sa CRMC Medical Social Services office. Hindi ito ipinapadala sa text, email, o social media — at walang makapagbibigay nito online.",
+      "codeBody": "Naka-print ito at ibinibigay nang personal sa {{gateway}} office. Hindi ito ipinapadala sa text, email, o social media — at walang makapagbibigay nito online.",
       "codeSample": "Halimbawa ng code",
       "codeCta": "Saan ang opisina?"
     },
@@ -251,25 +251,25 @@
       "heading": "Mga tanong na madalas itanong",
       "intro": "Kung wala rito ang tanong ninyo, tumawag o dumalaw — mas mabuting ipaliwanag namin kaysa manghula kayo.",
       "q1": "May kailangan ba akong bayaran?",
-      "a1": "Wala. Libre ang buong proseso sa MAPA, mula sa pagre-register hanggang sa paglabas ng Guarantee Letter. Hindi kayo hihingan ng bayad, deposito, o 'processing fee' ng CRMC o ng MAPA. Kung may humingi ng pera kapalit ng approval, ipagbigay-alam agad sa Medical Social Services.",
+      "a1": "Wala. Libre ang buong proseso sa MAPA, mula sa pagre-register hanggang sa paglabas ng Guarantee Letter. Hindi kayo hihingan ng bayad, deposito, o 'processing fee' ng {{gateway}} o ng MAPA. Kung may humingi ng pera kapalit ng approval, ipagbigay-alam agad sa Medical Social Services.",
       "q2": "Ano ang Patient Access Code at paano ito makukuha?",
-      "a2": "Isang naka-print na code na ibinibigay nang personal sa CRMC Medical Social Services office, matapos makumpirma ng social worker na kayo ay pasyente ng CRMC na may hindi pa bayad na bill. Ang code ang nag-uugnay sa inyong online application at tunay na hospital record, kaya hindi ito maaaring hingin sa telepono, text, o email. Magdala ng valid ID at billing statement.",
+      "a2": "Isang naka-print na code na ibinibigay nang personal sa {{gateway}} office, matapos makumpirma ng social worker na kayo ay pasyente ng {{facility}} na may hindi pa bayad na bill. Ang code ang nag-uugnay sa inyong online application at tunay na hospital record, kaya hindi ito maaaring hingin sa telepono, text, o email. Magdala ng valid ID at billing statement.",
       "q3": "Maaari ba akong mag-apply para sa kapamilya?",
       "a3": "Oo. Maaaring mag-apply ang asawa, magulang, anak na nasa hustong gulang, o awtorisadong kinatawan para sa pasyente — karaniwan kapag naka-confine pa ang pasyente o hindi kayang gumamit ng telepono. Itatanong ang inyong relasyon sa pasyente, sarili ninyong valid ID, at authorization letter na nilagdaan ng pasyente o pamilya.",
       "q4": "Gaano katagal ang proseso?",
-      "a4": "Depende ito sa kakumpletuhan ng inyong dokumento at sa review at bakanteng slot ng bawat ahensya. Sinisikap ng CRMC na mabilis na masuri ang dokumento at masuri ang inyong kaso, at makikita ninyo ang bawat hakbang sa inyong account.",
-      "q5": "Kailangan ko bang pumunta sa CRMC para sa panayam?",
-      "a5": "Hindi. Ginagawa nang malayuan ang pagsusuri — sinusuri ng isang CRMC social worker ang inyong kaso online at magme-message sa inyo sa app kung may kailangan sila. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link. Walang naka-iskedyul na panayam sa opisina na dadaluhan.",
+      "a4": "Depende ito sa kakumpletuhan ng inyong dokumento at sa review at bakanteng slot ng bawat ahensya. Sinisikap ng {{gateway}} na mabilis na masuri ang dokumento at masuri ang inyong kaso, at makikita ninyo ang bawat hakbang sa inyong account.",
+      "q5": "Kailangan ko bang pumunta sa {{facility}} para sa panayam?",
+      "a5": "Hindi. Ginagawa nang malayuan ang pagsusuri — sinusuri ng isang social worker ang inyong kaso online at magme-message sa inyo sa app kung may kailangan sila. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link. Walang naka-iskedyul na panayam sa opisina na dadaluhan.",
       "q6": "Ligtas ba ang aking impormasyon?",
-      "a6": "Oo. Pinapatakbo ang MAPA ng CRMC at pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ahensyang pinagsumite ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras."
+      "a6": "Oo. Pinapatakbo ang MAPA ng {{gateway}} at pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ahensyang pinagsumite ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras."
     },
     "help": {
       "title": "Kailangan ng tulong? Dumalaw.",
-      "intro": "Ang staff sa CRMC Malasakit Center ay maaaring magrehistro para sa inyo, kunan ng selfie, at mag-upload ng dokumento. Dalhin ang papeles at may tutulong sa inyo.",
+      "intro": "Ang staff sa {{gateway}} ay maaaring magrehistro para sa inyo, kunan ng selfie, at mag-upload ng dokumento. Dalhin ang papeles at may tutulong sa inyo.",
       "onsite": "May tulong para sa walk-in — hindi kailangan ng appointment.",
       "startBtn": "Simulan ang aplikasyon",
       "addressLabel": "Address",
-      "address": "CRMC Malasakit Center, Sinsuat Avenue, Lungsod ng Cotabato, Maguindanao del Norte 9600",
+      "address": "{{gateway}}, Sinsuat Avenue, Lungsod ng Cotabato, Maguindanao del Norte 9600",
       "phoneLabel": "Telepono",
       "emailLabel": "Email",
       "hoursLabel": "Oras ng opisina",
@@ -288,14 +288,14 @@
       "hours": "Lun – Biy, 8:00 AM – 5:00 PM",
       "copyright": "© {{year}} MAPA · Cotabato Regional Medical Center · Lahat ng karapatan ay nakalaan",
       "privacy": "Privacy Notice",
-      "officialPortal": "Opisyal na Portal ng CRMC"
+      "officialPortal": "Opisyal na Portal ng {{org}}"
     },
     "privacy": {
       "title": "Privacy Notice",
-      "intro": "Ipinapaliwanag ng abisong ito kung anong impormasyon ang kinokolekta ng MAPA, paano ito ginagamit, at sino ang pwedeng mag-access. Pinapatakbo ang MAPA ng Cotabato Regional Medical Center (CRMC) alinsunod sa Philippine Data Privacy Act of 2012 (Republic Act 10173).",
+      "intro": "Ipinapaliwanag ng abisong ito kung anong impormasyon ang kinokolekta ng MAPA, paano ito ginagamit, at sino ang pwedeng mag-access. Pinapatakbo ang MAPA ng {{facility}} alinsunod sa Philippine Data Privacy Act of 2012 (Republic Act 10173).",
       "dataTitle": "Datos na Kinokolekta Namin",
       "data1": "Buong pangalan, email address, at contact number",
-      "data2": "CRMC Hospital ID at patient ID number",
+      "data2": "Hospital ID at patient ID number",
       "data3": "Mga dokumentong na-upload para sa beripikasyon",
       "data4": "Mga aplikasyong naipasa at status history",
       "data5": "Mga mensahe sa administrator at agency staff",
@@ -310,7 +310,7 @@
       "access2": "Agency Coordinators — mga aplikasyong ipinasa sa kanilang ahensya",
       "access3": "Staff Administrators — mga dokumento at aplikasyon para sa pagrepaso",
       "access4": "System Administrators — buong access para sa management at audit",
-      "contactNote": "Para sa mga alalahanin sa datos, makipag-ugnayan sa <b>CRMC Records Office</b> sa records@crmc.gov.ph o tumawag sa (064) 421-2500.",
+      "contactNote": "Para sa mga alalahanin sa datos, makipag-ugnayan sa <b>{{gateway}}</b> sa {{contactEmail}} o tumawag sa (064) 421-2500.",
       "close": "Isara"
     }
   },
@@ -321,7 +321,7 @@
     "operations": "Operations",
     "help": {
       "title": "Kailangan ng tulong?",
-      "body": "Pumunta sa CRMC Medical Social Services, o basahin ang hakbang-hakbang na gabay.",
+      "body": "Pumunta sa {{gateway}}, o basahin ang hakbang-hakbang na gabay.",
       "cta": "Buksan ang gabay"
     },
     "notifs": {
@@ -372,7 +372,7 @@
       "helpSupport": "Tulong at Suporta",
       "reportProblem": "Mag-ulat ng Problema",
       "logout": "Mag-logout",
-      "footer": "Privacy · Terms · MAPA · CRMC",
+      "footer": "Privacy · Terms · {{org}}",
       "tooltip": "Profile"
     },
     "banner": {
@@ -400,8 +400,8 @@
     },
     "accessLog": {
       "title": "Sino ang nakakita sa iyong rekord",
-      "subtitle": "Karapatan mo sa ilalim ng RA 10173 — ang Data Privacy Act. Lalabas dito ang bawat aksyong gagawin ng CRMC o ng kasosyong ahensiya sa iyong kaso.",
-      "componentDescription": "Naitatala ang bawat aksyon ng CRMC at mga kasosyong ahensiya sa iyong kaso. Sa ilalim ng RA 10173 (Data Privacy Act §16c), may karapatan kang makita ito.",
+      "subtitle": "Karapatan mo sa ilalim ng RA 10173 — ang Data Privacy Act. Lalabas dito ang bawat aksyong gagawin ng {{gateway}} o ng kasosyong ahensiya sa iyong kaso.",
+      "componentDescription": "Naitatala ang bawat aksyon ng {{gateway}} at mga kasosyong ahensiya sa iyong kaso. Sa ilalim ng RA 10173 (Data Privacy Act §16c), may karapatan kang makita ito.",
       "unavailable": "Pansamantalang hindi makuha ang access log. Subukang i-refresh sa ilang sandali.",
       "empty": "Wala pang aksyon sa iyong rekord."
     },
@@ -428,7 +428,7 @@
       "addressStaffPlaceholder": "Tirahan ng opisina o trabaho (opsyonal)",
       "addressGLHint": "Lalabas sa inyong Guarantee Letter.",
       "lockedTag": "Naka-lock",
-      "nameLockedHint": "Upang itama ang inyong pangalan, bisitahin ang CRMC Medical Social Services.",
+      "nameLockedHint": "Upang itama ang inyong pangalan, bisitahin ang {{gateway}}.",
       "accountInfo": "Impormasyon ng Account",
       "role": "Tungkulin",
       "agency": "Ahensya",
@@ -473,11 +473,11 @@
     },
     "privacy": {
       "title": "Abiso sa Privacy",
-      "intro": "Ipinapaliwanag ng abisong ito kung anong impormasyon ang kinokolekta ng MAPA, paano ito ginagamit, at sino ang pwedeng mag-access. Pinapatakbo ang MAPA ng Cotabato Regional Medical Center (CRMC) alinsunod sa <b>Republic Act 10173</b> — ang Data Privacy Act of 2012.",
+      "intro": "Ipinapaliwanag ng abisong ito kung anong impormasyon ang kinokolekta ng MAPA, paano ito ginagamit, at sino ang pwedeng mag-access. Pinapatakbo ang MAPA ng {{facility}} alinsunod sa <b>Republic Act 10173</b> — ang Data Privacy Act of 2012.",
       "updated": "Huling na-update: Mayo 2026",
       "dataTitle": "Datos na Kinokolekta Namin",
       "data1": "Buong pangalan, email address, at contact number",
-      "data2": "CRMC Patient Access Code at patient ID number",
+      "data2": "Patient Access Code at patient ID number",
       "data3": "Mga dokumentong na-upload para sa beripikasyon (ligtas na nakatabi)",
       "data4": "Mga aplikasyong naipasa at kumpletong status history",
       "data5": "Mga mensaheng nipalitan sa administrator at agency staff",
@@ -494,17 +494,17 @@
       "access3": "Staff Administrators — mga dokumento at aplikasyon para sa pagrepaso",
       "access4": "System Administrators — buong access para sa system management at audit",
       "retentionTitle": "Pagtatabi ng Datos",
-      "retention1": "Ang inyong datos ay itinatabi habang naka-enroll kayo sa CRMC.",
+      "retention1": "Ang inyong datos ay itinatabi habang naka-enroll kayo sa {{facility}}.",
       "retention2": "Ang mga record ay itinatabi ayon sa kinakailangan ng mga regulasyon ng pamahalaan.",
-      "retention3": "Para sa mga alalahanin sa datos o request sa pagtanggal, makipag-ugnayan sa CRMC Medical Social Services.",
+      "retention3": "Para sa mga alalahanin sa datos o request sa pagtanggal, makipag-ugnayan sa {{gateway}}.",
       "rightsTitle": "Inyong mga Karapatan sa RA 10173",
       "right1": "Karapatang malaman — alamin kung anong datos ang kinokolekta at bakit.",
-      "right2": "Karapatang ma-access — humingi ng kopya ng inyong personal data sa CRMC.",
+      "right2": "Karapatang ma-access — humingi ng kopya ng inyong personal data sa {{facility}}.",
       "right3": "Karapatang itama — ipa-correct ang maling o kulang na datos.",
       "right4": "Karapatang tumutol — tumutol sa pagproseso ng inyong datos.",
       "right5": "Karapatang ipa-delete — humingi ng pagtanggal ng inyong datos ayon sa legal na pangangailangan.",
       "right6": "Karapatang mag-file ng reklamo — magsumite ng reklamo sa National Privacy Commission (privacy.gov.ph).",
-      "contact": "Para sa mga tanong tungkol sa inyong datos o upang gamitin ang inyong mga karapatan, makipag-ugnayan sa <b>CRMC Medical Social Services</b> o mag-email sa <b>mss@crmc.gov.ph</b>.",
+      "contact": "Para sa mga tanong tungkol sa inyong datos o upang gamitin ang inyong mga karapatan, makipag-ugnayan sa <b>{{gateway}}</b> o mag-email sa <b>{{contactEmail}}</b>.",
       "close": "Isara",
       "exportTitle": "I-download ang kopya ng inyong datos",
       "exportDesc": "Gamitin ang inyong karapatang mag-port ng datos sa ilalim ng RA 10173 §16(f). Ang download ay isang JSON file na naglalaman ng inyong profile, mga kahilingan, aplikasyon, dokumento (kasama ang nilalaman), Guarantee Letters, mga notipikasyon, at mga usapan. Maaaring ilang MB ang laki.",
@@ -530,11 +530,11 @@
       "patientFaqs": [
         {
           "q": "Paano humiling ng tulong medikal?",
-          "a": "Buksan ang Humiling ng Tulong, piliin ang uri ng tulong na kailangan (hal. Bayarin sa Ospital), ilagay ang halaga, at i-upload ang dokumentong kinakailangan para sa uring iyon. Susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong. Susuriin ninyo ang plano ng tulong, pindutin ang Magpatuloy, at kumpletuhin ang mga kinakailangan ng bawat ahensya."
+          "a": "Buksan ang Humiling ng Tulong, piliin ang uri ng tulong na kailangan (hal. Bayarin sa Ospital), ilagay ang halaga, at i-upload ang dokumentong kinakailangan para sa uring iyon. Susuriin ito ng {{gateway}} at ie-endorso sa mga ahensyang makakatulong. Susuriin ninyo ang plano ng tulong, pindutin ang Magpatuloy, at kumpletuhin ang mga kinakailangan ng bawat ahensya."
         },
         {
           "q": "Saan ako kukuha ng Patient Access Code?",
-          "a": "Ang Patient Access Codes ay ibinibigay nang personal ng CRMC Medical Social Services. Magdala ng valid na ID. Ang code ay sumusunod sa format na CRMC-YYYY-NNNNN."
+          "a": "Ang Patient Access Codes ay ibinibigay nang personal ng {{gateway}}. Magdala ng valid na ID. Ang code ay sumusunod sa format na {{codeFormat}}."
         },
         {
           "q": "Ano ang Guarantee Letter?",
@@ -542,19 +542,19 @@
         },
         {
           "q": "Paano ko malalaman ang status ng aking kahilingan?",
-          "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — kapag in-endorso ng CRMC, kapag sinuri ng mga ahensya, at sa bawat aproba. Ipinapakita sa pahinang Humiling ng Tulong ang plano ng tulong at kung magkano na ang natipon tungo sa zero balance."
+          "a": "Tatanggap kayo ng in-app notification at email sa bawat hakbang — kapag in-endorso ng {{gateway}}, kapag sinuri ng mga ahensya, at sa bawat aproba. Ipinapakita sa pahinang Humiling ng Tulong ang plano ng tulong at kung magkano na ang natipon tungo sa zero balance."
         },
         {
           "q": "Kailangan ko bang dumalo sa isang panayam?",
-          "a": "Hindi. Sinusuri ng CRMC ang inyong kaso nang malayuan — rine-review ng social worker ang inyong mga dokumento at magme-message sa inyo sa app kung may hindi malinaw. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link; walang naka-iskedyul na panayam na dadaluhan."
+          "a": "Hindi. Sinusuri ng {{gateway}} ang inyong kaso nang malayuan — rine-review ng social worker ang inyong mga dokumento at magme-message sa inyo sa app kung may hindi malinaw. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link; walang naka-iskedyul na panayam na dadaluhan."
         },
         {
           "q": "Pinipili ko ba kung aling ahensya ang tutulong?",
-          "a": "Hindi — magsusumite kayo ng isang kahilingan at ire-route ito ng CRMC sa mga ahensyang makakasaklaw, minsan hinahati sa ilang ahensya upang maabot ang zero balance. Maaaring magkaroon ng isang aktibong kahilingan sa bawat pagkakataon."
+          "a": "Hindi — magsusumite kayo ng isang kahilingan at ire-route ito ng {{gateway}} sa mga ahensyang makakasaklaw, minsan hinahati sa ilang ahensya upang maabot ang zero balance. Maaaring magkaroon ng isang aktibong kahilingan sa bawat pagkakataon."
         },
         {
           "q": "Paano mag-withdraw ng aking kahilingan?",
-          "a": "Maaaring i-withdraw ang kahilingan habang sinusuri pa ito ng CRMC (bago ma-endorso). Pagkatapos ma-endorso sa mga ahensya, makipag-ugnayan sa CRMC o sa ahensya sa Messages."
+          "a": "Maaaring i-withdraw ang kahilingan habang sinusuri pa ito ng {{gateway}} (bago ma-endorso). Pagkatapos ma-endorso sa mga ahensya, makipag-ugnayan sa {{gateway}} o sa ahensya sa Messages."
         }
       ]
     },
@@ -642,9 +642,9 @@
       "navLabel": "Humiling ng Tulong",
       "eyebrow": "Bagong kahilingan",
       "title": "Humiling ng Tulong Medikal",
-      "subtitle": "Sabihin sa amin ang inyong pangangailangan. Susuriin ng CRMC ang inyong kahilingan at ie-endorso ito sa mga ahensyang makakatulong.",
+      "subtitle": "Sabihin sa amin ang inyong pangangailangan. Susuriin ng {{gateway}} ang inyong kahilingan at ie-endorso ito sa mga ahensyang makakatulong.",
       "activeTitle": "May aktibong kahilingan kayo",
-      "activeDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Maaari kayong magsumite ng bago kapag natapos na ito.",
+      "activeDesc": "Pinoproseso ng {{gateway}} ang inyong kahilingan. Maaari kayong magsumite ng bago kapag natapos na ito.",
       "tasks": {
         "title": "Ano ang susunod",
         "docs": "Iyong mga dokumento",
@@ -663,17 +663,17 @@
       "typeLabel": "Uri ng tulong na kailangan",
       "typePlaceholder": "Pumili ng uri ng tulong",
       "amountLabel": "Halagang kailangan ninyong matulungan (₱)",
-      "amountHint": "Ang balanseng kailangan ninyo ng tulong (mula sa inyong Statement of Account). Bini-verify ito ng CRMC laban sa inyong na-upload na dokumento; ang mga ahensya ang magpapasya kung magkano ang masasaklaw ng bawat isa.",
+      "amountHint": "Ang balanseng kailangan ninyo ng tulong (mula sa inyong Statement of Account). Bini-verify ito ng {{gateway}} laban sa inyong na-upload na dokumento; ang mga ahensya ang magpapasya kung magkano ang masasaklaw ng bawat isa.",
       "billLabel": "Kabuuang bayarin sa ospital (₱)",
       "billHint": "Ang buong halaga sa inyong Statement of Account.",
-      "philhealthLabel": "Saklaw ng PhilHealth (₱)",
+      "philhealthLabel": "Naunang saklaw, hal. PhilHealth (₱)",
       "otherLabel": "Iba pang natanggap na tulong (₱)",
       "neededLabel": "Halagang kailangan pa",
       "neededHint": "Ito ang sasaklawin ng mga ahensya tungo sa zero balance.",
       "descLabel": "Maikling paglalarawan (opsyonal)",
       "descPlaceholder": "Diagnosis o layunin ng tulong…",
       "billingReminderTitle": "Statement of Account",
-      "billingReminderDesc": "I-upload ang inyong Statement of Account sa Aking mga Dokumento upang ma-verify ng CRMC ang halaga.",
+      "billingReminderDesc": "I-upload ang inyong Statement of Account sa Aking mga Dokumento upang ma-verify ng {{gateway}} ang halaga.",
       "goToDocuments": "Pumunta sa Aking mga Dokumento",
       "declaration": "Pinatutunayan ko na totoo at tama ang impormasyong ibinigay ko.",
       "submit": "Isumite ang Kahilingan",
@@ -698,7 +698,17 @@
         "saving": "Sine-save…",
         "uploadFailed": "Hindi na-save — itatago namin at susubukang muli",
         "retakePhoto": "Kumuhang muli",
-        "accepts": "Larawan o PDF · PDF hanggang 650 KB"
+        "accepts": "Larawan o PDF · PDF hanggang 650 KB",
+        "qtyNeeded": "{{n}} ang kailangan",
+        "tagTodo": "Gagawin",
+        "tagReady": "Handa",
+        "tagChecking": "Sinusuri",
+        "tagRetake": "Kunan muli",
+        "tagOnFile": "Nasa file",
+        "tagWaived": "Hindi kailangan",
+        "tagSaving": "Sine-save",
+        "tagFailed": "Nabigo",
+        "tagFlagged": "Na-flag"
       },
       "guidedId": {
         "titleFront": "Litrato ng ID · Harap",
@@ -741,7 +751,7 @@
         "holdSteady": "Huwag gumalaw · iwasan ang silaw.",
         "resultTitle": "Nabasa ang National ID",
         "sigValid": "Tunay na PSA signature · nasuri sa teleponong ito",
-        "sigUnverified": "Hindi na-verify ang signature sa device na ito — kumpirmahin ng CRMC.",
+        "sigUnverified": "Hindi na-verify ang signature sa device na ito — kumpirmahin ng {{gateway}}.",
         "name": "Pangalan",
         "dob": "Petsa ng kapanganakan",
         "pcn": "Numero ng card (PCN)",
@@ -751,17 +761,17 @@
         "rescan": "Hindi ito ang inyong detalye? I-scan muli",
         "typePcnTitle": "I-type ang inyong PhilSys Card Number (PCN).",
         "notYourPsn": "Hindi ito ang PSN. Pribado ang inyong 12-digit na PhilSys Number — huwag itong i-type o ibahagi.",
-        "pcnUnverified": "Ang na-type na numero ay hindi awtomatikong masusuri, kaya kukuha kayo ng litrato ng ID at kukumpirmahin ito ng CRMC."
+        "pcnUnverified": "Ang na-type na numero ay hindi awtomatikong masusuri, kaya kukuha kayo ng litrato ng ID at kukumpirmahin ito ng {{gateway}}."
       },
       "documentsTitle": "Mga kinakailangang dokumento",
-      "documentsHint": "Ilakip ang mga dokumento sa ibaba. Sinusuri ng CRMC ang mga ito bago i-endorso ang inyong kahilingan. Ang ilan (tulad ng Valid ID) ay magagamit muli kapag na-verify na; ang inyong Billing Statement ay kailangan sa bawat kahilingan.",
+      "documentsHint": "Ilakip ang mga dokumento sa ibaba. Sinusuri ng {{gateway}} ang mga ito bago i-endorso ang inyong kahilingan. Ang ilan (tulad ng Valid ID) ay magagamit muli kapag na-verify na; ang inyong Billing Statement ay kailangan sa bawat kahilingan.",
       "identitySection": "I-verify ang iyong pagkakakilanlan",
-      "identitySectionHint": "Ang iyong ID at isang live na selfie, para makumpirma ng CRMC na ikaw nga.",
+      "identitySectionHint": "Ang iyong ID at isang live na selfie, para makumpirma ng {{gateway}} na ikaw nga.",
       "docsSection": "Mga karagdagang dokumento",
-      "documentsNone": "Walang naka-set up na kinakailangang dokumento. Makipag-ugnayan sa CRMC.",
+      "documentsNone": "Walang naka-set up na kinakailangang dokumento. Makipag-ugnayan sa {{gateway}}.",
       "intakeTitle": "Household Information Sheet",
-      "intakeTodo": "Punan ang detalye ng inyong pamilya, kita, at medikal upang masuri ng CRMC ang inyong kahilingan.",
-      "intakeDone": "Naisumite na. Kukumpletuhin ng CRMC ang pagsusuri.",
+      "intakeTodo": "Punan ang detalye ng inyong pamilya, kita, at medikal upang masuri ng {{gateway}} ang inyong kahilingan.",
+      "intakeDone": "Naisumite na. Kukumpletuhin ng {{gateway}} ang pagsusuri.",
       "intakeIncomplete": "Gagawin pa",
       "docsSummary": "{{count}} dokumentong naisumite",
       "docsUnderReview": "Sinusuri",
@@ -777,7 +787,7 @@
       "next": "Susunod",
       "ocrChecking": "Sinusuri ang pangalan sa inyong ID…",
       "ocrMatch": "✓ Tumutugma ang pangalan sa inyong ID sa inyong account.",
-      "ocrNoMatch": "Hindi namin awtomatikong natugma ang pangalan — ive-verify ito ng CRMC. Maaari pa rin kayong magsumite.",
+      "ocrNoMatch": "Hindi namin awtomatikong natugma ang pangalan — ive-verify ito ng {{gateway}}. Maaari pa rin kayong magsumite.",
       "ocrUnreadable": "⚠ Hindi namin nabasa ang ID — kumuha ng malinaw at patag na larawan, o gamitin pa rin ito sa ibaba.",
       "ocrNotAnId": "⚠ Mukhang hindi ito ID — siguraduhing malinaw na larawan ito ng inyong government ID, o gamitin pa rin ito sa ibaba.",
       "exposureGlare": "💡 Masyadong maliwanag o may silaw — kumuha muli sa pantay na ilaw, o gamitin pa rin ito sa ibaba.",
@@ -789,7 +799,7 @@
       "qualityUsingAnyway": "Ginagamit ang larawang ito (na-flag na mababang kalidad)",
       "takeSelfie": "Kumuha ng selfie",
       "selfieTitle": "Kumuha ng live selfie",
-      "selfieHint": "Itutok ang inyong mukha sa frame. Itinutugma ito ng CRMC sa inyong ID.",
+      "selfieHint": "Itutok ang inyong mukha sa frame. Itinutugma ito ng {{gateway}} sa inyong ID.",
       "selfieCapture": "Kunan",
       "selfieRetake": "Ulitin",
       "selfieUse": "Gamitin ang larawang ito",
@@ -797,8 +807,8 @@
       "selfieChecking": "Sinusuri ang inyong larawan…",
       "selfieLiveOk": "Maganda — malinaw at maliwanag.",
       "selfieLiveUnclear": "Mahirap kumpirmahin. Subukan sa mas maliwanag, o gamitin pa rin — susuriin ito ng opisina.",
-      "selfieConsent": "Pumapayag ako na ihambing ng CRMC ang larawang ito sa aking ID upang kumpirmahin na ako ito.",
-      "selfieNoCamera": "Walang available na camera. Mangyaring pumunta sa CRMC Malasakit office upang makuhanan ng larawan nang personal.",
+      "selfieConsent": "Pumapayag ako na ihambing ng {{gateway}} ang larawang ito sa aking ID upang kumpirmahin na ako ito.",
+      "selfieNoCamera": "Walang available na camera. Mangyaring pumunta sa {{gateway}} office upang makuhanan ng larawan nang personal.",
       "selfieHeadline": "Put your face in the oval",
       "selfieHeadlineSub": "Ilagay ang mukha sa loob ng oval",
       "selfieLightGood": "Maganda ang ilaw",
@@ -806,7 +816,7 @@
       "selfieCheckLive": "Tinitingnan kung buhay na tao…",
       "selfieTipCap": "Tanggalin ang cap / salamin",
       "selfieTipLight": "Humarap sa bintana o ilaw",
-      "selfieReassure": "Ikinukumpara sa larawan ng iyong ID sa telepono mismo. Ang resulta lang ang napupunta sa CRMC, at ang social worker ang may huling desisyon.",
+      "selfieReassure": "Ikinukumpara sa larawan ng iyong ID sa telepono mismo. Ang resulta lang ang napupunta sa {{gateway}}, at ang social worker ang may huling desisyon.",
       "selfieReviewHint": "Tiyaking malinaw at maliwanag ang iyong mukha. Pindutin ang Kumuha Muli kung hindi — hindi gagamitin ang litratong ito hangga't hindi mo kinukumpirma.",
       "selfieDiffToggle": "Mukhang iba ba ang litrato mo sa iyong ID?",
       "selfieDiffHint": "Opsyonal — sabihin sa tagasuri kung bakit (halimbawa: kamakailang operasyon, pinsala, benda, o karamdaman). Hindi nito maaantala o maaapektuhan ang iyong aplikasyon; babasahin ito ng social worker.",
@@ -826,7 +836,7 @@
       "repAuth": "Pinatutunayan ko na ako ay awtorisadong maghain ng kahilingang ito sa ngalan ng pasyente at totoo ang impormasyon.",
       "errRep": "Mangyaring kumpletuhin ang detalye ng kinatawan (pangalan, kaugnayan, ID, selfie, at awtorisasyon).",
       "billingTitle": "Billing statement",
-      "billingHint": "Ilakip ang inyong billing statement ng ospital (Statement of Account). Tinitingnan ng CRMC ang halagang kailangan ninyo batay dito.",
+      "billingHint": "Ilakip ang inyong billing statement ng ospital (Statement of Account). Tinitingnan ng {{gateway}} ang halagang kailangan ninyo batay dito.",
       "billingLabel": "Billing statement / Statement of Account",
       "billingOnFile": "Naka-file na",
       "docUploaded": "Na-upload",
@@ -838,9 +848,9 @@
       "reuploadHint": "Kung may dokumentong markahan ng ahensya para itama, i-upload itong muli dito.",
       "reuploadOk": "Na-upload muli ang dokumento para sa pagsusuri.",
       "reuploadErr": "Hindi na-upload muli. Pakisubukan muli.",
-      "routeNote": "Sinusuri ng CRMC ang bawat kahilingan bago ito ie-endorso sa isang ahensya.",
+      "routeNote": "Sinusuri ng {{gateway}} ang bawat kahilingan bago ito ie-endorso sa isang ahensya.",
       "successTitle": "Naisumite ang kahilingan",
-      "successDesc": "Susuriin ng CRMC ang inyong kahilingan at ie-endorso ito sa mga ahensyang makakatulong sa inyong bayarin.",
+      "successDesc": "Susuriin ng {{gateway}} ang inyong kahilingan at ie-endorso ito sa mga ahensyang makakatulong sa inyong bayarin.",
       "successIdLabel": "Inyong Request ID",
       "viewStatus": "Tingnan ang aking kahilingan",
       "notifyPatientTitle": "Naisumite ang kahilingan",
@@ -898,11 +908,11 @@
       "title": "Aking Dashboard",
       "subtitle": "Maligayang pagbabalik, {{name}}.",
       "activeRequestTitle": "Ang inyong kahilingan ng tulong",
-      "activeRequestDesc": "Pinoproseso ng CRMC ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
+      "activeRequestDesc": "Pinoproseso ng {{gateway}} ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
       "coverage": {
         "title": "Coverage at balanse",
         "bill": "Kabuuang bayarin sa ospital",
-        "philhealth": "PhilHealth (nauuna)",
+        "philhealth": "Naunang saklaw (hal. PhilHealth)",
         "other": "Iba pang coverage",
         "needed": "Halagang kailangan",
         "approved": "Naaprubahan hanggang ngayon",
@@ -924,12 +934,12 @@
         "current": "Kasalukuyan",
         "s1": "Naisumite ang kahilingan",
         "s2": "Beripikasyon ng dokumento",
-        "s2metaReviewing": "Sinusuri ng CRMC",
+        "s2metaReviewing": "Sinusuri ng {{gateway}}",
         "s2metaDone": "{{verified}} dokumento ang na-verify",
-        "s3": "Pagsusuri ng CRMC",
-        "s3metaTBD": "Malayuang pagsusuri ng CRMC",
+        "s3": "Pagsusuri ng {{gateway}}",
+        "s3metaTBD": "Malayuang pagsusuri ng {{gateway}}",
         "s4": "Na-endorso sa mga ahensya",
-        "s4meta": "Ipinapasa ng CRMC ang inyong kahilingan sa mga ahensya",
+        "s4meta": "Ipinapasa ng {{gateway}} ang inyong kahilingan sa mga ahensya",
         "s5": "Nailabas ang tulong",
         "s5metaDone": "Ibinawas sa inyong bayarin sa ospital",
         "s5metaAfter": "Pagkatapos ng aprubahan ng ahensya"
@@ -947,7 +957,7 @@
       },
       "hero": {
         "eyebrow": "Kahilingan ng tulong",
-        "remainingLabel": "Natitirang tustusan sa inyong bill sa CRMC",
+        "remainingLabel": "Natitirang tustusan sa inyong bill sa {{facility}}",
         "fromTotal": "Mula sa {{total}} kailangan · {{approved}} ang naaprubahan",
         "approved": "Naaprubahan",
         "inReview": "Sinusuri",
@@ -966,8 +976,8 @@
         "uploadDocs": "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
         "findProgram": "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",
         "pending": "Sinusuri ang inyong kahilingan — walang kailangang gawin ngayon.",
-        "reviewing": "Veverifyin ng CRMC ang inyong mga dokumento.",
-        "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang CRMC.",
+        "reviewing": "Veverifyin ng {{gateway}} ang inyong mga dokumento.",
+        "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang {{gateway}}.",
         "interview": "Naka-iskedyul ang interview — sumali sa Google Meet sa takdang oras.",
         "approved": "Naaprubahan! Inihahanda na ang inyong Guarantee Letter.",
         "certificate": "Handa na ang inyong Guarantee Letter.",
@@ -986,7 +996,7 @@
         },
         "endorsed": {
           "label": "Suriin ang Plano ng Tulong",
-          "desc": "Itinugma ng CRMC ang mga ahensya sa inyong kahilingan. Suriin kung magkano ang sasaklawin ng bawat isa, pagkatapos ay magpatuloy upang isumite ito sa kanila.",
+          "desc": "Itinugma ng {{gateway}} ang mga ahensya sa inyong kahilingan. Suriin kung magkano ang sasaklawin ng bawat isa, pagkatapos ay magpatuloy upang isumite ito sa kanila.",
           "btn": "Tingnan ang Plano ng Tulong"
         },
         "reviewing": {
@@ -1057,12 +1067,12 @@
         "current": "Kasalukuyan",
         "s1Title": "Isumite ang Inyong Kahilingan",
         "s1Desc": "Magsimula ng kahilingan, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID.",
-        "s2Title": "Susuriin at I-eendorso ng CRMC",
-        "s2Desc": "Veverifyin ng CRMC ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito.",
+        "s2Title": "Susuriin at I-eendorso ng {{gateway}}",
+        "s2Desc": "Veverifyin ng {{gateway}} ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito.",
         "s3Title": "Subaybayan ang Inyong Progreso",
         "s3Desc": "Sundan ang status at funding coverage ng inyong kahilingan anumang oras.",
-        "s4Title": "Pagsusuri ng CRMC",
-        "s4Desc": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw — walang panayam na dadaluhan.",
+        "s4Title": "Pagsusuri ng {{gateway}}",
+        "s4Desc": "Sinusuri ng isang social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw — walang panayam na dadaluhan.",
         "s5Title": "Tanggapin ang Inyong Guarantee Letter",
         "s5Desc": "Kapag napondohan na ng mga ahensya ang inyong pangangailangan, kunin ang Guarantee Letter upang iharap sa pinangalanang provider."
       }
@@ -1100,13 +1110,13 @@
       "reviewCoverage": "Tingnan ang coverage at magpatuloy",
       "reqStages": {
         "submittedLabel": "Naisumite ang Kahilingan",
-        "submittedNote": "Naisumite sa CRMC ang inyong kahilingan at mga dokumento.",
+        "submittedNote": "Naisumite sa {{gateway}} ang inyong kahilingan at mga dokumento.",
         "reviewLabel": "Sinusuri",
-        "reviewNote": "Vine-verify ng CRMC ang inyong mga dokumento at bayarin.",
+        "reviewNote": "Vine-verify ng {{gateway}} ang inyong mga dokumento at bayarin.",
         "assessmentLabel": "Pagsusuri",
-        "assessmentNote": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw.",
+        "assessmentNote": "Sinusuri ng isang social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw.",
         "endorsedLabel": "Na-endorso sa mga Ahensya",
-        "endorsedNote": "Ini-refer ng CRMC ang inyong kahilingan sa isa o higit pang ahensya para tulungan ang inyong bayarin.",
+        "endorsedNote": "Ini-refer ng {{gateway}} ang inyong kahilingan sa isa o higit pang ahensya para tulungan ang inyong bayarin.",
         "endorsedCta": "Suriin ang plano sa pondo",
         "fundedLabel": "Naaprubahan at Napondohan",
         "fundedNote": "Inaaprubahan ng mga ahensya ang kani-kanilang bahagi at inilalabas ang inyong Guarantee Letters.",
@@ -1127,7 +1137,7 @@
         "certificateLabel": "Naibigay na ang Guarantee Letter",
         "certificateNote": "Naibigay na ang inyong Guarantee Letter.",
         "endorsedLabel": "Naendorso sa Ahensya",
-        "endorsedNote": "Naendorso ng CRMC ang inyong kahilingan sa ahensyang ito para sa pondo.",
+        "endorsedNote": "Naendorso ng {{gateway}} ang inyong kahilingan sa ahensyang ito para sa pondo.",
         "fundingLabel": "Pagsusuri ng Pondo",
         "fundingNote": "Sinusuri ng ahensya ang desisyon sa pondo para sa inyong bahagi."
       },
@@ -1143,7 +1153,7 @@
         "interviewBtn": "Tingnan ang Panayam",
         "reviewing": "Tiyaking nakapag-upload kayo ng lahat ng kinakailangang dokumento.",
         "reviewingBtn": "Tingnan ang mga Dokumento",
-        "endorsed": "Naendorso ng CRMC ang bahaging ito para sa pondo. Kumpirmahin upang ipadala sa pagsusuri ng ahensya.",
+        "endorsed": "Naendorso ng {{gateway}} ang bahaging ito para sa pondo. Kumpirmahin upang ipadala sa pagsusuri ng ahensya.",
         "endorsedBtn": "Kumpirmahin at Magpatuloy",
         "proceeding": "Ipinapadala…",
         "fundingReview": "Sinusuri ng ahensya ang inyong bahagi ng pondo. Walang kailangang gawin ngayon.",
@@ -1187,14 +1197,14 @@
       "breadcrumb": "Maghanap ng Programa",
       "eyebrow": "Tulong medikal",
       "title": "Maghanap ng Programa",
-      "subtitle": "Tingnan ang mga programang tulong medikal na available sa CRMC.",
+      "subtitle": "Tingnan ang mga programang tulong medikal na available sa {{facility}}.",
       "viewRequirements": "Mga kailangan at paano ito gumagana",
       "requiredDocs": "Karaniwang kailangan",
       "howItWorks": "Paano ito gumagana",
       "heroTitle": "Isang kahilingan. Maraming tumutustos.",
-      "heroDesc": "Nauuna ang PhilHealth, pagkatapos ay ie-endorso ng CRMC ang inyong bill sa mga ahensyang makakatulong — hindi ninyo kailangang mag-apply sa bawat isa.",
+      "heroDesc": "Ang anumang naunang saklaw na mayroon kayo, tulad ng PhilHealth, ay inilalapat muna sa inyong bill, pagkatapos ay ie-endorso ng {{gateway}} ang natitira sa mga ahensyang makakatulong — hindi ninyo kailangang mag-apply sa bawat isa.",
       "ctaTitle": "Nangangailangan ng tulong medikal?",
-      "ctaDesc": "Magsumite ng isang kahilingan — susuriin ito ng CRMC at ie-endorso sa mga ahensyang makakatulong sa inyong bayarin.",
+      "ctaDesc": "Magsumite ng isang kahilingan — susuriin ito ng {{gateway}} at ie-endorso sa mga ahensyang makakatulong sa inyong bayarin.",
       "ctaBtn": "Humiling ng Tulong",
       "backToMatches": "Bumalik sa Screening",
       "holdingTitle": "May Holding Period sa Ilang Programa",
@@ -1220,7 +1230,7 @@
       "eyebrow": "Pagtatasa",
       "heroEyebrow": "Ang inyong panayam sa pagtatasa",
       "title": "Aking Panayam",
-      "subtitle": "Sumali sa inyong naka-iskedyul na assessment interview kasama ang CRMC.",
+      "subtitle": "Sumali sa inyong naka-iskedyul na assessment interview kasama ang {{gateway}}.",
       "loadError": "Hindi ma-load ang mga detalye ng panayam. Pakirefresh.",
       "todayBadge": "Ngayon!",
       "tomorrow": "Bukas",
@@ -1228,9 +1238,9 @@
       "addToCalendar": "Idagdag sa Kalendaryo",
       "scheduledBadge": "Naka-iskedyul",
       "datePassedBadge": "Lumipas na",
-      "pastWarning": "Lumipas na ang petsa ng panayam na ito. Magpadala ng mensahe sa CRMC para sa update sa inyong status.",
-      "messageAgency": "Magpadala sa CRMC",
-      "messageCrmc": "Buksan ang Mensahe sa CRMC",
+      "pastWarning": "Lumipas na ang petsa ng panayam na ito. Magpadala ng mensahe sa {{gateway}} para sa update sa inyong status.",
+      "messageAgency": "Magpadala sa {{gateway}}",
+      "messageCrmc": "Buksan ang Mensahe sa {{gateway}}",
       "atTime": "ng {{time}}",
       "joinIntro": "Mangyaring sumali sa video call nang nasa oras. Tiyaking gumagana ang inyong camera at mikropono bago magsimula ang panayam.",
       "hideDetails": "Itago ang mga detalye",
@@ -1251,22 +1261,22 @@
         "completedDesc": "Natapos na ang inyong panayam. Tingnan ang Aking Aplikasyon para sa resulta.",
         "completedBtn": "Tingnan ang Aking Aplikasyon",
         "notYetTitle": "Wala pang naka-iskedyul na Panayam",
-        "notYetDesc": "Kapag na-verify na ng CRMC ang inyong mga dokumento, mag-iiskedyul sila ng assessment interview at aabisuhan kayo.",
+        "notYetDesc": "Kapag na-verify na ng {{gateway}} ang inyong mga dokumento, mag-iiskedyul sila ng assessment interview at aabisuhan kayo.",
         "notYetBtn": "Tingnan ang Aking Aplikasyon",
         "noAppTitle": "Wala pang Kahilingan",
-        "noAppDesc": "Kailangan munang magsumite ng kahilingan ng tulong. Nag-iiskedyul ang CRMC ng assessment interview pagkatapos ma-verify ang inyong mga dokumento.",
+        "noAppDesc": "Kailangan munang magsumite ng kahilingan ng tulong. Nag-iiskedyul ang {{gateway}} ng assessment interview pagkatapos ma-verify ang inyong mga dokumento.",
         "noAppBtn": "Humiling ng Tulong"
       },
       "booking": {
         "eyebrow": "I-book ang panayam",
         "title": "Pumili ng oras ng panayam",
-        "subtitle": "Binuksan ng CRMC ang booking ng panayam para sa iyong kahilingan. Pumili ng araw at oras na kaya mo.",
-        "modeInPerson": "Harapan · Opisina ng CRMC",
+        "subtitle": "Binuksan ng {{gateway}} ang booking ng panayam para sa iyong kahilingan. Pumili ng araw at oras na kaya mo.",
+        "modeInPerson": "Harapan · Opisina ng {{gateway}}",
         "modeOnline": "Online · Google Meet",
         "chooseDay": "Pumili ng araw",
         "openTimes": "Bukas na oras",
         "timezoneNote": "Lahat ng oras ay oras ng Pilipinas.",
-        "noSlots": "Walang bukas na oras ngayon. Bumalik mamaya o mag-message sa CRMC.",
+        "noSlots": "Walang bukas na oras ngayon. Bumalik mamaya o mag-message sa {{gateway}}.",
         "selected": "Panayam sa {{time}}, {{date}}",
         "confirmBtn": "Kumpirmahin ang booking",
         "confirming": "Bino-book…",
@@ -1276,7 +1286,7 @@
         "bookError": "Hindi na-book ang oras na iyon. Subukan ulit.",
         "yourAppointment": "Ang iyong appointment",
         "arriveEarly": "Dumating nang 15 minuto na maaga.",
-        "office": "CRMC Malasakit Center — Ground Floor, Medical Social Services",
+        "office": "{{gateway}} — Ground Floor, Medical Social Services",
         "queueNo": "Queue number {{no}}",
         "queuePending": "Ibibigay ang iyong queue number sa check-in.",
         "bring": "Dalhin",
@@ -1284,7 +1294,7 @@
         "bring2": "Valid ID at ang iyong orihinal na dokumento",
         "bring3": "Hospital bill o quotation",
         "joinNote": "Tatawagin ka ng social worker sa iyong nakatakdang oras.",
-        "onlineNote": "Ginawang online ng CRMC ang panayam — hindi na kailangang pumunta.",
+        "onlineNote": "Ginawang online ng {{gateway}} ang panayam — hindi na kailangang pumunta.",
         "reschedule": "Baguhin ang oras",
         "rescheduling": "Kinakansela…",
         "rescheduleConfirm": "Kanselahin ang oras na ito at pumili ng iba?",
@@ -1299,7 +1309,7 @@
       "tapHint": "I-tap ang anumang tanong sa ibaba para basahin ang sagot.",
       "searchPlaceholder": "Maghanap sa gabay (hal. panayam, withdraw, ahensya)…",
       "noResults": "Walang seksyong tumutugma sa \"{{query}}\". Subukan ang ibang keyword.",
-      "footer": "May iba pang katanungan? Pumunta sa CRMC Medical Social Services office o magpadala ng mensahe sa pamamagitan ng portal gamit ang envelope icon sa itaas.",
+      "footer": "May iba pang katanungan? Pumunta sa {{gateway}} office o magpadala ng mensahe sa pamamagitan ng portal gamit ang envelope icon sa itaas.",
       "linkGoToDocuments": "Pumunta sa Aking mga Dokumento",
       "linkGoToStatus": "Pumunta sa Aking Aplikasyon",
       "linkGoToInterviews": "Pumunta sa Aking mga Panayam",
@@ -1307,15 +1317,15 @@
       "sections": {
         "whatIsMapa": {
           "title": "Ano ang MAPA?",
-          "content": "Ang MAPA (Medical Assistance Portal Access) ay ang opisyal na online system ng Cotabato Regional Medical Center (CRMC) para sa pagproseso ng mga aplikasyon ng tulong medikal. Pinapahintulutan nito ang mga pasyente na mag-apply para sa tulong pinansiyal o materyal mula sa mga kasosyong ahensya ng pamahalaan tulad ng DSWD, PCSO, at Malasakit Center — sa isang lugar lamang, nang hindi na pumipila sa maraming opisina."
+          "content": "Ang MAPA (Medical Assistance Portal Access) ay ang opisyal na online system ng {{facility}} para sa pagproseso ng mga aplikasyon ng tulong medikal. Pinapahintulutan nito ang mga pasyente na mag-apply para sa tulong pinansiyal o materyal mula sa mga kasosyong ahensya ng pamahalaan tulad ng DSWD, PCSO, at Malasakit Center — sa isang lugar lamang, nang hindi na pumipila sa maraming opisina."
         },
         "whoCanUse": {
           "title": "Sino ang maaaring gumamit ng MAPA?",
-          "content": "Sinumang pasyente ng CRMC na nasuri na ng Medical Social Services ay maaaring magparehistro at gumamit ng MAPA. Makakatanggap kayo ng Patient Access Code (format: CRMC-YYYY-XXXXX) mula sa CRMC Medical Social Services office. Kailangan ninyo ang code na ito upang makagawa ng account."
+          "content": "Sinumang pasyente ng {{facility}} na nasuri na ng Medical Social Services ay maaaring magparehistro at gumamit ng MAPA. Makakatanggap kayo ng Patient Access Code (format: {{codeFormat}}) mula sa {{gateway}} office. Kailangan ninyo ang code na ito upang makagawa ng account."
         },
         "register": {
           "title": "Paano ako magpaparehistro?",
-          "s1": "Bisitahin ang CRMC Medical Social Services upang masuri at makatanggap ng Patient Access Code.",
+          "s1": "Bisitahin ang {{gateway}} upang masuri at makatanggap ng Patient Access Code.",
           "s2": "Pumunta sa MAPA registration page at punan ang inyong pangalan, email, numero ng telepono, at address.",
           "s3": "Ipasok ang inyong Patient Access Code at i-click ang Verify upang kumpirmahin.",
           "s4": "Gumawa ng matibay na password at isumite ang form.",
@@ -1326,9 +1336,9 @@
           "s1": "Buksan ang Humiling ng Tulong — nakalista doon ang mga kinakailangang dokumento bilang checklist.",
           "s2": "Ilakip ang malinaw na larawan o scan ng bawat isa (hal. Valid ID, Billing Statement, Medical Certificate, Barangay Indigency).",
           "s3": "Para sa inyong Valid ID, may mabilis na on-device na pagsusuri ng pangalan upang matulungang kumpirmahin na sa inyo ito — hindi ito humahadlang sa inyo.",
-          "s4": "Kumuha ng live selfie kapag hiniling; ikinukumpara ito ng CRMC sa inyong ID upang kumpirmahin ang inyong pagkakakilanlan.",
-          "s5": "Isumite. Sinusuri at vine-verify ng CRMC ang inyong mga dokumento bago i-endorso ang inyong kahilingan sa mga ahensya.",
-          "s6": "Kung may dokumentong markahan ng CRMC para itama, aabisuhan kayo — i-upload itong muli mula sa inyong kahilingan.",
+          "s4": "Kumuha ng live selfie kapag hiniling; ikinukumpara ito ng {{gateway}} sa inyong ID upang kumpirmahin ang inyong pagkakakilanlan.",
+          "s5": "Isumite. Sinusuri at vine-verify ng {{gateway}} ang inyong mga dokumento bago i-endorso ang inyong kahilingan sa mga ahensya.",
+          "s6": "Kung may dokumentong markahan ng {{gateway}} para itama, aabisuhan kayo — i-upload itong muli mula sa inyong kahilingan.",
           "note": "Tip: Ang Valid ID, kapag na-verify na, ay magagamit muli sa inyong susunod na mga kahilingan. Ang inyong Billing Statement (Statement of Account) ay kailangang bago sa bawat kahilingan."
         },
         "apply": {
@@ -1336,9 +1346,9 @@
           "s1": "Pumunta sa Humiling ng Tulong sa sidebar o sa bottom tab.",
           "s2": "Piliin ang uri ng tulong na kailangan ninyo at ilagay ang halagang kailangan ninyo, batay sa inyong billing statement.",
           "s3": "Ilakip ang inyong billing statement (Statement of Account), kumpirmahin ang deklarasyon, at isumite ang inyong kahilingan.",
-          "s4": "Susuriin ng CRMC ang inyong kahilingan at ie-endorso ito sa isa o higit pang ahensyang makakatulong sa inyong bayarin.",
+          "s4": "Susuriin ng {{gateway}} ang inyong kahilingan at ie-endorso ito sa isa o higit pang ahensyang makakatulong sa inyong bayarin.",
           "s5": "Buksan ang Humiling ng Tulong upang makita ang coverage plan, pagkatapos ay i-tap ang Magpatuloy upang ipadala ito sa mga ahensyang iyon.",
-          "s6": "Kumpletuhin ang mga kinakailangan ng bawat ahensya at tumugon sa anumang mensahe mula sa inyong CRMC social worker.",
+          "s6": "Kumpletuhin ang mga kinakailangan ng bawat ahensya at tumugon sa anumang mensahe mula sa inyong social worker.",
           "s7": "Kapag inaprubahan ng isang ahensya, makakatanggap kayo ng Guarantee Letter upang makuha ang inyong tulong.",
           "note": "Mahalaga: Isang aktibong kahilingan lamang ang pinapayagan sa isang pagkakataon. Subaybayan ang progreso nito anumang oras sa Aking Aplikasyon."
         },
@@ -1353,12 +1363,12 @@
         },
         "cofunding": {
           "title": "Ano ang co-funding? Bakit may maraming ahensya?",
-          "content": "Gumagamit ang MAPA ng co-funding model. Mag-file kayo ng IISANG kahilingan na may bayarin at halagang kailangan ninyo. Vine-verify ng CRMC ang inyong mga dokumento at sinusuri ang inyong kaso nang malayuan, pagkatapos ay ie-endorso ang inyong kahilingan sa isa o higit pang kasosyong ahensya (DSWD, PCSO, Malasakit, AMBaG) na magkakasamang tutulong sa inyong bayarin tungo sa zero balance. Ang bawat ahensya ay gumagawa ng sariling desisyon sa pagpopondo at nag-iisyu ng sariling Guarantee Letter para sa porsyong sinasakop nila. Hindi ninyo kailangang mag-apply sa bawat ahensya nang hiwalay — kino-coordinate ng CRMC ang lahat para sa inyo.",
-          "note": "Pagkatapos i-endorso ng CRMC ang inyong kahilingan, makikita ninyo ang Coverage Plan na naglilista sa bawat ahensya. I-tap ang Magpatuloy para kumpirmahin at sa simulan ang kanilang pagsusuri."
+          "content": "Gumagamit ang MAPA ng co-funding model. Mag-file kayo ng IISANG kahilingan na may bayarin at halagang kailangan ninyo. Vine-verify ng {{gateway}} ang inyong mga dokumento at sinusuri ang inyong kaso nang malayuan, pagkatapos ay ie-endorso ang inyong kahilingan sa isa o higit pang kasosyong ahensya (DSWD, PCSO, Malasakit, AMBaG) na magkakasamang tutulong sa inyong bayarin tungo sa zero balance. Ang bawat ahensya ay gumagawa ng sariling desisyon sa pagpopondo at nag-iisyu ng sariling Guarantee Letter para sa porsyong sinasakop nila. Hindi ninyo kailangang mag-apply sa bawat ahensya nang hiwalay — kino-coordinate ng {{gateway}} ang lahat para sa inyo.",
+          "note": "Pagkatapos i-endorso ng {{gateway}} ang inyong kahilingan, makikita ninyo ang Coverage Plan na naglilista sa bawat ahensya. I-tap ang Magpatuloy para kumpirmahin at sa simulan ang kanilang pagsusuri."
         },
         "intakeWizard": {
           "title": "Ano ang Household Intake Wizard?",
-          "content": "Pagkatapos simulan ng CRMC ang pagsusuri sa inyong mga dokumento, hihilingin sa inyo na punan ang 5-hakbang na household form tungkol sa inyong pamilya, kita, gastusin, at kondisyong medikal. Ito ang factual na bahagi ng Unified Intake Sheet — idinaragdag ng inyong CRMC social worker ang assessment portion habang sinusuri ang inyong kaso nang malayuan. Ginagamit ito upang irekomenda kung aling mga ahensya ang dapat magpondo sa inyong kahilingan.",
+          "content": "Pagkatapos simulan ng {{gateway}} ang pagsusuri sa inyong mga dokumento, hihilingin sa inyo na punan ang 5-hakbang na household form tungkol sa inyong pamilya, kita, gastusin, at kondisyong medikal. Ito ang factual na bahagi ng Unified Intake Sheet — idinaragdag ng inyong social worker ang assessment portion habang sinusuri ang inyong kaso nang malayuan. Ginagamit ito upang irekomenda kung aling mga ahensya ang dapat magpondo sa inyong kahilingan.",
           "s1": "Buksan ang Humiling ng Tulong at i-tap ang Household Intake link, o pumunta sa /patient/request/<id>/intake.",
           "s2": "Hakbang 1 — Sambahayan: ilista ang bawat miyembro ng pamilya na kasama ninyo.",
           "s3": "Hakbang 2-3 — Kita at gastusin: buwanang kita, trabaho, at gastusin ng tahanan.",
@@ -1370,13 +1380,13 @@
           "title": "Ano ang mga yugto ng aking hiling?",
           "content": "Dadaan ang inyong hiling sa anim na yugto mula pagsumite hanggang fully funded. Ipinapakita ng stepper sa Aking Aplikasyon kung nasaan kayo.",
           "submittedLabel": "Isinumite",
-          "submittedDesc": "Na-file ninyo ang hiling. Sisimulan agad ng CRMC na suriin ang inyong mga nakalakip na dokumento.",
+          "submittedDesc": "Na-file ninyo ang hiling. Sisimulan agad ng {{gateway}} na suriin ang inyong mga nakalakip na dokumento.",
           "underReviewLabel": "Sinusuri",
-          "underReviewDesc": "Vine-verify ng CRMC ang inyong mga dokumento. Maaaring hilingin sa inyo na muling mag-upload ng anumang malabo o tinanggihan.",
+          "underReviewDesc": "Vine-verify ng {{gateway}} ang inyong mga dokumento. Maaaring hilingin sa inyo na muling mag-upload ng anumang malabo o tinanggihan.",
           "assessmentLabel": "Pagsusuri",
-          "assessmentDesc": "Sinusuri ng isang CRMC social worker ang inyong kaso nang malayuan — maaaring mag-message kung may hindi malinaw — pagkatapos ay kumukumpleto ng Unified Intake Sheet. Walang panayam na dadaluhan.",
+          "assessmentDesc": "Sinusuri ng isang social worker ang inyong kaso nang malayuan — maaaring mag-message kung may hindi malinaw — pagkatapos ay kumukumpleto ng Unified Intake Sheet. Walang panayam na dadaluhan.",
           "endorsedLabel": "Na-endorso",
-          "endorsedDesc": "Na-route ng CRMC ang inyong hiling sa isa o higit pang ahensya. Tingnan ang Coverage Plan sa Aking Aplikasyon at i-tap ang Magpatuloy para simulan ang kanilang pagsusuri.",
+          "endorsedDesc": "Na-route ng {{gateway}} ang inyong hiling sa isa o higit pang ahensya. Tingnan ang Coverage Plan sa Aking Aplikasyon at i-tap ang Magpatuloy para simulan ang kanilang pagsusuri.",
           "partiallyFundedLabel": "Bahagyang Napondohan",
           "partiallyFundedDesc": "Hindi bababa sa isang ahensya ay nag-apruba ng kanilang porsyon. Maaaring sinusuri pa ang iba — unti-unting nasasakop ang inyong bayarin.",
           "fullyFundedLabel": "Lubos na Napondohan",
@@ -1384,9 +1394,9 @@
         },
         "statuses": {
           "title": "Ano ang ibig sabihin ng per-agency (slice) statuses?",
-          "content": "Bawat ahensyang nag-endorso ng CRMC sa inyong hiling ay may sariling card sa Aking Aplikasyon. Bawat card ay may sariling status habang pinoproseso ng ahensya ang inyong porsyon.",
+          "content": "Bawat ahensyang nag-endorso ng {{gateway}} sa inyong hiling ay may sariling card sa Aking Aplikasyon. Bawat card ay may sariling status habang pinoproseso ng ahensya ang inyong porsyon.",
           "endorsedLabel": "Na-endorso",
-          "endorsedDesc": "Na-route ng CRMC ang inyong hiling sa ahensyang ito. Hindi pa nagsimulang suriin ng ahensya — kailangan ninyong i-tap muna ang Magpatuloy sa Coverage Plan.",
+          "endorsedDesc": "Na-route ng {{gateway}} ang inyong hiling sa ahensyang ito. Hindi pa nagsimulang suriin ng ahensya — kailangan ninyong i-tap muna ang Magpatuloy sa Coverage Plan.",
           "reviewingLabel": "For Funding",
           "reviewingDesc": "Na-tap ninyo ang Magpatuloy at sinusuri na ngayon ng ahensya kung popondohan ang porsyong ito ng inyong bayarin.",
           "awaitingInfoLabel": "Kailangan ng Impormasyon",
@@ -1394,9 +1404,9 @@
           "approvedLabel": "Aprubado",
           "approvedDesc": "Nag-apruba ang ahensya ng partikular na halaga para sa inyong bayarin. Inihahanda na ang kanilang Guarantee Letter.",
           "certLabel": "Naibigay ang Guarantee Letter",
-          "certDesc": "Naibigay at nilagdaan na ng ahensya ang kanilang Guarantee Letter. I-download ito mula sa Aking Aplikasyon at iharap sa pinangalanang provider (hal. CRMC Billing, Mercury Drug).",
+          "certDesc": "Naibigay at nilagdaan na ng ahensya ang kanilang Guarantee Letter. I-download ito mula sa Aking Aplikasyon at iharap sa pinangalanang provider (hal. Hospital Billing, Mercury Drug).",
           "rejectedLabel": "Tinanggihan",
-          "rejectedDesc": "Hindi naitulong ng ahensyang ito ang kanilang porsyon. Maaaring i-endorso muli ng CRMC sa ibang ahensya, o manatiling bahagyang napondohan ang inyong kabuuang hiling."
+          "rejectedDesc": "Hindi naitulong ng ahensyang ito ang kanilang porsyon. Maaaring i-endorso muli ng {{gateway}} sa ibang ahensya, o manatiling bahagyang napondohan ang inyong kabuuang hiling."
         },
         "interview": {
           "title": "Paano ako sasali sa aking panayam?",
@@ -1418,21 +1428,21 @@
         },
         "contact": {
           "title": "Paano ako makikipag-ugnayan sa admin o ahensya?",
-          "content": "Pumunta sa Messages sa sidebar upang tingnan ang lahat ng inyong mga usapan. I-tap ang New Message button sa kanang itaas upang magsimula ng bagong usapan sa hospital staff o sa inyong itinalagang ahensya. Maaari ninyong direktang i-message ang mga ito kung may mga tanong tungkol sa aplikasyon o dokumento, o upang tumugon sa pagsusuri ng inyong CRMC social worker."
+          "content": "Pumunta sa Messages sa sidebar upang tingnan ang lahat ng inyong mga usapan. I-tap ang New Message button sa kanang itaas upang magsimula ng bagong usapan sa hospital staff o sa inyong itinalagang ahensya. Maaari ninyong direktang i-message ang mga ito kung may mga tanong tungkol sa aplikasyon o dokumento, o upang tumugon sa pagsusuri ng inyong social worker."
         },
         "forgotPw": {
           "title": "Nakalimutan ko ang aking password. Ano ang gagawin ko?",
-          "content": "Sa Login page, i-click ang \"Forgot Password?\" at ipasok ang inyong rehistradong email address. Magpapadala ng password reset link sa inyong email. I-click ang link upang gumawa ng bagong password. Kung hindi ninyo natanggap ang email, tingnan ang inyong spam o junk folder. Para sa karagdagang tulong, makipag-ugnayan sa CRMC Medical Social Services."
+          "content": "Sa Login page, i-click ang \"Forgot Password?\" at ipasok ang inyong rehistradong email address. Magpapadala ng password reset link sa inyong email. I-click ang link upang gumawa ng bagong password. Kung hindi ninyo natanggap ang email, tingnan ang inyong spam o junk folder. Para sa karagdagang tulong, makipag-ugnayan sa {{gateway}}."
         }
       }
     },
     "journey": {
       "label": "Iyong progreso",
       "stage": {
-        "submitted":    { "label": "Naisumite",    "now": "Naipasa na sa CRMC ang iyong kahilingan at mga dokumento.",                 "next": "Sisimulan itong suriin ng CRMC sa lalong madaling panahon." },
-        "under_review": { "label": "Sinusuri",     "now": "Bine-verify ng CRMC ang iyong mga dokumento at bill.",                       "next": "Susunod, susuriin ng social worker ang iyong kaso." },
-        "assessment":   { "label": "Pagsusuri",    "now": "Sinusuri ng social worker ng CRMC ang iyong kaso at maaaring mag-message.",  "next": "Susunod, ie-endorso ng CRMC ang kahilingan sa mga ahensya." },
-        "endorsed":     { "label": "Na-endorso",   "now": "In-endorso ng CRMC ang iyong kahilingan sa isa o higit pang ahensya.",       "next": "Suriin ang plano ng saklaw at magpatuloy." },
+        "submitted":    { "label": "Naisumite",    "now": "Naipasa na sa {{gateway}} ang iyong kahilingan at mga dokumento.",                 "next": "Sisimulan itong suriin ng {{gateway}} sa lalong madaling panahon." },
+        "under_review": { "label": "Sinusuri",     "now": "Bine-verify ng {{gateway}} ang iyong mga dokumento at bill.",                       "next": "Susunod, susuriin ng social worker ang iyong kaso." },
+        "assessment":   { "label": "Pagsusuri",    "now": "Sinusuri ng social worker ang iyong kaso at maaaring mag-message.",  "next": "Susunod, ie-endorso ng {{gateway}} ang kahilingan sa mga ahensya." },
+        "endorsed":     { "label": "Na-endorso",   "now": "In-endorso ng {{gateway}} ang iyong kahilingan sa isa o higit pang ahensya.",       "next": "Suriin ang plano ng saklaw at magpatuloy." },
         "funding":      { "label": "Pinopondohan", "now": "Inaaprubahan ng mga ahensya ang kanilang bahagi at gumagawa ng Guarantee Letter.", "next": "Susunod, ganap nang masasaklaw ang iyong bill." },
         "complete":     { "label": "Kumpleto",     "now": "Ganap nang saklaw ang iyong bill — kunin ang Guarantee Letters sa ahensya.", "next": "" }
       }
@@ -1440,10 +1450,10 @@
     "hero": {
       "step": "Hakbang {{n}} ng {{total}}",
       "trackCta": "Tingnan ang kahilingan",
-      "s0": { "title": "Natanggap ang kahilingan", "sub": "Sisimulan nang suriin ng CRMC ang iyong mga dokumento." },
-      "s1": { "title": "Sinusuri", "sub": "Sinusuri ng CRMC ang iyong mga dokumento." },
-      "s2": { "title": "Pagsusuri", "sub": "Sinusuri ng isang CRMC social worker ang inyong kaso at maaaring mag-message sa inyo." },
-      "s3": { "title": "Nasa mga ahensya", "sub": "Na-endorso ng CRMC ang iyong kahilingan sa ahensya." },
+      "s0": { "title": "Natanggap ang kahilingan", "sub": "Sisimulan nang suriin ng {{gateway}} ang iyong mga dokumento." },
+      "s1": { "title": "Sinusuri", "sub": "Sinusuri ng {{gateway}} ang iyong mga dokumento." },
+      "s2": { "title": "Pagsusuri", "sub": "Sinusuri ng isang social worker ang inyong kaso at maaaring mag-message sa inyo." },
+      "s3": { "title": "Nasa mga ahensya", "sub": "Na-endorso ng {{gateway}} ang iyong kahilingan sa ahensya." },
       "s4": { "title": "Bahagyang naaprubahan", "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan." }
     }
   },
@@ -1456,11 +1466,11 @@
       "sub": "Isang account, pagkatapos ay isumite ang inyong mga kahilingan para sa tulong medikal online — mas kaunting oras sa pila sa opisina.",
       "readyTitle": "Ihanda ang mga ito",
       "ready1": "Ang inyong pangalan at address ayon sa nakasaad sa balidong government ID",
-      "ready2": "Ang inyong Patient Access Code (CRMC-YYYY-NNNNN) mula sa Malasakit Center",
+      "ready2": "Ang inyong Patient Access Code ({{codeFormat}}) mula sa Malasakit Center",
       "ready3": "Isang gumaganang email address para sa mga update sa aprubahan",
       "trustTime": "Umaabot ng mga 3 minuto",
       "trustPrivacy": "Protektado sa ilalim ng Data Privacy Act (RA 10173)",
-      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa CRMC"
+      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa {{facility}}"
     },
     "stepPersonal": "Personal na Impormasyon",
     "stepAccount": "Pag-setup ng Account",
@@ -1501,17 +1511,17 @@
     },
     "step3": {
       "sectionTitle": "Patient Access Code",
-      "sectionDesc": "Kinakailangan ang inyong Patient Access Code. Ibinigay ito sa inyo ng CRMC Medical Social Services.",
+      "sectionDesc": "Kinakailangan ang inyong Patient Access Code. Ibinigay ito sa inyo ng {{gateway}}.",
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Ipasok ang 5-digit na numero pagkatapos ng prefix",
       "verifyBtn": "I-verify",
       "verified": "Na-verify",
       "edit": "I-edit",
       "reviewToggle": "Suriin ang inyong detalye bago isumite",
-      "noCodeHint": "Walang access code? Bisitahin ang CRMC Medical Social Services upang masuri at makakuha ng isa.",
-      "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa CRMC Medical Social Services para masuri at mabigyan ng bago.",
-      "codeUsedRecoveryAction": "I-email ang CRMC Medical Social Services",
-      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang CRMC na kolektahin ang aking personal na impormasyon para sa layuning medikal."
+      "noCodeHint": "Walang access code? Bisitahin ang {{gateway}} upang masuri at makakuha ng isa.",
+      "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa {{gateway}} para masuri at mabigyan ng bago.",
+      "codeUsedRecoveryAction": "I-email ang {{gateway}}",
+      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal."
     },
     "back": "Bumalik",
     "next": "Sunod",
@@ -1533,13 +1543,13 @@
       "emailInvalid": "Mangyaring magpasok ng wastong email address.",
       "passwordWeak": "Ang password ay dapat may hindi bababa sa 8 character at may mga titik at numero.",
       "passwordMismatch": "Hindi tugma ang mga password.",
-      "codeFormat": "Format: CRMC-{{year}}-00001",
+      "codeFormat": "Format: {{codeExample}}",
       "codeVerifyFirst": "Mangyaring i-verify muna ang inyong Patient Access Code.",
       "termsRequired": "Kailangan ninyong tanggapin ang Privacy Notice at Terms of Use.",
       "codeNotFound": "Hindi nakita ang access code. Pakisuri at subukan muli.",
       "codeUsed": "Nagamit na ang access code na ito.",
       "verifyFailed": "Nabigo ang pag-verify. Pakisubukan muli.",
-      "verifyRateLimit": "Sobrang dami ng pag-verify mula sa device na ito. Maghintay ng isang oras bago muling subukan, o makipag-ugnayan sa CRMC Medical Social Services para sa tulong.",
+      "verifyRateLimit": "Sobrang dami ng pag-verify mula sa device na ito. Maghintay ng isang oras bago muling subukan, o makipag-ugnayan sa {{gateway}} para sa tulong.",
       "emailInUse": "Nakarehistro na ang email na ito.",
       "passwordTooWeak": "Mahina pa ang password. Pumili ng mas matibay.",
       "generic": "Nabigo ang pagpaparehistro."
@@ -1565,7 +1575,7 @@
       },
       "s2": {
         "title": "Ang inyong kasalukuyang hiling",
-        "body": "Nandito ang inyong aktibong hiling o ang get-started card. I-tap para gawin ang susunod na hinihiling ng CRMC."
+        "body": "Nandito ang inyong aktibong hiling o ang get-started card. I-tap para gawin ang susunod na hinihiling ng {{gateway}}."
       },
       "s3": {
         "title": "Ang inyong 5-hakbang na paglalakbay",
@@ -1582,11 +1592,11 @@
         },
         "s2": {
           "title": "Ang paglalakbay ng hiling",
-          "body": "Anim na yugto mula Submitted hanggang Fully Funded. Naka-highlight ang kasalukuyang yugto; ina-advance ng CRMC ang inyong hiling habang nave-verify ang mga dokumento, nasusuri ang inyong kaso, at nagdedesisyon ang mga ahensya."
+          "body": "Anim na yugto mula Submitted hanggang Fully Funded. Naka-highlight ang kasalukuyang yugto; ina-advance ng {{gateway}} ang inyong hiling habang nave-verify ang mga dokumento, nasusuri ang inyong kaso, at nagdedesisyon ang mga ahensya."
         },
         "s3": {
           "title": "Mga agency card",
-          "body": "Kapag na-endorse na ng CRMC ang hiling sa isa o higit pang ahensya, lalabas dito ang bawat isa kasama ang kanilang funding status (Funding → Approved → Guarantee Letter)."
+          "body": "Kapag na-endorse na ng {{gateway}} ang hiling sa isa o higit pang ahensya, lalabas dito ang bawat isa kasama ang kanilang funding status (Funding → Approved → Guarantee Letter)."
         }
       }
     }

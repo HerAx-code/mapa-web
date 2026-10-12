@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { MdCheckCircle, MdDescription, MdVisibility, MdBlock, MdRefresh, MdCompareArrows, MdBadge, MdFace, MdOpenInNew } from 'react-icons/md'
 import { isIdType, isSelfieType } from '../../utils/idOcr'
 import { tsToDate } from '../../utils/dates'
+import { ORG } from '../../config/org'
 import StatusBadge from '../ui/StatusBadge'
 
 // Advisory verdict → text colour, reusing the OCR line's green/amber/gray
@@ -99,7 +100,7 @@ export default function VerifyDocsPanel({
                     <p className="text-sm text-gray-700 truncate">{d.documentTypeName || d.name}</p>
                     {reviewed && (
                       <p className="text-xs text-gray-500 truncate">
-                        {d.status === 'verified' ? 'Verified' : 'Rejected'} by {d.reviewedBy ?? 'CRMC'} · {fmtDate(d.reviewedAt)}
+                        {d.status === 'verified' ? 'Verified' : 'Rejected'} by {d.reviewedBy ?? ORG.gatewayName} · {fmtDate(d.reviewedAt)}
                       </p>
                     )}
                   </div>
