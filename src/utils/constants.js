@@ -153,62 +153,9 @@ export const SLOT_STATUS = (remaining, total) => {
   return { label: `${remaining} slots`, color: 'text-green-600', bar: 'bg-brand-500', badge: 'badge-green' }
 }
 
-// Mock agencies
-export const AGENCIES = [
-  {
-    id: 'malasakit',
-    name: 'Malasakit Center',
-    initials: 'MC',
-    color: 'bg-brand-500',
-    description: 'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.',
-    location: 'Hospital Ground Floor, Cotabato City',
-    phone: '064-421-2500',
-    slots: { total: 25, remaining: 21 },
-    requirements: ['Barangay Certificate of Indigency', 'Hospital Billing Statement', 'Valid ID', 'Medical Abstract'],
-    assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Laboratory Tests'],
-    processingTime: 'Same Day',
-  },
-  {
-    id: 'ambag',
-    name: 'AMBaG Program',
-    initials: 'AM',
-    color: 'bg-purple-600',
-    description: 'Zero balance billing for marginalized patients at partner hospitals under the BARMM government.',
-    location: 'BARMM Admin Building, Cotabato City',
-    phone: '064-421-3000',
-    slots: { total: 25, remaining: 5 },
-    requirements: ['Barangay Certificate of Indigency', 'PhilHealth ID', 'Valid ID'],
-    assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines'],
-    processingTime: '3–5 Days',
-  },
-  {
-    id: 'pcso',
-    name: 'PCSO MAP',
-    initials: 'PC',
-    color: 'bg-red-600',
-    description: 'Issues guarantee letters covering chemotherapy, radiation therapy, and essential medicines.',
-    location: 'Social Services Department',
-    phone: '064-421-2600',
-    slots: { total: 20, remaining: 0 },
-    requirements: ['Medical Certificate', 'Laboratory Results', 'PhilHealth ID', 'Valid ID'],
-    assistanceTypes: ['Chemotherapy', 'Medicines', 'Laboratory Tests'],
-    processingTime: '5–7 Days',
-  },
-  {
-    id: 'dswd',
-    name: 'DSWD AICS',
-    initials: 'DS',
-    color: 'bg-blue-600',
-    description: 'Cash assistance and medicine vouchers for individuals in crisis situations through community social workers.',
-    location: 'Social Welfare Office',
-    phone: '064-421-2700',
-    slots: { total: 25, remaining: 18 },
-    requirements: ['Barangay Certificate of Indigency', 'Valid ID', 'Crisis Documentation'],
-    assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Emergency Medical Assistance'],
-    processingTime: 'Same Day',
-  },
-]
-
+// (The former mock AGENCIES array lived here; it had zero importers and was
+//  removed in the single-source cleanup. The canonical agency seed is
+//  src/data/agencies.seed.js, consumed by Seed.jsx + bootstrap-reference-data.js.)
 // PATIENT_NOTIFICATIONS was prototype mock data referenced only by the
 // since-removed Navbar/NotificationPanel components. Real notifications
 // come from Firestore via the Layout's onSnapshot subscription.

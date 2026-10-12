@@ -40,165 +40,11 @@
 
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
-// Single source of truth for the doc + assistance catalogs (shared with the app
-// and src/pages/Seed.jsx). Agencies stay inline here for now (separate cleanup).
+// Single source of truth for the catalogs (shared with the app + src/pages/Seed.jsx).
 import { DOCUMENT_TYPES, ASSISTANCE_TYPES, CORE_DOC_IDS } from '../src/data/referenceData.js'
+import { AGENCIES, INITIAL_BUDGET } from '../src/data/agencies.seed.js'
 
-// ── Canonical reference data ─────────────────────────────────────
-// Kept in sync with src/pages/Seed.jsx by convention. If a row drifts
-// between the two, the browser /seed page and this CLI script will
-// produce different states — same risk we addressed for USERS by
-// extracting to scripts/demo-accounts.js. A future refactor could
-// hoist these into scripts/reference-data.js shared with Seed.jsx,
-// but Seed.jsx is largely a fallback now that the admin-SDK path
-// exists.
-
-// `logoUrl` is intentionally null for the demo seed. Each agency_admin
-// can paste an HTTPS link to their official logo via /admin/agencies
-// edit modal -> "Logo URL" field; the AgencyAvatar component renders
-// the image with the colored-initials block as the fallback. Demos
-// without a logo set still look polished thanks to the canonical
-// `color` + `initials` pair below.
-const SEED_AGENCIES = [
-  // RA 11463 reconciliation (2026-07-23). A Malasakit Center is legally a
-  // COORDINATION HUB, not a funding source: a co-located one-stop shop
-  // where DOH, DSWD, PCSO and PhilHealth receive and process requests. It
-  // holds no appropriation for direct patient assistance -- its budget
-  // line is personnel + facilities only. In MAPA that hub function is
-  // performed by the gateway role itself, so this entry is seeded
-  // DISABLED and exists for historical records, not new endorsements.
-  // Citation trail: docs/malasakit-center-research-2026-07-23.md.
-  {
-    id:              'malasakit',
-    name:            'Malasakit Center',
-    initials:        'MC',
-    color:           'bg-brand-500',
-    logoUrl:         null,
-    description:     'Coordination hub, not a funding source. Under RA 11463 and JAO 2020-0001 the Malasakit Center is a co-located one-stop shop where DOH, DSWD, PCSO and PhilHealth receive and process requests; it holds no appropriation for direct patient assistance. In MAPA this function is performed by the gateway role itself, so the Center is retained here for historical records only and is not available for new endorsements.',
-    // R32: structured location (BARMM cascading dropdowns).
-    province:        'Cotabato City',
-    city:            'Cotabato City',
-    officeName:      'Hospital Ground Floor',
-    location:        'Hospital Ground Floor, Cotabato City',
-    phone:           '064-421-2500',
-    slots:           { total: 25, remaining: 25 },
-    requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID','Medical Abstract'],
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests'],
-    processingTime:  'Same Day',
-    // Seeded disabled -- see the RA 11463 note above. Not a funder.
-    enabled:         false,
-  },
-  // DOH MAIP -- an RA 11463 participating agency that had no
-  // representation in MAPA at all before the 2026-07-23 reconciliation.
-  {
-    id:              'doh',
-    name:            'DOH MAIP',
-    initials:        'DH',
-    color:           'bg-emerald-600',
-    logoUrl:         null,
-    description:     'Medical Assistance for Indigent and Financially-Incapacitated Patients (MAIP), charged to the Department of Health under RA 11463.',
-    province:        'Cotabato City',
-    city:            'Cotabato City',
-    officeName:      'DOH Desk, Hospital Ground Floor',
-    location:        'DOH Desk, Hospital Ground Floor, Cotabato City',
-    phone:           '064-421-2800',
-    slots:           { total: 25, remaining: 25 },
-    requirements:    ['Barangay Certificate of Indigency','Hospital Billing Statement','Valid ID'],
-    // Payer of last resort under RA 11463; covers hospitalization, medicines,
-    // dialysis, surgery and labs after PhilHealth. See docs research 2026-10.
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Dialysis','Surgery / Medical Procedures','Chemotherapy'],
-    processingTime:  'Same Day',
-    enabled:         true,
-  },
-  // PhilHealth NHIF -- #1 in the RA 11463 Order of Charging, but NHIF
-  // operationally REDUCES the bill rather than issuing a GL (first charge,
-  // recorded at assessment -- see philhealth-first-plan.md). It was briefly
-  // surfaced as an enabled agency (2026-07-24) for Order-of-Charging
-  // visibility, but that made it appear as a fake endorsable "Available
-  // Program" with slots on the public Landing page. Now disabled (same as
-  // malasakit); re-enable only if PhilHealth ever issues GLs through MAPA.
-  {
-    id:              'philhealth',
-    name:            'PhilHealth',
-    initials:        'PH',
-    color:           'bg-teal-600',
-    logoUrl:         null,
-    description:     'National Health Insurance Fund (NHIF). Under RA 11463 Order of Charging, PhilHealth coverage is applied FIRST to reduce the bill before other agencies fund the balance.',
-    province:        'Cotabato City',
-    city:            'Cotabato City',
-    officeName:      'PhilHealth Desk, Hospital Ground Floor',
-    location:        'PhilHealth Desk, Hospital Ground Floor, Cotabato City',
-    phone:           '064-421-2900',
-    slots:           { total: 25, remaining: 25 },
-    requirements:    ['PhilHealth ID','Valid ID'],
-    assistanceTypes: ['Hospital Bills / Hospitalization'],
-    processingTime:  'Same Day',
-    // NOT a Guarantee-Letter funder: under philhealth-first-plan.md PhilHealth
-    // is a first-charge DEDUCTION recorded at assessment, never an endorsement
-    // slice. Disabled (same as malasakit) so it never appears as an endorsable
-    // "Available Program" on the public Landing page. Order-of-Charging context
-    // belongs in dedicated informational copy, not a fake program with slots.
-    enabled:         false,
-  },
-  {
-    id:              'ambag',
-    name:            'AMBaG Program',
-    initials:        'AM',
-    color:           'bg-purple-600',
-    logoUrl:         null,
-    description:     'Zero balance billing for marginalized patients at partner hospitals under the BARMM government.',
-    province:        'Cotabato City',
-    city:            'Cotabato City',
-    officeName:      'BARMM Admin Building',
-    location:        'BARMM Admin Building, Cotabato City',
-    phone:           '064-421-3000',
-    slots:           { total: 25, remaining: 25 },
-    requirements:    ['Barangay Certificate of Indigency','PhilHealth ID','Valid ID'],
-    // BARMM OCM program; broad advanced-service coverage (confinement, meds,
-    // dialysis, chemo/radiation, surgery, implants, labs). See docs research 2026-10.
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Dialysis','Chemotherapy','Laboratory Tests','Surgery / Medical Procedures'],
-    processingTime:  '3–5 Days',
-    enabled:         true,
-  },
-  {
-    id:              'pcso',
-    name:            'PCSO MAP',
-    initials:        'PC',
-    color:           'bg-red-600',
-    logoUrl:         null,
-    description:     'Issues guarantee letters covering hospital confinement, dialysis, chemotherapy/radiation, surgery and implants, essential medicines, and laboratory/diagnostic procedures.',
-    province:        'Cotabato City',
-    city:            'Cotabato City',
-    officeName:      'Social Services Department',
-    location:        'Social Services Department',
-    phone:           '064-421-2600',
-    requirements:    ['Medical Certificate','Laboratory Results','PhilHealth ID','Valid ID'],
-    slots:           { total: 20, remaining: 20 },
-    // Broad coverage incl. dialysis, surgery and confinement. See docs research 2026-10.
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Chemotherapy','Dialysis','Laboratory Tests','Surgery / Medical Procedures'],
-    processingTime:  '5–7 Days',
-    enabled:         true,
-  },
-  {
-    id:              'dswd',
-    name:            'DSWD AICS',
-    initials:        'DS',
-    color:           'bg-blue-600',
-    logoUrl:         null,
-    description:     'Assistance to Individuals in Crisis Situations (AICS): guarantee letters to hospitals and funeral homes covering hospital bills, medicines, laboratory/diagnostics, emergency medical needs, and burial assistance.',
-    province:        'Cotabato City',
-    city:            'Cotabato City',
-    officeName:      'Social Welfare Office',
-    location:        'Social Welfare Office',
-    phone:           '064-421-2700',
-    slots:           { total: 25, remaining: 25 },
-    requirements:    ['Barangay Certificate of Indigency','Valid ID','Crisis Documentation'],
-    // AICS covers medical AND burial/funeral assistance. See docs research 2026-10.
-    assistanceTypes: ['Hospital Bills / Hospitalization','Medicines','Laboratory Tests','Emergency Medical Assistance','Burial Assistance'],
-    processingTime:  'Same Day',
-    enabled:         true,
-  },
-]
+// Agencies come from src/data/agencies.seed.js (imported above) — the canonical
 
 // Document + assistance catalogs come from src/data/referenceData.js (imported
 // above) — no inline copies here. The legacy flat checklist still needs a
@@ -219,14 +65,14 @@ const db = getFirestore()
 
 async function seedAgencies() {
   let written = 0
-  for (const a of SEED_AGENCIES) {
+  for (const a of AGENCIES) {
     const { id, ...data } = a
     await db.doc(`agencies/${id}`).set({
       ...data,
       // Initialize the budget block so the agency lists/filters don't
       // render NaN for first-time seed. Coordinator allocation flow
       // takes over from here -- merge:true preserves any later edits.
-      budget: { allocated: 0, committed: 0, disbursed: 0, period: 'monthly' },
+      budget: { ...INITIAL_BUDGET },
       createdAt: FieldValue.serverTimestamp(),
     }, { merge: true })
     written++

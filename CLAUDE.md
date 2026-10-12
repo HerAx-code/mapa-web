@@ -71,6 +71,11 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or needs_info / rejected). An agency's `amountApproved` is **rules-capped at that slice's endorsed `amountRequested`** (which equals the full request `amountNeeded` — each slice is endorsed for the whole need, not a pre-split portion). So a *single* agency can't approve past the need, but **cumulative over-commitment across multiple agencies IS allowed by design** — CRMC sometimes intentionally over-endorses to give the patient a buffer. ApproveModal shows a soft `overCommit` warning (not a block) when sibling coverage + this approval exceed `amountNeeded`. Per-agency `maxPerApplicant` is a separate hard cap.
 - The assessment lives on the **request** (CRMC-conducted, one remote async assessment via messaging + on-demand Meet; the completed Unified Intake Sheet is the endorse gate). The agency's job is the funding decision only.
 
+### Coverage-model redesign (shipped 2026-10-12, flag-gated)
+- **Single source of truth:** `src/data/referenceData.js` holds the assistance-type catalog + required-document rules as declarative requirement records `{ docId, when, quantity?, appliesIf? }` (core + per-type + threshold-conditional), with externalized `THRESHOLDS`. The old editable **Assistance Types / Document Types admin pages were removed** — these are seeded config now (`Seed.jsx` + `scripts/bootstrap-reference-data.js` import `referenceData.js`).
+- **Per-assistance-type checklist** behind `VITE_PER_TYPE_DOCS` (default **off** → the legacy flat `required:true` list still runs in prod). On → the checklist resolves per selected type + bill amount. **Gate before enabling in prod:** CRMC confirms the real per-type document sets + thresholds via `docs/crmc-document-requirements-checklist.md` (lists are currently research placeholders).
+- **PhilHealth is an optional prior-coverage line**, not a mandatory "first" step. `amountNeeded = totalBill − philhealthCovered − otherCovered` is unchanged; only the framing was demoted. Scope is **inpatient hospital bills** (owner decision). See docs/assistance-model-remediation-plan.md.
+
 ## Coding Conventions
 - Components in /src/components, pages in /src/pages
 - Firestore queries grouped in /src/utils
@@ -105,4 +110,6 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - docs/ux-research/ — end-to-end UX study (README + current-state inventory of every page/panel/modal, external benchmarks, and a phased improvement plan). Read docs/ux-research/README.md before any broad UX/reskin work.
 - docs/visual-identity/ — the brand source-of-truth (audit, benchmarks, the identity system spec incl. the "care-pin" logomark + palette/WCAG/type, and a reusable research prompt). Read before any logo/brand/theme work. The mark lives at public/brand/mapa-mark.svg + src/components/ui/Logo.jsx (MapaMark).
 - docs/patient-abuse-hardening-plan.md — the patient-surface abuse hardening (#1–#5, all shipped); accepted risks recorded in docs/threat-model.md
+- docs/assistance-model-remediation-plan.md — the assistance-model remediation (coverage-model redesign shipped 2026-10-12; agency single-source + eligibility/capacity/charging-order still open). `src/data/referenceData.js` is the catalog/requirement source of truth.
+- docs/crmc-document-requirements-checklist.md — hand to CRMC to confirm the real per-type document sets + thresholds; the gate before enabling `VITE_PER_TYPE_DOCS` in prod.
 - (add others as you create them)
