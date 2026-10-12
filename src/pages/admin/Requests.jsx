@@ -541,9 +541,9 @@ function RequestDetail({ request, agencies, onClose }) {
   // legitimate decision -- this action exists for accident recovery, not for
   // routine flow.
   const [unverifyingDoc, setUnverifyingDoc]   = useState(null)
-  // PhilHealth-first coverage inputs (Order of Charging). Seeded from the
-  // request and re-seeded when a different request is opened; local edits stay
-  // until saved. See docs/philhealth-first-plan.md.
+  // Optional prior-coverage inputs (PhilHealth/insurance + other aid) the social
+  // worker records at assessment. Seeded from the request and re-seeded when a
+  // different request is opened; local edits stay until saved.
   const [coverage, setCoverage] = useState({ ph: '', other: '' })
   const [busy, setBusy] = useState(false)
   const [timeline, setTimeline] = useState([])
@@ -626,8 +626,8 @@ function RequestDetail({ request, agencies, onClose }) {
 
   const funding = computeFunding(request.amountNeeded, slices)
   const terminal = ['fully_funded', 'closed', 'rejected'].includes(request.status)
-  // PhilHealth-first coverage: the bill base falls back to amountNeeded for
-  // legacy requests with no totalBill. Coverage is editable only before
+  // Prior coverage: the bill base falls back to amountNeeded for legacy
+  // requests with no totalBill. Coverage is optional and editable only before
   // endorsement (slices freeze amountRequested at endorse time).
   const billBase       = Number(request.totalBill ?? request.amountNeeded) || 0
   const previewNeeded  = computeAmountNeeded({
@@ -780,11 +780,11 @@ function RequestDetail({ request, agencies, onClose }) {
   // the submitted documents, messaging them (handleMessagePatient) for anything
   // unclear, then completes the Unified Intake Sheet — which is the endorse gate.
 
-  // PhilHealth-first: record the coverage applied before endorsement and
-  // recompute the residual (amountNeeded) the agencies co-fund. Gated to
-  // pre-endorsement in the UI because the endorse transaction freezes
-  // amountRequested = amountNeeded onto each slice (see EndorseModal); editing
-  // it afterwards would desync the slices. See docs/philhealth-first-plan.md.
+  // Record any optional prior coverage applied before endorsement and recompute
+  // the residual (amountNeeded) the agencies co-fund. Gated to pre-endorsement
+  // in the UI because the endorse transaction freezes amountRequested =
+  // amountNeeded onto each slice (see EndorseModal); editing it afterwards would
+  // desync the slices.
   const saveCoverage = async () => {
     setBusy(true)
     try {
@@ -975,17 +975,17 @@ function RequestDetail({ request, agencies, onClose }) {
                 Open
               </Link>
             </div>
-            {/* Coverage applied first (Order of Charging, JAO 2020-0001):
-                PhilHealth reduces the bill, then any other prior aid; the
-                remaining balance is what CRMC endorses to funding agencies. */}
+            {/* Optional prior coverage already applied to the bill (insurance /
+                PhilHealth / discount), recorded by the social worker at
+                assessment; the remainder is what gets endorsed to agencies. */}
             <div className="p-3 rounded-lg border border-gray-100 mb-2 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-700">Coverage applied first</p>
+                <p className="text-sm text-gray-700">Coverage already applied <span className="text-gray-400 font-normal">(optional)</span></p>
                 <span className="text-xs text-gray-500">Bill {peso(billBase)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="text-xs text-gray-500">PhilHealth (₱)</span>
+                  <span className="text-xs text-gray-500">PhilHealth / insurance (₱)</span>
                   <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
                     disabled={!coverageEditable || busy}
                     value={coverage.ph} onChange={e => setCoverage(c => ({ ...c, ph: e.target.value }))} />
