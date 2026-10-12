@@ -337,6 +337,12 @@ service cloud.firestore {
           && (!('idVerifyMethod' in d) || d.idVerifyMethod == null  || d.idVerifyMethod in ['ocr', 'philid_qr', 'pcn_manual'])
           && (!('faceMatchScore' in d) || d.faceMatchScore == null || (d.faceMatchScore is number && d.faceMatchScore >= 0 && d.faceMatchScore <= 1))
           && (!('livenessScore' in d)  || d.livenessScore == null  || (d.livenessScore is number && d.livenessScore >= 0 && d.livenessScore <= 1))
+          // Advisory screen/photo-recapture heuristic (selfie docs). A weak,
+          // never-blocking hint to the social worker that the "live" selfie may
+          // be a photo of a screen/print; the camera-only capture + human
+          // confirmation remain the real control. Score 0..1 + a suspected flag.
+          && (!('recaptureScore' in d)     || d.recaptureScore == null || (d.recaptureScore is number && d.recaptureScore >= 0 && d.recaptureScore <= 1))
+          && (!('recaptureSuspected' in d) || d.recaptureSuspected == null || d.recaptureSuspected is bool)
           && (!('pcnLast4' in d)       || d.pcnLast4 == null       || (d.pcnLast4 is string && d.pcnLast4.size() <= 24))
           && (!('pcnFingerprint' in d) || d.pcnFingerprint == null || (d.pcnFingerprint is string && d.pcnFingerprint.size() <= 64))
           && (!('philIdName' in d)     || d.philIdName == null     || (d.philIdName is string && d.philIdName.size() <= 200))
@@ -400,7 +406,8 @@ service cloud.firestore {
                                     'idTypeDetected', 'faceMatch', 'faceMatchScore',
                                     'liveness', 'livenessScore', 'idVerifyMethod',
                                     'pcnLast4', 'pcnFingerprint', 'philIdName',
-                                    'philIdDob', 'philIdSigValid', 'appearanceNote']) &&
+                                    'philIdDob', 'philIdSigValid', 'appearanceNote',
+                                    'recaptureScore', 'recaptureSuspected']) &&
                         (!('ocrText' in request.resource.data) ||
                          (request.resource.data.ocrText is string &&
                           request.resource.data.ocrText.size() <= 4000)) &&

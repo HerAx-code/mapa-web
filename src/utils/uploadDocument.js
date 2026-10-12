@@ -111,6 +111,10 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
       faceMatchScore: typeof verify.faceMatchScore === 'number' ? verify.faceMatchScore : null,
       liveness:       verify.liveness ?? null,
       livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
+      // Advisory screen/photo-recapture heuristic (never blocks). Surfaced to
+      // the social worker; the camera-only capture + human call are the control.
+      recaptureScore:     typeof verify.recaptureScore === 'number' ? verify.recaptureScore : null,
+      recaptureSuspected: typeof verify.recaptureSuspected === 'boolean' ? verify.recaptureSuspected : null,
       idVerifyMethod: verify.method ?? 'ocr',
       // Optional patient note explaining an appearance change (surgery, injury,
       // bandages) so a non-matching selfie isn't read as fraud. Bounded.
@@ -184,6 +188,8 @@ export async function replacePatientDocument({ docId, file, ocr = null, verify =
       faceMatchScore: typeof verify.faceMatchScore === 'number' ? verify.faceMatchScore : null,
       liveness:       verify.liveness ?? null,
       livenessScore:  typeof verify.livenessScore === 'number' ? verify.livenessScore : null,
+      recaptureScore:     typeof verify.recaptureScore === 'number' ? verify.recaptureScore : null,
+      recaptureSuspected: typeof verify.recaptureSuspected === 'boolean' ? verify.recaptureSuspected : null,
       idVerifyMethod: verify.method ?? 'ocr',
       appearanceNote: verify.appearanceNote ? String(verify.appearanceNote).slice(0, 500) : null,
     } : {}),
