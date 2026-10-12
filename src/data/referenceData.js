@@ -156,5 +156,5 @@ export function resolveRequirements(request = {}, { upTo = 'assess' } = {}) {
  */
 export function requiredDocsFor(assistanceTypeName, request = {}) {
   return resolveRequirements({ ...request, assistanceType: assistanceTypeName }, { upTo: 'assess' })
-    .map((r, i) => ({ id: r.doc.id, name: r.doc.name, reusable: !!r.doc.reusable, order: i, quantity: r.quantity }))
+    .map((r, i) => ({ id: r.doc.id, name: r.doc.name, description: r.doc.description, reusable: !!r.doc.reusable, order: i, quantity: r.quantity }))
 }

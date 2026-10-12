@@ -697,7 +697,17 @@
         "reused": "Ginamit muli mula sa huling kahilingan · na-verify {{date}}",
         "saving": "Sine-save…",
         "uploadFailed": "Hindi na-save — itatago namin at susubukang muli",
-        "retakePhoto": "Kumuhang muli"
+        "retakePhoto": "Kumuhang muli",
+        "qtyNeeded": "{{n}} ang kailangan",
+        "tagTodo": "Gagawin",
+        "tagReady": "Handa",
+        "tagChecking": "Sinusuri",
+        "tagRetake": "Kunan muli",
+        "tagOnFile": "Nasa file",
+        "tagWaived": "Hindi kailangan",
+        "tagSaving": "Sine-save",
+        "tagFailed": "Nabigo",
+        "tagFlagged": "Na-flag"
       },
       "guidedId": {
         "titleFront": "Litrato ng ID · Harap",

@@ -413,7 +413,7 @@ export default function RequestAssistance() {
     getDocs(query(collection(db, 'documentTypes'), where('required', '==', true)))
       .then(snap => setReqDocTypes(
         snap.docs
-          .map(d => ({ id: d.id, name: d.data().name, reusable: !!d.data().reusable, order: d.data().order ?? 0 }))
+          .map(d => ({ id: d.id, name: d.data().name, description: d.data().description, reusable: !!d.data().reusable, order: d.data().order ?? 0 }))
           .filter(t => t.name)
           .sort((a, b) => a.order - b.order)
       ))

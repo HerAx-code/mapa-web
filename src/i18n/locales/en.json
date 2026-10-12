@@ -697,7 +697,17 @@
         "reused": "Reused from your last request · verified {{date}}",
         "saving": "Saving…",
         "uploadFailed": "Couldn't save — we'll keep it and retry",
-        "retakePhoto": "Retake photo"
+        "retakePhoto": "Retake photo",
+        "qtyNeeded": "{{n}} needed",
+        "tagTodo": "To do",
+        "tagReady": "Ready",
+        "tagChecking": "Checking",
+        "tagRetake": "Retake",
+        "tagOnFile": "On file",
+        "tagWaived": "Not needed",
+        "tagSaving": "Saving",
+        "tagFailed": "Failed",
+        "tagFlagged": "Flagged"
       },
       "guidedId": {
         "titleFront": "Photo of your ID · Front",
