@@ -1,3 +1,5 @@
+import { ORG } from '../config/org'
+
 /**
  * Export data as a CSV file download.
  * @param {string} filename - e.g. 'patients-2026-05-14.csv'
@@ -75,7 +77,7 @@ export const openPrintTab = (data, label, cols, generatedBy = 'Admin') => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${label} — MAPA CRMC</title>
+  <title>${label} — ${ORG.name}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;font-size:13px;color:#111827;background:#f3f4f6}
@@ -98,7 +100,7 @@ export const openPrintTab = (data, label, cols, generatedBy = 'Admin') => {
 <body>
 <div class="page">
   <div class="header">
-    <div><h1>${label}</h1><p>MAPA — Medical Assistance Portal Access &nbsp;·&nbsp; Cotabato Regional Medical Center (CRMC)</p></div>
+    <div><h1>${label}</h1><p>${ORG.name} — ${ORG.fullName}${ORG.facilityName ? ` &nbsp;·&nbsp; ${ORG.facilityName}` : ''}</p></div>
     <div style="text-align:right;font-size:12px;color:#6b7280"><div style="font-weight:600;color:#111827">Generated: ${now}</div><div>By: ${generatedBy}</div></div>
   </div>
   <div class="meta"><div><strong>${data.length}</strong> total records &nbsp;·&nbsp; ${statusSummary}</div></div>
@@ -107,7 +109,7 @@ export const openPrintTab = (data, label, cols, generatedBy = 'Admin') => {
     <button class="btn btn-secondary" onclick="window.print()">Print again</button>
   </div>
   <table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>
-  <div class="footer"><p><strong>Data Privacy Notice:</strong> This report contains personal data protected under Republic Act No. 10173 (Data Privacy Act of 2012). Intended solely for authorized CRMC personnel. Do not share or distribute without proper authorization.</p></div>
+  <div class="footer"><p><strong>Data Privacy Notice:</strong> This report contains personal data protected under Republic Act No. 10173 (Data Privacy Act of 2012). Intended solely for authorized personnel. Do not share or distribute without proper authorization.</p></div>
 </div>
 <script>
   window.onload = function(){ window.print(); };

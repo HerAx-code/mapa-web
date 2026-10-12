@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useAuth } from '../../contexts/AuthContext'
 import Layout from '../../components/Layout'
@@ -413,7 +414,7 @@ export default function IntakeWizard() {
                     ))}
                   </div>
                 ))}
-                <p className="text-xs text-gray-500 pt-2">CRMC will review this with you and complete the assessment. · Susuriin ito ng CRMC kasama kayo.</p>
+                <p className="text-xs text-gray-500 pt-2">{ORG.gatewayName} will review this with you and complete the assessment. · Susuriin ito ng {ORG.gatewayName} kasama kayo.</p>
               </div>
             )
           })()}

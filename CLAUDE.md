@@ -1,9 +1,11 @@
 # MAPA Project Context
 
 ## What This Is
-MAPA (Medical Assistance Portal Access) is a platform for Cotabato Regional Medical Center (CRMC). It digitizes the medical financial assistance application process — patients apply online, CRMC reviews the documents and does one **remote, asynchronous assessment** (no scheduled interview: the social worker works a queue and reaches the patient through in-app messaging, with an on-demand Google Meet only when a live talk is needed), then endorses the request to one or more funding agencies; approved patients receive a Guarantee Letter (digital certificate) to claim at the agency office.
+MAPA (Medical Assistance Portal Access) is a **client-agnostic** platform for medical financial assistance. It digitizes the application process — patients apply online, the hosting medical center's social-services office reviews the documents and does one **remote, asynchronous assessment** (no scheduled interview: the social worker works a queue and reaches the patient through in-app messaging, with an on-demand Google Meet only when a live talk is needed), then endorses the request to one or more funding agencies; approved patients receive a Guarantee Letter (digital certificate) to claim at the agency office.
 
-This is a **production system** deployed for real use at CRMC Malasakit Center in Cotabato City, Philippines. It began as a solo ~9-month build, but it is **not a throwaway pilot** — apply a production quality and robustness bar, and weigh features by real operational value at scale (coordinator workload, assessment turnaround, concurrency safety, indigent-patient phone UX), not demo-readiness. Pilot-era shortcuts in this file are being reconciled against that reality.
+The **host organization is configurable, not hardcoded** — a single source of truth in `src/config/org.js` (+ `functions/src/orgConfig.js`) drives the brand name, the gateway office, the facility name, the access-code prefix, and support contact, overridable per deployment via `VITE_ORG_*` env (neutral MAPA defaults otherwise). Patient-facing copy uses the `{{org}}` / `{{gateway}}` / `{{facility}}` i18n tokens; staff pages read `ORG` directly. The **reference deployment** is CRMC Malasakit Center in Cotabato City, Philippines — the real workflow, forms, and the Order of Charging throughout this file are modeled on CRMC's actual process, but the code no longer names CRMC. (See the "Org config / de-CRMC" memory. Geography — BARMM/Cotabato address + barangay data — is real location data, kept and not part of the configurable brand.)
+
+This is a **production system** built for real use (first deployment: CRMC Malasakit Center). It began as a solo ~9-month build, but it is **not a throwaway pilot** — apply a production quality and robustness bar, and weigh features by real operational value at scale (coordinator workload, assessment turnaround, concurrency safety, indigent-patient phone UX), not demo-readiness. Pilot-era shortcuts in this file are being reconciled against that reality.
 
 The system has two patient-facing surfaces:
 - A web portal (this codebase) — used by agencies, admins, and patients who prefer browser access
@@ -40,7 +42,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match CRMC's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the CRMC social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
-- Patient Access Code (CRMC-YYYY-NNNNN) is the registration gate. Issued in person by Medical Social Services.
+- Patient Access Code (`<PREFIX>-YYYY-NNNNN`, default prefix `MAPA`, set via `ORG.accessCodePrefix`) is the registration gate. Issued in person by the gateway office. (`legacyAccessCodePrefixes` is empty — a clean MAPA-only cut; add a prefix there if a future migration needs to keep accepting old codes.)
 
 ## Out Of Scope (do NOT build)
 - PhilSys API integration

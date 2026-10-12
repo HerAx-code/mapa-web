@@ -523,7 +523,7 @@ export default function AgencyAllocation() {
                     setNewMaxPerApplicant(Number.isFinite(n) && n >= 0 ? String(Math.floor(n)) : '')
                   }} />
                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  The most this agency may approve for a single case. PCSO uses ₱25,000; DSWD AICS varies by tier; Malasakit Center is based on case assessment. Leave blank if your agency has no per-case ceiling. CRMC sees a soft warning at endorsement; the agency's Approve modal hard-blocks any approval above this.
+                  The most this agency may approve for a single case. PCSO uses ₱25,000; DSWD AICS varies by tier; Malasakit Center is based on case assessment. Leave blank if your agency has no per-case ceiling. The coordinating office sees a soft warning at endorsement; the agency's Approve modal hard-blocks any approval above this.
                 </p>
               </div>
               <div>
@@ -667,7 +667,7 @@ export default function AgencyAllocation() {
         </div>{/* /split grid */}
 
         <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-          <strong>Accountability —</strong> Changes here are recorded in your agency's audit log. As Agency Administrator, you are accountable to your funding source (PCSO / DOH / DSWD / etc.) for how the allocation is set and spent. CRMC operates the platform but does not control your agency's budget.
+          <strong>Accountability —</strong> Changes here are recorded in your agency's audit log. As Agency Administrator, you are accountable to your funding source (PCSO / DOH / DSWD / etc.) for how the allocation is set and spent. The coordinating office operates the platform but does not control your agency's budget.
         </p>
 
       </div>

@@ -137,13 +137,13 @@ const TEST_IP = '203.0.113.5'  // RFC 5737 documentation IP -- never a real clie
 describe('verifyAccessCode: auth gate', () => {
   it('throws unauthenticated when uid is missing', async () => {
     const db = makeFakeDb()
-    await expect(handleVerifyAccessCode({ uid: null, code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp }))
+    await expect(handleVerifyAccessCode({ uid: null, code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp }))
       .rejects.toThrow(/Sign in/)
   })
 
   it('throws unauthenticated when uid is undefined', async () => {
     const db = makeFakeDb()
-    await expect(handleVerifyAccessCode({ uid: undefined, code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp }))
+    await expect(handleVerifyAccessCode({ uid: undefined, code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp }))
       .rejects.toMatchObject({ code: 'unauthenticated' })
   })
 })
@@ -163,16 +163,31 @@ describe('verifyAccessCode: input validation', () => {
 
   it('rejects malformed code (wrong digit count)', async () => {
     const db = makeFakeDb()
-    await expect(handleVerifyAccessCode({ uid: 'u', code: 'CRMC-2026-001', ip: TEST_IP, db, serverTimestamp }))
+    await expect(handleVerifyAccessCode({ uid: 'u', code: 'MAPA-2026-001', ip: TEST_IP, db, serverTimestamp }))
       .rejects.toMatchObject({ code: 'invalid-argument' })
   })
 
   it('normalizes lowercase + whitespace before checking format', async () => {
     const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
     const out = await handleVerifyAccessCode({
-      uid: 'u', code: '  crmc-2026-00001  ', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: '  mapa-2026-00001  ', ip: TEST_IP, db, serverTimestamp,
     })
     expect(out).toEqual({ available: true, exists: true })
+  })
+
+  it('accepts the active MAPA prefix', async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
+    const out = await handleVerifyAccessCode({
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
+    })
+    expect(out).toEqual({ available: true, exists: true })
+  })
+
+  it('rejects a legacy CRMC prefix (MAPA-only clean cut — no legacy acceptance)', async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
+    await expect(handleVerifyAccessCode({
+      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+    })).rejects.toMatchObject({ code: 'invalid-argument' })
   })
 })
 
@@ -181,7 +196,7 @@ describe('verifyAccessCode: input validation', () => {
 describe('verifyAccessCode: per-uid throttle', () => {
   it('lets the first call through and writes count=1 to the uid doc', async () => {
     const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
-    await handleVerifyAccessCode({ uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp })
+    await handleVerifyAccessCode({ uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp })
     // First write should be the uid throttle bumped to 1
     const uidWrites = db._writes.filter(w => w.ref._kind === 'uid')
     expect(uidWrites[0].data.count).toBe(1)
@@ -192,7 +207,7 @@ describe('verifyAccessCode: per-uid throttle', () => {
       uidThrottleDoc: { count: 9, windowStart: Date.now() },
       hospitalIdDoc:  { status: 'available' },
     })
-    await handleVerifyAccessCode({ uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp })
+    await handleVerifyAccessCode({ uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp })
     const uidWrites = db._writes.filter(w => w.ref._kind === 'uid')
     expect(uidWrites[0].data.count).toBe(10)
   })
@@ -202,7 +217,7 @@ describe('verifyAccessCode: per-uid throttle', () => {
       uidThrottleDoc: { count: 10, windowStart: Date.now() },
       hospitalIdDoc:  { status: 'available' },
     })
-    await expect(handleVerifyAccessCode({ uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp }))
+    await expect(handleVerifyAccessCode({ uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp }))
       .rejects.toMatchObject({ code: 'resource-exhausted' })
   })
 
@@ -212,7 +227,7 @@ describe('verifyAccessCode: per-uid throttle', () => {
       hospitalIdDoc:  { status: 'available' },
     })
     const out = await handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })
     expect(out).toEqual({ available: true, exists: true })
     const uidWrites = db._writes.filter(w => w.ref._kind === 'uid')
@@ -224,7 +239,7 @@ describe('verifyAccessCode: per-uid throttle', () => {
       uidThrottleDoc: { count: 10, windowStart: Date.now() - (5 * 60 * 1000) },
     })
     try {
-      await handleVerifyAccessCode({ uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp })
+      await handleVerifyAccessCode({ uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp })
       throw new Error('should have thrown')
     } catch (err) {
       expect(err.code).toBe('resource-exhausted')
@@ -248,7 +263,7 @@ describe('verifyAccessCode: per-IP throttle', () => {
       hospitalIdDoc:  { status: 'available' },
     })
     await expect(handleVerifyAccessCode({
-      uid: 'fresh-anon-uid', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'fresh-anon-uid', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })).rejects.toMatchObject({ code: 'resource-exhausted' })
   })
 
@@ -258,7 +273,7 @@ describe('verifyAccessCode: per-IP throttle', () => {
     })
     try {
       await handleVerifyAccessCode({
-        uid: 'fresh-uid', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+        uid: 'fresh-uid', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
       })
       throw new Error('should have thrown')
     } catch (err) {
@@ -273,13 +288,13 @@ describe('verifyAccessCode: per-IP throttle', () => {
     const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
     for (let i = 0; i < 10; i++) {
       const out = await handleVerifyAccessCode({
-        uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+        uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
       })
       expect(out).toEqual({ available: true, exists: true })
     }
     // 11th call should hit the uid cap (not the IP cap, which is at 10/60)
     await expect(handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })).rejects.toMatchObject({ code: 'resource-exhausted' })
   })
 
@@ -306,7 +321,7 @@ describe('verifyAccessCode: code resolution', () => {
   it('returns { available: false, exists: false } for a non-existent code', async () => {
     const db = makeFakeDb({ hospitalIdDoc: null })
     const out = await handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-99999', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-99999', ip: TEST_IP, db, serverTimestamp,
     })
     expect(out).toEqual({ available: false, exists: false })
   })
@@ -314,7 +329,7 @@ describe('verifyAccessCode: code resolution', () => {
   it('returns { available: true, exists: true } when status is available', async () => {
     const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
     const out = await handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })
     expect(out).toEqual({ available: true, exists: true })
   })
@@ -322,7 +337,7 @@ describe('verifyAccessCode: code resolution', () => {
   it('returns { available: false, exists: true } when status is "used"', async () => {
     const db = makeFakeDb({ hospitalIdDoc: { status: 'used' } })
     const out = await handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })
     expect(out).toEqual({ available: false, exists: true })
   })
@@ -338,7 +353,7 @@ describe('verifyAccessCode: code resolution', () => {
       },
     })
     const out = await handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })
     expect(Object.keys(out).sort()).toEqual(['available', 'exists'])
   })
@@ -346,7 +361,7 @@ describe('verifyAccessCode: code resolution', () => {
   it('wraps a Firestore read error as internal', async () => {
     const db = makeFakeDb({ throwOnGet: true })
     await expect(handleVerifyAccessCode({
-      uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
+      uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })).rejects.toMatchObject({ code: 'internal' })
   })
 })

@@ -7,6 +7,7 @@ import {
   writeBatch, increment, runTransaction, Timestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -702,7 +703,7 @@ export default function ApplicationDetail() {
       Promise.allSettled(rejTargets.map(uid => notify(uid, {
         type:  'app_advanced',
         title: `Sibling agency rejected on a shared case`,
-        body:  `${app.agencyName ?? 'An agency'} rejected ${app.patientName ?? 'patient'}'s slice. CRMC may re-endorse to another agency or this case may need additional coverage.`,
+        body:  `${app.agencyName ?? 'An agency'} rejected ${app.patientName ?? 'patient'}'s slice. ${ORG.gatewayName} may re-endorse to another agency or this case may need additional coverage.`,
       }))).catch(() => {})
     }
 
@@ -987,7 +988,7 @@ export default function ApplicationDetail() {
     if (!app?.endorsedById) return
     try {
       const convId = await getOrCreateConversation(user.uid, app.endorsedById, {
-        names:   { [user.uid]: user.name, [app.endorsedById]: app.endorsedBy ?? 'CRMC' },
+        names:   { [user.uid]: user.name, [app.endorsedById]: app.endorsedBy ?? ORG.gatewayName },
         roles:   { [user.uid]: user.role ?? 'agency', [app.endorsedById]: 'admin' },
         subject: `Re: Endorsed ${app.appId || app.id.slice(0, 8)} · ${app.patientName}`,
       })
@@ -1135,8 +1136,8 @@ export default function ApplicationDetail() {
             {app.endorsedById && (
               <button onClick={handleMessageCrmc}
                 className="btn-secondary text-sm flex items-center gap-1.5"
-                title={`Message ${app.endorsedBy ?? 'CRMC'} (endorsing coordinator)`}>
-                <MdMessage size={14} /> Message CRMC
+                title={`Message ${app.endorsedBy ?? ORG.gatewayName} (endorsing coordinator)`}>
+                <MdMessage size={14} /> Message {ORG.gatewayName}
               </button>
             )}
           </div>
@@ -1385,7 +1386,7 @@ export default function ApplicationDetail() {
             {/* INTAKE */}
             {section === 'intake' && (
               <div className="card p-5">
-                <p className="eyebrow mb-3">Case Assessment <span className="text-gray-300 normal-case font-normal">· owned by CRMC</span></p>
+                <p className="eyebrow mb-3">Case Assessment <span className="text-gray-300 normal-case font-normal">· owned by {ORG.gatewayName}</span></p>
                 <div className="flex items-start gap-3 mb-4">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     intakeReady ? 'bg-green-50' : effectiveIntake ? 'bg-amber-50' : 'bg-gray-100'
@@ -1400,8 +1401,8 @@ export default function ApplicationDetail() {
                     </p>
                     <p className="text-xs text-gray-500">
                       {intakeReady
-                        ? 'CRMC\'s assessment is complete. Approval unlocked.'
-                        : effectiveIntake ? 'CRMC\'s assessment is still in progress.' : 'CRMC has not completed the assessment yet.'}
+                        ? `${ORG.gatewayName}'s assessment is complete. Approval unlocked.`
+                        : effectiveIntake ? `${ORG.gatewayName}'s assessment is still in progress.` : `${ORG.gatewayName} has not completed the assessment yet.`}
                     </p>
                   </div>
                 </div>
@@ -1413,7 +1414,7 @@ export default function ApplicationDetail() {
                   <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <MdVideoCall size={14} className="text-blue-500 flex-shrink-0" />
-                      <p className="text-sm font-medium text-blue-800">CRMC Assessment Interview</p>
+                      <p className="text-sm font-medium text-blue-800">{ORG.gatewayName} Assessment Interview</p>
                       {request.interviewOutcome && (
                         <span className={`badge text-xs ml-auto ${
                           request.interviewOutcome === 'completed' ? 'badge-green'
@@ -1512,9 +1513,9 @@ export default function ApplicationDetail() {
                       </div>
                     ))}
                     {patientDocs.some(d => d.updatedAfterSubmission || d.status === 'pending') ? (
-                      <p className="text-xs text-gray-500 mt-2 italic">CRMC verified these documents before endorsement; any documents the patient re-uploaded since are pending re-verification.</p>
+                      <p className="text-xs text-gray-500 mt-2 italic">{ORG.gatewayName} verified these documents before endorsement; any documents the patient re-uploaded since are pending re-verification.</p>
                     ) : (
-                      <p className="text-xs text-gray-500 mt-2 italic">CRMC verified these documents before endorsing. Click a document to view it.</p>
+                      <p className="text-xs text-gray-500 mt-2 italic">{ORG.gatewayName} verified these documents before endorsing. Click a document to view it.</p>
                     )}
                   </div>
                 )}

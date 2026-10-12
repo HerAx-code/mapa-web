@@ -8,6 +8,7 @@ import {
   serverTimestamp, runTransaction, arrayUnion, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -245,7 +246,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             updatedAt:         serverTimestamp(),
             attachedDocuments: r.attachedDocuments ?? [],
             endorsedById:      user.uid,
-            endorsedBy:        user.name ?? 'CRMC',
+            endorsedBy:        user.name ?? ORG.gatewayName,
             endorsedAt:        serverTimestamp(),
             // Optional free-text note from CRMC, shown in the agency's
             // ApproveModal so the operator sees the referral context.
@@ -320,7 +321,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       notify(request.patientId, {
         type:  'app_advanced',
         title: 'Your request was endorsed',
-        body:  `CRMC referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.`,
+        body:  `${ORG.gatewayName} referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.`,
       }).catch(() => {})
 
       toast.success(`Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}.`)
@@ -664,7 +665,7 @@ function RequestDetail({ request, agencies, onClose }) {
       const isPending = newStatus === 'pending'
       await updateDoc(doc(db, 'documents', docItem.id), {
         status: newStatus,
-        reviewedBy: isPending ? null : (user.name ?? 'CRMC'),
+        reviewedBy: isPending ? null : (user.name ?? ORG.gatewayName),
         reviewedAt: isPending ? null : serverTimestamp(),
         // Persist the rejection reason so the doc viewer / audit trail
         // can surface it. Clear it on re-verify or un-verify.
@@ -691,7 +692,7 @@ function RequestDetail({ request, agencies, onClose }) {
         await notify(request.patientId, {
           type:  'doc_rejected',
           title: 'A document needs attention',
-          body:  `CRMC marked your "${docItem.name}" document for correction. Please re-upload it.`
+          body:  `${ORG.gatewayName} marked your "${docItem.name}" document for correction. Please re-upload it.`
             + (cleanReason ? ` Reason: ${cleanReason}` : ''),
         }).catch(() => {})
       }
@@ -738,7 +739,7 @@ function RequestDetail({ request, agencies, onClose }) {
     try {
       const batch = writeBatch(db)
       const now = serverTimestamp()
-      const reviewer = user.name ?? 'CRMC'
+      const reviewer = user.name ?? ORG.gatewayName
       pendingDocs.forEach(d => {
         batch.update(doc(db, 'documents', d.id), {
           status: 'verified',
@@ -1488,11 +1489,11 @@ export default function Requests() {
     setBulkBusy(true)
     try {
       await Promise.all(rows.map(r => updateDoc(doc(db, 'requests', r.id), {
-        assignee: user.name ?? 'CRMC', assigneeUid: user.uid, updatedAt: serverTimestamp(),
+        assignee: user.name ?? ORG.gatewayName, assigneeUid: user.uid, updatedAt: serverTimestamp(),
       })))
       rows.forEach(r => logAudit(user, {
         action: 'request_assigned', targetType: 'request', targetId: r.id, targetName: r.requestId,
-        details: `Assigned to ${user.name ?? 'CRMC'}`, requestId: r.id, patientId: r.patientId,
+        details: `Assigned to ${user.name ?? ORG.gatewayName}`, requestId: r.id, patientId: r.patientId,
       }))
       toast.success(`Assigned ${rows.length} request${rows.length === 1 ? '' : 's'} to you.`)
       clearSelection()
@@ -1506,8 +1507,8 @@ export default function Requests() {
     setBulkBusy(true)
     try {
       await Promise.all(rows.map(r => notify(r.patientId, {
-        type: 'docs_requested', title: 'CRMC needs more documents',
-        body: `CRMC has requested additional documents for your request ${r.requestId}. Please review your requirements and upload what's missing.`,
+        type: 'docs_requested', title: `${ORG.gatewayName} needs more documents`,
+        body: `${ORG.gatewayName} has requested additional documents for your request ${r.requestId}. Please review your requirements and upload what's missing.`,
       }).catch(() => {})))
       // All admin actions must call logAudit() (CLAUDE.md).
       rows.forEach(r => logAudit(user, {
@@ -1541,10 +1542,10 @@ export default function Requests() {
     <Layout breadcrumb="Assistance Requests">
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
         <div className="mb-5">
-          <p className="eyebrow">CRMC gateway</p>
+          <p className="eyebrow">{ORG.gatewayName} gateway</p>
           <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Requests</h1>
           <p className="text-sm text-gray-500 mt-1">
-            <span className="tabular-nums font-medium text-gray-700">{counts.all}</span> request{counts.all === 1 ? '' : 's'} at CRMC
+            <span className="tabular-nums font-medium text-gray-700">{counts.all}</span> request{counts.all === 1 ? '' : 's'} in the queue
             {' · '}
             <span className="tabular-nums font-medium text-gray-700">{counts.needs_action}</span> waiting on your team
           </p>

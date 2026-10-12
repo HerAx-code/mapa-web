@@ -295,7 +295,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
                     { value: 'patient',       label: 'Patients'        },
                     { value: 'agency',        label: 'Coordinators'    },
                     { value: 'agency_admin',  label: 'Agency admins'   },
-                    { value: 'admin',         label: 'CRMC staff'      },
+                    { value: 'admin',         label: 'Platform staff'  },
                   ].map(opt => {
                     const active = targetRoles.includes(opt.value)
                     return (

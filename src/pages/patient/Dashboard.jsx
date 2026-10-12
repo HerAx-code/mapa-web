@@ -20,6 +20,7 @@ import {
   collection, query, where, orderBy, onSnapshot,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import { isGLExpired } from '../../utils/constants'
 import { isSliceTerminal, computeFunding, REQ_RANK } from '../../utils/requests'
 import { peso } from '../../utils/format'
@@ -150,7 +151,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
       <ul className="mt-2 divide-y divide-gray-50">
         {convos.slice(0, 3).map(c => {
           const otherUid = (c.participants ?? []).find(p => p !== uid)
-          const sender   = c.names?.[otherUid] ?? 'CRMC'
+          const sender   = c.names?.[otherUid] ?? ORG.gatewayName
           const unread   = (c.unread?.[uid] ?? 0) > 0
           return (
             <li key={c.id}>

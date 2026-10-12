@@ -1,18 +1,22 @@
 // Brand
 //
 // "MAPA Portal" is redundant — the P in MAPA already stands for Portal.
-// Use BRAND_NAME ("MAPA") on its own, or pair with CRMC for context.
-export const BRAND_NAME = 'MAPA'
-export const BRAND_SUBTITLE = 'CRMC'
-export const BRAND_FULL = 'Medical Assistance Portal Access'
+// Use BRAND_NAME ("MAPA") on its own, or pair with BRAND_SUBTITLE for context.
+// Sourced from src/config/org.js so a deployment reskins via env, not by
+// chasing hardcoded institution strings across pages/GL templates.
+import { ORG } from '../config/org'
 
-// CRMC gateway identity — surfaces wherever the patient sees "who is
-// conducting my assessment" / "who endorsed my request". Centralized
-// so a rename or a multi-hospital rollout doesn't require chasing
-// hardcoded strings across patient/Interviews, GL templates, etc.
-export const CRMC_GATEWAY_NAME     = 'CRMC Malasakit'
-export const CRMC_GATEWAY_INITIALS = 'MC'
-export const CRMC_GATEWAY_COLOR    = 'bg-brand-500'
+export const BRAND_NAME = ORG.name
+export const BRAND_SUBTITLE = ORG.shortName
+export const BRAND_FULL = ORG.fullName
+
+// Gateway identity — surfaces wherever the patient sees "who is conducting
+// my assessment" / "who endorsed my request". The host organization is
+// configurable (ORG.gateway*); these aliases are kept so existing importers
+// don't need to change. (Name kept as *_GATEWAY_* for import stability.)
+export const CRMC_GATEWAY_NAME     = ORG.gatewayName
+export const CRMC_GATEWAY_INITIALS = ORG.gatewayInitials
+export const CRMC_GATEWAY_COLOR    = ORG.gatewayColor
 
 // Budget period helpers — budget.period is an adjective ('monthly') which
 // reads awkwardly when embedded in phrases like "Budget this monthly".
@@ -157,7 +161,7 @@ export const AGENCIES = [
     initials: 'MC',
     color: 'bg-brand-500',
     description: 'Consolidates DOH, DSWD, PhilHealth, and PCSO services for zero balance billing of indigent patients.',
-    location: 'CRMC Ground Floor, Cotabato City',
+    location: 'Hospital Ground Floor, Cotabato City',
     phone: '064-421-2500',
     slots: { total: 25, remaining: 21 },
     requirements: ['Barangay Certificate of Indigency', 'Hospital Billing Statement', 'Valid ID', 'Medical Abstract'],
@@ -169,7 +173,7 @@ export const AGENCIES = [
     name: 'AMBaG Program',
     initials: 'AM',
     color: 'bg-purple-600',
-    description: 'Zero balance billing for marginalized patients at CRMC and partner hospitals under the BARMM government.',
+    description: 'Zero balance billing for marginalized patients at partner hospitals under the BARMM government.',
     location: 'BARMM Admin Building, Cotabato City',
     phone: '064-421-3000',
     slots: { total: 25, remaining: 5 },
@@ -183,7 +187,7 @@ export const AGENCIES = [
     initials: 'PC',
     color: 'bg-red-600',
     description: 'Issues guarantee letters covering chemotherapy, radiation therapy, and essential medicines.',
-    location: 'Social Services Department, CRMC',
+    location: 'Social Services Department',
     phone: '064-421-2600',
     slots: { total: 20, remaining: 0 },
     requirements: ['Medical Certificate', 'Laboratory Results', 'PhilHealth ID', 'Valid ID'],
@@ -196,7 +200,7 @@ export const AGENCIES = [
     initials: 'DS',
     color: 'bg-blue-600',
     description: 'Cash assistance and medicine vouchers for individuals in crisis situations through community social workers.',
-    location: 'Social Welfare Office, CRMC',
+    location: 'Social Welfare Office',
     phone: '064-421-2700',
     slots: { total: 25, remaining: 18 },
     requirements: ['Barangay Certificate of Indigency', 'Valid ID', 'Crisis Documentation'],

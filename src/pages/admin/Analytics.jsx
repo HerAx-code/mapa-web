@@ -113,7 +113,7 @@ export default function Analytics() {
             <p className="eyebrow">Analytics</p>
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Program Overview</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Medical assistance across CRMC and partner agencies — the outcome view behind the operational queues.
+              Medical assistance across the hospital and partner agencies — the outcome view behind the operational queues.
             </p>
           </div>
           {hasAnyData && (

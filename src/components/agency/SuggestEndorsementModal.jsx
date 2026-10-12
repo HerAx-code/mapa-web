@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdSend, MdGroups } from 'react-icons/md'
+import { ORG } from '../../config/org'
 import toast from 'react-hot-toast'
 
 /**
@@ -102,7 +103,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
         // flow which we judged not worth the added complexity. Dropped.
         // Existing docs with the field retain it harmlessly.
       })
-      toast.success('Suggestion sent to CRMC. They will decide whether to endorse.')
+      toast.success(`Suggestion sent to ${ORG.gatewayName}. They will decide whether to endorse.`)
       onClose()
     } catch (err) {
       console.error('[SuggestEndorsement] write failed:', err)
@@ -145,7 +146,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
         {/* Body */}
         <div className="px-5 py-4 space-y-4">
           <p className="text-xs text-gray-500 leading-relaxed">
-            CRMC reviews each suggestion and decides whether to endorse the case to the suggested
+            {ORG.gatewayName} reviews each suggestion and decides whether to endorse the case to the suggested
             agency. Your suggestion is informational — it does not commit any agency to action.
           </p>
 
@@ -203,7 +204,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
               onChange={e => setRecommendedAmount(e.target.value)}
             />
             <p className="text-xs text-gray-500 mt-0.5">
-              Hint for CRMC. The receiving agency makes their own funding decision.
+              Hint for {ORG.gatewayName}. The receiving agency makes their own funding decision.
             </p>
           </div>
 

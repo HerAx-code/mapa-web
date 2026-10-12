@@ -523,7 +523,7 @@ export default function AgencyTeam() {
         )}
 
         <p className="text-xs text-gray-500 mt-4 leading-relaxed">
-          <strong>Note —</strong> Deleting a coordinator account requires CRMC system administration. To permanently remove someone, deactivate them here and contact CRMC. Coordinators you add will receive a password reset email (if checked) and must set their password before logging in.
+          <strong>Note —</strong> Deleting a coordinator account requires system administration. To permanently remove someone, deactivate them here and contact your system administrator. Coordinators you add will receive a password reset email (if checked) and must set their password before logging in.
         </p>
 
         {showAdd && agency && (

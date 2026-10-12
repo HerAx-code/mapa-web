@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const crypto = require('node:crypto')
+const { accessCodeRe, accessCodeFormatHint } = require('./orgConfig')
 
 /**
  * verifyAccessCode — Phase 3.5 server-side rate-limited access-code check.
@@ -28,7 +29,7 @@ const crypto = require('node:crypto')
  *      the 30k 2026 code range would take ~500 hours per IP.
  *
  * Contract:
- *   data:  { code: 'CRMC-YYYY-NNNNN' }
+ *   data:  { code: '<PREFIX>-YYYY-NNNNN' }  (prefix per orgConfig; MAPA default)
  *   auth:  required (anonymous sign-in is fine; throttle keys are uid
  *          AND a hash of request.rawRequest.ip)
  *   returns: { available: boolean, exists: boolean }
@@ -42,7 +43,9 @@ const crypto = require('node:crypto')
  * bottom unpacks request.auth + request.rawRequest.ip and calls it.
  */
 
-const CODE_RE = /^CRMC-\d{4}-\d{5}$/
+// Accepts the active issuing prefix plus any legacy prefixes (see orgConfig),
+// so patients holding a code from a prior deployment are never locked out.
+const CODE_RE = accessCodeRe()
 const WINDOW_MS = 60 * 60 * 1000  // 1 hour
 const MAX_UID_ATTEMPTS = 10
 const MAX_IP_ATTEMPTS  = 60
@@ -105,7 +108,7 @@ async function handleVerifyAccessCode({ uid, code, ip, db, now = () => Date.now(
   if (!CODE_RE.test(normalizedCode)) {
     throw new HttpsError(
       'invalid-argument',
-      'Code must be in the format CRMC-YYYY-NNNNN.',
+      `Code must be in the format ${accessCodeFormatHint()}.`,
     )
   }
 

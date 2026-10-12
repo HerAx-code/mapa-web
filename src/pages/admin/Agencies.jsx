@@ -272,7 +272,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><MdLocationOn size={12} className="text-gray-500" /> Office / Building <span className="text-gray-500 font-normal">— optional</span></label>
-              <input className="input" placeholder="CRMC Ground Floor"
+              <input className="input" placeholder="Hospital Ground Floor"
                 value={form.officeName} onChange={set('officeName')} />
               {/* On edit, surface the legacy free-text location so the
                   operator can see what was there before. Only relevant

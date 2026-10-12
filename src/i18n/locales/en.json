@@ -156,7 +156,7 @@
   "landing": {
     "header": {
       "downloadApp": "Install App",
-      "mobileToast": "The MAPA mobile app is coming soon. Follow CRMC for updates.",
+      "mobileToast": "The MAPA mobile app is coming soon. Follow {{org}} for updates.",
       "register": "Register",
       "login": "Log In →",
       "dashboard": "Dashboard →"
@@ -164,11 +164,11 @@
     "hero": {
       "badge": "Official portal of Cotabato Regional Medical Center",
       "location": "Sinsuat Avenue, Cotabato City",
-      "tagline": "Simplifying access to medical financial assistance programs at CRMC for patients, agencies, and administrators.",
+      "tagline": "Simplifying access to medical financial assistance programs at {{facility}} for patients, agencies, and administrators.",
       "ctaPatient": "Apply for Patient Account",
       "ctaDashboard": "Go to Dashboard",
       "learnMore": "Learn More ↓",
-      "headline": "Medical assistance at CRMC — one application, from your phone.",
+      "headline": "Medical assistance at {{facility}} — one application, from your phone.",
       "proof1Value": "One",
       "proof1Label": "application for every partner agency",
       "proof2Value": "Free",
@@ -180,7 +180,7 @@
       "stage1Label": "Filed",
       "stage1Detail": "You submit one request with your requirements.",
       "stage2Label": "Reviewed & assessed",
-      "stage2Detail": "CRMC verifies your documents and assesses your case.",
+      "stage2Detail": "{{gateway}} verifies your documents and assesses your case.",
       "stage3Label": "Endorsed & approved",
       "stage3Detail": "Partner agencies fund it and your Guarantee Letter is issued.",
       "stage4Label": "Released",
@@ -189,7 +189,7 @@
     "prepare": {
       "heading": "Before you register, prepare the following",
       "codeTitle": "Patient Access Code",
-      "codeDesc": "Your CRMC Patient Access Code (CRMC-YYYY-XXXXX). Get this from CRMC Medical Social Services.",
+      "codeDesc": "Your Patient Access Code ({{codeFormat}}). Get this from {{gateway}}.",
       "emailTitle": "Email Address",
       "emailDesc": "A working email address for account login, notifications, and password recovery.",
       "mobileTitle": "Mobile Number",
@@ -201,25 +201,25 @@
     },
     "steps": {
       "heading": "How to Get Medical Assistance",
-      "subtitle": "Follow these steps to submit and receive medical assistance through CRMC.",
+      "subtitle": "Follow these steps to submit and receive medical assistance through {{gateway}}.",
       "s1Title": "Get your Patient Access Code",
-      "s1Desc": "Visit CRMC Medical Social Services to be assessed and receive your Patient Access Code.",
+      "s1Desc": "Visit {{gateway}} to be assessed and receive your Patient Access Code.",
       "s2Title": "Create a Patient Account",
       "s2Desc": "Register online using your Hospital ID, email address, contact number, and home address.",
       "s3Title": "Submit Your Request",
       "s3Desc": "Open Request Assistance, upload your required documents, and verify your ID with a selfie.",
-      "s4Title": "CRMC Verifies Your Documents",
-      "s4Desc": "A CRMC social worker reviews your documents to make sure everything is in order.",
-      "s5Title": "CRMC Assesses Your Case",
-      "s5Desc": "A CRMC social worker assesses your case remotely and may message you if anything is needed — no interview to attend.",
+      "s4Title": "{{gateway}} Verifies Your Documents",
+      "s4Desc": "A social worker reviews your documents to make sure everything is in order.",
+      "s5Title": "{{gateway}} Assesses Your Case",
+      "s5Desc": "A social worker assesses your case remotely and may message you if anything is needed — no interview to attend.",
       "s6Title": "Get Endorsed & Receive Your Guarantee Letter",
-      "s6Desc": "CRMC endorses your request to agencies that can fund it. Get your Guarantee Letter to present at the named provider.",
+      "s6Desc": "{{gateway}} endorses your request to agencies that can fund it. Get your Guarantee Letter to present at the named provider.",
       "startBtn": "Start with Step 1",
-      "footer": "Free · No fees required · Powered by CRMC"
+      "footer": "Free · No fees required · Powered by {{gateway}}"
     },
     "programs": {
       "heading": "Available Programs",
-      "subtitle": "Browse active medical assistance programs at CRMC. Slots reset daily at midnight.",
+      "subtitle": "Browse active medical assistance programs at {{facility}}. Slots reset daily at midnight.",
       "applyNow": "Apply Now →",
       "goToDashboard": "Go to Dashboard →",
       "full": "Full",
@@ -232,18 +232,18 @@
       "point1": "No registration fee",
       "point2": "No processing fee",
       "point3": "No fixer, no middleman",
-      "warning": "If anyone asks you to pay to speed up your approval, they are not from CRMC. Report it to the Malasakit Center right away."
+      "warning": "If anyone asks you to pay to speed up your approval, they are not from {{gateway}}. Report it to the Malasakit Center right away."
     },
     "eligibility": {
       "title": "Who can apply",
-      "intro": "MAPA is for CRMC patients who cannot pay their hospital bill. You do not need to be good with computers — the form is short, and staff can sit with you and help.",
+      "intro": "MAPA is for hospital patients who cannot pay their hospital bill. You do not need to be good with computers — the form is short, and staff can sit with you and help.",
       "qualifyHeading": "You may apply if…",
-      "q1": "You are admitted at, or were treated in, CRMC.",
+      "q1": "You are admitted at, or were treated in, {{facility}}.",
       "q2": "You have an unpaid hospital bill or billing statement.",
-      "q3": "A CRMC social worker has classified you as an indigent patient.",
+      "q3": "A social worker has classified you as an indigent patient.",
       "q4": "You are the patient, or an immediate family member filing for them.",
       "codeHeading": "You will need a Patient Access Code",
-      "codeBody": "This is printed and handed to you in person at the CRMC Medical Social Services office. It is never sent by text, email, or social media — and no one online can give you one.",
+      "codeBody": "This is printed and handed to you in person at the {{gateway}} office. It is never sent by text, email, or social media — and no one online can give you one.",
       "codeSample": "Sample code",
       "codeCta": "Where is the office?"
     },
@@ -251,25 +251,25 @@
       "heading": "Questions people ask us",
       "intro": "If your question isn't here, call or visit us — we would rather explain it than have you guess.",
       "q1": "Do I need to pay anything?",
-      "a1": "No. Applying through MAPA is free, from registration to the release of your Guarantee Letter. CRMC staff and MAPA will never ask for a fee, a deposit, or a 'processing charge'. If anyone asks you for money in exchange for approval, report it to the Medical Social Services office right away.",
+      "a1": "No. Applying through MAPA is free, from registration to the release of your Guarantee Letter. {{gateway}} staff and MAPA will never ask for a fee, a deposit, or a 'processing charge'. If anyone asks you for money in exchange for approval, report it to the Medical Social Services office right away.",
       "q2": "What is a Patient Access Code and how do I get one?",
-      "a2": "It is a printed code given to you in person at the CRMC Medical Social Services office, after a social worker confirms you are a CRMC patient with an unpaid hospital bill. The code links your online application to your real hospital record, so it cannot be requested by phone, text, or email. Bring a valid ID and your billing statement.",
+      "a2": "It is a printed code given to you in person at the {{gateway}} office, after a social worker confirms you are a hospital patient with an unpaid hospital bill. The code links your online application to your real hospital record, so it cannot be requested by phone, text, or email. Bring a valid ID and your billing statement.",
       "q3": "Can I apply for a family member?",
       "a3": "Yes. A spouse, parent, adult child, or authorized representative may file on behalf of the patient — common when the patient is still confined or cannot use a phone. You'll be asked for your relationship to the patient, your own valid ID, and an authorization letter signed by the patient or immediate family.",
       "q4": "How long does it take?",
-      "a4": "It depends on how complete your documents are and on each agency's review and available slots. CRMC works to verify documents and assess your case as quickly as possible, and you can track every step in your account.",
-      "q5": "Do I have to travel to CRMC for an interview?",
-      "a5": "No. The assessment is done remotely — a CRMC social worker reviews your case online and messages you through the app if they need anything. If a short live conversation is needed, they send a Google Meet link. There is no scheduled office interview to attend.",
+      "a4": "It depends on how complete your documents are and on each agency's review and available slots. {{gateway}} works to verify documents and assess your case as quickly as possible, and you can track every step in your account.",
+      "q5": "Do I have to travel to {{facility}} for an interview?",
+      "a5": "No. The assessment is done remotely — a social worker reviews your case online and messages you through the app if they need anything. If a short live conversation is needed, they send a Google Meet link. There is no scheduled office interview to attend.",
       "q6": "Is my information safe?",
-      "a6": "Yes. MAPA is operated by CRMC and handles your data under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the funding agency your request is endorsed to. You may ask for a copy of your data or ask that it be corrected at any time."
+      "a6": "Yes. MAPA is operated by {{gateway}} and handles your data under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the funding agency your request is endorsed to. You may ask for a copy of your data or ask that it be corrected at any time."
     },
     "help": {
       "title": "Need help? Visit us.",
-      "intro": "Staff at the CRMC Malasakit Center can register you, take your selfie, and upload your documents for you. Bring your papers and someone will sit with you.",
+      "intro": "Staff at the {{gateway}} can register you, take your selfie, and upload your documents for you. Bring your papers and someone will sit with you.",
       "onsite": "Walk-in assistance available — no appointment needed.",
       "startBtn": "Start my application",
       "addressLabel": "Address",
-      "address": "CRMC Malasakit Center, Sinsuat Avenue, Cotabato City, Maguindanao del Norte 9600",
+      "address": "{{gateway}}, Sinsuat Avenue, Cotabato City, Maguindanao del Norte 9600",
       "phoneLabel": "Phone",
       "emailLabel": "Email",
       "hoursLabel": "Office hours",
@@ -288,14 +288,14 @@
       "hours": "Mon – Fri, 8:00 AM – 5:00 PM",
       "copyright": "© {{year}} MAPA · Cotabato Regional Medical Center · All rights reserved",
       "privacy": "Privacy Notice",
-      "officialPortal": "CRMC Official Portal"
+      "officialPortal": "{{org}} Official Portal"
     },
     "privacy": {
       "title": "Privacy Notice",
-      "intro": "This notice explains what information MAPA collects, how it is used, and who can access it. MAPA is operated by Cotabato Regional Medical Center (CRMC) in compliance with the Philippine Data Privacy Act of 2012 (Republic Act 10173).",
+      "intro": "This notice explains what information MAPA collects, how it is used, and who can access it. MAPA is operated by {{facility}} in compliance with the Philippine Data Privacy Act of 2012 (Republic Act 10173).",
       "dataTitle": "Data We Collect",
       "data1": "Full name, email address, and contact number",
-      "data2": "CRMC Hospital ID and patient ID number",
+      "data2": "Hospital ID and patient ID number",
       "data3": "Documents uploaded for verification",
       "data4": "Application submissions and status history",
       "data5": "Messages with administrators and agency staff",
@@ -310,7 +310,7 @@
       "access2": "Agency Coordinators — applications submitted to their agency",
       "access3": "Staff Administrators — documents and applications for review",
       "access4": "System Administrators — full access for management and audit",
-      "contactNote": "For data concerns, contact the <b>CRMC Records Office</b> at records@crmc.gov.ph or call (064) 421-2500.",
+      "contactNote": "For data concerns, contact the <b>{{gateway}}</b> at {{contactEmail}} or call (064) 421-2500.",
       "close": "Close"
     }
   },
@@ -321,7 +321,7 @@
     "operations": "Operations",
     "help": {
       "title": "Need help?",
-      "body": "Visit CRMC Medical Social Services, or read the step-by-step guide.",
+      "body": "Visit {{gateway}}, or read the step-by-step guide.",
       "cta": "Open the guide"
     },
     "notifs": {
@@ -372,7 +372,7 @@
       "helpSupport": "Help & Support",
       "reportProblem": "Report a Problem",
       "logout": "Log out",
-      "footer": "Privacy · Terms · MAPA · CRMC",
+      "footer": "Privacy · Terms · {{org}}",
       "tooltip": "Profile"
     },
     "banner": {
@@ -400,8 +400,8 @@
     },
     "accessLog": {
       "title": "Who has accessed your record",
-      "subtitle": "Your rights under RA 10173 — the Data Privacy Act. Every action CRMC or a partner agency takes on your case appears here.",
-      "componentDescription": "Every action by CRMC and partner agencies on your case is recorded. Under RA 10173 (Data Privacy Act §16c), you have the right to see it.",
+      "subtitle": "Your rights under RA 10173 — the Data Privacy Act. Every action {{gateway}} or a partner agency takes on your case appears here.",
+      "componentDescription": "Every action by {{gateway}} and partner agencies on your case is recorded. Under RA 10173 (Data Privacy Act §16c), you have the right to see it.",
       "unavailable": "Access log temporarily unavailable. Try refreshing in a moment.",
       "empty": "No activity on your record yet."
     },
@@ -428,7 +428,7 @@
       "addressStaffPlaceholder": "Office or work address (optional)",
       "addressGLHint": "Appears on your Guarantee Letter.",
       "lockedTag": "Locked",
-      "nameLockedHint": "To correct your name, visit CRMC Medical Social Services.",
+      "nameLockedHint": "To correct your name, visit {{gateway}}.",
       "accountInfo": "Account Info",
       "role": "Role",
       "agency": "Agency",
@@ -473,11 +473,11 @@
     },
     "privacy": {
       "title": "Privacy Notice",
-      "intro": "This notice explains what information MAPA collects, how it is used, and who can access it. MAPA is operated by Cotabato Regional Medical Center (CRMC) in compliance with <b>Republic Act 10173</b> — the Data Privacy Act of 2012.",
+      "intro": "This notice explains what information MAPA collects, how it is used, and who can access it. MAPA is operated by {{facility}} in compliance with <b>Republic Act 10173</b> — the Data Privacy Act of 2012.",
       "updated": "Last updated: May 2026",
       "dataTitle": "Data We Collect",
       "data1": "Full name, email address, and contact number",
-      "data2": "CRMC Patient Access Code and patient ID number",
+      "data2": "Patient Access Code and patient ID number",
       "data3": "Documents uploaded for verification (stored securely)",
       "data4": "Application submissions and their complete status history",
       "data5": "Messages exchanged with administrators and agency staff",
@@ -494,17 +494,17 @@
       "access3": "Staff Administrators — documents and applications for review purposes",
       "access4": "System Administrators — full access for system management and audit",
       "retentionTitle": "Data Retention",
-      "retention1": "Your data is retained for the duration of your enrollment with CRMC.",
+      "retention1": "Your data is retained for the duration of your enrollment with {{gateway}}.",
       "retention2": "Records are kept as required by applicable government regulations.",
-      "retention3": "For data concerns or deletion requests, contact CRMC Medical Social Services.",
+      "retention3": "For data concerns or deletion requests, contact {{gateway}}.",
       "rightsTitle": "Your Rights Under RA 10173",
       "right1": "Right to be informed — know what data is collected and why.",
-      "right2": "Right to access — request a copy of your personal data held by CRMC.",
+      "right2": "Right to access — request a copy of your personal data held by {{gateway}}.",
       "right3": "Right to correction — have inaccurate or incomplete data corrected.",
       "right4": "Right to object — object to the processing of your data.",
       "right5": "Right to erasure — request deletion of your data subject to legal retention requirements.",
       "right6": "Right to file a complaint — lodge a complaint with the National Privacy Commission (privacy.gov.ph).",
-      "contact": "For questions about your data or to exercise your rights, contact <b>CRMC Medical Social Services</b> or email <b>mss@crmc.gov.ph</b>.",
+      "contact": "For questions about your data or to exercise your rights, contact <b>{{gateway}}</b> or email <b>{{contactEmail}}</b>.",
       "close": "Close",
       "exportTitle": "Download a copy of your data",
       "exportDesc": "Exercise your right to data portability under RA 10173 §16(f). The download is a JSON file containing your profile, requests, applications, documents (including their content), Guarantee Letters, notifications, and conversations. It may be several MB large.",
@@ -530,11 +530,11 @@
       "patientFaqs": [
         {
           "q": "How do I request medical assistance?",
-          "a": "Open Request Assistance, choose the type of help you need (e.g. Hospital Bill), enter the amount, and upload the document required for that type. CRMC reviews it and endorses it to the agencies that can help. You then review your coverage plan, tap Proceed, and complete each agency's requirements."
+          "a": "Open Request Assistance, choose the type of help you need (e.g. Hospital Bill), enter the amount, and upload the document required for that type. {{gateway}} reviews it and endorses it to the agencies that can help. You then review your coverage plan, tap Proceed, and complete each agency's requirements."
         },
         {
           "q": "Where do I get a Patient Access Code?",
-          "a": "Patient Access Codes are issued in person by CRMC Medical Social Services. Bring a valid ID. The code follows the format CRMC-YYYY-NNNNN."
+          "a": "Patient Access Codes are issued in person by {{gateway}}. Bring a valid ID. The code follows the format {{codeFormat}}."
         },
         {
           "q": "What is a Guarantee Letter?",
@@ -542,19 +542,19 @@
         },
         {
           "q": "How will I know the status of my request?",
-          "a": "You'll receive in-app + email notifications at each step — when CRMC endorses your request, when agencies review it, and at each approval. The Request Assistance page shows your coverage plan and how much has been secured toward zero balance."
+          "a": "You'll receive in-app + email notifications at each step — when {{gateway}} endorses your request, when agencies review it, and at each approval. The Request Assistance page shows your coverage plan and how much has been secured toward zero balance."
         },
         {
           "q": "Do I need to attend an interview?",
-          "a": "No. CRMC assesses your case remotely — a social worker reviews your documents and messages you through the app if anything is unclear. If a short live conversation is needed, they send a Google Meet link; there is no scheduled interview to attend."
+          "a": "No. {{gateway}} assesses your case remotely — a social worker reviews your documents and messages you through the app if anything is unclear. If a short live conversation is needed, they send a Google Meet link; there is no scheduled interview to attend."
         },
         {
           "q": "Do I choose which agencies help me?",
-          "a": "No — you submit one request and CRMC routes it to the agencies that can cover it, sometimes splitting it across several to reach a zero balance. You can have one active request at a time."
+          "a": "No — you submit one request and {{gateway}} routes it to the agencies that can cover it, sometimes splitting it across several to reach a zero balance. You can have one active request at a time."
         },
         {
           "q": "How do I withdraw my request?",
-          "a": "You can withdraw a request while it's still being reviewed by CRMC (before it's endorsed). After it's endorsed to agencies, contact CRMC or the agency through Messages."
+          "a": "You can withdraw a request while it's still being reviewed by {{gateway}} (before it's endorsed). After it's endorsed to agencies, contact {{gateway}} or the agency through Messages."
         }
       ]
     },
@@ -642,9 +642,9 @@
       "navLabel": "Request Assistance",
       "eyebrow": "New request",
       "title": "Request Medical Assistance",
-      "subtitle": "Tell us what you need. CRMC will review your request and endorse it to the agencies that can help.",
+      "subtitle": "Tell us what you need. {{gateway}} will review your request and endorse it to the agencies that can help.",
       "activeTitle": "You have an active request",
-      "activeDesc": "CRMC is processing your request. You can submit a new one once this is completed.",
+      "activeDesc": "{{gateway}} is processing your request. You can submit a new one once this is completed.",
       "tasks": {
         "title": "What to do next",
         "docs": "Your documents",
@@ -663,7 +663,7 @@
       "typeLabel": "Type of assistance needed",
       "typePlaceholder": "Select assistance type",
       "amountLabel": "Amount you need help with (₱)",
-      "amountHint": "The balance you need assistance for (from your Statement of Account). CRMC verifies it against your uploaded document; the agencies decide how much each can cover.",
+      "amountHint": "The balance you need assistance for (from your Statement of Account). {{gateway}} verifies it against your uploaded document; the agencies decide how much each can cover.",
       "billLabel": "Total hospital bill (₱)",
       "billHint": "The full amount on your Statement of Account.",
       "philhealthLabel": "Covered by PhilHealth (₱)",
@@ -673,7 +673,7 @@
       "descLabel": "Brief description (optional)",
       "descPlaceholder": "Diagnosis or purpose of the assistance…",
       "billingReminderTitle": "Billing statement",
-      "billingReminderDesc": "Upload your Statement of Account in My Documents so CRMC can verify the amount.",
+      "billingReminderDesc": "Upload your Statement of Account in My Documents so {{gateway}} can verify the amount.",
       "goToDocuments": "Go to My Documents",
       "declaration": "I declare that the information I provided is true and correct.",
       "submit": "Submit Request",
@@ -740,7 +740,7 @@
         "holdSteady": "Hold steady · avoid glare.",
         "resultTitle": "National ID read",
         "sigValid": "Genuine PSA signature · checked on this phone",
-        "sigUnverified": "Signature not verified on this device — CRMC will confirm.",
+        "sigUnverified": "Signature not verified on this device — {{gateway}} will confirm.",
         "name": "Name",
         "dob": "Date of birth",
         "pcn": "Card number (PCN)",
@@ -750,14 +750,14 @@
         "rescan": "Not your details? Scan again",
         "typePcnTitle": "Type your PhilSys Card Number (PCN).",
         "notYourPsn": "Not your PSN. Your 12-digit PhilSys Number is private — never type or share it.",
-        "pcnUnverified": "A typed number can't be checked automatically, so you'll take a photo of your ID next and CRMC will confirm it."
+        "pcnUnverified": "A typed number can't be checked automatically, so you'll take a photo of your ID next and {{gateway}} will confirm it."
       },
       "documentsTitle": "Required documents",
-      "documentsHint": "Attach the documents below. CRMC verifies them before endorsing your request. Some (like a Valid ID) carry over once verified; your Billing Statement is needed each time.",
-      "documentsNone": "No required documents are configured. Contact CRMC.",
+      "documentsHint": "Attach the documents below. {{gateway}} verifies them before endorsing your request. Some (like a Valid ID) carry over once verified; your Billing Statement is needed each time.",
+      "documentsNone": "No required documents are configured. Contact {{gateway}}.",
       "intakeTitle": "Household Information Sheet",
-      "intakeTodo": "Fill in your family, income, and medical details so CRMC can assess your request.",
-      "intakeDone": "Submitted. CRMC will complete the assessment.",
+      "intakeTodo": "Fill in your family, income, and medical details so {{gateway}} can assess your request.",
+      "intakeDone": "Submitted. {{gateway}} will complete the assessment.",
       "intakeIncomplete": "To do",
       "docsSummary": "{{count}} documents submitted",
       "docsUnderReview": "Under review",
@@ -773,7 +773,7 @@
       "next": "Next",
       "ocrChecking": "Checking the name on your ID…",
       "ocrMatch": "✓ The name on your ID matches your account.",
-      "ocrNoMatch": "We couldn't match the name automatically — CRMC will verify it. You can still submit.",
+      "ocrNoMatch": "We couldn't match the name automatically — {{gateway}} will verify it. You can still submit.",
       "ocrUnreadable": "⚠ We couldn't read this ID — retake a clear, flat photo, or use it anyway below.",
       "ocrNotAnId": "⚠ This doesn't look like an ID — make sure it's a clear photo of your government ID, or use it anyway below.",
       "exposureGlare": "💡 Too bright or glary — retake in even light, or use it anyway below.",
@@ -785,7 +785,7 @@
       "qualityUsingAnyway": "Using this photo (flagged as low quality)",
       "takeSelfie": "Take selfie",
       "selfieTitle": "Take a live selfie",
-      "selfieHint": "Center your face in the frame. CRMC matches this photo to your ID.",
+      "selfieHint": "Center your face in the frame. {{gateway}} matches this photo to your ID.",
       "selfieCapture": "Capture",
       "selfieRetake": "Retake",
       "selfieUse": "Use this photo",
@@ -793,8 +793,8 @@
       "selfieChecking": "Checking your photo…",
       "selfieLiveOk": "Looks good — clear and well-lit.",
       "selfieLiveUnclear": "Hard to confirm. Try better light, or use it anyway — the office will check.",
-      "selfieConsent": "I consent to CRMC comparing this photo with my ID to confirm it's me.",
-      "selfieNoCamera": "No camera available. Please visit the CRMC Malasakit office to have your photo taken in person.",
+      "selfieConsent": "I consent to {{gateway}} comparing this photo with my ID to confirm it's me.",
+      "selfieNoCamera": "No camera available. Please visit the {{gateway}} office to have your photo taken in person.",
       "selfieHeadline": "Put your face in the oval",
       "selfieHeadlineSub": "Ilagay ang mukha sa loob ng oval",
       "selfieLightGood": "Good light",
@@ -802,7 +802,7 @@
       "selfieCheckLive": "Checking it's a live person…",
       "selfieTipCap": "Remove cap / glasses",
       "selfieTipLight": "Face a window or light",
-      "selfieReassure": "Compared with your ID photo on this phone. Only the result goes to CRMC, and a social worker makes the final decision.",
+      "selfieReassure": "Compared with your ID photo on this phone. Only the result goes to {{gateway}}, and a social worker makes the final decision.",
       "selfieReviewHint": "Check your face is clear and well-lit. Tap Retake if not — this photo won't be used until you confirm.",
       "selfieDiffToggle": "Does your photo look different from your ID?",
       "selfieDiffHint": "Optional — tell the reviewer why (for example: recent surgery, injury, bandages, or illness). This won't delay or affect your request; a social worker reads it.",
@@ -822,7 +822,7 @@
       "repAuth": "I confirm I am authorized to file this request on the patient's behalf and that the information is true.",
       "errRep": "Please complete the representative details (name, relationship, ID, selfie, and authorization).",
       "billingTitle": "Billing statement",
-      "billingHint": "Attach your hospital billing statement (Statement of Account). CRMC checks the amount you need against it.",
+      "billingHint": "Attach your hospital billing statement (Statement of Account). {{gateway}} checks the amount you need against it.",
       "billingLabel": "Billing statement / Statement of Account",
       "billingOnFile": "Already on file",
       "docUploaded": "Uploaded",
@@ -834,9 +834,9 @@
       "reuploadHint": "If an agency marks a document for correction, re-upload it here.",
       "reuploadOk": "Document re-uploaded for review.",
       "reuploadErr": "Failed to re-upload. Please try again.",
-      "routeNote": "CRMC reviews every request before endorsing it to an agency.",
+      "routeNote": "{{gateway}} reviews every request before endorsing it to an agency.",
       "successTitle": "Request submitted",
-      "successDesc": "CRMC will review your request and endorse it to agencies that can help cover your bill.",
+      "successDesc": "{{gateway}} will review your request and endorse it to agencies that can help cover your bill.",
       "successIdLabel": "Your Request ID",
       "viewStatus": "View my request",
       "notifyPatientTitle": "Request submitted",
@@ -894,7 +894,7 @@
       "title": "My Dashboard",
       "subtitle": "Welcome back, {{name}}.",
       "activeRequestTitle": "Your assistance request",
-      "activeRequestDesc": "CRMC is processing your request. Track its progress and coverage under My Application.",
+      "activeRequestDesc": "{{gateway}} is processing your request. Track its progress and coverage under My Application.",
       "coverage": {
         "title": "Coverage & balance",
         "bill": "Total hospital bill",
@@ -920,12 +920,12 @@
         "current": "Current",
         "s1": "Request submitted",
         "s2": "Document verification",
-        "s2metaReviewing": "Being reviewed by CRMC",
+        "s2metaReviewing": "Being reviewed by {{gateway}}",
         "s2metaDone": "{{verified}} document(s) verified",
-        "s3": "CRMC assessment",
-        "s3metaTBD": "Remote review by CRMC",
+        "s3": "{{gateway}} assessment",
+        "s3metaTBD": "Remote review by {{gateway}}",
         "s4": "Endorsed to funding agencies",
-        "s4meta": "CRMC forwards your request to the agencies",
+        "s4meta": "{{gateway}} forwards your request to the agencies",
         "s5": "Assistance released",
         "s5metaDone": "Deducted from your hospital bill",
         "s5metaAfter": "After agency approval"
@@ -943,7 +943,7 @@
       },
       "hero": {
         "eyebrow": "Assistance request",
-        "remainingLabel": "Still to be funded on your CRMC bill",
+        "remainingLabel": "Still to be funded on your hospital bill",
         "fromTotal": "Of {{total}} needed · {{approved}} approved",
         "approved": "Approved",
         "inReview": "In review",
@@ -962,8 +962,8 @@
         "uploadDocs": "Get started by submitting your assistance request.",
         "findProgram": "Your documents are ready — submit your assistance request.",
         "pending": "Your request is under review — no action needed right now.",
-        "reviewing": "CRMC is verifying your documents.",
-        "awaiting_info": "Action needed: CRMC asked you for more information.",
+        "reviewing": "{{gateway}} is verifying your documents.",
+        "awaiting_info": "Action needed: {{gateway}} asked you for more information.",
         "interview": "Interview scheduled — join the Google Meet at the scheduled time.",
         "approved": "Approved! Your Guarantee Letter is being prepared.",
         "certificate": "Your Guarantee Letter is ready.",
@@ -982,7 +982,7 @@
         },
         "endorsed": {
           "label": "Review Your Coverage Plan",
-          "desc": "CRMC matched agencies to your request. Review how much each will cover, then proceed to submit it to them.",
+          "desc": "{{gateway}} matched agencies to your request. Review how much each will cover, then proceed to submit it to them.",
           "btn": "View Coverage Plan"
         },
         "reviewing": {
@@ -1053,12 +1053,12 @@
         "current": "Current",
         "s1Title": "Submit Your Request",
         "s1Desc": "Start a request, upload your required documents, and verify your ID.",
-        "s2Title": "CRMC Reviews & Endorses",
-        "s2Desc": "CRMC verifies your documents and endorses your request to the agencies that can help fund it.",
+        "s2Title": "{{gateway}} Reviews & Endorses",
+        "s2Desc": "{{gateway}} verifies your documents and endorses your request to the agencies that can help fund it.",
         "s3Title": "Track Your Progress",
         "s3Desc": "Follow your request's status and funding coverage anytime.",
-        "s4Title": "CRMC Assessment",
-        "s4Desc": "A CRMC social worker assesses your case remotely and may message you if anything is unclear — no interview to attend.",
+        "s4Title": "{{gateway}} Assessment",
+        "s4Desc": "A social worker assesses your case remotely and may message you if anything is unclear — no interview to attend.",
         "s5Title": "Receive your Guarantee Letter",
         "s5Desc": "Once agencies fund your care, get your Guarantee Letter to present at the named provider."
       }
@@ -1096,13 +1096,13 @@
       "reviewCoverage": "Review coverage & proceed",
       "reqStages": {
         "submittedLabel": "Request Submitted",
-        "submittedNote": "Your request and documents were submitted to CRMC.",
+        "submittedNote": "Your request and documents were submitted to {{gateway}}.",
         "reviewLabel": "Under Review",
-        "reviewNote": "CRMC is verifying your documents and your bill.",
+        "reviewNote": "{{gateway}} is verifying your documents and your bill.",
         "assessmentLabel": "Assessment",
-        "assessmentNote": "A CRMC social worker assesses your case remotely and may message you if anything is unclear.",
+        "assessmentNote": "A social worker assesses your case remotely and may message you if anything is unclear.",
         "endorsedLabel": "Endorsed to Agencies",
-        "endorsedNote": "CRMC referred your request to one or more agencies to help cover your bill.",
+        "endorsedNote": "{{gateway}} referred your request to one or more agencies to help cover your bill.",
         "endorsedCta": "Review the coverage plan",
         "fundedLabel": "Approved & Funded",
         "fundedNote": "Agencies approve their share and issue your Guarantee Letters.",
@@ -1123,7 +1123,7 @@
         "certificateLabel": "Guarantee Letter Issued",
         "certificateNote": "Your Guarantee Letter has been issued.",
         "endorsedLabel": "Endorsed to Agency",
-        "endorsedNote": "CRMC has endorsed your request to this agency for funding.",
+        "endorsedNote": "{{gateway}} has endorsed your request to this agency for funding.",
         "fundingLabel": "Funding Review",
         "fundingNote": "The agency is reviewing the funding decision for your share."
       },
@@ -1134,7 +1134,7 @@
         "interviewBtn": "View Interview",
         "reviewing": "Make sure all required documents are uploaded.",
         "reviewingBtn": "Check Docs",
-        "endorsed": "CRMC endorsed this slice for funding. Confirm to send it into the agency's review queue.",
+        "endorsed": "{{gateway}} endorsed this slice for funding. Confirm to send it into the agency's review queue.",
         "endorsedBtn": "Confirm & Proceed",
         "proceeding": "Sending…",
         "fundingReview": "The agency is reviewing your funding share. No action needed right now.",
@@ -1178,14 +1178,14 @@
       "breadcrumb": "Find Programs",
       "eyebrow": "Medical assistance",
       "title": "Find Programs",
-      "subtitle": "Browse the medical assistance programs available at CRMC.",
+      "subtitle": "Browse the medical assistance programs available at {{facility}}.",
       "viewRequirements": "Requirements & how it works",
       "requiredDocs": "Typically required",
       "howItWorks": "How it works",
       "heroTitle": "One request. Many funders.",
-      "heroDesc": "PhilHealth applies first, then CRMC endorses your bill to the agencies that can help — you don't apply to each one.",
+      "heroDesc": "PhilHealth applies first, then {{gateway}} endorses your bill to the agencies that can help — you don't apply to each one.",
       "ctaTitle": "Need medical assistance?",
-      "ctaDesc": "Submit one request — CRMC will review it and route it to the agencies that can help cover your bill.",
+      "ctaDesc": "Submit one request — {{gateway}} will review it and route it to the agencies that can help cover your bill.",
       "ctaBtn": "Request Assistance",
       "backToMatches": "Back to Screening",
       "holdingTitle": "Holding Period Active on Some Programs",
@@ -1211,7 +1211,7 @@
       "eyebrow": "Assessment",
       "heroEyebrow": "Your assessment interview",
       "title": "My Interview",
-      "subtitle": "Join your scheduled assessment interview with CRMC.",
+      "subtitle": "Join your scheduled assessment interview with {{gateway}}.",
       "loadError": "Could not load interview details. Please refresh.",
       "todayBadge": "Today!",
       "tomorrow": "Tomorrow",
@@ -1219,9 +1219,9 @@
       "addToCalendar": "Add to Calendar",
       "scheduledBadge": "Scheduled",
       "datePassedBadge": "Date Passed",
-      "pastWarning": "This interview date has passed. Message CRMC for an update on your status.",
-      "messageAgency": "Message CRMC",
-      "messageCrmc": "Open Messages with CRMC",
+      "pastWarning": "This interview date has passed. Message {{gateway}} for an update on your status.",
+      "messageAgency": "Message {{gateway}}",
+      "messageCrmc": "Open Messages with {{gateway}}",
       "atTime": "at {{time}}",
       "joinIntro": "Please join the video call on time. Make sure your camera and microphone are working before the interview.",
       "hideDetails": "Hide details",
@@ -1242,22 +1242,22 @@
         "completedDesc": "Your interview has been completed. Check My Application to see the outcome of your application.",
         "completedBtn": "View My Application",
         "notYetTitle": "No Interview Scheduled Yet",
-        "notYetDesc": "Once CRMC verifies your documents, they will schedule your assessment interview and you will be notified.",
+        "notYetDesc": "Once {{gateway}} verifies your documents, they will schedule your assessment interview and you will be notified.",
         "notYetBtn": "View My Application",
         "noAppTitle": "No Request Yet",
-        "noAppDesc": "You need to submit an assistance request first. CRMC schedules your assessment interview after verifying your documents.",
+        "noAppDesc": "You need to submit an assistance request first. {{gateway}} schedules your assessment interview after verifying your documents.",
         "noAppBtn": "Request Assistance"
       },
       "booking": {
         "eyebrow": "Book your interview",
         "title": "Choose an interview time",
-        "subtitle": "CRMC has opened interview booking for your request. Pick a day and time that works for you.",
-        "modeInPerson": "In person · CRMC office",
+        "subtitle": "{{gateway}} has opened interview booking for your request. Pick a day and time that works for you.",
+        "modeInPerson": "In person · {{gateway}} office",
         "modeOnline": "Online · Google Meet",
         "chooseDay": "Choose a day",
         "openTimes": "Open times",
         "timezoneNote": "All times are Philippine time.",
-        "noSlots": "No open times right now. Please check back soon or message CRMC.",
+        "noSlots": "No open times right now. Please check back soon or message {{gateway}}.",
         "selected": "Interview at {{time}}, {{date}}",
         "confirmBtn": "Confirm booking",
         "confirming": "Booking…",
@@ -1267,7 +1267,7 @@
         "bookError": "Could not book that time. Please try again.",
         "yourAppointment": "Your appointment",
         "arriveEarly": "Arrive 15 minutes early.",
-        "office": "CRMC Malasakit Center — Ground Floor, Medical Social Services",
+        "office": "{{gateway}} — Ground Floor, Medical Social Services",
         "queueNo": "Queue number {{no}}",
         "queuePending": "Your queue number will be given at check-in.",
         "bring": "Bring",
@@ -1275,7 +1275,7 @@
         "bring2": "Valid ID and your original documents",
         "bring3": "Hospital bill or quotation",
         "joinNote": "A social worker will call you in at your scheduled time.",
-        "onlineNote": "CRMC set this interview to online — no need to travel.",
+        "onlineNote": "{{gateway}} set this interview to online — no need to travel.",
         "reschedule": "Reschedule",
         "rescheduling": "Cancelling…",
         "rescheduleConfirm": "Cancel this time and pick another?",
@@ -1290,7 +1290,7 @@
       "tapHint": "Tap any question below to read the answer.",
       "searchPlaceholder": "Search the guide (e.g., interview, withdraw, agency)…",
       "noResults": "No sections match \"{{query}}\". Try a different keyword.",
-      "footer": "Need further assistance? Visit the CRMC Medical Social Services office or send a message through the portal using the envelope icon in the top bar.",
+      "footer": "Need further assistance? Visit the {{gateway}} office or send a message through the portal using the envelope icon in the top bar.",
       "linkGoToDocuments": "Go to My Documents",
       "linkGoToStatus": "Go to My Application",
       "linkGoToInterviews": "Go to My Interviews",
@@ -1298,15 +1298,15 @@
       "sections": {
         "whatIsMapa": {
           "title": "What is MAPA?",
-          "content": "MAPA (Medical Assistance Portal Access) is the official online system of Cotabato Regional Medical Center (CRMC) for processing medical assistance applications. It allows patients to apply for financial or material assistance from partner government agencies such as DSWD, PCSO, and the Malasakit Center — all in one place, without lining up at multiple offices."
+          "content": "MAPA (Medical Assistance Portal Access) is the official online system of {{facility}} for processing medical assistance applications. It allows patients to apply for financial or material assistance from partner government agencies such as DSWD, PCSO, and the Malasakit Center — all in one place, without lining up at multiple offices."
         },
         "whoCanUse": {
           "title": "Who can use MAPA?",
-          "content": "Any patient of CRMC who has been assessed by Medical Social Services can register and use MAPA. You will receive a Patient Access Code (format: CRMC-YYYY-XXXXX) from the CRMC Medical Social Services office. You must have this code to create an account."
+          "content": "Any patient of {{facility}} who has been assessed by Medical Social Services can register and use MAPA. You will receive a Patient Access Code (format: {{codeFormat}}) from the {{gateway}} office. You must have this code to create an account."
         },
         "register": {
           "title": "How do I register?",
-          "s1": "Visit CRMC Medical Social Services to be assessed and receive your Patient Access Code.",
+          "s1": "Visit {{gateway}} to be assessed and receive your Patient Access Code.",
           "s2": "Go to the MAPA registration page and fill in your full name, email, contact number, and address.",
           "s3": "Enter your Patient Access Code and click Verify to confirm it.",
           "s4": "Create a secure password and submit the form.",
@@ -1317,9 +1317,9 @@
           "s1": "Open Request Assistance — the required documents are listed there as a checklist.",
           "s2": "Attach a clear photo or scan of each one (e.g., Valid ID, Billing Statement, Medical Certificate, Barangay Indigency).",
           "s3": "For your Valid ID, the app does a quick on-device name check to help confirm it's yours — it never blocks you.",
-          "s4": "Take a live selfie when prompted; CRMC compares it to your ID to confirm your identity.",
-          "s5": "Submit. CRMC reviews and verifies your documents before endorsing your request to agencies.",
-          "s6": "If CRMC marks a document for correction, you'll be notified — re-upload it from your request.",
+          "s4": "Take a live selfie when prompted; {{gateway}} compares it to your ID to confirm your identity.",
+          "s5": "Submit. {{gateway}} reviews and verifies your documents before endorsing your request to agencies.",
+          "s6": "If {{gateway}} marks a document for correction, you'll be notified — re-upload it from your request.",
           "note": "Tip: A Valid ID, once verified, carries over to your future requests. Your Billing Statement (Statement of Account) is needed fresh for each request."
         },
         "apply": {
@@ -1327,9 +1327,9 @@
           "s1": "Go to Request Assistance from the sidebar or the bottom tab.",
           "s2": "Choose the type of assistance you need and enter the amount you need help with, based on your billing statement.",
           "s3": "Attach your billing statement (Statement of Account), confirm the declaration, and submit your request.",
-          "s4": "CRMC reviews your request and endorses it to one or more agencies that can help cover your bill.",
+          "s4": "{{gateway}} reviews your request and endorses it to one or more agencies that can help cover your bill.",
           "s5": "Open Request Assistance to see your coverage plan, then tap Proceed to send it to those agencies.",
-          "s6": "Complete each agency's requirements and reply to any messages from your CRMC social worker.",
+          "s6": "Complete each agency's requirements and reply to any messages from your social worker.",
           "s7": "Once an agency approves, you will receive a Guarantee Letter to claim your assistance.",
           "note": "Important: You can have only one active request at a time. Track its progress anytime under My Application."
         },
@@ -1344,12 +1344,12 @@
         },
         "cofunding": {
           "title": "What is co-funding? Why do I see multiple agencies?",
-          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. CRMC verifies your documents and assesses your case remotely, then endorses your request to one or more partner agencies (DSWD, PCSO, Malasakit, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — CRMC routes the case for you.",
-          "note": "After CRMC endorses your request, you'll see a Coverage Plan listing each agency. Tap Proceed to confirm and start their reviews."
+          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. {{gateway}} verifies your documents and assesses your case remotely, then endorses your request to one or more partner agencies (DSWD, PCSO, Malasakit, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — {{gateway}} routes the case for you.",
+          "note": "After {{gateway}} endorses your request, you'll see a Coverage Plan listing each agency. Tap Proceed to confirm and start their reviews."
         },
         "intakeWizard": {
           "title": "What is the Household Intake Wizard?",
-          "content": "After CRMC starts reviewing your documents, you'll be asked to fill a 5-step household form covering your family, income, expenses, and medical situation. This is the factual part of the Unified Intake Sheet — your CRMC social worker adds the assessment portion while reviewing your case remotely. They use this to recommend which agencies should fund your request.",
+          "content": "After {{gateway}} starts reviewing your documents, you'll be asked to fill a 5-step household form covering your family, income, expenses, and medical situation. This is the factual part of the Unified Intake Sheet — your social worker adds the assessment portion while reviewing your case remotely. They use this to recommend which agencies should fund your request.",
           "s1": "Open Request Assistance and tap the Household Intake link, or go directly to /patient/request/<id>/intake.",
           "s2": "Step 1 — Household: list each family member living with you.",
           "s3": "Step 2-3 — Income and expenses: monthly income, employment, and household expenses.",
@@ -1361,13 +1361,13 @@
           "title": "What are the stages of my request?",
           "content": "Your request goes through six stages from submission to fully funded. The progress stepper on My Application shows where you are.",
           "submittedLabel": "Submitted",
-          "submittedDesc": "You filed the request. CRMC will start reviewing your attached documents shortly.",
+          "submittedDesc": "You filed the request. {{gateway}} will start reviewing your attached documents shortly.",
           "underReviewLabel": "Under Review",
-          "underReviewDesc": "CRMC is verifying your documents. You may be asked to re-upload any unclear or rejected ones.",
+          "underReviewDesc": "{{gateway}} is verifying your documents. You may be asked to re-upload any unclear or rejected ones.",
           "assessmentLabel": "Assessment",
-          "assessmentDesc": "A CRMC social worker assesses your case remotely — they may message you if anything is unclear — then completes the Unified Intake Sheet. No interview to attend.",
+          "assessmentDesc": "A social worker assesses your case remotely — they may message you if anything is unclear — then completes the Unified Intake Sheet. No interview to attend.",
           "endorsedLabel": "Endorsed",
-          "endorsedDesc": "CRMC has routed your request to one or more agencies. Review the Coverage Plan on My Application and tap Proceed to start their reviews.",
+          "endorsedDesc": "{{gateway}} has routed your request to one or more agencies. Review the Coverage Plan on My Application and tap Proceed to start their reviews.",
           "partiallyFundedLabel": "Partially Funded",
           "partiallyFundedDesc": "At least one agency has approved their portion. Others may still be reviewing — your bill is being progressively covered.",
           "fullyFundedLabel": "Fully Funded",
@@ -1375,9 +1375,9 @@
         },
         "statuses": {
           "title": "What do the per-agency (slice) statuses mean?",
-          "content": "Each agency CRMC endorses your request to gets its own card on My Application. Each card has its own status as the agency processes your portion.",
+          "content": "Each agency {{gateway}} endorses your request to gets its own card on My Application. Each card has its own status as the agency processes your portion.",
           "endorsedLabel": "Endorsed",
-          "endorsedDesc": "CRMC has routed your request to this agency. The agency hasn't started reviewing yet — you need to tap Proceed on the Coverage Plan first.",
+          "endorsedDesc": "{{gateway}} has routed your request to this agency. The agency hasn't started reviewing yet — you need to tap Proceed on the Coverage Plan first.",
           "reviewingLabel": "For Funding",
           "reviewingDesc": "You tapped Proceed and the agency is now reviewing whether to fund this portion of your bill.",
           "awaitingInfoLabel": "Needs Info",
@@ -1385,9 +1385,9 @@
           "approvedLabel": "Approved",
           "approvedDesc": "The agency approved a specific amount toward your bill. Their Guarantee Letter is being prepared.",
           "certLabel": "Guarantee Letter Issued",
-          "certDesc": "The agency has issued and signed their Guarantee Letter. Download it from My Application and present it at the named provider (e.g., CRMC Billing, Mercury Drug).",
+          "certDesc": "The agency has issued and signed their Guarantee Letter. Download it from My Application and present it at the named provider (e.g., Hospital Billing, Mercury Drug).",
           "rejectedLabel": "Rejected",
-          "rejectedDesc": "This agency couldn't cover its portion. CRMC may re-endorse to another agency, or your overall request may stay partially funded."
+          "rejectedDesc": "This agency couldn't cover its portion. {{gateway}} may re-endorse to another agency, or your overall request may stay partially funded."
         },
         "interview": {
           "title": "How do I join my interview?",
@@ -1409,21 +1409,21 @@
         },
         "contact": {
           "title": "How do I contact the admin or agency?",
-          "content": "Go to Messages from the sidebar to view all your conversations. Tap the New Message button at the top right to start a new conversation with hospital staff or your assigned agency. You can message them directly if you have questions about your application or documents, or to respond to your CRMC social worker's assessment."
+          "content": "Go to Messages from the sidebar to view all your conversations. Tap the New Message button at the top right to start a new conversation with hospital staff or your assigned agency. You can message them directly if you have questions about your application or documents, or to respond to your social worker's assessment."
         },
         "forgotPw": {
           "title": "I forgot my password. What do I do?",
-          "content": "On the Login page, click \"Forgot Password?\" and enter your registered email address. A password reset link will be sent to your email. Click the link to set a new password. If you did not receive the email, check your spam or junk folder. For further help, contact CRMC Medical Social Services."
+          "content": "On the Login page, click \"Forgot Password?\" and enter your registered email address. A password reset link will be sent to your email. Click the link to set a new password. If you did not receive the email, check your spam or junk folder. For further help, contact {{gateway}}."
         }
       }
     },
     "journey": {
       "label": "Your progress",
       "stage": {
-        "submitted":    { "label": "Submitted",    "now": "Your request and documents are in with CRMC.",                              "next": "CRMC will start reviewing them soon." },
-        "under_review": { "label": "Under review",  "now": "CRMC is verifying your documents and your bill.",                           "next": "Next, a social worker assesses your case." },
-        "assessment":   { "label": "Assessment",    "now": "A CRMC social worker is assessing your case and may message you.",          "next": "Next, CRMC endorses your request to agencies." },
-        "endorsed":     { "label": "Endorsed",      "now": "CRMC referred your request to one or more agencies.",                       "next": "Review your coverage plan and proceed." },
+        "submitted":    { "label": "Submitted",    "now": "Your request and documents are in with {{gateway}}.",                              "next": "{{gateway}} will start reviewing them soon." },
+        "under_review": { "label": "Under review",  "now": "{{gateway}} is verifying your documents and your bill.",                           "next": "Next, a social worker assesses your case." },
+        "assessment":   { "label": "Assessment",    "now": "A social worker is assessing your case and may message you.",          "next": "Next, {{gateway}} endorses your request to agencies." },
+        "endorsed":     { "label": "Endorsed",      "now": "{{gateway}} referred your request to one or more agencies.",                       "next": "Review your coverage plan and proceed." },
         "funding":      { "label": "Funding",       "now": "Agencies are approving their share and issuing your Guarantee Letters.",    "next": "Next, your bill is fully covered." },
         "complete":     { "label": "Complete",      "now": "Your bill is fully covered — claim your Guarantee Letters at the agency.",  "next": "" }
       }
@@ -1431,10 +1431,10 @@
     "hero": {
       "step": "Step {{n}} of {{total}}",
       "trackCta": "See my request",
-      "s0": { "title": "Request received", "sub": "CRMC will start reviewing your documents soon." },
-      "s1": { "title": "Under review", "sub": "CRMC is checking your documents." },
-      "s2": { "title": "Assessment", "sub": "A CRMC social worker is assessing your case and may message you." },
-      "s3": { "title": "With the agencies", "sub": "CRMC endorsed your request to a funding agency." },
+      "s0": { "title": "Request received", "sub": "{{gateway}} will start reviewing your documents soon." },
+      "s1": { "title": "Under review", "sub": "{{gateway}} is checking your documents." },
+      "s2": { "title": "Assessment", "sub": "A social worker is assessing your case and may message you." },
+      "s3": { "title": "With the agencies", "sub": "{{gateway}} endorsed your request to a funding agency." },
       "s4": { "title": "Partly approved", "sub": "An agency approved part of your request." }
     }
   },
@@ -1447,11 +1447,11 @@
       "sub": "One account, then submit your medical assistance requests online — less time queuing at the office.",
       "readyTitle": "Have these ready",
       "ready1": "Your name and address as they appear on a valid government ID",
-      "ready2": "Your Patient Access Code (CRMC-YYYY-NNNNN) from the Malasakit Center",
+      "ready2": "Your Patient Access Code ({{codeFormat}}) from the Malasakit Center",
       "ready3": "A working email address for approval updates",
       "trustTime": "Takes about 3 minutes",
       "trustPrivacy": "Protected under the Data Privacy Act (RA 10173)",
-      "trustHelp": "Need a code? Visit Medical Social Services at CRMC"
+      "trustHelp": "Need a code? Visit Medical Social Services at {{facility}}"
     },
     "stepPersonal": "Personal Info",
     "stepAccount": "Account Setup",
@@ -1492,17 +1492,17 @@
     },
     "step3": {
       "sectionTitle": "Patient Access Code",
-      "sectionDesc": "Your Patient Access Code is required. It was provided to you by CRMC Medical Social Services.",
+      "sectionDesc": "Your Patient Access Code is required. It was provided to you by {{gateway}}.",
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Enter the 5-digit number after the prefix",
       "verifyBtn": "Verify",
       "verified": "Verified",
       "edit": "Edit",
       "reviewToggle": "Review your details before submitting",
-      "noCodeHint": "Don't have an access code? Visit CRMC Medical Social Services to be assessed and receive one.",
-      "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to CRMC Medical Social Services so they can investigate and issue a new one.",
-      "codeUsedRecoveryAction": "Email CRMC Medical Social Services",
-      "termsAgree": "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to CRMC collecting my personal information for medical assistance purposes."
+      "noCodeHint": "Don't have an access code? Visit {{gateway}} to be assessed and receive one.",
+      "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to {{gateway}} so they can investigate and issue a new one.",
+      "codeUsedRecoveryAction": "Email {{gateway}}",
+      "termsAgree": "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to {{gateway}} collecting my personal information for medical assistance purposes."
     },
     "back": "Back",
     "next": "Next",
@@ -1524,13 +1524,13 @@
       "emailInvalid": "Please enter a valid email address.",
       "passwordWeak": "Password must be at least 8 characters and include letters and numbers.",
       "passwordMismatch": "Passwords do not match.",
-      "codeFormat": "Format: CRMC-{{year}}-00001",
+      "codeFormat": "Format: {{codeExample}}",
       "codeVerifyFirst": "Please verify your Patient Access Code first.",
       "termsRequired": "You must accept the Privacy Notice and Terms of Use.",
       "codeNotFound": "Access code not found. Please check and try again.",
       "codeUsed": "This access code has already been used.",
       "verifyFailed": "Verification failed. Please try again.",
-      "verifyRateLimit": "Too many verification attempts from this device. Please wait an hour before trying again, or contact CRMC Medical Social Services for help.",
+      "verifyRateLimit": "Too many verification attempts from this device. Please wait an hour before trying again, or contact {{gateway}} for help.",
       "emailInUse": "This email is already registered.",
       "passwordTooWeak": "Password is too weak. Please choose a stronger one.",
       "generic": "Registration failed."
@@ -1556,7 +1556,7 @@
       },
       "s2": {
         "title": "Your active request",
-        "body": "Your current request or the get-started card lives here. Tap it to act on the next step CRMC needs from you."
+        "body": "Your current request or the get-started card lives here. Tap it to act on the next step {{gateway}} needs from you."
       },
       "s3": {
         "title": "Your 5-step journey",
@@ -1573,11 +1573,11 @@
         },
         "s2": {
           "title": "Your request journey",
-          "body": "Six stages from Submitted to Fully Funded. The active stage is highlighted; CRMC moves you forward as documents verify, your case is assessed, and agencies decide."
+          "body": "Six stages from Submitted to Fully Funded. The active stage is highlighted; {{gateway}} moves you forward as documents verify, your case is assessed, and agencies decide."
         },
         "s3": {
           "title": "Agency cards",
-          "body": "Once CRMC endorses your request to one or more agencies, each one shows up here with its own funding status (Funding → Approved → Guarantee Letter)."
+          "body": "Once {{gateway}} endorses your request to one or more agencies, each one shows up here with its own funding status (Funding → Approved → Guarantee Letter)."
         }
       }
     }

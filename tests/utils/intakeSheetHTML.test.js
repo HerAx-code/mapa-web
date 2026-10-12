@@ -28,7 +28,7 @@ describe('buildIntakeSheetHTML', () => {
     expect(html).not.toContain('undefined')
     expect(html).toContain('REQ-2026-04273677O')              // reference no.
     expect(html).toContain('Hospital Bills / Hospitalization') // program falls back to type
-    expect(html).toContain('CRMC Malasakit Center')            // signatory falls back to CRMC
+    expect(html).toContain('Medical Social Services')          // signatory falls back to the gateway (ORG.gatewayName default)
   })
 
   it('renders an agency application (appId / agencyName) without "undefined"', () => {

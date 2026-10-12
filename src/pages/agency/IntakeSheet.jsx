@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   MdArrowBack, MdSave, MdPrint, MdCheckCircle,
@@ -425,8 +426,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               {app.status === 'rejected'
                 ? `This ${isRequestMode ? 'request' : 'application'} was rejected — the assessment is now read-only.`
                 : isRequestMode
-                  ? 'You are viewing this case assessment in read-only mode. Only CRMC staff can edit it.'
-                  : 'The case assessment is owned by CRMC on the parent request. This view is read-only.'}
+                  ? `You are viewing this case assessment in read-only mode. Only ${ORG.gatewayName} staff can edit it.`
+                  : `The case assessment is owned by ${ORG.gatewayName} on the parent request. This view is read-only.`}
             </p>
           </div>
         )}

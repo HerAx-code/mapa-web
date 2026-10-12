@@ -7,6 +7,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { tsToDate } from '../../utils/dates'
+import { ORG } from '../../config/org'
 
 // This file keeps only the agency-specific modals (Reject / Approve /
 // RequestInfo). The interview scheduling flow was removed in the async-
@@ -203,7 +204,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
     if (purposes.size === 0) { toast.error('Select at least one purpose of assistance.'); return }
     if (!payableTo.trim())   { toast.error('Specify the provider (Payable To).'); return }
     if (exceedsBudget)       { toast.error(`Amount exceeds remaining budget of ₱${remaining.toLocaleString()}.`); return }
-    if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} CRMC endorsed for this slice.`); return }
+    if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} ${ORG.gatewayName} endorsed for this slice.`); return }
     if (exceedsPerCap)       { toast.error(`Amount exceeds this agency's per-applicant cap of ₱${perApplicantCap.toLocaleString()}.`); return }
 
     setSaving(true)
@@ -258,7 +259,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
 
           {isSlice && (
             <div className="bg-brand-50 border border-brand-100 rounded-xl p-3 text-xs text-brand-700">
-              <strong>Co-funded request.</strong> CRMC referred this case asking you to cover up to <strong>₱{sliceCap.toLocaleString()}</strong> (the full bill). Approve what your agency can — other endorsed agencies are also assessing this case (see the application page for current coverage).
+              <strong>Co-funded request.</strong> {ORG.gatewayName} referred this case asking you to cover up to <strong>₱{sliceCap.toLocaleString()}</strong> (the full bill). Approve what your agency can — other endorsed agencies are also assessing this case (see the application page for current coverage).
             </div>
           )}
 
@@ -266,7 +267,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
               the agency's coordinator the context CRMC wanted them to know. */}
           {app.crmcNotes && (
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-              <p className="text-xs font-semibold text-amber-800 mb-0.5">Note from CRMC</p>
+              <p className="text-xs font-semibold text-amber-800 mb-0.5">Note from {ORG.gatewayName}</p>
               <p className="text-xs text-amber-700 leading-relaxed whitespace-pre-line">{app.crmcNotes}</p>
             </div>
           )}
@@ -331,7 +332,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
                 the total to <strong>₱{projectedTotal.toLocaleString()}</strong> of
                 ₱{needAmount.toLocaleString()} needed.
                 {overCommit && (
-                  <> That's <strong>₱{(projectedTotal - needAmount).toLocaleString()} over</strong> the bill — another agency may have already covered this. Coordinate via CRMC, or lower your amount.</>
+                  <> That's <strong>₱{(projectedTotal - needAmount).toLocaleString()} over</strong> the bill — another agency may have already covered this. Coordinate via {ORG.gatewayName}, or lower your amount.</>
                 )}
               </p>
             </div>
@@ -401,7 +402,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
               Payable To <span className="text-red-400">*</span>
             </label>
             <input className="input"
-              placeholder="e.g. CRMC Billing Department, Mercury Drug Cotabato"
+              placeholder="e.g. Hospital Billing Department, Mercury Drug Cotabato"
               value={payableTo} onChange={e => setPayableTo(e.target.value)} />
             <p className="text-xs text-gray-500 mt-0.5">
               Provider/department that will redeem this Guarantee Letter.
