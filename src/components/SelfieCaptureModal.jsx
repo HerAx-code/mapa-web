@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MdClose, MdCameraAlt, MdRefresh, MdCheckCircle, MdWarning, MdRadioButtonUnchecked } from 'react-icons/md'
 import { checkLiveness } from '../utils/faceCheck'
+import { detectScreenRecapture } from '../utils/recaptureCheck'
 import { assessFrame, isBlackFrame } from '../utils/imageQuality'
 import CaptureHint from './capture/CaptureHint'
 import { useEscapeKey } from '../hooks/useEscapeKey'
@@ -131,11 +132,14 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
       // Advisory on-device liveness on the captured still (never blocks).
       // Skipped when the ID-verify feature flag is off (no model download).
       if (livenessEnabled && b) {
-        checkLiveness(new File([b], 'selfie.jpg', { type: 'image/jpeg' }))
-          .then(r => setLive({ status: 'done', liveness: r.liveness, livenessScore: r.livenessScore }))
-          .catch(() => setLive({ status: 'done', liveness: null, livenessScore: null }))
+        // Liveness nudge + an advisory screen/photo-recapture check, both on the
+        // captured still, both fail-null and never blocking.
+        const selfieFile = new File([b], 'selfie.jpg', { type: 'image/jpeg' })
+        Promise.all([checkLiveness(selfieFile), detectScreenRecapture(selfieFile)])
+          .then(([r, rc]) => setLive({ status: 'done', liveness: r.liveness, livenessScore: r.livenessScore, recaptureScore: rc.recaptureScore, recaptureSuspected: rc.recaptureSuspected }))
+          .catch(() => setLive({ status: 'done', liveness: null, livenessScore: null, recaptureScore: null, recaptureSuspected: null }))
       } else if (livenessEnabled) {
-        setLive({ status: 'done', liveness: null, livenessScore: null })
+        setLive({ status: 'done', liveness: null, livenessScore: null, recaptureScore: null, recaptureSuspected: null })
       }
     }, 'image/jpeg', 0.85)
     stopStream()
@@ -152,6 +156,8 @@ export default function SelfieCaptureModal({ onCapture, onClose, liveness: liven
     onCapture(file, {
       liveness: live?.liveness ?? null,
       livenessScore: live?.livenessScore ?? null,
+      recaptureScore: live?.recaptureScore ?? null,
+      recaptureSuspected: live?.recaptureSuspected ?? null,
       appearanceNote: note.trim() ? note.trim().slice(0, 500) : null,
     })
     onClose()

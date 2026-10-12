@@ -231,3 +231,8 @@ export const isGLExpiringSoon = (app, withinDays = GL_EXPIRING_SOON_DAYS) => {
 // precision — a green "match" should be trustworthy; borderline falls to amber.
 export const FACE_MATCH_HI = 0.72   // cosine ≥ this → faceMatch 'pass', else 'unclear'
 export const LIVENESS_HI   = 0.55   // score  ≥ this → liveness  'pass', else 'unclear'
+// Advisory screen/photo-recapture flag (src/utils/recaptureCheck.js). score ≥
+// this → recaptureSuspected. PROVISIONAL + unvalidated like the two above: a
+// weak, never-blocking hint to the social worker, kept conservative so it rarely
+// cries wolf. Calibrate against a real labelled set before trusting it.
+export const RECAPTURE_HI  = 0.5

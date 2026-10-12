@@ -107,6 +107,14 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
           <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${lv.chip}`}>
             {lv.icon} Liveness: {lvLabel}
           </span>
+          {/* Advisory screen/photo-recapture flag — shown only when suspected, so
+              a clean selfie stays uncluttered. Weak heuristic; a prompt to look
+              closer (moiré/glare of a photographed screen or print), not a block. */}
+          {selfieDoc?.recaptureSuspected && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+              ⚠ Possible screen/photo recapture — look closely
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
             <MdInfoOutline size={13} /> Advisory — you make the final call
           </span>

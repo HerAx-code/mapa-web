@@ -184,6 +184,19 @@ describe('documents — advisory ID-verification field bounds', () => {
     await assertFails(addDoc(collection(ctx.firestore(), 'documents'), docPayload('patient-1', { ocrConfidence: -1 })))
   })
 
+  it('accepts a valid recapture flag (score 0–1 + bool) and rejects bad values', async () => {
+    await seedUser('patient-1', 'patient')
+    const ctx = testEnv.authenticatedContext('patient-1')
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { recaptureScore: 0.62, recaptureSuspected: true })))
+    await assertSucceeds(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { recaptureScore: null, recaptureSuspected: null })))
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { recaptureScore: 1.4 })))
+    await assertFails(addDoc(collection(ctx.firestore(), 'documents'),
+      docPayload('patient-1', { recaptureSuspected: 'yes' })))
+  })
+
   it('accepts an appearanceNote within bounds, and null, on create', async () => {
     await seedUser('patient-1', 'patient')
     const ctx = testEnv.authenticatedContext('patient-1')
