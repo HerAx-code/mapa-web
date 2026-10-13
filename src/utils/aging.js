@@ -34,4 +34,4 @@ export function aging(sinceTs, { warnAt, overAt, unit = 'h', now = Date.now() } 
 
 // Text color per state — one palette both queues share (gray calm, amber
 // attention, red breached).
-export const AGING_TEXT = { ok: 'text-gray-400', warn: 'text-amber-600', over: 'text-red-600' }
+export const AGING_TEXT = { ok: 'text-gray-500', warn: 'text-amber-600', over: 'text-red-600' }

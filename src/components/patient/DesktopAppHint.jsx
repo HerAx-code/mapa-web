@@ -63,7 +63,7 @@ export default function DesktopAppHint() {
         </p>
         <button
           onClick={handleDismiss}
-          className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200/70 rounded-md flex-shrink-0"
+          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-200/70 rounded-md flex-shrink-0"
           aria-label={t('install.desktopHint.dismiss')}>
           <MdClose size={16} />
         </button>

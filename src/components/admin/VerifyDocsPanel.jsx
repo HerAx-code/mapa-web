@@ -246,14 +246,14 @@ function PhotoTile({ label, doc, icon, onView }) {
       <div className="text-[13px] font-semibold text-gray-700">{label}</div>
       {doc ? (
         <button type="button" onClick={() => onView?.(doc)}
-          className="group relative h-32 rounded-xl bg-gray-100 border border-gray-200 hover:border-brand-300 flex flex-col items-center justify-center gap-1.5 text-gray-400">
+          className="group relative h-32 rounded-xl bg-gray-100 border border-gray-200 hover:border-brand-300 flex flex-col items-center justify-center gap-1.5 text-gray-500">
           <Icon size={40} />
           <span className="text-xs font-medium text-brand-600 inline-flex items-center gap-1">
             <MdOpenInNew size={13} /> View
           </span>
         </button>
       ) : (
-        <div className="h-32 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-400 text-center px-3">
+        <div className="h-32 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-500 text-center px-3">
           Not provided yet
         </div>
       )}

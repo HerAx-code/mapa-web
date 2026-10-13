@@ -297,7 +297,7 @@ export default function Notifications() {
                   className="flex items-center gap-1.5 text-xs text-red-500 border border-red-200 bg-white px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
                   <MdDelete size={14} /> {t('notifsPage.delete')}
                 </button>
-                <span className="text-xs text-gray-400">{t('notifsPage.selectedCount', { count: selected.size })}</span>
+                <span className="text-xs text-gray-500">{t('notifsPage.selectedCount', { count: selected.size })}</span>
               </>
             ) : (
               <span className="text-xs text-gray-500 font-medium">
@@ -362,7 +362,7 @@ export default function Notifications() {
                           {n.title}
                         </p>
                         {catKey && (
-                          <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-medium">
+                          <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded font-medium">
                             {categoryLabel(catKey)}
                           </span>
                         )}
@@ -372,7 +372,7 @@ export default function Notifications() {
 
                     {/* Date + read indicator */}
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
                         {fmtDate(n.createdAt)}
                       </span>
                       {!n.read
@@ -392,7 +392,7 @@ export default function Notifications() {
             {!loading && filtered.length === 0 && (
               <div className="text-center py-12">
                 <MdNotificationsNone size={36} className="text-gray-200 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-500">
                   {category === 'all'
                     ? t('notifsPage.emptyAll')
                     : t('notifsPage.emptyCategory', { category: categoryLabel(category).toLowerCase() })}

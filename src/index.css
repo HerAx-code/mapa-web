@@ -24,7 +24,9 @@
   button:focus-visible,
   a:focus-visible,
   [role="button"]:focus-visible {
-    @apply outline-none ring-2 ring-brand-400 ring-offset-2 ring-offset-white rounded-lg;
+    /* ring-brand-500 (not 400): the indicator itself must clear 3:1 vs white
+       (WCAG 1.4.11) — brand-400 #1DAF77 is only ~2.3:1. */
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white rounded-lg;
   }
 }
 
@@ -97,9 +99,10 @@
   /* ── Design system (Magic Patterns adoption) ──────────────────────────
      Reusable primitives so every surface reskins from one place. */
 
-  /* Small-caps section / eyebrow label. */
+  /* Small-caps section / eyebrow label. gray-500 (not 400): small uppercase
+     text must clear 4.5:1 (WCAG 1.4.3) — gray-400 #9CA3AF is only ~2.8:1. */
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-wider text-gray-400;
+    @apply text-[11px] font-semibold uppercase tracking-wider text-gray-500;
   }
 
   /* The signature dark-teal hero card (balance / coverage centrepiece). */

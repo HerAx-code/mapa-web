@@ -35,7 +35,7 @@ export default function JourneyStepper({ request, navigate }) {
             <span className={`z-10 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
               done    ? 'bg-brand-500 text-white'
               : current ? 'border-2 border-amber-500 bg-amber-50 text-amber-700'
-              : 'border-2 border-gray-200 bg-white text-gray-400'
+              : 'border-2 border-gray-200 bg-white text-gray-500'
             }`}>
               {done ? <MdCheck size={15} /> : i + 1}
             </span>
@@ -50,7 +50,7 @@ export default function JourneyStepper({ request, navigate }) {
               {current && <span className="ml-2 badge badge-blue text-xs align-middle">{t('patient.track.timeline.current')}</span>}
             </p>
             {note && (
-              <p className={`mt-0.5 text-xs leading-snug ${done || current ? 'text-gray-500' : 'text-gray-400'}`}>{note}</p>
+              <p className={`mt-0.5 text-xs leading-snug ${done || current ? 'text-gray-500' : 'text-gray-500'}`}>{note}</p>
             )}
             {showProceed && (
               <p className="mt-1 text-xs font-semibold text-brand-600">{t('patient.track.reqStages.endorsedCta')} →</p>

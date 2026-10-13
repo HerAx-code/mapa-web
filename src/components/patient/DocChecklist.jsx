@@ -178,7 +178,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
     ? 'bg-amber-200 text-amber-800'
     : pending || reusedDoc || repWaived
       ? 'bg-brand-50 text-brand-600'
-      : 'bg-gray-100 text-gray-400'
+      : 'bg-gray-100 text-gray-500'
   const TileIcon = isSelfie ? MdCameraAlt : MdDescription
 
   // Status line under the title.
@@ -247,7 +247,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
           {/* Confirm-the-file line for PDFs (images are confirmed by the
               thumbnail; captured photos have noisy auto-generated names). */}
           {isPdf && pending?.name && (
-            <p className="text-[11px] text-gray-400 truncate">{pending.name} · {fmtSize(pending.size)}</p>
+            <p className="text-[11px] text-gray-500 truncate">{pending.name} · {fmtSize(pending.size)}</p>
           )}
         </div>
         {/* Right column: scannable status tag + any secondary action. */}
@@ -260,7 +260,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
           {pending && !needsRetake && upload == null && (
             <button type="button" onClick={() => onRemove(tp.name)}
               aria-label={t('shell.common.remove', 'Remove')}
-              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-gray-400 hover:text-red-500">
+              className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center text-gray-500 hover:text-red-500">
               <MdClose size={20} />
             </button>
           )}
@@ -334,7 +334,7 @@ function DocCard({ tp, pending, reusedDoc, ocr, ocrBusy, upload, isId, isSelfie,
 
       {/* Accepted formats, shown up front (not only on a failure toast). */}
       {!pending && !reusedDoc && !repWaived && !isSelfie && (
-        <p className="text-[11px] text-gray-400 text-center">{t('patient.request.docCard.accepts')}</p>
+        <p className="text-[11px] text-gray-500 text-center">{t('patient.request.docCard.accepts')}</p>
       )}
 
       {/* Waived selfie (representative filing) — let the patient switch back. */}
