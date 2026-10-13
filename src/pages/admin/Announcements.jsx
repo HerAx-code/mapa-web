@@ -372,6 +372,11 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState([])
   const [loading, setLoading]           = useState(true)
   const [editing, setEditing]           = useState(null)
+  // Bumped to force the embedded compose form to remount (clear its fields) even
+  // when `editing` is already null → null — e.g. the "New / clear" button while a
+  // fresh form is open, and after a successful save. The form key folds this in.
+  const [resetNonce, setResetNonce]     = useState(0)
+  const resetForm = () => { setEditing(null); setResetNonce(n => n + 1) }
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting, setDeleting]         = useState(false)
 
@@ -422,7 +427,7 @@ export default function Announcements() {
 
         toast.success('Announcement created and all users notified.')
       }
-      setEditing(null)
+      resetForm()
       load()
     } catch {
       toast.error('Failed to save announcement.')
@@ -598,7 +603,7 @@ export default function Announcements() {
             </p>
           </div>
           <button className="btn-secondary flex items-center gap-1.5 text-sm"
-            onClick={() => setEditing(null)}
+            onClick={resetForm}
             title="Clear the compose form to start a new announcement">
             <MdAdd size={16} /> New / clear
           </button>
@@ -636,10 +641,10 @@ export default function Announcements() {
           <aside className="lg:sticky lg:top-[68px]">
             <AnnouncementForm
               embedded
-              key={editing?.id ?? 'new'}
+              key={editing?.id ?? `new-${resetNonce}`}
               announcement={editing}
               onSave={handleSave}
-              onClose={() => setEditing(null)}
+              onClose={resetForm}
             />
           </aside>
 

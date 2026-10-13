@@ -5,6 +5,22 @@
 reviewing the approach. Phase 2 (PhilID QR) is designed here but feature-
 flagged pending PSA clearance.*
 
+> **Update 2026-10-13 — shipped since.** Two research-grounded additions landed
+> (deep research in-session: NIST FRTE 1:1, cross-domain ID↔selfie, ISO/IEC
+> 30107-3):
+> - **Threshold-calibration harness** — `src/utils/calibration.js` (pure FAR/FRR
+>   sweep + operating-point from a FAR target) + `scripts/calibrate-thresholds.mjs`
+>   (Admin-SDK, reads the scores already on selfie docs + the worker's verify/reject
+>   verdict as ground truth). This is the concrete mechanism for §7 ("calibrate on
+>   real logged scores"): `FACE_MATCH_HI` / `LIVENESS_HI` stay **provisional** until
+>   run on real data, but the tooling now exists.
+> - **Advisory screen/photo-recapture flag** — `src/utils/recaptureCheck.js`
+>   (on-device moiré + specular heuristic, `RECAPTURE_HI` in constants, fail-null),
+>   surfaced as a soft chip in `CompareFacesModal`. This is the honest, **free**
+>   stand-in for the "Phase 1.5 paid PAD" note below — still **not certified** PAD;
+>   camera-only capture + human confirmation remain the real control. Its threshold
+>   is likewise provisional pending calibration.
+
 ## Guiding rules (carried from the research)
 1. **Additive & advisory.** New signals *augment* the social worker's decision.
    Nothing auto-rejects an applicant. Same contract as today's `ocrMatch` chip.

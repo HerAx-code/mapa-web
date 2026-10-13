@@ -27,6 +27,11 @@ export default function AgencyAnnouncements() {
   const [announcements, setAnnouncements] = useState([])
   const [loading,       setLoading]       = useState(true)
   const [editing,       setEditing]       = useState(null)
+  // Force the embedded compose form to remount (clear fields) even on a null→null
+  // transition — the "New / clear" button on a fresh form, and after a save. The
+  // form key folds this in (same fix as admin/Announcements).
+  const [resetNonce,    setResetNonce]    = useState(0)
+  const resetForm = () => { setEditing(null); setResetNonce(n => n + 1) }
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting,      setDeleting]      = useState(false)
 
@@ -91,7 +96,7 @@ export default function AgencyAnnouncements() {
 
         toast.success('Promotion posted. Patients will see it on their dashboard and on Find Programs.')
       }
-      setEditing(null); load()
+      resetForm(); load()
     } catch { toast.error('Failed to save announcement.') }
   }
 
@@ -231,7 +236,7 @@ export default function AgencyAnnouncements() {
             <p className="text-sm text-gray-500 mt-1">Post promotions patients see on the Find Programs page (e.g. new assistance offerings, open slots, requirements updates).</p>
           </div>
           <button className="btn-secondary flex items-center gap-1.5 text-sm"
-            onClick={() => setEditing(null)}
+            onClick={resetForm}
             title="Clear the compose form to start a new promotion">
             <MdAdd size={16} /> New / clear
           </button>
@@ -252,11 +257,11 @@ export default function AgencyAnnouncements() {
             <AnnouncementForm
               embedded
               promo
-              key={editing?.id ?? 'new'}
+              key={editing?.id ?? `new-${resetNonce}`}
               announcement={editing}
               audienceNote="patients on the Find Programs page"
               onSave={handleSave}
-              onClose={() => setEditing(null)}
+              onClose={resetForm}
             />
           </aside>
 
@@ -281,7 +286,7 @@ export default function AgencyAnnouncements() {
             <p className="text-sm font-medium text-gray-600 mb-1">No promotions yet</p>
             <p className="text-xs text-gray-500 mb-4">Post one to show your programs on the patient Find Programs page.</p>
             <button
-              onClick={() => setEditing(null)}
+              onClick={resetForm}
               className="btn-primary text-sm inline-flex items-center gap-1.5">
               <MdAdd size={15} /> Start a promotion
             </button>
