@@ -37,7 +37,7 @@ export default function JourneyStrip({ status, className = '' }) {
             <span className={`text-[9px] leading-tight ${
               state === 'current' ? 'font-semibold text-amber-700'
               : state === 'done'  ? 'text-gray-600'
-              : 'text-gray-400'
+              : 'text-gray-500'
             }`}>{t(`patient.journey.stage.${s.key}.label`)}</span>
           </div>
         )

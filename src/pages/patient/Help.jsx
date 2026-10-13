@@ -68,7 +68,7 @@ export default function PatientHelp() {
                 onClick={() => setOpen(open === i ? null : i)}
                 aria-expanded={open === i}>
                 <span className="text-sm font-medium text-gray-800">{faq.q}</span>
-                <span className="text-gray-400 flex-shrink-0">
+                <span className="text-gray-500 flex-shrink-0">
                   {open === i ? <MdRemove size={18} /> : <MdAdd size={18} />}
                 </span>
               </button>

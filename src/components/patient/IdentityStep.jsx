@@ -187,7 +187,7 @@ function QrResult({ t, parsed, accountName, onContinue, onRescan }) {
   return (
     <>
       <div className="flex items-center gap-2">
-        <MdCheckCircle size={22} className={verified ? 'text-brand-600' : 'text-gray-400'} />
+        <MdCheckCircle size={22} className={verified ? 'text-brand-600' : 'text-gray-500'} />
         <p className="text-base font-semibold text-gray-900">{t('patient.request.identity.resultTitle')}</p>
       </div>
       <p className={`text-xs ${verified ? 'text-brand-600' : 'text-amber-700'}`}>

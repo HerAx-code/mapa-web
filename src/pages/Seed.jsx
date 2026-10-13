@@ -238,7 +238,7 @@ export default function Seed() {
             disabled={running || backfilling}>
             {backfilling ? 'Backfilling…' : backfillDone ? 'Backfill agencyIds — Done' : 'Backfill document.agencyIds (after rules tighten)'}
           </button>
-          <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+          <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
             Stamps every legacy /documents/* row with the agencyId of any application it's attached to. Required once after deploying the tightened documents.read rule, so pre-existing scans stay readable to the right agency.
           </p>
         </div>

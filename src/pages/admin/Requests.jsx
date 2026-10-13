@@ -487,6 +487,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                 </label>
                 <textarea
                   className="input resize-none text-sm"
+                  aria-label="Notes for the agencies (optional)"
                   rows={2}
                   maxLength={400}
                   placeholder="e.g. urgent surgery scheduled Friday; family already raised ₱5K out of pocket"
@@ -980,7 +981,7 @@ function RequestDetail({ request, agencies, onClose }) {
                 assessment; the remainder is what gets endorsed to agencies. */}
             <div className="p-3 rounded-lg border border-gray-100 mb-2 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-700">Coverage already applied <span className="text-gray-400 font-normal">(optional)</span></p>
+                <p className="text-sm text-gray-700">Coverage already applied <span className="text-gray-500 font-normal">(optional)</span></p>
                 <span className="text-xs text-gray-500">Bill {peso(billBase)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -1642,7 +1643,7 @@ export default function Requests() {
         <div className="card px-3 py-2.5 mb-3 flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-            <input className="input pl-9 py-1.5" placeholder="Request ID, patient, or type…"
+            <input className="input pl-9 py-1.5" aria-label="Search requests" placeholder="Request ID, patient, or type…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <SearchableSelect

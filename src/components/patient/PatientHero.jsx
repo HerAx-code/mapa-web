@@ -155,7 +155,7 @@ export default function PatientHero({
       <button
         onClick={dismissWelcome}
         aria-label={t('common.close')}
-        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-brand-400 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
+        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-brand-600 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
         <MdClose size={16} />
       </button>
       <div className="flex items-center gap-3 mb-2 pr-8">
