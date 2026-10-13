@@ -6,6 +6,17 @@ problems, and a prioritized plan to improve the experience. Grounded in a
 first-hand read of the code — routes, pages, panels, and modals — not a
 guess from screenshots.*
 
+> **Status 2026-10-13 — the improvement plan (03) is now LARGELY IMPLEMENTED in
+> code.** Phase 1 (one patient journey: `utils/journey.js`, `PatientHero`,
+> `JourneyStepper`, `CoverageBar`; `TimelineCard` deleted), Phase 2 (`TaskList`,
+> upload compression), Phase 3.1/3.3 (`utils/aging.js`, case claiming), Phase 4
+> (GuidedIdCapture, CompareFacesModal + the recapture chip), Phase 5.2 (notification
+> categories) and the Phase-5.3 **accessibility pass** (WCAG AA contrast/focus/labels,
+> PR #291) have all shipped; Phase 3.2 was rejected as over-engineering. **Re-verify
+> any item against current source before treating it as pending** — this plan reads as
+> all-to-do but most of it is done. Genuinely open: a manual VoiceOver/NVDA walk, the
+> minor required-asterisk cue, and vocabulary consistency spot-checks.
+
 ## The documents
 
 1. **[01-current-state-inventory.md](01-current-state-inventory.md)** — every route,
