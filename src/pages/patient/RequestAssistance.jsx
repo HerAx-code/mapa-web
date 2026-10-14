@@ -17,6 +17,7 @@ import { runIdOcr, isIdType, LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 import { assessImageQuality } from '../../utils/imageQuality'
 import { compareFaces, hasFace } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
+import { fmtDate } from '../../utils/dates'
 import { requiredDocsFor } from '../../data/referenceData'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -563,7 +564,7 @@ export default function RequestAssistance() {
       // request's rejected/unrelated docs leaked onto the new request's
       // snapshot. uploadPatientDocument already returns the exact attachment
       // shape; for a replace (same id) and for a reused doc we build it.
-      const today = new Date().toLocaleDateString()
+      const today = fmtDate(new Date())
       const attachedDocuments = []
       for (const tp of reqDocTypes) {
         const file     = pendingFiles[tp.name]

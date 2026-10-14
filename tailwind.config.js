@@ -21,6 +21,10 @@ export default {
           800: '#04301F',
           900: '#02200F',
         },
+        // Warm off-white "canvas" ground for the public/landing surfaces
+        // (docs/visual-identity). Was a raw #FBFAF8 repeated across Landing +
+        // InstallApp + index.css; tokenized so it lives in one place.
+        canvas: '#FBFAF8',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

@@ -4,6 +4,7 @@ import {
 import { ref, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../firebase'
 import { compressImage } from './image'
+import { fmtDate } from './dates'
 
 // Shared patient-document upload pipeline.
 //
@@ -85,7 +86,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     documentTypeName:    typeName,
     type:                file.type || 'application/octet-stream',
     size:                `${sizeKB} KB`,
-    date:                new Date().toLocaleDateString(),
+    date:                fmtDate(new Date()),
     status:              'pending',
     agreedToAttestation: true,
     attestedAt:          new Date().toISOString(),
@@ -151,7 +152,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     name:             typeName,
     documentTypeName: typeName,
     status:           'pending',
-    date:             new Date().toLocaleDateString(),
+    date:             fmtDate(new Date()),
   }
 }
 
@@ -171,7 +172,7 @@ export async function replacePatientDocument({ docId, file, ocr = null, verify =
     fileName:   file.name,
     type:       file.type || 'application/octet-stream',
     size:       `${sizeKB} KB`,
-    date:       new Date().toLocaleDateString(),
+    date:       fmtDate(new Date()),
     reviewedBy: null,
     reviewedAt: null,
     ...(ocr ? {

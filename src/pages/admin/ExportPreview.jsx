@@ -9,7 +9,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { exportToCSV, dateStamp, readableFileType, openPrintTab } from '../../utils/export'
 import { logAudit } from '../../utils/auditLog'
-import { tsToDate } from '../../utils/dates'
+import { fmtDate } from '../../utils/dates'
 import {
   MdArrowBack, MdSearch, MdRefresh, MdDownload, MdClose,
 } from 'react-icons/md'
@@ -23,10 +23,8 @@ const LARGE_EXPORT_THRESHOLD = 10000
 
 // ── Column definitions ────────────────────────────────────────────────────
 
-const fmtDate = (ts) => {
-  const d = tsToDate(ts)
-  return d ? d.toLocaleDateString() : '—'
-}
+// fmtDate (en-PH / Asia/Manila) is imported from utils/dates — one canonical
+// formatter app-wide; the local copy was removed.
 
 
 const SECTION_CONFIG = {
@@ -80,8 +78,8 @@ const SECTION_CONFIG = {
       { label: 'Contact',     getValue: d => d.patientContact ?? '—' },
       { label: 'Agency',      getValue: d => d.agencyName ?? '—' },
       { label: 'Status',      getValue: d => d.status ?? '—' },
-      { label: 'Submitted',   getValue: d => d.submittedAt?.toDate?.().toLocaleDateString() ?? '—' },
-      { label: 'Last Updated',getValue: d => d.updatedAt?.toDate?.().toLocaleDateString() ?? '—' },
+      { label: 'Submitted',   getValue: d => fmtDate(d.submittedAt) },
+      { label: 'Last Updated',getValue: d => fmtDate(d.updatedAt) },
     ],
   },
   'applications-log': {
@@ -127,7 +125,7 @@ const SECTION_CONFIG = {
       { label: 'Description',getValue: d => d.description ?? '—' },
       { label: 'Reporter',   getValue: d => d.reporterName ?? '—' },
       { label: 'Role',       getValue: d => d.reporterRole ?? '—' },
-      { label: 'Submitted',  getValue: d => d.createdAt?.toDate?.().toLocaleDateString() ?? '—' },
+      { label: 'Submitted',  getValue: d => fmtDate(d.createdAt) },
       { label: 'Status',     getValue: d => d.status ?? 'open' },
     ],
   },

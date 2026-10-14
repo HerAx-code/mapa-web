@@ -123,7 +123,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBFAF8] text-gray-800">
+    <div className="min-h-screen bg-canvas text-gray-800">
       {/* Topbar — one compact, seated row (not a stack of full-width buttons).
           Brand left; language + install are icon actions on the right. Install is
           an icon here because the InstallNudge banner only shows inside the
@@ -132,7 +132,7 @@ export default function Landing() {
           (secondary, collapses to an icon on the narrowest phones); logged-in
           shows a single Dashboard button. A near-solid ground + hairline keeps the
           bar seated rather than floating. */}
-      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-[#FBFAF8]/95 backdrop-blur px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-canvas/95 backdrop-blur px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
         <Logo size={30} withWordmark />
         <div className="flex items-center gap-1">
           <LanguageToggle />

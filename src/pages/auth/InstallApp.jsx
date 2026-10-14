@@ -341,12 +341,12 @@ export default function InstallApp() {
   )
 
   return (
-    <div className="min-h-screen bg-[#FBFAF8] text-gray-800 flex flex-col">
+    <div className="min-h-screen bg-canvas text-gray-800 flex flex-col">
 
       {/* Topbar — hide 'Back to home' when the app is already
           installed; the Landing page redirects away in standalone
           mode so the link would just round-trip the user. */}
-      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-[#FBFAF8]/85 backdrop-blur px-5 sm:px-6 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-canvas/85 backdrop-blur px-5 sm:px-6 py-3 flex items-center justify-between">
         <Logo size={32} withWordmark />
         <div className="flex items-center gap-2">
           <LanguageToggle />

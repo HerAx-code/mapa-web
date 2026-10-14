@@ -18,6 +18,7 @@ import AddressPicker from '../../components/AddressPicker'
 import { hasReservedToken } from '../../utils/names'
 import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes } from '../../config/org'
 import toast from 'react-hot-toast'
+import { fmtDate } from '../../utils/dates'
 
 const CURRENT_YEAR        = new Date().getFullYear()
 const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
@@ -502,7 +503,7 @@ export default function Register() {
           tx.set(doc(db, 'users', uid), userData)
           tx.update(hidRef, {
             status: 'used', patId: uid,
-            date: new Date().toLocaleDateString(),
+            date: fmtDate(new Date()),
             time: new Date().toLocaleTimeString(),
           })
           tx.set(doc(db, 'hospitalIds', form.hospitalId, 'privateInfo', 'details'), {

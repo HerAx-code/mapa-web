@@ -13,7 +13,7 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
-import { tsToDate } from '../../utils/dates'
+import { tsToDate, fmtDate } from '../../utils/dates'
 import { computeFunding, deriveRequestFinancials } from '../../utils/requests'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
@@ -432,7 +432,7 @@ export default function ApplicationDetail() {
           const until = tsToDate(hid.cooldownUntilAt)
           if (until && until.getTime() > now) {
             toast.error(
-              `This patient (Hospital ID ${patientHospitalId}) has an active cooldown until ${until.toLocaleDateString()}. ` +
+              `This patient (Hospital ID ${patientHospitalId}) has an active cooldown until ${fmtDate(until)}. ` +
               `Approval blocked. Contact an administrator if a second approval is genuinely needed.`,
               { duration: 8000 }
             )
@@ -919,7 +919,7 @@ export default function ApplicationDetail() {
           reversedAt:          serverTimestamp(),
           reversedBy:          user.name,
           reversedByUid:       user.uid,
-          reversalReason:      `Reversed by ${user.name} on ${new Date().toLocaleDateString()}`,
+          reversalReason:      `Reversed by ${user.name} on ${fmtDate(new Date())}`,
           updatedAt:           serverTimestamp(),
         })
 
