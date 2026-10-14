@@ -11,7 +11,7 @@ import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
-import { tsToDate } from '../../utils/dates'
+import { tsToDate, fmtDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -242,10 +242,7 @@ export default function Patients() {
            p.contact?.includes(q)
   })
 
-  const formatDate = (ts) => {
-    const d = tsToDate(ts)
-    return d ? d.toLocaleDateString() : '—'
-  }
+  const formatDate = fmtDate // canonical en-PH / Asia/Manila formatter
 
   // ── Actions ──────────────────────────────────────────────────────────
 

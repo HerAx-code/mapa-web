@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { tsToDate } from '../../utils/dates'
+import { fmtDate } from '../../utils/dates'
 import { accessCodePrefixFor } from '../../config/org'
 import QRCode from 'qrcode'
 import toast from 'react-hot-toast'
@@ -54,7 +54,7 @@ function BulkAddModal({ nextNum, onClose }) {
           // to /privateInfo/details on claim).
           status:    'available',
           patId:     null,
-          date:      new Date().toLocaleDateString(),
+          date:      fmtDate(new Date()),
           time:      '',
           createdAt: serverTimestamp(),
         })
@@ -126,10 +126,8 @@ function BulkAddModal({ nextNum, onClose }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────
 
-const fmtDate = (ts) => {
-  const d = tsToDate(ts)
-  return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
-}
+// fmtDate (en-PH / Asia/Manila) is imported from utils/dates — one canonical
+// formatter app-wide; the local copy was removed.
 
 export default function HospitalIDs() {
   const [hospitalIds,    setHospitalIds]    = useState([])
@@ -212,7 +210,7 @@ export default function HospitalIDs() {
         // Register.jsx. Available codes have no sub-doc.
         status:    'available',
         patId:     null,
-        date:      new Date().toLocaleDateString(),
+        date:      fmtDate(new Date()),
         time:      '',
         createdAt: serverTimestamp(),
       })

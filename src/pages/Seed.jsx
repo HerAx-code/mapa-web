@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { doc, setDoc, collection, getDocs, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
+import { fmtDate } from '../utils/dates'
 import { accessCodePrefixFor } from '../config/org'
 // Single source of truth for the catalogs (shared with the app + bootstrap).
 import { DOCUMENT_TYPES, ASSISTANCE_TYPES, CORE_DOC_IDS } from '../data/referenceData'
@@ -129,7 +130,7 @@ export default function Seed() {
       try {
         await setDoc(doc(db, 'hospitalIds', id), {
           status: 'available', usedBy: null, patId: null,
-          date: new Date().toLocaleDateString(), time: '',
+          date: fmtDate(new Date()), time: '',
         }, { merge: true })
       } catch (err) {
         push(`❌ Failed ID ${id}: ${err.message}`)

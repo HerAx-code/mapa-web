@@ -31,3 +31,23 @@ export const tsToDate = (ts) => {
 // 'en-CA' yields the YYYY-MM-DD ordering; the timeZone option does the shift.
 export const phTodayKey = (now = new Date()) =>
   now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+
+// ── Canonical display formatters ────────────────────────────────────────────
+// en-PH + Asia/Manila so a date reads the SAME for every viewer, regardless of
+// their machine locale or zone (a bare `.toLocaleDateString()` renders
+// "10/14/2026" or "14/10/2026" depending on the browser — inconsistent + not
+// PH-anchored). Accepts a Firestore Timestamp | Date | ISO string (via
+// tsToDate); returns '—' for null/invalid so call sites need no guard.
+const DATE_OPTS = { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Manila' }
+const TIME_OPTS = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Manila' }
+
+export const fmtDate = (ts) => {
+  const d = tsToDate(ts)
+  return d && !isNaN(d.getTime()) ? d.toLocaleDateString('en-PH', DATE_OPTS) : '—'
+}
+
+export const fmtDateTime = (ts) => {
+  const d = tsToDate(ts)
+  if (!d || isNaN(d.getTime())) return '—'
+  return `${d.toLocaleDateString('en-PH', DATE_OPTS)}, ${d.toLocaleTimeString('en-PH', TIME_OPTS)}`
+}
