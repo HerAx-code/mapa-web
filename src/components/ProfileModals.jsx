@@ -630,8 +630,8 @@ function SettingsModal({ onClose }) {
 // Staff/admin FAQs remain English-only — internal staff per CLAUDE.md.
 
 const AGENCY_FAQS = [
-  { q: 'How do I review a new application?',          a: 'Open the Inbox — pending applications appear at the top. Click one to open the intake sheet, review documents, and either request changes, schedule an interview, or move it to approval.' },
-  { q: 'How do I schedule an online interview?',      a: 'From an application in the review or interview stage, click "Schedule Interview", paste a Google Meet link, and pick a date/time. The patient is notified by email and in-app.' },
+  { q: 'How do I review a new application?',          a: 'Open the Inbox — pending applications appear at the top. Click one to open the intake sheet, review the endorsed details, and either request changes or move it to approval.' },
+  { q: 'Do I schedule an interview with the patient?', a: 'No. The gateway office (Medical Social Services) conducts one remote assessment on the parent request and shares the result with every endorsed agency, so your agency makes the funding decision from that — there is no per-agency interview. If you need to clarify something, reach the patient or the gateway through Messages.' },
   { q: 'How do I issue a Guarantee Letter?',          a: 'On an approved application, open GL Letters and click "Issue GL". Fill in the amount and any notes; the system generates a printable letter and decrements your committed budget.' },
   { q: 'How do I mark a Guarantee Letter as redeemed?', a: 'Open GL Letters, find the issued GL, and click "Mark as Redeemed" after the patient claims it at the provider. Optionally attach the signed scan. This moves the amount from committed to disbursed.' },
   { q: 'Why can\'t I approve this application?',      a: 'The patient may already have an approval for the same assistance type within the last 30 days (cooldown), or your remaining budget is below the requested amount. Check the warning banner for the specific reason.' },
