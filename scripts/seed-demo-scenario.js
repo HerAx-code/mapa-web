@@ -253,7 +253,7 @@ async function main() {
   console.log(`       documents:      ${attachedDocuments.length}`)
 
   console.log(`\n[seed-demo-scenario] Demo walkthrough hints for the panel:`)
-  console.log(`  1. Sign in as admin@crmc.gov.ph / admin123 -> /admin/requests`)
+  console.log(`  1. Sign in as admin@example.org / admin123 -> /admin/requests`)
   console.log(`     -> open this request, click each doc, verify or reject`)
   console.log(`  2. Open the intake sheet, fill the assessment portion`)
   console.log(`  3. Schedule an interview (any Google Meet link works)`)
