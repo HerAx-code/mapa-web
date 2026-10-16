@@ -4,6 +4,13 @@
 // layers: coverage-first (PhilHealth → other prior aid reduce the bill to the
 // residual the agencies co-fund), then endorsed agency slices toward zero.
 // Presentational — reads request fields + the request's slices + computeFunding.
+//
+// Phase 2.3: the agency slices render in the RA 11463 Order of Charging
+// (agency.chargeOrder, via orderSlicesByCharging) rather than by amount, so the
+// waterfall reflects the real charging sequence. Visual/advisory — no amounts
+// or caps change; the provisional order lives in the agency seed.
+
+import { orderSlicesByCharging } from '../../../utils/requests'
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
@@ -29,7 +36,11 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
     ? Math.min(100, Math.round(((ph + other + funding.committed) / totalBill) * 100))
     : 0
 
-  const sliceRows = [...slices].sort((a, b) => (b.amountApproved ?? b.amountRequested ?? 0) - (a.amountApproved ?? a.amountRequested ?? 0))
+  // Phase 2.3: order the agency slices by the RA 11463 Order of Charging
+  // (agency.chargeOrder) instead of by amount, so the waterfall reads as the
+  // real charging sequence. Advisory — amounts are unchanged.
+  const sliceRows = orderSlicesByCharging(slices, agencies)
+  const chargeOrderOf = (id) => agencies.find(a => a.id === id)?.chargeOrder
 
   const Row = ({ label, sub, amount, sign = '', strong = false, top = false, muted = false }) => (
     <li className={`flex items-center justify-between gap-3 py-2 ${top ? 'border-t border-gray-100' : ''}`}>
@@ -67,9 +78,21 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
           // — so neither carries the "−" sign, and the visible "−" rows sum to
           // the stated Remaining balance.
           const isApproved = st.label === 'approved'
+          const ord = chargeOrderOf(s.agencyId)
+          const label = (
+            <>
+              {Number.isFinite(ord) && (
+                <span className="mr-1.5 inline-flex items-center justify-center w-4 h-4 rounded bg-gray-100 text-[10px] font-semibold text-gray-500 tabular-nums align-middle"
+                      title={`Order of Charging: #${ord}`}>
+                  {ord}
+                </span>
+              )}
+              {agencyName(s.agencyId)}
+            </>
+          )
           return (
             <Row key={s.id}
-              label={agencyName(s.agencyId)}
+              label={label}
               sub={<span className={st.cls}>{st.label}</span>}
               amount={amount}
               sign={isApproved ? '− ' : ''}
@@ -79,6 +102,14 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
 
         <Row label="Remaining balance" amount={funding.balance} sign="" top strong />
       </ul>
+
+      {/* Phase 2.3: funders apply in the RA 11463 Order of Charging. The order
+          shown is provisional until confirmed with the host — advisory only. */}
+      {sliceRows.length > 0 && (
+        <p className="mt-2 text-[11px] text-gray-400">
+          Funders apply in the Order of Charging (RA 11463).
+        </p>
+      )}
     </div>
   )
 }

@@ -47,4 +47,11 @@ describe('agencies.seed (canonical single source)', () => {
       expect(a.eligibility.residencyScope).toBe('nationwide')
     }
   })
+
+  it('every agency has a distinct chargeOrder; PhilHealth is first (Phase 2.3)', () => {
+    const orders = AGENCIES.map(a => a.chargeOrder)
+    for (const o of orders) expect(Number.isInteger(o)).toBe(true)
+    expect(new Set(orders).size).toBe(orders.length) // distinct
+    expect(AGENCIES.find(a => a.id === 'philhealth').chargeOrder).toBe(1)
+  })
 })

@@ -4,6 +4,7 @@ import {
   deriveAmountNeeded,
   computeFunding,
   agencyCoverage,
+  orderSlicesByCharging,
   deriveRequestStatus,
   COMMITTED_SLICE_STATUSES,
   OUTSTANDING_SLICE_STATUSES,
@@ -259,5 +260,56 @@ describe('agencyCoverage', () => {
 
   it('zero/negative need is always coverable (nothing to fund)', () => {
     expect(agencyCoverage({ budget: { allocated: 100_000, committed: 100_000 } }, 0).status).toBe('full')
+  })
+})
+
+// orderSlicesByCharging (Phase 2.3) orders slices by the RA 11463 Order of
+// Charging (agency.chargeOrder asc), committed before pending, larger first.
+// VISUAL/ADVISORY — it reorders display only, never mutates the input.
+describe('orderSlicesByCharging', () => {
+  const agencies = [
+    { id: 'ph',   chargeOrder: 1 },
+    { id: 'doh',  chargeOrder: 3 },
+    { id: 'pcso', chargeOrder: 4 },
+    { id: 'noorder' }, // no chargeOrder → sorts last
+  ]
+
+  it('orders by agency.chargeOrder ascending', () => {
+    const slices = [
+      { id: 'a', agencyId: 'pcso', status: 'approved', amountApproved: 1000 },
+      { id: 'b', agencyId: 'ph',   status: 'approved', amountApproved: 1000 },
+      { id: 'c', agencyId: 'doh',  status: 'approved', amountApproved: 1000 },
+    ]
+    expect(orderSlicesByCharging(slices, agencies).map(s => s.agencyId))
+      .toEqual(['ph', 'doh', 'pcso'])
+  })
+
+  it('funders without a chargeOrder sort last', () => {
+    const slices = [
+      { id: 'a', agencyId: 'noorder', status: 'approved', amountApproved: 9000 },
+      { id: 'b', agencyId: 'doh',     status: 'approved', amountApproved: 100 },
+    ]
+    expect(orderSlicesByCharging(slices, agencies).map(s => s.agencyId))
+      .toEqual(['doh', 'noorder'])
+  })
+
+  it('within the same charge order, committed beats pending, then larger amount', () => {
+    const slices = [
+      { id: 'pending',  agencyId: 'doh', status: 'reviewing', amountRequested: 5000 },
+      { id: 'small',    agencyId: 'doh', status: 'approved',  amountApproved: 1000 },
+      { id: 'big',      agencyId: 'doh', status: 'approved',  amountApproved: 8000 },
+    ]
+    expect(orderSlicesByCharging(slices, agencies).map(s => s.id))
+      .toEqual(['big', 'small', 'pending'])
+  })
+
+  it('does not mutate the input array', () => {
+    const slices = [
+      { id: 'a', agencyId: 'pcso', status: 'approved', amountApproved: 1 },
+      { id: 'b', agencyId: 'ph',   status: 'approved', amountApproved: 1 },
+    ]
+    const before = slices.map(s => s.id)
+    orderSlicesByCharging(slices, agencies)
+    expect(slices.map(s => s.id)).toEqual(before)
   })
 })

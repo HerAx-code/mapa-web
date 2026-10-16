@@ -22,6 +22,13 @@
 // flags + sorts on it, never blocks (see src/utils/eligibility.js). AMBaG is a
 // BARMM-government program, so it is scoped 'barmm' — ⚠ confirm with CRMC in
 // Phase 0 Q2 (see docs/assistance-model-remediation-plan.md) before relying on it.
+//
+// `chargeOrder` (remediation Phase 2.3): the funder's position in the RA 11463
+// Order of Charging (PhilHealth first, then the co-funders). VISUAL/ADVISORY —
+// it only orders how funding sources appear in the "path to zero balance"
+// waterfall (see orderSlicesByCharging + PathToZeroBalance); it enforces no caps
+// and changes no amounts. ⚠ The exact sequence here is PROVISIONAL — confirm
+// with CRMC in Phase 0 Q3 before treating it as the real charging order.
 export const AGENCIES = [
   {
     id: 'malasakit', name: 'Malasakit Center', initials: 'MC', color: 'bg-brand-500', logoUrl: null,
@@ -30,7 +37,7 @@ export const AGENCIES = [
     phone: '064-421-2500', slots: { total: 25, remaining: 25 },
     requirements: ['Barangay Certificate of Indigency', 'Hospital Billing Statement', 'Valid ID', 'Medical Abstract'],
     assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Laboratory Tests'],
-    eligibility: { residencyScope: 'nationwide' },
+    eligibility: { residencyScope: 'nationwide' }, chargeOrder: 2,
     processingTime: 'Same Day', enabled: false,
   },
   {
@@ -40,7 +47,7 @@ export const AGENCIES = [
     phone: '064-421-2800', slots: { total: 25, remaining: 25 },
     requirements: ['Barangay Certificate of Indigency', 'Hospital Billing Statement', 'Valid ID'],
     assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Laboratory Tests', 'Dialysis', 'Surgery / Medical Procedures', 'Chemotherapy'],
-    eligibility: { residencyScope: 'nationwide' },
+    eligibility: { residencyScope: 'nationwide' }, chargeOrder: 3,
     processingTime: 'Same Day', enabled: true,
   },
   {
@@ -50,7 +57,7 @@ export const AGENCIES = [
     phone: '064-421-2900', slots: { total: 25, remaining: 25 },
     requirements: ['PhilHealth ID', 'Valid ID'],
     assistanceTypes: ['Hospital Bills / Hospitalization'],
-    eligibility: { residencyScope: 'nationwide' },
+    eligibility: { residencyScope: 'nationwide' }, chargeOrder: 1,
     processingTime: 'Same Day', enabled: false,
   },
   {
@@ -62,7 +69,7 @@ export const AGENCIES = [
     assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Dialysis', 'Chemotherapy', 'Laboratory Tests', 'Surgery / Medical Procedures'],
     // ⚠ Phase 0 Q2 unconfirmed: AMBaG is a BARMM-government program, scoped to
     // Bangsamoro residents here. Confirm the exact rule with CRMC before relying.
-    eligibility: { residencyScope: 'barmm' },
+    eligibility: { residencyScope: 'barmm' }, chargeOrder: 6,
     processingTime: '3–5 Days', enabled: true,
   },
   {
@@ -72,7 +79,7 @@ export const AGENCIES = [
     phone: '064-421-2600', slots: { total: 20, remaining: 20 },
     requirements: ['Medical Certificate', 'Laboratory Results', 'PhilHealth ID', 'Valid ID'],
     assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Chemotherapy', 'Dialysis', 'Laboratory Tests', 'Surgery / Medical Procedures'],
-    eligibility: { residencyScope: 'nationwide' },
+    eligibility: { residencyScope: 'nationwide' }, chargeOrder: 4,
     processingTime: '5–7 Days', enabled: true,
   },
   {
@@ -82,7 +89,7 @@ export const AGENCIES = [
     phone: '064-421-2700', slots: { total: 25, remaining: 25 },
     requirements: ['Barangay Certificate of Indigency', 'Valid ID', 'Crisis Documentation'],
     assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Laboratory Tests', 'Emergency Medical Assistance', 'Burial Assistance'],
-    eligibility: { residencyScope: 'nationwide' },
+    eligibility: { residencyScope: 'nationwide' }, chargeOrder: 5,
     processingTime: 'Same Day', enabled: true,
   },
 ]

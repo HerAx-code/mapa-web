@@ -130,6 +130,25 @@ export function agencyCoverage(agency, need = 0) {
   return { ceiling, status }
 }
 
+// Phase 2.3 — Order of Charging. Order a request's slices by the funder charging
+// sequence (RA 11463): agency.chargeOrder ascending, with committed money before
+// pending and larger amounts first as stable tiebreakers. VISUAL/ADVISORY — this
+// only controls how slices are *shown* in the path-to-zero-balance waterfall; it
+// changes no amounts and enforces no caps/sequence. Funders without a chargeOrder
+// sort last. Non-mutating (returns a new array).
+export function orderSlicesByCharging(slices = [], agencies = []) {
+  const orderOf = (agencyId) => {
+    const o = agencies.find(a => a.id === agencyId)?.chargeOrder
+    return Number.isFinite(o) ? o : Number.POSITIVE_INFINITY
+  }
+  const committedRank = (s) => (isCommittedSlice(s) ? 0 : 1)
+  const amountOf = (s) => Number(s.amountApproved ?? s.amountRequested ?? 0)
+  return [...slices].sort((a, b) =>
+    orderOf(a.agencyId) - orderOf(b.agencyId) ||
+    committedRank(a) - committedRank(b) ||
+    amountOf(b) - amountOf(a))
+}
+
 // Derive the request status from its funding figures. CRMC can still override
 // to 'closed' (gave up on the remaining balance) or 'rejected' (ineligible).
 export function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0) {
