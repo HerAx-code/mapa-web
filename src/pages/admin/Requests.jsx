@@ -13,7 +13,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
-import { computeFunding, computeAmountNeeded } from '../../utils/requests'
+import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
 import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
@@ -123,20 +123,27 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   }, [request.id])
 
   // Agencies already holding a slice in this request can't be picked again.
-  // Residency (Phase 2.1) is the strongest sort key: out-of-area funders sink
-  // to the bottom (but are never removed/disabled — advisory only, CRMC may
-  // override). Within that, matching-type agencies sort first, then alpha.
+  // Sort keys, in order (all advisory — nothing is removed/disabled, CRMC may
+  // override any of them):
+  //   1. Residency (Phase 2.1): out-of-area funders sink to the bottom.
+  //   2. Capacity (Phase 2.2): funders that can cover the remaining balance
+  //      rank above partial-coverage, which rank above zero-headroom funders.
+  //   3. Assistance-type match, then alphabetical.
   const usedIds = new Set(slices.map(s => s.agencyId))
   const patientProvince = request.patientProvince ?? ''
+  // The remaining balance this endorsement targets (what still needs funding).
+  const coverRank = { full: 2, partial: 1, none: 0 }
   const eligible = agencies
     .filter(a => !usedIds.has(a.id) && (a.slots?.remaining ?? 0) > 0)
     .map(a => ({
       ...a,
       matches:   (a.assistanceTypes ?? []).includes(request.assistanceType),
       residency: residencyEligibility(patientProvince, a), // 'eligible'|'out_of_area'|'unknown'
+      coverage:  agencyCoverage(a, headroom),              // { ceiling, status }
     }))
     .sort((a, b) =>
       (a.residency === 'out_of_area' ? 1 : 0) - (b.residency === 'out_of_area' ? 1 : 0) ||
+      (coverRank[b.coverage.status] - coverRank[a.coverage.status]) ||
       (b.matches ? 1 : 0) - (a.matches ? 1 : 0) ||
       a.name.localeCompare(b.name))
 
@@ -483,6 +490,27 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             {hasResidencyScope(a) && a.residency === 'unknown' && (
                               <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded font-medium" title="Patient has no province on file; residency can't be confirmed">
                                 Residency unknown
+                              </span>
+                            )}
+                            {/* Capacity verdict (Phase 2.2): can this funder cover the
+                                remaining balance right now? Advisory — budget headroom
+                                + per-applicant cap, re-checked with authority at approval.
+                                Uncapped funders show nothing here ("no budget cap" below
+                                already says it). */}
+                            {headroom > 0 && a.coverage.status === 'partial' && (
+                              <span className="text-xs text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium"
+                                    title={`Headroom / per-applicant cap limits this funder to ${peso(a.coverage.ceiling)} of the ${peso(headroom)} balance`}>
+                                Covers {peso(a.coverage.ceiling)} of {peso(headroom)}
+                              </span>
+                            )}
+                            {headroom > 0 && a.coverage.status === 'none' && (
+                              <span className="text-xs text-red-700 bg-red-100 px-1.5 py-0.5 rounded font-medium" title="No budget headroom left this period">
+                                No budget headroom
+                              </span>
+                            )}
+                            {headroom > 0 && a.coverage.status === 'full' && Number.isFinite(a.coverage.ceiling) && (
+                              <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">
+                                Covers {peso(headroom)}
                               </span>
                             )}
                           </div>

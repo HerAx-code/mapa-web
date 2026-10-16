@@ -37,10 +37,21 @@ Cúram externalized thresholds (decision-table-lite, not a rules engine).
 - **Gate before prod go-live:** CRMC confirms the real per-type document sets +
   thresholds via `docs/crmc-document-requirements-checklist.md`, then flip the flag.
 
-Still open from the original plan below: capacity-at-endorsement (2.2),
-charging-order (2.3), per-agency intake (Phase 3), and the Phase 0 stakeholder
-answers. **Shipped since:** single-source agency list (1.1), and residency
-eligibility v1 (2.1 — see below).
+Still open from the original plan below: charging-order (2.3), per-agency intake
+(Phase 3), and the Phase 0 stakeholder answers. **Shipped since:** single-source
+agency list (1.1), residency eligibility v1 (2.1), and capacity-at-endorsement
+(2.2) — see below.
+
+## Shipped — capacity at endorsement (2026-10-16, Phase 2.2)
+
+`agencyCoverage(agency, need)` in `src/utils/requests.js` → `{ ceiling, status }`
+(`full | partial | none`) from live budget headroom (allocated − committed) ∩
+per-applicant cap; no allocation = uncapped. EndorseModal shows a per-agency
+coverage chip (amber "Covers ₱X of ₱Y" / red "No budget headroom" / green
+"Covers ₱Y" for a capped funder that fully covers; uncapped funders stay quiet),
+and capacity is now a sort key below residency and above type-match. **Read-only
+surfacing** — no data model, no money math, no rules change; advisory, re-checked
+with authority at approval. 7 unit tests.
 
 ## Shipped — residency eligibility v1 (2026-10-16, Phase 2.1)
 
