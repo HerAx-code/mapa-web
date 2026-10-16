@@ -37,9 +37,23 @@ Cúram externalized thresholds (decision-table-lite, not a rules engine).
 - **Gate before prod go-live:** CRMC confirms the real per-type document sets +
   thresholds via `docs/crmc-document-requirements-checklist.md`, then flip the flag.
 
-Still open from the original plan below: single-source the **agency** list (1.1),
-eligibility/capacity/charging-order (Phase 2), per-agency intake (Phase 3), and the
-Phase 0 stakeholder answers.
+Still open from the original plan below: capacity-at-endorsement (2.2),
+charging-order (2.3), per-agency intake (Phase 3), and the Phase 0 stakeholder
+answers. **Shipped since:** single-source agency list (1.1), and residency
+eligibility v1 (2.1 — see below).
+
+## Shipped — residency eligibility v1 (2026-10-16, Phase 2.1)
+
+The first decision-bearing routing signal. `src/utils/eligibility.js`
+(`residencyEligibility` → eligible | out_of_area | unknown, reusing
+`BARMM_PROVINCES`); `agency.eligibility.residencyScope` on every seeded agency
+(nationwide default; AMBaG = `'barmm'`, ⚠ Phase-0-unconfirmed); `patientProvince`
+snapshotted on the request at submission; EndorseModal shows a per-agency
+In-area / Out-of-area / Residency-unknown chip and sinks out-of-area funders in
+the list. **Advisory only** — never disables, never blocks; `unknown` (legacy /
+free-text origins) and nationwide never exclude. No money math, no Firestore
+rules change, no patient lockout. 10 unit tests. **Takes effect in prod on the
+next agency re-seed** (or an admin edit of the field — editor not yet built).
 
 ---
 
