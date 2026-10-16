@@ -25,7 +25,7 @@ const SECTIONS = [
     content:
       `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for Medical Social Services. ` +
       `Under the co-funding model, Medical Social Services is the single intake gateway: patients submit ONE request for their full bill, ` +
-      `Medical Social Services verifies the documents, conducts the assessment interview, and fills the Unified Intake Sheet. Medical Social Services then ` +
+      `Medical Social Services verifies the documents, conducts the remote assessment, and fills the Unified Intake Sheet. Medical Social Services then ` +
       `endorses the request to one or more agencies — each endorsement is a "slice" toward zero balance.\n\n` +
       `Your job as an agency coordinator is the funding decision only. You do NOT re-verify documents and you do NOT ` +
       `re-interview the patient. You read the Medical Social Services' assessment, decide whether to approve your slice (and for how much), ` +

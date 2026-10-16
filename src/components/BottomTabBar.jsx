@@ -79,7 +79,7 @@ export default function BottomTabBar({ unreadMessages = 0 }) {
       })}
       {/* More tab — navigates to /patient/more (a dedicated page)
           rather than opening a slide-in drawer. The page hosts the
-          secondary nav (Find Programs, Interviews, Guide) plus the
+          secondary nav (Find Programs, Guide) plus the
           account/settings actions that used to live in the avatar
           dropdown. */}
       <NavLink

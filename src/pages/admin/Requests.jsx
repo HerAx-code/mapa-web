@@ -918,7 +918,7 @@ function RequestDetail({ request, agencies, onClose }) {
         </div>
       </div>
 
-      {/* Two-column review workspace: the documents → interview → endorse flow
+      {/* Two-column review workspace: the verify → assess → endorse flow
           fills a wide work column; the money summary, path-to-zero, and stage
           rail pin to a sticky context rail on the right (desktop) / stack on
           top (mobile). Uses the full width instead of a narrow centred column. */}
@@ -975,7 +975,7 @@ function RequestDetail({ request, agencies, onClose }) {
               (coverage-first → agency slices), read-only. */}
           <PathToZeroBalance request={request} slices={slices} agencies={agencies} funding={funding} />
 
-          {/* Stage rail — at-a-glance verify → assess → interview → endorse
+          {/* Stage rail — at-a-glance verify → assess → endorse
               progress (redesign Phase 1), driven by the requestStage model. */}
           <RequestStageRail stage={stage} />
           </aside>
