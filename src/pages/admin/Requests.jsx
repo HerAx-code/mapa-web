@@ -14,6 +14,7 @@ import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded } from '../../utils/requests'
+import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
 import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
 import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
@@ -121,16 +122,23 @@ function EndorseModal({ request, slices, agencies, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request.id])
 
-  // Agencies already holding a slice in this request can't be picked again;
-  // sort matching-type agencies first, then alphabetically.
+  // Agencies already holding a slice in this request can't be picked again.
+  // Residency (Phase 2.1) is the strongest sort key: out-of-area funders sink
+  // to the bottom (but are never removed/disabled — advisory only, CRMC may
+  // override). Within that, matching-type agencies sort first, then alpha.
   const usedIds = new Set(slices.map(s => s.agencyId))
+  const patientProvince = request.patientProvince ?? ''
   const eligible = agencies
     .filter(a => !usedIds.has(a.id) && (a.slots?.remaining ?? 0) > 0)
     .map(a => ({
       ...a,
-      matches: (a.assistanceTypes ?? []).includes(request.assistanceType),
+      matches:   (a.assistanceTypes ?? []).includes(request.assistanceType),
+      residency: residencyEligibility(patientProvince, a), // 'eligible'|'out_of_area'|'unknown'
     }))
-    .sort((a, b) => (b.matches ? 1 : 0) - (a.matches ? 1 : 0) || a.name.localeCompare(b.name))
+    .sort((a, b) =>
+      (a.residency === 'out_of_area' ? 1 : 0) - (b.residency === 'out_of_area' ? 1 : 0) ||
+      (b.matches ? 1 : 0) - (a.matches ? 1 : 0) ||
+      a.name.localeCompare(b.name))
 
   const selectedCount = selected.size
   const canSubmit     = !saving && selectedCount > 0 && headroom > 0
@@ -459,6 +467,22 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             {!a.matches && (
                               <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium" title={`Does not list "${request.assistanceType}"`}>
                                 Type mismatch
+                              </span>
+                            )}
+                            {/* Residency flag (Phase 2.1) — only for funders that
+                                gate on residency (e.g. AMBaG = BARMM). Advisory:
+                                CRMC may still endorse out-of-area with a reason. */}
+                            {hasResidencyScope(a) && a.residency === 'eligible' && (
+                              <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">In area</span>
+                            )}
+                            {hasResidencyScope(a) && a.residency === 'out_of_area' && (
+                              <span className="text-xs text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium" title={`Serves BARMM residents; patient province: ${patientProvince || 'unknown'}`}>
+                                Out of area
+                              </span>
+                            )}
+                            {hasResidencyScope(a) && a.residency === 'unknown' && (
+                              <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded font-medium" title="Patient has no province on file; residency can't be confirmed">
+                                Residency unknown
                               </span>
                             )}
                           </div>
