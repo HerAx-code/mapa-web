@@ -522,7 +522,7 @@ export default function Landing() {
               {[
                 { Icon: MdLocationOn,  label: t('landing.help.addressLabel'), value: t('landing.help.address') },
                 { Icon: MdPhone,       label: t('landing.help.phoneLabel'),   value: '(064) 421-2500' },
-                { Icon: MdMailOutline, label: t('landing.help.emailLabel'),   value: 'records@crmc.gov.ph' },
+                { Icon: MdMailOutline, label: t('landing.help.emailLabel'),   value: ORG.contactEmail },
                 { Icon: MdSchedule,    label: t('landing.help.hoursLabel'),   value: t('landing.help.hours') },
               ].map((row, i) => (
                 <div key={i} className="flex gap-4 py-4">
@@ -614,7 +614,7 @@ export default function Landing() {
                 </li>
                 <li className="flex items-center gap-2">
                   <MdMailOutline size={15} className="flex-shrink-0 text-brand-300" />
-                  <span>records@crmc.gov.ph</span>
+                  <span>{ORG.contactEmail}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <MdSchedule size={15} className="flex-shrink-0 text-brand-300" />

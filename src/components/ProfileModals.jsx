@@ -5,6 +5,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'fi
 import { db, auth, storage } from '../firebase'
 import SearchableSelect from './ui/SearchableSelect'
 import { notify } from '../utils/notifications'
+import { ORG } from '../config/org'
 import MfaEnrollModal from './MfaEnrollModal'
 
 // Phase 2.4: profile photos now live in Cloud Storage at
@@ -666,7 +667,7 @@ function HelpModal({ onClose, onOpenReport }) {
 
   const handleEmailSupport = () => {
     window.location.href = [
-      'mailto:support@crmc.gov.ph',
+      `mailto:${ORG.contactEmail}`,
       '?subject=MAPA Support Request',
       '&body=Please describe your issue below:%0A%0A',
     ].join('')
@@ -709,7 +710,7 @@ function HelpModal({ onClose, onOpenReport }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800">{t('profile.help.emailSupport')}</p>
-            <p className="text-xs text-gray-500">support@crmc.gov.ph</p>
+            <p className="text-xs text-gray-500">{ORG.contactEmail}</p>
           </div>
           <span className="text-xs text-blue-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
         </button>

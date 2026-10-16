@@ -179,7 +179,7 @@ function AccountModal({ account, onClose }) {
           {!isEdit && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Email Address <span className="text-red-400">*</span></label>
-              <input type="email" className="input" placeholder="admin@crmc.gov.ph" value={form.email} onChange={set('email')} />
+              <input type="email" className="input" placeholder="name@example.org" value={form.email} onChange={set('email')} />
             </div>
           )}
 

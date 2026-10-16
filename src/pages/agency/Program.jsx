@@ -346,7 +346,7 @@ export default function AgencyProfile() {
             <EditableField
               icon={MdEmail} label="Public contact email"
               value={agency.publicEmail}
-              placeholder="e.g. malasakit@crmc.gov.ph"
+              placeholder="e.g. program@example.org"
               onSave={handleSaveField('publicEmail', 'Public email')}
             />
             <EditableField
