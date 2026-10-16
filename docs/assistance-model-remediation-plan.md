@@ -37,10 +37,23 @@ Cúram externalized thresholds (decision-table-lite, not a rules engine).
 - **Gate before prod go-live:** CRMC confirms the real per-type document sets +
   thresholds via `docs/crmc-document-requirements-checklist.md`, then flip the flag.
 
-Still open from the original plan below: charging-order (2.3), per-agency intake
-(Phase 3), and the Phase 0 stakeholder answers. **Shipped since:** single-source
-agency list (1.1), residency eligibility v1 (2.1), and capacity-at-endorsement
-(2.2) — see below.
+Still open from the original plan below: Order-of-Charging **enforcement** (caps /
+per-funder rules — 2.3 shipped visual-only), per-agency intake (Phase 3), the
+Phase 1b invented-step deletions, and the Phase 0 stakeholder answers. **Shipped
+since:** single-source agency list (1.1), residency eligibility v1 (2.1),
+capacity-at-endorsement (2.2), and the Order-of-Charging waterfall (2.3,
+visual/advisory) — see below.
+
+## Shipped — Order-of-Charging waterfall, visual/advisory (2026-10-16, Phase 2.3)
+
+Shipped visual-only (owner decision — enforcement gated on Phase 0 Q3). `chargeOrder`
+(int) on every seeded agency (PhilHealth = 1, then co-funders; ⚠ PROVISIONAL);
+`orderSlicesByCharging(slices, agencies)` in `src/utils/requests.js` (pure,
+non-mutating). `PathToZeroBalance` renders agency slices in charging order (not by
+amount), each with a muted order ordinal, plus an "Order of Charging (RA 11463)"
+footnote. No caps enforced, no amounts changed, no rules touched. 9 unit tests.
+**Takes effect in prod on the next agency re-seed.** Still open: structured
+per-funder caps / co-pay enforcement, once Phase 0 Q3 confirms the real sequence.
 
 ## Shipped — capacity at endorsement (2026-10-16, Phase 2.2)
 
