@@ -3,6 +3,7 @@ import {
   computeAmountNeeded,
   deriveAmountNeeded,
   computeFunding,
+  agencyCoverage,
   deriveRequestStatus,
   COMMITTED_SLICE_STATUSES,
   OUTSTANDING_SLICE_STATUSES,
@@ -210,5 +211,53 @@ describe('deriveRequestStatus', () => {
 
   it('returns submitted when no slices exist yet', () => {
     expect(deriveRequestStatus({ committed: 0, outstanding: 0 }, 50_000)).toBe('submitted')
+  })
+})
+
+// agencyCoverage (Phase 2.2) answers "can this funder cover ₱need right now?"
+// from live budget headroom (allocated − committed) ∩ per-applicant cap.
+// ADVISORY — never a hard block; re-checked with authority at approval.
+describe('agencyCoverage', () => {
+  it('an agency with no budget allocation is uncapped (full, Infinity ceiling)', () => {
+    const r = agencyCoverage({}, 10_000)
+    expect(r.status).toBe('full')
+    expect(r.ceiling).toBe(Infinity)
+  })
+
+  it('full when budget headroom meets or exceeds the need', () => {
+    const a = { budget: { allocated: 100_000, committed: 20_000 } } // headroom 80k
+    expect(agencyCoverage(a, 80_000).status).toBe('full')
+    expect(agencyCoverage(a, 50_000).status).toBe('full')
+    expect(agencyCoverage(a, 80_000).ceiling).toBe(80_000)
+  })
+
+  it('partial when headroom funds some but not all of the need', () => {
+    const a = { budget: { allocated: 100_000, committed: 70_000 } } // headroom 30k
+    const r = agencyCoverage(a, 50_000)
+    expect(r.status).toBe('partial')
+    expect(r.ceiling).toBe(30_000)
+  })
+
+  it('none when the budget is fully committed (or over-committed)', () => {
+    expect(agencyCoverage({ budget: { allocated: 100_000, committed: 100_000 } }, 5_000).status).toBe('none')
+    expect(agencyCoverage({ budget: { allocated: 100_000, committed: 120_000 } }, 5_000).status).toBe('none')
+  })
+
+  it('a per-applicant cap lowers the ceiling below budget headroom', () => {
+    const a = { budget: { allocated: 1_000_000, committed: 0 }, maxPerApplicant: 25_000 }
+    const r = agencyCoverage(a, 60_000)
+    expect(r.ceiling).toBe(25_000)   // capped by policy, not budget
+    expect(r.status).toBe('partial')
+  })
+
+  it('per-applicant cap alone (no budget) still bounds an uncapped funder', () => {
+    const a = { maxPerApplicant: 25_000 }
+    expect(agencyCoverage(a, 10_000).status).toBe('full')     // cap covers need
+    expect(agencyCoverage(a, 40_000).status).toBe('partial')  // cap below need
+    expect(agencyCoverage(a, 40_000).ceiling).toBe(25_000)
+  })
+
+  it('zero/negative need is always coverable (nothing to fund)', () => {
+    expect(agencyCoverage({ budget: { allocated: 100_000, committed: 100_000 } }, 0).status).toBe('full')
   })
 })
