@@ -26,7 +26,7 @@
   },
   "installPage": {
     "backHome": "Bumalik sa home",
-    "org": "Cotabato Regional Medical Center",
+    "org": "{{facility}}",
     "trustLine": "Ini-install ng inyong browser, hindi mula sa app store. Mga sampung segundo lang.",
     "phonePreviewCaption": "Ang MAPA katabi ng inyong mga app",
     "steps": {
@@ -92,7 +92,7 @@
       "offline": "Gumagana kahit walang internet para sa mga bagay na binuksan na.",
       "notifs": "Tumanggap ng abiso kapag may pagbabago sa status ng aplikasyon (paparating)."
     },
-    "footer": "Libre · Ginawa ng Cotabato Regional Medical Center · Walang app store na kailangan"
+    "footer": "Libre · Ginawa ng {{facility}} · Walang app store na kailangan"
   },
   "common": {
     "close": "Isara",
@@ -162,7 +162,7 @@
       "dashboard": "Dashboard →"
     },
     "hero": {
-      "badge": "Opisyal na portal ng Cotabato Regional Medical Center",
+      "badge": "Opisyal na portal ng {{facility}}",
       "location": "Sinsuat Avenue, Cotabato City",
       "tagline": "Pinapasimple ang pag-access sa mga medical financial assistance program sa {{facility}} para sa mga pasyente, ahensya, at administrator.",
       "ctaPatient": "Mag-apply para sa Patient Account",
@@ -276,7 +276,7 @@
       "hours": "Lunes hanggang Biyernes, 8:00 AM – 5:00 PM. Sarado sa holiday."
     },
     "footer": {
-      "brandDesc": "Ang opisyal na online system ng Cotabato Regional Medical Center para sa pagproseso ng medical assistance applications.",
+      "brandDesc": "Ang opisyal na online system ng {{facility}} para sa pagproseso ng medical assistance applications.",
       "quickLinks": "Mabilisang Links",
       "registerPatient": "Mag-register bilang Pasyente",
       "login": "Mag-login",
@@ -286,7 +286,7 @@
       "addressLine1": "Sinsuat Avenue, Cotabato City,",
       "addressLine2": "Maguindanao del Norte 9600",
       "hours": "Lun – Biy, 8:00 AM – 5:00 PM",
-      "copyright": "© {{year}} MAPA · Cotabato Regional Medical Center · Lahat ng karapatan ay nakalaan",
+      "copyright": "© {{year}} MAPA · {{facility}} · Lahat ng karapatan ay nakalaan",
       "privacy": "Privacy Notice",
       "officialPortal": "Opisyal na Portal ng {{org}}"
     },
@@ -1144,7 +1144,7 @@
       "waitingDays": "Naghihintay {{count}}d",
       "docsNeedFix": {
         "title": "Kailangan ng aksyon: mag-upload muli ng dokumento",
-        "intro": "Ibinalik ng CRMC ang mga sumusunod para ma-verify ang iyong hiling:",
+        "intro": "Ibinalik ng {{gateway}} ang mga sumusunod para ma-verify ang iyong hiling:",
         "btn": "Mag-upload muli"
       },
       "banner": {

@@ -195,7 +195,7 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
         <Seal />
         <div className="header-text">
           <p className="republic">Republic of the Philippines</p>
-          <p className="agency-name">Cotabato Regional Medical Center</p>
+          <p className="agency-name">{ORG.facilityName}</p>
           <p className="sub-line">Medical Assistance Portal Access (MAPA) &nbsp;·&nbsp; Cotabato City, Maguindanao del Norte</p>
         </div>
         <Seal />

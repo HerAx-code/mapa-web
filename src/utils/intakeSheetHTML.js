@@ -189,7 +189,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
     ${seal}
     <div class="header-text">
       <p class="republic">Republic of the Philippines</p>
-      <p class="agency-name">Cotabato Regional Medical Center</p>
+      <p class="agency-name">${ORG.facilityName}</p>
       <p class="sub">Medical Assistance Portal Access (MAPA)${agency?.name ? ` &nbsp;·&nbsp; ${agency.name}` : ''}</p>
     </div>
     ${seal}

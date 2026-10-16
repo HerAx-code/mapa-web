@@ -8,7 +8,7 @@ import { logAudit } from '../../utils/auditLog'
 import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { fmtDate } from '../../utils/dates'
-import { accessCodePrefixFor } from '../../config/org'
+import { accessCodePrefixFor, ORG } from '../../config/org'
 import QRCode from 'qrcode'
 import toast from 'react-hot-toast'
 
@@ -285,8 +285,8 @@ export default function HospitalIDs() {
       return `
       <div class="card">
         <div class="header">
-          <div class="brand">MAPA</div>
-          <div class="sub">Cotabato Regional Medical Center</div>
+          <div class="brand">${escape(ORG.name)}</div>
+          <div class="sub">${escape(ORG.facilityName)}</div>
         </div>
         <div class="label">Patient Access Code</div>
         <div class="code">${escape(c.id)}</div>

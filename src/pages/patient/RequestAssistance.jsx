@@ -663,6 +663,12 @@ export default function RequestAssistance() {
         patientName:       user.name ?? '',
         patientContact:    user.contact ?? '',
         patientAddress:    user.address ?? '',
+        // Structured province snapshot (remediation Phase 2.1): the residency
+        // signal the EndorseModal flags agencies on. Snapshotted here (like the
+        // other patient facts) so endorsement doesn't need a separate user read;
+        // '' for legacy/free-text origins → eligibility resolves to 'unknown',
+        // never a block. See src/utils/eligibility.js.
+        patientProvince:   user.province ?? '',
         patientHospitalId: user.hospitalId ?? null,
         assistanceType:    form.assistanceType,
         description:       form.description.trim(),

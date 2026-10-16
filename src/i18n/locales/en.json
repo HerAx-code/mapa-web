@@ -26,7 +26,7 @@
   },
   "installPage": {
     "backHome": "Back to home",
-    "org": "Cotabato Regional Medical Center",
+    "org": "{{facility}}",
     "trustLine": "Installed by your browser, not an app store. Takes about ten seconds.",
     "phonePreviewCaption": "MAPA next to your everyday apps",
     "steps": {
@@ -92,7 +92,7 @@
       "offline": "Works without internet for things you've already opened.",
       "notifs": "Get notified when your application status changes (coming soon)."
     },
-    "footer": "Free · Made by Cotabato Regional Medical Center · No app store needed"
+    "footer": "Free · Made by {{facility}} · No app store needed"
   },
   "common": {
     "close": "Close",
@@ -162,7 +162,7 @@
       "dashboard": "Dashboard →"
     },
     "hero": {
-      "badge": "Official portal of Cotabato Regional Medical Center",
+      "badge": "Official portal of {{facility}}",
       "location": "Sinsuat Avenue, Cotabato City",
       "tagline": "Simplifying access to medical financial assistance programs at {{facility}} for patients, agencies, and administrators.",
       "ctaPatient": "Apply for Patient Account",
@@ -276,7 +276,7 @@
       "hours": "Monday to Friday, 8:00 AM – 5:00 PM. Closed on holidays."
     },
     "footer": {
-      "brandDesc": "The official online system of Cotabato Regional Medical Center for processing medical assistance applications.",
+      "brandDesc": "The official online system of {{facility}} for processing medical assistance applications.",
       "quickLinks": "Quick Links",
       "registerPatient": "Register as Patient",
       "login": "Log In",
@@ -286,7 +286,7 @@
       "addressLine1": "Sinsuat Avenue, Cotabato City,",
       "addressLine2": "Maguindanao del Norte 9600",
       "hours": "Mon – Fri, 8:00 AM – 5:00 PM",
-      "copyright": "© {{year}} MAPA · Cotabato Regional Medical Center · All rights reserved",
+      "copyright": "© {{year}} MAPA · {{facility}} · All rights reserved",
       "privacy": "Privacy Notice",
       "officialPortal": "{{org}} Official Portal"
     },
@@ -1144,7 +1144,7 @@
       "waitingDays": "Waiting {{count}}d",
       "docsNeedFix": {
         "title": "Action needed: re-upload a document",
-        "intro": "CRMC returned the following so they can verify your request:",
+        "intro": "{{gateway}} returned the following so they can verify your request:",
         "btn": "Re-upload now"
       },
       "banner": {

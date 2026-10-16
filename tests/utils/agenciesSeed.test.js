@@ -36,4 +36,15 @@ describe('agencies.seed (canonical single source)', () => {
     const blob = JSON.stringify(AGENCIES)
     expect(blob).not.toMatch(/CRMC/)
   })
+
+  it('every agency declares a valid residency scope (Phase 2.1); AMBaG is BARMM', () => {
+    for (const a of AGENCIES) {
+      expect(['nationwide', 'barmm']).toContain(a.eligibility?.residencyScope)
+    }
+    expect(AGENCIES.find(a => a.id === 'ambag').eligibility.residencyScope).toBe('barmm')
+    // Everyone else is nationwide until Phase 0 confirms otherwise.
+    for (const a of AGENCIES.filter(a => a.id !== 'ambag')) {
+      expect(a.eligibility.residencyScope).toBe('nationwide')
+    }
+  })
 })
