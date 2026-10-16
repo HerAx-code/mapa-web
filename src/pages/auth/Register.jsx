@@ -5,7 +5,7 @@ import {
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
   MdSchedule, MdPlace,
 } from 'react-icons/md'
-import Logo from '../../components/ui/Logo'
+import Logo, { MapaMark } from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import LanguageToggle from '../../components/LanguageToggle'
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
@@ -577,10 +577,7 @@ export default function Register() {
         <div className="brand-aurora" aria-hidden="true" />
         <div className="relative px-10 pt-12">
           <span className="inline-flex items-center gap-2.5">
-            <img
-              src="/mapa-logo.png"
-              alt="MAPA"
-              className="h-10 w-10 rounded-[11px] object-contain ring-1 ring-white/15" />
+            <MapaMark size={40} className="text-white" />
             <span className="font-display text-[19px] font-bold tracking-tight text-white">MAPA</span>
           </span>
           <h2 className="mt-10 text-[28px] font-semibold leading-[1.15] tracking-tight text-white text-balance">

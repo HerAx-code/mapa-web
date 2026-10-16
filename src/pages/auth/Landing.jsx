@@ -551,7 +551,7 @@ export default function Landing() {
             {/* Brand */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Logo size={32} />
+                <Logo size={32} markClassName="text-white" />
                 <div>
                   <p className="text-sm font-bold">MAPA</p>
                   <p className="text-xs text-brand-200/80">Medical Assistance Portal Access</p>

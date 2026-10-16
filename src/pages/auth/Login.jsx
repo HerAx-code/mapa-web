@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageToggle from '../../components/LanguageToggle'
-import Logo from '../../components/ui/Logo'
+import Logo, { MapaMark } from '../../components/ui/Logo'
 import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning, MdShield } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
@@ -207,14 +207,11 @@ export default function Login() {
         {/* Dark-panel aurora — visual continuity with the Landing hero. */}
         <div className="brand-aurora" aria-hidden="true" />
 
-        {/* MAPA logo tile + white wordmark. The tile is a self-contained pine
-            mark, so a faint white ring separates it from the pine column. */}
+        {/* Reversed care-pin mark + white wordmark on the pine column
+            (visual-identity: the mark themes via currentColor). */}
         <div className="relative px-12 pt-12">
           <span className="inline-flex items-center gap-2.5">
-            <img
-              src="/mapa-logo.png"
-              alt="MAPA"
-              className="h-10 w-10 rounded-[11px] object-contain ring-1 ring-white/15" />
+            <MapaMark size={40} className="text-white" />
             <span className="font-display text-[19px] font-bold tracking-tight text-white">MAPA</span>
           </span>
         </div>
