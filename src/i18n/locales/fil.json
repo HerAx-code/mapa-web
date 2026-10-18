@@ -101,6 +101,7 @@
   "auth": {
     "welcome": "Maligayang pagdating sa MAPA",
     "signinSubtitle": "Mag-sign in sa inyong account",
+    "timeoutNotice": "Na-sign out kayo dahil sa matagal na hindi paggamit, para sa seguridad ng mga rekord. Mangyaring mag-sign in muli.",
     "brand": {
       "headline": "Isang kahilingan, isang beses na beripikasyon, tinustusan ng marami.",
       "a1title": "Isang kahilingan lamang",

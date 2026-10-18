@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { LiveDataProvider } from './contexts/LiveDataContext'
 import PrivateRoute from './components/PrivateRoute'
+import SessionTimeoutProvider from './components/SessionTimeoutProvider'
 import { ROLES } from './utils/constants'
 
 // Eager imports: auth + landing entry points and the patient dashboard.
@@ -94,6 +95,7 @@ export default function App() {
   return (
     <AuthProvider>
       <LiveDataProvider>
+      <SessionTimeoutProvider>
       <Suspense fallback={<RouteLoader />}>
         <Routes>
           {/* Public */}
@@ -172,6 +174,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </SessionTimeoutProvider>
       </LiveDataProvider>
     </AuthProvider>
   )
