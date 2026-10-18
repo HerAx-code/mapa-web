@@ -1,4 +1,19 @@
 {
+  "terms": {
+    "title": "Mga Tuntunin ng Paggamit",
+    "intro": "Mangyaring basahin ang mga tuntuning ito bago gamitin ang MAPA. Sa pagrehistro, sumasang-ayon kayo sa mga ito.",
+    "p1": "Ang MAPA ay isang portal upang mag-apply ng tulong pinansiyal na medikal sa pamamagitan ng {{gateway}}. Itinatala at ipinapadala nito ang inyong kahilingan; hindi ito mismo ang nagbabayad ng inyong bill.",
+    "p2": "Hindi garantisado ang tulong. Ang pag-apruba, ang halaga, at kung gaano kabilis ay nakadepende sa desisyon ng bawat ahensya, sa badyet nito, at sa bakanteng slot.",
+    "p3": "Hinding-hindi humihingi ng bayad ang MAPA at ang {{gateway}} — hindi sa pagrehistro, sa Access Code, o sa paglabas ng Guarantee Letter. Isumbong ang sinumang humingi ng bayad.",
+    "p4": "Pinatutunayan ninyong totoo ang impormasyon at mga dokumentong inyong isinusumite. Maaaring mapawalang-bisa ang tulong kung may maling impormasyon.",
+    "p5": "Ang inyong personal na datos ay pinoproseso alinsunod sa Privacy Notice, kaayon ng Data Privacy Act of 2012 (RA 10173).",
+    "p6": "Gamitin ang MAPA nang tapat: isang aktibong kahilingan sa bawat pagkakataon, at huwag magpanggap na ibang tao o abusuhin ang sistema.",
+    "privacyLink": "Basahin ang Privacy Notice",
+    "close": "Isara",
+    "acceptBtn": "Sumasang-ayon Ako",
+    "updatedTitle": "Na-update ang aming Mga Tuntunin ng Paggamit",
+    "updatedBody": "Mangyaring suriin at tanggapin ang na-update na mga tuntunin upang magpatuloy sa paggamit ng MAPA."
+  },
   "pwa": {
     "installPrompt": {
       "title": "I-install ang MAPA para sa mas mabilis na access",
@@ -1435,7 +1450,7 @@
       "noCodeHint": "Walang access code? Bisitahin ang {{gateway}} upang masuri at makakuha ng isa.",
       "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa {{gateway}} para masuri at mabigyan ng bago.",
       "codeUsedRecoveryAction": "I-email ang {{gateway}}",
-      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at Terms of Use. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal."
+      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at <termslink>Terms of Use</termslink>. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal."
     },
     "back": "Bumalik",
     "next": "Sunod",

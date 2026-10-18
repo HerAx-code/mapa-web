@@ -1,4 +1,19 @@
 {
+  "terms": {
+    "title": "Terms of Use",
+    "intro": "Please read these terms before using MAPA. By registering, you agree to them.",
+    "p1": "MAPA is a portal to apply for medical financial assistance through {{gateway}}. It records and routes your request; it does not itself pay your bill.",
+    "p2": "Assistance is not guaranteed. Whether you are approved, for how much, and how soon depend on each agency's decision, its budget, and available slots.",
+    "p3": "MAPA and {{gateway}} never charge a fee — not for registration, your Access Code, or releasing a Guarantee Letter. Report anyone who asks you to pay.",
+    "p4": "You confirm that the information and documents you submit are true. False information may void your assistance.",
+    "p5": "Your personal data is handled under the Privacy Notice, in compliance with the Data Privacy Act of 2012 (RA 10173).",
+    "p6": "Use MAPA honestly: one active request at a time, and do not impersonate another person or misuse the system.",
+    "privacyLink": "Read the Privacy Notice",
+    "close": "Close",
+    "acceptBtn": "I Agree",
+    "updatedTitle": "Our Terms of Use have been updated",
+    "updatedBody": "Please review and accept the updated terms to continue using MAPA."
+  },
   "pwa": {
     "installPrompt": {
       "title": "Install MAPA for faster access",
@@ -1435,7 +1450,7 @@
       "noCodeHint": "Don't have an access code? Visit {{gateway}} to be assessed and receive one.",
       "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to {{gateway}} so they can investigate and issue a new one.",
       "codeUsedRecoveryAction": "Email {{gateway}}",
-      "termsAgree": "I agree to the <link>Privacy Notice</link> and Terms of Use. I consent to {{gateway}} collecting my personal information for medical assistance purposes."
+      "termsAgree": "I agree to the <link>Privacy Notice</link> and <termslink>Terms of Use</termslink>. I consent to {{gateway}} collecting my personal information for medical assistance purposes."
     },
     "back": "Back",
     "next": "Next",

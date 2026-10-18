@@ -72,6 +72,13 @@ export const SESSION_ABSOLUTE_MS = 10 * 60 * 60 * 1000  // hard cap ~10h since a
 // A staff role is subject to the timeout; patients (and logged-out) are not.
 export const isTimeoutRole = (role) => isCrmcAdminRole(role) || isAgencyRole(role)
 
+// Terms of Use version (docs/session-timeout-and-terms-plan.md). Patients accept
+// at registration; the accepted version is stamped on their user doc. Bump this
+// (any new string — a date is convenient) when the terms change, and every
+// patient is re-prompted to accept at next load (TermsGate). Patient-scoped: the
+// Terms are about applying for assistance, so staff accounts are exempt.
+export const TERMS_VERSION = '2026-10-18'
+
 // Canonical display labels for roles. Import from here instead of redefining
 // per-file so wording stays consistent across the UI.
 export const ROLE_LABEL = {

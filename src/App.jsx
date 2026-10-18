@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { LiveDataProvider } from './contexts/LiveDataContext'
 import PrivateRoute from './components/PrivateRoute'
+import TermsGate from './components/TermsGate'
 import SessionTimeoutProvider from './components/SessionTimeoutProvider'
 import { ROLES } from './utils/constants'
 
@@ -96,6 +97,7 @@ export default function App() {
     <AuthProvider>
       <LiveDataProvider>
       <SessionTimeoutProvider>
+      <TermsGate>
       <Suspense fallback={<RouteLoader />}>
         <Routes>
           {/* Public */}
@@ -174,6 +176,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </TermsGate>
       </SessionTimeoutProvider>
       </LiveDataProvider>
     </AuthProvider>
