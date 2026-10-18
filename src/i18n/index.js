@@ -13,11 +13,18 @@ const STORAGE_KEY = 'mapa.lang'
 // Org-brand tokens injected into every t() call via interpolation, so the
 // translation JSON stays deployment-agnostic ({{org}}, {{gateway}}, {{prefix}},
 // {{codeFormat}}, {{contactEmail}}) and a reskin needs no string edits.
+// {{facility}} is language-aware: a configured facility name is a proper noun
+// used in both languages, but the generic default differs ("the hospital" vs
+// "ospital") so Filipino copy doesn't read "sa the hospital". ORG_VARS IS the
+// defaultVariables object i18next interpolates from (by reference), so updating
+// ORG_VARS.facility on languageChanged live-swaps it for every subsequent t().
+const facilityFor = (lng) => (lng === 'fil' ? ORG.facilityNameFil : ORG.facilityName)
+
 const ORG_VARS = {
   org:          ORG.name,
   orgFull:      ORG.fullName,
   gateway:      ORG.gatewayName,
-  facility:     ORG.facilityName,
+  facility:     ORG.facilityName, // set per-language just below
   prefix:       ORG.accessCodePrefix,
   codeFormat:   accessCodeFormatHint(),
   codeExample:  `${accessCodePrefixFor(new Date().getFullYear())}00001`,
@@ -35,6 +42,9 @@ try {
   }
 } catch { savedLang = null }
 
+// Resolve the facility token for the starting language before init.
+ORG_VARS.facility = facilityFor(savedLang ?? 'en')
+
 i18n
   .use(initReactI18next)
   .init({
@@ -48,6 +58,10 @@ i18n
   })
 
 i18n.on('languageChanged', (lng) => {
+  // Live-swap the facility default so {{facility}} localizes. This handler is
+  // registered before any component's useTranslation listener, so the update
+  // lands before react-i18next re-renders on the same event.
+  ORG_VARS.facility = facilityFor(lng)
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(STORAGE_KEY, lng)

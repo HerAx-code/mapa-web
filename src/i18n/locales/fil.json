@@ -176,7 +176,7 @@
       "proof3Value": "2 wika",
       "proof3Label": "Filipino at Ingles",
       "journeyTitle": "Ang daloy ng inyong aplikasyon",
-      "journeyDesc": "Bawat request ay dumadaan sa parehong malinaw na hakbang — subaybayan mula pag-file hanggang release.",
+      "journeyDesc": "Bawat request ay dumadaan sa parehong malinaw na hakbang — subaybayan ito mula sa pag-file hanggang sa release.",
       "stage1Label": "Na-file",
       "stage1Detail": "Nagsusumite kayo ng isang request kasama ang mga requirements.",
       "stage2Label": "Na-review at na-assess",
@@ -196,24 +196,24 @@
       "mobileDesc": "Ang inyong 11-digit na Philippine mobile number (hal. 09XXXXXXXXX).",
       "addressTitle": "Tirahan",
       "addressDesc": "Ang inyong kumpletong tirahan — barangay, munisipalidad, at probinsya. Lalabas sa inyong Guarantee Letter.",
-      "ready": "Nakahanda na ang mga ito?",
+      "ready": "Nakahanda na ba ang lahat ng ito?",
       "registerNow": "Mag-register na →"
     },
     "steps": {
       "heading": "Paano Kumuha ng Tulong Medikal",
-      "subtitle": "Sundin ang mga hakbang na ito upang magsumite at makatanggap ng tulong medikal sa {{facility}}.",
+      "subtitle": "Sundin ang mga hakbang na ito upang magsumite at makatanggap ng tulong medikal sa pamamagitan ng {{gateway}}.",
       "s1Title": "Kunin ang inyong Patient Access Code",
       "s1Desc": "Bisitahin ang {{gateway}} upang masuri at makakuha ng inyong Patient Access Code.",
       "s2Title": "Gumawa ng Patient Account",
       "s2Desc": "Mag-register online gamit ang inyong Hospital ID, email address, contact number, at tirahan.",
       "s3Title": "Isumite ang Inyong Kahilingan",
       "s3Desc": "Buksan ang Request Assistance, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID gamit ang selfie.",
-      "s4Title": "Veverifyin ng {{gateway}} ang Inyong mga Dokumento",
+      "s4Title": "Bini-verify ng {{gateway}} ang Inyong mga Dokumento",
       "s4Desc": "Susuriin ng social worker ang inyong mga dokumento upang siguraduhing ayos lahat.",
       "s5Title": "Sinusuri ng {{gateway}} ang Inyong Kaso",
       "s5Desc": "Sinusuri ng isang social worker ang inyong kaso nang malayuan at maaaring mag-message kung may kailangan — walang panayam na dadaluhan.",
       "s6Title": "Ma-endorso at Tanggapin ang Guarantee Letter",
-      "s6Desc": "I-eendorso ng {{gateway}} ang inyong kahilingan sa mga ahensyang makakatulong magpondo nito. Kunin ang Guarantee Letter upang iharap sa pinangalanang provider.",
+      "s6Desc": "I-eendorso ng {{gateway}} ang inyong kahilingan sa mga ahensyang makakapagpondo nito. Kunin ang Guarantee Letter upang iharap sa pinangalanang provider.",
       "startBtn": "Magsimula sa Hakbang 1",
       "footer": "Libre · Walang babayaran · Pinapatakbo ng {{gateway}}"
     },
@@ -224,7 +224,7 @@
       "goToDashboard": "Pumunta sa Dashboard →",
       "full": "Puno",
       "slotsBadge": "{{count}} slots",
-      "slotsRemaining": "{{remaining}} ng {{total}} na slot ang natitira ngayon"
+      "slotsRemaining": "{{remaining}} sa {{total}} na slot ang natitira ngayon"
     },
     "cost": {
       "title": "Libre ang pag-apply",
