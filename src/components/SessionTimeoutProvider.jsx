@@ -90,7 +90,7 @@ export default function SessionTimeoutProvider({ children }) {
         try { bcRef.current?.postMessage({ type: 'activity', ts: now }) } catch { /* ignore */ }
       }
     }
-    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'visibilitychange']
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart']
     events.forEach(ev => window.addEventListener(ev, onActivity, { passive: true }))
 
     // One ticking interval drives both limits + the countdown.

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 /**
  * Step-up (re-)authentication for high-stakes actions — the phase-2 item in
@@ -19,25 +20,35 @@ import { useState, useRef, useCallback } from 'react'
 const FRESH_KEY = 'mapa.reauthAt'
 
 export function useStepUpAuth({ freshnessMs = 10 * 60 * 1000 } = {}) {
+  const { user } = useAuth()
+  const uid = user?.uid
   const [open, setOpen] = useState(false)
   const pending = useRef(null)
 
   const requireReauth = useCallback((action) => {
     if (typeof action !== 'function') return
-    let last = 0
-    try { last = Number(sessionStorage.getItem(FRESH_KEY)) || 0 } catch { last = 0 }
-    if (Date.now() - last < freshnessMs) { action(); return } // still fresh — run it
+    // Freshness is tied to THIS user, so a different account signing into the
+    // same tab can't inherit the prior user's re-auth.
+    let fresh = false
+    try {
+      const raw = sessionStorage.getItem(FRESH_KEY)
+      if (raw) {
+        const { at, uid: storedUid } = JSON.parse(raw)
+        fresh = storedUid === uid && Date.now() - Number(at) < freshnessMs
+      }
+    } catch { fresh = false }
+    if (fresh) { action(); return }
     pending.current = action
     setOpen(true)
-  }, [freshnessMs])
+  }, [freshnessMs, uid])
 
   const onSuccess = useCallback(() => {
-    try { sessionStorage.setItem(FRESH_KEY, String(Date.now())) } catch { /* storage blocked */ }
+    try { sessionStorage.setItem(FRESH_KEY, JSON.stringify({ at: Date.now(), uid })) } catch { /* storage blocked */ }
     setOpen(false)
     const action = pending.current
     pending.current = null
     action?.()
-  }, [])
+  }, [uid])
 
   const onClose = useCallback(() => {
     pending.current = null
