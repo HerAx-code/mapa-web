@@ -17,6 +17,7 @@ import {
   MdExpandMore, MdGroups, MdMoneyOff, MdFavorite,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
+import TermsModal from '../../components/TermsModal'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import LanguageToggle from '../../components/LanguageToggle'
 
@@ -60,6 +61,7 @@ export default function Landing() {
   const programsRef = useRef(null)
 
   const [showPrivacy, setShowPrivacy] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
   const [agencies, setAgencies]       = useState([])
   // Program-slot bars fill from empty the first time the Programs section
   // scrolls into view — motion that conveys the data (how full each program
@@ -637,6 +639,12 @@ export default function Landing() {
                 {t('landing.footer.privacy')}
               </button>
               <span>·</span>
+              <button
+                onClick={() => setShowTerms(true)}
+                className="hover:text-white transition-colors">
+                {t('terms.title')}
+              </button>
+              <span>·</span>
               <span>{t('landing.footer.officialPortal')}</span>
             </div>
           </div>
@@ -685,6 +693,13 @@ export default function Landing() {
           </div>
         </div>
       )}
+
+      {/* Terms of Use modal (reuses the shared component + terms.* strings). */}
+      <TermsModal
+        open={showTerms}
+        onClose={() => setShowTerms(false)}
+        onPrivacy={() => { setShowTerms(false); setShowPrivacy(true) }}
+      />
     </div>
   )
 }
