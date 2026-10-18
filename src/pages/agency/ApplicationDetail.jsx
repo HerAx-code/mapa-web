@@ -30,6 +30,8 @@ import GLDocumentPanel from '../../components/GLDocumentPanel'
 import DocViewerModal from '../../components/DocViewerModal'
 import ConfirmModal from '../../components/ConfirmModal'
 import { RejectModal, ApproveModal, RequestInfoModal } from '../../components/agency/ApplicationModals'
+import ReauthModal from '../../components/ReauthModal'
+import { useStepUpAuth } from '../../hooks/useStepUpAuth'
 import CaseTimeline from '../../components/CaseTimeline'
 import SuggestEndorsementModal from '../../components/agency/SuggestEndorsementModal'
 // Phase 2.1: helpers / stepper / primaryActions extracted to siblings
@@ -86,6 +88,8 @@ export default function ApplicationDetail() {
   const [showConfirmExpire, setShowConfirmExpire]       = useState(false)
   const [showConfirmReverse, setShowConfirmReverse]     = useState(false)
   const [viewingDoc, setViewingDoc]         = useState(null)
+  // Step-up re-auth before the money actions (GL-issuing approval + reversal).
+  const { requireReauth, reauthProps } = useStepUpAuth()
   const [updating, setUpdating]             = useState(false)
   const [newNote, setNewNote]               = useState('')
   const [savingNote, setSavingNote]         = useState(false)
@@ -1647,7 +1651,7 @@ export default function ApplicationDetail() {
           <ApproveModal app={app} agency={agency} currentUser={user}
             request={request}
             siblings={siblings}
-            onConfirm={handleApprove}
+            onConfirm={(data) => requireReauth(() => handleApprove(data))}
             onClose={() => setShowApprove(false)} />
         )}
         {showSuggest && (
@@ -1705,13 +1709,16 @@ export default function ApplicationDetail() {
         <ConfirmModal
           open={showConfirmReverse}
           onClose={() => setShowConfirmReverse(false)}
-          onConfirm={performReverseApproval}
+          onConfirm={() => requireReauth(performReverseApproval)}
           title="Reverse this approval?"
           body={`The application returns to 'Reviewing' status, the committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} is released, and the patient is notified.\n\nThe 30-day cooldown clock keeps running from the original approval date — the patient cannot be re-approved at any agency until the cooldown elapses.\n\nUse this only to correct mistakes, not to deny assistance after the fact.`}
           tone="warning"
           confirmLabel="Reverse Approval"
           confirmLabelBusy="Reversing…"
         />
+
+        {/* Step-up re-auth for the GL-issuing approval + reversal above. */}
+        <ReauthModal {...reauthProps} />
 
       </div>
     </Layout>
