@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
-import { accessCodePrefixFor } from '../../config/org'
+import { accessCodePrefixFor, ORG } from '../../config/org'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import {
