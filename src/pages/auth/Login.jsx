@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageToggle from '../../components/LanguageToggle'
 import Logo from '../../components/ui/Logo'
-import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning, MdShield } from 'react-icons/md'
+import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning, MdShield, MdInfoOutline } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { sendPasswordResetEmail } from 'firebase/auth'
@@ -62,6 +62,8 @@ const FIELD_BASE =
 
 export default function Login() {
   const navigate        = useNavigate()
+  const [searchParams]  = useSearchParams()
+  const timedOut        = searchParams.get('reason') === 'timeout'
   const { t }           = useTranslation()
   const { login, user } = useAuth()
 
@@ -265,6 +267,14 @@ export default function Login() {
               {t('auth.welcome')}
             </h1>
             <p className="mt-2 text-[15px] text-gray-500">{t('auth.signinSubtitle')}</p>
+
+            {/* Signed-out-for-inactivity notice (staff idle timeout). */}
+            {timedOut && (
+              <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <MdInfoOutline size={18} className="mt-0.5 flex-shrink-0 text-amber-600" />
+                <p className="text-sm text-amber-800">{t('auth.timeoutNotice')}</p>
+              </div>
+            )}
 
             {/* Maintenance / announcement banner */}
             {activeAnnouncement && (() => {

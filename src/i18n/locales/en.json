@@ -101,6 +101,7 @@
   "auth": {
     "welcome": "Welcome to MAPA",
     "signinSubtitle": "Sign in to your account",
+    "timeoutNotice": "You were signed out for inactivity, to keep records secure. Please sign in again.",
     "brand": {
       "headline": "One request, verified once, funded by many.",
       "a1title": "A single request",
