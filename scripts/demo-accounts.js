@@ -33,11 +33,11 @@
 export const USERS = [
   // CRMC admins
   {
-    email: 'admin@crmc.gov.ph', password: 'admin123',
+    email: 'admin@example.org', password: 'admin123',
     profile: { name: 'Super Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
   {
-    email: 'staff@crmc.gov.ph', password: 'staff123',
+    email: 'staff@example.org', password: 'staff123',
     profile: { name: 'Staff Admin', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
 

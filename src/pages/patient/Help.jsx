@@ -6,8 +6,9 @@ import Layout from '../../components/Layout'
 import PatientPage from '../../components/patient/PatientPage'
 import ProfileModals from '../../components/ProfileModals'
 import { useAuth } from '../../contexts/AuthContext'
+import { ORG } from '../../config/org'
 
-const SUPPORT_EMAIL = 'support@crmc.gov.ph'
+const SUPPORT_EMAIL = ORG.contactEmail
 
 /**
  * Patient Help & support page (R-mobile-settings).
