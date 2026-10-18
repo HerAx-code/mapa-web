@@ -61,6 +61,17 @@ export const ROLES = {
 export const isAgencyRole = (role) => role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN
 export const isCrmcAdminRole = (role) => role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN
 
+// Idle session timeout (security-improvement-plan §1.3; see
+// docs/session-timeout-and-terms-plan.md). STAFF ONLY — patients are exempt,
+// because auto-logout punishes the indigent phone users MAPA exists to serve.
+// Values are deliberately conservative for health-adjacent PII on potentially
+// shared office machines; tune here if field use shows them too aggressive.
+export const SESSION_IDLE_MS     = 15 * 60 * 1000       // log out after 15 min idle
+export const SESSION_WARN_MS     = 90 * 1000            // warn 90s before logout
+export const SESSION_ABSOLUTE_MS = 10 * 60 * 60 * 1000  // hard cap ~10h since app load
+// A staff role is subject to the timeout; patients (and logged-out) are not.
+export const isTimeoutRole = (role) => isCrmcAdminRole(role) || isAgencyRole(role)
+
 // Terms of Use version (docs/session-timeout-and-terms-plan.md). Patients accept
 // at registration; the accepted version is stamped on their user doc. Bump this
 // (any new string — a date is convenient) when the terms change, and every

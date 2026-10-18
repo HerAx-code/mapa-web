@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { LiveDataProvider } from './contexts/LiveDataContext'
 import PrivateRoute from './components/PrivateRoute'
 import TermsGate from './components/TermsGate'
+import SessionTimeoutProvider from './components/SessionTimeoutProvider'
 import { ROLES } from './utils/constants'
 
 // Eager imports: auth + landing entry points and the patient dashboard.
@@ -95,6 +96,7 @@ export default function App() {
   return (
     <AuthProvider>
       <LiveDataProvider>
+      <SessionTimeoutProvider>
       <TermsGate>
       <Suspense fallback={<RouteLoader />}>
         <Routes>
@@ -175,6 +177,7 @@ export default function App() {
         </Routes>
       </Suspense>
       </TermsGate>
+      </SessionTimeoutProvider>
       </LiveDataProvider>
     </AuthProvider>
   )
