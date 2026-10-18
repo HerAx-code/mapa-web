@@ -6,9 +6,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, renderHook, act } from '@testing-library/react'
 
 const h = vi.hoisted(() => ({
-  reauth:    vi.fn(() => Promise.resolve()),
-  onSuccess: vi.fn(),
-  onClose:   vi.fn(),
+  reauth:      vi.fn(() => Promise.resolve()),
+  resolveTotp: vi.fn(() => Promise.resolve()),
+  onSuccess:   vi.fn(),
+  onClose:     vi.fn(),
 }))
 
 vi.mock('../../src/firebase', () => ({ auth: { currentUser: {} } }))
@@ -16,8 +17,13 @@ vi.mock('firebase/auth', () => ({
   EmailAuthProvider: { credential: vi.fn(() => 'cred') },
   reauthenticateWithCredential: (...a) => h.reauth(...a),
 }))
+vi.mock('../../src/utils/mfa', () => ({
+  isMfaChallenge: (err) => err?.code === 'auth/multi-factor-auth-required',
+  resolverFor: () => ({ hints: [] }),
+  resolveTotpSignIn: (...a) => h.resolveTotp(...a),
+}))
 vi.mock('../../src/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: { email: 'staff@example.org' } }),
+  useAuth: () => ({ user: { uid: 'u1', email: 'staff@example.org' } }),
 }))
 
 import ReauthModal from '../../src/components/ReauthModal'
@@ -30,6 +36,7 @@ const pwInput = () => screen.getByPlaceholderText(/password/i)
 describe('ReauthModal', () => {
   beforeEach(() => {
     h.reauth.mockReset().mockResolvedValue(undefined)
+    h.resolveTotp.mockReset().mockResolvedValue(undefined)
     h.onSuccess.mockClear()
     h.onClose.mockClear()
   })
@@ -54,6 +61,21 @@ describe('ReauthModal', () => {
     fireEvent.click(confirmBtn())
     await waitFor(() => expect(screen.getByText(/Incorrect password/i)).toBeTruthy())
     expect(h.onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('for MFA-enrolled staff: password → TOTP code → onSuccess', async () => {
+    h.reauth.mockRejectedValue({ code: 'auth/multi-factor-auth-required' })
+    renderOpen()
+    fireEvent.change(pwInput(), { target: { value: 'secret' } })
+    fireEvent.click(confirmBtn())
+    // Transitions to the authenticator-code step.
+    await waitFor(() => expect(screen.getByText(/authenticator app/i)).toBeTruthy())
+    expect(h.onSuccess).not.toHaveBeenCalled()
+    // Enter the 6-digit code and verify.
+    fireEvent.change(screen.getByPlaceholderText(/123456/), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Verify$/i }))
+    await waitFor(() => expect(h.resolveTotp).toHaveBeenCalled())
+    expect(h.onSuccess).toHaveBeenCalledTimes(1)
   })
 })
 
