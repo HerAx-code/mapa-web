@@ -33,6 +33,12 @@ export const ORG = {
   // an affiliated deployment overrides to the real hospital name so copy like
   // "admitted at {{facility}}" reads correctly. Mostly used mid-sentence.
   facilityName: env.VITE_ORG_FACILITY_NAME || 'the hospital',
+  // Filipino rendering of the facility. A configured VITE_ORG_FACILITY_NAME is a
+  // proper noun (language-neutral), so it's used verbatim in both languages; only
+  // the generic English default ("the hospital") needs a Filipino equivalent, so
+  // patient copy renders "sa ospital" rather than the mixed-language "sa the
+  // hospital". Tagalog prepositions (sa/ng) take the bare noun — no article.
+  facilityNameFil: env.VITE_ORG_FACILITY_NAME || 'ospital',
 
   // Patient Access Code prefix. New codes are issued as
   //   `${accessCodePrefix}-YYYY-NNNNN`  e.g. MAPA-2026-00001
