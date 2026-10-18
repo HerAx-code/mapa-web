@@ -14,7 +14,9 @@ import { auth, db, functions, signInAnonymously, httpsCallable } from '../../fir
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
+import TermsModal from '../../components/TermsModal'
 import AddressPicker from '../../components/AddressPicker'
+import { TERMS_VERSION } from '../../utils/constants'
 import { hasReservedToken } from '../../utils/names'
 import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes } from '../../config/org'
 import toast from 'react-hot-toast'
@@ -173,6 +175,7 @@ export default function Register() {
   // Open ProfileModals' Privacy Notice (SettingsModal) from the terms
   // checkbox so the patient can actually read what they're agreeing to.
   const [showPrivacy, setShowPrivacy]       = useState(false)
+  const [showTerms, setShowTerms]           = useState(false)
 
   const [form, setForm] = useState({
     firstName: '', middleName: '', lastName: '', suffix: '',
@@ -478,6 +481,9 @@ export default function Register() {
         hospitalId: form.hospitalId, patientId,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
+        // Terms of Use acceptance record (who = this uid, when, which version).
+        termsVersion: TERMS_VERSION,
+        termsAcceptedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
       }
 
@@ -915,7 +921,10 @@ export default function Register() {
                     <Trans i18nKey="register.step3.termsAgree" components={{
                       link: <button type="button"
                         className="text-brand-600 hover:text-brand-700 underline underline-offset-2 font-medium"
-                        onClick={(e) => { e.preventDefault(); setShowPrivacy(true) }} />
+                        onClick={(e) => { e.preventDefault(); setShowPrivacy(true) }} />,
+                      termslink: <button type="button"
+                        className="text-brand-600 hover:text-brand-700 underline underline-offset-2 font-medium"
+                        onClick={(e) => { e.preventDefault(); setShowTerms(true) }} />
                     }} />
                   </span>
                 </label>
@@ -961,6 +970,13 @@ export default function Register() {
         activeModal={showPrivacy ? 'settings' : null}
         onClose={() => setShowPrivacy(false)}
         onSetModal={() => {}}
+      />
+
+      {/* Terms of Use — readable document behind the agreement checkbox. */}
+      <TermsModal
+        open={showTerms}
+        onClose={() => setShowTerms(false)}
+        onPrivacy={() => { setShowTerms(false); setShowPrivacy(true) }}
       />
     </div>
   )

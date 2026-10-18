@@ -61,6 +61,13 @@ export const ROLES = {
 export const isAgencyRole = (role) => role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN
 export const isCrmcAdminRole = (role) => role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN
 
+// Terms of Use version (docs/session-timeout-and-terms-plan.md). Patients accept
+// at registration; the accepted version is stamped on their user doc. Bump this
+// (any new string — a date is convenient) when the terms change, and every
+// patient is re-prompted to accept at next load (TermsGate). Patient-scoped: the
+// Terms are about applying for assistance, so staff accounts are exempt.
+export const TERMS_VERSION = '2026-10-18'
+
 // Canonical display labels for roles. Import from here instead of redefining
 // per-file so wording stays consistent across the UI.
 export const ROLE_LABEL = {
