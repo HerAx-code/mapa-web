@@ -147,7 +147,7 @@ describe('applications.update — Phase 1.6 identity lock', () => {
 // request pre-advanced past CRMC verification, or pre-loaded with agencies.
 describe('requests.create — Phase 1.4 self-endorsement', () => {
   const req = (over = {}) => ({
-    requestId: 'CRMC-2026-00001', patientId: 'patient-1',
+    requestId: 'MAPA-2026-00001', patientId: 'patient-1',
     assistanceType: 'Hospital Bills', amountNeeded: 25000,
     amountCommitted: 0, agencyIds: [], status: 'submitted',
     submittedAt: serverTimestamp(), ...over,
@@ -199,7 +199,7 @@ describe('requests.create — Phase 1.4 self-endorsement', () => {
   it('rejects a second request while activeRequestId is set', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'users', 'patient-1'),
-        { role: 'patient', agencyId: null, activeRequestId: 'CRMC-2026-00000' })
+        { role: 'patient', agencyId: null, activeRequestId: 'MAPA-2026-00000' })
     })
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertFails(addDoc(collection(ctx.firestore(), 'requests'), req()))
@@ -499,26 +499,26 @@ describe('hospitalIds.update — Phase 1.5 claim write scope', () => {
   }
 
   it('allows the real registration claim', async () => {
-    await seedCode('CRMC-2026-00001')
+    await seedCode('MAPA-2026-00001')
     const ctx = testEnv.authenticatedContext('new-patient')
-    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001'), {
+    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), {
       status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
     }))
   })
 
   it('REGRESSION GUARD: rejects rewriting unrelated fields while claiming', async () => {
-    await seedCode('CRMC-2026-00001')
+    await seedCode('MAPA-2026-00001')
     const ctx = testEnv.authenticatedContext('new-patient')
-    await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001'), {
+    await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), {
       status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
       note: 'tampered',
     }))
   })
 
   it('still rejects claiming an already-used code', async () => {
-    await seedCode('CRMC-2026-00001', { status: 'used', patId: 'someone-else' })
+    await seedCode('MAPA-2026-00001', { status: 'used', patId: 'someone-else' })
     const ctx = testEnv.authenticatedContext('new-patient')
-    await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001'), {
+    await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), {
       status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
     }))
   })

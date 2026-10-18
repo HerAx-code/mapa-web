@@ -174,13 +174,13 @@ describe('users.update — self-update cannot escalate', () => {
 // or rename themselves; staff (no hospitalId/patientId) can still self-rename.
 describe('users.update — identity fields locked on self-update', () => {
   const patient = { role: 'patient', agencyId: null, active: true, rank: 0,
-    name: 'Juan', email: 'j@example.com', hospitalId: 'CRMC-2026-00001', patientId: 'PAT-001' }
+    name: 'Juan', email: 'j@example.com', hospitalId: 'MAPA-2026-00001', patientId: 'PAT-001' }
 
   it('rejects a patient re-pointing their hospitalId', async () => {
     await seedUserDoc('patient-1', patient)
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
-      ...patient, hospitalId: 'CRMC-2026-09999',
+      ...patient, hospitalId: 'MAPA-2026-09999',
     }))
   })
 
@@ -219,7 +219,7 @@ describe('users.update — identity fields locked on self-update', () => {
   // Abuse hardening #3 — the one-active-request guard is server-owned; a patient
   // must not clear their own activeRequestId to unlock a second concurrent request.
   it('rejects a patient nulling their own activeRequestId', async () => {
-    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'CRMC-2026-00001' })
+    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'MAPA-2026-00001' })
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
       ...patient, activeRequestId: null,
@@ -227,18 +227,18 @@ describe('users.update — identity fields locked on self-update', () => {
   })
 
   it('rejects a patient re-pointing their activeRequestId', async () => {
-    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'CRMC-2026-00001' })
+    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'MAPA-2026-00001' })
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertFails(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
-      ...patient, activeRequestId: 'CRMC-2026-09999',
+      ...patient, activeRequestId: 'MAPA-2026-09999',
     }))
   })
 
   it('allows a self-update that leaves activeRequestId unchanged', async () => {
-    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'CRMC-2026-00001' })
+    await seedUserDoc('patient-1', { ...patient, activeRequestId: 'MAPA-2026-00001' })
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'patient-1'), {
-      ...patient, activeRequestId: 'CRMC-2026-00001', contact: '09990001111',
+      ...patient, activeRequestId: 'MAPA-2026-00001', contact: '09990001111',
     }))
   })
 

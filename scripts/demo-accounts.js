@@ -102,6 +102,6 @@ export const USERS = [
   // panel work on a fresh DB without a manual register run)
   {
     email: 'patient@gmail.com', password: 'patient123',
-    profile: { name: 'Baher Blah', role: 'patient', agencyId: null, rank: null, contact: '09324324344', hospitalId: 'CRMC-2026-00014', patientId: 'PAT-013', cooldown: 0, deletion: false },
+    profile: { name: 'Baher Blah', role: 'patient', agencyId: null, rank: null, contact: '09324324344', hospitalId: 'MAPA-2026-00014', patientId: 'PAT-013', cooldown: 0, deletion: false },
   },
 ]

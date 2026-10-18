@@ -29,13 +29,13 @@ const AG = {
 
 // Each case: one request + its approved slices. Amounts in ₱.
 const CASES = [
-  { pid: '_demo_p1', name: 'Maria Santos',      hid: 'CRMC-2026-90001', type: 'Hospital Bills / Hospitalization', bill: 80000,  ph: 30000, mo: 4, slices: [{ ag: 'doh', amt: 30000, gl: 'issued' }, { ag: 'dswd', amt: 20000, gl: 'issued' }] },
-  { pid: '_demo_p2', name: 'Juan dela Cruz',    hid: 'CRMC-2026-90002', type: 'Chemotherapy',                     bill: 120000, ph: 40000, mo: 3, slices: [{ ag: 'pcso', amt: 80000, gl: 'redeemed' }] },
-  { pid: '_demo_p3', name: 'Rosa Mendoza',      hid: 'CRMC-2026-90003', type: 'Dialysis',                         bill: 60000,  ph: 20000, mo: 3, slices: [{ ag: 'doh', amt: 40000, gl: 'issued' }] },
-  { pid: '_demo_p4', name: 'Pedro Reyes',       hid: 'CRMC-2026-90004', type: 'Medicines',                        bill: 25000,  ph: 5000,  mo: 2, slices: [{ ag: 'dswd', amt: 15000, gl: 'issued' }] }, // partial (need 20k)
-  { pid: '_demo_p5', name: 'Ana Villanueva',    hid: 'CRMC-2026-90005', type: 'Surgery / Medical Procedures',     bill: 150000, ph: 50000, mo: 2, slices: [{ ag: 'doh', amt: 40000, gl: 'issued' }, { ag: 'pcso', amt: 60000, gl: 'issued' }] },
-  { pid: '_demo_p6', name: 'Carlos Aquino',     hid: 'CRMC-2026-90006', type: 'Emergency Medical Assistance',     bill: 35000,  ph: 0,     mo: 1, slices: [{ ag: 'ambag', amt: 35000, gl: 'redeemed' }] },
-  { pid: '_demo_p7', name: 'Lita Flores',       hid: 'CRMC-2026-90007', type: 'Laboratory Tests',                 bill: 18000,  ph: 3000,  mo: 0, slices: [{ ag: 'dswd', amt: 15000, gl: 'issued' }] },
+  { pid: '_demo_p1', name: 'Maria Santos',      hid: 'MAPA-2026-90001', type: 'Hospital Bills / Hospitalization', bill: 80000,  ph: 30000, mo: 4, slices: [{ ag: 'doh', amt: 30000, gl: 'issued' }, { ag: 'dswd', amt: 20000, gl: 'issued' }] },
+  { pid: '_demo_p2', name: 'Juan dela Cruz',    hid: 'MAPA-2026-90002', type: 'Chemotherapy',                     bill: 120000, ph: 40000, mo: 3, slices: [{ ag: 'pcso', amt: 80000, gl: 'redeemed' }] },
+  { pid: '_demo_p3', name: 'Rosa Mendoza',      hid: 'MAPA-2026-90003', type: 'Dialysis',                         bill: 60000,  ph: 20000, mo: 3, slices: [{ ag: 'doh', amt: 40000, gl: 'issued' }] },
+  { pid: '_demo_p4', name: 'Pedro Reyes',       hid: 'MAPA-2026-90004', type: 'Medicines',                        bill: 25000,  ph: 5000,  mo: 2, slices: [{ ag: 'dswd', amt: 15000, gl: 'issued' }] }, // partial (need 20k)
+  { pid: '_demo_p5', name: 'Ana Villanueva',    hid: 'MAPA-2026-90005', type: 'Surgery / Medical Procedures',     bill: 150000, ph: 50000, mo: 2, slices: [{ ag: 'doh', amt: 40000, gl: 'issued' }, { ag: 'pcso', amt: 60000, gl: 'issued' }] },
+  { pid: '_demo_p6', name: 'Carlos Aquino',     hid: 'MAPA-2026-90006', type: 'Emergency Medical Assistance',     bill: 35000,  ph: 0,     mo: 1, slices: [{ ag: 'ambag', amt: 35000, gl: 'redeemed' }] },
+  { pid: '_demo_p7', name: 'Lita Flores',       hid: 'MAPA-2026-90007', type: 'Laboratory Tests',                 bill: 18000,  ph: 3000,  mo: 0, slices: [{ ag: 'dswd', amt: 15000, gl: 'issued' }] },
 ]
 
 if (mode === 'clean') {

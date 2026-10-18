@@ -220,7 +220,7 @@ async function main() {
     patientName:       patient.name ?? 'Baher Blah',
     patientContact:    patient.contact ?? '09324324344',
     patientAddress:    patient.address ?? '2nd Street, Rosary Heights V, Cotabato City',
-    patientHospitalId: patient.hospitalId ?? 'CRMC-2026-00014',
+    patientHospitalId: patient.hospitalId ?? 'MAPA-2026-00014',
     assistanceType:    'Hospital Bills / Hospitalization',
     description:       'Father admitted at CRMC ICU for severe pneumonia (Day 5 of admission). Requesting assistance to cover the outstanding balance after PhilHealth deduction. Family has exhausted personal savings; community fundraising covered the first 4 days. Doctor advises 3-5 more days of inpatient care including continued IV antibiotics.',
     // PhilHealth-first bill model (Order of Charging): a ₱40k bill reduced by
