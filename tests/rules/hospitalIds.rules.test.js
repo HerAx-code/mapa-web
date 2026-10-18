@@ -54,17 +54,17 @@ async function seedPrivateInfo(hospitalId, usedById, usedBy = 'Maria Santos') {
 // without breaking registration, agency cooldown reads, or admin management.
 describe('hospitalIds parent — get requires auth', () => {
   it('DENIES an unauthenticated client from GETting the parent doc', async () => {
-    await seedHospitalId('CRMC-2026-00001')
+    await seedHospitalId('MAPA-2026-00001')
     const ctx = testEnv.unauthenticatedContext()
-    await assertFails(getDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00001')))
+    await assertFails(getDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001')))
   })
 
   it('allows an authenticated client to GET the parent doc (the registration path)', async () => {
     // The registrant is authenticated (anon at verify, real account at the
     // claim tx.get) — this is exactly how registration reads the code.
-    await seedHospitalId('CRMC-2026-00002')
+    await seedHospitalId('MAPA-2026-00002')
     const ctx = testEnv.authenticatedContext('registrant-uid')
-    await assertSucceeds(getDoc(doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00002')))
+    await assertSucceeds(getDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00002')))
   })
 
   it('rejects an unauthenticated client from LISTING the collection', async () => {
@@ -85,14 +85,14 @@ describe('hospitalIds parent — get requires auth', () => {
 //   - unauthenticated: denied
 describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
   beforeEach(async () => {
-    await seedHospitalId('CRMC-2026-00042', { status: 'used', patId: 'patient-1' })
-    await seedPrivateInfo('CRMC-2026-00042', 'patient-1', 'Maria Santos')
+    await seedHospitalId('MAPA-2026-00042', { status: 'used', patId: 'patient-1' })
+    await seedPrivateInfo('MAPA-2026-00042', 'patient-1', 'Maria Santos')
   })
 
   it('REGRESSION GUARD: rejects unauthenticated read (the original enumeration leak)', async () => {
     const ctx = testEnv.unauthenticatedContext()
     await assertFails(getDoc(doc(
-      ctx.firestore(), 'hospitalIds', 'CRMC-2026-00042', 'privateInfo', 'details',
+      ctx.firestore(), 'hospitalIds', 'MAPA-2026-00042', 'privateInfo', 'details',
     )))
   })
 
@@ -100,7 +100,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     await seedUser('patient-1', 'patient')
     const ctx = testEnv.authenticatedContext('patient-1')
     await assertSucceeds(getDoc(doc(
-      ctx.firestore(), 'hospitalIds', 'CRMC-2026-00042', 'privateInfo', 'details',
+      ctx.firestore(), 'hospitalIds', 'MAPA-2026-00042', 'privateInfo', 'details',
     )))
   })
 
@@ -108,7 +108,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     await seedUser('admin-1', 'super_admin')
     const ctx = testEnv.authenticatedContext('admin-1')
     await assertSucceeds(getDoc(doc(
-      ctx.firestore(), 'hospitalIds', 'CRMC-2026-00042', 'privateInfo', 'details',
+      ctx.firestore(), 'hospitalIds', 'MAPA-2026-00042', 'privateInfo', 'details',
     )))
   })
 
@@ -119,7 +119,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
     await assertFails(getDoc(doc(
-      ctx.firestore(), 'hospitalIds', 'CRMC-2026-00042', 'privateInfo', 'details',
+      ctx.firestore(), 'hospitalIds', 'MAPA-2026-00042', 'privateInfo', 'details',
     )))
   })
 
@@ -128,7 +128,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     await seedUser('patient-2', 'patient')
     const ctx = testEnv.authenticatedContext('patient-2')
     await assertFails(getDoc(doc(
-      ctx.firestore(), 'hospitalIds', 'CRMC-2026-00042', 'privateInfo', 'details',
+      ctx.firestore(), 'hospitalIds', 'MAPA-2026-00042', 'privateInfo', 'details',
     )))
   })
 
@@ -138,14 +138,14 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     beforeEach(async () => {
       // Different parent so the create test isn't blocked by an
       // existing sub-doc from the read tests' beforeEach.
-      await seedHospitalId('CRMC-2026-00099', { status: 'used', patId: 'new-patient' })
+      await seedHospitalId('MAPA-2026-00099', { status: 'used', patId: 'new-patient' })
     })
 
     it('allows the claimant to create their own privateInfo', async () => {
       await seedUser('new-patient', 'patient')
       const ctx = testEnv.authenticatedContext('new-patient')
       await assertSucceeds(setDoc(
-        doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00099', 'privateInfo', 'details'),
+        doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00099', 'privateInfo', 'details'),
         { usedBy: 'Juan Dela Cruz', usedById: 'new-patient', createdAt: 'whenever' },
       ))
     })
@@ -156,7 +156,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
       await seedUser('attacker', 'patient')
       const ctx = testEnv.authenticatedContext('attacker')
       await assertFails(setDoc(
-        doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00099', 'privateInfo', 'details'),
+        doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00099', 'privateInfo', 'details'),
         { usedBy: 'Fake Name', usedById: 'someone-else', createdAt: 'whenever' },
       ))
     })
@@ -165,7 +165,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
       await seedUser('new-patient', 'patient')
       const ctx = testEnv.authenticatedContext('new-patient')
       await assertFails(setDoc(
-        doc(ctx.firestore(), 'hospitalIds', 'CRMC-2026-00099', 'privateInfo', 'details'),
+        doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00099', 'privateInfo', 'details'),
         { usedBy: 'A'.repeat(121), usedById: 'new-patient', createdAt: 'whenever' },
       ))
     })

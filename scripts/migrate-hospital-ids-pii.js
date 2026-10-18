@@ -30,8 +30,8 @@
  *
  * Output sample:
  *   [migrate] Scanning hospitalIds...
- *   [migrate]   ✅ CRMC-2026-00001 -- usedBy "Maria Santos" -> sub-doc
- *   [migrate]   ⏭️  CRMC-2026-00002 -- no usedBy, skipped
+ *   [migrate]   ✅ MAPA-2026-00001 -- usedBy "Maria Santos" -> sub-doc
+ *   [migrate]   ⏭️  MAPA-2026-00002 -- no usedBy, skipped
  *   [migrate] Done.
  *     migrated: 7
  *     skipped:  13
