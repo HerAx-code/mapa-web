@@ -18,19 +18,21 @@ match /auditLog/{logId} {
   // … allow read (request-scoped for agencies, self-scoped for patients)
 }
 
-// (b) interviewSlots — compare-and-set booking: the open→booked transition
-//     requires the CURRENT status to be 'open', so a lost race surfaces as
-//     permission-denied rather than a double-book. Only the four booking
-//     fields may change, and the request must belong to the booking patient.
-function isBooking() {
-  return isPatient() &&
-         resource.data.status == 'open' &&
-         request.resource.data.status == 'booked' &&
-         request.resource.data.patientId == uid() &&
-         ownsRequest(request.resource.data.requestId) &&
-         request.resource.data.diff(resource.data).affectedKeys()
-           .hasOnly(['status', 'patientId', 'requestId', 'bookedAt']);
-}
+// (b) requests — bounded agency write: an agency holding a slice on a request
+//     may touch ONLY the three funding-sync fields, and only to a well-formed
+//     value in the derived-status set, so it can advance the money tally it is
+//     responsible for without being able to set a CRMC-only state or a bad
+//     amount. (A sum over sibling slices can't be re-derived in rules, so the
+//     authoritative figure is corrected by the syncRequestFinancials trigger —
+//     see B.6.)
+allow update: if isAgency() &&
+                 userAgencyId() in resource.data.agencyIds &&
+                 request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['amountCommitted', 'status', 'updatedAt']) &&
+                 request.resource.data.amountCommitted is number &&
+                 request.resource.data.amountCommitted >= 0 &&
+                 request.resource.data.status in
+                   ['submitted', 'endorsed', 'partially_funded', 'fully_funded'];
 
 // (c) certificates — cross-agency guard: an agency may create a Guarantee
 //     Letter only under its own agencyId AND only when the linked application

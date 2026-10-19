@@ -1,0 +1,130 @@
+[
+ {
+  "title": "Part 1 — Patient: register and submit a request",
+  "rows": [
+   {
+    "n": "1.1",
+    "step": "Open the portal and choose **Register**. Enter the Patient Access Code (`MAPA-YYYY-NNNNN`) issued in person by Medical Social Services.",
+    "expected": "Code is accepted; registration form opens. An invalid/used code is rejected.",
+    "role": "Patient"
+   },
+   {
+    "n": "1.2",
+    "step": "Complete registration (name, email, password) and sign in.",
+    "expected": "Account is created; patient lands on **Dashboard**.",
+    "role": "Patient"
+   },
+   {
+    "n": "1.3",
+    "step": "Start a new **Request** — enter the bill amount, PhilHealth deduction, and any other payments.",
+    "expected": "The amount-needed is computed as *bill − PhilHealth − other* (Order of Charging).",
+    "role": "Patient"
+   },
+   {
+    "n": "1.4",
+    "step": "Complete the **Household Intake** wizard and upload the required documents + a live selfie.",
+    "expected": "Each required document type shows as attached; selfie is camera-only (no gallery upload).",
+    "role": "Patient"
+   },
+   {
+    "n": "1.5",
+    "step": "Submit the request.",
+    "expected": "Request status becomes **Submitted / Under Review**; it appears under **Status**.",
+    "role": "Patient"
+   },
+   {
+    "n": "1.6",
+    "step": "During the **remote assessment**, respond to Medical Social Services through the in-app conversation (and join the on-demand Google Meet link only if one is sent).",
+    "expected": "Messages reach the social worker; no appointment is booked — the assessment is asynchronous.",
+    "role": "Patient"
+   }
+  ]
+ },
+ {
+  "title": "Part 2 — CRMC: verify, assess, endorse",
+  "rows": [
+   {
+    "n": "2.1",
+    "step": "Sign in as CRMC staff and open **Requests**. Locate the submitted request.",
+    "expected": "Request is listed with its documents and status.",
+    "role": "CRMC Staff"
+   },
+   {
+    "n": "2.2",
+    "step": "Open the request and run **document verification** (OCR-assisted). Compare the live selfie to the ID.",
+    "expected": "OCR name shows as an advisory cross-check; social worker confirms/rejects each document.",
+    "role": "CRMC Staff"
+   },
+   {
+    "n": "2.3",
+    "step": "Conduct the **remote assessment** — reach the patient through the in-app conversation (drop an on-demand Google Meet link only if a live talk is needed) — and complete the **Unified Intake Sheet**.",
+    "expected": "Intake sheet saves; once documents are verified AND intake is complete the request is ready to endorse.",
+    "role": "CRMC Staff"
+   },
+   {
+    "n": "2.4",
+    "step": "**Endorse** the request to one or more funding agencies (pure selection — no per-agency amounts).",
+    "expected": "Child application \"slices\" are created, each endorsed for the full amount needed; a single agency cannot approve past the need, though CRMC may intentionally over-endorse across agencies for a buffer. The patient is notified.",
+    "role": "CRMC Staff"
+   },
+   {
+    "n": "2.5",
+    "step": "Confirm the request status reflects the endorsement.",
+    "expected": "Status becomes **Endorsed**; each slice appears for its agency.",
+    "role": "CRMC Staff"
+   }
+  ]
+ },
+ {
+  "title": "Part 3 — Agency: fund and issue the Guarantee Letter",
+  "rows": [
+   {
+    "n": "3.1",
+    "step": "Sign in as the agency coordinator and open the **Application Inbox**.",
+    "expected": "The endorsed slice appears (patient having proceeded), marked **For Funding**.",
+    "role": "Agency Coord."
+   },
+   {
+    "n": "3.2",
+    "step": "Open the application detail and review the endorsed amount against the agency budget.",
+    "expected": "Detail + timeline render; remaining budget is shown.",
+    "role": "Agency Coord."
+   },
+   {
+    "n": "3.3",
+    "step": "**Approve** the slice.",
+    "expected": "Approval is capped at the endorsed slice amount; over-commitment beyond remaining budget is blocked; the agency budget is decremented and the request advances (partially/fully funded).",
+    "role": "Agency Coord."
+   },
+   {
+    "n": "3.4",
+    "step": "Confirm the **Guarantee Letter** is issued at approval.",
+    "expected": "A GL (digital certificate) is generated for the approved slice.",
+    "role": "Agency Coord."
+   }
+  ]
+ },
+ {
+  "title": "Part 4 — Patient: receive and download the Guarantee Letter",
+  "rows": [
+   {
+    "n": "4.1",
+    "step": "As the patient, open **Status** and view the coverage plan.",
+    "expected": "Coverage shows the approved slice(s) and any remaining balance.",
+    "role": "Patient"
+   },
+   {
+    "n": "4.2",
+    "step": "Download the **Guarantee Letter**.",
+    "expected": "The GL downloads successfully and shows the correct patient, agency, and amount.",
+    "role": "Patient"
+   },
+   {
+    "n": "4.3",
+    "step": "Open **Access Log / Data export** (RA 10173 §16(f)).",
+    "expected": "The patient can see who accessed their data and export their own record.",
+    "role": "Patient"
+   }
+  ]
+ }
+]

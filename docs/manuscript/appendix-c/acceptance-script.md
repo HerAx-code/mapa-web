@@ -27,21 +27,21 @@ re-run after the fix.
 
 | # | Step | Expected result | Role | Sign-off | Notes |
 |---|---|---|---|---|---|
-| 1.1 | Open the portal and choose **Register**. Enter the Patient Access Code (`CRMC-YYYY-NNNNN`) issued in person by Medical Social Services. | Code is accepted; registration form opens. An invalid/used code is rejected. | Patient | | |
+| 1.1 | Open the portal and choose **Register**. Enter the Patient Access Code (`MAPA-YYYY-NNNNN`) issued in person by Medical Social Services. | Code is accepted; registration form opens. An invalid/used code is rejected. | Patient | | |
 | 1.2 | Complete registration (name, email, password) and sign in. | Account is created; patient lands on **Dashboard**. | Patient | | |
 | 1.3 | Start a new **Request** — enter the bill amount, PhilHealth deduction, and any other payments. | The amount-needed is computed as *bill − PhilHealth − other* (Order of Charging). | Patient | | |
 | 1.4 | Complete the **Household Intake** wizard and upload the required documents + a live selfie. | Each required document type shows as attached; selfie is camera-only (no gallery upload). | Patient | | |
 | 1.5 | Submit the request. | Request status becomes **Submitted / Under Review**; it appears under **Status**. | Patient | | |
-| 1.6 | Book an assessment **interview** slot. | An open slot is reserved; a double-book of the same slot is refused. Confirmation shows date/time and mode (in-person default). | Patient | | |
+| 1.6 | During the **remote assessment**, respond to Medical Social Services through the in-app conversation (and join the on-demand Google Meet link only if one is sent). | Messages reach the social worker; no appointment is booked — the assessment is asynchronous. | Patient | | |
 
-## Part 2 — CRMC: verify, interview, endorse
+## Part 2 — CRMC: verify, assess, endorse
 
 | # | Step | Expected result | Role | Sign-off | Notes |
 |---|---|---|---|---|---|
 | 2.1 | Sign in as CRMC staff and open **Requests**. Locate the submitted request. | Request is listed with its documents and status. | CRMC Staff | | |
 | 2.2 | Open the request and run **document verification** (OCR-assisted). Compare the live selfie to the ID. | OCR name shows as an advisory cross-check; social worker confirms/rejects each document. | CRMC Staff | | |
-| 2.3 | Conduct the assessment interview and complete the **Unified Intake Sheet**. | Intake sheet saves; the request advances to **Assessment**. | CRMC Staff | | |
-| 2.4 | **Endorse** the request to one or more funding agencies, allocating a slice amount to each. | Child application "slices" are created; the sum of slices cannot exceed the amount needed; the patient is notified. | CRMC Staff | | |
+| 2.3 | Conduct the **remote assessment** — reach the patient through the in-app conversation (drop an on-demand Google Meet link only if a live talk is needed) — and complete the **Unified Intake Sheet**. | Intake sheet saves; once documents are verified AND intake is complete the request is ready to endorse. | CRMC Staff | | |
+| 2.4 | **Endorse** the request to one or more funding agencies (pure selection — no per-agency amounts). | Child application "slices" are created, each endorsed for the full amount needed; a single agency cannot approve past the need, though CRMC may intentionally over-endorse across agencies for a buffer. The patient is notified. | CRMC Staff | | |
 | 2.5 | Confirm the request status reflects the endorsement. | Status becomes **Endorsed**; each slice appears for its agency. | CRMC Staff | | |
 
 ## Part 3 — Agency: fund and issue the Guarantee Letter

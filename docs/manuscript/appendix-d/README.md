@@ -35,7 +35,7 @@ verification / selfie (D-10) and the intake sheet (D-11).
 | D-03 | Patient dashboard | route `/patient/dashboard` — reliable |
 | D-04 | Request wizard | route `/patient/request` (step 1; later steps by hand) — reliable |
 | D-05 | Household intake wizard | `/patient/request/:id/intake` — **best-effort** (needs seeded request id) |
-| D-06 | Interview booking | route `/patient/interviews` — reliable |
+| D-06 | Assessment conversation (remote async assessment) | route `/patient/messages` — reliable *(replaces the removed interview-booking screen)* |
 | D-07 | Coverage plan | route `/patient/status` (coverage view) — reliable |
 | D-08 | Request tracking | route `/patient/status` (tracking view) — reliable |
 | D-09 | CRMC Requests + stepper | route `/admin/requests` — reliable |

@@ -15,9 +15,11 @@ user actually sees. Reported, not rewritten (per the brief).
 
 **Verified correct (no change needed):** E.3 "Team" (matches `/agency/team`
 label), E.5 "Admin Accounts", "Agencies", and "Patients" all match their nav
-labels; the Patient guide's "Find Programs", "Request Assistance", "Interviews",
+labels; the Patient guide's "Find Programs", "Request Assistance",
 "Messages", and "Proceed" all match; the Staff guide's "Requests" workspace and
-its four-step stepper match.
+its four-step stepper match. *(2026-10-18: the Patient "Interviews" nav item and
+its guide section were removed with interview scheduling — #300 — so they are no
+longer a verification target.)*
 
 **Note:** items 2–4 are the guide describing a destination by its *function*
 rather than its exact on-screen label. They won't mislead a user badly, but a
