@@ -63,8 +63,8 @@ files — and each preceded by its file path and line range.
 | B.2 | `src/utils/requests.js` | `deriveRequestStatus` + `isSliceTerminal` |
 | B.3 | `src/pages/admin/Requests.jsx` | The endorsement transaction — slice creation, slot decrement, `documents.agencyIds[]` stamping, patient notify |
 | B.4 | `src/components/agency/ApplicationModals.jsx` | The approval transaction — cooldown + cap checks, budget increment, request advance, Hospital ID stamp |
-| B.5 | `firestore.rules` | Four excerpts: `auditLog` actor-binding, `interviewSlots` compare-and-set booking, `certificates` cross-agency guard, `users` role-escalation guard |
-| B.6 | `functions/src/onInterviewSlotWritten.js` | The whole handler — request sync + queue-number assignment |
+| B.5 | `firestore.rules` | ⚠️ UPDATED 2026-10-16 — `interviewSlots` booking was deleted. Use: `auditLog` actor-binding, slice `amountApproved` ≤ endorsed cap, `certificates` cross-agency guard, `users` role-escalation guard |
+| B.6 | `functions/src/onSliceProceeded.js` (or `syncRequestFinancials.js`) | ⚠️ UPDATED 2026-10-16 — `onInterviewSlotWritten.js` was deleted with the booking removal. Use a current handler that carries real logic |
 
 Keep each listing under ~60 lines. Where you trim, use `// …` and say what was
 removed.
@@ -73,10 +73,13 @@ removed.
 
 1. Run `npm run test:all` and `npm run test:e2e`; capture the full output to
    `docs/manuscript/appendix-c/test-run.txt`.
-2. Confirm the per-suite counts still match what the manuscript claims —
-   **utils 35 / components 64 / functions 49 / rules 138 = 286**. If any number
-   has drifted, report the new figure; Table 9, Table 10, the Abstract, the
-   Conclusion Summary and §4.1 of the revision report all cite it.
+2. Confirm the per-suite counts still match what the manuscript claims.
+   **UPDATE 2026-10-16 — the counts have drifted and must be corrected**
+   (see `MAPA_Manuscript_Sync_Delta_Oct2026.md`, Delta 1): the manuscript's
+   **utils 35 / components 64 / functions 49 / rules 138 = 286** is now
+   **utils 256 / components 131 / functions 94 / rules 209 = 690**, and
+   "seven server-side handlers" is now **ten**. Table 9, Table 10, the Abstract,
+   the Conclusion Summary and §4.1 of the revision report all cite the old total.
 3. Export the most recent successful GitHub Actions run summary (job names,
    durations, result) to `docs/manuscript/appendix-c/ci-report.md`.
 4. Produce `docs/manuscript/appendix-c/acceptance-script.md` — a scenario-based

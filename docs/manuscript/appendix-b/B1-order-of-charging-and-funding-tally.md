@@ -15,7 +15,7 @@ export function computeAmountNeeded({ totalBill = 0, philhealthCovered = 0, othe
 
 // Slice statuses that count as money already secured vs. still in flight.
 export const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
-export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'for_funding', 'needs_info', 'reviewing', 'interview']
+export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info']
 // …  isCommittedSlice(s) = COMMITTED_SLICE_STATUSES.includes(s.status)
 
 export function computeFunding(amountNeeded = 0, slices = []) {
