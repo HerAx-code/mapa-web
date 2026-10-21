@@ -37,7 +37,7 @@ export const PERIOD_ADJECTIVE = {
 
 // Roles
 //
-// MAPA's role model reflects the Malasakit Center arrangement: agencies
+// MAPA's role model reflects a one-stop gateway arrangement: agencies
 // (PCSO, DOH, DSWD, congressional offices, NGOs) bring their own funds.
 // the gateway hosts the platform. So fund control lives inside the agency:
 //   - AGENCY_ADMIN — senior officer at the agency (e.g., PCSO branch head).
@@ -149,7 +149,7 @@ export const REPORT_STATUS_CONFIG = {
 // zero balance. Each contributing agency gets a child application "slice"
 // which keeps its own APP_STATUS_CONFIG. "partially_funded" is a legitimate
 // outcome: agencies cover up to their ceilings and full zero-balance is the
-// target, not a guarantee (see Malasakit sequential-charging model).
+// target, not a guarantee (see the Order of Charging model).
 export const REQUEST_STATUS_CONFIG = {
   submitted:        { label: 'Submitted',        badge: 'badge-blue'   },
   under_review:     { label: 'Under Review',      badge: 'badge-amber'  },

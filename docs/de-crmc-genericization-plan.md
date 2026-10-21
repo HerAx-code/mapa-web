@@ -1,6 +1,11 @@
 # De-CRMC Genericization Plan — make MAPA fully client-agnostic
 
-**Status:** approved, not started. Owner decisions locked **2026-10-21** (see §3).
+**Status:** ✅ **COMPLETE (2026-10-21)** — all phases shipped (PRs #315–#324 + this
+Phase 7 cleanup); final audit clean. The running system (src / functions / config /
+rules / CLAUDE.md) carries no `CRMC` or `Malasakit`. Accepted exceptions by owner
+decision: the Firebase project id `mapa-crmc` (D4), the Cotabato/BARMM geography
+(D1/D2), the `'malasakit'` test-fixture id strings (option A), and the manuscript +
+historical `docs/*.md` (D5). Owner decisions locked **2026-10-21** (see §3).
 **Principle:** one accurate, independently-shippable step at a time. Every phase is a
 single PR that builds, passes `lint:i18n` + `npm run test:all`, and is verified on a
 Vercel preview before merge. No phase depends on a later one. We optimize for *zero
@@ -132,9 +137,12 @@ preview eyeball. Bilingual (FIL/EN) preserved on patient surfaces; staff stays E
   re-seed/rules tests pass.
 - **Phase 6 — Infra & meta (Layer 6).** `package.json` name; `public/philsys…` README;
   `names.js`; rewrite `CLAUDE.md` + `SETUP.md` to neutral framing. Firebase project stays.
-- **Phase 7 — Final audit.** Re-run the §1 token greps; assert **0** `CRMC`/`crmc` outside
-  the agreed out-of-scope docs; live smoke of the full patient + staff flows; set this
-  doc's status to *done*.
+- **Phase 7 — Final audit.** ✅ **DONE.** Re-ran the §1 token greps. The audit surfaced 6
+  residual `Malasakit` references in `src/` the CRMC-focused phases had missed (5 comments +
+  1 agency help string) — fixed here (→ "co-funding" / "the Order of Charging" / "the
+  coordination hub"). Result: **0** `CRMC`/`Malasakit` in src / functions / config / rules /
+  CLAUDE.md. The only remaining `crmc` match is `--project mapa-crmc` in
+  `functions/package.json` (the Firebase project id, kept per D4). Status set to COMPLETE.
 
 ---
 

@@ -82,7 +82,7 @@ export default function AdminDashboard() {
 
   // Real-time metric counts. Note: agency budget aggregates are no longer
   // shown on the gateway admin dashboard — funds are intra-agency per the
-  // Malasakit Center model. See /agency/allocation (agency_admin role).
+  // co-funding model. See /agency/allocation (agency_admin role).
   useEffect(() => {
     const u1 = onSnapshot(
       query(collection(db, 'users'),    where('role',    '==', 'patient')),
