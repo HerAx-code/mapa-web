@@ -21,7 +21,7 @@ match /auditLog/{logId} {
 // (b) requests — bounded agency write: an agency holding a slice on a request
 //     may touch ONLY the three funding-sync fields, and only to a well-formed
 //     value in the derived-status set, so it can advance the money tally it is
-//     responsible for without being able to set a CRMC-only state or a bad
+//     responsible for without being able to set a gateway-only state or a bad
 //     amount. (A sum over sibling slices can't be re-derived in rules, so the
 //     authoritative figure is corrected by the syncRequestFinancials trigger —
 //     see B.6.)

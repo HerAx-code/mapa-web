@@ -2,16 +2,16 @@
 A.  TASK COMPLETION  (observed, one respondent per role)
 ========================================================================
 Patient                      n=8  done 8 (100%)  with help 0 (0%)  not done 0
-CRMC Staff Administrator     n=8  done 4 (50%)  with help 4 (50%)  not done 0
+Medical Center Staff Administrator     n=8  done 4 (50%)  with help 4 (50%)  not done 0
       5. [help] Put an assessment question to the patient in the conversation.
       6. [help] Complete the assessment part of the Unified Intake Sheet.
       7. [help] Record the PhilHealth coverage applied to the bill.
       8. [help] Endorse the residual balance to two partner agencies.
 Agency Coordinator           n=8  done 1 (12%)  with help 7 (88%)  not done 0
       1. [help] Log in and open the agency dashboard.
-      2. [help] Open a slice CRMC has endorsed to your agency.
+      2. [help] Open a slice the medical center has endorsed to your agency.
       3. [help] Read the attached documents and the Unified Intake Sheet.
-      4. [help] Read the note CRMC attached to the endorsement.
+      4. [help] Read the note the medical center attached to the endorsement.
       5. [help] Approve an amount within your per-applicant cap.
       7. [help] Generate and upload the signed Guarantee Letter.
       8. [help] Adjust the agency’s daily capacity, giving the required reason
@@ -26,7 +26,7 @@ B.  ISO/IEC 25010:2023 RATINGS  (5 = Strongly Agree … 1 = Strongly Disagree)
 Functional Suitability
   The system performed every task I needed for my role.          4   3   4  3.67
   The amounts, statuses and documents it produced were correct   4   3   4  3.67
-  What it does fits how this work is done at CRMC.               4   4   3  3.67
+  What it does fits how this work is done at the medical center.               4   4   3  3.67
   — characteristic mean                                        4.00 3.33 3.67  3.67  Agree
 
 Performance Efficiency
@@ -54,7 +54,7 @@ Security
 
 ------------------------------------------------------------------------
 Patient                      overall 3.86   Agree
-CRMC Staff Administrator     overall 3.36   Neutral
+Medical Center Staff Administrator     overall 3.36   Neutral
 Agency Coordinator           overall 3.36   Neutral
 OVERALL (13 items x 3 roles) overall 3.52   Agree
 
@@ -62,12 +62,12 @@ OVERALL (13 items x 3 roles) overall 3.52   Agree
 C.  SYSTEM USABILITY SCALE
 ========================================================================
 Patient                      responses [4, 2, 4, 2, 4, 2, 4, 2, 4, 2]  ->  75.0
-CRMC Staff Administrator     responses [3, 3, 3, 4, 3, 3, 3, 3, 3, 3]  ->  47.5
+Medical Center Staff Administrator     responses [3, 3, 3, 4, 3, 3, 3, 3, 3, 3]  ->  47.5
 Agency Coordinator           responses [3, 3, 3, 4, 3, 3, 2, 3, 3, 4]  ->  42.5
 
 mean SUS 55.0  (published average 68)  grade D  adjective "Poor"
    Patient                       75.0  grade B  Good
-   CRMC Staff Administrator      47.5  grade F  Worst imaginable
+   Medical Center Staff Administrator      47.5  grade F  Worst imaginable
    Agency Coordinator            42.5  grade F  Worst imaginable
 
 wrote results.json

@@ -16,11 +16,11 @@ treat CI as the authoritative green signal.
 =====================================================================
 
 
-> mapa-crmc@1.0.0 test:all
+> mapa-web@1.0.0 test:all
 > npm run test && npm run test:components && npm run test:functions && npm run test:rules
 
 
-> mapa-crmc@1.0.0 test
+> mapa-web@1.0.0 test
 > vitest run tests/utils
 
 [2m8:05:45 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
@@ -36,7 +36,7 @@ treat CI as the authoritative green signal.
    Duration  107.27s (transform 1.91s, setup 19.61s, import 7.16s, tests 605ms, environment 72.19s)
 
 
-> mapa-crmc@1.0.0 test:components
+> mapa-web@1.0.0 test:components
 > vitest run tests/components
 
 [2m8:07:50 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
@@ -52,7 +52,7 @@ treat CI as the authoritative green signal.
    Duration  67.66s (transform 1.73s, setup 10.18s, import 3.82s, tests 9.51s, environment 37.43s)
 
 
-> mapa-crmc@1.0.0 test:functions
+> mapa-web@1.0.0 test:functions
 > vitest run tests/functions
 
 [2m8:08:53 AM[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
@@ -68,7 +68,7 @@ treat CI as the authoritative green signal.
    Duration  38.59s (transform 372ms, setup 4.50s, import 511ms, tests 14.49s, environment 16.24s)
 
 
-> mapa-crmc@1.0.0 test:rules
+> mapa-web@1.0.0 test:rules
 > firebase emulators:exec --only firestore --project mapa-rules-test "vitest run tests/rules"
 
 [36m[1mi  emulators:[22m[39m Starting emulators: firestore

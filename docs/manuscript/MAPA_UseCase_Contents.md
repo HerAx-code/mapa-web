@@ -17,7 +17,7 @@ Interviews · Messages · User Guide, plus the **More** menu.
 
 | # | Use case | Where it lives |
 |---|---|---|
-| 1 | Register using a Patient Access Code | `/register` — code issued in person by CRMC, entered manually or opened from its QR |
+| 1 | Register using a Patient Access Code | `/register` — code issued in person by the medical center, entered manually or opened from its QR |
 | 2 | Install the app on a phone | `/install` — platform-specific PWA install steps |
 | 3 | Browse partner agencies and their requirements | `/patient/programs` — "Find Programs"; each agency expands to its required documents and procedure |
 | 4 | Upload and manage personal documents | Document library, reached from the request flow |
@@ -29,7 +29,7 @@ Interviews · Messages · User Guide, plus the **More** menu.
 | 10 | Track the request and each agency slice | `/patient/status` — "My Application" |
 | 11 | Withdraw the request | `handleWithdraw` — while still pre-endorsement |
 | 12 | Download the signed Guarantee Letter | `handleDownloadCertificate` |
-| 13 | Message CRMC and endorsed agencies | `/patient/messages` |
+| 13 | Message the medical center and endorsed agencies | `/patient/messages` |
 | 14 | View who has accessed their record | `/patient/access-log` |
 | 15 | Export personal data | Account settings modal → `src/utils/dataExport.js` (RA 10173) |
 | 16 | Switch between Filipino and English | More menu |
@@ -46,14 +46,14 @@ Slot Management · Guarantee Letters · Funds · Impact · Application Logs · U
 |---|---|---|
 | 1 | View the funding inbox | `/agency/inbox` |
 | 2 | Open a slice and start review | `ApplicationDetail` — `handleStartReview` |
-| 3 | Review CRMC-verified documents | Read-only |
+| 3 | Review center-verified documents | Read-only |
 | 4 | View the Unified Intake Sheet | `/agency/applications/:id/intake` — `canEdit` is `false` for agency roles |
 | 5 | View the co-funding picture and case timeline | `ApplicationDetail` |
 | 6 | Approve the slice | `handleApprove` — amount, purposes, payable-to provider |
 | 7 | Request more information | `handleRequestInfo`, `handleResumeFromAwaiting` |
 | 8 | Reject the slice with a reason | `handleReject` |
 | 9 | Add a case note | `handleAddNote` |
-| 10 | Suggest another agency to CRMC | Writes a referral suggestion |
+| 10 | Suggest another agency to the medical center | Writes a referral suggestion |
 | 11 | Generate and print the Guarantee Letter | `/agency/generator`, `/agency/applications/:id/gl` |
 | 12 | Upload the signed Guarantee Letter | `/agency/certificates` |
 | 13 | Manage the Guarantee Letter lifecycle | `handleRedeemGL`, `handleExpireGL`, `handleReverseApproval`, `handleUnmarkRedeemed` |
@@ -62,7 +62,7 @@ Slot Management · Guarantee Letters · Funds · Impact · Application Logs · U
 | 16 | View funds | `/agency/funds` |
 | 17 | View impact statistics | `/agency/impact` |
 | 18 | View application logs | `/agency/logs` |
-| 19 | Message the patient and CRMC | `handleMessagePatient`, `handleMessageCrmc`, `/agency/messages` |
+| 19 | Message the patient and the medical center | `handleMessagePatient`, `handleMessageGateway`, `/agency/messages` |
 
 ---
 
@@ -82,7 +82,7 @@ base role. Only the four below are administrator-only
 
 ---
 
-## 4. CRMC Staff Admin — role `staff_admin`
+## 4. Staff Admin — role `staff_admin`
 
 Sidebar: Dashboard · Agencies · Announcements · Document Types · Assistance Types ·
 Requests · Interviews · Analytics · App Logs · Patients · Access Codes · Messages ·
@@ -94,7 +94,7 @@ Reports · Export.
 | 2 | Verify or reject uploaded documents | `/admin/requests` — `VerifyDocsPanel`; can also un-verify back to pending |
 | 3 | Record the PhilHealth coverage applied to the bill | `/admin/requests` — coverage inputs, editable while submitted / under review / assessment |
 | 4 | Generate and publish interview slots | `/admin/interviews` — `handleGenerate`, `handlePublish` |
-| 5 | Complete the Unified Intake Sheet | `/admin/requests/:id/intake` — editable for CRMC roles |
+| 5 | Complete the Unified Intake Sheet | `/admin/requests/:id/intake` — editable for the medical center roles |
 | 6 | Endorse the residual to partner agencies as slices | `/admin/requests` — `handleEndorse` |
 | 7 | Accept or decline an agency's referral suggestion | `handleAcceptSuggestion`, `handleDeclineSuggestion` |
 | 8 | Manage patient records | `/admin/patients` — message, place on hold, flag for deletion |
@@ -109,7 +109,7 @@ Reports · Export.
 
 ---
 
-## 5. CRMC Super Admin — role `super_admin`
+## 5. Super Admin — role `super_admin`
 
 **Inherits every Staff Admin use case.** Draw the generalization triangle
 **pointing at Staff Admin**. Only these four are super-admin-only.
