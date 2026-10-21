@@ -5,7 +5,7 @@ describe('agencies.seed (canonical single source)', () => {
   it('has unique ids and the expected roster', () => {
     const ids = AGENCIES.map(a => a.id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids).toEqual(['malasakit', 'doh', 'philhealth', 'ambag', 'pcso', 'dswd'])
+    expect(ids).toEqual(['doh', 'philhealth', 'ambag', 'pcso', 'dswd'])
   })
 
   it('every agency has the fields the app + seeders rely on', () => {
@@ -22,9 +22,9 @@ describe('agencies.seed (canonical single source)', () => {
     }
   })
 
-  it('Malasakit and PhilHealth are seeded DISABLED (RA 11463: hub + deduction, not funders)', () => {
+  it('PhilHealth is seeded DISABLED (RA 11463: first-charge deduction, not a funder)', () => {
     const disabled = AGENCIES.filter(a => !a.enabled).map(a => a.id).sort()
-    expect(disabled).toEqual(['malasakit', 'philhealth'])
+    expect(disabled).toEqual(['philhealth'])
   })
 
   it('does not define budget (seeders apply INITIAL_BUDGET at write time)', () => {
