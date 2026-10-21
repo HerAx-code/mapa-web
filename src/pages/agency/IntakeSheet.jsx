@@ -17,7 +17,7 @@ import {
   blankSheet, isIntakeComplete, requiredFieldsStatus,
 } from '../../utils/intakeSheet'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
-import { isCrmcAdminRole } from '../../utils/constants'
+import { isGatewayAdminRole } from '../../utils/constants'
 // Phase 2.3: Field + PesoInput live in components/ui/ now so other
 // intake-style forms can share them without re-declaring the helpers.
 import Field from '../../components/ui/Field'
@@ -150,7 +150,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     patientFacts
       ? app.patientId === user?.uid && !['closed', 'rejected', 'fully_funded'].includes(app.status)
       : isRequestMode
-        ? isCrmcAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
+        ? isGatewayAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
         : false
   )
 

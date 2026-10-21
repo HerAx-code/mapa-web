@@ -22,7 +22,7 @@ export const TERMINAL_REQUEST_STATUSES = ['fully_funded', 'closed', 'rejected']
 
 // Ordered CRMC processing stages. 'endorse' is the goal; the first three are
 // its prerequisites.
-export const CRMC_STAGE_KEYS = ['verify', 'assess', 'endorse']
+export const GATEWAY_STAGE_KEYS = ['verify', 'assess', 'endorse']
 
 export function deriveRequestStage(request = {}, docs = []) {
   const terminal      = TERMINAL_REQUEST_STATUSES.includes(request?.status)
@@ -45,7 +45,7 @@ export function deriveRequestStage(request = {}, docs = []) {
   const firstIncomplete = ['verify', 'assess'].find(k => !done[k])
   const current = terminal ? null : (firstIncomplete ?? 'endorse')
 
-  const stages = CRMC_STAGE_KEYS.map(key => ({
+  const stages = GATEWAY_STAGE_KEYS.map(key => ({
     key,
     label:  label[key],
     detail: detail[key],

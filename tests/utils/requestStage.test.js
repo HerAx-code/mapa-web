@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveRequestStage, CRMC_STAGE_KEYS } from '../../src/utils/requestStage.js'
+import { deriveRequestStage, GATEWAY_STAGE_KEYS } from '../../src/utils/requestStage.js'
 
 const completeIntake = {
   householdSize: 4, monthlyIncome: 8000, diagnosis: 'Pneumonia',
@@ -76,6 +76,6 @@ describe('deriveRequestStage', () => {
 
   it('always returns the three stages in order', () => {
     const r = deriveRequestStage({ status: 'submitted' }, [])
-    expect(r.stages.map(s => s.key)).toEqual(CRMC_STAGE_KEYS)
+    expect(r.stages.map(s => s.key)).toEqual(GATEWAY_STAGE_KEYS)
   })
 })
