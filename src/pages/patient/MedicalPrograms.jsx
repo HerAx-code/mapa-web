@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next'
 
 // Informational catalog of available medical-assistance programs. Patients no
 // longer apply to a specific agency here — under the co-funding model they
-// submit ONE assistance request and CRMC routes/splits it across agencies
+// submit ONE assistance request and the gateway routes/splits it across agencies
 // toward zero balance. This page is a browse-and-learn surface with a single
 // "Request Assistance" call to action.
 export default function MedicalPrograms() {
@@ -90,7 +90,7 @@ export default function MedicalPrograms() {
 
         {/* Brand hero band — on-model intro to the co-funding model + the one
             real patient action. NOT a funding tracker or a self-service cart:
-            this page is a browse-and-learn catalog, and CRMC endorses the
+            this page is a browse-and-learn catalog, and the gateway endorses the
             request to agencies — patients don't apply to each one. */}
         <div className="card-hero mb-6">
           <div className="p-6 sm:p-7">
@@ -208,7 +208,7 @@ export default function MedicalPrograms() {
 
                   {/* Requirements & how it works — expand in place. Informational:
                       these are the documents/steps the agency typically needs;
-                      CRMC still decides eligibility and routes the request. */}
+                      the gateway still decides eligibility and routes the request. */}
                   {hasDetail && (
                     <>
                       <button onClick={() => setExpandedId(expanded ? null : agency.id)}

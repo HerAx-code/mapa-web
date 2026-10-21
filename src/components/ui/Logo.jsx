@@ -9,7 +9,7 @@ import { useState } from 'react'
  * Use this wherever the MAPA brand mark appears (sidebar header, landing page
  * header, login screen, footer, etc.). One source of truth so swapping the
  * logo later is a one-file change. The wordmark is the standalone MAPA name —
- * the operating institution (CRMC) is credited in content/legal copy, not
+ * the operating institution (the gateway) is credited in content/legal copy, not
  * baked into the lockup.
  */
 export default function Logo({ size = 32, withWordmark = false, className = '' }) {

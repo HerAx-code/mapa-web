@@ -4,7 +4,7 @@
 // face-api.js fork) are lazy-loaded so the ~6.6 MB of weights + the tfjs
 // runtime stay out of the main bundle, the image never leaves the device, and
 // EVERY function fails to a neutral null result — it must never throw into the
-// submit flow. This is a *hint* for the CRMC social worker, exactly like the
+// submit flow. This is a *hint* for the gateway social worker, exactly like the
 // OCR name-check: it never blocks a submission, and the worker always makes the
 // final call. See docs/id-verification-plan.md.
 //

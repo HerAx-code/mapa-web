@@ -24,7 +24,7 @@ const { accessCodeRe, accessCodeFormatHint } = require('./orgConfig')
  *      Catches the bot bypass via signInAnonymously() looping: each
  *      new anon sign-in gets a fresh uid (defeating throttle #1), but
  *      the IP stays the same (caught by throttle #2). 60/hour is loose
- *      enough for shared NAT / CRMC compound wifi (a normal patient
+ *      enough for shared NAT / facility compound wifi (a normal patient
  *      attempts ~5 codes max), tight enough that full enumeration of
  *      the 30k 2026 code range would take ~500 hours per IP.
  *

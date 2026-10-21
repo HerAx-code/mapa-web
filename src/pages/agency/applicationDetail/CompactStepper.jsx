@@ -3,7 +3,7 @@
  * page hero. Extracted from ApplicationDetail.jsx as part of the Phase
  * 2.1 split. Pure presentational; takes an `app` and renders dots.
  *
- * Funding-only agency view: CRMC owns document review + assessment,
+ * Funding-only agency view: the gateway owns document review + assessment,
  * so the agency's track is just Submit -> For Funding -> Approve ->
  * GL Done.
  */

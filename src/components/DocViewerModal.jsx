@@ -31,7 +31,7 @@ function ImageLightbox({ src, onClose }) {
 // Fetches the document content from Storage (when docMeta.storagePath is
 // present; new uploads since Tier-2 item 8) or from documentContents
 // (legacy path). Renders the image/PDF inline with robust fallbacks.
-// Used both inside DocViewerModal and inline in the CRMC request
+// Used both inside DocViewerModal and inline in the gateway request
 // detail's side-by-side review panel.
 export function DocPreview({ docMeta, className = '', onClose }) {
   const [content, setContent]     = useState(null)

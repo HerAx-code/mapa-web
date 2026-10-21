@@ -2,7 +2,7 @@
 //
 // Indigent patients photograph IDs on low-end phones, often with flash glare on
 // a laminated card or in a dark room. A washed-out or too-dark photo is the most
-// common reason OCR (and the CRMC verifier) can't read an ID. This gives a
+// common reason OCR (and the gateway verifier) can't read an ID. This gives a
 // gentle "retake in better light" nudge BEFORE submit.
 //
 // Deliberately EXPOSURE only, not sharpness/blur: over/under-exposure is a
@@ -12,9 +12,9 @@
 // liveness signals this is ADVISORY and fails null — it never blocks submit and
 // the social worker always makes the final call (CLAUDE.md).
 
-// Field-tunable thresholds. These are reasoned defaults (no real CRMC ID-photo
+// Field-tunable thresholds. These are reasoned defaults (no real ID-photo
 // corpus exists yet to calibrate against), so they're overridable per deploy via
-// VITE_IDQ_* env vars — CRMC can adjust them against real traffic with a Vercel
+// VITE_IDQ_* env vars — the gateway can adjust them against real traffic with a Vercel
 // setting + redeploy, no code change. Each is read by its literal name so Vite
 // inlines it; a missing/invalid value falls back to the default. See .env.example.
 const envNum = (v, fallback) => { const n = Number(v); return Number.isFinite(n) ? n : fallback }
@@ -110,7 +110,7 @@ export function assessFrame(data, width) {
 // ── Combined capture quality (ID hardening) ─────────────────────────────────
 // Broadens the advisory check beyond exposure to also catch an out-of-focus or
 // too-small ID photo — the three things that most often make an ID unreadable
-// for OCR and the CRMC verifier. Still ADVISORY: it drives a "retake?" nudge the
+// for OCR and the gateway verifier. Still ADVISORY: it drives a "retake?" nudge the
 // patient can override, never a hard reject (CLAUDE.md: don't lock out indigent
 // patients on poor cameras).
 

@@ -59,7 +59,7 @@ export function getPrimaryActions(ctx) {
 
   // Note: under the co-funding redesign, slices never reach status
   // 'interview' -- the single assessment interview is on the parent
-  // request (CRMC-conducted), not per-slice. Legacy interview branches
+  // request (the gateway-conducted), not per-slice. Legacy interview branches
   // removed.
 
   if (app.status === 'approved') {

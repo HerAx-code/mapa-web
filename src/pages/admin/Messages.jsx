@@ -267,7 +267,7 @@ export default function Messages() {
   )
 
   // Reply-only messaging (abuse hardening #2): patients can no longer START a
-  // conversation, so there is no patient compose modal. CRMC initiates the
+  // conversation, so there is no patient compose modal. the gateway initiates the
   // thread (admin "Message patient"); the patient reads + replies. Staff keep
   // AdminComposeModal in the admin layout.
   const composeModal = null
@@ -326,7 +326,7 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* Reply-only: no patient "new conversation" FAB. CRMC starts the
+        {/* Reply-only: no patient "new conversation" FAB. the gateway starts the
             thread; the patient replies from the conversation view. */}
 
         {/* Mobile-only full-screen thread. fixed inset-0 fills the phone

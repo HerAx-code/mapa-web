@@ -22,7 +22,7 @@ import toast from 'react-hot-toast'
 // Patient-facing Household Information wizard. A deliberately simple,
 // large-text, one-step-at-a-time, inline-bilingual flow for elderly /
 // low-literacy users. Writes only the FACTUAL portion of intakeSheet to the
-// patient's request; the CRMC social worker adds the assessment separately.
+// patient's request; the gateway social worker adds the assessment separately.
 
 // Inline-bilingual question label (English + Filipino, always both).
 // When `htmlFor` is given, Q renders as a real <label> tied to that input id
@@ -133,7 +133,7 @@ export default function IntakeWizard() {
   const removeMember = (i) => setSheet(p => ({ ...p, familyMembers: (p.familyMembers ?? []).filter((_, j) => j !== i) }))
 
   // Persist the patient's facts onto the request, merging over any existing
-  // intake so the CRMC assessment fields are never clobbered.
+  // intake so the gateway assessment fields are never clobbered.
   const persist = async () => {
     const payload = {
       ...(request?.intakeSheet ?? {}),

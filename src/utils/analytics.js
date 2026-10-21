@@ -38,7 +38,7 @@ function topEntries(map) {
 }
 
 /**
- * Aggregate slices (+ optional requests) into the figures both the CRMC
+ * Aggregate slices (+ optional requests) into the figures both the gateway
  * Analytics page and the per-agency Impact page render. Pass an already-
  * filtered slice array for the agency scope; pass requests only for the
  * program view (agency scope leaves request-level counts at 0).
@@ -88,7 +88,7 @@ export function computeAnalytics(slices = [], requests = null) {
     requestsFullyFunded = requests.filter(r => r.status === 'fully_funded').length
     // Approval rate: of the requests that reached a FUNDING decision, the share
     // fully funded. Rejected = ineligible (a denial). 'closed' is excluded — it
-    // covers both CRMC give-ups and patient withdrawals, neither of which is a
+    // covers both the gateway give-ups and patient withdrawals, neither of which is a
     // funding-eligibility decision, so counting them would deflate the rate.
     const closed   = requests.filter(r => r.status === 'closed').length
     const rejected = requests.filter(r => r.status === 'rejected').length

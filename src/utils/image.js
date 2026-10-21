@@ -5,7 +5,7 @@
 //   1. Keep the base64 payload under the Firestore doc cap (documentContents
 //      holds the image inline on the Spark plan — see uploadDocument.js).
 //   2. Keep the image legible enough that on-device OCR can read an ID and a
-//      CRMC verifier can read a bill.
+//      the gateway verifier can read a bill.
 // So we downscale to a legible long-edge, then trade JPEG quality (not more
 // resolution) to hit the byte target, only shrinking further if quality alone
 // can't get there.

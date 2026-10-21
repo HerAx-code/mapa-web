@@ -9,7 +9,7 @@ import StatusBadge from '../ui/StatusBadge'
 // pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
 const advisoryTone = (v) => v === 'pass' ? 'text-green-600' : v === 'unclear' ? 'text-amber-600' : 'text-gray-500'
 
-// ① Verify documents — the CRMC document-review panel, extracted verbatim from
+// ① Verify documents — the gateway document-review panel, extracted verbatim from
 // admin/Requests.jsx (redesign Phase 0: decompose the 1,700-line file). Pure
 // presentational; the parent owns the data (reqDocs) and the mutations
 // (verify / reject / reset / bulk-verify, OCR expand, viewer). Same DOM as

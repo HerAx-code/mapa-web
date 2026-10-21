@@ -1,7 +1,7 @@
 // Pure helpers for the co-funding REQUEST model.
 //
 // A request is the patient's medical-assistance need (a bill + an amount).
-// CRMC splits it into child "application" slices — one per contributing
+// the gateway splits it into child "application" slices — one per contributing
 // agency — and endorses them sequentially toward zero balance (the Malasakit
 // model: PhilHealth applies first, then PCSO → DSWD → DOH-MAIP → LGU, each
 // covering up to its own ceiling). PhilHealth is captured as a deduction on
@@ -72,7 +72,7 @@ export const reqRank = (status) => REQ_RANK[status] ?? 0
 //   - committed:   Σ amountApproved for secured slices
 //   - outstanding: Σ amountRequested for in-flight slices (reserved caps)
 //   - balance:     amountNeeded − committed (what's still unfunded)
-//   - headroom:    amountNeeded − committed − outstanding (what CRMC may still
+//   - headroom:    amountNeeded − committed − outstanding (what the gateway may still
 //                  endorse without breaching the balance cap)
 //   - pct:         committed / amountNeeded, 0–100
 //   - fullyFunded: committed has reached the target
@@ -111,7 +111,7 @@ export function computeFunding(amountNeeded = 0, slices = []) {
 //   - status:  'full'  (covers the whole need, or is uncapped / nothing to fund)
 //              'partial'(can fund some but not all)
 //              'none'   (no budget headroom left)
-// ADVISORY ONLY — surfaced so CRMC doesn't endorse to a zero-headroom funder;
+// ADVISORY ONLY — surfaced so the gateway doesn't endorse to a zero-headroom funder;
 // never a hard block (budget is re-checked with authority at approval).
 export function agencyCoverage(agency, need = 0) {
   const alloc     = Number(agency?.budget?.allocated) || 0
@@ -130,7 +130,7 @@ export function agencyCoverage(agency, need = 0) {
   return { ceiling, status }
 }
 
-// Derive the request status from its funding figures. CRMC can still override
+// Derive the request status from its funding figures. the gateway can still override
 // to 'closed' (gave up on the remaining balance) or 'rejected' (ineligible).
 export function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0) {
   const need = Number(amountNeeded) || 0

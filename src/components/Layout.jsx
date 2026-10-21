@@ -101,7 +101,7 @@ const ADMIN_NAV = {
     { to: '/admin/logs',        icon: MdListAlt,   label: 'App Logs' },
     { to: '/admin/patients',    icon: MdGroup,     label: 'Patients' },
     { to: '/admin/hospitalids', icon: MdBadge,     label: 'Access Codes' },
-    // Funds removed — CRMC has zero fund authority. Each agency manages its
+    // Funds removed — the gateway has zero fund authority. Each agency manages its
     // own allocation through /agency/allocation (Agency Administrator role).
     { to: '/admin/messages',    icon: MdEmail,     label: 'Messages' },
     { to: '/admin/reports',     icon: MdFlag,      label: 'Reports'   },
@@ -648,7 +648,7 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
         )}
       </nav>
 
-      {/* Bottom help card — a calm, always-there way to reach CRMC. Patient
+      {/* Bottom help card — a calm, always-there way to reach the gateway. Patient
           side only (staff know their way around). No phone number promised;
           points to the in-app guide. */}
       {role === ROLES.PATIENT && (
@@ -979,7 +979,7 @@ export default function Layout({ children, breadcrumb }) {
           const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
 
           // R38: this top strip renders only when the announcement opts
-          // into 'banner' or 'both'. Existing CRMC announcements default
+          // into 'banner' or 'both'. Existing the gateway announcements default
           // to 'banner' via computeSurface, so pre-R38 behavior is
           // preserved; agency promotions default to 'feed' and stay off
           // the banner the way they always did.

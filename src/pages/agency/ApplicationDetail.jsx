@@ -348,7 +348,7 @@ export default function ApplicationDetail() {
 
   // Interview scheduling/rescheduling lived here pre-co-funding when each
   // agency interviewed its applicants. Removed: the single assessment
-  // interview is now on the parent request and conducted by CRMC.
+  // interview is now on the parent request and conducted by the gateway.
 
   const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid }) => {
     setUpdating(true)
@@ -369,7 +369,7 @@ export default function ApplicationDetail() {
       // can't statically guarantee that for unconstrained patientId
       // queries. Cross-agency cooldown is already caught by the
       // hospitalIds check below (every approval stamps lastApprovedAt
-      // on the patient's CRMC Hospital ID, so any agency's recent
+      // on the patient's gateway Hospital ID, so any agency's recent
       // approval is visible there).
       const COOLDOWN_DAYS = 30
       const now = Date.now()
@@ -417,7 +417,7 @@ export default function ApplicationDetail() {
       // This catches the abuse case where a patient deleted their account
       // and re-registered with a new email to bypass per-UID cooldown
       // tracking. The cooldownUntilAt on hospitalIds persists across
-      // account churn because it's keyed by CRMC-issued ID, not by uid.
+      // account churn because it's keyed by the gateway-issued ID, not by uid.
       // (Fall back to user doc if the app pre-dates the patientHospitalId
       // snapshot field added in MedicalPrograms.handleSubmit.)
       let patientHospitalId = app.patientHospitalId ?? null
@@ -513,7 +513,7 @@ export default function ApplicationDetail() {
           })
         }
 
-        // #9 — Stamp the patient's CRMC Hospital ID with the approval
+        // #9 — Stamp the patient's gateway Hospital ID with the approval
         // timestamp so cooldown follows the human, not the account. If
         // the patient deletes their account and re-registers, the new
         // account inherits this cooldown automatically. Best-effort:
@@ -698,7 +698,7 @@ export default function ApplicationDetail() {
     }
 
     // R34: watcher fan-out -- rejection on a co-funded case means the
-    // remaining agencies might need to step up (or expect CRMC to add
+    // remaining agencies might need to step up (or expect the gateway to add
     // a new sibling). Higher signal than a pure status flip.
     const rejWatchers = request?.watchers ?? []
     const rejTargets = rejWatchers.filter(uid =>
@@ -985,8 +985,8 @@ export default function ApplicationDetail() {
     }
   }
 
-  // Direct ping to the CRMC coordinator who endorsed this slice — closes the
-  // agency -> CRMC ad-hoc-question loop without making the agency hunt for
+  // Direct ping to the gateway coordinator who endorsed this slice — closes the
+  // agency -> the gateway ad-hoc-question loop without making the agency hunt for
   // the right admin in their messages list.
   const handleMessageGateway = async () => {
     if (!app?.endorsedById) return
@@ -1041,7 +1041,7 @@ export default function ApplicationDetail() {
   // ── Derived values ───────────────────────────────────────────────────
 
   // Under the co-funding redesign, the assessment is single-sourced on the
-  // parent request. Prefer request.intakeSheet (live data CRMC owns); fall
+  // parent request. Prefer request.intakeSheet (live data gateway owns); fall
   // back to app.intakeSheet for legacy pre-redesign slices.
   const effectiveIntake = request?.intakeSheet ?? app.intakeSheet
   const intakeReady     = isIntakeComplete(effectiveIntake)
@@ -1411,7 +1411,7 @@ export default function ApplicationDetail() {
                   </div>
                 </div>
 
-                {/* CRMC-conducted assessment interview — read-only context for
+                {/* the gateway-conducted assessment interview — read-only context for
                     the funding decision. Surfaces date/conductor/Meet link and
                     the recorded outcome + any free-text notes. */}
                 {request && (request.interviewDate || request.interviewOutcome) && (

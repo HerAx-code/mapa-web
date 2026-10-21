@@ -158,13 +158,13 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   const remaining = Math.max(0, allocated - committed)
   const hasBudget = allocated > 0
 
-  // Co-funding slice: CRMC endorsed a capped amount this agency may approve up
+  // Co-funding slice: the gateway endorsed a capped amount this agency may approve up
   // to. Approving less returns the remainder to the request balance.
   const isSlice  = !!app?.requestId
   const sliceCap = Number(app?.amountRequested) || 0
 
   // Per-applicant cap: the agency's policy ceiling per case (PCSO ₱25K,
-  // DSWD tier limits, etc.). Hard-enforced here; CRMC saw a soft warning
+  // DSWD tier limits, etc.). Hard-enforced here; the gateway saw a soft warning
   // at endorse time.
   const perApplicantCap = Number(agency?.maxPerApplicant) || 0
 
@@ -188,7 +188,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   // siblings array updates via onSnapshot). Surface the running total so
   // the coordinator sees what their proposed amount adds to the network's
   // running total. Soft warning -- doesn't block submit -- because the
-  // existing design explicitly allows controlled over-commitment (CRMC
+  // existing design explicitly allows controlled over-commitment (the gateway
   // sometimes intentionally over-endorses to give the patient a buffer).
   const needAmount = Number(request?.amountNeeded) || 0
   const siblingsCommitted = (siblings ?? [])
@@ -263,8 +263,8 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
             </div>
           )}
 
-          {/* CRMC's free-text referral note, if provided in EndorseModal. Shows
-              the agency's coordinator the context CRMC wanted them to know. */}
+          {/* the gateway's free-text referral note, if provided in EndorseModal. Shows
+              the agency's coordinator the context the gateway wanted them to know. */}
           {app.crmcNotes && (
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
               <p className="text-xs font-semibold text-amber-800 mb-0.5">Note from {ORG.gatewayName}</p>

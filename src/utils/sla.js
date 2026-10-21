@@ -1,4 +1,4 @@
-// Service-level-agreement (SLA) signal for the admin request queue. CRMC aims
+// Service-level-agreement (SLA) signal for the admin request queue. the gateway aims
 // to reach a decision within a target window of submission; the queue surfaces
 // how close each request is, and how many have breached it, so time-critical
 // cases (a patient can't be cleared for discharge until a decision is recorded)
@@ -15,7 +15,7 @@ export const SLA_HOURS = 48
 const SLA_WARN_HOURS = SLA_HOURS - 12
 
 // 'ok' | 'due_soon' (<=12h left) | 'overdue' (past due). Resolved requests
-// carry no SLA pressure. Delegates to the shared aging() primitive so the CRMC
+// carry no SLA pressure. Delegates to the shared aging() primitive so the gateway
 // queue and the agency inbox share one state model (different thresholds).
 export function slaState(request, now = Date.now()) {
   if (TERMINAL_REQUEST_STATUSES.includes(request?.status)) return 'ok'

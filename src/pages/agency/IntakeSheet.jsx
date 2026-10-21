@@ -56,7 +56,7 @@ const fmtRelative = (date) => {
 
 // ── Page ──────────────────────────────────────────────────────────────────
 
-// Used by both the agency (per-application, legacy) and CRMC (per-request,
+// Used by both the agency (per-application, legacy) and the gateway (per-request,
 // the redesign's assessment step) — `collectionName` switches which doc the
 // same Unified Intake form reads and writes.
 export default function IntakeSheet({ collectionName = 'applications', patientFacts = false } = {}) {
@@ -65,7 +65,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const { user }    = useAuth()
   const isRequestMode = collectionName === 'requests'
   // patientFacts: the patient fills the socioeconomic + medical facts on their
-  // own request (the Assessment section stays CRMC-only and is hidden here).
+  // own request (the Assessment section stays the gateway-only and is hidden here).
   const backList = patientFacts ? '/patient/request' : isRequestMode ? '/admin/requests' : '/agency/inbox'
   const visibleSections = patientFacts ? SECTIONS.filter(s => s.id !== 'assess') : SECTIONS
 
@@ -75,10 +75,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const [hydrated, setHydrated] = useState(false)
   const [saveState, setSaveState] = useState({ status: 'idle', lastSavedAt: null })
   const [activeSection, setActiveSection] = useState('family')
-  // Under the co-funding redesign the assessment is owned by CRMC on the
+  // Under the co-funding redesign the assessment is owned by the gateway on the
   // parent request. The legacy agency intake route still loads a slice doc
   // (no edits possible — see canEdit below), but we mirror the request's
-  // intake into the displayed sheet so the agency actually sees what CRMC
+  // intake into the displayed sheet so the agency actually sees what the gateway
   // filled in instead of the slice's empty field.
   const [parentRequest, setParentRequest] = useState(null)
 
@@ -124,7 +124,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 
   // Agency mode only: load the parent request and re-hydrate the displayed
   // sheet from request.intakeSheet (the actual source of truth). Skipped in
-  // patient/CRMC modes because they already load from the request directly.
+  // patient/the gateway modes because they already load from the request directly.
   useEffect(() => {
     if (patientFacts || isRequestMode || !app?.requestId) return
     const unsub = onSnapshot(doc(db, 'requests', app.requestId),
@@ -141,7 +141,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     return unsub
   }, [app?.requestId, patientFacts, isRequestMode])
 
-  // Permission: CRMC admins edit the request's intake; patients fill the
+  // Permission: the gateway admins edit the request's intake; patients fill the
   // facts portion on their own request. Under the co-funding redesign the
   // assessment is single-sourced on the parent request, so the legacy
   // agency-application intake is view-only (kept accessible for old slices
@@ -486,7 +486,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 )}
               </div>
 
-              {/* Financial snapshot + advisory means-test suggestion — a CRMC
+              {/* Financial snapshot + advisory means-test suggestion — a gateway
                   assessment aid that fills the rail and turns the entered
                   figures into decision support. Not shown while a patient fills
                   their factual portion (it's staff decision support, and would
@@ -504,7 +504,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               )}
 
               {/* Editor info — agency mode prefers the parent request's
-                  intake authorship (the real CRMC source); other modes use
+                  intake authorship (the real source); other modes use
                   the loaded doc itself. */}
               {(() => {
                 const src = (!patientFacts && !isRequestMode && parentRequest?.intakeSheet)
@@ -702,7 +702,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               </div>
             </section>
 
-            {/* Section: Assessment — CRMC social worker only (hidden when the
+            {/* Section: Assessment — the gateway social worker only (hidden when the
                 patient is filling their factual portion). */}
             {!patientFacts && (
             <section ref={el => sectionRefs.current.assess = el} id="assess" className="card p-5 scroll-mt-24">

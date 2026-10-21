@@ -5,7 +5,7 @@ import { withTimeout, modelTimeoutMs } from './withTimeout'
 // Reads the text off an uploaded ID image with tesseract.js (lazy-loaded so
 // the ~MB wasm/worker isn't in the main bundle) and does a fuzzy match of the
 // patient's expected name against that text. The image never leaves the
-// device. This is a *hint* for the CRMC social worker — it never blocks a
+// device. This is a *hint* for the gateway social worker — it never blocks a
 // submission, and any failure resolves to a neutral { match: null } result.
 //
 // The pipeline:

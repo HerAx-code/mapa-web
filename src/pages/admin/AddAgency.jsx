@@ -119,7 +119,7 @@ export default function AddAgency() {
 
     // The first Agency Administrator is mandatory: every agency needs at
     // least one admin who can then add coordinators from the agency portal's
-    // Team page (CRMC no longer creates agency members). Without this, a new
+    // Team page (the gateway no longer creates agency members). Without this, a new
     // agency would be stranded with no one able to log in or onboard staff.
     if (!coord.name.trim())        { toast.error('Agency administrator name is required.'); return }
     if (!coord.email.trim())       { toast.error('Agency administrator email is required.'); return }

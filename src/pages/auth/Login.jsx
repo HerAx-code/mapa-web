@@ -176,7 +176,7 @@ export default function Login() {
     }
     // Client-side format check — Firebase will reject malformed addresses
     // anyway, but catching them here saves a network round-trip on slow
-    // CRMC connections.
+    // the gateway connections.
     if (!EMAIL_RE.test(email)) {
       toast.error(t('auth.errors.invalidEmail'))
       return

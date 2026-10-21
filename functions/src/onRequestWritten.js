@@ -11,8 +11,8 @@ const admin = require('firebase-admin')
  * legitimate patient-triggered staff pings therefore move server-side; this
  * trigger owns two of them (the third — "patient proceeded" → agency — is in
  * onSliceProceeded):
- *   - NEW REQUEST (create)                → notify CRMC admins.
- *   - WITHDRAWAL (patient closes it)      → notify CRMC admins so it leaves
+ *   - NEW REQUEST (create)                → notify the gateway admins.
+ *   - WITHDRAWAL (patient closes it)      → notify the gateway admins so it leaves
  *                                           their action queue.
  * Admin SDK, rules-bypassing. In-app only (the old client path also emailed via
  * /api/send-email; dropped — admins triage the queue in-app).

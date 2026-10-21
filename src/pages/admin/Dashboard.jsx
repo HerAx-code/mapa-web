@@ -81,7 +81,7 @@ export default function AdminDashboard() {
   const [deliveryFailures, setDeliveryFailures] = useState(0)
 
   // Real-time metric counts. Note: agency budget aggregates are no longer
-  // shown on the CRMC admin dashboard — funds are intra-agency per the
+  // shown on the gateway admin dashboard — funds are intra-agency per the
   // Malasakit Center model. See /agency/allocation (agency_admin role).
   useEffect(() => {
     const u1 = onSnapshot(
@@ -94,8 +94,8 @@ export default function AdminDashboard() {
       snap => setAgencyCount(snap.size),
       err => { console.error('[Dashboard] agency count failed:', err); setAgencyCount('—') }
     )
-    // Open requests = anything still moving through the CRMC pipeline (not
-    // closed/rejected/fully_funded). This is the CRMC's actual day-to-day queue.
+    // Open requests = anything still moving through the gateway pipeline (not
+    // closed/rejected/fully_funded). This is the gateway's actual day-to-day queue.
     const u4 = onSnapshot(
       query(collection(db, 'requests'), where('status', 'in', ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded'])),
       snap => { setOpenRequests(snap.size); setPipelineReqs(snap.docs.map(d => d.data())) },
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
   // an agency sits on it, awaiting_info while a patient is being chased)
   // and the legacy pre-redesign statuses (pending) that older applications
   // still carry. Endorsed-but-not-Proceeded slices already have their own
-  // amber chip on the CRMC Requests detail + list, so they're excluded
+  // amber chip on the gateway Requests detail + list, so they're excluded
   // here to avoid double-flagging.
   useEffect(() => {
     const u1 = onSnapshot(
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
     blue:   'bg-blue-50   border-blue-100   text-blue-700',
   }
 
-  // Active-request distribution across the CRMC lifecycle stages (live) — open
+  // Active-request distribution across the gateway lifecycle stages (live) — open
   // stages only (fully_funded/closed/rejected aren't loaded). Shared stageCounts
   // helper so the label mapping isn't duplicated with Analytics.
   const pipelineStages = useMemo(
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* First-visit guided tour for CRMC operators. Auto-fires once per
+      {/* First-visit guided tour for the gateway operators. Auto-fires once per
           uid; spotlights metrics, alerts, activity feed, and Manage /
           Review shortcuts. */}
       <Tour steps={adminDashboardTour} storageKey="admin-dashboard" />

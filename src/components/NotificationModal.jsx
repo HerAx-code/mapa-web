@@ -66,7 +66,7 @@ export const getNotifRoute = (type, role) => {
     awaiting_info_requested: '/patient/request',
     awaiting_info_responded: isAgency  ? '/agency/inbox'       : null,
 
-    // ── Budget (agency-side only — CRMC has zero fund authority) ──
+    // ── Budget (agency-side only — the gateway has zero fund authority) ──
     budget_low:              isAgency  ? '/agency/funds'       : null,
     budget_request:          '/agency/allocation',
     new_message:             isPatient ? '/patient/messages' : isAgency ? '/agency/messages' : '/admin/messages',

@@ -13,7 +13,7 @@
 // LEGAL / STATUS: verifying PSA-signed National-ID data as a relying party needs
 // PSA/NIDAS clearance (see docs/id-verification-research.md §4-5). This path is
 // OFF by default (VITE_PHILID_QR_ENABLED) and signature verification returns
-// 'unverified' until CRMC vendors PSA's real public key into
+// 'unverified' until the gateway vendors PSA's real public key into
 // public/philsys-public-keys.json post-clearance. The verify LOGIC is unit-tested
 // with a test keypair; the production key is a deploy-time artifact.
 //
@@ -105,7 +105,7 @@ export async function verifyEd25519(sigBytes, msgBytes, pubKeyHex) {
   } catch { return null }
 }
 
-// Load vendored PSA public key(s). Empty until CRMC drops the real key in
+// Load vendored PSA public key(s). Empty until the gateway drops the real key in
 // post-clearance → verification returns 'unverified' (null), never a false pass.
 async function psaPublicKeys() {
   try {

@@ -6,13 +6,13 @@
 // deployment can change the prefix without a code change.
 const ACCESS_CODE_PREFIX = process.env.ACCESS_CODE_PREFIX || 'MAPA'
 // Accepted but never issued — patients holding a prior deployment's code are
-// not locked out. Empty = clean cut (MAPA-only): no outstanding CRMC codes.
+// not locked out. Empty = clean cut (MAPA-only): no outstanding legacy codes.
 const LEGACY_ACCESS_CODE_PREFIXES = []
 
 const acceptedAccessCodePrefixes = () =>
   [ACCESS_CODE_PREFIX, ...LEGACY_ACCESS_CODE_PREFIXES].filter(Boolean)
 
-// Full-code validator, e.g. /^(MAPA|CRMC)-\d{4}-\d{5}$/
+// Full-code validator, e.g. /^MAPA-\d{4}-\d{5}$/
 const accessCodeRe = () =>
   new RegExp(`^(${acceptedAccessCodePrefixes().join('|')})-\\d{4}-\\d{5}$`)
 

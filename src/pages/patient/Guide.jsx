@@ -137,7 +137,7 @@ export default function UserGuide() {
       link: { label: t('patient.nav.requestAssistance'), path: '/patient/request' },
     },
     {
-      // Explains the CRMC-gateway co-funding model -- patients see
+      // Explains the gateway co-funding model -- patients see
       // multiple agency cards on TrackStatus and need to know why one
       // bill produces multiple slices.
       icon:    MdGroups,
@@ -148,7 +148,7 @@ export default function UserGuide() {
     },
     {
       // The patient-filled portion of the Unified Intake Sheet. Auto-
-      // saves every 2s. Required before CRMC can finalize their
+      // saves every 2s. Required before the gateway can finalize their
       // assessment portion.
       icon:    MdFactCheck,
       title:   t('patient.guide.sections.intakeWizard.title'),

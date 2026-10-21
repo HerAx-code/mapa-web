@@ -26,9 +26,9 @@ const admin = require('firebase-admin')
  *
  * AUTHORITY BOUNDARY
  *
- * CRMC owns the request lifecycle; this function must not fight it.
+ * the gateway owns the request lifecycle; this function must not fight it.
  * `status` is only rewritten when the request is currently sitting in one
- * of the four states deriveRequestStatus() itself can produce. If CRMC
+ * of the four states deriveRequestStatus() itself can produce. If the gateway
  * has moved the request to `under_review`, `assessment`, `closed` or
  * `rejected`, the status is left alone and only `amountCommitted` is
  * synced -- that figure is factual regardless of lifecycle state.
@@ -100,7 +100,7 @@ function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 }
 
 // The only statuses this function is allowed to write. Anything else on
-// the request is CRMC's call -- see AUTHORITY BOUNDARY above.
+// the request is the gateway's call -- see AUTHORITY BOUNDARY above.
 const DERIVED_STATUSES = ['submitted', 'endorsed', 'partially_funded', 'fully_funded']
 
 async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {

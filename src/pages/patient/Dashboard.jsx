@@ -177,7 +177,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
 
 // ── Next-action card ─────────────────────────────────────────────────────────
 // Surfaces the single most pressing real action (fix a rejected doc / respond
-// to an agency). Renders nothing when the ball is in CRMC's court.
+// to an agency). Renders nothing when the ball is in the gateway's court.
 function NextActionCard({ action }) {
   const Icon = action.icon
   return (
@@ -214,7 +214,7 @@ export default function PatientDashboard() {
     return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
   })()
 
-  // R38: dashboard "What's new" feed — CRMC notices opted into 'feed'
+  // R38: dashboard "What's new" feed — the gateway notices opted into 'feed'
   // or 'both', plus all active agency promotions (targetRoles includes
   // 'patient'). The hook handles the source-aware default in
   // computeTargetRoles so agency promos surface here even on legacy
@@ -296,7 +296,7 @@ export default function PatientDashboard() {
   }, [user?.uid])
 
   // Live document stats so the verified/pending counts update the moment
-  // CRMC verifies or rejects a doc -- no reload required.
+  // the gateway verifies or rejects a doc -- no reload required.
   useEffect(() => {
     if (!user?.uid) return
     const unsub = onSnapshot(
@@ -403,7 +403,7 @@ export default function PatientDashboard() {
   const reqSlices = activeRequest ? apps.filter(a => a.requestId === activeRequest.id) : []
   const funding   = activeRequest ? computeFunding(activeRequest.amountNeeded, reqSlices) : null
 
-  // The single most pressing next action (or null when the ball is with CRMC).
+  // The single most pressing next action (or null when the ball is with the gateway).
   const nextAction = (() => {
     const rejected = docList.find(d => d.status === 'rejected')
     if (rejected) return {

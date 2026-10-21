@@ -223,7 +223,7 @@ export default function Patients() {
   // gathers more docs, approved with GL pending issuance) and the legacy
   // pre-redesign statuses (pending, interview). Without including
   // 'endorsed' here, the previous version missed patients with brand-new
-  // CRMC endorsements waiting on the patient to accept the coverage plan.
+  // the gateway endorsements waiting on the patient to accept the coverage plan.
   useEffect(() => {
     getDocs(query(
       collection(db, 'applications'),

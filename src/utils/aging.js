@@ -1,6 +1,6 @@
 // Shared aging vocabulary for the staff queues.
 //
-// CRMC's request SLA (measured in HOURS from submission) and the agency inbox's
+// the gateway's request SLA (measured in HOURS from submission) and the agency inbox's
 // "days waiting" (measured in DAYS) are the same idea on different clocks. This
 // module gives both ONE state model — ok | warn | over — with consistent color
 // semantics, while keeping each queue's own thresholds (they are genuinely

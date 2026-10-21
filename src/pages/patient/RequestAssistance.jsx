@@ -40,7 +40,7 @@ const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
 
 // Per-assistance-type document checklists (coverage-model redesign). OFF by
 // default: production keeps the flat `required: true` documentTypes list until
-// CRMC confirms the real per-type document sets (src/data/referenceData.js).
+// the gateway confirms the real per-type document sets (src/data/referenceData.js).
 // Flip VITE_PER_TYPE_DOCS=true (e.g. on a preview deploy) to drive the checklist
 // from the assistance type the patient selects.
 const PER_TYPE_DOCS = import.meta.env.VITE_PER_TYPE_DOCS === 'true'
@@ -79,7 +79,7 @@ export default function RequestAssistance() {
   const [submittedId,   setSubmittedId]   = useState('')
   // Patient-initiated withdraw of an active request. CLAUDE.md is explicit:
   // "Patient can withdraw before endorsement" -- so the action is only
-  // exposed while status is in the pre-endorsement window. Once CRMC has
+  // exposed while status is in the pre-endorsement window. Once the gateway has
   // endorsed (slices exist), the agencies have committed time to review
   // and we don't want the patient to silently pull the rug.
   const [confirmWithdraw, setConfirmWithdraw] = useState(false)
@@ -330,7 +330,7 @@ export default function RequestAssistance() {
 
   // Patient-initiated request withdrawal. Only callable while status is
   // pre-endorsement -- the button isn't even rendered otherwise. Marks the
-  // request as 'closed' with closeReason so CRMC's logs still show what
+  // request as 'closed' with closeReason so the gateway's logs still show what
   // happened. The patient is then free to submit a new one.
   const handleWithdraw = async () => {
     if (!activeRequest || withdrawing) return
@@ -341,7 +341,7 @@ export default function RequestAssistance() {
         closeReason: 'Withdrawn by applicant.',
         updatedAt:   serverTimestamp(),
       })
-      // CRMC is notified server-side by onRequestWritten when the request is
+      // the gateway is notified server-side by onRequestWritten when the request is
       // closed as a withdrawal, so it leaves their action queue (abuse
       // hardening #1 — patients no longer write into staff feeds).
       toast.success(t('patient.track.withdrawSuccess'))
@@ -530,7 +530,7 @@ export default function RequestAssistance() {
 
   // The patient declares their total hospital bill. Coverage (PhilHealth first,
   // then any other prior coverage) is unknown at submission — it is computed by
-  // CRMC at assessment — so the residual `amountNeeded` starts equal to the full
+  // the gateway at assessment — so the residual `amountNeeded` starts equal to the full
   // bill and is reduced later. See docs/philhealth-first-plan.md.
   const totalBill    = Number(form.totalBill) || 0
   const amountNeeded = totalBill
@@ -620,7 +620,7 @@ export default function RequestAssistance() {
       // Representative identity documents (when filing on the patient's behalf).
       let filedBy = null
       if (filedByRep) {
-        // Persist the rep-ID OCR result so the CRMC verifier sees the same
+        // Persist the rep-ID OCR result so the gateway verifier sees the same
         // advisory line they get on the patient's own ID. The OCR ran at
         // attach time against repForm.name (see attachReq).
         const repIdOcr = ocrResults[REP_ID] ?? null
@@ -673,7 +673,7 @@ export default function RequestAssistance() {
         assistanceType:    form.assistanceType,
         description:       form.description.trim(),
         // PhilHealth-first bill model: the patient declares the full bill;
-        // CRMC fills the coverage fields at assessment, which reduces
+        // the gateway fills the coverage fields at assessment, which reduces
         // amountNeeded to the residual the agencies co-fund. Coverage is 0 at
         // submission. See docs/philhealth-first-plan.md.
         totalBill,
@@ -691,7 +691,7 @@ export default function RequestAssistance() {
 
       setSubmittedId(requestId)
 
-      // Notifying CRMC admins of the new request is now done server-side by the
+      // Notifying the gateway admins of the new request is now done server-side by the
       // onRequestWritten Cloud Function (abuse hardening #1): patients can no
       // longer write into other users' notification feeds, so the client no
       // longer fetches the admin roster or writes to it here. That same trigger
@@ -733,7 +733,7 @@ export default function RequestAssistance() {
                 ID is reference-only (the patient is signed in and can see
                 everything in My Application), so it doesn't deserve hero
                 treatment under the green check. Kept here so they can
-                screenshot or quote it if they message CRMC. */}
+                screenshot or quote it if they message the gateway. */}
             <p className="text-xs text-gray-500 flex items-center justify-center gap-1.5 pt-1">
               <span>{t('patient.request.successIdLabel')}:</span>
               <span className="font-mono text-gray-600">{submittedId}</span>
@@ -802,8 +802,8 @@ export default function RequestAssistance() {
             <p className="text-sm text-gray-500 mb-4">{t('patient.request.activeDesc')}</p>
 
             {/* Household Information Sheet — the patient fills the factual
-                portion (family, income, expenses, medical); CRMC completes the
-                assessment. Required before CRMC can endorse. */}
+                portion (family, income, expenses, medical); the gateway completes the
+                assessment. Required before the gateway can endorse. */}
             {(() => {
               const done = isPatientIntakeComplete(activeRequest.intakeSheet)
               return (
@@ -939,7 +939,7 @@ export default function RequestAssistance() {
             <button className="btn-primary w-full mt-4 text-sm" onClick={() => navigate('/patient/status')}>
               {t('patient.request.viewStatus')} →
             </button>
-            {/* Withdraw is only offered while CRMC hasn't endorsed yet. Once
+            {/* Withdraw is only offered while the gateway hasn't endorsed yet. Once
                 slices exist, agencies have started reviewing and the patient
                 shouldn't silently bow out -- they should reach out via
                 Messages instead. */}
@@ -1017,7 +1017,7 @@ export default function RequestAssistance() {
           </div>
 
           {/* Total hospital bill — the full amount on the patient's Statement
-              of Account. CRMC applies PhilHealth (and any other coverage) first
+              of Account. the gateway applies PhilHealth (and any other coverage) first
               at assessment, then endorses the remaining balance to agencies. */}
           <div>
             <label htmlFor="req-bill" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>

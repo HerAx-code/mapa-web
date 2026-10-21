@@ -315,7 +315,7 @@ export default function AgencyDetail() {
   }
 
   // handleSaveBudget / handleResetBudgetPeriod moved to agency/Allocation.jsx
-  // (agency_admin owns budget authority — CRMC is read-only).
+  // (agency_admin owns budget authority — the gateway is read-only).
 
   const handleDeleteAgency = async () => {
     setDeletingAgency(true)
@@ -611,10 +611,10 @@ export default function AgencyDetail() {
           </div>
         </div>
 
-        {/* ── Budget (read-only oversight view for CRMC) ──
-            CRMC has no fund authority — agencies bring their own money and
+        {/* ── Budget (read-only oversight view for the gateway) ──
+            the gateway has no fund authority — agencies bring their own money and
             the agency_admin sets the allocation. This card is informational
-            only: it lets CRMC route patients sensibly and follow up with
+            only: it lets the gateway route patients sensibly and follow up with
             under-funded agencies, without giving any edit capability. */}
         {(() => {
           const budget    = agency.budget ?? { period: 'monthly', allocated: 0, committed: 0, disbursed: 0 }

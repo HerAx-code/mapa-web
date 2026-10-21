@@ -5,7 +5,7 @@ import StatusBadge from '../ui/StatusBadge'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 
-// Side-by-side ID-portrait ↔ live-selfie compare for the CRMC verifier — the
+// Side-by-side ID-portrait ↔ live-selfie compare for the gateway verifier — the
 // highest-value affordance of the ID-verification feature: it puts the two
 // faces next to each other so the human match is fast, with the on-device
 // face-match score + liveness verdict shown only as a hint. Staff surface
