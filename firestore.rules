@@ -67,7 +67,7 @@ service cloud.firestore {
     // web page no longer self-creates users.
     match /users/{userId} {
       // Read rule additions for the patient compose-message flow:
-      //   - Patients can read CRMC admin (super_admin / staff_admin) user
+      //   - Patients can read the gateway admin (super_admin / staff_admin) user
       //     docs so the New Message picker can list them. Without this
       //     the picker silently fails (the original rule treated patients
       //     the same as unauthenticated for cross-user reads, but the
@@ -98,7 +98,7 @@ service cloud.firestore {
       //   - self: only profile fields. role / agencyId / active / rank are
       //     managed elsewhere — without this, any user could self-promote
       //     to super_admin by writing to their own user doc.
-      //   - isAdmin (CRMC super/staff): can edit anything.
+      //   - isAdmin (the gateway super/staff): can edit anything.
       //   - isAgencyAdmin: can edit members of their own agency, but only
       //     within the agency_admin/agency role pair and cannot move them
       //     to a different agency. This lets agency administrators manage
@@ -160,7 +160,7 @@ service cloud.firestore {
       // The isPatient() branch was dead. It was left for "the legacy direct
       // apply flow (still active during the co-funding transition)", but
       // that flow no longer exists: the ONLY write to applications anywhere
-      // in src/ is the CRMC endorsement transaction in
+      // in src/ is the gateway endorsement transaction in
       // src/pages/admin/Requests.jsx (tx.set on a new slice, status
       // 'endorsed'), which runs as an admin. Every other reference is a
       // read. Patients reach slices through requests, never by creating one.
@@ -181,7 +181,7 @@ service cloud.firestore {
         )) ||
         // Phase 1.6: an agency may write its own slice, but the identity +
         // endorsement fields are LOCKED — they can't reassign the slice to
-        // another patient/agency/request or inflate the CRMC-endorsed cap.
+        // another patient/agency/request or inflate the gateway-endorsed cap.
         // Everything else (the funding decision: status, amountApproved,
         // glStatus, approvedBy, cooldown, purposeOfAssistance, payableTo,
         // signedScan pointer, timestamps, …) stays writable, so no legitimate
@@ -189,8 +189,8 @@ service cloud.firestore {
         // immutables guard rather than a field allowlist precisely so it can't
         // silently break one of those multi-field transitions.
         // amountApproved (the agency's decision) stays writable but is CAPPED
-        // at amountRequested (CRMC's endorsed cap, itself locked). Without the
-        // cap an agency could approve MORE than CRMC endorsed via a direct
+        // at amountRequested (the gateway's endorsed cap, itself locked). Without the
+        // cap an agency could approve MORE than the gateway endorsed via a direct
         // write, over-committing the request past its need (double-funding) —
         // syncRequestFinancials would then faithfully sum the inflated figure.
         // Guarded so non-approval updates that don't carry amountApproved
@@ -208,15 +208,15 @@ service cloud.firestore {
     }
 
     // ── requests ────────────────────────────────────────────────────────────
-    // Co-funding parent: the patient's medical-assistance need + amount. CRMC
+    // Co-funding parent: the patient's medical-assistance need + amount. the gateway
     // verifies it, then splits it into child application "slices" and endorses
     // them toward zero balance. Patients own and read their own request and may
-    // withdraw it while still 'submitted'. CRMC admins manage all. An agency
+    // withdraw it while still 'submitted'. the gateway admins manage all. An agency
     // can read a request only if it holds a slice in it (its id is in
     // agencyIds[]), and may update ONLY the funding tally fields when recording
     // an approval against its slice — never patient data, the target amount, or
     // the agency list. (The applications/create rule still gates slice creation
-    // to CRMC at cutover; this block is additive and does not change the
+    // to the gateway at cutover; this block is additive and does not change the
     // existing apply flow.)
     match /requests/{requestId} {
       allow read: if isAuth() && (
@@ -227,7 +227,7 @@ service cloud.firestore {
       // Phase 1.4: pin the entry state. Ownership was already enforced, but
       // nothing stopped a patient creating their own request pre-advanced to
       // 'fully_funded'/'endorsed', or pre-loaded with agencyIds -- i.e.
-      // self-endorsing past CRMC verification, which is the whole point of
+      // self-endorsing past the gateway verification, which is the whole point of
       // the gateway. Mirrors documents.create, which already pins status and
       // blocklists agencyIds. Verified against the only create site,
       // src/pages/patient/RequestAssistance.jsx, which sends exactly
@@ -251,14 +251,14 @@ service cloud.firestore {
           resource.data.status == 'submitted' &&
           request.resource.data.status == 'closed') ||
         // Patient fills the factual portion of their own intake sheet (the
-        // CRMC assessment fields are written by admins). Only the intakeSheet
+        // the gateway assessment fields are written by admins). Only the intakeSheet
         // field may change via this path.
         (isPatient() && resource.data.patientId == uid() &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['intakeSheet', 'updatedAt'])) ||
         // Phase 1.5: hasOnly limited WHICH fields an agency may touch but not
         // WHAT it may write, so an agency holding one slice could set status
-        // to any string -- including CRMC-only states like 'under_review',
+        // to any string -- including the gateway-only states like 'under_review',
         // 'assessment' or 'closed' -- and amountCommitted to a non-number or
         // a negative. Constrain both to what the real path can produce:
         // deriveRequestStatus() in src/utils/requests.js returns exactly this
@@ -304,7 +304,7 @@ service cloud.firestore {
       allow read: if isAgency() && userAgencyId() in resource.data.agencyIds;
       // Patient creates own document. patientId must match auth (no creating
       // docs attributed to other patients), status must start at 'pending'
-      // (can't pre-stamp verified to bypass CRMC review), agencyIds[]
+      // (can't pre-stamp verified to bypass the gateway review), agencyIds[]
       // can't be pre-stamped (admins set this at endorse time, granting
       // agency read access), and storagePath cannot be present at create
       // time (it's stamped via update AFTER the actual Storage upload
@@ -315,7 +315,7 @@ service cloud.firestore {
       //
       // Advisory ID-verification fields (idTypeDetected + on-device face-match /
       // liveness flags & scores — see docs/id-verification-plan.md). These are
-      // hints for the CRMC verifier, never authoritative, but a hostile client
+      // hints for the gateway verifier, never authoritative, but a hostile client
       // must not be able to write junk into the audit trail, so bound each:
       // verdicts to their enum (or null), scores to a number in [0,1] (or null),
       // the detected type to a short string. NEVER a face template.
@@ -374,7 +374,7 @@ service cloud.firestore {
                        verifyFieldsOk(request.resource.data) &&
                        get(/databases/$(database)/documents/users/$(uid()))
                          .data.get('documentCount', 0) < 60;
-      // CRMC-gateway redesign: document verification is CRMC's job (the single
+      // gateway redesign: document verification is the gateway's job (the single
       // intake gateway), so only admins verify/reject. Agencies keep READ for
       // the funding decision but no longer write document status. Patients may
       // re-upload their own (status reset handled by replacePatientDocument).
@@ -428,7 +428,7 @@ service cloud.firestore {
     // ── agencies ──────────────────────────────────────────────────────────────
     // Public read — landing page shows available programs to unauthenticated visitors.
     // Updates split by authority:
-    //   - CRMC admin (super/staff): operational fields (name, enabled, slots,
+    //   - the gateway admin (super/staff): operational fields (name, enabled, slots,
     //     contact info, defaultSignatory, assistanceTypes, etc.) — but NOT
     //     budget.allocated / budget.committed / budget.disbursed.
     //   - agency_admin: own agency only. Can write budget fields (the
@@ -438,7 +438,7 @@ service cloud.firestore {
     // Field-level constraints are enforced in the client UI; the rules here
     // give the broad write permission. A tighter field-level guard can be
     // added later (request.resource.data.budget == resource.data.budget for
-    // CRMC admin) once the UI gating is fully verified.
+    // the gateway admin) once the UI gating is fully verified.
     // The rich agency doc carries budget (allocated / committed / disbursed),
     // fundSource, contacts and signatories. It was world-readable (`if true`)
     // only so the public Landing page could show a live programs teaser — which
@@ -450,7 +450,7 @@ service cloud.firestore {
       allow read:   if isAuth();
       allow create: if isSuperAdmin();
       // Update authority split:
-      //   - CRMC admin: anything (operational fields + emergency budget
+      //   - the gateway admin: anything (operational fields + emergency budget
       //     overrides during incident response).
       //   - agency_admin: own agency. Allowed to write budget.* because
       //     they are the allocation authority for their own fund source.
@@ -499,7 +499,7 @@ service cloud.firestore {
     // mirrors this projection from every agency-write path (src/utils/
     // agenciesPublic.js), the same belt-and-suspenders pattern as the client-side
     // daily slot reset. Writers are therefore the exact principals allowed to
-    // edit the source agencies/{id} doc (CRMC admin, or any agency role on its
+    // edit the source agencies/{id} doc (the gateway admin, or any agency role on its
     // own agency), and the payload is pinned to ONLY the four projected fields —
     // so this can never become a budget/contact leak even from a hostile client.
     match /agenciesPublic/{agencyId} {
@@ -571,7 +571,7 @@ service cloud.firestore {
                        // #9 — Agencies (and agency admins) may stamp the
                        // cooldown fields when approving or reversing an
                        // approval, but cannot touch status / usedBy / patId.
-                       // Tracking cooldown here (keyed by the human's CRMC
+                       // Tracking cooldown here (keyed by the human's the gateway
                        // ID, not by the per-account UID) makes the 30-day
                        // lock survive account-deletion + re-registration.
                        (isAgency() &&
@@ -726,7 +726,7 @@ service cloud.firestore {
 
     // ── auditLog ──────────────────────────────────────────────────────────────
     // Reads:
-    //   - super_admin: all entries (CRMC oversight of the platform)
+    //   - super_admin: all entries (the gateway oversight of the platform)
     //   - agency_admin: only entries scoped to their own agency. This lets
     //     them satisfy COA-style accountability for their fund usage
     //     without exposing other agencies' operations.
@@ -911,9 +911,9 @@ service cloud.firestore {
 
     // ── reports ───────────────────────────────────────────────────────────────
     // Reports include both platform-level issue tickets (read/managed by
-    // CRMC admins) and intra-agency Budget Requests (read/managed by the
+    // the gateway admins) and intra-agency Budget Requests (read/managed by the
     // requesting agency's agency_admin). The category field distinguishes
-    // them; CRMC admins filter Budget Requests out client-side.
+    // them; the gateway admins filter Budget Requests out client-side.
     match /reports/{reportId} {
       allow read:   if isAdmin() ||
                        (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
@@ -950,7 +950,7 @@ service cloud.firestore {
 
     // ── announcements ─────────────────────────────────────────────────────────
     // All authenticated users can read (needed to show banners in Layout).
-    // CRMC admins (super/staff) manage ALL announcements. Agency admins may
+    // the gateway admins (super/staff) manage ALL announcements. Agency admins may
     // create and manage only their OWN agency-sourced announcements
     // (source == 'agency', matching their agencyId) — these are shown to all
     // patients via the Layout banner.
@@ -989,12 +989,12 @@ service cloud.firestore {
     // ── referralSuggestions ──
     // R36 (§B.27): Bonterra warm-handoff pattern. An agency_admin or
     // coordinator at an agency that already holds a slice on a case may
-    // suggest that CRMC endorses a SIBLING agency for the same request.
-    // CRMC reviews each suggestion -- accept (pre-fills EndorseModal for
+    // suggest that the gateway endorses a SIBLING agency for the same request.
+    // the gateway reviews each suggestion -- accept (pre-fills EndorseModal for
     // the target agency) or decline (logs a reason visible to the
     // originating agency). The suggestion does not commit any agency to
     // action; it is an information channel from the ground (agencies)
-    // to the network broker (CRMC).
+    // to the network broker (the gateway).
     //
     // Reads:
     //   - admins always

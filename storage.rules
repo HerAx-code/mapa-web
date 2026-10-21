@@ -37,7 +37,7 @@ service firebase.storage {
       // Read:
       //  - the patient who owns this application
       //  - the agency that owns this application (slice)
-      //  - any CRMC admin
+      //  - any the gateway admin
       allow read: if
         (isPatient() && appDoc(appId).data.patientId == request.auth.uid)
         || (isAgency() && appDoc(appId).data.agencyId == userDoc().data.agencyId)

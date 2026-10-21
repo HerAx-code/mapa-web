@@ -27,7 +27,7 @@ export function firstGivenName(fullName) {
 // registration rejects these to keep fake "the gateway Admin" / "System
 // Diagnostics" / "cascade_*" accounts out of the patient list.
 export const RESERVED_NAME_TOKENS = new Set([
-  'admin', 'administrator', 'system', 'crmc', 'mapa', 'malasakit',
+  'admin', 'administrator', 'system', 'mapa',
   'diagnostic', 'diagnostics', 'recovery', 'migration', 'daemon',
   'agency', 'staff', 'super', 'root', 'test', 'nuke', 'cascade',
   'claude', 'gpt', 'bot',
