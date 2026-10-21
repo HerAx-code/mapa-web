@@ -8,7 +8,7 @@
  * panel always match what's actually in Firebase Auth + Firestore.
  *
  * The 15 accounts cover every role in the system:
- *   - 2 CRMC admins (super_admin + staff_admin)
+ *   - 2 gateway admins (super_admin + staff_admin)
  *   - 6 agency_admins (one per agency)
  *   - 6 agency coordinators (one per agency)
  *   - 1 demo patient
@@ -31,7 +31,7 @@
  */
 
 export const USERS = [
-  // CRMC admins
+  // gateway admins
   {
     email: 'admin@example.org', password: 'admin123',
     profile: { name: 'Super Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
