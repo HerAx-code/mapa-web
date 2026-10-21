@@ -1,8 +1,8 @@
 # MAPA — Medical Assistance Portal Access
 
-A web portal that digitises medical financial assistance for the
-Cotabato Regional Medical Center (CRMC) Malasakit Center pilot.
-Patients apply once; CRMC verifies + assesses; one or more partner
+A client-agnostic web portal that digitises medical financial
+assistance. Patients apply once; the hosting medical center's
+social-services office verifies + assesses; one or more partner
 agencies co-fund the bill toward zero balance.
 
 > Thesis project — solo student, 9 months. Government-adjacent system.
@@ -15,7 +15,7 @@ agencies co-fund the bill toward zero balance.
 
 | What | Where |
 |---|---|
-| Live deploy | https://mapa-crmc.vercel.app |
+| Live deploy | https://mapa-web-six.vercel.app |
 | Source | https://github.com/HerAx-code/mapa-web |
 | Firebase Console | https://console.firebase.google.com/project/mapa-crmc |
 | GitHub Actions CI | https://github.com/HerAx-code/mapa-web/actions |
@@ -30,20 +30,21 @@ agencies co-fund the bill toward zero balance.
 
 ## What this system does
 
-CRMC is the **single intake gateway**. A patient submits **one
-assistance request** with a bill amount + required documents +
-live selfie. CRMC verifies the documents (OCR-assisted), fills the
-Unified Intake Sheet, conducts **one assessment interview** over
-Google Meet, then **endorses** the request to one or more partner
+The hosting medical center is the **single intake gateway**. A patient
+submits **one assistance request** with a bill amount + required documents +
+live selfie. The medical center verifies the documents (OCR-assisted), fills the
+Unified Intake Sheet, conducts **one remote, asynchronous assessment**
+(in-app messaging, with an on-demand Google Meet only when a live talk is
+needed), then **endorses** the request to one or more partner
 agencies as child application "slices" that together fund the bill
-to zero balance. Agencies don't re-review documents or re-interview
+to zero balance. Agencies don't re-review documents or re-assess
 — they only approve their slice and issue a Guarantee Letter.
 
 ### Five user roles
 
 | Role | What they do |
 |---|---|
-| `super_admin` | Full system access; CRMC IT |
+| `super_admin` | Full system access; host-org IT |
 | `staff_admin` | Operations: accounts, audit, announcements, coordinators |
 | `agency_admin` | Manages own agency's coordinators + budget |
 | `agency` | Reviews endorsed slices, approves + issues GLs |
@@ -141,7 +142,7 @@ src/
   pages/                React Router page components
     patient/              Patient-facing surfaces (bilingual)
     agency/               Agency coordinator + agency_admin surfaces (English)
-    admin/                CRMC super/staff admin surfaces (English)
+    admin/                Host-org super/staff admin surfaces (English)
     auth/                 Public-facing (Login, Register, Landing)
   components/             Shared React components
     ui/                     UI primitives (Field, PesoInput, StatusBadge, Logo)
@@ -160,8 +161,8 @@ tests/
   functions/              Cloud Function handler tests
   rules/                  Firestore rules tests (run against emulator)
 docs/
-  redesign-plan.md        The frozen CRMC-gateway model + lifecycle
-  intake-sheet-fields.md  Every field on CRMC's paper intake forms
+  redesign-plan.md        The frozen gateway model + lifecycle
+  intake-sheet-fields.md  Every field on the gateway's paper intake forms
   threat-model.md         Risk catalog with mitigations
   recovery-and-hardening-plan.md   Multi-phase execution log
   handoff-2026-06-29.md   Operational runbook for solo-testing window

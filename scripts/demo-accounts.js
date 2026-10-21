@@ -33,11 +33,11 @@
 export const USERS = [
   // gateway admins
   {
-    email: 'admin@example.org', password: 'admin123',
+    email: 'admin@mapa.gov.ph', password: 'admin123',
     profile: { name: 'Super Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
   {
-    email: 'staff@example.org', password: 'staff123',
+    email: 'staff@mapa.gov.ph', password: 'staff123',
     profile: { name: 'Staff Admin', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
 
