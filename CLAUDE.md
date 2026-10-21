@@ -3,9 +3,9 @@
 ## What This Is
 MAPA (Medical Assistance Portal Access) is a **client-agnostic** platform for medical financial assistance. It digitizes the application process — patients apply online, the hosting medical center's social-services office reviews the documents and does one **remote, asynchronous assessment** (no scheduled interview: the social worker works a queue and reaches the patient through in-app messaging, with an on-demand Google Meet only when a live talk is needed), then endorses the request to one or more funding agencies; approved patients receive a Guarantee Letter (digital certificate) to claim at the agency office.
 
-The **host organization is configurable, not hardcoded** — a single source of truth in `src/config/org.js` (+ `functions/src/orgConfig.js`) drives the brand name, the gateway office, the facility name, the access-code prefix, and support contact, overridable per deployment via `VITE_ORG_*` env (neutral MAPA defaults otherwise). Patient-facing copy uses the `{{org}}` / `{{gateway}}` / `{{facility}}` i18n tokens; staff pages read `ORG` directly. The **reference deployment** is CRMC Malasakit Center in Cotabato City, Philippines — the real workflow, forms, and the Order of Charging throughout this file are modeled on CRMC's actual process, but the code no longer names CRMC. (See the "Org config / de-CRMC" memory. Geography — BARMM/Cotabato address + barangay data — is real location data, kept and not part of the configurable brand.)
+The **host organization is configurable, not hardcoded** — a single source of truth in `src/config/org.js` (+ `functions/src/orgConfig.js`) drives the brand name, the gateway office, the facility name, the access-code prefix, and support contact, overridable per deployment via `VITE_ORG_*` env (neutral MAPA defaults otherwise). Patient-facing copy uses the `{{org}}` / `{{gateway}}` / `{{facility}}` i18n tokens; staff pages read `ORG` directly. The workflow, forms, and the Order of Charging throughout this file are modeled on a real Philippine medical-center social-services process, but the product, code, and copy are fully client-agnostic and name no specific host. (See the "Org config / de-the gateway" memory. Geography — BARMM/Cotabato address + barangay data — is real location data, kept and not part of the configurable brand.)
 
-This is a **production system** built for real use (first deployment: CRMC Malasakit Center). It began as a solo ~9-month build, but it is **not a throwaway pilot** — apply a production quality and robustness bar, and weigh features by real operational value at scale (coordinator workload, assessment turnaround, concurrency safety, indigent-patient phone UX), not demo-readiness. Pilot-era shortcuts in this file are being reconciled against that reality.
+This is a **production system** built for real use (first deployment: a Philippine regional medical center). It began as a solo ~9-month build, but it is **not a throwaway pilot** — apply a production quality and robustness bar, and weigh features by real operational value at scale (coordinator workload, assessment turnaround, concurrency safety, indigent-patient phone UX), not demo-readiness. Pilot-era shortcuts in this file are being reconciled against that reality.
 
 The system has two patient-facing surfaces:
 - A web portal (this codebase) — used by agencies, admins, and patients who prefer browser access
@@ -22,7 +22,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - i18n: react-i18next for Filipino/English support — not yet integrated
 
 ## Communication Channels (current decisions)
-- Assessment — **remote and asynchronous. No appointments, no scheduled interview.** The mandatory human assessment is kept, but it is worked from a queue, not booked. After documents verify, the request enters an "assess" queue; a CRMC social worker picks it up, reaches the patient through the in-app conversation (and drops an **on-demand Google Meet** link into the chat only when a live conversation is genuinely needed), then completes the Unified Intake Sheet. The completed intake sheet is the endorse gate (`docsVerified && intakeComplete`) — the human-in-the-loop requirement without the travel/wait/no-show friction. See docs/remove-interview-scheduling-plan.md.
+- Assessment — **remote and asynchronous. No appointments, no scheduled interview.** The mandatory human assessment is kept, but it is worked from a queue, not booked. After documents verify, the request enters an "assess" queue; a gateway social worker picks it up, reaches the patient through the in-app conversation (and drops an **on-demand Google Meet** link into the chat only when a live conversation is genuinely needed), then completes the Unified Intake Sheet. The completed intake sheet is the endorse gate (`docsVerified && intakeComplete`) — the human-in-the-loop requirement without the travel/wait/no-show friction. See docs/remove-interview-scheduling-plan.md.
   - **Why no booking:** a pre-booked appointment reintroduces exactly the friction MAPA exists to remove; congestion control is moot when the assessment is remote/async (nobody queues at the office for it). Reversed the earlier appointment-system decision (2026-09-24).
   - Google Meet (on demand) is deliberate — free, reliable on weak networks, no infra to run. Building our own video is NOT planned (see Out Of Scope).
 - Notifications: in-app notifications (Firestore) + email (Firebase)
@@ -38,10 +38,10 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.
 - Patient-facing UI must be bilingual (Filipino + English). Use inline bilingual labels where possible. **Enforced** by `npm run lint:i18n` across `src/pages/patient/**`, `src/components/patient/**`, and the shared shell components patients see (Layout, AnnouncementBanner, AnnouncementFeedCard, OfflineBanner, InstallNudge, InstallPrompt).
-- **Staff surfaces (agency/admin pages) are English-only by design.** CRMC + partner-agency operators are professionals expected to work in English (clinical / government default language for record-keeping in the Philippines). The eslint linter does NOT enforce i18n on `src/pages/agency/**` or `src/pages/admin/**`. If a future stakeholder reports that staff need bilingual UI, that becomes a scoped epic — adding it to the linter scope requires committing to translating ~30+ staff pages. Not a v1 shortcut.
+- **Staff surfaces (agency/admin pages) are English-only by design.** The gateway + partner-agency operators are professionals expected to work in English (clinical / government default language for record-keeping in the Philippines). The eslint linter does NOT enforce i18n on `src/pages/agency/**` or `src/pages/admin/**`. If a future stakeholder reports that staff need bilingual UI, that becomes a scoped epic — adding it to the linter scope requires committing to translating ~30+ staff pages. Not a v1 shortcut.
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
-- Match CRMC's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
-- ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the CRMC social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
+- Match the gateway's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
+- ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the gateway social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
 - Patient Access Code (`<PREFIX>-YYYY-NNNNN`, default prefix `MAPA`, set via `ORG.accessCodePrefix`) is the registration gate. Issued in person by the gateway office. (`legacyAccessCodePrefixes` is empty — a clean MAPA-only cut; add a prefix there if a future migration needs to keep accepting old codes.)
 
 ## Out Of Scope (do NOT build)
@@ -52,28 +52,28 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Interview appointment / self-service booking system — **removed** (was built, now reversed). Assessment is remote/async; see docs/remove-interview-scheduling-plan.md.
 - Donor portal
 - Fraud detection engine (manual judgment by social workers)
-- Multi-hospital network (CRMC only)
+- Multi-hospital network (one host facility per deployment)
 - Real-time IHOMIS integration (use manual case number reference instead)
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
 
 ## Co-funding model (current)
-CRMC is the single intake gateway; agencies only fund. The patient submits ONE
-**request** (a bill + amount needed) with the full required-document checklist
-and a live selfie. CRMC verifies the documents (OCR-assisted), does ONE remote
+The gateway (the host organization) is the single intake point; agencies only
+fund. The patient submits ONE **request** (a bill + amount needed) with the full
+required-document checklist and a live selfie. The gateway verifies the documents (OCR-assisted), does ONE remote
 async assessment and fills the Unified Intake Sheet, then **endorses** the request
 to one or more agencies as child application "slices" toward zero balance. Agencies
 do NOT re-review documents or re-assess — they only approve their slice and the
 Guarantee Letter issues at approval. See docs/redesign-plan.md.
 
-- **Request lifecycle:** submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). Patient can withdraw before endorsement. (`assessment` may be skipped in the status field now that entry is no longer stamped by interview booking; the CRMC stage machine `verify → assess → endorse` in `src/utils/requestStage.js` drives the queue off docs + intake, not the status.)
-- **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or needs_info / rejected). An agency's `amountApproved` is **rules-capped at that slice's endorsed `amountRequested`** (which equals the full request `amountNeeded` — each slice is endorsed for the whole need, not a pre-split portion). So a *single* agency can't approve past the need, but **cumulative over-commitment across multiple agencies IS allowed by design** — CRMC sometimes intentionally over-endorses to give the patient a buffer. ApproveModal shows a soft `overCommit` warning (not a block) when sibling coverage + this approval exceed `amountNeeded`. Per-agency `maxPerApplicant` is a separate hard cap.
-- The assessment lives on the **request** (CRMC-conducted, one remote async assessment via messaging + on-demand Meet; the completed Unified Intake Sheet is the endorse gate). The agency's job is the funding decision only.
+- **Request lifecycle:** submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). Patient can withdraw before endorsement. (`assessment` may be skipped in the status field now that entry is no longer stamped by interview booking; the gateway stage machine `verify → assess → endorse` in `src/utils/requestStage.js` drives the queue off docs + intake, not the status.)
+- **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or needs_info / rejected). An agency's `amountApproved` is **rules-capped at that slice's endorsed `amountRequested`** (which equals the full request `amountNeeded` — each slice is endorsed for the whole need, not a pre-split portion). So a *single* agency can't approve past the need, but **cumulative over-commitment across multiple agencies IS allowed by design** — the gateway sometimes intentionally over-endorses to give the patient a buffer. ApproveModal shows a soft `overCommit` warning (not a block) when sibling coverage + this approval exceed `amountNeeded`. Per-agency `maxPerApplicant` is a separate hard cap.
+- The assessment lives on the **request** (the gateway-conducted, one remote async assessment via messaging + on-demand Meet; the completed Unified Intake Sheet is the endorse gate). The agency's job is the funding decision only.
 
 ### Coverage-model redesign (shipped 2026-10-12, flag-gated)
 - **Single source of truth:** `src/data/referenceData.js` holds the assistance-type catalog + required-document rules as declarative requirement records `{ docId, when, quantity?, appliesIf? }` (core + per-type + threshold-conditional), with externalized `THRESHOLDS`. The old editable **Assistance Types / Document Types admin pages were removed** — these are seeded config now (`Seed.jsx` + `scripts/bootstrap-reference-data.js` import `referenceData.js`).
-- **Per-assistance-type checklist** behind `VITE_PER_TYPE_DOCS` (default **off** → the legacy flat `required:true` list still runs in prod). On → the checklist resolves per selected type + bill amount. **Gate before enabling in prod:** CRMC confirms the real per-type document sets + thresholds via `docs/crmc-document-requirements-checklist.md` (lists are currently research placeholders).
+- **Per-assistance-type checklist** behind `VITE_PER_TYPE_DOCS` (default **off** → the legacy flat `required:true` list still runs in prod). On → the checklist resolves per selected type + bill amount. **Gate before enabling in prod:** the gateway confirms the real per-type document sets + thresholds via `docs/document-requirements-checklist.md` (lists are currently research placeholders).
 - **PhilHealth is an optional prior-coverage line**, not a mandatory "first" step. `amountNeeded = totalBill − philhealthCovered − otherCovered` is unchanged; only the framing was demoted. Scope is **inpatient hospital bills** (owner decision). See docs/assistance-model-remediation-plan.md.
 
 ## Coding Conventions
@@ -101,8 +101,8 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - For UI work on patient-facing screens, consider both web and future mobile — avoid web-only patterns where possible (e.g., hover-only interactions don't work on mobile)
 
 ## Reference Documents (read when relevant)
-- docs/redesign-plan.md — the frozen CRMC-gateway redesign plan (model, lifecycle, phases)
-- docs/intake-sheet-fields.md — every field from CRMC's paper intake forms
+- docs/redesign-plan.md — the frozen gateway redesign plan (model, lifecycle, phases)
+- docs/intake-sheet-fields.md — every field from the gateway's paper intake forms
 - docs/sprint-plan.md — current sprint goals
 - docs/design-workflow.md — how to combine the design skills + Magic Patterns MCP for web UI work (read before non-trivial reskins)
 - docs/reskin-relayout-plan.md — the living tracker of which pages are reskinned/relaid out and what remains (check before touching any page)
@@ -111,5 +111,5 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - docs/visual-identity/ — the brand source-of-truth (audit, benchmarks, the identity system spec incl. the "care-pin" logomark + palette/WCAG/type, and a reusable research prompt). Read before any logo/brand/theme work. The mark lives at public/brand/mapa-mark.svg + src/components/ui/Logo.jsx (MapaMark).
 - docs/patient-abuse-hardening-plan.md — the patient-surface abuse hardening (#1–#5, all shipped); accepted risks recorded in docs/threat-model.md
 - docs/assistance-model-remediation-plan.md — the assistance-model remediation (coverage-model redesign shipped 2026-10-12; agency single-source + eligibility/capacity/charging-order still open). `src/data/referenceData.js` is the catalog/requirement source of truth.
-- docs/crmc-document-requirements-checklist.md — hand to CRMC to confirm the real per-type document sets + thresholds; the gate before enabling `VITE_PER_TYPE_DOCS` in prod.
+- docs/document-requirements-checklist.md — hand to the gateway to confirm the real per-type document sets + thresholds; the gate before enabling `VITE_PER_TYPE_DOCS` in prod.
 - (add others as you create them)
