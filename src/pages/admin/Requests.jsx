@@ -64,16 +64,16 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const { user } = useAuth()
   const { committed, headroom } = computeFunding(request.amountNeeded, slices)
 
-  // Pure-selection model: CRMC nominates which agencies should look at this
+  // Pure-selection model: the gateway nominates which agencies should look at this
   // case. No per-agency amounts. Each agency does its own case assessment
   // and decides their portion, capped by their per-applicant policy, their
   // budget headroom, and the live coverage of sibling slices visible on
   // their Application Detail page.
   //
-  // Why no amounts here: CRMC's expertise is "who fits this patient" (slot
+  // Why no amounts here: the gateway's expertise is "who fits this patient" (slot
   // availability, assistance-type match, recent track record). The "how
   // much" question is the agency's case-by-case judgment, informed by
-  // policy ceilings CRMC doesn't always know.
+  // policy ceilings the gateway doesn't always know.
   const [selected, setSelected] = useState(() => new Set())
   const [notes,    setNotes]    = useState('')
   const [saving,   setSaving]   = useState(false)
@@ -86,7 +86,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   // later (manual cleanup, account soft-delete, schema migrations). If we
   // endorse with stale refs, R8 keeps the transaction healthy but the agency
   // receives a slice with documents they can't actually open. Better to
-  // surface the bad state here so CRMC can ask the patient to re-upload
+  // surface the bad state here so the gateway can ask the patient to re-upload
   // before referring the case.
   const attachedIds = (request.attachedDocuments ?? [])
     .map(a => a?.documentId)
@@ -123,7 +123,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   }, [request.id])
 
   // Agencies already holding a slice in this request can't be picked again.
-  // Sort keys, in order (all advisory — nothing is removed/disabled, CRMC may
+  // Sort keys, in order (all advisory — nothing is removed/disabled, the gateway may
   // override any of them):
   //   1. Residency (Phase 2.1): out-of-area funders sink to the bottom.
   //   2. Capacity (Phase 2.2): funders that can cover the remaining balance
@@ -263,7 +263,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             endorsedById:      user.uid,
             endorsedBy:        user.name ?? ORG.gatewayName,
             endorsedAt:        serverTimestamp(),
-            // Optional free-text note from CRMC, shown in the agency's
+            // Optional free-text note from the gateway, shown in the agency's
             // ApproveModal so the operator sees the referral context.
             crmcNotes:         notesValue,
           })
@@ -478,7 +478,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             )}
                             {/* Residency flag (Phase 2.1) — only for funders that
                                 gate on residency (e.g. AMBaG = BARMM). Advisory:
-                                CRMC may still endorse out-of-area with a reason. */}
+                                the gateway may still endorse out-of-area with a reason. */}
                             {hasResidencyScope(a) && a.residency === 'eligible' && (
                               <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">In area</span>
                             )}
@@ -614,7 +614,7 @@ function RequestDetail({ request, agencies, onClose }) {
   })
 
   // Open (or create) a conversation with the patient and jump to Messages.
-  // Used for the stale-endorsement nudge so CRMC can poke the patient without
+  // Used for the stale-endorsement nudge so the gateway can poke the patient without
   // hunting through the conversation list.
   const handleMessagePatient = async (subjectHint) => {
     if (messagingPatient) return
@@ -829,7 +829,7 @@ function RequestDetail({ request, agencies, onClose }) {
   }
 
   // ② Assessment is async/remote now (no scheduled interview — see
-  // docs/remove-interview-scheduling-plan.md). CRMC assesses the patient from
+  // docs/remove-interview-scheduling-plan.md). the gateway assesses the patient from
   // the submitted documents, messaging them (handleMessagePatient) for anything
   // unclear, then completes the Unified Intake Sheet — which is the endorse gate.
 
@@ -892,7 +892,7 @@ function RequestDetail({ request, agencies, onClose }) {
   return (
     <div>
       {/* Sub-header — back to the list + request summary (stays inside the
-          app shell so the CRMC nav/top bar remain available). */}
+          app shell so the gateway nav/top bar remain available). */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 sticky top-0 bg-white z-30">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onClose} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-brand-600 flex-shrink-0">
@@ -1097,7 +1097,7 @@ function RequestDetail({ request, agencies, onClose }) {
                   // A slice stays in status 'endorsed' until the patient
                   // accepts the coverage plan (Proceed) and the slice flips
                   // to 'reviewing' on the agency side. If they sit on it,
-                  // surface a nudge so CRMC can poke them.
+                  // surface a nudge so the gateway can poke them.
                   const isEndorsed = s.status === 'endorsed'
                   const endorsedDate = isEndorsed ? tsToDate(s.endorsedAt) : null
                   const daysSinceEndorsed = endorsedDate
@@ -1282,7 +1282,7 @@ export default function Requests() {
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
   // R36 (§B.27): live pending referral suggestions from agencies. Surfaced
-  // as an amber banner above the requests table so CRMC sees the
+  // as an amber banner above the requests table so the gateway sees the
   // bottom-up coordination signal without leaving this page.
   const [pendingSuggestions, setPendingSuggestions] = useState([])
   const [actingOn, setActingOn] = useState(null)
@@ -1318,7 +1318,7 @@ export default function Requests() {
       () => setAllSlices([]),
     )
     // R36: pending referral suggestions. Bonterra-style closed-loop --
-    // CRMC sees agency-side bottom-up signals here, decides accept/decline.
+    // the gateway sees agency-side bottom-up signals here, decides accept/decline.
     const u4 = onSnapshot(
       query(collection(db, 'referralSuggestions'),
             where('status', '==', 'pending'),
@@ -1331,7 +1331,7 @@ export default function Requests() {
 
   // R36: respond to a referral suggestion. Accept -> opens the request's
   // EndorseModal for the operator to actually do the endorsement; doesn't
-  // auto-endorse (CRMC retains final judgment). Decline -> writes a
+  // auto-endorse (the gateway retains final judgment). Decline -> writes a
   // decline reason that the suggesting agency can see.
   const handleAcceptSuggestion = async (s) => {
     if (actingOn) return
@@ -1342,7 +1342,7 @@ export default function Requests() {
         respondedAt: serverTimestamp(),
         respondedBy: user.uid,
       })
-      // Navigate to the request and open it so CRMC can endorse.
+      // Navigate to the request and open it so the gateway can endorse.
       const req = requests.find(r => r.id === s.requestId)
       if (req) {
         setSelected(req)
@@ -1383,9 +1383,9 @@ export default function Requests() {
   }
 
   // Mirror trigger for the daily slot reset. The primary mechanism in the
-  // pilot is the lazy check on agency/Dashboard.jsx, but if a CRMC operator
+  // pilot is the lazy check on agency/Dashboard.jsx, but if a gateway operator
   // arrives before any agency user does, they'd see yesterday's remaining
-  // counts when endorsing. This fires the same reset from the CRMC side so
+  // counts when endorsing. This fires the same reset from the gateway side so
   // the critical-path (Requests page) is guaranteed to see today's slots.
   //
   // Once the scheduled Cloud Function is deployable (project on Blaze), it
@@ -1417,7 +1417,7 @@ export default function Requests() {
           for (const m of toMirror) await syncAgencyPublic(m.id, m.data)
         }
       } catch (err) {
-        // Best-effort: if the batch fails (rule denial, network), CRMC will
+        // Best-effort: if the batch fails (rule denial, network), the gateway will
         // see slightly stale counts but endorsement still works.
         console.error('[Requests] daily slot reset check failed:', err)
       }
@@ -1438,8 +1438,8 @@ export default function Requests() {
   }, [allSlices])
 
   // Single most-urgent coverage warning per request. Order: rejected with
-  // remaining balance (CRMC must re-endorse) > stale endorsement (CRMC must
-  // poke the patient). Both signal "CRMC has something to do here."
+  // remaining balance (the gateway must re-endorse) > stale endorsement (the gateway must
+  // poke the patient). Both signal "the gateway has something to do here."
   const coverageWarning = (r) => {
     const slices = slicesByRequest.get(r.id) ?? []
     if (slices.length === 0) return null
@@ -1554,7 +1554,7 @@ export default function Requests() {
     finally { setBulkBusy(false) }
   }
 
-  // Notify the selected patients that CRMC needs more documents (uses notify()).
+  // Notify the selected patients that the gateway needs more documents (uses notify()).
   const requestDocuments = async () => {
     const rows = selectedRequests(); if (!rows.length) return
     setBulkBusy(true)
@@ -1576,7 +1576,7 @@ export default function Requests() {
   }
 
   // Endorse cannot batch — it needs per-request agencies + amounts. Open the
-  // first selected request so CRMC endorses through the EndorseModal.
+  // first selected request so the gateway endorses through the EndorseModal.
   const bulkEndorse = () => {
     const rows = selectedRequests(); if (!rows.length) return
     if (rows.length > 1) toast('Endorse one request at a time — opening the first.', { icon: '↗' })
@@ -1606,8 +1606,8 @@ export default function Requests() {
 
         {/* R36: agency suggestions queue. Amber banner surfaces bottom-up
             referral signals from agency staff. Each suggestion is an
-            information channel into the network broker (CRMC) -- accepting
-            does NOT auto-endorse, only acknowledges; CRMC still decides
+            information channel into the network broker (the gateway) -- accepting
+            does NOT auto-endorse, only acknowledges; the gateway still decides
             and endorses through the normal flow. */}
         {pendingSuggestions.length > 0 && (
           <div className="mb-4 border border-amber-200 bg-amber-50/60 rounded-xl p-4">

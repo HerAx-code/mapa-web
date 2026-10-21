@@ -10,7 +10,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap'
 
 // Camera-only live selfie capture. Uses getUserMedia (front camera) so the
 // photo is a fresh capture, not a gallery pick — basic anti-spoofing. If no
-// camera is available / permission is denied, we show the in-person CRMC
+// camera is available / permission is denied, we show the in-person the gateway
 // fallback instead of letting the patient upload an arbitrary photo. The
 // captured image never leaves the device until the request is submitted.
 //
@@ -21,7 +21,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap'
 //
 // The liveness check runs on the captured still — a quiet nudge toward a usable
 // photo. It NEVER blocks: even an unclear result keeps "Use anyway" available
-// (the CRMC social worker makes the final call, and an elderly/ill patient's
+// (the gateway social worker makes the final call, and an elderly/ill patient's
 // poor camera must not lock them out). The liveness result is handed up via
 // onCapture and stamped on the selfie doc as an advisory flag. See
 // docs/id-verification-plan.md.

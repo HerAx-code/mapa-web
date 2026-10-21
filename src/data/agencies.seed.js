@@ -20,7 +20,7 @@
 // `eligibility.residencyScope` (remediation Phase 2.1): the residency a funder
 // serves — 'nationwide' (default) or 'barmm'. ADVISORY ONLY: the EndorseModal
 // flags + sorts on it, never blocks (see src/utils/eligibility.js). AMBaG is a
-// BARMM-government program, so it is scoped 'barmm' — ⚠ confirm with CRMC in
+// BARMM-government program, so it is scoped 'barmm' — ⚠ confirm with the gateway in
 // Phase 0 Q2 (see docs/assistance-model-remediation-plan.md) before relying on it.
 export const AGENCIES = [
   {
@@ -61,7 +61,7 @@ export const AGENCIES = [
     requirements: ['Barangay Certificate of Indigency', 'PhilHealth ID', 'Valid ID'],
     assistanceTypes: ['Hospital Bills / Hospitalization', 'Medicines', 'Dialysis', 'Chemotherapy', 'Laboratory Tests', 'Surgery / Medical Procedures'],
     // ⚠ Phase 0 Q2 unconfirmed: AMBaG is a BARMM-government program, scoped to
-    // Bangsamoro residents here. Confirm the exact rule with CRMC before relying.
+    // Bangsamoro residents here. Confirm the exact rule with the gateway before relying.
     eligibility: { residencyScope: 'barmm' },
     processingTime: '3–5 Days', enabled: true,
   },

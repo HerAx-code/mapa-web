@@ -39,13 +39,13 @@ export const PERIOD_ADJECTIVE = {
 //
 // MAPA's role model reflects the Malasakit Center arrangement: agencies
 // (PCSO, DOH, DSWD, congressional offices, NGOs) bring their own funds.
-// CRMC hosts the platform. So fund control lives inside the agency:
+// the gateway hosts the platform. So fund control lives inside the agency:
 //   - AGENCY_ADMIN — senior officer at the agency (e.g., PCSO branch head).
 //     Controls allocation, manages coordinators, sees own audit log.
 //   - AGENCY — coordinator/social worker. Approves cases within allocation.
-//   - SUPER_ADMIN — CRMC platform operator. Onboards agencies, doc review,
+//   - SUPER_ADMIN — the gateway platform operator. Onboards agencies, doc review,
 //     issues Patient Access Codes. Has zero fund authority.
-//   - STAFF_ADMIN — CRMC operations staff. Same as super_admin minus
+//   - STAFF_ADMIN — the gateway operations staff. Same as super_admin minus
 //     destructive actions.
 //   - PATIENT — applicant.
 export const ROLES = {
@@ -116,7 +116,7 @@ export const ROLE_BADGE = {
 
 export const APP_STATUS_CONFIG = {
   pending:       { label: 'Pending',                  badge: 'badge-blue'   },
-  // Endorsed means CRMC routed the slice to this agency; the patient still
+  // Endorsed means the gateway routed the slice to this agency; the patient still
   // has to hit Proceed before the agency actually starts reviewing funding.
   // So the previous "Awaiting You" label was wrong from the agency's seat --
   // they're not the one being waited on.

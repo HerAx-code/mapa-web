@@ -17,14 +17,14 @@
 //   • Values that change (THRESHOLDS) are externalized config, editable in one
 //     place.                                                        [Cúram/DMN]
 //   • Two timing tiers via `when`: 'submit' (needed to file) and 'assess'
-//     (needed before CRMC endorses). 'approve' is reserved for future
+//     (needed before the gateway endorses). 'approve' is reserved for future
 //     per-agency (funder-owned) requirements — not modeled yet.        [Stripe]
 //
 // Scope: inpatient hospital bills (owner decision 2026-10-12). PhilHealth is an
 // optional prior-coverage amount, not a required document (money-model step).
 //
 // ⚠ The per-type requirement lists and THRESHOLDS below are research-grounded
-// PLACEHOLDERS (PCSO/DSWD/DOH published requirements). Confirm against CRMC
+// PLACEHOLDERS (PCSO/DSWD/DOH published requirements). Confirm against the gateway
 // Malasakit's real forms — see docs/crmc-document-requirements-checklist.md —
 // before enabling VITE_PER_TYPE_DOCS in production.
 
@@ -54,7 +54,7 @@ export const DOCUMENT_TYPES = [
 
 const DOC_BY_ID = Object.fromEntries(DOCUMENT_TYPES.map(d => [d.id, d]))
 
-// ── Externalized thresholds (CRMC confirms — see Part C of the checklist) ────
+// ── Externalized thresholds (the gateway confirms — see Part C of the checklist) ────
 // Editing these is the intended way to tune policy; no rules engine, no deploy
 // cycle beyond a config change. `0`/null disables a threshold rule.
 export const THRESHOLDS = {
@@ -63,11 +63,11 @@ export const THRESHOLDS = {
 
 // ── Requirement timing tiers (earliest first) ───────────────────────────────
 // 'submit'  — needed to file the request (patient uploads up front)
-// 'assess'  — needed before CRMC endorses (also collected up front today)
+// 'assess'  — needed before the gateway endorses (also collected up front today)
 // 'approve' — reserved for future funder-owned per-agency requirements
 export const WHEN_ORDER = ['submit', 'assess', 'approve']
 
-// Attribute helper for predicates. amountNeeded is the residual CRMC endorses;
+// Attribute helper for predicates. amountNeeded is the residual the gateway endorses;
 // falls back to the raw bill before assessment fills coverage.
 const amountNeededOf = (req) => Number(req?.amountNeeded ?? req?.totalBill ?? 0)
 

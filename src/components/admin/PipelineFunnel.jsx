@@ -1,6 +1,6 @@
 // Request pipeline distribution for the admin dashboard (Magic Patterns
 // "where requests slow down" adoption, remapped to MAPA). Shows how the active
-// CRMC requests are distributed across the lifecycle stages, so an operator
+// the gateway requests are distributed across the lifecycle stages, so an operator
 // sees at a glance where the workload is piling up. Presentational — the
 // container passes the already-counted stages. Live figures, no new data model.
 export default function PipelineFunnel({ stages = [], onOpenQueue, totalLabel = 'open' }) {

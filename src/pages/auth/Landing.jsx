@@ -502,7 +502,7 @@ export default function Landing() {
       </section>
 
       {/* Need help / Visit us — the human escape hatch for low-literacy users:
-          real CRMC contact details + a note that staff will do the whole
+          real contact details + a note that staff will do the whole
           application with them in person. Everyone. */}
       <section id="help" className="px-5 sm:px-6 py-16 sm:py-20">
         <div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-12 lg:gap-12">

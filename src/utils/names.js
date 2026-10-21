@@ -24,7 +24,7 @@ export function firstGivenName(fullName) {
 }
 
 // Names that look like internal services or staff roles. Patient
-// registration rejects these to keep fake "CRMC Admin" / "System
+// registration rejects these to keep fake "the gateway Admin" / "System
 // Diagnostics" / "cascade_*" accounts out of the patient list.
 export const RESERVED_NAME_TOKENS = new Set([
   'admin', 'administrator', 'system', 'crmc', 'mapa', 'malasakit',

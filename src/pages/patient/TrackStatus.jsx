@@ -62,7 +62,7 @@ const glExpiryInfo = (app) => {
 // come from the locale files (patient.track.stages.*) rather than being
 // hardcoded English.
 const buildStages = (app, t) => {
-  // Co-funding slice (new model): CRMC owns intake, doc verification, and
+  // Co-funding slice (new model): the gateway owns intake, doc verification, and
   // the interview on the parent request, so a per-slice stepper that
   // shows "Document Verification" or "Interview Scheduled" is misleading.
   // Slices only cover the agency's funding leg: Endorsed → Funding Review
@@ -193,7 +193,7 @@ export default function TrackStatus() {
         updatedAt: serverTimestamp(),
       })
       // Activity Timeline (§B.26): patient's proceed is the handoff from
-      // CRMC's endorsement to the agency's funding queue -- a key event
+      // the gateway's endorsement to the agency's funding queue -- a key event
       // every co-funding agency on this case should see in chronological
       // context. Best-effort: a failed audit doesn't undo the proceed.
       logAudit(user, {
@@ -343,7 +343,7 @@ export default function TrackStatus() {
     return unsub
   }, [activeRequest?.id])
 
-  // Documents on the active request — so we can flag any CRMC returned for a fix
+  // Documents on the active request — so we can flag any the gateway returned for a fix
   // (status 'rejected') with its reason and a one-tap re-upload CTA, instead of
   // the generic "being reviewed" banner.
   const [reqDocs, setReqDocs] = useState([])
@@ -481,7 +481,7 @@ export default function TrackStatus() {
           const rejectedReqDocs = reqDocs.filter(d => d.status === 'rejected')
           return (
             <div data-tour-id="track-request" className="space-y-5 mb-5">
-              {/* Action-first: if CRMC returned any document for a fix, surface
+              {/* Action-first: if the gateway returned any document for a fix, surface
                   exactly which one(s) + the reason + a one-tap re-upload, above
                   everything else — it's the one thing the patient must do. */}
               {rejectedReqDocs.length > 0 && (
@@ -656,7 +656,7 @@ export default function TrackStatus() {
                           </div>
                         )
                       })()}
-                      {/* Endorsed (slice only): CRMC has sent this slice to
+                      {/* Endorsed (slice only): the gateway has sent this slice to
                           the agency and the patient needs to confirm on the
                           Request page before the agency review starts. */}
                       {app.requestId && app.status === 'endorsed' && (

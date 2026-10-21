@@ -75,7 +75,7 @@ const AgencyDetail     = lazyWithReload(() => import('./pages/admin/AgencyDetail
 const AuditLog         = lazyWithReload(() => import('./pages/admin/AuditLog'))
 const Announcements    = lazyWithReload(() => import('./pages/admin/Announcements'))
 const ExportPreview    = lazyWithReload(() => import('./pages/admin/ExportPreview'))
-// Funds page removed — CRMC has zero fund authority. Each agency manages
+// Funds page removed — the gateway has zero fund authority. Each agency manages
 // its own budget via /agency/allocation (Agency Administrator role).
 
 const PATIENT_ROLES = [ROLES.PATIENT]

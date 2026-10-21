@@ -160,7 +160,7 @@ export default function Inbox() {
 
         {/* Summary cards (clickable filters). Under the co-funding model,
             slices only sit in For Funding (reviewing) / Needs Info
-            (awaiting_info) / Approved / Rejected — CRMC handles doc review
+            (awaiting_info) / Approved / Rejected — the gateway handles doc review
             and the assessment interview on the parent request. */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           {[
@@ -250,7 +250,7 @@ export default function Inbox() {
                   !['rejected','certificate'].includes(app.status)
                 const days = daysSince(app.submittedAt)
                 // Color from the shared aging() vocabulary (warn ≥3d, over ≥7d)
-                // so this cue matches the CRMC queue's SLA semantics. null-safe:
+                // so this cue matches the gateway queue's SLA semantics. null-safe:
                 // a missing submittedAt resolves to 'ok' (gray), never a false alarm.
                 const dayColor = AGING_TEXT[aging(app.submittedAt, { warnAt: 3, overAt: 7, unit: 'd' }).state]
                 return (

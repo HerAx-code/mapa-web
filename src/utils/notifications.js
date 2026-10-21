@@ -28,7 +28,7 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
       type, title, body, read: false, createdAt: serverTimestamp(),
       // Phase 1.4: sender attribution, required by the notifications
       // create rule. Cross-role notification writes stay allowed (a
-      // patient's submit notifies every CRMC admin), so the rule cannot
+      // patient's submit notifies every the gateway admin), so the rule cannot
       // check uid() == recipient — instead every notification names the
       // account that wrote it, making a forged one traceable.
       fromUid: auth.currentUser?.uid ?? null,

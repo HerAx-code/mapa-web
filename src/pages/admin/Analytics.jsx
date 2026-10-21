@@ -20,7 +20,7 @@ const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 const ANALYTICS_PIPELINE_KEYS = ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded', 'fully_funded']
 const OUTCOME_TONE = { brand: 'bg-brand-500', gray: 'bg-gray-300', amber: 'bg-amber-400', red: 'bg-red-400' }
 
-// CRMC Program Overview — the board-level analytics surface (Magic Patterns
+// the gateway Program Overview — the board-level analytics surface (Magic Patterns
 // adoption): facilitation KPIs with period-over-period deltas, a reporting-range
 // selector, the request pipeline distribution, where requests end up, and the
 // by-agency / by-type breakdowns. Staff surface (English-only).

@@ -1,5 +1,5 @@
 // Build a formal, printable HTML version of the Unified Intake Sheet.
-// Mirrors the CRMC paper form: letterhead, sectioned fields as label:value,
+// Mirrors the gateway paper form: letterhead, sectioned fields as label:value,
 // family composition table, narrative blocks, and signature lines.
 
 import { tsToDate } from './dates'
@@ -58,7 +58,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
 
   const author = s.completedBy || currentUser?.name || ''
 
-  // The sheet prints for both agency applications (appId / agencyName) and CRMC
+  // The sheet prints for both agency applications (appId / agencyName) and the gateway
   // requests (requestId / assistanceType, no agency until endorsement), so fall
   // back across both shapes rather than rendering "undefined".
   const refNo           = app.appId || app.requestId || ''

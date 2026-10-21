@@ -15,7 +15,7 @@ const env = (typeof import.meta !== 'undefined' && import.meta.env) || {}
 export const ORG = {
   // Short product name shown in the header/logo lockup.
   name: env.VITE_ORG_NAME || 'MAPA',
-  // Optional institution tag under the product name (was 'CRMC'). Empty by
+  // Optional institution tag under the product name (was 'the gateway'). Empty by
   // default so an unaffiliated deployment shows no host institution.
   shortName: env.VITE_ORG_SHORT_NAME || '',
   // Expanded product name.
@@ -44,7 +44,7 @@ export const ORG = {
   //   `${accessCodePrefix}-YYYY-NNNNN`  e.g. MAPA-2026-00001
   // legacyAccessCodePrefixes are ACCEPTED at registration but never issued, so
   // patients holding a code from a prior deployment aren't locked out. Empty =
-  // clean cut (MAPA-only): confirmed no outstanding CRMC codes, so none kept.
+  // clean cut (MAPA-only): confirmed no outstanding legacy codes, so none kept.
   accessCodePrefix: env.VITE_ACCESS_CODE_PREFIX || 'MAPA',
   legacyAccessCodePrefixes: [],
 
@@ -56,7 +56,7 @@ export const ORG = {
 export const acceptedAccessCodePrefixes = () =>
   [ORG.accessCodePrefix, ...ORG.legacyAccessCodePrefixes].filter(Boolean)
 
-// Validator for a full access code, e.g. MAPA-2026-00001 (or a legacy CRMC- one).
+// Validator for a full access code, e.g. MAPA-2026-00001 (or a legacy the gateway- one).
 export const accessCodeRe = () =>
   new RegExp(`^(${acceptedAccessCodePrefixes().join('|')})-\\d{4}-\\d{5}$`)
 

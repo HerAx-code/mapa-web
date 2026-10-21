@@ -32,7 +32,7 @@ export const patientTrackStatusTour = (t) => [
     body:     t('tour.patient.track.s2.body'),
     position: 'bottom',
   },
-  // The slices list only exists once CRMC has endorsed to at least one
+  // The slices list only exists once the gateway has endorsed to at least one
   // agency. For a freshly-submitted request, no slice cards render yet
   // and the Tour component falls back to centered + full-page dim,
   // which keeps the explainer copy meaningful ("when endorsed, each
@@ -82,7 +82,7 @@ export const agencyDashboardTour = [
   {
     targetId: 'agency-slots',
     title:    'Slot capacity',
-    body:     "Today's intake counter. Slots are consumed when CRMC endorses a case to you and reset at PH midnight. Manage daily capacity on Slot Management.",
+    body:     "Today's intake counter. Slots are consumed when the coordinating office endorses a case to you and reset at PH midnight. Manage daily capacity on Slot Management.",
     position: 'bottom',
   },
   {
@@ -94,7 +94,7 @@ export const agencyDashboardTour = [
   {
     targetId: 'agency-actions',
     title:    'Your daily work',
-    body:     'Inbox is the funding queue. GL Letters lets you print/upload signed guarantees. App Logs is the historical archive. Messages reaches patients and CRMC.',
+    body:     'Inbox is the funding queue. GL Letters lets you print/upload signed guarantees. App Logs is the historical archive. Messages reaches patients and the coordinating office.',
     position: 'top',
   },
 ]

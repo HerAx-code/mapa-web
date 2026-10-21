@@ -92,12 +92,12 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     attestedAt:          new Date().toISOString(),
     ...(idType ? { idType } : {}),
     // Advisory on-device OCR result (ID docs only): extracted text + a
-    // fuzzy name-match flag, surfaced to the CRMC verifier. Never
+    // fuzzy name-match flag, surfaced to the gateway verifier. Never
     // authoritative.
     ...(ocr ? {
       ocrText: (ocr.text ?? '').slice(0, 2000),
       ocrMatch: ocr.match ?? null,
-      // Advisory OCR confidence (0–100) — how legible the read was. Lets the CRMC
+      // Advisory OCR confidence (0–100) — how legible the read was. Lets the gateway
       // verifier weigh a no-match (shaky scan vs genuinely wrong ID).
       ocrConfidence: typeof ocr.confidence === 'number' ? ocr.confidence : null,
     } : {}),
@@ -106,7 +106,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     ...(idTypeDetected ? { idTypeDetected: String(idTypeDetected).slice(0, 100) } : {}),
     // Advisory on-device face-match + liveness (selfie docs). Flags + scores
     // only, never a face template. All fail-null and never block submission —
-    // the CRMC social worker makes the final call. See docs/id-verification-plan.md.
+    // the gateway social worker makes the final call. See docs/id-verification-plan.md.
     ...(verify ? {
       faceMatch:      verify.faceMatch ?? null,
       faceMatchScore: typeof verify.faceMatchScore === 'number' ? verify.faceMatchScore : null,
@@ -180,7 +180,7 @@ export async function replacePatientDocument({ docId, file, ocr = null, verify =
       ocrMatch: ocr.match ?? null,
       ocrConfidence: typeof ocr.confidence === 'number' ? ocr.confidence : null,
     } : {}),
-    // Refresh the advisory verification on a re-upload so the CRMC verifier sees
+    // Refresh the advisory verification on a re-upload so the gateway verifier sees
     // the new file's result, not the rejected one's. Rules allow exactly these
     // keys on a patient update (firestore.rules documents.update).
     ...(idTypeDetected ? { idTypeDetected: String(idTypeDetected).slice(0, 100) } : {}),

@@ -18,7 +18,7 @@ import toast from 'react-hot-toast'
 
 // Agency-side announcements. Authored by the Agency Administrator and shown
 // to ALL patients via the Layout banner (source: 'agency'). Distinct from
-// CRMC system announcements — agencies only see/manage their own.
+// the gateway system announcements — agencies only see/manage their own.
 export default function AgencyAnnouncements() {
   const { user }          = useAuth()
   const isAgencyAdmin     = user?.role === 'agency_admin'

@@ -14,7 +14,7 @@ import {
  * Implements the patient-facing branch of RA 10173 §16(c) (right to
  * access) and aligns with Estonia's X-Road "every access by a public
  * official is visible to the citizen" model. Patients see every
- * agency / CRMC interaction with their record in plain language --
+ * agency / the gateway interaction with their record in plain language --
  * who, what, when -- with no system jargon.
  *
  * Reads auditLog entries where patientId == current user's uid, scoped

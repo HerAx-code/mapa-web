@@ -19,7 +19,7 @@ export const tsToDate = (ts) => {
 }
 
 // PH-local "YYYY-MM-DD" for a moment (defaults to now). This is the canonical
-// "which day is it at the pilot site" key: everything day-bucketed for CRMC /
+// "which day is it at the pilot site" key: everything day-bucketed for the gateway /
 // the agencies is anchored to Asia/Manila (UTC+8, no DST), never to UTC or the
 // host machine's zone.
 //

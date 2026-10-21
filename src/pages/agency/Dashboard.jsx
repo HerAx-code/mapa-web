@@ -52,7 +52,7 @@ export default function AgencyDashboard() {
   const [loading, setLoading]           = useState(true)
   const [showTopUp, setShowTopUp]       = useState(false)
 
-  // R38: dashboard "What's new" feed. Coordinators see CRMC notices
+  // R38: dashboard "What's new" feed. Coordinators see the gateway notices
   // targeted at their role plus their own agency's posted promos
   // (so they can verify what patients see).
   const feedAnnouncements = useFeedAnnouncements({
@@ -232,7 +232,7 @@ export default function AgencyDashboard() {
         await updateDoc(doc(db, 'agencies', agency.id), {
           'budget.lowBalanceNotifiedAt': serverTimestamp(),
         })
-        // Low-balance is an intra-agency concern. CRMC has zero fund
+        // Low-balance is an intra-agency concern. the gateway has zero fund
         // authority, so they're not notified. Targets: every user at this
         // agency (both coordinator and agency_admin roles).
         const teamSnap = await getDocs(query(
@@ -322,7 +322,7 @@ export default function AgencyDashboard() {
           </div>
         </div>
 
-        {/* R38: "What's new" feed — CRMC notices + own agency's promos.
+        {/* R38: "What's new" feed — the gateway notices + own agency's promos.
             Renders null when empty so the dashboard stays clean for
             agencies that have no active announcements. */}
         <div className="mb-5">
@@ -549,7 +549,7 @@ function BudgetTopUpModal({ agency, user, onClose }) {
         status:          'open',
       })
       // Top-up is an intra-agency matter — funds come from the agency's
-      // own source, not CRMC. Notify the agency_admin for this agency.
+      // own source, not the gateway. Notify the agency_admin for this agency.
       // (If no agency_admin exists yet, the report still lands in the
       // reports collection and a super_admin can promote one.)
       getDocs(query(

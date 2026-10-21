@@ -1,5 +1,5 @@
 // Queue categorization for the admin Requests page (Phase 2 of the request-
-// pipeline redesign). Buckets each request by the CRMC processing stage it is
+// pipeline redesign). Buckets each request by the gateway processing stage it is
 // waiting on, reusing the SAME requestStage model that drives the detail rail
 // and the endorse gate — so the tabs, the row's stage chip, and the endorse
 // blockers can never disagree.
@@ -15,7 +15,7 @@ import { deriveRequestStage, TERMINAL_REQUEST_STATUSES } from './requestStage'
 // (awaiting agencies) and completed (terminal).
 export const QUEUE_BUCKETS = ['verify', 'assess', 'endorse', 'endorsed', 'completed']
 
-// Post-endorsement, pre-terminal statuses — the request is out of CRMC's hands
+// Post-endorsement, pre-terminal statuses — the request is out of the gateway's hands
 // and waiting on agencies. ('endorsing' is the brief transient at endorse time.)
 const ENDORSED_STATUSES = ['endorsed', 'partially_funded', 'endorsing']
 
@@ -70,7 +70,7 @@ export function bucketCounts(requests = []) {
 // The queue's top-level categorization is the coarser action-oriented set the
 // MP reference uses; the fine stage (verify/assess/endorse above)
 // still drives each ROW's stage chip. Default landing tab is 'needs_action' —
-// the work actually blocked on CRMC.
+// the work actually blocked on the gateway.
 
 export const COARSE_TABS = ['needs_action', 'under_review', 'awaiting_agency', 'resolved', 'all']
 
@@ -87,7 +87,7 @@ export function coarseBucketOf(request) {
   if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'resolved'
   if (ENDORSED_STATUSES.includes(status)) return 'awaiting_agency'
   // Pre-endorsement: a freshly-submitted request, or one with a blocking
-  // (rejected) document, needs CRMC to act; anything else is under active review.
+  // (rejected) document, needs the gateway to act; anything else is under active review.
   const blocking = (request?.attachedDocuments ?? []).some(a => a?.status === 'rejected')
   if (status === 'submitted' || blocking) return 'needs_action'
   return 'under_review'

@@ -57,8 +57,8 @@ export const TYPE_CONFIG = {
 //   - source === 'agency'  -> surface 'feed', targetRoles ['patient']
 //                             (agency promotions never go in the top banner)
 //   - otherwise            -> surface 'banner', targetRoles all non-admin
-//                             (preserves the pre-R38 CRMC banner behavior;
-//                              existing CRMC announcements do NOT suddenly
+//                             (preserves the pre-R38 the gateway banner behavior;
+//                              existing the gateway announcements do NOT suddenly
 //                              start appearing on dashboards)
 //
 // targetRoles is NOT a security boundary. Firestore reads return the doc

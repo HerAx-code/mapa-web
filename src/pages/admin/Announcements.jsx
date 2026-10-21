@@ -195,7 +195,7 @@ export function AnnouncementForm({ announcement, onClose, onSave, audienceNote, 
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
 
-          {/* Type selector — alert types are for CRMC system notices only;
+          {/* Type selector — alert types are for the gateway system notices only;
               promotions always use the neutral info style. */}
           {!promo && (
             <div>

@@ -1,4 +1,4 @@
-// CRMC request-processing stage model (Phase 0 of the request-pipeline
+// the gateway request-processing stage model (Phase 0 of the request-pipeline
 // redesign). Encapsulates the verify → assess → endorse workflow that was
 // inline in admin/Requests.jsx, so the queue chips, the stage rail, and the
 // endorse gate all read one source of truth instead of re-deriving it.
@@ -20,7 +20,7 @@ import { isIntakeComplete } from './intakeSheet'
 
 export const TERMINAL_REQUEST_STATUSES = ['fully_funded', 'closed', 'rejected']
 
-// Ordered CRMC processing stages. 'endorse' is the goal; the first three are
+// Ordered the gateway processing stages. 'endorse' is the goal; the first three are
 // its prerequisites.
 export const GATEWAY_STAGE_KEYS = ['verify', 'assess', 'endorse']
 

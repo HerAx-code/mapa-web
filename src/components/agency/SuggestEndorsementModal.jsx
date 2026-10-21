@@ -16,15 +16,15 @@ import toast from 'react-hot-toast'
  * a co-funded slice. They pick a sibling agency that ISN'T already on
  * the case, write a reason, optionally recommend an amount, and set
  * urgency. The submission writes a referralSuggestions/{id} doc that
- * CRMC reviews on admin/Requests. CRMC has final say -- the suggestion
+ * the gateway reviews on admin/Requests. the gateway has final say -- the suggestion
  * is an information channel, not an instruction.
  *
- * The CRMC-gateway model is deliberately preserved: agencies do NOT
- * endorse each other. They suggest; CRMC decides.
+ * The gateway model is deliberately preserved: agencies do NOT
+ * endorse each other. They suggest; the gateway decides.
  *
  * Theoretical anchor: Bardach (1998) describes agency staff as
  * "craftsmen" with ground-truth case knowledge. This UI gives them a
- * structured voice without bypassing the network broker (CRMC).
+ * structured voice without bypassing the network broker (the gateway).
  */
 
 const URGENCY_OPTIONS = [
@@ -48,7 +48,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
 
   // Load all enabled agencies that aren't already on this case.
   // Sibling agencies are excluded -- suggesting an agency that already
-  // holds a slice would be a no-op for CRMC.
+  // holds a slice would be a no-op for the gateway.
   useEffect(() => {
     let cancelled = false
     ;(async () => {

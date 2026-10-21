@@ -256,7 +256,7 @@ export default function Accounts() {
     // Limited to system administrator roles. Agency staff are managed
     // under their agency at /admin/agencies/:id — keeping them off this
     // page prevents accidental deactivation of agency users from a
-    // surface intended for CRMC staff only.
+    // surface intended for the gateway staff only.
     const q = query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin']))
     const unsub = onSnapshot(q, snap => {
       setAccounts(snap.docs.map(d => ({ uid: d.id, ...d.data() })))

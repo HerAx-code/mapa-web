@@ -5,7 +5,7 @@ import { db } from '../firebase'
  * Write an entry to the auditLog collection.
  *
  * actorAgencyId is included so that an agency_admin can read their own
- * agency's slice without being able to see other agencies' entries. CRMC
+ * agency's slice without being able to see other agencies' entries. the gateway
  * admin entries have actorAgencyId = null.
  *
  * `requestId` and `patientId` are optional denormalised fields added
