@@ -265,10 +265,10 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
 
           {/* the gateway's free-text referral note, if provided in EndorseModal. Shows
               the agency's coordinator the context the gateway wanted them to know. */}
-          {app.crmcNotes && (
+          {(app.gatewayNotes ?? app.crmcNotes) && (
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
               <p className="text-xs font-semibold text-amber-800 mb-0.5">Note from {ORG.gatewayName}</p>
-              <p className="text-xs text-amber-700 leading-relaxed whitespace-pre-line">{app.crmcNotes}</p>
+              <p className="text-xs text-amber-700 leading-relaxed whitespace-pre-line">{app.gatewayNotes ?? app.crmcNotes}</p>
             </div>
           )}
 
