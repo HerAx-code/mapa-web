@@ -313,7 +313,7 @@ export default function AddAgency() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Agency Name <span className="text-red-400">*</span></label>
-              <input className="input" placeholder="Malasakit Center"
+              <input className="input" placeholder="Agency name"
                 value={agency.name} onChange={setA('name')} />
             </div>
             <div>
@@ -348,7 +348,7 @@ export default function AddAgency() {
               AddressPicker -- same component the patient registration
               and Account Settings forms now use. Barangay is intentionally
               hidden; an agency's office identity comes from the Office /
-              Building Name field below (e.g. "CRMC Ground Floor", "BARMM
+              Building Name field below (e.g. "Ground Floor, Main Building", "BARMM
               Admin Building"), not a barangay. The "Other (not listed)"
               fallback lets us register agencies outside BARMM (NCR HQ,
               regional offices) without changing the schema. */}
