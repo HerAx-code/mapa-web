@@ -2,8 +2,8 @@
 //
 // A request is the patient's medical-assistance need (a bill + an amount).
 // the gateway splits it into child "application" slices — one per contributing
-// agency — and endorses them sequentially toward zero balance (the Malasakit
-// model: PhilHealth applies first, then PCSO → DSWD → DOH-MAIP → LGU, each
+// agency — and endorses them sequentially toward zero balance (the Order of
+// Charging model: PhilHealth applies first, then PCSO → DSWD → DOH-MAIP → LGU, each
 // covering up to its own ceiling). PhilHealth is captured as a deduction on
 // the request itself, not as an endorsable agency.
 //
