@@ -265,12 +265,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             endorsedAt:        serverTimestamp(),
             // Optional free-text note from the gateway, shown in the agency's
             // ApproveModal so the operator sees the referral context.
-            // De-CRMC migration: dual-write the new `gatewayNotes` alongside the
-            // legacy `crmcNotes`. Readers prefer gatewayNotes ?? crmcNotes. The
-            // legacy write is dropped in Phase 4b after the backfill is confirmed
-            // in prod (scripts/backfill-gateway-notes.mjs).
             gatewayNotes:      notesValue,
-            crmcNotes:         notesValue,
           })
           tx.update(doc(db, 'agencies', id), {
             'slots.remaining': remaining - 1,
