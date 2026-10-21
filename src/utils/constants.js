@@ -14,9 +14,9 @@ export const BRAND_FULL = ORG.fullName
 // my assessment" / "who endorsed my request". The host organization is
 // configurable (ORG.gateway*); these aliases are kept so existing importers
 // don't need to change. (Name kept as *_GATEWAY_* for import stability.)
-export const CRMC_GATEWAY_NAME     = ORG.gatewayName
-export const CRMC_GATEWAY_INITIALS = ORG.gatewayInitials
-export const CRMC_GATEWAY_COLOR    = ORG.gatewayColor
+export const GATEWAY_NAME     = ORG.gatewayName
+export const GATEWAY_INITIALS = ORG.gatewayInitials
+export const GATEWAY_COLOR    = ORG.gatewayColor
 
 // Budget period helpers — budget.period is an adjective ('monthly') which
 // reads awkwardly when embedded in phrases like "Budget this monthly".
@@ -59,7 +59,7 @@ export const ROLES = {
 // Helpers — use these instead of role === ROLES.AGENCY comparisons so that
 // agency_admin inherits agency permissions automatically.
 export const isAgencyRole = (role) => role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN
-export const isCrmcAdminRole = (role) => role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN
+export const isGatewayAdminRole = (role) => role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN
 
 // Idle session timeout (security-improvement-plan §1.3; see
 // docs/session-timeout-and-terms-plan.md). STAFF ONLY — patients are exempt,
@@ -70,7 +70,7 @@ export const SESSION_IDLE_MS     = 15 * 60 * 1000       // log out after 15 min 
 export const SESSION_WARN_MS     = 90 * 1000            // warn 90s before logout
 export const SESSION_ABSOLUTE_MS = 10 * 60 * 60 * 1000  // hard cap ~10h since app load
 // A staff role is subject to the timeout; patients (and logged-out) are not.
-export const isTimeoutRole = (role) => isCrmcAdminRole(role) || isAgencyRole(role)
+export const isTimeoutRole = (role) => isGatewayAdminRole(role) || isAgencyRole(role)
 
 // Terms of Use version (docs/session-timeout-and-terms-plan.md). Patients accept
 // at registration; the accepted version is stamped on their user doc. Bump this

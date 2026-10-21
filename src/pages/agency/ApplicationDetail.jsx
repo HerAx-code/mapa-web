@@ -988,7 +988,7 @@ export default function ApplicationDetail() {
   // Direct ping to the CRMC coordinator who endorsed this slice — closes the
   // agency -> CRMC ad-hoc-question loop without making the agency hunt for
   // the right admin in their messages list.
-  const handleMessageCrmc = async () => {
+  const handleMessageGateway = async () => {
     if (!app?.endorsedById) return
     try {
       const convId = await getOrCreateConversation(user.uid, app.endorsedById, {
@@ -1138,7 +1138,7 @@ export default function ApplicationDetail() {
               <MdMessage size={14} /> Message Patient
             </button>
             {app.endorsedById && (
-              <button onClick={handleMessageCrmc}
+              <button onClick={handleMessageGateway}
                 className="btn-secondary text-sm flex items-center gap-1.5"
                 title={`Message ${app.endorsedBy ?? ORG.gatewayName} (endorsing coordinator)`}>
                 <MdMessage size={14} /> Message {ORG.gatewayName}
