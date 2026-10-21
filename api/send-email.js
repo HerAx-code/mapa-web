@@ -14,7 +14,7 @@
 // Required Vercel env vars (Project Settings → Environment Variables):
 //   SMTP_USER  — the Gmail address you generated the App Password for
 //   SMTP_PASS  — the 16-character Gmail App Password (no spaces)
-//   SMTP_FROM  — display 'From' address, e.g. 'MAPA CRMC <user@gmail.com>'
+//   SMTP_FROM  — display 'From' address, e.g. 'MAPA <user@gmail.com>'
 //
 // Authentication (added for production):
 //   Every request must carry a valid Firebase ID token minted by THIS
@@ -22,7 +22,7 @@
 //   against Google's public keys (signature + issuer + audience + expiry)
 //   via `jose` — no service-account secret needed, only the public
 //   project id. This closes the open-relay hole: without a valid token an
-//   internet caller can no longer send mail as CRMC.
+//   internet caller can no longer send mail as MAPA.
 //
 //   Required Vercel env var (in addition to the SMTP ones below):
 //     FIREBASE_PROJECT_ID — the project id (public, non-secret).
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
 
   const SMTP_USER = process.env.SMTP_USER
   const SMTP_PASS = process.env.SMTP_PASS
-  const SMTP_FROM = process.env.SMTP_FROM || (SMTP_USER ? `MAPA CRMC <${SMTP_USER}>` : null)
+  const SMTP_FROM = process.env.SMTP_FROM || (SMTP_USER ? `MAPA <${SMTP_USER}>` : null)
 
   if (!SMTP_USER || !SMTP_PASS) {
     console.error('[send-email] Missing SMTP_USER or SMTP_PASS env var')

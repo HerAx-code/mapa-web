@@ -248,7 +248,7 @@
       "point1": "No registration fee",
       "point2": "No processing fee",
       "point3": "No fixer, no middleman",
-      "warning": "If anyone asks you to pay to speed up your approval, they are not from {{gateway}}. Report it to the Malasakit Center right away."
+      "warning": "If anyone asks you to pay to speed up your approval, they are not from {{gateway}}. Report it to {{gateway}} right away."
     },
     "eligibility": {
       "title": "Who can apply",
@@ -1058,7 +1058,7 @@
         "medicines": "Medicines & prescriptions",
         "labTests": "Laboratory tests & imaging",
         "chemotherapy": "Chemotherapy & specialty treatments",
-        "fromAgencies": "From PCSO, DOH, DSWD, Malasakit Center, and more.",
+        "fromAgencies": "From PCSO, DOH, DSWD, and more.",
         "findProgram": "Find a Program",
         "getStarted": "Get Started — Upload Documents",
         "newToMapa": "New to MAPA? Read the User Guide",
@@ -1255,7 +1255,7 @@
       "sections": {
         "whatIsMapa": {
           "title": "What is MAPA?",
-          "content": "MAPA (Medical Assistance Portal Access) is the official online system of {{facility}} for processing medical assistance applications. It allows patients to apply for financial or material assistance from partner government agencies such as DSWD, PCSO, and the Malasakit Center — all in one place, without lining up at multiple offices."
+          "content": "MAPA (Medical Assistance Portal Access) is the official online system of {{facility}} for processing medical assistance applications. It allows patients to apply for financial or material assistance from partner government agencies such as DSWD, PCSO, and DOH — all in one place, without lining up at multiple offices."
         },
         "whoCanUse": {
           "title": "Who can use MAPA?",
@@ -1301,7 +1301,7 @@
         },
         "cofunding": {
           "title": "What is co-funding? Why do I see multiple agencies?",
-          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. {{gateway}} verifies your documents and assesses your case remotely, then endorses your request to one or more partner agencies (DSWD, PCSO, Malasakit, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — {{gateway}} routes the case for you.",
+          "content": "MAPA uses a co-funding model. You file ONE request stating your bill and the amount you need. {{gateway}} verifies your documents and assesses your case remotely, then endorses your request to one or more partner agencies (DSWD, PCSO, DOH, AMBaG) that together cover your bill toward zero balance. Each agency makes its own funding decision and issues its own Guarantee Letter for the portion it covers. You never have to apply to each agency separately — {{gateway}} routes the case for you.",
           "note": "After {{gateway}} endorses your request, you'll see a Coverage Plan listing each agency. Tap Proceed to confirm and start their reviews."
         },
         "intakeWizard": {
@@ -1395,7 +1395,7 @@
       "sub": "One account, then submit your medical assistance requests online — less time queuing at the office.",
       "readyTitle": "Have these ready",
       "ready1": "Your name and address as they appear on a valid government ID",
-      "ready2": "Your Patient Access Code ({{codeFormat}}) from the Malasakit Center",
+      "ready2": "Your Patient Access Code ({{codeFormat}}) from {{gateway}}",
       "ready3": "A working email address for approval updates",
       "trustTime": "Takes about 3 minutes",
       "trustPrivacy": "Protected under the Data Privacy Act (RA 10173)",

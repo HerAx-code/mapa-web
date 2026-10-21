@@ -211,7 +211,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Agency Name <span className="text-red-400">*</span></label>
-              <input className="input" placeholder="Malasakit Center" value={form.name} onChange={set('name')} />
+              <input className="input" placeholder="Agency name" value={form.name} onChange={set('name')} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Initials <span className="text-red-400">*</span></label>

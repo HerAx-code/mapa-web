@@ -248,7 +248,7 @@
       "point1": "Walang bayad sa pagrehistro",
       "point2": "Walang processing fee",
       "point3": "Walang fixer o tagapamagitan",
-      "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-{{gateway}}. Isumbong agad sa Malasakit Center."
+      "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-{{gateway}}. Isumbong agad sa {{gateway}}."
     },
     "eligibility": {
       "title": "Sino ang maaaring mag-apply",
@@ -1058,7 +1058,7 @@
         "medicines": "Mga gamot at reseta",
         "labTests": "Mga laboratoryo at imaging",
         "chemotherapy": "Chemotherapy at mga espesyal na paggamot",
-        "fromAgencies": "Mula sa PCSO, DOH, DSWD, Malasakit Center, at iba pa.",
+        "fromAgencies": "Mula sa PCSO, DOH, DSWD, at iba pa.",
         "findProgram": "Maghanap ng Programa",
         "getStarted": "Magsimula — Mag-upload ng Dokumento",
         "newToMapa": "Bago sa MAPA? Basahin ang Gabay sa Paggamit",
@@ -1255,7 +1255,7 @@
       "sections": {
         "whatIsMapa": {
           "title": "Ano ang MAPA?",
-          "content": "Ang MAPA (Medical Assistance Portal Access) ay ang opisyal na online system ng {{facility}} para sa pagproseso ng mga aplikasyon ng tulong medikal. Pinapahintulutan nito ang mga pasyente na mag-apply para sa tulong pinansiyal o materyal mula sa mga kasosyong ahensya ng pamahalaan tulad ng DSWD, PCSO, at Malasakit Center — sa isang lugar lamang, nang hindi na pumipila sa maraming opisina."
+          "content": "Ang MAPA (Medical Assistance Portal Access) ay ang opisyal na online system ng {{facility}} para sa pagproseso ng mga aplikasyon ng tulong medikal. Pinapahintulutan nito ang mga pasyente na mag-apply para sa tulong pinansiyal o materyal mula sa mga kasosyong ahensya ng pamahalaan tulad ng DSWD, PCSO, at DOH — sa isang lugar lamang, nang hindi na pumipila sa maraming opisina."
         },
         "whoCanUse": {
           "title": "Sino ang maaaring gumamit ng MAPA?",
@@ -1301,7 +1301,7 @@
         },
         "cofunding": {
           "title": "Ano ang co-funding? Bakit may maraming ahensya?",
-          "content": "Gumagamit ang MAPA ng co-funding model. Mag-file kayo ng IISANG kahilingan na may bayarin at halagang kailangan ninyo. Bini-verify ng {{gateway}} ang inyong mga dokumento at sinusuri ang inyong kaso nang malayuan, pagkatapos ay ie-endorso ang inyong kahilingan sa isa o higit pang kasosyong ahensya (DSWD, PCSO, Malasakit, AMBaG) na magkakasamang tutulong sa inyong bayarin tungo sa zero balance. Ang bawat ahensya ay gumagawa ng sariling desisyon sa pagpopondo at nag-iisyu ng sariling Guarantee Letter para sa porsyong sinasakop nila. Hindi ninyo kailangang mag-apply sa bawat ahensya nang hiwalay — kino-coordinate ng {{gateway}} ang lahat para sa inyo.",
+          "content": "Gumagamit ang MAPA ng co-funding model. Mag-file kayo ng IISANG kahilingan na may bayarin at halagang kailangan ninyo. Bini-verify ng {{gateway}} ang inyong mga dokumento at sinusuri ang inyong kaso nang malayuan, pagkatapos ay ie-endorso ang inyong kahilingan sa isa o higit pang kasosyong ahensya (DSWD, PCSO, DOH, AMBaG) na magkakasamang tutulong sa inyong bayarin tungo sa zero balance. Ang bawat ahensya ay gumagawa ng sariling desisyon sa pagpopondo at nag-iisyu ng sariling Guarantee Letter para sa porsyong sinasakop nila. Hindi ninyo kailangang mag-apply sa bawat ahensya nang hiwalay — kino-coordinate ng {{gateway}} ang lahat para sa inyo.",
           "note": "Pagkatapos i-endorso ng {{gateway}} ang inyong kahilingan, makikita ninyo ang Coverage Plan na naglilista sa bawat ahensya. I-tap ang Magpatuloy para kumpirmahin at sa simulan ang kanilang pagsusuri."
         },
         "intakeWizard": {
@@ -1395,7 +1395,7 @@
       "sub": "Isang account, pagkatapos ay isumite ang inyong mga kahilingan para sa tulong medikal online — mas kaunting oras sa pila sa opisina.",
       "readyTitle": "Ihanda ang mga ito",
       "ready1": "Ang inyong pangalan at address ayon sa nakasaad sa balidong government ID",
-      "ready2": "Ang inyong Patient Access Code ({{codeFormat}}) mula sa Malasakit Center",
+      "ready2": "Ang inyong Patient Access Code ({{codeFormat}}) mula sa {{gateway}}",
       "ready3": "Isang gumaganang email address para sa mga update sa aprubahan",
       "trustTime": "Umaabot ng mga 3 minuto",
       "trustPrivacy": "Protektado sa ilalim ng Data Privacy Act (RA 10173)",
