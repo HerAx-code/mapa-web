@@ -1,6 +1,6 @@
-### B.3 CRMC endorsement transaction
+### B.3 Endorsement transaction
 
-When CRMC endorses a verified request, one Firestore transaction creates a
+When the medical center endorses a verified request, one Firestore transaction creates a
 child application "slice" per selected agency, decrements each agency's daily
 slot, and advances the request to `endorsed` — all-or-nothing, with all reads
 before any writes (Firestore's transaction contract).
@@ -35,7 +35,7 @@ await runTransaction(db, async (tx) => {
       patientId: r.patientId, agencyId: id, agencyName: aData.name,
       status: 'endorsed',                                // awaits patient Proceed
       endorsedById: user.uid, endorsedAt: serverTimestamp(),
-      crmcNotes: notesValue,
+      gatewayNotes: notesValue,
       // … patient snapshot + display fields omitted
     })
     tx.update(doc(db, 'agencies', id),

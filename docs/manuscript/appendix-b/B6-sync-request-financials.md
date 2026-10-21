@@ -54,7 +54,7 @@ async function handleSyncRequestFinancials({ db, requestId }) {
   const outstanding = /* Σ amountRequested over in-flight slices */ 0
   const status      = deriveRequestStatus({ committed, outstanding }, req.amountNeeded)
   // … write back only amountCommitted + a derived status; terminal states
-  //   (closed / rejected) stay CRMC's call, never overwritten by the trigger.
+  //   (closed / rejected) stay the medical center's call, never overwritten by the trigger.
 }
 ```
 

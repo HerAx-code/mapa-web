@@ -12,8 +12,8 @@ re-run after the fix.
 
 - Patient surface tested on a phone-sized viewport (390×844); staff surfaces on
   desktop (1440×900).
-- Demo accounts: patient `patient@gmail.com`; CRMC staff admin
-  `admin@crmc.gov.ph`; agency coordinator `coordinator@malasakit.gov.ph`.
+- Demo accounts: patient `patient@gmail.com`; medical center staff admin
+  `admin@example.gov.ph`; agency coordinator `coordinator@example.gov.ph`.
 
 | Environment | |
 |---|---|
@@ -34,15 +34,15 @@ re-run after the fix.
 | 1.5 | Submit the request. | Request status becomes **Submitted / Under Review**; it appears under **Status**. | Patient | | |
 | 1.6 | During the **remote assessment**, respond to Medical Social Services through the in-app conversation (and join the on-demand Google Meet link only if one is sent). | Messages reach the social worker; no appointment is booked — the assessment is asynchronous. | Patient | | |
 
-## Part 2 — CRMC: verify, assess, endorse
+## Part 2 — Medical center: verify, assess, endorse
 
 | # | Step | Expected result | Role | Sign-off | Notes |
 |---|---|---|---|---|---|
-| 2.1 | Sign in as CRMC staff and open **Requests**. Locate the submitted request. | Request is listed with its documents and status. | CRMC Staff | | |
-| 2.2 | Open the request and run **document verification** (OCR-assisted). Compare the live selfie to the ID. | OCR name shows as an advisory cross-check; social worker confirms/rejects each document. | CRMC Staff | | |
-| 2.3 | Conduct the **remote assessment** — reach the patient through the in-app conversation (drop an on-demand Google Meet link only if a live talk is needed) — and complete the **Unified Intake Sheet**. | Intake sheet saves; once documents are verified AND intake is complete the request is ready to endorse. | CRMC Staff | | |
-| 2.4 | **Endorse** the request to one or more funding agencies (pure selection — no per-agency amounts). | Child application "slices" are created, each endorsed for the full amount needed; a single agency cannot approve past the need, though CRMC may intentionally over-endorse across agencies for a buffer. The patient is notified. | CRMC Staff | | |
-| 2.5 | Confirm the request status reflects the endorsement. | Status becomes **Endorsed**; each slice appears for its agency. | CRMC Staff | | |
+| 2.1 | Sign in as medical center staff and open **Requests**. Locate the submitted request. | Request is listed with its documents and status. | Medical Center Staff | | |
+| 2.2 | Open the request and run **document verification** (OCR-assisted). Compare the live selfie to the ID. | OCR name shows as an advisory cross-check; social worker confirms/rejects each document. | Medical Center Staff | | |
+| 2.3 | Conduct the **remote assessment** — reach the patient through the in-app conversation (drop an on-demand Google Meet link only if a live talk is needed) — and complete the **Unified Intake Sheet**. | Intake sheet saves; once documents are verified AND intake is complete the request is ready to endorse. | Medical Center Staff | | |
+| 2.4 | **Endorse** the request to one or more funding agencies (pure selection — no per-agency amounts). | Child application "slices" are created, each endorsed for the full amount needed; a single agency cannot approve past the need, though the medical center may intentionally over-endorse across agencies for a buffer. The patient is notified. | Medical Center Staff | | |
+| 2.5 | Confirm the request status reflects the endorsement. | Status becomes **Endorsed**; each slice appears for its agency. | Medical Center Staff | | |
 
 ## Part 3 — Agency: fund and issue the Guarantee Letter
 
@@ -67,7 +67,7 @@ re-run after the fix.
 
 | | Name | Signature | Date |
 |---|---|---|---|
-| CRMC representative | | | |
+| Medical center representative | | | |
 | Agency representative | | | |
 | Facilitator / proponent | | | |
 

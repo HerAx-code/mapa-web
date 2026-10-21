@@ -38,7 +38,7 @@ verification / selfie (D-10) and the intake sheet (D-11).
 | D-06 | Assessment conversation (remote async assessment) | route `/patient/messages` — reliable *(replaces the removed interview-booking screen)* |
 | D-07 | Coverage plan | route `/patient/status` (coverage view) — reliable |
 | D-08 | Request tracking | route `/patient/status` (tracking view) — reliable |
-| D-09 | CRMC Requests + stepper | route `/admin/requests` — reliable |
+| D-09 | Admin Requests + stepper | route `/admin/requests` — reliable |
 | D-10 | Document verification + OCR | inside a request stepper — **best-effort / manual** |
 | D-11 | Unified Intake Sheet | inside a request stepper — **manual** |
 | D-12 | Endorse modal | inside a request — **manual** |
