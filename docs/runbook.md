@@ -204,7 +204,7 @@ will report `created / repaired / skipped / failed` counts.
 
 ### Re-seed reference data
 
-After bootstrap-users, sign in as `admin@crmc.gov.ph` in the web app
+After bootstrap-users, sign in as `admin@mapa.gov.ph` in the web app
 and visit `/seed`. Click **Seed Database** to refresh agencies, document
 types, assistance types, and hospital IDs.
 

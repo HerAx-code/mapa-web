@@ -73,7 +73,7 @@ Re-run this command any time `firestore.rules` or `firestore.indexes.json` chang
 - [ ] `firestore.indexes.json` deployed (composite indexes for inbox/audit queries)
 - [ ] Test login → patient dashboard → upload doc → apply → withdraw on the live URL
 - [ ] Test login as agency + admin on the live URL
-- [ ] Confirm CRMC's email server can receive Firebase Auth password-reset emails (`noreply@<project>.firebaseapp.com`)
+- [ ] Confirm the organization's email server can receive Firebase Auth password-reset emails (`noreply@<project>.firebaseapp.com`)
 
 ## Bandwidth note
 
@@ -96,7 +96,7 @@ Both work for thesis/pilot scale. Vercel wins on deploy previews per branch; Fir
 
 ## Pre-Pilot Operational Runbook
 
-Items that aren't shipped by `git push` — you (or whoever runs CRMC IT)
+Items that aren't shipped by `git push` — you (or whoever runs the deployment's IT)
 have to do these manually before the first patient onboards.
 
 ### A. Deploy Firestore rules + indexes
@@ -204,7 +204,7 @@ work:
 
 After A–E above are done, run an end-to-end test as a real patient:
 
-1. Use a fresh access code from CRMC Medical Social Services
+1. Use a fresh access code from the Medical Social Services office
 2. Register a real (test) patient account
 3. Upload one document
 4. Apply to a test agency

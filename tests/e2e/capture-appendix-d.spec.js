@@ -26,7 +26,7 @@ const PHONE = { width: 390, height: 844 }
 const DESK  = { width: 1440, height: 900 }
 
 const PATIENT = { email: 'patient@gmail.com',                 pw: 'patient123' }
-const STAFF   = { email: 'admin@crmc.gov.ph',                 pw: 'admin123'   }
+const STAFF   = { email: 'admin@mapa.gov.ph',                 pw: 'admin123'   }
 const COORD   = { email: 'coordinator@malasakit.gov.ph',      pw: 'agency123'  }
 
 test.beforeAll(() => { fs.mkdirSync(DIR, { recursive: true }) })
