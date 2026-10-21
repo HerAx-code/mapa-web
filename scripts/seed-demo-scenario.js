@@ -12,7 +12,7 @@
  *   - Three attached document records (Valid ID, Barangay Certificate
  *     of Indigency, Hospital Billing Statement) in 'pending' state,
  *     each with a placeholder text-as-base64 documentContent so the
- *     CRMC verifier can see SOMETHING when they open the viewer
+ *     gateway verifier can see SOMETHING when they open the viewer
  *   - No interview scheduled, no agencies endorsed yet
  *
  * That state is the cleanest demo starting point: the demonstrator
@@ -60,7 +60,7 @@ const requestId = () => {
 // DocViewer can render. The point is to give the verifier something
 // to see, not to be a real ID scan.
 const placeholderContent = (label) => {
-  const text = `[Demo document for the defense: ${label}]\n\nThis is placeholder content. A real patient upload would be a JPG / PNG / PDF of the actual document. The CRMC verifier UI works identically -- approve / reject / re-review buttons drive the same lifecycle.`
+  const text = `[Demo document for the defense: ${label}]\n\nThis is placeholder content. A real patient upload would be a JPG / PNG / PDF of the actual document. The gateway verifier UI works identically -- approve / reject / re-review buttons drive the same lifecycle.`
   return 'data:text/plain;base64,' + Buffer.from(text).toString('base64')
 }
 
@@ -75,7 +75,7 @@ const ATTACHED_DOC_SPECS = [
   },
   {
     typeName: 'Hospital Billing Statement',
-    displayName: 'CRMC Billing Statement',
+    displayName: 'Hospital Billing Statement',
   },
 ]
 
@@ -100,7 +100,7 @@ async function findPatient() {
 // items list, so without seeded content the panel sees nothing.
 //
 // Two seeded:
-//   1. CRMC info-level on surface 'both' -- visible on dashboard card AND
+//   1. gateway info-level on surface 'both' -- visible on dashboard card AND
 //      top strip; targets every non-admin role
 //   2. Malasakit promotion on surface 'feed' -- patient-only dashboard
 //      card, no top strip
@@ -115,7 +115,7 @@ async function seedAnnouncements() {
   const crmc = {
     type:        'info',
     title:       'Office hours updated for the holidays',
-    message:     'CRMC Malasakit Center will be open 9am-12nn on December 24 and December 31. Regular hours resume January 2.',
+    message:     'Our office will be open 9am-12nn on December 24 and December 31. Regular hours resume January 2.',
     startAt,
     endAt,
     surface:     'both',
@@ -158,7 +158,7 @@ async function seedAnnouncements() {
   if (!DRY_RUN) {
     await db.collection('announcements').add(crmc)
   }
-  console.log(`  ${DRY_RUN ? '➕ WOULD CREATE' : '✅'} CRMC info: "${crmc.title}" (surface: both)`)
+  console.log(`  ${DRY_RUN ? '➕ WOULD CREATE' : '✅'} gateway info: "${crmc.title}" (surface: both)`)
 
   if (malasakit) {
     if (!DRY_RUN) await db.collection('announcements').add(malasakit)
@@ -222,7 +222,7 @@ async function main() {
     patientAddress:    patient.address ?? '2nd Street, Rosary Heights V, Cotabato City',
     patientHospitalId: patient.hospitalId ?? 'MAPA-2026-00014',
     assistanceType:    'Hospital Bills / Hospitalization',
-    description:       'Father admitted at CRMC ICU for severe pneumonia (Day 5 of admission). Requesting assistance to cover the outstanding balance after PhilHealth deduction. Family has exhausted personal savings; community fundraising covered the first 4 days. Doctor advises 3-5 more days of inpatient care including continued IV antibiotics.',
+    description:       'Father admitted at the hospital ICU for severe pneumonia (Day 5 of admission). Requesting assistance to cover the outstanding balance after PhilHealth deduction. Family has exhausted personal savings; community fundraising covered the first 4 days. Doctor advises 3-5 more days of inpatient care including continued IV antibiotics.',
     // PhilHealth-first bill model (Order of Charging): a ₱40k bill reduced by
     // PhilHealth first, leaving a ₱25k residual the agencies co-fund. See
     // docs/philhealth-first-plan.md.

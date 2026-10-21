@@ -93,8 +93,8 @@ const DOH = {
   description:     'Medical Assistance for Indigent and Financially-Incapacitated Patients (MAIP), charged to the Department of Health under RA 11463.',
   province:        'Cotabato City',
   city:            'Cotabato City',
-  officeName:      'DOH Desk, CRMC Ground Floor',
-  location:        'DOH Desk, CRMC Ground Floor, Cotabato City',
+  officeName:      'DOH Desk, Ground Floor',
+  location:        'DOH Desk, Ground Floor, Cotabato City',
   phone:           '064-421-2800',
   slots:           { total: 25, remaining: 25 },
   requirements:    ['Barangay Certificate of Indigency', 'Hospital Billing Statement', 'Valid ID'],
@@ -115,8 +115,8 @@ const PHILHEALTH = {
   description:     'National Health Insurance Fund (NHIF). Under RA 11463 Order of Charging, PhilHealth coverage is applied FIRST to reduce the bill before other agencies fund the balance.',
   province:        'Cotabato City',
   city:            'Cotabato City',
-  officeName:      'PhilHealth Desk, CRMC Ground Floor',
-  location:        'PhilHealth Desk, CRMC Ground Floor, Cotabato City',
+  officeName:      'PhilHealth Desk, Ground Floor',
+  location:        'PhilHealth Desk, Ground Floor, Cotabato City',
   phone:           '064-421-2900',
   slots:           { total: 25, remaining: 25 },
   requirements:    ['PhilHealth ID', 'Valid ID'],
@@ -136,8 +136,8 @@ const DSWD = {
   description:     'Assistance to Individuals in Crisis Situations (AICS): cash assistance and medicine vouchers through community social workers.',
   province:        'Cotabato City',
   city:            'Cotabato City',
-  officeName:      'Social Welfare Office, CRMC',
-  location:        'Social Welfare Office, CRMC',
+  officeName:      'Social Welfare Office',
+  location:        'Social Welfare Office',
   phone:           '064-421-2700',
   slots:           { total: 25, remaining: 25 },
   requirements:    ['Barangay Certificate of Indigency', 'Valid ID', 'Crisis Documentation'],
@@ -147,7 +147,7 @@ const DSWD = {
 }
 
 const MALASAKIT_REFRAME = {
-  description: 'Coordination hub, not a funding source. Under RA 11463 and JAO 2020-0001 the Malasakit Center is a co-located one-stop shop where DOH, DSWD, PCSO and PhilHealth receive and process requests; it holds no appropriation for direct patient assistance. In MAPA this function is performed by the CRMC gateway role itself, so the Center is retained here for historical records only and is not available for new endorsements.',
+  description: 'Coordination hub, not a funding source. Under RA 11463 and JAO 2020-0001 the Malasakit Center is a co-located one-stop shop where DOH, DSWD, PCSO and PhilHealth receive and process requests; it holds no appropriation for direct patient assistance. In MAPA this function is performed by the gateway role itself, so the Center is retained here for historical records only and is not available for new endorsements.',
   enabled: false,
 }
 

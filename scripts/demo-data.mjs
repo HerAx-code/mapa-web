@@ -88,7 +88,7 @@ for (const c of CASES) {
     amountNeeded: need, amountCommitted: committed, agencyIds: c.slices.map(s => s.ag),
     status, description: `${c.type} assistance`, filedBy: 'self',
     interviewDate: monthsAgo(c.mo + 0, 8).toDate().toISOString().slice(0, 10), interviewTime: '10:00',
-    interviewOutcome: 'eligible', conductedBy: 'CRMC Medical Social Services',
+    interviewOutcome: 'eligible', conductedBy: 'Medical Social Services',
     submittedAt: monthsAgo(c.mo, 5), updatedAt: now(), _demo: true,
   })
   reqN++
@@ -100,7 +100,7 @@ for (const c of CASES) {
       assistanceType: c.type, amountRequested: need, amountApproved: s.amt, approvedAmount: s.amt,
       status: 'approved', glStatus: s.gl, glRedeemedAt: s.gl === 'redeemed' ? monthsAgo(c.mo, 20) : null,
       purposeOfAssistance: c.type, payableTo: 'Cotabato Regional Medical Center',
-      approvedBy: 'CRMC-endorsed', endorsedBy: 'CRMC Medical Social Services',
+      approvedBy: 'endorsed', endorsedBy: 'Medical Social Services',
       submittedAt: monthsAgo(c.mo, 5), endorsedAt: monthsAgo(c.mo, 6), approvedAt: monthsAgo(c.mo, 8),
       updatedAt: now(), _demo: true,
     })
