@@ -25,7 +25,7 @@
 //
 // ⚠ The per-type requirement lists and THRESHOLDS below are research-grounded
 // PLACEHOLDERS (PCSO/DSWD/DOH published requirements). Confirm against the gateway
-// Malasakit's real forms — see docs/crmc-document-requirements-checklist.md —
+// The gateway's real forms — see docs/document-requirements-checklist.md —
 // before enabling VITE_PER_TYPE_DOCS in production.
 
 // Deterministic slug → id (matches scripts/bootstrap-reference-data.js so ids

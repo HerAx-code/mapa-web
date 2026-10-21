@@ -35,7 +35,7 @@ Cúram externalized thresholds (decision-table-lite, not a rules engine).
   `scripts/bootstrap-reference-data.js` now import the catalogs from `referenceData.js`
   (kills the 3-way duplication for these two) and no longer emit `CRMC-` codes.
 - **Gate before prod go-live:** CRMC confirms the real per-type document sets +
-  thresholds via `docs/crmc-document-requirements-checklist.md`, then flip the flag.
+  thresholds via `docs/document-requirements-checklist.md`, then flip the flag.
 
 Still open from the original plan below: charging-order (2.3), per-agency intake
 (Phase 3), and the Phase 0 stakeholder answers. **Shipped since:** single-source
