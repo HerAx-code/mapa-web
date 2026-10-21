@@ -5,7 +5,7 @@
  * Admin-SDK companion to bootstrap-users.js. Seeds (or repairs) the
  * non-user reference collections:
  *
- *   - agencies          (6: 5 funders + Malasakit as a disabled hub)
+ *   - agencies          (5 funders; PhilHealth seeded disabled as first-charge deduction)
  *   - documentTypes     (8 patient-uploadable document categories)
  *   - assistanceTypes   (8 categories of medical assistance)
  *   - hospitalIds       (20 demo Patient Access Codes)
