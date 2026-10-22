@@ -77,7 +77,7 @@ export default function ReauthModal({
   const submit = onPassword ? submitPassword : submitCode
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
+    <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 p-4"
          role="dialog" aria-modal="true" aria-labelledby="reauth-title">
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
         <div className="flex items-start justify-between">
