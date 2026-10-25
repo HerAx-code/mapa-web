@@ -54,4 +54,15 @@ describe('TrendArea', () => {
     render(<TrendArea data={[]} emptyText="Nothing yet." />)
     expect(screen.getByText('Nothing yet.')).toBeInTheDocument()
   })
+
+  it('renders a labeled callout (not an empty axis) for a single month', () => {
+    const { container } = render(
+      <TrendArea data={[{ key: '2026-09', amount: 5000 }]} labelFor={(d) => d.key} />
+    )
+    // No SVG axis for one point — a callout instead.
+    expect(container.querySelector('svg')).toBeNull()
+    expect(screen.getByText('₱5,000')).toBeInTheDocument()
+    expect(screen.getByText('2026-09')).toBeInTheDocument()
+    expect(screen.getByText(/one month of data so far/i)).toBeInTheDocument()
+  })
 })

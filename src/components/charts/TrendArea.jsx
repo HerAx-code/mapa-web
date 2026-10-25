@@ -10,6 +10,22 @@ export default function TrendArea({ data = [], height = 200, labelFor = (d) => d
     return <p className="text-sm text-gray-500 italic py-4">{emptyText}</p>
   }
 
+  // Low-data state: a single month is a lone dot in a big empty axis, which
+  // reads as broken. Show the one value as a labeled callout instead, and say
+  // the trend line arrives with a second month. (Theme D — graceful low-data.)
+  if (data.length === 1) {
+    const only = data[0]
+    return (
+      <div className="flex flex-col items-center justify-center text-center" style={{ minHeight: height }}>
+        <p className="text-3xl font-bold tabular-nums text-brand-600">{peso(only.amount)}</p>
+        <p className="mt-1 text-sm text-gray-600">{labelFor(only)}</p>
+        <p className="mt-2 max-w-xs text-xs text-gray-400">
+          One month of data so far — the trend line appears once there’s a second month.
+        </p>
+      </div>
+    )
+  }
+
   const W = 640, H = height, padX = 12, padTop = 16, padBot = 28
   const peak = Math.max(...data.map(d => Number(d.amount) || 0), 1)
   const innerW = W - padX * 2
