@@ -158,25 +158,32 @@ export default function Inbox() {
           <p className="text-sm text-gray-500 mt-1">Click any row to open the full case record.</p>
         </div>
 
-        {/* Summary cards (clickable filters). Under the co-funding model,
-            slices only sit in For Funding (reviewing) / Needs Info
-            (awaiting_info) / Approved / Rejected — the gateway handles doc review
-            and the assessment interview on the parent request. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+        {/* Compact segmented filter bar (was a five-tile grid). Same clickable
+            filters + inline counts, but it reclaims the top third of the queue
+            for actual rows. Attention categories keep their semantic color on
+            the count so the information scent survives the density gain. Under
+            the co-funding model, slices only sit in For Funding (reviewing) /
+            Needs Info (awaiting_info) / Approved / Rejected — the gateway handles
+            doc review and the assessment on the parent request. */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-4">
           {[
-            { label: 'Total',       value: applications.filter(a => a.status !== 'endorsed').length, color: 'text-gray-800',   key: 'all' },
-            { label: 'For Funding', value: countOf('reviewing'),               color: 'text-amber-600',  key: 'reviewing' },
-            { label: 'Needs Info',  value: countOf('awaiting_info'),           color: 'text-orange-600', key: 'awaiting_info' },
-            { label: 'Approved',    value: countOf('approved') + countOf('certificate'), color: 'text-green-600', key: 'approved' },
-            { label: 'Rejected',    value: countOf('rejected'),                color: 'text-red-500',    key: 'rejected' },
+            { label: 'All',         value: applications.filter(a => a.status !== 'endorsed').length, countColor: 'text-gray-500',   key: 'all' },
+            { label: 'For Funding', value: countOf('reviewing'),               countColor: 'text-amber-600',  key: 'reviewing' },
+            { label: 'Needs Info',  value: countOf('awaiting_info'),           countColor: 'text-orange-600', key: 'awaiting_info' },
+            { label: 'Approved',    value: countOf('approved') + countOf('certificate'), countColor: 'text-green-600', key: 'approved' },
+            { label: 'Rejected',    value: countOf('rejected'),                countColor: 'text-red-500',    key: 'rejected' },
           ].map(m => {
             const active = statusFilter === m.key
             return (
               <button key={m.key}
+                aria-pressed={active}
                 onClick={() => setStatusFilter(active && m.key !== 'all' ? 'all' : m.key)}
-                className={`stat-tile text-left transition-all hover:shadow-md ${active ? 'ring-2 ring-brand-400' : ''}`}>
-                <p className="stat-label mt-0">{m.label}</p>
-                <p className={`stat-num mt-1 ${m.color}`}>{loading ? '—' : m.value}</p>
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  active ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}>
+                {m.label}
+                <span className={`tabular-nums text-xs font-semibold ${active ? 'text-white/90' : m.countColor}`}>
+                  {loading ? '—' : m.value}
+                </span>
               </button>
             )
           })}
@@ -219,6 +226,7 @@ export default function Inbox() {
               <tr>
                 <th>Patient</th>
                 <th>Application ID</th>
+                <th className="text-right">Amount</th>
                 <th>Submitted</th>
                 <th>Documents</th>
                 <th>Status</th>
@@ -238,6 +246,7 @@ export default function Inbox() {
                     </div>
                   </td>
                   <td><div className="h-3 bg-gray-100 rounded w-24" /></td>
+                  <td><div className="h-3 bg-gray-100 rounded w-16 ml-auto" /></td>
                   <td><div className="h-3 bg-gray-100 rounded w-20" /></td>
                   <td><div className="h-3 bg-gray-100 rounded w-16" /></td>
                   <td><div className="h-5 bg-gray-100 rounded-full w-16" /></td>
@@ -276,6 +285,14 @@ export default function Inbox() {
                       </div>
                     </td>
                     <td className="font-mono text-xs text-gray-500">{app.appId}</td>
+                    <td className="text-right whitespace-nowrap">
+                      {app.amountRequested != null
+                        ? <span className="tabular-nums text-sm font-semibold text-gray-800">₱{Number(app.amountRequested).toLocaleString()}</span>
+                        : <span className="text-gray-300">—</span>}
+                      {['approved','certificate'].includes(app.status) && app.amountApproved != null && (
+                        <span className="block tabular-nums text-xs text-green-600">₱{Number(app.amountApproved).toLocaleString()} approved</span>
+                      )}
+                    </td>
                     <td>
                       <p className="text-xs text-gray-500">{formatDate(app.submittedAt)}</p>
                       {days !== null && !['approved','certificate','rejected'].includes(app.status) && (
@@ -340,7 +357,7 @@ export default function Inbox() {
 
               {!loading && sortedFiltered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={7} className="text-center py-12">
                     <MdInbox size={36} className="text-gray-200 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">
                       {search || statusFilter !== 'all'
