@@ -128,8 +128,13 @@ Gate every PR on `npm run build` + `npm run test:all` + a Vercel-preview eyeball
   live running total. Full smoke test of approve + reversal (money path untouched).
 - **Phase 3 — Dashboard polish.** Themes A + E + F on the Dashboard: bullet-style budget
   + slots, tile counts/badges, a useful caught-up empty state, tighter stat scale.
-- **Phase 4 — Data-viz pass.** Theme D across Impact + Funds + Allocation: bullet charts,
-  low-data handling, chart chrome + tooltips.
+- **Phase 4 — Data-viz pass.** Theme D across Impact + Funds. Shipped the graceful
+  **low-data handling** (TrendArea single-month → labeled callout instead of a lone dot
+  in an empty axis). On review the existing charts (BarList, TrendArea, BudgetHero/Funds
+  bars) already carry `tabular-nums`, accessible labels, and tooltips, so chart-chrome
+  work was minimal. **Bullet charts were dropped by decision** — see §6: committed and
+  disbursed are distinct buckets that can't share one allocated axis without
+  double-counting, so the single-measure bars stay.
 - **Phase 5 — System polish.** Themes F + G everywhere: skeletons, `tabular-nums`,
   hover/dividers, nav badges. A broad, low-risk sweep.
 
@@ -144,3 +149,15 @@ Gate every PR on `npm run build` + `npm run test:all` + a Vercel-preview eyeball
 - Dashboard Budget Hero shows **Disbursed ₱10,000 > Committed ₱5,000** — disbursed
   exceeding committed looks semantically off. Likely demo-data, but confirm the
   committed/disbursed derivation before the data-viz pass (Phase 4) relies on it.
+  - **Resolved (Phase 4, 2026-10-25):** this is **not a bug** in the live app. The
+    runtime treats `committed` = *issued-but-unredeemed* GLs and `disbursed` =
+    *redeemed* GLs — redeeming a GL moves the amount from committed → disbursed
+    (`ApplicationDetail.jsx performRedeemGL`), and the Funds page states exactly this.
+    So once most GLs are redeemed, Disbursed > Committed is the **correct steady
+    state**. The only real inconsistency is that `scripts/demo-data.mjs` seeds
+    `committed` as the sum of *all* slices (not just unredeemed), so demo data can
+    overstate committed vs the runtime convention — a **demo-seed fix**, money-adjacent
+    and out of scope for this presentational track. Because committed/disbursed are
+    distinct buckets (not summable against one allocated axis without double-counting),
+    Phase 4 keeps the single-measure budget bars as-is and does **not** build a stacked
+    "committed + disbursed" bullet chart.
