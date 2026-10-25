@@ -9,6 +9,7 @@ import {
   MdWarning, MdCalendarToday, MdArrowForward,
   MdInbox, MdVideoCall, MdCardMembership, MdBarChart,
   MdListAlt, MdMessage, MdDescription, MdMenuBook, MdTour, MdClose,
+  MdCheckCircleOutline,
 } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { PERIOD_NOUN, PERIOD_ADJECTIVE, GL_VALIDITY_DAYS } from '../../utils/constants'
@@ -277,6 +278,7 @@ export default function AgencyDashboard() {
   const slotPct    = slots.total > 0 ? Math.round(((slots.total - slots.remaining) / slots.total) * 100) : 0
   const pendingApps = applications.filter(a => a.status === 'pending' || a.status === 'reviewing')
   const approvedCount = applications.filter(a => a.status === 'approved' || a.status === 'certificate').length
+  const hasPending = pendingApps.length > 0
 
   return (
     <Layout breadcrumb="Agency Dashboard">
@@ -298,11 +300,13 @@ export default function AgencyDashboard() {
         <div data-tour-id="agency-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
           <div className="stat-tile">
             <div className="flex items-center gap-2 mb-1">
-              <MdWarning size={16} className="text-amber-500" />
+              {/* Amber only fires when there's actual work waiting — at zero the
+                  tile goes neutral so the colour keeps meaning (M11). */}
+              <MdWarning size={16} className={hasPending ? 'text-amber-500' : 'text-gray-400'} />
               <span className="stat-label mt-0">Awaiting funding decision</span>
             </div>
-            <p className="stat-num text-amber-600">{pendingApps.length}</p>
-            <p className="text-xs text-gray-500 mt-1">endorsed to you</p>
+            <p className={`stat-num ${hasPending ? 'text-amber-600' : 'text-gray-900'}`}>{pendingApps.length}</p>
+            <p className="text-xs text-gray-500 mt-1">{hasPending ? 'endorsed to you' : 'you’re all caught up'}</p>
           </div>
           <div className="stat-tile">
             <div className="flex items-center gap-2 mb-1">
@@ -319,6 +323,7 @@ export default function AgencyDashboard() {
           <div className="stat-tile">
             <span className="stat-label mt-0">Total approved</span>
             <p className="stat-num text-gray-900">{approvedCount}</p>
+            <p className="text-xs text-gray-500 mt-1">all time</p>
           </div>
         </div>
 
@@ -435,9 +440,19 @@ export default function AgencyDashboard() {
         {loading ? (
           <div className="card p-8 text-center text-sm text-gray-500">Loading applications...</div>
         ) : pendingApps.length === 0 ? (
-          <div className="card p-8 text-center">
-            <p className="text-sm text-gray-500">No pending applications.</p>
-            <p className="text-xs text-gray-300 mt-1">New applications will appear here when a request is endorsed to your agency.</p>
+          <div className="card flex min-h-[220px] flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+              <MdCheckCircleOutline size={26} />
+            </div>
+            <p className="mt-3 text-sm font-semibold text-gray-800">You’re all caught up</p>
+            <p className="mt-1 max-w-sm text-xs text-gray-500">
+              No applications are waiting on {agency.name}. New ones appear here the moment a request is endorsed to your agency.
+            </p>
+            <button
+              onClick={() => navigate('/agency/impact')}
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors">
+              <MdBarChart size={14} /> View your funding impact
+            </button>
           </div>
         ) : (
           <div className="card overflow-x-auto">
