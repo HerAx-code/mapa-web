@@ -658,6 +658,10 @@
       "eyebrow": "Bagong kahilingan",
       "title": "Humiling ng Tulong Medikal",
       "subtitle": "Sabihin sa amin ang inyong pangangailangan. Susuriin ng {{gateway}} ang inyong kahilingan at ie-endorso ito sa mga ahensyang makakatulong.",
+      "draftRestored": "Maligayang pagbabalik — ibinalik namin ang inyong kahilingang hindi pa tapos.",
+      "draftRestoredNote": "Awtomatikong nase-save ang inyong progreso sa device na ito — kasama ang inyong mga litrato — kaya puwede kayong umalis at bumalik nang hindi nawawala ang anuman.",
+      "draftDiscard": "Magsimula muli",
+      "draftDiscarded": "Na-clear ang draft. Nagsisimula ng bago.",
       "activeTitle": "May aktibong kahilingan kayo",
       "activeDesc": "Pinoproseso ng {{gateway}} ang inyong kahilingan. Maaari kayong magsumite ng bago kapag natapos na ito.",
       "tasks": {

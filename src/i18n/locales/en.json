@@ -658,6 +658,10 @@
       "eyebrow": "New request",
       "title": "Request Medical Assistance",
       "subtitle": "Tell us what you need. {{gateway}} will review your request and endorse it to the agencies that can help.",
+      "draftRestored": "Welcome back — we restored your in-progress request.",
+      "draftRestoredNote": "Your progress is saved automatically on this device — including your photos — so you can leave and come back without losing anything.",
+      "draftDiscard": "Start over",
+      "draftDiscarded": "Draft cleared. Starting fresh.",
       "activeTitle": "You have an active request",
       "activeDesc": "{{gateway}} is processing your request. You can submit a new one once this is completed.",
       "tasks": {
