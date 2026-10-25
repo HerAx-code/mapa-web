@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import { ORG } from '../../config/org'
 import {
   MdExpandMore, MdExpandLess, MdSearch, MdMenuBook,
   MdInbox, MdCardMembership, MdBarChart,
@@ -11,7 +12,14 @@ import {
   MdEditNote, MdContactSupport,
 } from 'react-icons/md'
 
-const LAST_UPDATED = '2026-06-01'
+const LAST_UPDATED = '2026-10-25'
+
+// The gateway office name is configurable (src/config/org.js), so the guide
+// reads it from ORG rather than hardcoding one deployment's office — a renamed
+// gateway gets a guide that says the right name everywhere. `G` is used inline
+// in the section copy below; the access-code prefix comes from ORG too.
+const G = ORG.gatewayName
+const CODE = ORG.accessCodePrefix
 
 // ── Sections (Glossary lives here too, no special-case rendering) ──────────
 
@@ -23,12 +31,12 @@ const SECTIONS = [
     Icon: MdMenuBook,
     title: 'How MAPA works for your agency',
     content:
-      `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for Medical Social Services. ` +
-      `Under the co-funding model, Medical Social Services is the single intake gateway: patients submit ONE request for their full bill, ` +
-      `Medical Social Services verifies the documents, conducts the remote assessment, and fills the Unified Intake Sheet. Medical Social Services then ` +
+      `MAPA (Medical Assistance Portal Access) digitizes the financial medical assistance process for ${G}. ` +
+      `Under the co-funding model, ${G} is the single intake gateway: patients submit ONE request for their full bill, ` +
+      `${G} verifies the documents, conducts one remote assessment, and fills the Unified Intake Sheet. ${G} then ` +
       `endorses the request to one or more agencies — each endorsement is a "slice" toward zero balance.\n\n` +
       `Your job as an agency coordinator is the funding decision only. You do NOT re-verify documents and you do NOT ` +
-      `re-interview the patient. You read the Medical Social Services' assessment, decide whether to approve your slice (and for how much), ` +
+      `re-assess the patient. You read ${G}'s assessment, decide whether to approve your slice (and for how much), ` +
       `and issue the Guarantee Letter that the named provider redeems with your agency.\n\n` +
       `MAPA does not move money — it records commitments. Actual settlement happens off-system between your ` +
       `agency and the provider.`,
@@ -39,8 +47,8 @@ const SECTIONS = [
     Icon: MdSync,
     title: 'Slice lifecycle',
     items: [
-      { label: 'Endorsed',     desc: 'Medical Social Services routed a slice of the patient\'s request to your agency. Waiting on the patient to confirm they want to proceed with your share.' },
-      { label: 'For Funding',  desc: 'Patient confirmed. The slice is in your queue for a funding decision. Medical Social Services has already verified docs and done the assessment — you decide approve / needs info / reject.' },
+      { label: 'Endorsed',     desc: `${G} routed a slice of the patient's request to your agency. Waiting on the patient to confirm they want to proceed with your share.` },
+      { label: 'For Funding',  desc: `Patient confirmed. The slice is in your queue for a funding decision. ${G} has already verified docs and done the assessment — you decide approve / needs info / reject.` },
       { label: 'Needs Info',   desc: 'You requested clarification from the patient. They\'ve been notified; the slice waits in your queue with the amber chip until they respond.' },
       { label: 'Approved',     desc: 'You issued the approval with amount, purpose, and payable-to. GL status: Issued. Committed budget incremented. Patient notified.' },
       { label: 'Certificate',  desc: 'GL has been printed and confirmed. Upload the wet-signed scan so the patient can download it.' },
@@ -53,12 +61,12 @@ const SECTIONS = [
     Icon: MdImportContacts,
     title: 'Glossary — key terms',
     items: [
-      { label: 'Patient Access Code',   desc: 'MAPA-YYYY-NNNNN code issued by Medical Social Services. Patients must enter it to register.' },
-      { label: 'Request',               desc: 'The patient\'s top-level ask — one bill, one amount needed. Owned by Medical Social Services after submission. The parent of one or more agency slices.' },
-      { label: 'Application slice',     desc: 'Your agency\'s portion of a patient request. Created when Medical Social Services endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or needs_info / rejected).' },
-      { label: 'Endorsement',           desc: 'Medical Social Services\'s decision to route part of a verified request to your agency. Endorsement carries Medical Social Services\'s assessment + verified documents — you do not re-do that work.' },
-      { label: 'Intake Assessment',       desc: 'The Unified Intake Sheet that Medical Social Services fills during their single assessment interview. You see it read-only on each slice. Replaces the agency-side Case Assessment that existed before the redesign.' },
-      { label: 'Means-Test Category',   desc: 'Manual classification recorded by Medical Social Services: Indigent / Marginalized / Low Income / Above Threshold.' },
+      { label: 'Patient Access Code',   desc: `${CODE}-YYYY-NNNNN code issued by ${G}. Patients must enter it to register.` },
+      { label: 'Request',               desc: `The patient's top-level ask — one bill, one amount needed. Owned by ${G} after submission. The parent of one or more agency slices.` },
+      { label: 'Application slice',     desc: `Your agency's portion of a patient request. Created when ${G} endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or needs_info / rejected).` },
+      { label: 'Endorsement',           desc: `${G}'s decision to route part of a verified request to your agency. Endorsement carries ${G}'s assessment + verified documents — you do not re-do that work.` },
+      { label: 'Intake Assessment',     desc: `The Unified Intake Sheet that ${G} fills during its one remote assessment. You see it read-only on each slice. Replaces the agency-side Case Assessment that existed before the redesign.` },
+      { label: 'Means-Test Category',   desc: `Manual classification recorded by ${G}: Indigent / Marginalized / Low Income / Above Threshold.` },
       { label: 'Guarantee Letter (GL)', desc: 'The official document issued to an approved patient. States the guaranteed amount, the purpose, and the provider that will be billed.' },
       { label: 'GL Status',             desc: 'Issued (just approved), Redeemed (provider billed back), or Expired (30-day window passed).' },
       { label: 'Committed Budget',      desc: 'Total money approved but not yet redeemed. Subtracted from your allocation.' },
@@ -80,7 +88,7 @@ const SECTIONS = [
       'The Message icon opens a chat with the patient. The blue action button reads "Review" or "View" depending on status.',
       'Summary cards at the top filter the list by status — click "For Funding" to focus your decision queue.',
     ],
-    note: 'Days-since-endorsement turns amber at 3+ days and red at 7+ days. Tackle red rows first — patients are waiting on your funding decision after Medical Social Services has already done their part.',
+    note: `Days-since-endorsement turns amber at 3+ days and red at 7+ days. Tackle red rows first — patients are waiting on your funding decision after ${G} has already done their part.`,
   },
   {
     id: 'review-endorsement',
@@ -88,16 +96,16 @@ const SECTIONS = [
     Icon: MdPlayCircle,
     title: 'Reviewing an endorsed slice',
     content:
-      `When a slice reaches "For Funding," Medical Social Services has already verified the patient's documents, conducted the assessment ` +
-      `interview, and filled the Unified Intake Sheet. Your review is a funding judgment, not a re-verification.`,
+      `When a slice reaches "For Funding," ${G} has already verified the patient's documents, conducted the remote ` +
+      `assessment, and filled the Unified Intake Sheet. Your review is a funding judgment, not a re-verification.`,
     steps: [
       'Click a "For Funding" row → the application detail opens on the Overview tab.',
-      'Read the Intake Assessment tab to see household composition, income, expenses, diagnosis, social case narrative, and Medical Social Services\'s recommendation. This is the same Unified Intake Sheet Medical Social Services used; you cannot edit it.',
+      `Read the Intake Assessment tab to see household composition, income, expenses, diagnosis, social case narrative, and ${G}'s recommendation. This is the same Unified Intake Sheet ${G} used; you cannot edit it.`,
       'Open the Documents tab to view the patient\'s attached files (also read-only on your side).',
       'Check the request context — your slice is part of a larger ask; the page shows what other agencies have already approved toward zero balance.',
       'Choose one of three actions: Approve & Issue GL, Request More Info, or Reject.',
     ],
-    note: 'If something in Medical Social Services\'s assessment looks wrong or incomplete, use Request More Info (sends a question to the patient) or Reject with a clear reason — do not edit Medical Social Services\'s sheet.',
+    note: `If something in ${G}'s assessment looks wrong or incomplete, use Request More Info (sends a question to the patient) or Reject with a clear reason — do not edit ${G}'s sheet.`,
   },
   {
     id: 'needs-info',
@@ -105,7 +113,7 @@ const SECTIONS = [
     Icon: MdHelpOutline,
     title: 'Requesting more info from the patient',
     content:
-      `If Medical Social Services\'s assessment is missing something your agency specifically needs — proof of address for a province-locked ` +
+      `If ${G}'s assessment is missing something your agency specifically needs — proof of address for a province-locked ` +
       `program, a more recent billing statement, etc. — you can pause the slice and request it from the patient ` +
       `directly without rejecting.`,
     steps: [
@@ -115,7 +123,7 @@ const SECTIONS = [
       'When the patient responds, the slice returns to your queue with the original For Funding chip.',
       'Click Resume Review to continue, or Update Request to ask a follow-up.',
     ],
-    note: 'Use Request More Info sparingly — Medical Social Services already did the standard verification. This is for agency-specific extras.',
+    note: `Use Request More Info sparingly — ${G} already did the standard verification. This is for agency-specific extras.`,
   },
 
   // ── Approval and GL ────────────────────────────────────────────
@@ -128,14 +136,14 @@ const SECTIONS = [
       `The Approve & Issue GL action captures three pieces of information: the guaranteed amount, the purpose, ` +
       `and the provider (Payable To). The slice moves to Approved, your agency's committed budget increases ` +
       `by the approved amount, and the patient is notified. There is no separate "complete the assessment first" ` +
-      `prerequisite under the co-funding redesign — Medical Social Services has already completed that on the parent request.`,
+      `prerequisite under the co-funding redesign — ${G} has already completed that on the parent request.`,
     steps: [
       'Open the slice → click Approve & Issue GL (available once status is "For Funding").',
       'Review the budget remaining banner — your approval cannot exceed this amount.',
       'If a cooldown warning appears (a recent approval for the same patient by any agency), decide whether to proceed.',
-      'Enter the approved amount in pesos. Validation blocks amounts exceeding the remaining budget OR the slice\'s outstanding balance on the parent request.',
+      'Enter the approved amount in pesos — or tap the Full / Remaining quick-fill chip. Validation blocks amounts exceeding the remaining budget OR the slice\'s outstanding balance on the parent request.',
       'Pick one or more purposes from your agency\'s assistance types.',
-      'Enter the provider name (Payable To) — e.g. "Medical Social Services Billing Department", "Mercury Drug Cotabato".',
+      'Enter the provider name (Payable To) — e.g. "Hospital Billing Department", "Mercury Drug Cotabato".',
       'Click Approve & Issue GL. The committed budget increments and the patient is notified.',
     ],
     note: 'Approve only what your agency can actually fund. The budget enforcement is real — exceeding it is blocked. You can approve LESS than the slice asks for; the remaining balance stays open for other agencies to fund.',
@@ -151,7 +159,7 @@ const SECTIONS = [
       'Click Confirm Reject. The patient is notified with the exact reason.',
       'If the slice was endorsed today, the slot is automatically restored.',
     ],
-    note: 'Be specific so the patient knows whether to appeal, ask Medical Social Services for re-endorsement to another agency, or correct something for next time. Rejecting one slice does not close the parent request — other agency slices continue independently.',
+    note: `Be specific so the patient knows whether to appeal, ask ${G} for re-endorsement to another agency, or correct something for next time. Rejecting one slice does not close the parent request — other agency slices continue independently.`,
   },
   {
     id: 'print-upload',
@@ -197,8 +205,8 @@ const SECTIONS = [
     title: 'Daily slot management',
     content:
       `Slots represent your agency's daily processing capacity. Under the co-funding redesign, slots are consumed when ` +
-      `Medical Social Services endorses a slice to your agency (not when a patient submits an application). If your slots are full for ` +
-      `the day, the Medical Social Services' endorse modal warns the staff member and they can choose a different agency or hold the request ` +
+      `${G} endorses a slice to your agency (not when a patient submits an application). If your slots are full for ` +
+      `the day, ${G}'s endorse modal warns the staff member and they can choose a different agency or hold the request ` +
       `for tomorrow.`,
     steps: [
       'Open Slot Management from the sidebar.',
@@ -218,11 +226,11 @@ const SECTIONS = [
     content:
       `Your agency has a budget allocation set by your Agency Administrator. The Approve modal validates each ` +
       `approved amount against it, so over-approval is impossible. The Dashboard and Funds pages show your ` +
-      `remaining budget in real time. Medical Social Services operates the platform but does not control your agency's budget.`,
+      `remaining budget in real time. ${G} operates the platform but does not control your agency's budget.`,
     items: [
       { label: 'Allocated',    desc: 'Total budget for the period (monthly, quarterly, or yearly). Set by your Agency Administrator on /agency/allocation.' },
       { label: 'Committed',    desc: 'Sum of all approved-but-not-redeemed GL amounts. Decreases when a GL is redeemed, expired, or reversed.' },
-      { label: 'Disbursed',    desc: 'Sum of all redeemed GL amounts. Final spend.' },
+      { label: 'Disbursed',    desc: 'Sum of all redeemed GL amounts. Final spend. Over a period this can exceed Committed once most GLs have been redeemed — that is expected, not an error.' },
       { label: 'Remaining',    desc: 'Allocated − Committed. This is what your next approval can draw from.' },
       { label: 'Period reset', desc: 'Your Agency Administrator starts a new period via /agency/allocation → Reset Period. Committed and disbursed reset to ₱0; allocation remains.' },
       { label: 'Cooldown',     desc: 'Hard 30-day check: if the patient was already approved (by any agency) in the past 30 days, the Approve button is disabled. Reversed approvals also keep the cooldown clock running.' },
@@ -249,12 +257,12 @@ const SECTIONS = [
     content:
       `Case notes are an append-only log on the slice. Use them for your own ongoing observations: ` +
       `"Called patient on 5/19, voicemail" or "Provider confirmed receipt of GL". They are NOT how you record an ` +
-      `assessment — Medical Social Services owns the Unified Intake Sheet under the redesign.`,
+      `assessment — ${G} owns the Unified Intake Sheet under the redesign.`,
     steps: [
       'Open the slice → Timeline & Notes tab.',
       'Type your note in the textarea (up to 500 characters).',
       'Click Add. The note is permanent (no edit/delete).',
-      'Notes are visible to your agency\'s coordinators and to Medical Social Services admins for audit.',
+      `Notes are visible to your agency's coordinators and to ${G} admins for audit.`,
     ],
   },
   {
@@ -278,15 +286,15 @@ const SECTIONS = [
     Icon: MdHelpOutline,
     title: 'Common problems',
     items: [
-      { label: 'The Approve button is disabled',     desc: 'Slice is not yet at "For Funding" — the patient may not have confirmed they want to proceed with your share, or Medical Social Services hasn\'t finalized the endorsement. Check the status chip on the slice.' },
-      { label: 'Medical Social Services\'s assessment looks incomplete', desc: 'You cannot edit it from your side. Use Request More Info to ask the patient directly, or message Medical Social Services via the admin Messages flow if the gap is on Medical Social Services\'s side.' },
+      { label: 'The Approve button is disabled',     desc: `Slice is not yet at "For Funding" — the patient may not have confirmed they want to proceed with your share, or ${G} hasn't finalized the endorsement. Check the status chip on the slice.` },
+      { label: `${G}'s assessment looks incomplete`, desc: `You cannot edit it from your side. Use Request More Info to ask the patient directly, or message ${G} via the admin Messages flow if the gap is on ${G}'s side.` },
       { label: 'My approval was blocked',            desc: 'Either you tried to approve more than the agency\'s remaining budget, OR more than the slice\'s outstanding balance on the parent request. Lower the amount or ask the admin to increase the allocation.' },
       { label: 'I see "GL Expired (action needed)"', desc: 'A GL passed its 30-day validity window. Open the slice and click Mark GL Expired to release the committed budget.' },
       { label: 'A patient says they didn\'t get the notification', desc: 'Check Messages and send a direct message. The patient may not have logged in to the portal yet.' },
       { label: 'I approved by mistake',              desc: 'Open the slice → click Reverse Approval. The committed budget is released and the slice returns to For Funding.' },
       { label: 'The print window cancelled',         desc: 'Answer "Not yet" on the confirmation prompt. The slice stays at Approved so you can retry.' },
-      { label: 'No budget allocated message',        desc: 'Ask your Agency Administrator to set a budget on /agency/allocation, or the Medical Social Services system administrator if your agency has none on file.' },
-      { label: 'Why don\'t I schedule interviews anymore', desc: 'Under the co-funding redesign, Medical Social Services conducts a single assessment interview on the parent request and shares the result with all endorsed agencies. Your agency makes a funding decision based on that — no per-agency interview.' },
+      { label: 'No budget allocated message',        desc: `Ask your Agency Administrator to set a budget on /agency/allocation, or the ${G} system administrator if your agency has none on file.` },
+      { label: 'Why don\'t I schedule interviews anymore', desc: `MAPA no longer books assessment interviews. Under the co-funding redesign, ${G} conducts one remote, asynchronous assessment on the parent request — reaching the patient through in-app messaging (with an on-demand video call only when a live talk is truly needed) — and shares the result with all endorsed agencies. Your agency makes a funding decision based on that; there is no per-agency interview.` },
     ],
   },
   {
@@ -302,6 +310,17 @@ const SECTIONS = [
 ]
 
 const GROUPS = ['Orientation', 'Daily Processing', 'Approval & Guarantee Letter', 'Operations', 'FAQ']
+
+// Short labels for the jump-nav chips (the full group names are long).
+const GROUP_SHORT = {
+  'Orientation': 'Orientation',
+  'Daily Processing': 'Daily',
+  'Approval & Guarantee Letter': 'Approval & GL',
+  'Operations': 'Operations',
+  'FAQ': 'FAQ',
+}
+
+const groupId = (group) => `grp-${group.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
 const QUICK_LINKS = [
   { label: 'Application Inbox', path: '/agency/inbox',      Icon: MdInbox },
@@ -324,8 +343,11 @@ function SectionCard({ section, open, onToggle }) {
     <div className="card overflow-hidden">
       <button
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
-        onClick={onToggle}>
-        <Icon className="text-brand-500 flex-shrink-0" size={20} aria-hidden="true" />
+        onClick={onToggle}
+        aria-expanded={open}>
+        <span className="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-500">
+          <Icon size={18} aria-hidden="true" />
+        </span>
         <span className="text-sm font-semibold text-gray-800 flex-1">{title}</span>
         {open
           ? <MdExpandLess size={20} className="text-gray-500 flex-shrink-0" />
@@ -340,7 +362,7 @@ function SectionCard({ section, open, onToggle }) {
             <ol className="space-y-2">
               {steps.map((step, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-brand-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-brand-500 text-white text-xs font-bold flex items-center justify-center mt-0.5 tabular-nums">
                     {i + 1}
                   </span>
                   <span className="text-sm text-gray-600 leading-relaxed">{step}</span>
@@ -406,6 +428,11 @@ export default function AgencyGuide() {
     else setOpenIds(new Set(allFilteredIds))
   }
 
+  const jumpTo = (group) => {
+    const el = document.getElementById(groupId(group))
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <Layout breadcrumb="User Guide">
       <div className="p-4 sm:p-6 max-w-3xl">
@@ -416,8 +443,11 @@ export default function AgencyGuide() {
             <p className="eyebrow">Help</p>
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agency User Guide</h1>
             <p className="text-sm text-gray-500 mt-1">Step-by-step instructions for funding endorsed application slices under the co-funding model.</p>
+            <p className="text-xs text-gray-400 mt-2">
+              {SECTIONS.length} topics · gateway: <span className="font-medium text-gray-500">{G}</span>
+            </p>
           </div>
-          <span className="text-xs text-gray-500">Last updated {LAST_UPDATED}</span>
+          <span className="text-xs text-gray-500 flex-shrink-0">Last updated {LAST_UPDATED}</span>
         </div>
 
         {/* ── Quick Links (one card) ── */}
@@ -448,8 +478,11 @@ export default function AgencyGuide() {
           </div>
         </div>
 
-        {/* ── Search + controls (one card) ── */}
-        <div className="card p-5 mb-5">
+        {/* ── Sticky search + section jump-nav ──
+            Sticks to the top of the scroll area so search and navigation stay
+            reachable through a long guide. Bleeds to the container edges so the
+            bar reads as a bar, not a floating card. */}
+        <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 mb-5 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 space-y-2.5">
           <div className="flex gap-2 items-stretch">
             <div className="relative flex-1">
               <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
@@ -470,10 +503,23 @@ export default function AgencyGuide() {
                 : <><MdUnfoldMore size={16} /> Expand all</>}
             </button>
           </div>
-          {search.trim() && (
-            <p className="text-xs text-gray-500 mt-2">
+          {search.trim() ? (
+            <p className="text-xs text-gray-500">
               {filtered.length} section{filtered.length === 1 ? '' : 's'} match — all expanded
             </p>
+          ) : (
+            <div className="flex gap-1.5 overflow-x-auto -mb-1 pb-1">
+              {GROUPS.map(group => {
+                const n = SECTIONS.filter(s => s.group === group).length
+                return (
+                  <button key={group}
+                    onClick={() => jumpTo(group)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-medium text-gray-600 hover:bg-brand-50 hover:text-brand-600 hover:border-brand-100 transition-colors whitespace-nowrap">
+                    {GROUP_SHORT[group]} <span className="text-gray-400 tabular-nums">{n}</span>
+                  </button>
+                )
+              })}
+            </div>
           )}
         </div>
 
@@ -482,11 +528,11 @@ export default function AgencyGuide() {
           const groupSections = filtered.filter(s => s.group === group)
           if (groupSections.length === 0) return null
           return (
-            <div key={group} className="mb-5">
+            <div key={group} id={groupId(group)} className="mb-5 scroll-mt-28">
               <div className="flex items-center gap-3 mb-2.5">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{group}</p>
                 <div className="flex-1 h-px bg-gray-100" />
-                <span className="text-xs text-gray-300">{groupSections.length}</span>
+                <span className="text-xs text-gray-300 tabular-nums">{groupSections.length}</span>
               </div>
               <div className="space-y-2">
                 {groupSections.map(section => (
