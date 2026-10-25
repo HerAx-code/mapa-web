@@ -136,7 +136,22 @@ Gate every PR on `npm run build` + `npm run test:all` + a Vercel-preview eyeball
   disbursed are distinct buckets that can't share one allocated axis without
   double-counting, so the single-measure bars stay.
 - **Phase 5 — System polish.** Themes F + G everywhere: skeletons, `tabular-nums`,
-  hover/dividers, nav badges. A broad, low-risk sweep.
+  hover/dividers, nav badges. A broad, low-risk sweep. **On review, most of this was
+  already shipped by prior work:** the agency-inbox **nav badge** is live
+  (`useLiveData().agencyInboxCount` → sidebar), `.stat-num` already applies
+  `tabular-nums` (Dashboard tiles + Impact KPIs), and the charts/BudgetHero already use
+  it. The residual gaps closed here: the Dashboard pending-queue **loading skeleton**
+  (was bare "Loading applications…" text) and `tabular-nums` on the two ad-hoc peso
+  spots that lacked it — the **Funds budget summary** figures and the right-aligned
+  **ledger amount column** (so the money column aligns down the page).
+
+---
+
+**Plan status: COMPLETE (Phases 1–5 shipped, 2026-10-25).** PRs #333 (1), #334 (2),
+#335 (3), #336 (4), and this one (5). All presentational; the approval/GL transaction,
+budget math, slot logic, and over-commit guard were never touched. Open follow-up noted
+in §6: the `scripts/demo-data.mjs` committed-seeding convention doesn't match the
+runtime (a demo-seed fix, out of scope for this track).
 
 ## 5. Guardrails & non-goals
 - **Never touch** the approval/GL transaction, budget math (`allocated/committed/

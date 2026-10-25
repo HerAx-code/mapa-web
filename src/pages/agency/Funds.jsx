@@ -250,19 +250,19 @@ export default function AgencyFunds() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <div>
                 <p className="text-xs text-gray-500">Allocated</p>
-                <p className="text-xl font-semibold text-gray-800">₱{allocated.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-gray-800 tabular-nums">₱{allocated.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Committed</p>
-                <p className="text-xl font-semibold text-amber-600">₱{committed.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-amber-600 tabular-nums">₱{committed.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Disbursed</p>
-                <p className="text-xl font-semibold text-purple-600">₱{disbursed.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-purple-600 tabular-nums">₱{disbursed.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Remaining</p>
-                <p className="text-xl font-semibold text-green-600">₱{remaining.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-green-600 tabular-nums">₱{remaining.toLocaleString()}</p>
               </div>
             </div>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-1">
@@ -395,7 +395,7 @@ export default function AgencyFunds() {
                         <td className="text-sm text-gray-600">{formatDateTime(e.date)}</td>
                         <td className="text-right">
                           {e.amount != null ? (
-                            <span className={`text-sm font-semibold ${meta.text}`}>
+                            <span className={`text-sm font-semibold tabular-nums ${meta.text}`}>
                               {meta.sign} ₱{e.amount.toLocaleString()}
                             </span>
                           ) : (
