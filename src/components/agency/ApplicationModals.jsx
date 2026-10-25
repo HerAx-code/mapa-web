@@ -199,6 +199,14 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   const fullFunded     = needAmount > 0 && projectedTotal === needAmount
   const pctOfBill      = needAmount > 0 ? Math.min(100, Math.round((projectedTotal / needAmount) * 100)) : 0
 
+  // Quick-fill helpers (presentational only — one-tap setAmount, no math change):
+  // the full endorsed slice, and the need still unfunded after sibling agencies'
+  // commitments, capped at this slice. The input stays empty by default (operator
+  // decides), but the two common cases are a single tap away.
+  const remainingGap = isSlice
+    ? Math.max(0, Math.min(sliceCap || needAmount, needAmount - siblingsCommitted))
+    : 0
+
   const handleSubmit = () => {
     if (amountNum <= 0)      { toast.error('Enter a valid amount greater than 0.'); return }
     if (purposes.size === 0) { toast.error('Select at least one purpose of assistance.'); return }
@@ -342,6 +350,20 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Approved Amount (₱) <span className="text-red-400">*</span>
             </label>
+            {isSlice && sliceCap > 0 && (
+              <div className="mb-1.5 flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => setAmount(String(sliceCap))}
+                  className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 tabular-nums transition-colors hover:bg-brand-100">
+                  Full ₱{sliceCap.toLocaleString()}
+                </button>
+                {remainingGap > 0 && remainingGap !== sliceCap && (
+                  <button type="button" onClick={() => setAmount(String(remainingGap))}
+                    className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 tabular-nums transition-colors hover:bg-gray-50">
+                    Remaining ₱{remainingGap.toLocaleString()}
+                  </button>
+                )}
+              </div>
+            )}
             <input type="number" min={1} max={isSlice && sliceCap > 0 ? sliceCap : undefined}
               className={`input ${(exceedsBudget || exceedsRequested || exceedsPerCap) ? 'border-red-400 bg-red-50' : ''}`}
               placeholder="e.g. 5000"
