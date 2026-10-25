@@ -435,7 +435,10 @@ export default function AgencyGuide() {
 
   return (
     <Layout breadcrumb="User Guide">
-      <div className="p-4 sm:p-6 max-w-3xl">
+      {/* Centered reading column (mx-auto), same method as the patient guide's
+          PatientPage width="narrow" — so the page reads as a deliberate column
+          instead of a left-pinned ribbon with dead space on the right. */}
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-4 sm:py-6 overflow-x-clip">
 
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
