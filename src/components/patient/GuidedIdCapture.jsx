@@ -57,6 +57,24 @@ export default function GuidedIdCapture({ wantBack = true, onCapture, onClose })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Re-attach the live stream whenever the <video> is (re)mounted for a live
+  // preview. The <video> only exists in the live-camera branch, so it unmounts
+  // while reviewing a captured shot and on the front→back step change — the
+  // remounted element is fresh and has no srcObject. Without this the back step
+  // (and Retake) show a dead, black camera: the stream is still running, it's
+  // just no longer wired to the on-screen element. See the "back-of-ID camera"
+  // bug report.
+  useEffect(() => {
+    if (error || current) return
+    const v = videoRef.current
+    const stream = streamRef.current
+    if (v && stream && v.srcObject !== stream) {
+      v.srcObject = stream
+      v.play().catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, current, error])
+
   // Live quality loop — runs only while previewing the current step (no shot yet).
   useEffect(() => {
     if (error || current) return
