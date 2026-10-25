@@ -438,7 +438,23 @@ export default function AgencyDashboard() {
         </div>
 
         {loading ? (
-          <div className="card p-8 text-center text-sm text-gray-500">Loading applications...</div>
+          /* Skeleton that matches the queue's shape, so the layout doesn't
+             jump when the rows arrive (design-DB: match the wait). */
+          <div className="card overflow-hidden">
+            <div className="divide-y divide-gray-100">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-32 rounded bg-gray-100" />
+                    <div className="h-2.5 w-24 rounded bg-gray-100" />
+                  </div>
+                  <div className="h-2.5 w-20 rounded bg-gray-100" />
+                  <div className="h-5 w-16 rounded-full bg-gray-100" />
+                  <div className="h-7 w-16 rounded-lg bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          </div>
         ) : pendingApps.length === 0 ? (
           <div className="card flex min-h-[220px] flex-col items-center justify-center px-6 py-12 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
