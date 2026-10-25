@@ -13,6 +13,7 @@ import {
 } from '../../utils/requests'
 import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
+import { saveRequestDraft, loadRequestDraft, clearRequestDraft } from '../../utils/requestDraft'
 import { runIdOcr, isIdType, LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 import { assessImageQuality } from '../../utils/imageQuality'
 import { compareFaces, hasFace } from '../../utils/faceCheck'
@@ -32,7 +33,7 @@ import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
-  MdContentCopy,
+  MdContentCopy, MdHistory,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -125,6 +126,15 @@ export default function RequestAssistance() {
   const faceResults    = useRef({ patient: null, rep: null }) // face-match (from the pair)
   const selfieLiveness = useRef({ patient: null, rep: null }) // liveness (from the capture modal)
   const faceChecked    = useRef({ patient: null, rep: null })
+
+  // ── Draft autosave (survives tab-away / reload / app close) ──────────────
+  // draftReady gates autosave until a restore attempt has finished (so the
+  // empty initial state never overwrites a saved draft). latestDraftRef holds
+  // the freshest snapshot for the hide/close flush. See utils/requestDraft.js.
+  const draftReady    = useRef(false)
+  const draftTimer    = useRef(null)
+  const latestDraftRef = useRef(null)
+  const [draftRestored, setDraftRestored] = useState(false)
   const [faceRunning, setFaceRunning] = useState({ patient: false, rep: false })
 
   const fileSig = (f) => (f ? `${f.name}:${f.size}:${f.lastModified}` : '')
@@ -296,6 +306,99 @@ export default function RequestAssistance() {
     setOcrResults(p => { const n = { ...p }; delete n[typeName]; return n })
     setOcrRunning(p => { const n = { ...p }; delete n[typeName]; return n })
   }
+
+  // ── Draft autosave / restore ─────────────────────────────────────────────
+  // The wizard holds the whole in-progress request (fields, step, and the
+  // staged photo Files) in volatile state, so navigating away used to lose it.
+  // snapshotDraft() is exactly what's needed to rebuild the wizard. faceResults
+  // are NOT stored (the face-pair effect above re-derives them from the restored
+  // files); selfieLiveness + ocrResults can't be recomputed from a File, so they
+  // ride along. See utils/requestDraft.js.
+  const draftHasContent = () => !!(
+    form.assistanceType || Number(form.totalBill) > 0 || form.description?.trim() ||
+    Object.keys(pendingFiles).length > 0 || step > 0
+  )
+  const snapshotDraft = () => ({
+    v: 1,
+    form, step, declared, filedByRep, repForm, repAuthorized,
+    qualityAck, idMetaByType, ocrResults,
+    selfieLiveness: selfieLiveness.current,
+    pendingFiles, idBackFiles,
+  })
+  const discardDraft = () => {
+    clearRequestDraft(user?.uid)
+    setForm({ assistanceType: '', totalBill: '', description: '' })
+    setStep(0); setDeclared(false); setFiledByRep(false)
+    setRepForm({ name: '', relationship: '' }); setRepAuthorized(false)
+    setPendingFiles({}); setIdBackFiles({})
+    setQualityAck({}); setOcrResults({}); setIdMetaByType({})
+    selfieLiveness.current = { patient: null, rep: null }
+    faceResults.current = { patient: null, rep: null }
+    latestDraftRef.current = null
+    setDraftRestored(false)
+    toast.success(t('patient.request.draftDiscarded'))
+  }
+
+  // Restore once, after the initial load settles. If a request is already
+  // active (already submitted) there's no wizard, so drop any stale draft.
+  useEffect(() => {
+    if (draftReady.current || !user?.uid || loading) return
+    if (activeRequest) { draftReady.current = true; clearRequestDraft(user.uid); return }
+    let alive = true
+    loadRequestDraft(user.uid).then(d => {
+      if (!alive) return
+      const meaningful = d && (d.form?.assistanceType || Number(d.form?.totalBill) > 0 ||
+        Object.keys(d.pendingFiles ?? {}).length > 0 || (d.step ?? 0) > 0)
+      if (meaningful) {
+        if (d.form)                               setForm(f => ({ ...f, ...d.form }))
+        if (typeof d.step === 'number')           setStep(d.step)
+        if (typeof d.declared === 'boolean')      setDeclared(d.declared)
+        if (typeof d.filedByRep === 'boolean')    setFiledByRep(d.filedByRep)
+        if (d.repForm)                            setRepForm(r => ({ ...r, ...d.repForm }))
+        if (typeof d.repAuthorized === 'boolean') setRepAuthorized(d.repAuthorized)
+        if (d.qualityAck)                         setQualityAck(d.qualityAck)
+        if (d.idMetaByType)                       setIdMetaByType(d.idMetaByType)
+        if (d.ocrResults)                         setOcrResults(d.ocrResults)
+        if (d.selfieLiveness)                     selfieLiveness.current = d.selfieLiveness
+        if (d.idBackFiles)                        setIdBackFiles(d.idBackFiles)
+        if (d.pendingFiles)                       setPendingFiles(d.pendingFiles) // re-runs the face-pair effect
+        setDraftRestored(true)
+        toast.success(t('patient.request.draftRestored'))
+      }
+      draftReady.current = true
+    })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, loading, activeRequest])
+
+  // Debounced autosave whenever the draftable state changes. Keeps the freshest
+  // snapshot in a ref (null when there's nothing to save) for the hide-flush.
+  useEffect(() => {
+    if (!draftReady.current || !user?.uid || activeRequest || submittedId) return
+    const hasContent = draftHasContent()
+    latestDraftRef.current = hasContent ? snapshotDraft() : null
+    clearTimeout(draftTimer.current)
+    if (!hasContent) { clearRequestDraft(user.uid); return }
+    const snap = latestDraftRef.current
+    draftTimer.current = setTimeout(() => saveRequestDraft(user.uid, snap), 500)
+    return () => clearTimeout(draftTimer.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, step, declared, filedByRep, repForm, repAuthorized, qualityAck, idMetaByType, ocrResults, pendingFiles, idBackFiles, activeRequest, submittedId, user?.uid])
+
+  // Flush on tab-hide / app-close. Mobile often never fires a clean unload, but
+  // visibilitychange→hidden fires reliably, so the latest draft lands even when
+  // the OS kills a backgrounded tab.
+  useEffect(() => {
+    const flush = () => {
+      if (!draftReady.current || !user?.uid || activeRequest || submittedId) return
+      if (latestDraftRef.current) saveRequestDraft(user.uid, latestDraftRef.current)
+    }
+    const onVis = () => { if (document.visibilityState === 'hidden') flush() }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVis)
+    return () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', onVis) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, activeRequest, submittedId])
 
   // Proceed gate: the patient accepts the coverage plan, advancing every
   // endorsed slice into its agency's review queue and notifying the agencies.
@@ -690,6 +793,10 @@ export default function RequestAssistance() {
       })
 
       setSubmittedId(requestId)
+      // Request is filed — the staged draft is no longer needed. Clearing here
+      // (plus the submittedId autosave guard) keeps a stale draft from
+      // resurrecting the just-submitted request on the next visit.
+      clearRequestDraft(user.uid)
 
       // Notifying the gateway admins of the new request is now done server-side by the
       // onRequestWritten Cloud Function (abuse hardening #1): patients can no
@@ -993,6 +1100,19 @@ export default function RequestAssistance() {
           <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.request.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.request.subtitle')}</p>
         </div>
+
+        {/* Draft restored — reassure the patient their progress came back, and
+            offer a one-tap way to start fresh instead. */}
+        {draftRestored && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5">
+            <MdHistory size={16} className="text-brand-500 flex-shrink-0 mt-0.5" />
+            <p className="flex-1 min-w-0 text-xs text-brand-800 leading-relaxed">{t('patient.request.draftRestoredNote')}</p>
+            <button type="button" onClick={discardDraft}
+              className="flex-shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700 underline">
+              {t('patient.request.draftDiscard')}
+            </button>
+          </div>
+        )}
 
         {/* Progress */}
         <div className="flex items-center gap-1.5 mb-1">
