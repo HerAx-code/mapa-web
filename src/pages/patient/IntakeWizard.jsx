@@ -1,11 +1,12 @@
-/* eslint-disable i18next/no-literal-string -- IntakeWizard uses the
-   inline-bilingual pattern documented in CLAUDE.md ("Use inline
-   bilingual labels where possible"). Every English string here is
-   followed by " · <Filipino>", which the linter can't recognize as
-   already-translated. Per-string exemption would be noisier than
-   file-level. */
+/* eslint-disable i18next/no-literal-string -- IntakeWizard keeps its English +
+   Filipino copy co-located as inline pairs and renders ONE of them via L()
+   according to the active EN/FIL toggle (i18n.language), like the rest of the
+   app shows a single language. The literals are the translations themselves, so
+   the no-literal-string rule (which assumes untranslated text) doesn't apply;
+   a file-level disable is cleaner than per-string exemptions. */
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -24,18 +25,21 @@ import toast from 'react-hot-toast'
 // low-literacy users. Writes only the FACTUAL portion of intakeSheet to the
 // patient's request; the gateway social worker adds the assessment separately.
 
-// Inline-bilingual question label (English + Filipino, always both).
-// When `htmlFor` is given, Q renders as a real <label> tied to that input id
-// so the bilingual question text becomes the field's accessible name (a11y:
-// WCAG 1.3.1 / 4.1.2). Section-heading uses (no associated control) omit
-// htmlFor and stay a <div>. Inner text uses block <span> so the <label> holds
-// only phrasing content (valid markup).
+// Pick one language from an inline en/fil pair, following the active EN/FIL
+// toggle. Filipino locales start with 'fil' (react-i18next); everything else
+// (en, en-US, …) takes English.
+const pick = (lang, en, fil) => (lang && lang.toLowerCase().startsWith('fil') ? fil : en)
+
+// Single-language question label, following the toggle. When `htmlFor` is given
+// Q renders as a real <label> tied to that input id so the question text becomes
+// the field's accessible name (a11y: WCAG 1.3.1 / 4.1.2); section-heading uses
+// omit htmlFor and stay a <div>.
 function Q({ en, fil, required, htmlFor }) {
+  const { i18n } = useTranslation()
   const content = (
-    <>
-      <span className="block text-lg font-semibold text-gray-900 leading-snug">{en} {required && <span className="text-red-400">*</span>}</span>
-      <span className="block text-sm text-gray-500 leading-snug">{fil}</span>
-    </>
+    <span className="block text-lg font-semibold text-gray-900 leading-snug">
+      {pick(i18n.language, en, fil)} {required && <span className="text-red-400">*</span>}
+    </span>
   )
   return htmlFor
     ? <label htmlFor={htmlFor} className="mb-2 block">{content}</label>
@@ -69,6 +73,9 @@ export default function IntakeWizard() {
   const { id }   = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { i18n } = useTranslation()
+  // One language at a time, following the header's EN/FIL toggle.
+  const L = (en, fil) => pick(i18n.language, en, fil)
 
   const [request, setRequest] = useState(null)
   const [sheet, setSheet]     = useState(() => blankSheet())
@@ -98,7 +105,7 @@ export default function IntakeWizard() {
   useEffect(() => {
     if (!id) return
     const unsub = onSnapshot(doc(db, 'requests', id), snap => {
-      if (!snap.exists()) { toast.error('Request not found.'); navigate('/patient/request'); return }
+      if (!snap.exists()) { toast.error(L('Request not found.', 'Hindi nakita ang kahilingan.')); navigate('/patient/request'); return }
       const data = { id: snap.id, ...snap.data() }
       setRequest(data)
       if (!hydrated.current) {
@@ -106,7 +113,7 @@ export default function IntakeWizard() {
         hydrated.current = true
       }
       setLoading(false)
-    }, () => { setLoading(false); toast.error('Failed to load your request.') })
+    }, () => { setLoading(false); toast.error(L('Failed to load your request.', 'Hindi na-load ang inyong kahilingan.')) })
     return unsub
   }, [id, navigate])
 
@@ -200,8 +207,8 @@ export default function IntakeWizard() {
 
   const saveAndExit = async () => {
     setSaving(true)
-    try { await persist(); toast.success('Saved. You can finish later.'); navigate('/patient/request') }
-    catch { toast.error('Could not save — please try again.') }
+    try { await persist(); toast.success(L('Saved. You can finish later.', 'Na-save. Maaari ninyong tapusin mamaya.')); navigate('/patient/request') }
+    catch { toast.error(L('Could not save — please try again.', 'Hindi na-save — pakisubukang muli.')) }
     finally { setSaving(false) }
   }
 
@@ -212,12 +219,12 @@ export default function IntakeWizard() {
   }
 
   const finish = async () => {
-    if (!sheet.householdSize || Number(sheet.householdSize) <= 0) { flagField('householdSize', 0, 'Please enter your household size.'); return }
-    if (sheet.monthlyIncome === '' || sheet.monthlyIncome == null) { flagField('monthlyIncome', 1, 'Please enter your monthly income.'); return }
-    if (!sheet.diagnosis?.trim())                                    { flagField('diagnosis', 3, 'Please enter the illness or condition.'); return }
+    if (!sheet.householdSize || Number(sheet.householdSize) <= 0) { flagField('householdSize', 0, L('Please enter your household size.', 'Pakilagay ang laki ng inyong sambahayan.')); return }
+    if (sheet.monthlyIncome === '' || sheet.monthlyIncome == null) { flagField('monthlyIncome', 1, L('Please enter your monthly income.', 'Pakilagay ang inyong buwanang kita.')); return }
+    if (!sheet.diagnosis?.trim())                                    { flagField('diagnosis', 3, L('Please enter the illness or condition.', 'Pakilagay ang sakit o kondisyon.')); return }
     setSaving(true)
-    try { await persist(); toast.success('Your household information was submitted.'); navigate('/patient/request') }
-    catch { toast.error('Could not save — please try again.') }
+    try { await persist(); toast.success(L('Your household information was submitted.', 'Naisumite ang inyong impormasyon ng sambahayan.')); navigate('/patient/request') }
+    catch { toast.error(L('Could not save — please try again.', 'Hindi na-save — pakisubukang muli.')) }
     finally { setSaving(false) }
   }
 
@@ -229,34 +236,33 @@ export default function IntakeWizard() {
   }
 
   return (
-    <Layout breadcrumb="Household Information">
+    <Layout breadcrumb={L('Household Information', 'Impormasyon ng Sambahayan')}>
       <div className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
 
         {/* Header + progress */}
         <button onClick={() => navigate('/patient/request')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium mb-3">
-          <MdArrowBack size={16} /> Back to my request · Bumalik
+          <MdArrowBack size={16} /> {L('Back to my request', 'Bumalik sa kahilingan')}
         </button>
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-3">
           <cur.Icon className="text-brand-500 flex-shrink-0" size={24} />
-          <h1 className="font-display text-xl font-bold text-gray-900">{cur.en}</h1>
+          <h1 className="font-display text-xl font-bold text-gray-900">{L(cur.en, cur.fil)}</h1>
         </div>
-        <p className="text-sm text-gray-500 mb-3">{cur.fil}</p>
         <div className="flex items-center gap-1.5 mb-1">
           {STEPS.map((s, i) => (
             <div key={s.key} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-brand-500' : 'bg-gray-200'}`} />
           ))}
         </div>
         <div className="flex items-center justify-between mb-5">
-          <p className="text-xs text-gray-500">Step {step + 1} of {STEPS.length} · Hakbang {step + 1} sa {STEPS.length}</p>
+          <p className="text-xs text-gray-500">{L(`Step ${step + 1} of ${STEPS.length}`, `Hakbang ${step + 1} sa ${STEPS.length}`)}</p>
           {/* Tiny auto-save indicator. Stays gentle so it doesn't compete
               with the form -- the patient only needs to know "my work is
               being saved". On error we surface a console log; no toast,
               since the next field change or step navigation retries. */}
           {autoSaving ? (
-            <p className="text-xs text-gray-500 italic">Saving…</p>
+            <p className="text-xs text-gray-500 italic">{L('Saving…', 'Sine-save…')}</p>
           ) : lastSavedAt ? (
             <p className="text-xs text-gray-500">
-              Saved · {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {L('Saved', 'Na-save')} · {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
           ) : null}
         </div>
@@ -277,17 +283,17 @@ export default function IntakeWizard() {
                 <div className="space-y-2">
                   {members.map((m, i) => (
                     <div key={i} className="flex gap-2">
-                      <input className={inputCls} aria-label="Family member name · Pangalan" placeholder="Name · Pangalan" value={m.name} onChange={e => setMember(i, 'name', e.target.value)} />
-                      <input className={inputCls} aria-label="Relationship · Kaugnayan" placeholder="Relationship · Kaugnayan" value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} />
+                      <input className={inputCls} aria-label={L('Family member name', 'Pangalan')} placeholder={L('Name', 'Pangalan')} value={m.name} onChange={e => setMember(i, 'name', e.target.value)} />
+                      <input className={inputCls} aria-label={L('Relationship', 'Kaugnayan')} placeholder={L('Relationship', 'Kaugnayan')} value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} />
                       <button onClick={() => removeMember(i)}
-                        aria-label="Remove family member"
+                        aria-label={L('Remove family member', 'Alisin ang kasapi')}
                         className="text-gray-300 hover:text-red-500 flex-shrink-0 min-w-[44px] min-h-[44px] inline-flex items-center justify-center">
                         <MdDelete size={20} />
                       </button>
                     </div>
                   ))}
                   <button onClick={addMember} className="flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700">
-                    <MdAdd size={18} /> Add a family member · Magdagdag
+                    <MdAdd size={18} /> {L('Add a family member', 'Magdagdag ng kasapi')}
                   </button>
                 </div>
               </div>
@@ -313,11 +319,11 @@ export default function IntakeWizard() {
                   id="iw-employment"
                   value={sheet.employmentType}
                   onChange={v => set('employmentType')({ target: { value: v } })}
-                  options={EMPLOYMENT.map(o => ({ value: o.value, label: `${o.en}${o.value ? ` · ${o.fil}` : ''}` }))} />
+                  options={EMPLOYMENT.map(o => ({ value: o.value, label: L(o.en, o.fil) }))} />
               </div>
               <div>
                 <Q en="Where does the money come from? (optional)" fil="Saan nanggagaling ang pera? (opsyonal)" htmlFor="iw-income-source" />
-                <input id="iw-income-source" className={inputCls} value={sheet.incomeSource} onChange={set('incomeSource')} placeholder="e.g. Sweldo, negosyo, pension, padala" />
+                <input id="iw-income-source" className={inputCls} value={sheet.incomeSource} onChange={set('incomeSource')} placeholder={L('e.g. Salary, business, pension, remittance', 'hal. Sweldo, negosyo, pension, padala')} />
               </div>
             </>
           )}
@@ -325,7 +331,7 @@ export default function IntakeWizard() {
           {/* ── Expenses ── */}
           {cur.key === 'expenses' && (
             <>
-              <p className="text-sm text-gray-500">Roughly how much do you spend each month? Leave blank if unsure.<br /><span className="text-gray-500">Halos magkano ang gastos kada buwan? Iwanang blanko kung hindi sigurado.</span></p>
+              <p className="text-sm text-gray-500">{L('Roughly how much do you spend each month? Leave blank if unsure.', 'Halos magkano ang gastos kada buwan? Iwanang blanko kung hindi sigurado.')}</p>
               {[
                 { k: 'food',      en: 'Food',          fil: 'Pagkain' },
                 { k: 'utilities', en: 'Water & power', fil: 'Tubig at kuryente' },
@@ -333,7 +339,7 @@ export default function IntakeWizard() {
                 { k: 'medicine',  en: 'Medicine',      fil: 'Gamot' },
               ].map(row => (
                 <div key={row.k}>
-                  <label htmlFor={`iw-expense-${row.k}`} className="block text-base font-medium text-gray-800">{row.en} <span className="text-gray-500 font-normal">· {row.fil}</span></label>
+                  <label htmlFor={`iw-expense-${row.k}`} className="block text-base font-medium text-gray-800">{L(row.en, row.fil)}</label>
                   <div className="relative mt-1">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base">₱</span>
                     <input id={`iw-expense-${row.k}`} type="number" min="0" inputMode="numeric" className={`${inputCls} pl-8`} value={sheet.expenses?.[row.k] ?? ''} onChange={setExp(row.k)} placeholder="0" />
@@ -351,7 +357,7 @@ export default function IntakeWizard() {
                 <input id="iw-diagnosis"
                   ref={errorField === 'diagnosis' ? errorRef : null}
                   className={`${inputCls} ${errorField === 'diagnosis' ? inputErrCls : ''}`}
-                  value={sheet.diagnosis} onChange={set('diagnosis')} placeholder="e.g. Pneumonia, kidney disease" />
+                  value={sheet.diagnosis} onChange={set('diagnosis')} placeholder={L('e.g. Pneumonia, kidney disease', 'hal. Pulmonya, sakit sa bato')} />
               </div>
               <div>
                 <Q en="When were you admitted? (optional)" fil="Kailan kayo na-admit? (opsyonal)" htmlFor="iw-admission" />
@@ -373,37 +379,37 @@ export default function IntakeWizard() {
             const emp  = EMPLOYMENT.find(o => o.value === sheet.employmentType)
             const familyCount = (sheet.familyMembers ?? []).filter(m => m.name?.trim() || m.relationship?.trim()).length
             const sections = [
-              { stepIdx: 0, title: 'Your household · Sambahayan', rows: [
-                ['Household size · Laki ng sambahayan', sheet.householdSize || '—'],
-                ['Family members listed · Nakalistang kasambahay', familyCount > 0 ? `${familyCount}` : '—'],
+              { stepIdx: 0, title: L('Your household', 'Ang inyong sambahayan'), rows: [
+                [L('Household size', 'Laki ng sambahayan'), sheet.householdSize || '—'],
+                [L('Family members listed', 'Nakalistang kasapi'), familyCount > 0 ? `${familyCount}` : '—'],
               ]},
-              { stepIdx: 1, title: 'Income & work · Kita at trabaho', rows: [
-                ['Monthly income · Buwanang kita', peso(sheet.monthlyIncome)],
-                ['Work situation · Trabaho', emp?.value ? `${emp.en} · ${emp.fil}` : '—'],
-                ['Income source · Pinagkukunan', sheet.incomeSource || '—'],
+              { stepIdx: 1, title: L('Income & work', 'Kita at trabaho'), rows: [
+                [L('Monthly income', 'Buwanang kita'), peso(sheet.monthlyIncome)],
+                [L('Work situation', 'Trabaho'), emp?.value ? L(emp.en, emp.fil) : '—'],
+                [L('Income source', 'Pinagkukunan'), sheet.incomeSource || '—'],
               ]},
-              { stepIdx: 2, title: 'Monthly expenses · Gastusin', rows: [
-                ['Food · Pagkain',           peso(sheet.expenses?.food)],
-                ['Water & power · Tubig at kuryente', peso(sheet.expenses?.utilities)],
-                ['Rent · Upa',               peso(sheet.expenses?.rent)],
-                ['Medicine · Gamot',         peso(sheet.expenses?.medicine)],
+              { stepIdx: 2, title: L('Monthly expenses', 'Buwanang gastusin'), rows: [
+                [L('Food', 'Pagkain'),                peso(sheet.expenses?.food)],
+                [L('Water & power', 'Tubig at kuryente'), peso(sheet.expenses?.utilities)],
+                [L('Rent', 'Upa'),                    peso(sheet.expenses?.rent)],
+                [L('Medicine', 'Gamot'),              peso(sheet.expenses?.medicine)],
               ]},
-              { stepIdx: 3, title: 'Medical · Medikal', rows: [
-                ['Illness · Sakit',                                 sheet.diagnosis || '—'],
-                ['Date admitted · Petsa ng pag-admit',              sheet.dateOfAdmission || '—'],
-                ['Estimated cost · Tinatayang gastos',              peso(sheet.estimatedTotalCost)],
+              { stepIdx: 3, title: L('Medical', 'Medikal'), rows: [
+                [L('Illness', 'Sakit'),                   sheet.diagnosis || '—'],
+                [L('Date admitted', 'Petsa ng pag-admit'), sheet.dateOfAdmission || '—'],
+                [L('Estimated cost', 'Tinatayang gastos'), peso(sheet.estimatedTotalCost)],
               ]},
             ]
             return (
               <div className="space-y-4 text-sm">
-                <p className="text-gray-500">Please check your answers, then tap Submit.<br /><span className="text-gray-500">Pakitingnan ang inyong mga sagot, pagkatapos ay i-Submit.</span></p>
+                <p className="text-gray-500">{L('Please check your answers, then tap Submit.', 'Pakitingnan ang inyong mga sagot, pagkatapos ay i-Submit.')}</p>
                 {sections.map(section => (
                   <div key={section.title}>
                     <div className="flex items-baseline justify-between mb-1">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{section.title}</p>
                       <button onClick={() => setStep(section.stepIdx)}
                         className="text-xs font-medium text-brand-600 hover:text-brand-700">
-                        Edit · I-edit
+                        {L('Edit', 'I-edit')}
                       </button>
                     </div>
                     {section.rows.map(([label, val]) => (
@@ -414,7 +420,7 @@ export default function IntakeWizard() {
                     ))}
                   </div>
                 ))}
-                <p className="text-xs text-gray-500 pt-2">{ORG.gatewayName} will review this with you and complete the assessment. · Susuriin ito ng {ORG.gatewayName} kasama kayo.</p>
+                <p className="text-xs text-gray-500 pt-2">{L(`${ORG.gatewayName} will review this with you and complete the assessment.`, `Susuriin ito ng ${ORG.gatewayName} kasama kayo.`)}</p>
               </div>
             )
           })()}
@@ -424,16 +430,16 @@ export default function IntakeWizard() {
         <div className="flex items-center gap-3 mt-5">
           {step > 0 && (
             <button onClick={() => setStep(s => s - 1)} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium text-base flex items-center justify-center gap-1.5">
-              <MdArrowBack size={18} /> Back
+              <MdArrowBack size={18} /> {L('Back', 'Bumalik')}
             </button>
           )}
           {!isLast ? (
             <button onClick={() => setStep(s => s + 1)} className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-base flex items-center justify-center gap-1.5">
-              Next · Susunod <MdArrowForward size={18} />
+              {L('Next', 'Susunod')} <MdArrowForward size={18} />
             </button>
           ) : (
             <button onClick={finish} disabled={saving} className="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-base flex items-center justify-center gap-1.5 disabled:opacity-60">
-              <MdCheckCircle size={18} /> {saving ? 'Saving…' : 'Submit · Isumite'}
+              <MdCheckCircle size={18} /> {saving ? L('Saving…', 'Sine-save…') : L('Submit', 'Isumite')}
             </button>
           )}
         </div>
@@ -443,7 +449,7 @@ export default function IntakeWizard() {
             text link. */}
         <button onClick={saveAndExit} disabled={saving}
           className="w-full min-h-[44px] inline-flex items-center justify-center mt-3 text-sm font-medium text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 rounded-xl px-4 disabled:opacity-60">
-          Save and finish later · I-save at tapusin mamaya
+          {L('Save and finish later', 'I-save at tapusin mamaya')}
         </button>
       </div>
     </Layout>
