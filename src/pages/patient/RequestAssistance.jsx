@@ -824,7 +824,7 @@ export default function RequestAssistance() {
   if (submittedId) {
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
-        <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto">
+        <div className="px-4 py-6 sm:p-6 w-full max-w-xl mx-auto">
           <div className="card p-6 sm:p-8 text-center space-y-5">
             <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
               <MdCheckCircle size={36} className="text-green-500" />
@@ -897,7 +897,7 @@ export default function RequestAssistance() {
 
     return (
       <Layout breadcrumb={t('patient.request.navLabel')}>
-        <div className="px-4 py-6 sm:p-6 max-w-xl mx-auto space-y-4">
+        <div className="px-4 py-6 sm:p-6 w-full max-w-xl mx-auto space-y-4">
           {/* Shared balance hero — same centrepiece as the Dashboard + My
               Application, so a returning patient sees one consistent view. */}
           <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
@@ -1094,7 +1094,7 @@ export default function RequestAssistance() {
 
   return (
     <Layout breadcrumb={t('patient.request.navLabel')}>
-      <div className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+      <div className="px-4 py-5 sm:p-6 w-full max-w-xl mx-auto">
         <div className="mb-4">
           <p className="eyebrow">{t('patient.request.eyebrow')}</p>
           <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.request.title')}</h1>
