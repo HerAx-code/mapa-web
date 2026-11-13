@@ -52,6 +52,52 @@ export const ORG = {
   contactEmail: env.VITE_ORG_CONTACT_EMAIL || 'support@example.org',
 }
 
+// ── Multi-hospital tenancy (docs/multi-hospital-network-plan.md, Phase 1) ───
+//
+// MAPA is becoming one deployment serving many hospitals. The env values above
+// are now the FALLBACK; at sign-in AuthContext loads the user's hospitals/{id}
+// doc and applyHospital() copies its fields INTO this same ORG object. Every
+// existing `ORG.x` read — React pages, HTML builders (GL / intake sheet),
+// notify(), MFA issuer — picks up the hospital's value with no call-site change.
+// Values copied once at module load go stale: i18n/index.js re-syncs its token
+// map via onOrgChange(); lazily-loaded pages evaluate after sign-in.
+//
+// Users carry no hospitalId until Phase 2, so everyone resolves to the default
+// (hospital #1, seeded from these env values by scripts/seed-default-hospital.mjs).
+export const DEFAULT_HOSPITAL_ID = env.VITE_DEFAULT_HOSPITAL_ID || 'hospital-1'
+
+// Fields a hospital doc may override. NOT here on purpose:
+//   - name / fullName: the MAPA product brand is network-wide, not per hospital.
+//   - accessCodePrefix: verifyAccessCode (server) still validates against the
+//     single env prefix; issuing codes with a hospital prefix before Phase 8
+//     makes the server reject them.
+const HOSPITAL_FIELDS = ['shortName', 'gatewayName', 'gatewayInitials', 'facilityName', 'contactEmail']
+
+const ENV_ORG = { ...ORG, hospitalId: DEFAULT_HOSPITAL_ID }
+Object.assign(ORG, ENV_ORG)
+
+const listeners = new Set()
+
+// Subscribe to hospital changes. Returns an unsubscribe function.
+export const onOrgChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
+
+// Apply a hospital doc's data (or null = back to env defaults, e.g. on sign-out
+// or when the doc is missing/unreadable). Blank values fall back to env so a
+// half-filled hospital doc never blanks out the UI.
+export function applyHospital(hospital, hospitalId = DEFAULT_HOSPITAL_ID) {
+  Object.assign(ORG, ENV_ORG)
+  if (hospital) {
+    ORG.hospitalId = hospitalId
+    for (const key of HOSPITAL_FIELDS) {
+      const v = hospital[key]
+      if (typeof v === 'string' && v.trim()) ORG[key] = v.trim()
+    }
+    // A configured facility is a proper noun, used verbatim in both languages.
+    if (ORG.facilityName !== ENV_ORG.facilityName) ORG.facilityNameFil = ORG.facilityName
+  }
+  listeners.forEach((fn) => fn(ORG))
+}
+
 // All prefixes a typed access code may validly use (active + legacy).
 export const acceptedAccessCodePrefixes = () =>
   [ORG.accessCodePrefix, ...ORG.legacyAccessCodePrefixes].filter(Boolean)

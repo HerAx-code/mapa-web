@@ -573,6 +573,25 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // ── hospitals ─────────────────────────────────────────────────────────────
+    // Multi-hospital tenancy, Phase 1 (docs/multi-hospital-network-plan.md).
+    // One doc per hospital (tenant): branding/contact config that AuthContext
+    // applies to ORG at sign-in. No PII, so any signed-in user may read (every
+    // role needs its own hospital's names on screen). Writes: super_admin only
+    // until platform_admin exists (Phase 6). Keys are pinned so the doc can't
+    // become a dumping ground for data the readable-by-all rule would expose.
+    match /hospitals/{hospitalId} {
+      allow read:  if isAuth();
+      // create/update only — rules OR together, so `allow write` would also
+      // grant delete. Deleting a tenant is never a client action.
+      allow create, update: if isSuperAdmin() &&
+                      request.resource.data.keys().hasOnly([
+                        'shortName', 'gatewayName', 'gatewayInitials', 'facilityName',
+                        'contactEmail', 'accessCodePrefix', 'address', 'logoUrl',
+                        'enabled', 'createdAt', 'updatedAt'
+                      ]);
+    }
+
     // ── hospitalIds ───────────────────────────────────────────────────────────
     // Single-document GET requires authentication. Registration never reads a
     // code unauthenticated: Register.jsx signs the user in anonymously before
