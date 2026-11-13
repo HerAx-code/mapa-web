@@ -5,7 +5,7 @@ assistance. Patients apply once; the hosting medical center's
 social-services office verifies + assesses; one or more partner
 agencies co-fund the bill toward zero balance.
 
-> Thesis project — solo student, 9 months. Government-adjacent system.
+> Capstone project — four proponents, 9 months. Government-adjacent system.
 > Tone: civic, professional, trustworthy. Bilingual (Filipino + English)
 > for patient-facing UI by design.
 
@@ -34,8 +34,8 @@ The hosting medical center is the **single intake gateway**. A patient
 submits **one assistance request** with a bill amount + required documents +
 live selfie. The medical center verifies the documents (OCR-assisted), fills the
 Unified Intake Sheet, conducts **one remote, asynchronous assessment**
-(in-app messaging, with an on-demand Google Meet only when a live talk is
-needed), then **endorses** the request to one or more partner
+(in-app messaging; the assessment is text-only — see Out of scope),
+then **endorses** the request to one or more partner
 agencies as child application "slices" that together fund the bill
 to zero balance. Agencies don't re-review documents or re-assess
 — they only approve their slice and issue a Guarantee Letter.
@@ -72,13 +72,18 @@ to zero balance. Agencies don't re-review documents or re-assess
 | OCR | tesseract.js (lazy-loaded on-device) |
 | Linting | ESLint v9 + eslint-plugin-i18next (warn-level on patient surfaces) |
 | Pre-commit | simple-git-hooks → utils tests |
-| CI | GitHub Actions → build + 4 test suites in parallel |
+| CI | GitHub Actions → three concurrent jobs: build + 3 suites + i18n lint; rules; e2e |
 
 ### What this system deliberately does NOT do
 
 - **No real money movement.** MAPA tracks intent (approved amounts, GL status); actual settlement happens off-system between agency and provider.
-- **SMS: built, activation pending.** SMS via Semaphore (opt-in per message, PII-free, reserved for high-value alerts like interview-scheduled and approval) is implemented but not yet live — it turns on once the Semaphore sender name "MAPA" clears approval. In-app + email are the active channels today; FCM push is planned when the mobile app ships.
-- **No embedded video calling.** Google Meet links (free, no API integration).
+- **SMS: built, activation pending.** SMS via Semaphore (opt-in per message, PII-free, reserved for high-value alerts such as a funding approval) is implemented but not yet live — it turns on once the Semaphore sender name "MAPA" clears approval. In-app + email are the active channels today; FCM push is planned when the mobile app ships.
+- **No video calling of any kind.** An on-demand Google Meet link was once
+  planned and a read-side remnant survives (`request.meetLink` is rendered in
+  the agency view), but nothing writes it: the field has no producer anywhere
+  in the app or the Cloud Functions. Remote assessment is text-only through
+  the in-app conversation. Remove the remnant or build the producer — do not
+  document it as a capability until one of those is true.
 - **No PhilSys API integration.** OCR-assisted, social-worker-confirmed ID verification.
 - **No donor portal, no fraud detection engine, no multi-hospital network, no real-time IHOMIS integration** — all out of scope for the thesis pilot.
 
@@ -115,11 +120,14 @@ npm run build
 
 | Suite | Command | What it does | Tests | Speed |
 |---|---|---|---|---|
-| **Utils** | `npm test` | Pure helper functions (no I/O) | 35 | ~15s |
-| **Components** | `npm run test:components` | React component smoke tests (jsdom) | 64 | ~30s |
-| **Functions** | `npm run test:functions` | Cloud Function pure handlers (mocked Firestore) | 34 | ~5s |
-| **Rules** | `npm run test:rules` | Firestore security rules (boots emulator; needs Java 21+) | 75 | ~30s |
-| **All** | `npm run test:all` | Chains all four | **208** | ~80s |
+| **Utils** | `npm test` | Pure helper functions (no I/O) | 256 | ~15s |
+| **Components** | `npm run test:components` | React component smoke tests (jsdom) | 131 | ~30s |
+| **Functions** | `npm run test:functions` | Cloud Function pure handlers (mocked Firestore) | 94 | ~5s |
+| **Rules** | `npm run test:rules` | Firestore security rules (boots emulator; needs Java 21+) | 209 | ~30s |
+| **All** | `npm run test:all` | Chains all four | **690** | ~80s |
+
+Counts are the verified run of 18 October 2026 and drift upward as suites
+grow — re-run `npm run test:all` before quoting them anywhere.
 
 Pre-commit hook runs utils tests automatically (~15s); CI runs the
 full suite on every push to main. The component tests use accessible
@@ -153,7 +161,7 @@ src/
   utils/                  Pure utility functions
   i18n/                   react-i18next config + en/fil locale files
 functions/
-  src/                    Cloud Function handlers (CommonJS, Node 20)
+  src/                    Cloud Function handlers (CommonJS, Node 22)
   index.js                Top-level exports (what firebase deploy picks up)
 tests/
   utils/                  Pure utility tests
@@ -165,7 +173,7 @@ docs/
   intake-sheet-fields.md  Every field on the gateway's paper intake forms
   threat-model.md         Risk catalog with mitigations
   recovery-and-hardening-plan.md   Multi-phase execution log
-  handoff-2026-06-29.md   Operational runbook for solo-testing window
+  handoff-2026-06-29.md   Operational runbook for the single-operator testing window
   thesis-summary.md       Defense-facing summary
   thesis-documentation.md Manuscript-backing detail
   revision-list.md        Per-R-number change history
@@ -177,7 +185,7 @@ firebase.json             Firebase CLI config
 vite.config.js            Vite + PWA + esbuild config
 vitest.config.js          Vitest config (single-fork; env-globs per folder)
 eslint.config.js          Flat config (ESLint v9); narrow i18n scope
-.github/workflows/        GitHub Actions (ci.yml + cleanup-orphans.yml)
+.github/workflows/        GitHub Actions (ci.yml, cleanup-orphans.yml, deploy-rules.yml)
 ```
 
 ---
@@ -190,7 +198,7 @@ Three layers:
 Every collection has explicit per-role read/write rules. Patient data
 is scoped by `uid` matching, agency data by `agencyId`. Cross-agency
 reads use a `get()` chain to verify membership in the parent request's
-`agencyIds[]`. 75 unit tests pin every rule constraint.
+`agencyIds[]`. 209 unit tests pin every rule constraint.
 
 See [firestore.rules](firestore.rules) for the full ruleset and
 [tests/rules/README.md](tests/rules/README.md) for the test coverage.
@@ -239,16 +247,17 @@ write is gated by rules.
 | Sunday 03:00 UTC | Scheduled orphan-cleanup workflow runs (dry-run) |
 
 CI runs build + utils tests + component tests + function tests + rules
-tests + i18n lint in two parallel jobs. Both must pass for the workflow
-to go green. CI is separate from deploy — Vercel pushes regardless of
+tests + i18n lint in three concurrent jobs — build-and-test, the rules suite
+against the emulator, and the Playwright end-to-end pass. All must pass for
+the workflow to go green. CI is separate from deploy — Vercel pushes regardless of
 CI status. Failed CI is a flag for the operator to investigate.
 
 ---
 
 ## Contributing (operator notes)
 
-This is a solo thesis project; the only "contributor" is the project
-owner. The codebase + collaboration conventions doc at [CLAUDE.md](CLAUDE.md)
+This is a four-person capstone project; the contributors are the project
+proponents. The codebase + collaboration conventions doc at [CLAUDE.md](CLAUDE.md)
 is the canonical source for how AI assistants and any future
 collaborators should work on the codebase. Key items:
 
