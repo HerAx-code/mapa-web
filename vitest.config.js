@@ -45,5 +45,14 @@ export default defineConfig({
     ],
     setupFiles: ['./tests/setup.js'],
     exclude: ['node_modules', 'dist', '.idea', '.git'],
+    // Single-fork mode (above) runs every file in one worker, so the FIRST
+    // file in a suite pays the cold cost of transforming + loading that
+    // suite's whole dependency graph. For tests/functions that cold require
+    // (firebase-admin/functions) can exceed the default 10s hookTimeout on a
+    // memory-starved machine or a CI cold start, which fails the beforeAll
+    // even though nothing is wrong. Give hooks and async tests generous
+    // headroom — these are ceilings, not waits, so a fast machine is unaffected.
+    hookTimeout: 30000,
+    testTimeout: 20000,
   },
 })
