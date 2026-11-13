@@ -3,8 +3,8 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅
-(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 3 next.
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 4 next.
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -111,11 +111,24 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   requests/documents are already key-allowlisted, so tenantId is immutable there.
 - Tests: `tests/utils/hospitals.test.js`, `tests/rules/tenancy.rules.test.js`.
 
-### Phase 3 — Backfill existing data
-- `scripts/backfill-hospital-id.mjs` (Admin SDK, dry-run by default, batched,
-  idempotent, logs counts per collection) → sets `tenantId = <hospital #1>` on
-  every doc missing it.
-- Verify: a count query per collection for `tenantId == null` returns 0 (agency-only docs excepted).
+### Phase 3 — Backfill existing data ✅ script ready 2026-11-14 (not yet run on production)
+- `scripts/backfill-tenant-id.mjs` (Admin SDK). **Dry run by default**; writes only
+  with `--apply`. Idempotent: touches only docs with no `tenantId` and writes only
+  that one field (no `updatedAt` bump). Reads via `select()` so the large
+  `documentContents` files are never downloaded. Paged (500) + batched (400).
+- Which docs get stamped lives in `scripts/lib/tenant-backfill-plan.mjs` (unit-tested
+  in `tests/utils/tenantBackfillPlan.test.js`) and mirrors Phase 2's create-time
+  stamping: patient/gateway records yes; agency users, agency-only conversations,
+  budget requests, agency announcements and agency-actor audit entries no.
+- Triggers fire on the updates; all are no-ops for a tenantId-only change except
+  `syncRequestFinancials`, which re-derives each slice's request totals (only
+  changes a request that had drifted — that trigger's job).
+- Verified end to end on the emulator (613 seeded docs incl. 601 requests across
+  pages: dry run → apply → re-run reports 0 to stamp).
+- **Run order on production:** (1) Phases 1–2 merged + deployed, (2)
+  `seed-default-hospital.mjs`, (3) backfill dry run, review counts, (4) `--apply`,
+  (5) dry run again → expect 0 to stamp. The script refuses `--apply` if
+  `hospitals/<tenant>` doesn't exist.
 
 ### Phase 4 — Tenant-scoped queries (client)
 - ~30 files query `requests` / `applications` / `users` directly (count from
