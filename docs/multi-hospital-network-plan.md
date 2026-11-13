@@ -3,8 +3,8 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅
-(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 4 next.
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off)
+(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 5 next.
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -130,14 +130,36 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   (5) dry run again → expect 0 to stamp. The script refuses `--apply` if
   `hospitals/<tenant>` doesn't exist.
 
-### Phase 4 — Tenant-scoped queries (client)
-- ~30 files query `requests` / `applications` / `users` directly (count from
-  2026-11-13). Each gateway-side query adds `where('tenantId', '==', tid)`;
-  centralize in `src/utils/` helpers so it can't be forgotten.
-- Add composite indexes to `firestore.indexes.json` (tenantId + status +
-  createdAt, etc.) and deploy them **before** the PR merges.
-- Agency queries stay on `agencyId` (cross-hospital by design) but show a
-  **Hospital** column + filter in Inbox / Dashboard.
+### Phase 4 — Tenant-scoped queries (client) ✅ 2026-11-14 — dormant behind a flag
+- **`VITE_TENANT_SCOPING` (default `false`).** Turning it on before the Phase 3
+  backfill would hide every record without a `tenantId`, so the code ships dormant.
+- Helpers in `src/utils/hospitals.js` (unit-tested):
+  - `tenantWhere()` → `[where('tenantId','==',tid)]` (or `[]` when off / agency user),
+    spread into ~30 gateway queries across Dashboard, Requests, Patients, AppLogs,
+    AuditLog, Analytics, Reports, HospitalIDs, Accounts, Agencies, AgencyDetail,
+    AddAgency, ProfileModals (admin notify).
+  - `getUsersInScope(db, roles?)` → own hospital's users **plus** agency users (two
+    queries; one can't say "tenant X or no tenant"). Used by the message composers
+    and the announcement broadcasts.
+  - `inMyTenant(doc)` → client-side filter for announcements (small, readable by
+    all): own hospital's + network-wide (no tenantId) ones.
+- **Unchanged by design:** queries already narrowed by `patientId`, `requestId`,
+  `participants`, or `agencyId` (agency users, agency inbox); reference data
+  (agencies, assistance/document types); `notificationErrors`; `/seed`.
+- Indexes added to `firestore.indexes.json` for every tenant + orderBy query
+  (users, documents, applications, reports, auditLog, referralSuggestions).
+  Equality-only combinations use Firestore index merging.
+- **Enable order:** (1) deploy indexes (`firebase deploy --only firestore:indexes`)
+  and wait until they finish building, (2) backfill verified 0 left, (3) set
+  `VITE_TENANT_SCOPING=true` in Vercel and redeploy, (4) preview-test every staff
+  page.
+- **Follow-ups:**
+  - Agency-side Hospital column + filter (Inbox / Dashboard) moves to Phase 7, where
+    agencies get partner hospitals to list.
+  - Audit entries by **agency** actors carry no tenant (Phase 2: agencies are
+    network-level), so with scoping on they leave the gateway Audit Log page; they
+    stay on each request's timeline (queried by `requestId`). Phase 9: a Cloud
+    Function stamps the case's tenant from `requestId`.
 
 ### Phase 5 — Rules enforce the boundary (the real security line)
 - Helpers: `userTenantId()`; `isHospitalAdmin(hid)` =

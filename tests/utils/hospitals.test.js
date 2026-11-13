@@ -1,17 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Multi-hospital Phase 2 — tenant resolution + stamping
 // (docs/multi-hospital-network-plan.md). Firestore is mocked: loadHospital's
 // read result is controlled per test.
 const getDoc = vi.fn()
+const getDocs = vi.fn()
 vi.mock('../../src/firebase', () => ({ db: {} }))
-vi.mock('firebase/firestore', () => ({ doc: (_db, ...path) => path.join('/'), getDoc: (...a) => getDoc(...a) }))
+vi.mock('firebase/firestore', () => ({
+  doc: (_db, ...path) => path.join('/'),
+  getDoc: (...a) => getDoc(...a),
+  collection: (_db, name) => ({ name, cs: [] }),
+  where: (field, op, value) => ({ field, op, value }),
+  query: (c, ...cs) => ({ name: c.name, cs: [...c.cs, ...cs] }),
+  getDocs: (...a) => getDocs(...a),
+}))
 
-const { tenantIdFor, withTenant, currentTenantId, loadHospital, clearHospital, isNetworkRole } =
-  await import('../../src/utils/hospitals')
+const {
+  tenantIdFor, withTenant, currentTenantId, loadHospital, clearHospital, isNetworkRole,
+  tenantWhere, inMyTenant, getUsersInScope,
+} = await import('../../src/utils/hospitals')
 const { ORG, DEFAULT_HOSPITAL_ID } = await import('../../src/config/org')
 
-beforeEach(() => { getDoc.mockReset(); clearHospital() })
+beforeEach(() => { getDoc.mockReset(); getDocs.mockReset(); clearHospital() })
+afterEach(() => vi.unstubAllEnvs())
 
 describe('tenantIdFor', () => {
   it('uses the user tenantId when present', () => {
@@ -84,5 +95,87 @@ describe('loadHospital / clearHospital', () => {
     await loadHospital('bgh')
     clearHospital()
     expect(currentTenantId()).toBeNull()
+  })
+})
+
+// Phase 4 — tenant-scoped reads, dormant until VITE_TENANT_SCOPING=true.
+const signInAs = async (tenantId) => {
+  getDoc.mockResolvedValue({ exists: () => false })
+  await loadHospital(tenantId)
+}
+const docs = (...ids) => ({ docs: ids.map((id) => ({ id })) })
+
+describe('tenantWhere', () => {
+  it('adds nothing while scoping is off (the default)', async () => {
+    await signInAs('bgh')
+    expect(tenantWhere()).toEqual([])
+  })
+
+  it('narrows to the signed-in hospital when on', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    expect(tenantWhere()).toEqual([{ field: 'tenantId', op: '==', value: 'bgh' }])
+  })
+
+  it('adds nothing for agency users (network-level) even when on', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs(null)
+    expect(tenantWhere()).toEqual([])
+  })
+})
+
+describe('inMyTenant', () => {
+  it('keeps everything while scoping is off', async () => {
+    await signInAs('bgh')
+    expect(inMyTenant({ tenantId: 'other' })).toBe(true)
+  })
+
+  it('keeps own-hospital and network-wide docs, drops other hospitals', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    expect(inMyTenant({ tenantId: 'bgh' })).toBe(true)
+    expect(inMyTenant({ source: 'agency' })).toBe(true)
+    expect(inMyTenant({ tenantId: 'other' })).toBe(false)
+  })
+})
+
+describe('getUsersInScope', () => {
+  it('scoping off: one plain query, as before', async () => {
+    getDocs.mockResolvedValue(docs('a', 'b'))
+    await signInAs('bgh')
+    expect((await getUsersInScope({})).map((d) => d.id)).toEqual(['a', 'b'])
+    expect(getDocs).toHaveBeenCalledTimes(1)
+    expect(getDocs.mock.calls[0][0]).toEqual({ name: 'users', cs: [] })
+  })
+
+  it('scoping on: own hospital + agency users, de-duplicated', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    getDocs.mockImplementation(async (q) =>
+      q.cs.some((c) => c.field === 'tenantId') ? docs('pat', 'sw') : docs('coord', 'sw'))
+    expect((await getUsersInScope({})).map((d) => d.id)).toEqual(['pat', 'sw', 'coord'])
+    expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
+      [{ field: 'tenantId', op: '==', value: 'bgh' }],
+      [{ field: 'role', op: 'in', value: ['agency', 'agency_admin'] }],
+    ])
+  })
+
+  it('scoping on with roles: splits hospital roles from agency roles', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['patient', 'staff_admin', 'agency'])
+    expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
+      [{ field: 'tenantId', op: '==', value: 'bgh' }, { field: 'role', op: 'in', value: ['patient', 'staff_admin'] }],
+      [{ field: 'role', op: 'in', value: ['agency'] }],
+    ])
+  })
+
+  it('scoping on, hospital roles only: no agency query', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['super_admin'])
+    expect(getDocs).toHaveBeenCalledTimes(1)
   })
 })

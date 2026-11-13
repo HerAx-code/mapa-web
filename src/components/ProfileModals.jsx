@@ -5,7 +5,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'fi
 import { db, auth, storage } from '../firebase'
 import SearchableSelect from './ui/SearchableSelect'
 import { notify } from '../utils/notifications'
-import { withTenant } from '../utils/hospitals'
+import { withTenant, tenantWhere } from '../utils/hospitals'
 import { ORG } from '../config/org'
 import MfaEnrollModal from './MfaEnrollModal'
 
@@ -768,7 +768,7 @@ function ReportModal({ onClose }) {
       setSent(true)
 
       // Notify admins — fire and forget
-      getDocs(query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])))
+      getDocs(query(collection(db, 'users'), ...tenantWhere(), where('role', 'in', ['super_admin', 'staff_admin'])))
         .then(snap => Promise.all(snap.docs.map(d => notify(d.id, {
           type:  'report_submitted',
           title: 'New problem report',

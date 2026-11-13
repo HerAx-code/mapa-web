@@ -10,7 +10,7 @@ import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant } from '../../utils/hospitals'
+import { withTenant, tenantWhere } from '../../utils/hospitals'
 import {
   MdSearch, MdAdd, MdEdit, MdDelete, MdLock, MdLockOpen,
   MdKey, MdClose, MdVisibility, MdVisibilityOff, MdWarning,
@@ -32,7 +32,7 @@ const getSecondaryAuth = () => {
 // Account events are Super Admin only — Staff Admin has no access to the Accounts page
 const notifySuperAdmins = async (notification) => {
   try {
-    const snap = await getDocs(query(collection(db, 'users'), where('role', '==', 'super_admin')))
+    const snap = await getDocs(query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'super_admin')))
     for (const d of snap.docs) await notify(d.id, notification)
   } catch (e) { console.error(e) }
 }
@@ -259,7 +259,7 @@ export default function Accounts() {
     // under their agency at /admin/agencies/:id — keeping them off this
     // page prevents accidental deactivation of agency users from a
     // surface intended for the gateway staff only.
-    const q = query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin']))
+    const q = query(collection(db, 'users'), ...tenantWhere(), where('role', 'in', ['super_admin', 'staff_admin']))
     const unsub = onSnapshot(q, snap => {
       setAccounts(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
       setLoading(false)

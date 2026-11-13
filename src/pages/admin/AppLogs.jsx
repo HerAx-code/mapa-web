@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { MdSearch } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { collection, query, where, orderBy, limit, getDocs, startAfter, getCountFromServer } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import { tsToDate } from '../../utils/dates'
 import { groupByDay } from '../../utils/groupByDay'
@@ -49,7 +50,7 @@ export default function AppLogs() {
     try {
       const constraints = [orderBy('submittedAt', 'desc'), limit(PAGE_SIZE)]
       if (cursor) constraints.push(startAfter(cursor))
-      const snap = await getDocs(query(collection(db, 'applications'), ...constraints))
+      const snap = await getDocs(query(collection(db, 'applications'), ...tenantWhere(), ...constraints))
       const batch = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       setApps(prev => cursor ? [...prev, ...batch] : batch)
       setLastVisible(snap.docs[snap.docs.length - 1] ?? null)
@@ -71,8 +72,8 @@ export default function AppLogs() {
   useEffect(() => {
     const statuses = ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview', 'approved', 'certificate', 'rejected']
     Promise.all([
-      getCountFromServer(query(collection(db, 'applications'))),
-      ...statuses.map(s => getCountFromServer(query(collection(db, 'applications'), where('status', '==', s)))),
+      getCountFromServer(query(collection(db, 'applications'), ...tenantWhere())),
+      ...statuses.map(s => getCountFromServer(query(collection(db, 'applications'), ...tenantWhere(), where('status', '==', s)))),
     ]).then(([totalSnap, ...statusSnaps]) => {
       const result = { total: totalSnap.data().count }
       statuses.forEach((s, i) => { result[s] = statusSnaps[i].data().count })

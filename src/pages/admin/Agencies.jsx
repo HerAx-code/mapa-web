@@ -7,6 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -35,7 +36,7 @@ const notifyAgencyUser = async (agencyId, notification) => {
 const notifyAllAdmins = async (notification) => {
   try {
     const snap = await getDocs(
-      query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin']))
+      query(collection(db, 'users'), ...tenantWhere(), where('role', 'in', ['super_admin', 'staff_admin']))
     )
     for (const d of snap.docs) await notify(d.id, notification)
   } catch (e) { console.error('notifyAllAdmins:', e) }
@@ -401,7 +402,7 @@ export default function Agencies() {
   }, [])
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'applications'), snap => {
+    const unsub = onSnapshot(query(collection(db, 'applications'), ...tenantWhere()), snap => {
       const stats = {}
       snap.docs.forEach(d => {
         const { agencyId, status } = d.data()

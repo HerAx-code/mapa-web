@@ -5,7 +5,7 @@
 // NOT `hospitalId` — that name already means the patient's ACCESS CODE
 // (users.hospitalId = 'MAPA-2026-00001', the hospitalIds collection), and the
 // rules, Register, Patients and the GL all read it that way.
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import { applyHospital, DEFAULT_HOSPITAL_ID } from '../config/org'
 
@@ -53,4 +53,53 @@ export async function loadHospital(tenantId) {
 export const clearHospital = () => {
   currentTenant = null
   applyHospital(null)
+}
+
+// ── Phase 4: tenant-scoped reads ─────────────────────────────────────────
+//
+// DORMANT until VITE_TENANT_SCOPING=true. Turning it on before the Phase 3
+// backfill has run would hide every existing record (they have no tenantId
+// yet), so the switch is flipped only after the backfill verifies 0 left.
+// Read at call time (not module load) so tests can toggle it.
+export const tenantScopingOn = () => import.meta.env.VITE_TENANT_SCOPING === 'true'
+
+const scopedTenant = () => (tenantScopingOn() ? currentTenant : null)
+
+// Constraints that narrow a gateway query to the signed-in user's hospital.
+// [] when scoping is off or the user has no tenant (agency users: they work
+// across hospitals by design). Spread into query():
+//   query(collection(db, 'requests'), ...tenantWhere(), where('status', ...))
+export const tenantWhere = () => {
+  const t = scopedTenant()
+  return t ? [where('tenantId', '==', t)] : []
+}
+
+// Client-side counterpart for small collections everyone may read
+// (announcements): keep the user's hospital's docs plus network-wide ones
+// (no tenantId — agency announcements, pre-tenancy docs).
+export const inMyTenant = (d) => {
+  const t = scopedTenant()
+  return !t || !d?.tenantId || d.tenantId === t
+}
+
+// Users in scope for a gateway directory or broadcast: the user's own
+// hospital's users PLUS agency users (network-level, no tenantId). Two
+// queries, because one Firestore query can't express "tenant X or no tenant".
+// `roles` (optional) narrows both. Returns the user docs (snapshots).
+export async function getUsersInScope(db, roles = null) {
+  const users = collection(db, 'users')
+  const t = scopedTenant()
+  if (!t) {
+    const snap = await getDocs(roles ? query(users, where('role', 'in', roles)) : users)
+    return snap.docs
+  }
+  const hospitalRoles = roles ? roles.filter((r) => !isNetworkRole(r)) : null
+  const networkRoles  = roles ? roles.filter(isNetworkRole) : NETWORK_ROLES
+  const queries = []
+  if (hospitalRoles === null)  queries.push(query(users, where('tenantId', '==', t)))
+  else if (hospitalRoles.length) queries.push(query(users, where('tenantId', '==', t), where('role', 'in', hospitalRoles)))
+  if (networkRoles.length) queries.push(query(users, where('role', 'in', networkRoles)))
+  const snaps = await Promise.all(queries.map((q) => getDocs(q)))
+  const seen = new Set()
+  return snaps.flatMap((s) => s.docs).filter((d) => !seen.has(d.id) && seen.add(d.id))
 }

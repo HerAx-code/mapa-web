@@ -5,8 +5,8 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant } from '../../utils/hospitals'
-import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { withTenant, tenantWhere } from '../../utils/hospitals'
+import { collection, query, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { fmtDate } from '../../utils/dates'
 import { accessCodePrefixFor, ORG } from '../../config/org'
@@ -156,7 +156,7 @@ export default function HospitalIDs() {
     // `usedBy` field back into the row for display. Only 'used' codes
     // have a sub-doc; available codes skip the read. Read count is
     // bounded by the active claim set (a few hundred at pilot scale).
-    const unsub = onSnapshot(collection(db, 'hospitalIds'), async (snap) => {
+    const unsub = onSnapshot(query(collection(db, 'hospitalIds'), ...tenantWhere()), async (snap) => {
       const docs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => b.id.localeCompare(a.id))

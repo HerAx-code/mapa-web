@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, query } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import { analyticsForRange, formatMonth } from '../../utils/analytics'
 import { stageCounts } from '../../utils/queueBuckets'
@@ -36,8 +37,8 @@ export default function Analytics() {
     ;(async () => {
       try {
         const [appSnap, reqSnap] = await Promise.all([
-          getDocs(collection(db, 'applications')),
-          getDocs(collection(db, 'requests')),
+          getDocs(query(collection(db, 'applications'), ...tenantWhere())),
+          getDocs(query(collection(db, 'requests'), ...tenantWhere())),
         ])
         if (!alive) return
         setSlices(appSnap.docs.map(d => ({ id: d.id, ...d.data() })))

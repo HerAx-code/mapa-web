@@ -12,7 +12,7 @@ import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant, currentTenantId } from '../../utils/hospitals'
+import { withTenant, currentTenantId, tenantWhere } from '../../utils/hospitals'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
@@ -1292,7 +1292,7 @@ export default function Requests() {
   const [actingOn, setActingOn] = useState(null)
 
   useEffect(() => {
-    const u1 = onSnapshot(collection(db, 'requests'), snap => {
+    const u1 = onSnapshot(query(collection(db, 'requests'), ...tenantWhere()), snap => {
       setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (b.submittedAt?.seconds ?? 0) - (a.submittedAt?.seconds ?? 0)))
       setLoading(false)
@@ -1315,6 +1315,7 @@ export default function Requests() {
     // (Phase 3.4 in docs/recovery-and-hardening-plan.md).
     const u3 = onSnapshot(
       query(collection(db, 'applications'),
+        ...tenantWhere(),
         where('status', 'in',
           ['endorsed', 'reviewing', 'awaiting_info', 'approved', 'certificate', 'rejected']),
         limit(500)),
@@ -1325,6 +1326,7 @@ export default function Requests() {
     // the gateway sees agency-side bottom-up signals here, decides accept/decline.
     const u4 = onSnapshot(
       query(collection(db, 'referralSuggestions'),
+            ...tenantWhere(),
             where('status', '==', 'pending'),
             orderBy('createdAt', 'desc')),
       snap => setPendingSuggestions(snap.docs.map(d => ({ id: d.id, ...d.data() }))),

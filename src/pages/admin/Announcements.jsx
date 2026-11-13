@@ -10,7 +10,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant } from '../../utils/hospitals'
+import { withTenant, getUsersInScope, inMyTenant } from '../../utils/hospitals'
 import {
   MdAdd, MdEdit, MdDelete, MdClose, MdBuildCircle,
   MdWarning, MdInfo, MdCampaign, MdSchedule, MdCheckCircle,
@@ -385,7 +385,7 @@ export default function Announcements() {
     setLoading(true)
     try {
       const snap = await getDocs(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')))
-      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(inMyTenant))
     } catch (err) { console.error(err); toast.error('Failed to load announcements. Please refresh the page.') }
     finally { setLoading(false) }
   }, [])
@@ -416,8 +416,8 @@ export default function Announcements() {
         // Notify all users — fire-and-forget
         const cfg = TYPE_CONFIG[data.type] ?? TYPE_CONFIG.info
         const window = `${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}`
-        getDocs(collection(db, 'users')).then(snap =>
-          Promise.all(snap.docs.map(d =>
+        getUsersInScope(db).then(docs =>
+          Promise.all(docs.map(d =>
             notify(d.id, {
               type:  'system_announcement',
               title: data.title,

@@ -17,6 +17,7 @@ import {
   MdSync,
 } from 'react-icons/md'
 import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
+import { getUsersInScope, inMyTenant } from '../utils/hospitals'
 import { db } from '../firebase'
 import { getOrCreateConversation, sendMessage } from '../utils/messages'
 import { notify } from '../utils/notifications'
@@ -295,9 +296,9 @@ function ComposeModal({ user, onClose }) {
     // staff/agency-only. Guard the fetch so no patient session loads the
     // user directory even if this modal is ever mounted for one.
     if (user?.role === 'patient') return
-    getDocs(collection(db, 'users'))
-      .then(snap => setPatients(
-        snap.docs
+    getUsersInScope(db)
+      .then(docs => setPatients(
+        docs
           .map(d => ({ uid: d.id, ...d.data() }))
           .filter(u => !(u.uid === user?.uid || !u.name || !u.email))
       ))
@@ -975,6 +976,7 @@ export default function Layout({ children, breadcrumb }) {
         const live = []
         for (const d of snap.docs) {
           const ann   = { id: d.id, ...d.data() }
+          if (!inMyTenant(ann)) continue   // another hospital's banner
           const start = ann.startAt?.toDate?.()?.getTime() ?? 0
           const end   = ann.endAt?.toDate?.()?.getTime()   ?? 0
 
@@ -997,8 +999,8 @@ export default function Layout({ children, breadcrumb }) {
           if (ann.source !== 'agency' && now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
             updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
               .then(async () => {
-                const allUsers = await getDocs(collection(db, 'users'))
-                await Promise.all(allUsers.docs.map(u =>
+                const allUsers = await getUsersInScope(db)
+                await Promise.all(allUsers.map(u =>
                   notify(u.id, {
                     type:  'system_announcement',
                     title: `Reminder: ${ann.title}`,
