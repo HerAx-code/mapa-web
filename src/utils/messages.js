@@ -1,5 +1,6 @@
 import { collection, addDoc, updateDoc, doc, serverTimestamp, increment, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
+import { withTenant } from './hospitals'
 
 // R7 (2026-06-03): defaults for `names` and `roles` are required because
 // Firestore rejects undefined field values on addDoc. Some call sites pass
@@ -14,7 +15,9 @@ export const getOrCreateConversation = async (uid1, uid2, { names = {}, roles = 
   const existing = snap.docs.find(d => d.data().participants.includes(uid2))
   if (existing) return existing.id
 
-  const ref = await addDoc(collection(db, 'conversations'), {
+  // Gateway-started threads carry the gateway's tenant (multi-hospital
+  // Phase 2); agency-started ones have none (agencies are network-level).
+  const ref = await addDoc(collection(db, 'conversations'), withTenant({
     participants: [uid1, uid2],
     names,
     roles,
@@ -22,7 +25,7 @@ export const getOrCreateConversation = async (uid1, uid2, { names = {}, roles = 
     lastMessage: '',
     lastAt:      serverTimestamp(),
     unread:      { [uid1]: 0, [uid2]: 0 },
-  })
+  }))
   return ref.id
 }
 

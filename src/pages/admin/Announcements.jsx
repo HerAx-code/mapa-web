@@ -10,6 +10,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
+import { withTenant } from '../../utils/hospitals'
 import {
   MdAdd, MdEdit, MdDelete, MdClose, MdBuildCircle,
   MdWarning, MdInfo, MdCampaign, MdSchedule, MdCheckCircle,
@@ -401,14 +402,14 @@ export default function Announcements() {
         logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: data.title, details: detailSuffix })
         toast.success('Announcement updated.')
       } else {
-        const ref = await addDoc(collection(db, 'announcements'), {
+        const ref = await addDoc(collection(db, 'announcements'), withTenant({
           ...data,
           active:       true,
           reminderSent: false,
           createdAt:    serverTimestamp(),
           createdBy:    user.name ?? 'Admin',
           createdById:  user.uid,
-        })
+        }))
 
         logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `${detailSuffix} · ${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}` })
 

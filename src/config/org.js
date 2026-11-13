@@ -62,7 +62,10 @@ export const ORG = {
 // Values copied once at module load go stale: i18n/index.js re-syncs its token
 // map via onOrgChange(); lazily-loaded pages evaluate after sign-in.
 //
-// Users carry no hospitalId until Phase 2, so everyone resolves to the default
+// ORG is BRANDING only. Which hospital a record belongs to (its `tenantId`) is
+// tracked separately in src/utils/hospitals.js, so a hospital doc that fails to
+// load can fall back to env branding without mis-stamping data. Until the
+// Phase 3 backfill every patient/gateway user resolves to the default
 // (hospital #1, seeded from these env values by scripts/seed-default-hospital.mjs).
 export const DEFAULT_HOSPITAL_ID = env.VITE_DEFAULT_HOSPITAL_ID || 'hospital-1'
 
@@ -73,8 +76,7 @@ export const DEFAULT_HOSPITAL_ID = env.VITE_DEFAULT_HOSPITAL_ID || 'hospital-1'
 //     makes the server reject them.
 const HOSPITAL_FIELDS = ['shortName', 'gatewayName', 'gatewayInitials', 'facilityName', 'contactEmail']
 
-const ENV_ORG = { ...ORG, hospitalId: DEFAULT_HOSPITAL_ID }
-Object.assign(ORG, ENV_ORG)
+const ENV_ORG = { ...ORG }
 
 const listeners = new Set()
 
@@ -84,10 +86,9 @@ export const onOrgChange = (fn) => { listeners.add(fn); return () => listeners.d
 // Apply a hospital doc's data (or null = back to env defaults, e.g. on sign-out
 // or when the doc is missing/unreadable). Blank values fall back to env so a
 // half-filled hospital doc never blanks out the UI.
-export function applyHospital(hospital, hospitalId = DEFAULT_HOSPITAL_ID) {
+export function applyHospital(hospital) {
   Object.assign(ORG, ENV_ORG)
   if (hospital) {
-    ORG.hospitalId = hospitalId
     for (const key of HOSPITAL_FIELDS) {
       const v = hospital[key]
       if (typeof v === 'string' && v.trim()) ORG[key] = v.trim()

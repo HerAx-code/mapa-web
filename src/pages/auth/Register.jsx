@@ -18,7 +18,7 @@ import TermsModal from '../../components/TermsModal'
 import AddressPicker from '../../components/AddressPicker'
 import { TERMS_VERSION } from '../../utils/constants'
 import { hasReservedToken } from '../../utils/names'
-import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes } from '../../config/org'
+import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
 
@@ -506,7 +506,10 @@ export default function Register() {
           const hidSnap = await tx.get(hidRef)
           if (!hidSnap.exists()) throw new Error('CODE_NOT_FOUND')
           if (hidSnap.data().status !== 'available') throw new Error('CODE_USED')
-          tx.set(doc(db, 'users', uid), userData)
+          // Tenant (multi-hospital Phase 2): the patient joins the hospital
+          // that issued the access code. Codes carry tenantId from Phase 2 on;
+          // older codes belong to hospital #1 (Phase 3 backfills them).
+          tx.set(doc(db, 'users', uid), { ...userData, tenantId: hidSnap.data().tenantId || DEFAULT_HOSPITAL_ID })
           tx.update(hidRef, {
             status: 'used', patId: uid,
             date: fmtDate(new Date()),

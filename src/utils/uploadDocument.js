@@ -5,6 +5,7 @@ import { ref, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../firebase'
 import { compressImage } from './image'
 import { fmtDate } from './dates'
+import { tenantIdFor } from './hospitals'
 
 // Shared patient-document upload pipeline.
 //
@@ -79,6 +80,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
   // 1. Metadata doc.
   const metaRef = await addDoc(collection(db, 'documents'), {
     patientId:           user.uid,
+    tenantId:            tenantIdFor(user),   // multi-hospital Phase 2
     patientName:         user.name ?? '',
     name:                typeName,
     fileName:            file.name,
@@ -140,7 +142,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
   //    leave orphan rows.
   try {
     await setDoc(doc(db, 'documentContents', metaRef.id), {
-      content, documentId: metaRef.id, patientId: user.uid,
+      content, documentId: metaRef.id, patientId: user.uid, tenantId: tenantIdFor(user),
     })
   } catch (err) {
     await deleteDoc(doc(db, 'documents', metaRef.id)).catch(() => {})
@@ -165,7 +167,7 @@ export async function replacePatientDocument({ docId, file, ocr = null, verify =
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
   await setDoc(doc(db, 'documentContents', docId), {
-    content, documentId: docId, patientId: user.uid,
+    content, documentId: docId, patientId: user.uid, tenantId: tenantIdFor(user),
   })
   await updateDoc(doc(db, 'documents', docId), {
     status:     'pending',

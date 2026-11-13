@@ -10,6 +10,7 @@ import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
+import { withTenant } from '../../utils/hospitals'
 import {
   MdSearch, MdAdd, MdEdit, MdDelete, MdLock, MdLockOpen,
   MdKey, MdClose, MdVisibility, MdVisibilityOff, MdWarning,
@@ -105,7 +106,8 @@ function AccountModal({ account, onClose }) {
         // failed creates leave the email permanently registered with no
         // way to retry from this page (auth/email-already-in-use).
         try {
-          await setDoc(doc(db, 'users', uid), {
+          // Gateway staff join the creating admin's hospital (multi-hospital Phase 2).
+          await setDoc(doc(db, 'users', uid), withTenant({
             name:      form.name.trim(),
             email:     form.email.trim(),
             role:      form.role,
@@ -121,7 +123,7 @@ function AccountModal({ account, onClose }) {
             deletion:  false,
             cooldown:  0,
             createdAt: serverTimestamp(),
-          })
+          }))
         } catch (setDocErr) {
           try { await deleteUser(cred.user) } catch (cleanupErr) {
             console.error('[Accounts] orphaned Auth user cleanup failed for', form.email.trim(), cleanupErr)

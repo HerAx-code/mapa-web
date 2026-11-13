@@ -12,6 +12,7 @@ import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
+import { withTenant, currentTenantId } from '../../utils/hospitals'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
@@ -239,6 +240,9 @@ function EndorseModal({ request, slices, agencies, onClose }) {
           const remaining = aData?.slots?.remaining ?? 0
           const sliceRef  = doc(collection(db, 'applications'))
           tx.set(sliceRef, {
+            // A slice belongs to its request's hospital (multi-hospital Phase 2);
+            // pre-backfill requests fall back to the endorsing admin's.
+            ...withTenant({}, r.tenantId ?? currentTenantId()),
             appId:             newAppId(),
             requestId:         request.id,
             amountRequested:   sliceAmount,

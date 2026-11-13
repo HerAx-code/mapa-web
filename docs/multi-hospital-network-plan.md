@@ -3,7 +3,8 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ (this PR). Phase 1 next.
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 3 next.
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -29,12 +30,12 @@ We optimize for *zero regressions and zero cross-hospital leaks*, not speed.
 
 - A **hospital is the tenant.** It owns its gateway staff, patients, access codes,
   requests, documents, intake sheets, conversations, certificates, reports,
-  announcements and audit trail. Every one of those docs gets a `hospitalId`.
+  announcements and audit trail. Every one of those docs gets a `tenantId`.
 - **Agencies are network-level, not tenant-level.** A funder like DSWD or PCSO
   co-funds patients from *several* hospitals; that is the point of the title. An
   agency **partners** with a set of hospitals and sees only slices endorsed to it,
   from any partner hospital.
-- **Slices (`applications`) carry both** `hospitalId` (who endorsed) and `agencyId`
+- **Slices (`applications`) carry both** `tenantId` (who endorsed) and `agencyId`
   (who funds).
 
 ### Key finding from the current code (2026-11-13)
@@ -69,7 +70,7 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   "Tenancy" section pointing here; add `hospitals` to the collections list.
 
 ### Phase 1 — `hospitals` collection + runtime org config (no behavior change)
-- New collection `hospitals/{hospitalId}`: `name`, `shortName`, `gatewayName`,
+- New collection `hospitals/{tenantId}`: `name`, `shortName`, `gatewayName`,
   `gatewayInitials`, `facilityName`, `accessCodePrefix`, `contactEmail`, `address`,
   `logoUrl`, `enabled`, `createdAt`.
 - Seed **hospital #1** from today's `VITE_ORG_*` values (script, Admin SDK).
@@ -81,35 +82,55 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
 - Rules: `hospitals` readable by any auth user (public fields only), writable by
   `platform_admin` (and by the hospital's own `super_admin` for branding fields).
 
-### Phase 2 — Dual-write `hospitalId` on every new doc
-- Add `hospitalId` on create for: `users`, `hospitalIds`, `requests`,
-  `applications`, `documents`, `documentContents`, `conversations`, `certificates`,
-  `reports`, `announcements`, `auditLog`, `referralSuggestions`, notifications.
-- Source of truth: the patient's `users.hospitalId` (set at registration from the
-  access code); staff get it from their user doc.
-- Nothing *reads* it yet → zero behavior change, safe to ship.
-- Rules (create only): `request.resource.data.hospitalId == userHospitalId()`.
+### Phase 2 — Dual-write `tenantId` on every new doc ✅ 2026-11-14
+- **Field name is `tenantId`, not `hospitalId`.** `hospitalId` already means the
+  patient's *access code* (`users.hospitalId = 'MAPA-2026-00001'`, the
+  `hospitalIds` collection) and the rules, Register, Patients and the GL read it
+  that way. Phase 1's `hospitalIdFor()` had read that access code as the tenant
+  (harmless — the lookup missed and fell back — but wrong); fixed here.
+- `src/utils/hospitals.js`: `tenantIdFor(user)` (patients + gateway staff →
+  `user.tenantId` or hospital #1; **agency users → null**, they are network-level),
+  `currentTenantId()` (set at sign-in), `withTenant(data, id?)` (adds the field only
+  when there is a tenant — never `tenantId: null`). `ORG` is branding-only now, so a
+  hospital doc that fails to load can't mis-stamp data.
+- Stamped on create: `users` (Register — copied from the access code's tenantId;
+  Accounts — the admin's), `hospitalIds`, `requests`, `applications` (the
+  request's tenant), `documents` + `documentContents`, `conversations`
+  (gateway-started), `certificates` + `referralSuggestions` (the slice's / case's
+  tenant, even though an agency writes them), `reports`, `announcements` (gateway),
+  `auditLog` (gateway/patient actors).
+- **Not stamped (by design):** agency-only docs (agency announcements, budget
+  requests, agency users, agency-started conversations); `notifications/{uid}` —
+  already scoped by recipient uid; Cloud Function writes → Phase 9; `/seed`.
+- Nothing *reads* it yet → zero behavior change.
+- Rules: `users.tenantId` is **pinned on self-update** (patients and agency
+  admins can't set or change it; a transfer is a gateway-admin action, D2).
+  Create-time equality checks (`tenantId == the writer's tenant`) are deferred to
+  **Phase 5**: until the Phase 3 backfill, users carry no tenantId, so an equality
+  rule would have nothing to compare against. Patient/agency updates on
+  requests/documents are already key-allowlisted, so tenantId is immutable there.
+- Tests: `tests/utils/hospitals.test.js`, `tests/rules/tenancy.rules.test.js`.
 
 ### Phase 3 — Backfill existing data
 - `scripts/backfill-hospital-id.mjs` (Admin SDK, dry-run by default, batched,
-  idempotent, logs counts per collection) → sets `hospitalId = <hospital #1>` on
+  idempotent, logs counts per collection) → sets `tenantId = <hospital #1>` on
   every doc missing it.
-- Verify: a count query per collection for `hospitalId == null` returns 0.
+- Verify: a count query per collection for `tenantId == null` returns 0 (agency-only docs excepted).
 
 ### Phase 4 — Tenant-scoped queries (client)
 - ~30 files query `requests` / `applications` / `users` directly (count from
-  2026-11-13). Each gateway-side query adds `where('hospitalId', '==', hid)`;
+  2026-11-13). Each gateway-side query adds `where('tenantId', '==', tid)`;
   centralize in `src/utils/` helpers so it can't be forgotten.
-- Add composite indexes to `firestore.indexes.json` (hospitalId + status +
+- Add composite indexes to `firestore.indexes.json` (tenantId + status +
   createdAt, etc.) and deploy them **before** the PR merges.
 - Agency queries stay on `agencyId` (cross-hospital by design) but show a
   **Hospital** column + filter in Inbox / Dashboard.
 
 ### Phase 5 — Rules enforce the boundary (the real security line)
-- Helpers: `userHospitalId()`; `isHospitalAdmin(hid)` =
-  `isAdmin() && userHospitalId() == hid`; `isPlatformAdmin()`.
+- Helpers: `userTenantId()`; `isHospitalAdmin(hid)` =
+  `isAdmin() && userTenantId() == tid`; `isPlatformAdmin()`.
 - Replace every bare `isAdmin()` on tenant data with
-  `isHospitalAdmin(resource.data.hospitalId)`.
+  `isHospitalAdmin(resource.data.tenantId)`.
 - `users` read rule: staff may read users **of their own hospital**; agencies may
   read only patients who have a request endorsed to them (today: all users).
 - `hospitalIds` (access codes): admin of the owning hospital only.
@@ -119,7 +140,7 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   merge unless every cross-tenant case is denied.
 - Note: each `get(users/uid)` in rules is a billed read and counts toward the
   10-gets-per-request limit. If rule cost becomes a problem, move `role`,
-  `hospitalId`, `agencyId` into **custom claims** (set by a Cloud Function) — tracked
+  `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) — tracked
   as a follow-up, not v1.
 
 ### Phase 6 — Roles: `platform_admin` + hospital-scoped admins
@@ -138,7 +159,8 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
 
 ### Phase 8 — Per-hospital access codes + configuration
 - `verifyAccessCode` + `orgConfig.js`: accept any **enabled hospital's** prefix;
-  the matched prefix sets `users.hospitalId` at registration.
+  the matched prefix's hospital sets `users.tenantId` at registration
+  (Register already copies `hospitalIds/{code}.tenantId` since Phase 2).
 - Guarantee Letter, intake sheet (`intakeSheetHTML.js`), emails (`api/send-email.js`)
   render the **endorsing hospital's** name/logo/address.
 - Optional per-hospital overrides of `referenceData.js` (document sets,
@@ -146,7 +168,7 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
 - Hospital Settings page for the hospital `super_admin` (branding + contact).
 
 ### Phase 9 — Functions + analytics + polish
-- Cloud Functions: stamp/propagate `hospitalId` where they create docs
+- Cloud Functions: stamp/propagate `tenantId` where they create docs
   (notifications, `onRequestWritten`, `syncRequestFinancials`, `glExpirySweep`).
 - Admin analytics scoped per hospital; platform analytics across hospitals.
 - Optional: per-hospital agency sub-budgets (D3 follow-up).

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { ORG, applyHospital, onOrgChange, DEFAULT_HOSPITAL_ID } from '../../src/config/org'
+import { ORG, applyHospital, onOrgChange } from '../../src/config/org'
 
 // Multi-hospital Phase 1 — a hospital doc overrides ORG in place, with the
 // env values as the fallback (docs/multi-hospital-network-plan.md).
@@ -8,9 +8,10 @@ const ENV = { ...ORG }
 afterEach(() => applyHospital(null))
 
 describe('applyHospital', () => {
-  it('starts on the env defaults and the default hospital id', () => {
-    expect(ORG.hospitalId).toBe(DEFAULT_HOSPITAL_ID)
+  it('starts on the env defaults and carries no tenant id (branding only)', () => {
     expect(ORG.gatewayName).toBe(ENV.gatewayName)
+    expect(ORG).not.toHaveProperty('hospitalId')
+    expect(ORG).not.toHaveProperty('tenantId')
   })
 
   it('copies hospital-level fields into ORG', () => {
@@ -20,7 +21,7 @@ describe('applyHospital', () => {
       shortName: 'BGH',
     }, 'bgh')
     expect(ORG).toMatchObject({
-      hospitalId: 'bgh', gatewayName: 'Malasakit Desk', gatewayInitials: 'MD',
+      gatewayName: 'Malasakit Desk', gatewayInitials: 'MD',
       facilityName: 'Bangsamoro General Hospital', contactEmail: 'mss@bgh.example', shortName: 'BGH',
     })
   })

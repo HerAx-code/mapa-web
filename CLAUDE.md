@@ -58,7 +58,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
-(planned, multi-hospital Phase 1: `hospitals`)
+`hospitals` (multi-hospital tenants; Phase 1)
 
 ## Tenancy (multi-hospital network — in progress)
 MAPA is moving from one host facility per deployment to **one deployment serving many
@@ -66,17 +66,18 @@ hospitals** (docs/multi-hospital-network-plan.md — read it before touching rul
 queries, roles, access codes, or org config). Locked decisions (2026-11-13):
 - A **hospital is the tenant**: its gateway staff, patients, access codes, requests,
   documents, intake sheets, conversations, certificates, reports, announcements and
-  audit log carry a `hospitalId`. Gateway roles (`super_admin`, `staff_admin`) become
+  audit log carry a **`tenantId`** (the `hospitals/{id}` doc id). NOT `hospitalId` —
+  that field already means the patient's access code (`hospitalIds` collection). Gateway roles (`super_admin`, `staff_admin`) become
   **hospital-scoped**; a new **`platform_admin`** role runs the network (onboards
   hospitals/agencies, aggregate analytics, no patient PII).
 - **Agencies are network-level and shared**: an agency partners with many hospitals
-  and funds slices from any partner hospital. Slices carry both `hospitalId` and
+  and funds slices from any partner hospital. Slices carry both `tenantId` and
   `agencyId`. One budget per agency (per-hospital sub-budgets are future work).
 - A patient belongs to **one** hospital, decided by the **per-hospital access-code
   prefix** they register with (prefixes globally unique).
 - Reference data = network defaults (`src/data/referenceData.js`) + optional
   per-hospital overrides. Existing production data backfills to **hospital #1**.
-- Order is data → queries → rules. Never tighten rules on `hospitalId` before the
+- Order is data → queries → rules. Never tighten rules on `tenantId` before the
   data and queries carry it, and never merge a rules change without the tenancy
   rules tests proving cross-hospital access is denied.
 

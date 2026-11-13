@@ -13,6 +13,7 @@ import {
 } from '../../utils/requests'
 import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
+import { tenantIdFor } from '../../utils/hospitals'
 import { saveRequestDraft, loadRequestDraft, clearRequestDraft } from '../../utils/requestDraft'
 import { runIdOcr, isIdType, LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 import { assessImageQuality } from '../../utils/imageQuality'
@@ -773,6 +774,7 @@ export default function RequestAssistance() {
         // never a block. See src/utils/eligibility.js.
         patientProvince:   user.province ?? '',
         patientHospitalId: user.hospitalId ?? null,
+        tenantId:          tenantIdFor(user),   // multi-hospital Phase 2
         assistanceType:    form.assistanceType,
         description:       form.description.trim(),
         // PhilHealth-first bill model: the patient declares the full bill;

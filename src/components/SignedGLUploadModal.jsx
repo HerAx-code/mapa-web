@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { notify } from '../utils/notifications'
+import { withTenant } from '../utils/hospitals'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { MdClose, MdUpload, MdPictureAsPdf, MdOpenInNew } from 'react-icons/md'
@@ -139,7 +140,8 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
     if (!pendingPayload) { toast.error('Please select a file first.'); return }
     setUploading(true)
     try {
-      await setDoc(doc(db, 'certificates', app.id), {
+      // The GL belongs to the slice's hospital (multi-hospital Phase 2).
+      await setDoc(doc(db, 'certificates', app.id), withTenant({
         base64:      pendingPayload,
         contentType: pendingType,
         fileName:    pendingName ?? (pendingType === 'application/pdf' ? 'guarantee-letter.pdf' : 'guarantee-letter.jpg'),
@@ -151,7 +153,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
         // pointing read sites at a downloadUrl that no longer resolves.
         downloadUrl: null,
         storagePath: null,
-      })
+      }, app.tenantId))
       await updateDoc(doc(db, 'applications', app.id), {
         certificateUploaded: true,
         updatedAt: serverTimestamp(),

@@ -5,6 +5,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'fi
 import { db, auth, storage } from '../firebase'
 import SearchableSelect from './ui/SearchableSelect'
 import { notify } from '../utils/notifications'
+import { withTenant } from '../utils/hospitals'
 import { ORG } from '../config/org'
 import MfaEnrollModal from './MfaEnrollModal'
 
@@ -754,7 +755,7 @@ function ReportModal({ onClose }) {
     if (!form.description.trim()){ toast.error(t('profile.report.errDescription')); return }
     setSending(true)
     try {
-      await addDoc(collection(db, 'reports'), {
+      await addDoc(collection(db, 'reports'), withTenant({
         category:      form.category,
         description:   form.description.trim(),
         reportedBy:    user?.uid,
@@ -763,7 +764,7 @@ function ReportModal({ onClose }) {
         reporterRole:  user?.role,
         createdAt:     serverTimestamp(),
         status:        'open',
-      })
+      }))
       setSent(true)
 
       // Notify admins — fire and forget

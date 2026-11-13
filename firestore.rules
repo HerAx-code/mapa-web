@@ -116,6 +116,11 @@ service cloud.firestore {
           // name is pinned for patients only, so staff can still self-rename.
           request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
+          // Multi-hospital Phase 2: tenantId (which hospital the user belongs
+          // to — NOT hospitalId, which is the access code) is pinned too. A
+          // patient re-pointing it would move their new requests/documents to
+          // another hospital. Transfers are an admin action (decision D2).
+          request.resource.data.get('tenantId', null)   == resource.data.get('tenantId', null) &&
           (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null)) &&
           // Server-owned counters (abuse hardening #3 + #5): only the Admin SDK
           // triggers (onRequestWritten / onDocumentCountChanged, rules-bypassing)
@@ -129,6 +134,7 @@ service cloud.firestore {
           resource.data.agencyId == userAgencyId() &&
           resource.data.role in ['agency', 'agency_admin'] &&
           request.resource.data.agencyId == resource.data.agencyId &&
+          request.resource.data.get('tenantId', null) == resource.data.get('tenantId', null) &&
           request.resource.data.role in ['agency', 'agency_admin'])
       );
       allow delete: if isSuperAdmin();
