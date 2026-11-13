@@ -28,7 +28,9 @@ import { useDropdownPlacement } from '../../hooks/useDropdownPlacement'
  *   ariaLabel, className, emptyText
  *
  * The search box only appears once the list is long enough to need it
- * (> 7 entries), so short pickers stay clean.
+ * (> 7 entries), so short pickers stay clean. Pass searchable={false} to
+ * never show it (e.g. a short fixed list for low-literacy patient screens,
+ * where a search box is more confusing than scrolling).
  */
 export default function SearchableSelect({
   value = '',
@@ -45,6 +47,7 @@ export default function SearchableSelect({
   className = '',
   triggerClassName = '',
   emptyText = 'No matches',
+  searchable = true,
 }) {
   const [open, setOpen]     = useState(false)
   const [query, setQuery]   = useState('')
@@ -75,7 +78,7 @@ export default function SearchableSelect({
     [filtered, pinnedOption],
   )
 
-  const showSearch = options.length + (pinnedOption ? 1 : 0) > 7
+  const showSearch = searchable && options.length + (pinnedOption ? 1 : 0) > 7
 
   const close = useCallback(() => { setOpen(false); setQuery('') }, [])
 

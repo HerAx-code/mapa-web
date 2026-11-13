@@ -4,14 +4,31 @@
 
 import { tsToDate } from './dates'
 import { ORG } from '../config/org'
+import { relationshipLabel, shortfallLabel } from './intakeSheet'
 
-const peso = (v) => v == null || v === '' ? '—' : `₱${Number(v).toLocaleString()}`
+// HTML-escape every stored value before it goes into the markup. Most of the
+// sheet is typed by the patient (names, occupation, diagnosis, employer, …) and
+// the result is opened as a same-origin blob page, so unescaped text like
+// `<img src=x onerror=…>` would run script with the printing social worker's
+// session (stored XSS). Escape at every interpolation of data — never only
+// "the fields that look risky".
+export const esc = (v) => String(v ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const peso = (v) => v == null || v === '' ? '—' : `₱${esc(Number(v).toLocaleString())}`
 
 const orDash = (v) => {
   if (v == null) return '<span class="empty">—</span>'
   const s = String(v).trim()
-  return s ? s : '<span class="empty">—</span>'
+  return s ? esc(s) : '<span class="empty">—</span>'
 }
+
+// A free-text block: escaped text, or the placeholder.
+const block = (v, placeholder = '— not provided —') => (v?.trim() ? esc(v.trim()) : placeholder)
 
 const fmtDate = (ts) => {
   const d = tsToDate(ts)
@@ -45,8 +62,8 @@ const seal = `
   <svg class="seal" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
     <circle cx="40" cy="40" r="37" fill="none" stroke="#0f6e56" stroke-width="2.5"/>
     <circle cx="40" cy="40" r="30" fill="none" stroke="#0f6e56" stroke-width="1"/>
-    <text x="40" y="38" text-anchor="middle" font-size="11" fill="#0f6e56" font-weight="bold" font-family="serif">${(ORG.gatewayInitials || ORG.name).toUpperCase()}</text>
-    <text x="40" y="50" text-anchor="middle" font-size="5.5" fill="#0f6e56" font-family="serif">${(ORG.facilityName || '').toUpperCase()}</text>
+    <text x="40" y="38" text-anchor="middle" font-size="11" fill="#0f6e56" font-weight="bold" font-family="serif">${esc((ORG.gatewayInitials || ORG.name).toUpperCase())}</text>
+    <text x="40" y="50" text-anchor="middle" font-size="5.5" fill="#0f6e56" font-family="serif">${esc((ORG.facilityName || '').toUpperCase())}</text>
   </svg>
 `
 
@@ -72,7 +89,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
   const familyRowsHTML = familyRows.map(m => `
     <tr>
       <td>${orDash(m.name)}</td>
-      <td>${orDash(m.relationship)}</td>
+      <td>${orDash(relationshipLabel(m.relationship))}</td>
       <td>${orDash(m.age)}</td>
       <td>${orDash(m.occupation)}</td>
       <td style="text-align:right;">${m.monthlyContribution !== '' && m.monthlyContribution != null ? peso(m.monthlyContribution) : '—'}</td>
@@ -88,7 +105,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Unified Intake Sheet &ndash; ${app.patientName || refNo || 'MAPA'}</title>
+  <title>Unified Intake Sheet &ndash; ${esc(app.patientName || refNo || 'MAPA')}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -189,8 +206,8 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
     ${seal}
     <div class="header-text">
       <p class="republic">Republic of the Philippines</p>
-      <p class="agency-name">${ORG.facilityName}</p>
-      <p class="sub">Medical Assistance Portal Access (MAPA)${agency?.name ? ` &nbsp;·&nbsp; ${agency.name}` : ''}</p>
+      <p class="agency-name">${esc(ORG.facilityName)}</p>
+      <p class="sub">Medical Assistance Portal Access (MAPA)${agency?.name ? ` &nbsp;·&nbsp; ${esc(agency.name)}` : ''}</p>
     </div>
     ${seal}
   </div>
@@ -242,7 +259,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
   <div class="section-header">C. Income &amp; Employment</div>
   <div class="field-grid">
     <div class="field"><span class="field-label">Monthly Household Income:</span> <span class="field-value">${peso(s.monthlyIncome)}</span></div>
-    <div class="field"><span class="field-label">Employment Type:</span> <span class="field-value">${empLabel(s.employmentType)}</span></div>
+    <div class="field"><span class="field-label">Employment Type:</span> <span class="field-value">${empLabel(s.employmentType)}${s.employmentType === 'other' && s.employmentTypeOther?.trim() ? `: ${esc(s.employmentTypeOther.trim())}` : ''}</span></div>
     <div class="field"><span class="field-label">Employer:</span> <span class="field-value">${orDash(s.employer)}</span></div>
     <div class="field"><span class="field-label">Length of Employment:</span> <span class="field-value">${orDash(s.lengthOfEmployment)}</span></div>
     <div class="field full"><span class="field-label">Other Income Source:</span> <span class="field-value">${orDash(s.incomeSource)}</span></div>
@@ -261,6 +278,13 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
       <span class="field-label">Total Monthly Expenses:</span>
       <span class="field-value"><strong>₱${totalExp.toLocaleString()}</strong></span>
     </div>
+    ${(s.shortfallCoverage ?? []).length ? `
+    <div class="field full">
+      <span class="field-label">Shortfall Covered By:</span>
+      <span class="field-value">${esc(s.shortfallCoverage.filter(v => v !== 'other').map(shortfallLabel)
+        .concat(s.shortfallCoverage.includes('other') && s.shortfallCoverageOther?.trim() ? [s.shortfallCoverageOther.trim()] : [])
+        .join(', '))}</span>
+    </div>` : ''}
   </div>
 
   <!-- E. Medical Information -->
@@ -281,20 +305,23 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
       ? `<span class="means">${meansLabel(s.meansTestCategory)}</span>`
       : '<span class="empty">— not yet classified —</span>'}</span>
   </div>
+  ${s.meansTestOverrideReason?.trim() ? `
+  <p style="font-size: 11px; font-weight: bold; color: #555; margin: 10px 0 2px;">Reason for Category</p>
+  <div class="narrative">${esc(s.meansTestOverrideReason.trim())}</div>` : ''}
 
   <p style="font-size: 11px; font-weight: bold; color: #555; margin: 10px 0 2px;">Social Case Study Narrative</p>
-  <div class="narrative ${s.caseStudyNarrative?.trim() ? '' : 'empty-block'}">${s.caseStudyNarrative?.trim() || '— not provided —'}</div>
+  <div class="narrative ${s.caseStudyNarrative?.trim() ? '' : 'empty-block'}">${block(s.caseStudyNarrative)}</div>
 
   <p style="font-size: 11px; font-weight: bold; color: #555; margin: 10px 0 2px;">Recommendation</p>
-  <div class="narrative ${s.recommendation?.trim() ? '' : 'empty-block'}">${s.recommendation?.trim() || '— not provided —'}</div>
+  <div class="narrative ${s.recommendation?.trim() ? '' : 'empty-block'}">${block(s.recommendation)}</div>
 
   <!-- Signatures -->
   <div class="sig-section">
     <div class="sig-block">
       <div class="sig-line"></div>
-      <p class="sig-name">${author || '_________________________'}</p>
+      <p class="sig-name">${author ? esc(author) : '_________________________'}</p>
       <p class="sig-title">Medical Social Worker</p>
-      <p class="sig-title">${signatoryAgency}</p>
+      <p class="sig-title">${esc(signatoryAgency)}</p>
     </div>
     <div class="sig-block">
       <div class="sig-line"></div>
@@ -305,7 +332,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser }) {
   </div>
 
   <div class="footer">
-    Generated by ${ORG.name} &mdash; ${ORG.fullName}${ORG.facilityName ? ` &nbsp;&middot;&nbsp; ${ORG.facilityName}` : ''} &nbsp;&middot;&nbsp; ${refNo || '&mdash;'} &nbsp;&middot;&nbsp; Printed ${printDate}
+    Generated by ${esc(ORG.name)} &mdash; ${esc(ORG.fullName)}${ORG.facilityName ? ` &nbsp;&middot;&nbsp; ${esc(ORG.facilityName)}` : ''} &nbsp;&middot;&nbsp; ${refNo ? esc(refNo) : '&mdash;'} &nbsp;&middot;&nbsp; Printed ${printDate}
   </div>
 
 </body>

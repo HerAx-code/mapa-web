@@ -246,16 +246,65 @@ service cloud.firestore {
                        request.resource.data.amountCommitted == 0 &&
                        get(/databases/$(database)/documents/users/$(uid()))
                          .data.get('activeRequestId', null) == null;
-      allow update: if isAdmin() ||
+
+      // Revision 9 — the applicant's answers belong to the applicant. Gateway
+      // staff may change anything else on the request (status, assessment,
+      // verification, lock), but NOT the patient FACT keys of intakeSheet —
+      // they verify them or send them back for correction. The one exception
+      // is encoding on behalf of a patient who has never filled the sheet
+      // (no patientFilledAt), which must carry encodedOnBehalf with the
+      // writer's uid and a reason. Keep intakeFactKeys() in sync with
+      // PATIENT_FACT_KEYS in src/utils/intakeSheet.js.
+      function intakeFactKeys() {
+        return ['familyMembers', 'householdSize', 'monthlyIncome', 'employmentType',
+                'employmentTypeOther', 'employer', 'lengthOfEmployment', 'incomeSource',
+                'expenses', 'shortfallCoverage', 'shortfallCoverageOther',
+                'diagnosis', 'attendingPhysician', 'dateOfAdmission', 'estimatedTotalCost'];
+      }
+      function staffIntakeWriteOk() {
+        let before = resource.data.get('intakeSheet', {});
+        let after  = request.resource.data.get('intakeSheet', {});
+        return !after.diff(before).affectedKeys().hasAny(intakeFactKeys()) ||
+          (!before.keys().hasAny(['patientFilledAt']) &&
+           after.get('encodedOnBehalf', {}).get('byUid', '') == uid() &&
+           after.encodedOnBehalf.get('reason', '') is string &&
+           after.encodedOnBehalf.reason.size() >= 10);
+      }
+
+      allow update: if (isAdmin() && staffIntakeWriteOk()) ||
         (isPatient() && resource.data.patientId == uid() &&
           resource.data.status == 'submitted' &&
           request.resource.data.status == 'closed') ||
         // Patient fills the factual portion of their own intake sheet (the
         // the gateway assessment fields are written by admins). Only the intakeSheet
         // field may change via this path.
+        //
+        // Within intakeSheet the patient may change ONLY the factual keys. The
+        // whole map used to be writable, so a patient could set their own
+        // meansTestCategory / recommendation / completedBy and make the
+        // assessment look complete — the endorse gate. Assessment + audit keys
+        // (meansTestCategory, meansTestOverrideReason, recommendation,
+        // caseStudyNarrative, hospitalCaseNumber, completedBy/At,
+        // lastEditedBy/At) are gateway-only. diff() against the stored map (or
+        // {} before the first save) so carrying existing values through is fine.
+        //
+        // Once the social worker completes the assessment the sheet is LOCKED
+        // (intakeSheet.factsLocked == true, set by staff only — not in the
+        // allowlist below), so the facts the assessment was based on can't
+        // change underneath it. Staff can unlock to allow a correction.
         (isPatient() && resource.data.patientId == uid() &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['intakeSheet', 'updatedAt'])) ||
+            .hasOnly(['intakeSheet', 'updatedAt']) &&
+          resource.data.get('intakeSheet', {}).get('factsLocked', false) != true &&
+          request.resource.data.intakeSheet is map &&
+          request.resource.data.intakeSheet.diff(resource.data.get('intakeSheet', {})).affectedKeys()
+            .hasOnly([
+              'familyMembers', 'householdSize', 'monthlyIncome', 'employmentType',
+              'employmentTypeOther', 'employer', 'lengthOfEmployment', 'incomeSource',
+              'expenses', 'shortfallCoverage', 'shortfallCoverageOther',
+              'diagnosis', 'attendingPhysician', 'dateOfAdmission',
+              'estimatedTotalCost', 'patientFilledAt'
+            ])) ||
         // Phase 1.5: hasOnly limited WHICH fields an agency may touch but not
         // WHAT it may write, so an agency holding one slice could set status
         // to any string -- including the gateway-only states like 'under_review',

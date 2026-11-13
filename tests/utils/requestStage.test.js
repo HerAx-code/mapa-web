@@ -3,7 +3,7 @@ import { deriveRequestStage, GATEWAY_STAGE_KEYS } from '../../src/utils/requestS
 
 const completeIntake = {
   householdSize: 4, monthlyIncome: 8000, diagnosis: 'Pneumonia',
-  recommendation: 'Endorse to DOH', meansTestCategory: 'C3', completedBy: 'MSW Cruz',
+  recommendation: 'Endorse to DOH', meansTestCategory: 'indigent', completedBy: 'MSW Cruz',
 }
 const verified = [{ status: 'verified' }, { status: 'verified' }]
 const partial  = [{ status: 'verified' }, { status: 'pending' }]
