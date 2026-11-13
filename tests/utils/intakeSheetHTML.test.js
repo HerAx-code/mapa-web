@@ -44,3 +44,31 @@ describe('buildIntakeSheetHTML', () => {
     expect(html).toContain('DSWD AICS')
   })
 })
+
+// Intake improvement A1 — every stored value is HTML-escaped. The printout is
+// opened as a same-origin blob page, so patient-typed markup must never run.
+describe('buildIntakeSheetHTML — escaping (stored XSS)', () => {
+  const evil = '<img src=x onerror="alert(1)">'
+  const html = buildIntakeSheetHTML({
+    app: { requestId: 'REQ-1', patientName: evil, patientAddress: evil, patientContact: evil, assistanceType: evil },
+    sheet: {
+      ...sheet,
+      familyMembers: [{ name: evil, relationship: evil, age: evil, occupation: evil, monthlyContribution: 100 }],
+      employmentType: 'other', employmentTypeOther: evil, employer: evil, lengthOfEmployment: evil, incomeSource: evil,
+      diagnosis: evil, attendingPhysician: evil, hospitalCaseNumber: evil,
+      meansTestCategory: 'above_threshold', meansTestOverrideReason: evil,
+      caseStudyNarrative: evil, recommendation: evil, completedBy: evil,
+    },
+    agency: { name: evil },
+    currentUser: null,
+  })
+
+  it('contains no raw tag from any field', () => {
+    expect(html).not.toContain('<img')
+    expect(html).not.toMatch(/onerror="/)
+  })
+
+  it('shows the text itself, escaped', () => {
+    expect(html).toContain('&lt;img src=x onerror=&quot;alert(1)&quot;&gt;')
+  })
+})

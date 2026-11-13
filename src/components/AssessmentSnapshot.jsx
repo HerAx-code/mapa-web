@@ -1,5 +1,10 @@
 import { MdInsights, MdAutoAwesome, MdCheckCircle, MdTrendingDown } from 'react-icons/md'
-import { MEANS_CATEGORIES, POVERTY_LINE_PER_CAPITA, meansTestSuggestion } from '../utils/intakeSheet'
+import { MEANS_CATEGORIES, POVERTY_LINE_PER_CAPITA, meansTestSuggestion, billIncomeMonths, shortfallLabel } from '../utils/intakeSheet'
+
+// A bill this many months of household income or more is flagged as
+// catastrophic — the "financially incapacitated" case: a family above the
+// poverty line that still cannot pay. Advisory, like the rest of this panel.
+const CATASTROPHIC_MONTHS = 12
 
 // Decision-support panel for the Unified Intake Sheet's side rail: turns the
 // raw income / household / expenses the social worker enters into an
@@ -17,7 +22,8 @@ import { MEANS_CATEGORIES, POVERTY_LINE_PER_CAPITA, meansTestSuggestion } from '
 const peso = (n) => `₱${Math.round(Number(n) || 0).toLocaleString()}`
 const shortLabel = (cat) => (MEANS_CATEGORIES.find(c => c.value === cat)?.label ?? cat).split('—')[0].trim()
 
-export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdit = false, onApplyMeansTest }) {
+export default function AssessmentSnapshot({ sheet, bill, showMeansTest = true, canEdit = false, onApplyMeansTest }) {
+  const billMonths = billIncomeMonths({ bill, monthlyIncome: sheet?.monthlyIncome })
   const income = Number(sheet?.monthlyIncome) || 0
   const totalExpenses = Object.values(sheet?.expenses ?? {}).reduce((s, v) => s + (Number(v) || 0), 0)
   const suggestion = meansTestSuggestion({ monthlyIncome: sheet?.monthlyIncome, householdSize: sheet?.householdSize })
@@ -99,6 +105,38 @@ export default function AssessmentSnapshot({ sheet, showMeansTest = true, canEdi
             <p className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold text-red-700 tabular-nums">
               <MdTrendingDown size={16} className="flex-shrink-0" />
               {peso(shortfall)} monthly shortfall
+            </p>
+          )}
+          {overBudget && (
+            <p className="mt-1.5 text-xs text-gray-600 leading-snug">
+              {(sheet?.shortfallCoverage ?? []).length
+                ? <>Covered by: <strong className="text-gray-800">
+                    {sheet.shortfallCoverage.filter(v => v !== 'other').map(shortfallLabel)
+                      .concat(sheet.shortfallCoverage.includes('other') && sheet.shortfallCoverageOther?.trim() ? [sheet.shortfallCoverageOther.trim()] : [])
+                      .join(', ')}
+                  </strong></>
+                : <span className="italic">Patient hasn't said how the shortfall is covered — ask during the assessment.</span>}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Bill vs income — financial incapacity even above the poverty line */}
+      {billMonths && (
+        <div className="border-t border-gray-100 px-4 py-4">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Bill vs income</p>
+          <div className="mt-1 flex items-end gap-1.5">
+            <p className="text-2xl font-semibold leading-none text-gray-900 tabular-nums">
+              {Number.isFinite(billMonths.months) ? (Math.round(billMonths.months * 10) / 10).toLocaleString() : '—'}
+            </p>
+            <p className="pb-0.5 text-xs text-gray-500">
+              {Number.isFinite(billMonths.months) ? 'months of household income' : 'no household income'}
+            </p>
+          </div>
+          <p className="mt-2 text-xs text-gray-500 tabular-nums">Amount needed {peso(bill)}</p>
+          {billMonths.months >= CATASTROPHIC_MONTHS && (
+            <p className="mt-3 inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-100">
+              Catastrophic — {CATASTROPHIC_MONTHS}+ months of income
             </p>
           )}
         </div>

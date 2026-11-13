@@ -10,12 +10,19 @@ import {
   MdArrowBack, MdSave, MdPrint, MdCheckCircle,
   MdInfo, MdAdd, MdDelete, MdLock, MdAutorenew,
   MdGroups, MdWork, MdReceipt, MdMedicalServices, MdAssignment,
+  MdHourglassEmpty, MdErrorOutline, MdSend, MdEdit,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import {
-  MEANS_CATEGORIES, EMPLOYMENT_TYPES, EMPTY_FAMILY_MEMBER,
-  blankSheet, isIntakeComplete, requiredFieldsStatus,
+  MEANS_CATEGORIES, EMPLOYMENT_TYPES, EMPTY_FAMILY_MEMBER, RELATIONSHIPS, EXPENSE_FIELDS,
+  blankSheet, isIntakeComplete, requiredFieldsStatus, meansTestSuggestion, needsMeansTestReason,
+  PATIENT_FACT_KEYS, factsOf, sameFact, factChanges, mergeRemoteFacts,
+  SHORTFALL_SOURCES, monthlyShortfall,
+  FACT_SECTIONS, sectionFacts, sectionVerification, allSectionsVerified, sectionsNeedingCorrection,
 } from '../../utils/intakeSheet'
+import { logAudit } from '../../utils/auditLog'
+import { notify } from '../../utils/notifications'
+import { tsToDate } from '../../utils/dates'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
 import { isGatewayAdminRole } from '../../utils/constants'
 // Phase 2.3: Field + PesoInput live in components/ui/ now so other
@@ -43,7 +50,20 @@ const REQ_SECTION = {
   recommendation:    'assess',
   meansTestCategory: 'assess',
   completedBy:       'assess',
+  meansTestOverrideReason: 'assess',
+  'verify.family':   'family',
+  'verify.income':   'income',
+  'verify.expenses': 'expenses',
+  'verify.medical':  'medical',
 }
+
+// Staff-only intake fields set by their own actions rather than the form.
+const STAFF_CONTROL_KEYS = [
+  'factsVerification', 'factsLocked', 'factsLockedAt', 'factsLockedBy',
+  'encodedOnBehalf', 'correctionRequestedAt', 'correctionRequestedBy',
+]
+
+const meansShortLabel = (cat) => (MEANS_CATEGORIES.find(c => c.value === cat)?.label ?? cat).split('—')[0].trim()
 
 const fmtRelative = (date) => {
   if (!date) return ''
@@ -92,6 +112,25 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // crosses documents.
   const sheetRef       = useRef(sheet)
   useEffect(() => { sheetRef.current = sheet }, [sheet])
+  // Last means-test category / override reason written to the audit log, so
+  // each change is logged once rather than on every autosave.
+  const lastAuditedCategoryRef = useRef(null)
+  const lastAuditedReasonRef   = useRef('')
+  // Latest loaded doc, for the debounced save (its closure can be a render old).
+  const appRef = useRef(null)
+  // The patient facts as last seen from Firestore — the "base" of the
+  // three-way merge that keeps a patient's update from being overwritten.
+  const baselineFactsRef = useRef(null)
+  // Facts the patient changed since the social worker last reviewed them
+  // (intakeSheet.reviewedFacts vs the current facts). Request mode only.
+  const [patientChanges, setPatientChanges] = useState([])
+  // Revision 9: encoding the patient's answers on their behalf (only when the
+  // patient never filled the sheet). Ref mirror for the debounced save.
+  const [encodeMode, setEncodeMode] = useState(false)
+  const encodeModeRef = useRef(false)
+  useEffect(() => { encodeModeRef.current = encodeMode }, [encodeMode])
+  const [showEncodeModal, setShowEncodeModal] = useState(false)
+  const [encodeReason, setEncodeReason] = useState('')
 
   // Subscribe to application — use a ref for the "have we hydrated" flag
   // so the snapshot subscription doesn't tear down + recreate the moment
@@ -109,14 +148,32 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
       }
       const data = { id: snap.id, ...snap.data() }
       setApp(data)
+      appRef.current = data
+      const remoteFacts = factsOf(data.intakeSheet)
 
-      // Hydrate the local sheet once from the remote intake. Later remote
-      // changes don't overwrite local edits in progress.
+      // Hydrate the local sheet once from the remote intake. After that, a
+      // remote change to a patient FACT is merged in only where the worker
+      // hasn't edited that fact (mergeRemoteFacts) — so the patient's update
+      // shows up instead of being overwritten by the next autosave, and the
+      // worker's own in-progress edits are never clobbered.
       if (!hydratedRef.current) {
         setSheet({ ...blankSheet(), ...(data.intakeSheet ?? {}) })
+        lastAuditedCategoryRef.current = data.intakeSheet?.meansTestCategory || null
+        lastAuditedReasonRef.current   = data.intakeSheet?.meansTestOverrideReason?.trim() ?? ''
+        // Resume encoding if this worker started it and the patient still
+        // hasn't filled the sheet themselves.
+        setEncodeMode(!!(data.intakeSheet?.encodedOnBehalf?.byUid && data.intakeSheet.encodedOnBehalf.byUid === user?.uid
+          && !data.intakeSheet?.patientFilledAt))
         setHydrated(true)
         hydratedRef.current = true
+      } else if (isRequestMode) {
+        const base = baselineFactsRef.current
+        if (!PATIENT_FACT_KEYS.every(k => sameFact(remoteFacts[k], base?.[k]))) {
+          setSheet(local => mergeRemoteFacts(local, base, data.intakeSheet))
+        }
       }
+      baselineFactsRef.current = remoteFacts
+      if (isRequestMode) setPatientChanges(factChanges(data.intakeSheet?.reviewedFacts, remoteFacts))
       setLoading(false)
     }, () => { setLoading(false); toast.error('Failed to load application.') })
     return unsub
@@ -153,14 +210,25 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         ? isGatewayAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
         : false
   )
+  // Revision 9: the patient's answers are read-only for staff unless they are
+  // encoding on behalf of a patient who never filled the sheet. If the
+  // patient fills it after all, encoding ends and the facts become theirs.
+  const remoteIntake = app?.intakeSheet ?? {}
+  const canEditFacts = !!canEdit && (!isRequestMode || (encodeMode && !remoteIntake.patientFilledAt))
+  // Verification state comes from the STORED sheet (staff-only fields).
+  const verificationRequired = isRequestMode && (remoteIntake.verificationRequired ?? !isIntakeComplete(app?.intakeSheet))
+  const verifySheet = { ...remoteIntake, verificationRequired }
 
   // Autosave (debounced)
-  const performSave = async () => {
+  // acknowledge: the worker clicked "Mark as reviewed" on the patient-changes
+  // banner — record every current fact as reviewed.
+  const performSave = async ({ acknowledge = false } = {}) => {
     if (!app || !dirtyRef.current) return
     setSaveState(prev => ({ ...prev, status: 'saving' }))
     try {
       // Read the LATEST sheet (via ref), not this render's captured `sheet`.
       const s = sheetRef.current
+      const remote = appRef.current?.intakeSheet ?? {}
       const cleanedMembers = (s.familyMembers ?? [])
         .filter(m => m.name?.trim() || m.relationship?.trim())
       const payload = {
@@ -177,10 +245,76 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         lastEditedBy:  user.name,
         lastEditedAt:  serverTimestamp(),
       }
+
+      if (isRequestMode) {
+        // Revision 9: the patient's answers are written exactly as stored —
+        // staff verify them, they don't edit them (firestore.rules refuses a
+        // staff write that changes a fact). Only while encoding on behalf of
+        // a patient who never filled the sheet do the form's facts go out.
+        const encoding = encodeModeRef.current && !remote.patientFilledAt && remote.encodedOnBehalf?.byUid === user.uid
+        if (!encoding) {
+          for (const k of PATIENT_FACT_KEYS) { if (k in remote) payload[k] = remote[k]; else delete payload[k] }
+        }
+        // Staff control fields are written by their own actions (verify,
+        // lock, send back, encode) — always carry the stored value through,
+        // never this form's possibly stale copy.
+        for (const k of STAFF_CONTROL_KEYS) { if (k in remote) payload[k] = remote[k]; else delete payload[k] }
+        // Grandfathering: only sheets that weren't already complete when staff
+        // first worked them need section verification before endorsement.
+        payload.verificationRequired = remote.verificationRequired ?? !isIntakeComplete(remote)
+      }
+
+      // reviewedFacts = the patient facts as the social worker last reviewed
+      // them (the patient can't write it — firestore.rules). A fact the patient
+      // changed since then stays "unreviewed" (keeps its old reviewed value, so
+      // the banner keeps showing it) until the worker clicks Mark as reviewed;
+      // every other fact takes the worker's current value, so the worker's
+      // own edits never show up as "patient changes".
+      if (isRequestMode) {
+        const facts = factsOf(payload)
+        const prev  = remote.reviewedFacts
+        payload.reviewedFacts = (!prev || acknowledge)
+          ? facts
+          : Object.fromEntries(PATIENT_FACT_KEYS.map(k => [k, sameFact(remote[k], prev[k]) ? facts[k] : (prev[k] ?? null)]))
+      }
+
+      // Lock the patient's answers the first time the assessment is complete
+      // (A2). Only when the lock has never been set: once a worker explicitly
+      // unlocks for a correction, autosave must not silently re-lock it.
+      const autoLock = isRequestMode && remote.factsLocked === undefined && isIntakeComplete(payload)
+      if (autoLock) Object.assign(payload, { factsLocked: true, factsLockedAt: serverTimestamp(), factsLockedBy: user.name })
+
       await updateDoc(doc(db, collectionName, app.id), {
         intakeSheet: payload,
         updatedAt:   serverTimestamp(),
       })
+      if (autoLock) {
+        setSheet(p => ({ ...p, factsLocked: true }))
+        logAudit(user, {
+          action: 'intake_facts_locked', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+          details: 'Assessment complete — patient answers locked automatically',
+          requestId: app.id, patientId: app.patientId ?? null,
+        })
+      }
+      // Audit every means-test classification change (CLAUDE.md: admin actions
+      // call logAudit). Logged once per change, not per autosave, and carries
+      // the advisory suggestion + the written reason when the worker departed
+      // from it — so every exception is traceable.
+      const savedCategory = lastAuditedCategoryRef.current
+      if (s.meansTestCategory && s.meansTestCategory !== savedCategory) {
+        const suggestion = meansTestSuggestion({ monthlyIncome: s.monthlyIncome, householdSize: s.householdSize })
+        logAudit(user, {
+          action: 'means_test_set', targetType: collectionName === 'requests' ? 'request' : 'application',
+          targetId: app.id, targetName: app.requestId ?? app.appId ?? '',
+          details: `Means-test: ${meansShortLabel(s.meansTestCategory)}`
+            + (suggestion ? ` (suggested ${meansShortLabel(suggestion.category)})` : '')
+            + (needsMeansTestReason(s) && s.meansTestOverrideReason?.trim() ? ` · reason: ${s.meansTestOverrideReason.trim()}` : ''),
+          requestId: collectionName === 'requests' ? app.id : (app.requestId ?? null),
+          patientId: app.patientId ?? null,
+        })
+        lastAuditedCategoryRef.current = s.meansTestCategory
+        lastAuditedReasonRef.current   = s.meansTestOverrideReason?.trim() ?? ''
+      }
       dirtyRef.current = false
       setSaveState({ status: 'saved', lastSavedAt: new Date() })
     } catch (err) {
@@ -255,6 +389,34 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     setSheet(p => ({ ...p, expenses: { ...p.expenses, [field]: e.target.value } }))
     scheduleAutosave()
   }
+  const toggleCoverage = (v) => {
+    setSheet(p => {
+      const cur = p.shortfallCoverage ?? []
+      const next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v]
+      return { ...p, shortfallCoverage: next, shortfallCoverageOther: next.includes('other') ? (p.shortfallCoverageOther ?? '') : '' }
+    })
+    scheduleAutosave()
+  }
+  const setEmployment = (v) => {
+    // Leaving "Other" discards its description so a stale one isn't saved.
+    setSheet(p => ({ ...p, employmentType: v, employmentTypeOther: v === 'other' ? (p.employmentTypeOther ?? '') : '' }))
+    scheduleAutosave()
+  }
+  // Log the written reason once the social worker leaves the box (the
+  // category change itself is logged in performSave, usually before the
+  // reason is typed).
+  const auditReason = () => {
+    const reason = sheet.meansTestOverrideReason?.trim() ?? ''
+    if (!canEdit || !reason || reason === lastAuditedReasonRef.current || !needsMeansTestReason(sheet)) return
+    logAudit(user, {
+      action: 'means_test_reason', targetType: isRequestMode ? 'request' : 'application',
+      targetId: app.id, targetName: app.requestId ?? app.appId ?? '',
+      details: `Means-test ${meansShortLabel(sheet.meansTestCategory)} · reason: ${reason}`,
+      requestId: isRequestMode ? app.id : (app.requestId ?? null),
+      patientId: app.patientId ?? null,
+    })
+    lastAuditedReasonRef.current = reason
+  }
   const setMember = (idx, field, val) => {
     setSheet(p => {
       const next = [...p.familyMembers]
@@ -270,6 +432,156 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const removeMember = (idx) => {
     setSheet(p => ({ ...p, familyMembers: p.familyMembers.filter((_, i) => i !== idx) }))
     scheduleAutosave()
+  }
+
+  // A3: the worker has read the patient's changes.
+  const markChangesReviewed = async () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    dirtyRef.current = true
+    await performSave({ acknowledge: true })
+    logAudit(user, {
+      action: 'intake_changes_reviewed', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+      details: `Reviewed patient changes: ${patientChanges.map(c => `${c.label} ${c.from} → ${c.to}`).join('; ')}`,
+      requestId: app.id, patientId: app.patientId ?? null,
+    })
+    toast.success('Marked as reviewed.')
+  }
+
+  // A2: lock / unlock the patient's answers by hand. Unlocking lets the
+  // patient correct something after the assessment; it never re-locks itself.
+  const setFactsLock = async (locked) => {
+    if (!canEdit) return
+    // Flush pending edits first so the save can't race the lock write.
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    if (dirtyRef.current) await performSave()
+    try {
+      await updateDoc(doc(db, collectionName, app.id), {
+        'intakeSheet.factsLocked':   locked,
+        'intakeSheet.factsLockedAt': serverTimestamp(),
+        'intakeSheet.factsLockedBy': user.name,
+        updatedAt: serverTimestamp(),
+      })
+      setSheet(p => ({ ...p, factsLocked: locked }))
+      logAudit(user, {
+        action: locked ? 'intake_facts_locked' : 'intake_facts_unlocked', targetType: 'request',
+        targetId: app.id, targetName: app.requestId ?? '',
+        details: locked ? 'Patient answers locked' : 'Patient answers unlocked for correction',
+        requestId: app.id, patientId: app.patientId ?? null,
+      })
+      if (!locked && app.patientId) {
+        notify(app.patientId, {
+          type:  'app_advanced',
+          title: 'You can update your household information',
+          body:  `${ORG.gatewayName} has reopened your household information so you can correct it. Open your request to make changes.`,
+        }).catch(() => {})
+      }
+      toast.success(locked ? 'Patient answers locked.' : 'Patient can now edit their answers.')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to change the lock.')
+    }
+  }
+
+  // Flush the debounced save so an action's own write can't race it.
+  const flushSave = async () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    if (dirtyRef.current) await performSave()
+  }
+
+  // Revision 9b: verify a section, or flag it for the patient to correct.
+  // Stores a copy of the section's answers so a later patient change reads
+  // as "changed — check again" (sectionVerification) without another write.
+  const setSectionVerification = async (sectionKey, status, note = '') => {
+    if (!canEdit || !isRequestMode) return
+    await flushSave()
+    const remote = appRef.current?.intakeSheet ?? {}
+    const sec = FACT_SECTIONS.find(x => x.key === sectionKey)
+    const entry = {
+      status, note: note.trim(), by: user.name, byUid: user.uid,
+      at: serverTimestamp(), facts: sectionFacts(remote, sectionKey),
+    }
+    const updates = { [`intakeSheet.factsVerification.${sectionKey}`]: entry, updatedAt: serverTimestamp() }
+    if (remote.verificationRequired === undefined) updates['intakeSheet.verificationRequired'] = !isIntakeComplete(remote)
+    // 9d: once every section is verified, the answers lock again.
+    const after = { ...remote, factsVerification: { ...(remote.factsVerification ?? {}), [sectionKey]: entry } }
+    const lockNow = allSectionsVerified(after) && remote.factsLocked !== true
+    if (lockNow) Object.assign(updates, {
+      'intakeSheet.factsLocked': true, 'intakeSheet.factsLockedAt': serverTimestamp(), 'intakeSheet.factsLockedBy': user.name,
+    })
+    try {
+      await updateDoc(doc(db, collectionName, app.id), updates)
+      setSheet(p => ({ ...p, ...(lockNow ? { factsLocked: true } : {}) }))
+      logAudit(user, {
+        action: status === 'verified' ? 'intake_section_verified' : 'intake_section_flagged',
+        targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+        details: `${sec.label}: ${status === 'verified' ? 'verified' : `needs correction — ${entry.note}`}`
+          + (lockNow ? ' · all sections verified, patient answers locked' : ''),
+        requestId: app.id, patientId: app.patientId ?? null,
+      })
+      toast.success(status === 'verified' ? `${sec.label} verified.` : `${sec.label} marked for correction.`)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to save the verification.')
+    }
+  }
+
+  // Revision 9c: return the flagged sections to the patient. Unlocks their
+  // answers and tells them what to fix; they correct it themselves.
+  const sendBackForCorrection = async () => {
+    const flagged = sectionsNeedingCorrection(appRef.current?.intakeSheet ?? {})
+    if (!canEdit || !flagged.length) return
+    await flushSave()
+    try {
+      await updateDoc(doc(db, collectionName, app.id), {
+        'intakeSheet.factsLocked':           false,
+        'intakeSheet.factsLockedAt':         serverTimestamp(),
+        'intakeSheet.factsLockedBy':         user.name,
+        'intakeSheet.correctionRequestedAt': serverTimestamp(),
+        'intakeSheet.correctionRequestedBy': user.name,
+        updatedAt: serverTimestamp(),
+      })
+      setSheet(p => ({ ...p, factsLocked: false }))
+      const list = flagged.map(f => `${f.label}: ${f.note}`).join(' · ')
+      logAudit(user, {
+        action: 'intake_correction_requested', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+        details: `Sent back to patient — ${list}`, requestId: app.id, patientId: app.patientId ?? null,
+      })
+      if (app.patientId) {
+        notify(app.patientId, {
+          type:  'app_advanced',
+          title: 'Please correct your household information',
+          body:  `${ORG.gatewayName} asked you to correct: ${list}. Open your request to update your answers.`,
+        }).catch(() => {})
+      }
+      toast.success('Sent back to the patient for correction.')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to send back for correction.')
+    }
+  }
+
+  // Revision 9 (decision 1): encode on behalf of a patient who can't fill the
+  // sheet themselves. Labelled with who + why; firestore.rules only accepts
+  // staff fact edits carrying this, and only before the patient has filled it.
+  const startEncoding = async () => {
+    const reason = encodeReason.trim()
+    if (!canEdit || reason.length < 10 || remoteIntake.patientFilledAt) return
+    const entry = { by: user.name, byUid: user.uid, reason, at: serverTimestamp() }
+    try {
+      await updateDoc(doc(db, collectionName, app.id), { 'intakeSheet.encodedOnBehalf': entry, updatedAt: serverTimestamp() })
+      setEncodeMode(true)
+      setShowEncodeModal(false)
+      setEncodeReason('')
+      logAudit(user, {
+        action: 'intake_encoded_on_behalf', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+        details: `Encoding the patient's answers on their behalf — reason: ${reason}`,
+        requestId: app.id, patientId: app.patientId ?? null,
+      })
+      toast.success("You can now encode the patient's answers.")
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to start encoding.')
+    }
   }
 
   const handleManualSave = async () => {
@@ -319,15 +631,33 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     ? parentRequest.intakeSheet
     : app?.intakeSheet
   const required = useMemo(
-    () => requiredFieldsStatus({ ...sheet, completedBy: intakeSource?.completedBy ?? user?.name }, user?.name),
-    [sheet, intakeSource?.completedBy, user?.name]
+    () => requiredFieldsStatus({
+      ...sheet,
+      factsVerification: remoteIntake.factsVerification,
+      verificationRequired,
+      completedBy: intakeSource?.completedBy ?? user?.name,
+    }, user?.name),
+    [sheet, remoteIntake.factsVerification, verificationRequired, intakeSource?.completedBy, user?.name]
   )
+  const verifyBar = (key) => (isRequestMode
+    ? <SectionVerify state={sectionVerification(verifySheet, key)} canAct={!!canEdit}
+        onVerify={() => setSectionVerification(key, 'verified')}
+        onFlag={(note) => setSectionVerification(key, 'needs_correction', note)} />
+    : null)
+  const flaggedSections = isRequestMode ? sectionsNeedingCorrection(verifySheet) : []
   const completedCount = required.filter(r => r.done).length
   const completion     = Math.round((completedCount / required.length) * 100)
   const complete       = completedCount === required.length
 
   const totalExpenses = Object.values(sheet.expenses ?? {})
     .reduce((sum, v) => sum + (Number(v) || 0), 0)
+
+  const suggestion   = meansTestSuggestion({ monthlyIncome: sheet.monthlyIncome, householdSize: sheet.householdSize })
+  const reasonNeeded = needsMeansTestReason(sheet)
+  // The amount the patient still needs — gateway mode loads the request
+  // itself; agency mode reads it off the parent request.
+  const billSource = isRequestMode ? app : parentRequest
+  const billAmount = billSource?.amountNeeded ?? billSource?.totalBill ?? sheet.estimatedTotalCost
 
   // Section completion (rough — used for nav indicators)
   const sectionDone = {
@@ -494,6 +824,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               {!patientFacts && (
                 <AssessmentSnapshot
                   sheet={sheet}
+                  bill={billAmount}
                   showMeansTest
                   canEdit={canEdit}
                   onApplyMeansTest={(cat) => {
@@ -501,6 +832,30 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     scheduleAutosave()
                   }}
                 />
+              )}
+
+              {/* A2: whether the patient can still change their answers. */}
+              {isRequestMode && (
+                <div className="card p-3">
+                  <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                    {sheet.factsLocked
+                      ? <><MdLock size={13} className="text-gray-500" /> Patient answers locked</>
+                      : <><MdInfo size={13} className="text-gray-500" /> Patient can edit their answers</>}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    {sheet.factsLocked
+                      ? <>Locked{app.intakeSheet?.factsLockedBy ? <> by <strong className="text-gray-700">{app.intakeSheet.factsLockedBy}</strong></> : null}
+                          {tsToDate(app.intakeSheet?.factsLockedAt) ? ` on ${tsToDate(app.intakeSheet.factsLockedAt).toLocaleDateString('en-PH')}` : ''}.
+                          The facts your assessment used can't change.</>
+                      : 'Locks automatically when the assessment is complete.'}
+                  </p>
+                  {canEdit && (
+                    <button className="btn-secondary text-xs mt-2 w-full"
+                      onClick={() => setFactsLock(!sheet.factsLocked)}>
+                      {sheet.factsLocked ? 'Allow patient to correct answers' : 'Lock patient answers now'}
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* Editor info — agency mode prefers the parent request's
@@ -528,6 +883,85 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
           {/* Main content (3/4) */}
           <div className="lg:col-span-3 space-y-5 print:col-span-1">
 
+            {/* Revision 9: whose answers these are, and what the assessor can do. */}
+            {isRequestMode && (
+              <div className="card p-4 border-blue-100 bg-blue-50/40 print:hidden">
+                {remoteIntake.encodedOnBehalf ? (
+                  <p className="text-xs text-blue-900 leading-relaxed">
+                    <strong>Answers encoded by {remoteIntake.encodedOnBehalf.by} for the patient</strong> — reason: {remoteIntake.encodedOnBehalf.reason}
+                    {remoteIntake.patientFilledAt && ' The patient has since filled in their own answers.'}
+                  </p>
+                ) : !remoteIntake.patientFilledAt ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-blue-900">The patient hasn't filled in their household information yet.</p>
+                    {canEdit && (
+                      <button className="btn-secondary text-xs flex items-center gap-1.5" onClick={() => setShowEncodeModal(true)}>
+                        <MdEdit size={13} /> Encode on their behalf
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-blue-900 leading-relaxed">
+                    <strong>The applicant's answers are read-only.</strong> Verify each section below, or mark it for
+                    correction and send it back — the patient corrects their own answers.
+                  </p>
+                )}
+                {flaggedSections.length > 0 && (
+                  <div className="mt-3 border-t border-blue-100 pt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-gray-700">
+                      <strong>{flaggedSections.length}</strong> section{flaggedSections.length === 1 ? '' : 's'} marked for correction:
+                      {' '}{flaggedSections.map(f => f.label).join(', ')}
+                    </p>
+                    {remoteIntake.factsLocked === false && remoteIntake.correctionRequestedAt ? (
+                      <p className="text-xs text-gray-600 italic">
+                        Sent back {tsToDate(remoteIntake.correctionRequestedAt)?.toLocaleDateString('en-PH') ?? ''} — waiting for the patient.
+                      </p>
+                    ) : canEdit && (
+                      <button className="btn-primary text-xs flex items-center gap-1.5" onClick={sendBackForCorrection}>
+                        <MdSend size={13} /> Send back to patient
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* A3: what the patient changed since the worker last reviewed. */}
+            {isRequestMode && patientChanges.length > 0 && (
+              <div className="card p-4 border-amber-200 bg-amber-50/60 print:hidden" role="status">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">
+                      The patient changed {patientChanges.length} answer{patientChanges.length === 1 ? '' : 's'} since your last review
+                    </p>
+                    {tsToDate(app.intakeSheet?.patientFilledAt) && (
+                      <p className="text-xs text-amber-800 mt-0.5">
+                        Last patient update: {tsToDate(app.intakeSheet.patientFilledAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </p>
+                    )}
+                  </div>
+                  {canEdit && (
+                    <button className="btn-secondary text-xs flex items-center gap-1.5" onClick={markChangesReviewed}>
+                      <MdCheckCircle size={14} /> Mark as reviewed
+                    </button>
+                  )}
+                </div>
+                <dl className="mt-3 divide-y divide-amber-100 text-xs">
+                  {patientChanges.map(c => (
+                    <div key={c.key} className="grid grid-cols-1 sm:grid-cols-3 gap-1 py-1.5">
+                      <dt className="font-medium text-gray-700">{c.label}</dt>
+                      <dd className="sm:col-span-2 text-gray-700">
+                        <span className="line-through text-gray-500">{c.from}</span>
+                        <span className="mx-1.5 text-gray-400" aria-hidden="true">→</span>
+                        <span className="sr-only">changed to</span>
+                        <strong className="text-gray-900">{c.to}</strong>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
             {/* Print-only header */}
             <div className="hidden print:block mb-4">
               <h1 className="text-xl font-bold text-gray-900">Unified Intake Sheet</h1>
@@ -542,6 +976,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <MdGroups className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Family Composition</h2>
               </div>
+              {verifyBar('family')}
 
               <div className="space-y-2 mb-3">
                 {/* Column headers — visible on sm+ where the row is
@@ -568,33 +1003,44 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <div key={i} className="grid grid-cols-12 gap-2 items-start">
                     <input className="input col-span-12 sm:col-span-3 text-sm"
                       placeholder="Juan Dela Cruz" aria-label={`Family member ${i + 1} name`}
-                      value={m.name} onChange={e => setMember(i, 'name', e.target.value)} disabled={!canEdit} />
-                    <input className="input col-span-6 sm:col-span-2 text-sm"
-                      placeholder="e.g. Spouse" aria-label={`Family member ${i + 1} relationship`}
-                      value={m.relationship} onChange={e => setMember(i, 'relationship', e.target.value)} disabled={!canEdit} />
+                      value={m.name} onChange={e => setMember(i, 'name', e.target.value)} disabled={!canEditFacts} />
+                    <SearchableSelect
+                      className="col-span-6 sm:col-span-2 text-sm"
+                      ariaLabel={`Family member ${i + 1} relationship`}
+                      value={m.relationship ?? ''}
+                      onChange={v => setMember(i, 'relationship', v)}
+                      disabled={!canEditFacts}
+                      options={[
+                        { value: '', label: 'Select…' },
+                        ...RELATIONSHIPS.map(r => ({ value: r.value, label: r.label })),
+                        // A free-text value saved before the dropdown existed stays
+                        // visible (and selectable) until someone picks a list value.
+                        ...(m.relationship && !RELATIONSHIPS.some(r => r.value === m.relationship)
+                          ? [{ value: m.relationship, label: `${m.relationship} (old entry)` }] : []),
+                      ]} />
                     <input className="input col-span-3 sm:col-span-2 text-sm" type="number"
                       placeholder="—" aria-label={`Family member ${i + 1} age`}
-                      value={m.age} onChange={e => setMember(i, 'age', e.target.value)} disabled={!canEdit} />
+                      value={m.age} onChange={e => setMember(i, 'age', e.target.value)} disabled={!canEditFacts} />
                     <input className="input col-span-3 sm:col-span-2 text-sm"
                       placeholder="e.g. Driver" aria-label={`Family member ${i + 1} occupation`}
-                      value={m.occupation} onChange={e => setMember(i, 'occupation', e.target.value)} disabled={!canEdit} />
+                      value={m.occupation} onChange={e => setMember(i, 'occupation', e.target.value)} disabled={!canEditFacts} />
                     <PesoInput
                       wrapperClassName="col-span-10 sm:col-span-2"
                       className="text-sm"
                       ariaLabel={`Family member ${i + 1} monthly contribution`}
                       value={m.monthlyContribution}
                       onChange={e => setMember(i, 'monthlyContribution', e.target.value)}
-                      disabled={!canEdit} />
+                      disabled={!canEditFacts} />
                     <button
                       className="col-span-2 sm:col-span-1 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-30 flex items-center justify-center"
                       onClick={() => removeMember(i)}
                       aria-label={`Remove family member ${i + 1}`}
-                      disabled={!canEdit || sheet.familyMembers.length === 1}>
+                      disabled={!canEditFacts || sheet.familyMembers.length === 1}>
                       <MdDelete size={16} />
                     </button>
                   </div>
                 ))}
-                {canEdit && (
+                {canEditFacts && (
                   <button className="btn-secondary text-xs flex items-center gap-1.5 mt-3"
                     onClick={addMember}>
                     <MdAdd size={14} /> Add family member
@@ -605,7 +1051,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-50">
                 <Field label="Household Size" required>
                   <input type="number" className="input" min={1}
-                    value={sheet.householdSize} onChange={set('householdSize')} disabled={!canEdit} />
+                    value={sheet.householdSize} onChange={set('householdSize')} disabled={!canEditFacts} />
                   <p className="text-xs text-gray-500 mt-1 leading-snug">
                     {sheet.familyMembers.length} family member{sheet.familyMembers.length !== 1 ? 's' : ''} listed above.
                     Total household size includes the patient and any dependents not listed individually.
@@ -620,30 +1066,37 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <MdWork className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Income & Employment</h2>
               </div>
+              {verifyBar('income')}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Monthly Household Income" required>
                   <PesoInput
                     value={sheet.monthlyIncome}
                     onChange={set('monthlyIncome')}
-                    disabled={!canEdit} />
+                    disabled={!canEditFacts} />
                 </Field>
                 <Field label="Employment Type">
                   <SearchableSelect
                     value={sheet.employmentType}
-                    onChange={v => set('employmentType')({ target: { value: v } })}
-                    disabled={!canEdit}
+                    onChange={setEmployment}
+                    disabled={!canEditFacts}
                     options={EMPLOYMENT_TYPES.map(t => ({ value: t.value, label: t.label }))} />
                 </Field>
+                {sheet.employmentType === 'other' && (
+                  <Field label="Describe Work Situation" required>
+                    <input className="input" value={sheet.employmentTypeOther ?? ''}
+                      onChange={set('employmentTypeOther')} placeholder="e.g. Seasonal farm work" disabled={!canEditFacts} />
+                  </Field>
+                )}
                 <Field label="Employer">
-                  <input className="input" value={sheet.employer} onChange={set('employer')} disabled={!canEdit} />
+                  <input className="input" value={sheet.employer} onChange={set('employer')} disabled={!canEditFacts} />
                 </Field>
                 <Field label="Length of Employment">
                   <input className="input" value={sheet.lengthOfEmployment}
-                    onChange={set('lengthOfEmployment')} placeholder="e.g. 3 years" disabled={!canEdit} />
+                    onChange={set('lengthOfEmployment')} placeholder="e.g. 3 years" disabled={!canEditFacts} />
                 </Field>
                 <Field label="Other Income Source" colSpan={2}>
                   <input className="input" value={sheet.incomeSource}
-                    onChange={set('incomeSource')} placeholder="Pension, remittance, etc." disabled={!canEdit} />
+                    onChange={set('incomeSource')} placeholder="Pension, remittance, etc." disabled={!canEditFacts} />
                 </Field>
               </div>
             </section>
@@ -657,16 +1110,38 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 </div>
                 <span className="text-xs text-gray-500">Total: <strong>₱{totalExpenses.toLocaleString()}</strong></span>
               </div>
+              {verifyBar('expenses')}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {['food','utilities','rent','education','medicine','other'].map(k => (
-                  <Field key={k} label={k.charAt(0).toUpperCase() + k.slice(1)}>
+                {EXPENSE_FIELDS.map(({ key: k, label }) => (
+                  <Field key={k} label={label}>
                     <PesoInput
                       value={sheet.expenses?.[k] ?? ''}
                       onChange={setExp(k)}
-                      disabled={!canEdit} />
+                      disabled={!canEditFacts} />
                   </Field>
                 ))}
               </div>
+              {monthlyShortfall(sheet) > 0 && (
+                <div className="mt-4 rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+                  <p className="text-xs font-semibold text-gray-700">
+                    Expenses exceed income by ₱{monthlyShortfall(sheet).toLocaleString()} / month — how is the difference covered?
+                  </p>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                    {SHORTFALL_SOURCES.map(src => (
+                      <label key={src.value} className="flex items-center gap-2 text-sm text-gray-700 py-1 cursor-pointer">
+                        <input type="checkbox" className="accent-brand-600" disabled={!canEditFacts}
+                          checked={(sheet.shortfallCoverage ?? []).includes(src.value)}
+                          onChange={() => toggleCoverage(src.value)} />
+                        {src.label}
+                      </label>
+                    ))}
+                  </div>
+                  {(sheet.shortfallCoverage ?? []).includes('other') && (
+                    <input className="input mt-2" placeholder="Describe how else" value={sheet.shortfallCoverageOther ?? ''}
+                      onChange={set('shortfallCoverageOther')} disabled={!canEditFacts} />
+                  )}
+                </div>
+              )}
             </section>
 
             {/* Section: Medical */}
@@ -675,14 +1150,15 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <MdMedicalServices className="text-brand-500" size={18} />
                 <h2 className="text-sm font-semibold text-gray-800">Medical Information</h2>
               </div>
+              {verifyBar('medical')}
               <div className="space-y-3">
                 <Field label="Primary Diagnosis" required>
-                  <input className="input" value={sheet.diagnosis} onChange={set('diagnosis')} disabled={!canEdit} />
+                  <input className="input" value={sheet.diagnosis} onChange={set('diagnosis')} disabled={!canEditFacts} />
                 </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Attending Physician">
                     <input className="input" value={sheet.attendingPhysician}
-                      onChange={set('attendingPhysician')} disabled={!canEdit} />
+                      onChange={set('attendingPhysician')} disabled={!canEditFacts} />
                   </Field>
                   <Field label="Hospital Case # (IHOMIS)">
                     <input className="input" value={sheet.hospitalCaseNumber}
@@ -690,13 +1166,13 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   </Field>
                   <Field label="Date of Admission">
                     <input type="date" className="input" value={sheet.dateOfAdmission}
-                      onChange={set('dateOfAdmission')} disabled={!canEdit} />
+                      onChange={set('dateOfAdmission')} disabled={!canEditFacts} />
                   </Field>
                   <Field label="Estimated Total Cost">
                     <PesoInput
                       value={sheet.estimatedTotalCost}
                       onChange={set('estimatedTotalCost')}
-                      disabled={!canEdit} />
+                      disabled={!canEditFacts} />
                   </Field>
                 </div>
               </div>
@@ -718,7 +1194,24 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     onChange={v => set('meansTestCategory')({ target: { value: v } })}
                     disabled={!canEdit}
                     options={MEANS_CATEGORIES.map(c => ({ value: c.value, label: c.label }))} />
+                  {suggestion && (
+                    <p className="text-xs text-gray-600 mt-1.5">
+                      Suggested from income ÷ household size: <strong>{meansShortLabel(suggestion.category)}</strong>
+                      {' '}({(Math.floor(suggestion.ratio * 10) / 10).toFixed(1)}× the poverty line)
+                    </p>
+                  )}
                 </Field>
+                {reasonNeeded && (
+                  <Field label="Reason for this category" required
+                    hint={sheet.meansTestCategory === 'above_threshold'
+                      ? 'Explain why an Above Threshold patient is still being assessed for assistance (e.g. catastrophic bill vs income). Saved to the audit log.'
+                      : `Your category differs from the suggestion (${suggestion ? meansShortLabel(suggestion.category) : '—'}). Explain what the figures don't show. Saved to the audit log.`}>
+                    <textarea className="input resize-none" rows={2} maxLength={500}
+                      value={sheet.meansTestOverrideReason ?? ''}
+                      onChange={set('meansTestOverrideReason')} onBlur={auditReason} disabled={!canEdit} />
+                    <p className="text-xs text-gray-500 mt-0.5 text-right">{(sheet.meansTestOverrideReason ?? '').length} / 500</p>
+                  </Field>
+                )}
                 <Field label="Social Case Study Narrative"
                   hint="Family background, circumstances of illness, observations during home visit or interview.">
                   <textarea className="input resize-none" rows={4} maxLength={2000}
@@ -754,6 +1247,28 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
           </div>
         </div>
       </div>
+
+      {/* Revision 9: encode on behalf — a reason is required and recorded. */}
+      {showEncodeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="encode-title">
+          <div className="card w-full max-w-md p-5">
+            <h2 id="encode-title" className="text-base font-semibold text-gray-900">Encode on the patient's behalf?</h2>
+            <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">
+              Only when the patient can't fill in their household information themselves. The answers will be labelled
+              as encoded by you, with your reason, and recorded in the audit log. If the patient fills in their own
+              answers later, theirs replace yours.
+            </p>
+            <label htmlFor="encode-reason" className="mt-4 block text-xs font-medium text-gray-700">Reason (at least 10 characters)</label>
+            <textarea id="encode-reason" className="input mt-1 resize-none" rows={3} maxLength={300} autoFocus
+              placeholder="e.g. Patient is 82, has no phone; information given by daughter at the ward."
+              value={encodeReason} onChange={e => setEncodeReason(e.target.value)} />
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-secondary text-sm" onClick={() => { setShowEncodeModal(false); setEncodeReason('') }}>Cancel</button>
+              <button className="btn-primary text-sm" disabled={encodeReason.trim().length < 10} onClick={startEncoding}>Start encoding</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
@@ -761,3 +1276,59 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 // Phase 2.3: Field + PesoInput were inlined here originally; promoted
 // to src/components/ui/ so the patient IntakeWizard, future budget
 // forms, etc. can share the same components.
+
+// Revision 9b: per-section verification of the applicant's answers. The
+// assessor never edits them — they mark a section verified, or flag it with a
+// note for the patient to correct. `state` comes from sectionVerification().
+function SectionVerify({ state, canAct, onVerify, onFlag }) {
+  const [flagging, setFlagging] = useState(false)
+  const [note, setNote]         = useState('')
+  const when = tsToDate(state.at)
+  const who  = state.by ? ` · ${state.by}${when ? `, ${when.toLocaleDateString('en-PH')}` : ''}` : ''
+  const chip = {
+    pending:          { cls: 'bg-gray-100 text-gray-600',   Icon: MdHourglassEmpty, text: 'Not yet verified' },
+    verified:         { cls: 'bg-green-50 text-green-700',  Icon: MdCheckCircle,    text: `Verified${who}` },
+    needs_correction: { cls: 'bg-red-50 text-red-700',      Icon: MdErrorOutline,   text: `Needs correction${who}` },
+    changed:          { cls: 'bg-amber-50 text-amber-800',  Icon: MdAutorenew,      text: 'Patient updated this — verify again' },
+  }[state.status]
+  const saveFlag = () => { onFlag(note); setFlagging(false) }
+
+  return (
+    <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-2 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${chip.cls}`}>
+          <chip.Icon size={13} /> {chip.text}
+        </span>
+        {canAct && !flagging && (
+          <div className="flex items-center gap-1">
+            {state.status !== 'verified' && (
+              <button className="btn-secondary text-xs flex items-center gap-1" onClick={onVerify}>
+                <MdCheckCircle size={13} /> Mark verified
+              </button>
+            )}
+            <button className="text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg px-2.5 py-1.5"
+              onClick={() => { setNote(state.note ?? ''); setFlagging(true) }}>
+              Needs correction
+            </button>
+          </div>
+        )}
+      </div>
+      {!flagging && state.note && ['needs_correction', 'changed'].includes(state.status) && (
+        <p className={`mt-1.5 text-xs ${state.status === 'changed' ? 'text-amber-800' : 'text-red-700'}`}>
+          {state.status === 'changed' ? 'Earlier note' : 'Note to patient'}: {state.note}
+        </p>
+      )}
+      {flagging && (
+        <div className="mt-2 space-y-2">
+          <textarea className="input resize-none text-sm" rows={2} maxLength={300} autoFocus
+            placeholder="What should the patient correct? e.g. Payslip shows ₱12,000, not ₱8,000."
+            value={note} onChange={e => setNote(e.target.value)} />
+          <div className="flex justify-end gap-2">
+            <button className="text-xs text-gray-600 px-2.5 py-1.5" onClick={() => setFlagging(false)}>Cancel</button>
+            <button className="btn-primary text-xs" disabled={note.trim().length < 5} onClick={saveFlag}>Save note</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
