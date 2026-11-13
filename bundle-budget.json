@@ -1,7 +1,7 @@
 {
-  "_comment": "Gzipped production-bundle size budgets in KB. `npm run budget` (and CI) fails if any is exceeded. These guard first-load weight for indigent patients on slow connections. When a change legitimately grows a bundle, bump the relevant number here in the same PR and say why — that keeps growth a deliberate, reviewed decision instead of silent drift. Headroom over the 2026-09-29 baseline is ~10-15%.",
+  "_comment": "Gzipped production-bundle size budgets in KB. `npm run budget` (and CI) fails if any is exceeded. These guard first-load weight for indigent patients on slow connections. When a change legitimately grows a bundle, bump the relevant number here in the same PR and say why — that keeps growth a deliberate, reviewed decision instead of silent drift. Headroom over the 2026-09-29 baseline is ~10-15%. 2026-11-14: totalJs 1050 -> 1060 for multi-hospital Phase 6 (the lazy platform-admin Hospitals page, ~5 KB gz, loaded only by the network operator; initial/index unchanged within budget).",
   "initialJs": 410,
-  "totalJs": 1050,
+  "totalJs": 1060,
   "totalCss": 18,
   "chunks": {
     "index": 185,

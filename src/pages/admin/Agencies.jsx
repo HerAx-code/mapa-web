@@ -11,6 +11,7 @@ import { tenantWhere } from '../../utils/hospitals'
 import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { ROLES } from '../../utils/constants'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -358,7 +359,11 @@ export function AgencyModal({ agency, onClose, onSave }) {
 export default function Agencies() {
   const navigate            = useNavigate()
   const { user }            = useAuth()
-  const isSuperAdmin        = user?.role === 'super_admin'
+  // Phase 6: agencies are network config — the platform admin manages them;
+  // hospital admins see a read-only directory. The platform admin has no
+  // patient data, so it gets no case counts and no messaging.
+  const isPlatform          = user?.role === ROLES.PLATFORM_ADMIN
+  const canManage           = isPlatform
   const [agencies,     setAgencies]     = useState([])
   const [appStats,     setAppStats]     = useState({})
   const [agencyUsers,  setAgencyUsers]  = useState([])
@@ -402,6 +407,7 @@ export default function Agencies() {
   }, [])
 
   useEffect(() => {
+    if (isPlatform) return undefined
     const unsub = onSnapshot(query(collection(db, 'applications'), ...tenantWhere()), snap => {
       const stats = {}
       snap.docs.forEach(d => {
@@ -416,7 +422,7 @@ export default function Agencies() {
       setAppStats(stats)
     }, () => {})
     return unsub
-  }, [])
+  }, [isPlatform])
 
   // ── Action handlers ──────────────────────────────────────────────────
 
@@ -581,6 +587,7 @@ export default function Agencies() {
             <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered medical assistance agencies.</p>
           </div>
           <div className="flex items-center gap-2">
+            {canManage && (
             <button
               className="btn-secondary flex items-center gap-1.5 disabled:opacity-60"
               onClick={handleResyncPublic}
@@ -589,7 +596,8 @@ export default function Agencies() {
               <MdRefresh size={16} className={resyncing ? 'animate-spin' : ''} />
               {resyncing ? 'Resyncing…' : 'Resync public'}
             </button>
-            {isSuperAdmin && (
+            )}
+            {canManage && (
               <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate('/admin/agencies/new')}>
                 <MdAdd size={16} /> Add Agency
               </button>
@@ -742,9 +750,11 @@ export default function Agencies() {
 
                   {/* Quick actions — stop propagation so row click doesn't also fire */}
                   <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
-                      onClick={() => handleMessageAgency(agency)}><MdMessage size={16} /></button>
-                    {isSuperAdmin && (
+                    {!isPlatform && (
+                      <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
+                        onClick={() => handleMessageAgency(agency)}><MdMessage size={16} /></button>
+                    )}
+                    {canManage && (
                       <>
                         <button
                           className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${agency.enabled ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
@@ -791,7 +801,7 @@ export default function Agencies() {
                   ? 'Try changing your search or filter.'
                   : 'Add your first agency or run the seed script.'}
               </p>
-              {!search && statusFilter === 'all' && (
+              {canManage && !search && statusFilter === 'all' && (
                 <button className="btn-primary text-sm mx-auto" onClick={() => setModal('add')}>
                   <MdAdd size={15} className="inline mr-1" /> Add First Agency
                 </button>

@@ -30,6 +30,7 @@ const DASHBOARD = {
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
   [ROLES.STAFF_ADMIN]:  '/admin/dashboard',
+  [ROLES.PLATFORM_ADMIN]: '/platform/hospitals',
 }
 
 // Fix 4 — human-readable Firebase error messages
@@ -418,6 +419,7 @@ export default function Login() {
                     { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
                     { label: 'Super Admin',            email: 'admin@example.org',            password: 'admin123',   note: null     },
                     { label: 'Staff Admin',            email: 'staff@example.org',            password: 'staff123',   note: null     },
+                    { label: 'Network Admin',          email: 'platform@example.org',         password: 'platform123', note: null    },
                     // The coordination hub and PhilHealth (modelled as the
                     // first-charge coverage that REDUCES the bill, not an endorsable
                     // GL-issuing funder — see docs/philhealth-first-plan.md) are

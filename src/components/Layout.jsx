@@ -89,6 +89,12 @@ const AGENCY_NAV = [
   { to: '/agency/guide',        icon: MdMenuBook,       label: 'User Guide' },
 ]
 
+// Network operator (multi-hospital Phase 6). No patient-facing pages.
+const PLATFORM_NAV = [
+  { to: '/platform/hospitals', icon: MdLocalHospital, label: 'Hospitals' },
+  { to: '/admin/agencies',     icon: MdBusiness,      label: 'Agencies'  },
+]
+
 const ADMIN_NAV = {
   management: [
     { to: '/admin/dashboard',       icon: MdDashboard,            label: 'Dashboard'        },
@@ -628,6 +634,12 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
             />
           </>
         )}
+        {role === ROLES.PLATFORM_ADMIN && (
+          <>
+            <p className="eyebrow px-3 mb-2">{t('shell.network')}</p>
+            <NavItems items={PLATFORM_NAV} onClose={onClose} />
+          </>
+        )}
         {(role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN) && (
           <>
             <p className="eyebrow px-3 mb-2">{t('shell.systemAdmin')}</p>
@@ -716,6 +728,7 @@ const APPS = {
     { label: 'Audit Log',      icon: MdHistory,              to: '/admin/auditlog'    },
   ],
 }
+APPS[ROLES.PLATFORM_ADMIN] = PLATFORM_NAV
 APPS[ROLES.STAFF_ADMIN] = APPS[ROLES.SUPER_ADMIN].filter(a =>
   a.to !== '/admin/accounts' && a.to !== '/admin/auditlog'
 )
@@ -996,7 +1009,8 @@ export default function Layout({ children, breadcrumb }) {
           // 24h reminder: upcoming within 24h, not yet reminded — first user
           // triggers it. Skipped for agency announcements (not maintenance
           // windows, and they shouldn't notify non-patients).
-          if (ann.source !== 'agency' && now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
+          if (ann.source !== 'agency' && user?.role !== ROLES.PLATFORM_ADMIN &&
+              now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
             updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
               .then(async () => {
                 const allUsers = await getUsersInScope(db)
@@ -1061,6 +1075,7 @@ export default function Layout({ children, breadcrumb }) {
       case ROLES.PATIENT:      return 'bg-brand-50 text-brand-600 border-brand-400'
       case ROLES.AGENCY:       return 'bg-blue-50 text-blue-600 border-blue-400'
       case ROLES.AGENCY_ADMIN: return 'bg-teal-50 text-teal-600 border-teal-400'
+      case ROLES.PLATFORM_ADMIN: return 'bg-purple-50 text-purple-600 border-purple-400'
       case ROLES.SUPER_ADMIN:  return 'bg-purple-50 text-purple-600 border-purple-400'
       case ROLES.STAFF_ADMIN:  return 'bg-purple-50 text-purple-600 border-purple-400'
       default:                 return 'bg-gray-100 text-gray-600 border-gray-300'
@@ -1207,7 +1222,10 @@ export default function Layout({ children, breadcrumb }) {
                 tab in BottomTabBar; hiding the topbar icon there removes
                 the duplicate entry point. Non-patient and lg+ unchanged. */}
             <div className={`relative ${
-              user?.role === ROLES.PATIENT ? 'hidden lg:block' : ''
+              user?.role === ROLES.PATIENT ? 'hidden lg:block'
+                // The network operator has no messaging (no directory, no
+                // patients) — Phase 6.
+                : user?.role === ROLES.PLATFORM_ADMIN ? 'hidden' : ''
             }`}>
               <button
                 className="nav-icon-btn"

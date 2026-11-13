@@ -93,10 +93,12 @@ describe('users.create — admin-elevated create', () => {
     }))
   })
 
-  it('allows a super_admin to create an agency coordinator', async () => {
+  // Phase 6: agency users are created by the platform admin or their own
+  // agency admin, no longer by a hospital admin.
+  it('rejects a super_admin creating an agency coordinator (Phase 6)', async () => {
     await seedUser('admin-1', 'super_admin')
     const ctx = testEnv.authenticatedContext('admin-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'new-coord-1'), {
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'new-coord-1'), {
       role: 'agency',
       agencyId: 'malasakit',
       name: 'New Coordinator',
@@ -269,13 +271,46 @@ describe('users.update — identity fields locked on self-update', () => {
 describe('users.update — admin & agency_admin bounds', () => {
   const target = { role: 'agency', agencyId: 'malasakit', active: true, rank: 0, name: 'Coord' }
 
-  it('allows a super_admin to change a role', async () => {
+  it("allows a super_admin to change a gateway staff member's role", async () => {
+    const staff = { role: 'staff_admin', agencyId: null, active: true, rank: 'low', name: 'Staff' }
+    await seedUser('admin-1', 'super_admin')
+    await seedUserDoc('staff-1', staff)
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'staff-1'), {
+      ...staff, role: 'super_admin',
+    }))
+  })
+
+  // Phase 6: agency users are platform-owned; a hospital admin can't edit them.
+  it("rejects a super_admin changing an agency user's role (Phase 6)", async () => {
     await seedUser('admin-1', 'super_admin')
     await seedUserDoc('coord-1', target)
     const ctx = testEnv.authenticatedContext('admin-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'coord-1'), {
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'coord-1'), {
       ...target, role: 'agency_admin',
     }))
+  })
+
+  it('rejects a super_admin minting a platform_admin (Phase 6 role allowlist)', async () => {
+    await seedUser('admin-1', 'super_admin')
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'new-plat'), { role: 'platform_admin', agencyId: null }))
+  })
+
+  it('rejects a super_admin promoting a staff member to platform_admin', async () => {
+    const staff = { role: 'staff_admin', agencyId: null, active: true, rank: 'low', name: 'Staff' }
+    await seedUser('admin-1', 'super_admin')
+    await seedUserDoc('staff-1', staff)
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'staff-1'), { ...staff, role: 'platform_admin' }))
+  })
+
+  it('rejects a super_admin turning a patient into staff', async () => {
+    const pat = { role: 'patient', agencyId: null, active: true, rank: null, name: 'Pat' }
+    await seedUser('admin-1', 'super_admin')
+    await seedUserDoc('pat-1', pat)
+    const ctx = testEnv.authenticatedContext('admin-1')
+    await assertFails(setDoc(doc(ctx.firestore(), 'users', 'pat-1'), { ...pat, role: 'super_admin' }))
   })
 
   it('rejects an agency_admin promoting a coordinator to super_admin', async () => {

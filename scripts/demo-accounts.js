@@ -7,7 +7,8 @@
  * the credentials shown on the login page's "DEV ONLY -- DEMO ACCOUNTS"
  * panel always match what's actually in Firebase Auth + Firestore.
  *
- * The 15 accounts cover every role in the system:
+ * The 16 accounts cover every role in the system:
+ *   - 1 network operator (platform_admin, multi-hospital Phase 6)
  *   - 2 gateway admins (super_admin + staff_admin)
  *   - 6 agency_admins (one per agency)
  *   - 6 agency coordinators (one per agency)
@@ -31,6 +32,11 @@
  */
 
 export const USERS = [
+  // network operator (multi-hospital Phase 6): hospitals, agencies, reference data
+  {
+    email: 'platform@mapa.gov.ph', password: 'platform123',
+    profile: { name: 'Network Admin', role: 'platform_admin', rank: null, agencyId: null, contact: null, cooldown: 0, deletion: false },
+  },
   // gateway admins
   {
     email: 'admin@mapa.gov.ph', password: 'admin123',

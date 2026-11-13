@@ -12,11 +12,15 @@ import { applyHospital, DEFAULT_HOSPITAL_ID } from '../config/org'
 // Agencies are network-level (decision D1/D4): they partner with many
 // hospitals, so an agency user belongs to no tenant. Records an agency writes
 // about a case take the tenant of that case (request / slice), never the
-// agency's.
-const NETWORK_ROLES = ['agency', 'agency_admin']
+// agency's. The platform_admin (Phase 6) runs the network and has no tenant
+// either.
+const AGENCY_ROLES  = ['agency', 'agency_admin']
+const NETWORK_ROLES = [...AGENCY_ROLES, 'platform_admin']
 export const isNetworkRole = (role) => NETWORK_ROLES.includes(role)
+const isAgencyRoleName = (role) => AGENCY_ROLES.includes(role)
 
-// Which hospital a signed-in user belongs to — null for agency users.
+// Which hospital a signed-in user belongs to — null for agency users and the
+// platform admin.
 // Users carry no tenantId until the Phase 3 backfill, so patients and gateway
 // staff fall back to the default (hospital #1).
 export const tenantIdFor = (user) =>
@@ -93,8 +97,10 @@ export async function getUsersInScope(db, roles = null) {
     const snap = await getDocs(roles ? query(users, where('role', 'in', roles)) : users)
     return snap.docs
   }
+  // Directories reach the staff's own hospital plus agency users — never
+  // platform admins (they aren't messaging or broadcast recipients).
   const hospitalRoles = roles ? roles.filter((r) => !isNetworkRole(r)) : null
-  const networkRoles  = roles ? roles.filter(isNetworkRole) : NETWORK_ROLES
+  const networkRoles  = roles ? roles.filter(isAgencyRoleName) : AGENCY_ROLES
   const queries = []
   if (hospitalRoles === null)  queries.push(query(users, where('tenantId', '==', t)))
   else if (hospitalRoles.length) queries.push(query(users, where('tenantId', '==', t), where('role', 'in', hospitalRoles)))

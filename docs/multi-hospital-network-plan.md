@@ -3,10 +3,10 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅
-(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 6 next.
-**Merge/deploy:** Phases 0–4 are safe to ship as-is; Phase 5 rules ship only in
-the coordinated rollout described under Phase 5.
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 7 next.
+**Merge/deploy:** Phases 0–4 are safe to ship as-is; the Phase 5 + 6 rules ship
+only in the coordinated rollout described under Phase 5 (with the Phase 6 step).
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -196,7 +196,10 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   post-backfill state (`tenantId: 'hospital-1'`). 308/308 rules tests pass.
 - **Rollout is one coordinated step — never deploy these rules on their own:**
   (1) Phases 1–4 deployed, (2) seed hospital #1, (3) backfill `--apply` and
-  re-verify 0 left, (4) deploy indexes and wait for them to build, (5) set
+  re-verify 0 left, (4) deploy indexes and wait for them to build,
+  (4b) **Phase 6:** create the network operator with
+  `scripts/create-platform-admin.mjs --apply` (once these rules are live, only a
+  platform_admin can manage agencies), (5) set
   `VITE_TENANT_SCOPING=true` + redeploy the app **and** deploy these rules
   together. Rules without the flag → every gateway list query is denied; rules
   before the backfill → untagged records unreachable by staff.
@@ -211,11 +214,59 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   `role`, `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) —
   tracked as a follow-up, not v1.
 
-### Phase 6 — Roles: `platform_admin` + hospital-scoped admins
-- Add `ROLES.PLATFORM_ADMIN`; new `/platform/*` pages: Hospitals list, Add Hospital,
-  Agencies (network-wide), Partnerships, Network analytics (aggregates, no PII).
-- `admin/Accounts.jsx`: hospital admins create staff only in their own hospital.
-- MFA required for `platform_admin` (same as other staff roles).
+### Phase 6 — Roles: `platform_admin` + hospital-scoped admins ✅ 2026-11-14 (not deployed)
+- **Role.** `ROLES.PLATFORM_ADMIN` (`'platform_admin'`, shown as "Network Admin"):
+  no tenant (`tenantIdFor` → null, like agency users), **no patient data** — it is
+  not in `isAdmin()`, so every hospital-scoped rule denies it. MFA + idle timeout
+  apply as for other staff. Created only by `scripts/create-platform-admin.mjs`
+  (Admin SDK, dry run by default, refuses an email that already has another role,
+  prints a one-time password link); a demo account is in `scripts/demo-accounts.js`.
+- **Pages.**
+  - `/platform/hospitals` (`src/pages/platform/Hospitals.jsx`): list hospitals with
+    their admin counts, **add** a hospital (id, name, gateway office, access-code
+    prefix, contact), **edit** it, and **add its first administrator** (secondary
+    Auth app, `src/utils/staffAccounts.js`). Form rules in
+    `src/utils/hospitalConfig.js` (unit-tested): slug ids, prefixes `[A-Z][A-Z0-9]{1,9}`
+    (they go into the access-code regex), **prefix unique across hospitals** (D5).
+  - Agencies: the existing `/admin/agencies` pages, now managed by the platform
+    admin (add, edit, enable/disable, slots, team, public resync). Hospital admins
+    keep a read-only directory. The platform view shows no case counts and no
+    messaging; disabling an agency **holds** its in-flight slices (the platform
+    admin can't read or reject them) and each hospital re-endorses.
+- **Rules.**
+  - `users`: hospital admins create/edit only gateway staff (+ their own patients'
+    non-role fields) in their own hospital — a **role allowlist**; before it, an
+    admin could mint any role, which would have included `platform_admin`. They can
+    no longer create/edit/delete agency users or touch a platform admin (whose
+    missing tenantId would otherwise default to hospital #1). The platform admin
+    creates staff into an **existing** hospital, agency users with no tenant,
+    transfers staff between hospitals (D2), and never touches patients or other
+    platform admins.
+  - `hospitals`: platform admin creates + edits; a hospital's super admin edits only
+    its own **branding** (not `accessCodePrefix`, not `enabled`).
+  - `agencies`: create/delete/edit → platform admin. Hospital admins keep only
+    `slots.remaining` + `lastResetDate` (the endorse decrement and the daily-reset
+    fallback); `slots.total` pinned. `agenciesPublic` delete → platform admin.
+  - `documentTypes`, `assistanceTypes` → platform admin only.
+- Tests: `tests/rules/platformAdmin.rules.test.js` (44: no PII reachable, onboarding,
+  user management bounds, agency/reference-data ownership, slot paths kept),
+  role-escalation cases in `users.rules.test.js`, `tests/utils/hospitalConfig.test.js`.
+  356/356 rules tests pass.
+- Deferred, by design:
+  - **Network analytics** — Firestore counts need read access to the counted docs,
+    and the platform admin must not read patient records, so aggregates come from
+    a Cloud Function-maintained stats doc (Phase 9).
+  - **Partnerships** → Phase 7. **`enabled` enforcement** (a disabled hospital's
+    codes stop registering) and a server-side prefix-uniqueness guarantee → Phase 8
+    with per-hospital access codes; until then the platform admin is the only
+    writer and the form checks uniqueness.
+  - **Patient transfer** between hospitals moves every record they own — an Admin
+    SDK script, not a client action (future).
+  - A platform audit view: its entries are untagged and readable by no one yet
+    (Phase 9).
+  - The dev `/seed` page can no longer run end to end under the Phase 5/6 rules
+    (network config vs. access codes need different roles); use the Admin SDK
+    bootstrap scripts.
 
 ### Phase 7 — Agency ↔ hospital partnerships
 - `agencies/{id}.partnerHospitalIds: []` (or a `partnerships` collection if

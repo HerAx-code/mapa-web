@@ -45,6 +45,11 @@ describe('tenantIdFor', () => {
     expect(tenantIdFor({ role: 'agency_admin' })).toBeNull()
   })
 
+  it('gives the platform admin no tenant (network operator, Phase 6)', () => {
+    expect(isNetworkRole('platform_admin')).toBe(true)
+    expect(tenantIdFor({ role: 'platform_admin', tenantId: 'bgh' })).toBeNull()
+  })
+
   it('is null when signed out', () => {
     expect(tenantIdFor(null)).toBeNull()
   })
@@ -168,6 +173,16 @@ describe('getUsersInScope', () => {
     expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
       [{ field: 'tenantId', op: '==', value: 'bgh' }, { field: 'role', op: 'in', value: ['patient', 'staff_admin'] }],
       [{ field: 'role', op: 'in', value: ['agency'] }],
+    ])
+  })
+
+  it('scoping on: platform admins are never directory recipients', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['patient', 'platform_admin'])
+    expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
+      [{ field: 'tenantId', op: '==', value: 'bgh' }, { field: 'role', op: 'in', value: ['patient'] }],
     ])
   })
 

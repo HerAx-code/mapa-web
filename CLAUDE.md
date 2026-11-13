@@ -30,8 +30,8 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 
 ## User Roles
-- platform_admin — *(planned, multi-hospital Phase 6)* network operator: onboards hospitals + agencies, aggregate analytics, no patient PII
-- super_admin — full system access (becoming hospital-scoped under multi-hospital tenancy)
+- platform_admin — *(multi-hospital Phase 6, not yet deployed)* network operator ("Network Admin"): onboards hospitals + their first admins, owns agencies + reference data, no tenant, **no patient PII** (not in `isAdmin()`). Created only via `scripts/create-platform-admin.mjs`
+- super_admin — full access to **its own hospital** (hospital-scoped under multi-hospital tenancy); agencies + reference data move to platform_admin in Phase 6
 - staff_admin — operations (no accounts, audit, announcements, coordinators)
 - agency — agency portal, own applications only
 - patient — patient portal, own data only (self-registers with Patient Access Code)

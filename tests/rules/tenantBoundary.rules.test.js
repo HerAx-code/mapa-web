@@ -190,8 +190,10 @@ describe('writes stay inside the writer\'s hospital', () => {
     await assertSucceeds(setDoc(ref('adminA', 'users/newStaff'), { role: 'staff_admin', tenantId: A }))
   })
 
-  it('an admin may still create agency users (network-level, no tenant)', async () => {
-    await assertSucceeds(setDoc(ref('adminB', 'users/newCoord'), { role: 'agency_admin', agencyId: 'dswd' }))
+  // Phase 6: agency users are network-level and belong to the platform admin
+  // (tests/rules/platformAdmin.rules.test.js) and their own agency admin.
+  it('a hospital admin cannot create agency users (Phase 6: platform-owned)', async () => {
+    await assertFails(setDoc(ref('adminB', 'users/newCoord'), { role: 'agency_admin', agencyId: 'dswd' }))
   })
 
   it('a patient can only file requests and upload documents in their own hospital', async () => {
