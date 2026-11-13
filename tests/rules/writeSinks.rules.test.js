@@ -81,7 +81,9 @@ describe('applications.update — Phase 1.6 identity lock', () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'applications', id), {
         requestId: 'req-1', patientId: 'patient-1', agencyId: 'malasakit',
-        amountRequested: 25000, amountApproved: 0, status: 'reviewing', ...over,
+        amountRequested: 25000, amountApproved: 0, status: 'reviewing',
+        tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
+        ...over,
       })
     })
   }
@@ -310,7 +312,9 @@ describe('documents.update — Phase 1.5 create-guard bypass', () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'documents', docId), {
         patientId, name: 'Valid ID', fileName: 'id.jpg', type: 'image/jpeg',
-        size: '50 KB', date: '2026-07-23', status: 'pending', ...over,
+        size: '50 KB', date: '2026-07-23', status: 'pending',
+        tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
+        ...over,
       })
     })
   }

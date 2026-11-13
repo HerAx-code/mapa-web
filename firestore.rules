@@ -46,6 +46,66 @@ service cloud.firestore {
       return isAuth() && userRole() == 'patient';
     }
 
+    // ── Multi-hospital tenancy (Phase 5, docs/multi-hospital-network-plan.md) ──
+    // A hospital is the tenant; tenant docs carry `tenantId` (NOT `hospitalId`,
+    // which is the patient's access code). Gateway staff and patients reach only
+    // their own hospital's records; agencies are network-level and keep their
+    // agencyId-based access across hospitals.
+    //
+    // STRICT ON EXISTING DOCS. Gateway access to an existing doc requires
+    // `resource.data.tenantId == the user's tenant` — no default. Rules are
+    // checked against a QUERY's filters, and a field the query doesn't filter
+    // on reads as absent there, so a default (`get('tenantId', 'hospital-1')`)
+    // would make every UNFILTERED admin query pass for hospital #1 and return
+    // other hospitals' docs. That leak was reproduced on the emulator
+    // (tests/rules/tenantBoundary.rules.test.js "rules are not filters").
+    // Consequence: these rules go live only AFTER the Phase 3 backfill, together
+    // with VITE_TENANT_SCOPING=true.
+    //
+    // The default IS used where it's safe — single concrete docs, never query
+    // shapes: the signed-in USER (a staff/patient doc without tenantId is
+    // hospital #1) and NEW docs being written. MUST equal VITE_DEFAULT_HOSPITAL_ID.
+    function defaultTenant() {
+      return 'hospital-1';
+    }
+
+    // Writes only (request.resource.data, or a doc fetched with get()).
+    function tenantOf(data) {
+      return data.get('tenantId', defaultTenant());
+    }
+
+    // Same users/{uid} doc as userRole(): rules cache identical get()s within
+    // one evaluation, so this costs no extra read.
+    function userTenantId() {
+      return get(/databases/$(database)/documents/users/$(uid())).data.get('tenantId', defaultTenant());
+    }
+
+    // Strict: the doc must carry the user's tenantId.
+    function isHospitalAdmin(data) {
+      return isAdmin() && data.tenantId == userTenantId();
+    }
+
+    function isHospitalSuperAdmin(data) {
+      return isSuperAdmin() && data.tenantId == userTenantId();
+    }
+
+    // A new doc is tagged with the writer's own hospital.
+    function createsInOwnHospital() {
+      return tenantOf(request.resource.data) == userTenantId();
+    }
+
+    // Gateway write to an existing doc: it is in the admin's hospital and stays
+    // there (moving records between hospitals is a platform action, Phase 6).
+    function hospitalAdminWrite() {
+      return isHospitalAdmin(resource.data) &&
+             request.resource.data.tenantId == resource.data.tenantId;
+    }
+
+    // Agency users are network-level (no tenant).
+    function isNetworkUserDoc(data) {
+      return data.get('role', '') in ['agency', 'agency_admin'];
+    }
+
     // ── users ─────────────────────────────────────────────────────────────────
     // Patients own their profile.
     // Admins and agencies can read all users (needed for messaging compose search
@@ -83,13 +143,20 @@ service cloud.firestore {
       // patients/{uid} which keeps its tighter rule.
       allow read:   if isAuth() && (
         uid() == userId
-        || isAdmin()
+        || isHospitalAdmin(resource.data)
         || isAgency()
         || resource.data.role in ['super_admin', 'staff_admin', 'agency', 'agency_admin']
       );
       allow create: if isAuth() && (
-        (uid() == userId && request.resource.data.role == 'patient') ||
-        isAdmin() ||
+        // Self-registration joins the hospital that issued the access code.
+        (uid() == userId && request.resource.data.role == 'patient' &&
+          tenantOf(request.resource.data) ==
+            tenantOf(get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.hospitalId)).data)) ||
+        // Gateway staff create users in their own hospital, or network-level
+        // agency users (no tenant).
+        (isAdmin() &&
+          (createsInOwnHospital() ||
+           (isNetworkUserDoc(request.resource.data) && !('tenantId' in request.resource.data)))) ||
         (isAgencyAdmin() &&
          request.resource.data.agencyId == userAgencyId() &&
          request.resource.data.role in ['agency', 'agency_admin'])
@@ -129,7 +196,11 @@ service cloud.firestore {
           // documentCount to defeat the upload cap.
           request.resource.data.get('activeRequestId', null) == resource.data.get('activeRequestId', null) &&
           request.resource.data.get('documentCount', 0) == resource.data.get('documentCount', 0)) ||
-        isAdmin() ||
+        // Gateway staff edit their own hospital's users and network (agency)
+        // users, and can't move anyone to another hospital.
+        (isAdmin() &&
+          (tenantOf(resource.data) == userTenantId() || isNetworkUserDoc(resource.data)) &&
+          tenantOf(request.resource.data) == tenantOf(resource.data)) ||
         (isAgencyAdmin() &&
           resource.data.agencyId == userAgencyId() &&
           resource.data.role in ['agency', 'agency_admin'] &&
@@ -137,7 +208,8 @@ service cloud.firestore {
           request.resource.data.get('tenantId', null) == resource.data.get('tenantId', null) &&
           request.resource.data.role in ['agency', 'agency_admin'])
       );
-      allow delete: if isSuperAdmin();
+      allow delete: if isHospitalSuperAdmin(resource.data) ||
+                       (isSuperAdmin() && isNetworkUserDoc(resource.data));
     }
 
     // ── applications ──────────────────────────────────────────────────────────
@@ -154,7 +226,7 @@ service cloud.firestore {
         // The client only surfaces agency name, amount, and status.
         (isAgency() && resource.data.requestId != null &&
           userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||
-        isAdmin()
+        isHospitalAdmin(resource.data)
       );
       // Phase 1.4: admin-only. The rule was `isPatient() || isAdmin()` with
       // NO field validation of any kind, so a signed-in patient could write
@@ -170,7 +242,7 @@ service cloud.firestore {
       // src/pages/admin/Requests.jsx (tx.set on a new slice, status
       // 'endorsed'), which runs as an admin. Every other reference is a
       // read. Patients reach slices through requests, never by creating one.
-      allow create: if isAdmin();
+      allow create: if isAdmin() && createsInOwnHospital();
       allow update: if isAuth() && (
         // Patient can make exactly two transitions on their own application:
         //  1. pending → rejected (self-withdrawal)
@@ -208,9 +280,9 @@ service cloud.firestore {
           request.resource.data.amountRequested == resource.data.amountRequested &&
           (!('amountApproved' in request.resource.data) ||
             request.resource.data.amountApproved <= resource.data.amountRequested)) ||
-        isAdmin()
+        hospitalAdminWrite()
       );
-      allow delete: if isAdmin();
+      allow delete: if isHospitalAdmin(resource.data);
     }
 
     // ── requests ────────────────────────────────────────────────────────────
@@ -227,7 +299,7 @@ service cloud.firestore {
     match /requests/{requestId} {
       allow read: if isAuth() && (
         resource.data.patientId == uid() ||
-        isAdmin() ||
+        isHospitalAdmin(resource.data) ||
         (isAgency() && userAgencyId() in resource.data.agencyIds)
       );
       // Phase 1.4: pin the entry state. Ownership was already enforced, but
@@ -247,6 +319,7 @@ service cloud.firestore {
       // trigger clears the pointer when the request goes terminal/withdrawn.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
+                       createsInOwnHospital() &&
                        request.resource.data.status == 'submitted' &&
                        request.resource.data.agencyIds == [] &&
                        request.resource.data.amountCommitted == 0 &&
@@ -277,7 +350,7 @@ service cloud.firestore {
            after.encodedOnBehalf.reason.size() >= 10);
       }
 
-      allow update: if (isAdmin() && staffIntakeWriteOk()) ||
+      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk()) ||
         (isPatient() && resource.data.patientId == uid() &&
           resource.data.status == 'submitted' &&
           request.resource.data.status == 'closed') ||
@@ -330,7 +403,7 @@ service cloud.firestore {
           request.resource.data.amountCommitted >= 0 &&
           request.resource.data.status in
             ['submitted', 'endorsed', 'partially_funded', 'fully_funded']);
-      allow delete: if isAdmin();
+      allow delete: if isHospitalAdmin(resource.data);
     }
 
     // ── documents ─────────────────────────────────────────────────────────────
@@ -355,7 +428,7 @@ service cloud.firestore {
       // can match `array-contains` directly against `in` without
       // intervening conjunctions.
       allow read: if isAuth() && resource.data.patientId == uid();
-      allow read: if isAdmin();
+      allow read: if isHospitalAdmin(resource.data);
       allow read: if isAgency() && userAgencyId() in resource.data.agencyIds;
       // Patient creates own document. patientId must match auth (no creating
       // docs attributed to other patients), status must start at 'pending'
@@ -420,6 +493,7 @@ service cloud.firestore {
       // long-lived patient ever approaches it.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
+                       createsInOwnHospital() &&
                        request.resource.data.status == 'pending' &&
                        !('agencyIds' in request.resource.data) &&
                        !('storagePath' in request.resource.data) &&
@@ -452,7 +526,7 @@ service cloud.firestore {
       // client-side patient write, replacePatientDocument in
       // src/utils/uploadDocument.js, which sets precisely these keys and
       // always resets status to 'pending' for re-review.
-      allow update: if isAdmin() ||
+      allow update: if hospitalAdminWrite() ||
                        (isPatient() && resource.data.patientId == uid() &&
                         request.resource.data.status == 'pending' &&
                         request.resource.data.diff(resource.data).affectedKeys()
@@ -474,7 +548,7 @@ service cloud.firestore {
       // these conditions a patient could delete a VERIFIED, already-endorsed
       // document mid-review to destroy the evidence behind a funding
       // decision.
-      allow delete: if isAdmin() ||
+      allow delete: if isHospitalAdmin(resource.data) ||
                        (isPatient() && resource.data.patientId == uid() &&
                         resource.data.status == 'pending' &&
                         !('agencyIds' in resource.data));
@@ -590,7 +664,9 @@ service cloud.firestore {
       allow read:  if isAuth();
       // create/update only — rules OR together, so `allow write` would also
       // grant delete. Deleting a tenant is never a client action.
-      allow create, update: if isSuperAdmin() &&
+      // A hospital's own super admin edits only that hospital's doc (creating
+      // other hospitals is the platform_admin's job, Phase 6).
+      allow create, update: if isSuperAdmin() && hospitalId == userTenantId() &&
                       request.resource.data.keys().hasOnly([
                         'shortName', 'gatewayName', 'gatewayInitials', 'facilityName',
                         'contactEmail', 'accessCodePrefix', 'address', 'logoUrl',
@@ -625,10 +701,13 @@ service cloud.firestore {
     //     without needing the role lookup.
     // Only super_admin can create or delete IDs.
     match /hospitalIds/{hospitalId} {
+      // get stays open to any signed-in user: registration verifies a code
+      // (anonymous auth) before the patient has a hospital. Listing the codes
+      // is the gateway's job, scoped to its own hospital.
       allow get:    if isAuth();
-      allow list:   if isAuth();
-      allow create: if isSuperAdmin();
-      allow update: if isAdmin() ||
+      allow list:   if isHospitalAdmin(resource.data);
+      allow create: if isSuperAdmin() && createsInOwnHospital();
+      allow update: if hospitalAdminWrite() ||
                        // Phase 1.5: the claim branch pinned status and patId
                        // but left every OTHER field on the doc writable in
                        // the same operation -- a registering user could
@@ -650,7 +729,7 @@ service cloud.firestore {
                        // lock survive account-deletion + re-registration.
                        (isAgency() &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt']));
-      allow delete: if isSuperAdmin();
+      allow delete: if isHospitalSuperAdmin(resource.data);
 
       // Phase 0.3 hardening (post-review): the patient NAME used to live on
       // the parent hospitalIds doc as `usedBy`, but the parent allows
@@ -669,7 +748,7 @@ service cloud.firestore {
         // doc's patId must equal the requesting uid). Agencies do NOT
         // need patient names from this collection -- they get them from
         // the users/{uid} doc via the application's patientId.
-        allow read:   if isAdmin() ||
+        allow read:   if isHospitalAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) ||
                          (isAuth() &&
                           get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.patId == uid());
         // Create runs inside the registration claim transaction. Patient
@@ -681,8 +760,8 @@ service cloud.firestore {
                          request.resource.data.usedById == uid() &&
                          request.resource.data.usedBy is string &&
                          request.resource.data.usedBy.size() <= 120;
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+        allow update: if isHospitalAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data);
+        allow delete: if isHospitalAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data);
       }
     }
 
@@ -766,7 +845,7 @@ service cloud.firestore {
       // read-receipt writes in the two admin message components.
       allow update: if isAuth() && uid() in resource.data.participants &&
                        request.resource.data.participants == resource.data.participants;
-      allow delete: if isAdmin() || (isAuth() && uid() in resource.data.participants);
+      allow delete: if isHospitalAdmin(resource.data) || (isAuth() && uid() in resource.data.participants);
 
       match /messages/{msgId} {
         allow read:   if isAuth() && uid() in
@@ -794,7 +873,7 @@ service cloud.firestore {
           // conversation without lastAt is permissive rather than erroring.
           (!isPatient() ||
            request.time >= get(/databases/$(database)/documents/conversations/$(convId)).data.get('lastAt', timestamp.value(0)) + duration.value(5, 's'));
-        allow delete: if isAdmin();
+        allow delete: if isHospitalAdmin(get(/databases/$(database)/documents/conversations/$(convId)).data);
       }
     }
 
@@ -824,13 +903,21 @@ service cloud.firestore {
       // Patient self-read (planned for §B.26 follow-up): a patient can
       // read entries where their uid matches entry.patientId. Surfaces
       // the X-Road citizen-visible audit pattern for RA 10173 §16(c).
-      allow read:   if isSuperAdmin() ||
+      // Hospital super admins read their hospital's entries, plus entries about
+      // their hospital's requests written by (tenant-less) agency actors — the
+      // request timeline queries by requestId.
+      allow read:   if isHospitalSuperAdmin(resource.data) ||
+                       (isSuperAdmin() && resource.data.requestId != null &&
+                        isHospitalSuperAdmin(get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data)) ||
                        (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId()) ||
                        (isAgency() && resource.data.requestId != null &&
                         userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||
                        (isAuth() && resource.data.patientId == uid());
       allow create: if isAuth() &&
                        request.resource.data.actorId == uid() &&
+                       // Tenant-less entries come from agency actors; a tagged
+                       // entry must carry the writer's own hospital.
+                       (!('tenantId' in request.resource.data) || createsInOwnHospital()) &&
                        request.resource.data.details is string &&
                        request.resource.data.details.size() <= 2000;
       allow update, delete: if false;
@@ -889,7 +976,7 @@ service cloud.firestore {
         resource == null ||
         resource.data.patientId == uid() ||
         (isAgency() && resource.data.agencyId == userAgencyId()) ||
-        isAdmin()
+        isHospitalAdmin(resource.data)
       );
       // Agencies can only write certs scoped to their own agency. Admins
       // can write any (e.g. moving a cert between agencies during a
@@ -903,15 +990,19 @@ service cloud.firestore {
       //   2. the underlying application's agencyId also matches (new).
       // certId is the appId (see comment in src/pages/admin/Patients.jsx:334)
       // so the get() chain resolves cleanly.
-      allow create: if isAdmin() ||
+      // The GL belongs to its slice's hospital, whoever writes it.
+      allow create: if (isAdmin() && createsInOwnHospital()) ||
                        (isAgency() &&
                         request.resource.data.agencyId == userAgencyId() &&
-                        get(/databases/$(database)/documents/applications/$(certId)).data.agencyId == userAgencyId());
-      allow update: if isAdmin() ||
+                        get(/databases/$(database)/documents/applications/$(certId)).data.agencyId == userAgencyId() &&
+                        tenantOf(request.resource.data) ==
+                          tenantOf(get(/databases/$(database)/documents/applications/$(certId)).data));
+      allow update: if hospitalAdminWrite() ||
                        (isAgency() &&
                         request.resource.data.agencyId == userAgencyId() &&
-                        resource.data.agencyId == userAgencyId());
-      allow delete: if isAdmin();
+                        resource.data.agencyId == userAgencyId() &&
+                        tenantOf(request.resource.data) == tenantOf(resource.data));
+      allow delete: if isHospitalAdmin(resource.data);
     }
 
     // ── docReviewPresence ─────────────────────────────────────────────────────
@@ -937,7 +1028,7 @@ service cloud.firestore {
     match /documentContents/{docId} {
       allow read:   if isAuth() && (
         resource.data.patientId == uid() ||
-        isAdmin() ||
+        isHospitalAdmin(resource.data) ||
         (isAgency() && userAgencyId() in
           get(/databases/$(database)/documents/documents/$(docId)).data.agencyIds)
       );
@@ -970,17 +1061,19 @@ service cloud.firestore {
       // rule above and auditLog at lines 399-404.
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
+                       createsInOwnHospital() &&
                        exists(/databases/$(database)/documents/documents/$(docId)) &&
                        get(/databases/$(database)/documents/documents/$(docId)).data.patientId == uid() &&
                        (!('content' in request.resource.data) ||
                         (request.resource.data.content is string &&
                          request.resource.data.content.size() <= 1000000));
-      allow update: if (isAdmin() ||
-                        (isPatient() && resource.data.patientId == uid())) &&
+      allow update: if (hospitalAdminWrite() ||
+                        (isPatient() && resource.data.patientId == uid() &&
+                         tenantOf(request.resource.data) == tenantOf(resource.data))) &&
                        (!('content' in request.resource.data) ||
                         (request.resource.data.content is string &&
                          request.resource.data.content.size() <= 1000000));
-      allow delete: if isAdmin() || (isPatient() && resource.data.patientId == uid());
+      allow delete: if isHospitalAdmin(resource.data) || (isPatient() && resource.data.patientId == uid());
     }
 
     // ── reports ───────────────────────────────────────────────────────────────
@@ -989,7 +1082,7 @@ service cloud.firestore {
     // requesting agency's agency_admin). The category field distinguishes
     // them; the gateway admins filter Budget Requests out client-side.
     match /reports/{reportId} {
-      allow read:   if isAdmin() ||
+      allow read:   if isHospitalAdmin(resource.data) ||
                        (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
       // Caller must self-attribute (reportedBy == uid()) and the
       // description is bounded — defends the same admin-visible surface
@@ -1009,6 +1102,7 @@ service cloud.firestore {
       // request.time also stops backdated entries.
       allow create: if isAuth() &&
                        request.resource.data.reportedBy == uid() &&
+                       (!('tenantId' in request.resource.data) || createsInOwnHospital()) &&
                        request.resource.data.status == 'open' &&
                        request.resource.data.createdAt == request.time &&
                        request.resource.data.category is string &&
@@ -1017,9 +1111,9 @@ service cloud.firestore {
                        request.resource.data.description is string &&
                        request.resource.data.description.size() > 0 &&
                        request.resource.data.description.size() <= 5000;
-      allow update: if isAdmin() ||
+      allow update: if hospitalAdminWrite() ||
                        (isAgencyAdmin() && resource.data.agencyId == userAgencyId());
-      allow delete: if isAdmin();
+      allow delete: if isHospitalAdmin(resource.data);
     }
 
     // ── announcements ─────────────────────────────────────────────────────────
@@ -1034,7 +1128,7 @@ service cloud.firestore {
       // banner visible to all users -- a long payload would dominate the
       // viewport. The UI inputs are already maxLength-constrained but the
       // server is the actual gate.
-      allow create: if (isAdmin() ||
+      allow create: if ((isAdmin() && createsInOwnHospital()) ||
                        (isAgencyAdmin() &&
                         request.resource.data.source == 'agency' &&
                         request.resource.data.agencyId == userAgencyId())) &&
@@ -1044,7 +1138,7 @@ service cloud.firestore {
                        (!('message' in request.resource.data) ||
                         (request.resource.data.message is string &&
                          request.resource.data.message.size() <= 2000));
-      allow update: if (isAdmin() ||
+      allow update: if (hospitalAdminWrite() ||
                        (isAgencyAdmin() &&
                         resource.data.source == 'agency' &&
                         resource.data.agencyId == userAgencyId())) &&
@@ -1054,7 +1148,7 @@ service cloud.firestore {
                        (!('message' in request.resource.data) ||
                         (request.resource.data.message is string &&
                          request.resource.data.message.size() <= 2000));
-      allow delete: if isAdmin() ||
+      allow delete: if isHospitalAdmin(resource.data) ||
                        (isAgencyAdmin() &&
                         resource.data.source == 'agency' &&
                         resource.data.agencyId == userAgencyId());
@@ -1084,7 +1178,7 @@ service cloud.firestore {
     //   - never (suggestions are part of the audit trail)
     match /referralSuggestions/{suggestionId} {
       allow read:   if isAuth() && (
-                       isAdmin() ||
+                       isHospitalAdmin(resource.data) ||
                        (isAgency() && resource.data.fromAgencyId == userAgencyId()) ||
                        (isAgency() && resource.data.toAgencyId   == userAgencyId())
                      );
@@ -1093,8 +1187,11 @@ service cloud.firestore {
                        request.resource.data.fromUserId   == uid() &&
                        request.resource.data.status == 'pending' &&
                        request.resource.data.reason is string &&
-                       request.resource.data.reason.size() <= 1000;
-      allow update: if isAdmin() &&
+                       request.resource.data.reason.size() <= 1000 &&
+                       // Belongs to the case's hospital.
+                       tenantOf(request.resource.data) ==
+                         tenantOf(get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data);
+      allow update: if hospitalAdminWrite() &&
                        request.resource.data.status in ['accepted', 'declined'];
       allow delete: if false;
     }

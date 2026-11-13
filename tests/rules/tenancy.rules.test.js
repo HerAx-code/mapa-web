@@ -30,6 +30,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users', 'agadm-1'),   { role: 'agency_admin', agencyId: 'dswd' })
     await setDoc(doc(db, 'users', 'coord-1'),   { role: 'agency', agencyId: 'dswd' })
     await setDoc(doc(db, 'users', 'super-1'),   { role: 'super_admin', tenantId: 'hospital-1' })
+    await setDoc(doc(db, 'hospitalIds', 'MAPA-2026-00009'), { status: 'available', patId: null, tenantId: 'hospital-1' })
     // Real patient profiles carry agencyId/rank/active (Register.jsx); the
     // self-update rule compares them, so the fixture must too.
     const patient = { role: 'patient', agencyId: null, rank: null, active: true }
@@ -41,7 +42,7 @@ const as = (uid) => testEnv.authenticatedContext(uid).firestore()
 
 describe('users.tenantId', () => {
   it('a patient may self-register with a tenantId', async () => {
-    await assertSucceeds(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', tenantId: 'hospital-1' }))
+    await assertSucceeds(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', hospitalId: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
   })
 
   it('a patient may NOT change their own tenantId', async () => {
@@ -58,8 +59,13 @@ describe('users.tenantId', () => {
     await assertSucceeds(updateDoc(doc(as('patient-1'), 'users', 'patient-1'), { contact: '09170000000' }))
   })
 
-  it('gateway admins may set it (a transfer is an admin action)', async () => {
-    await assertSucceeds(updateDoc(doc(as('admin-1'), 'users', 'patient-1'), { tenantId: 'bgh' }))
+  // Phase 5: a hospital admin can't move anyone to another hospital — a
+  // transfer becomes a platform_admin action (Phase 6).
+  it('gateway admins may NOT move a patient to another hospital', async () => {
+    await assertFails(updateDoc(doc(as('admin-1'), 'users', 'patient-1'), { tenantId: 'bgh' }))
+  })
+
+  it('gateway admins create staff in their own hospital', async () => {
     await assertSucceeds(setDoc(doc(as('admin-1'), 'users', 'staff-2'), { role: 'staff_admin', tenantId: 'hospital-1' }))
   })
 

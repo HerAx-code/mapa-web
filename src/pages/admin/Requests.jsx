@@ -639,7 +639,7 @@ function RequestDetail({ request, agencies, onClose }) {
 
   useEffect(() => {
     const unsub = onSnapshot(
-      query(collection(db, 'applications'), where('requestId', '==', request.id)),
+      query(collection(db, 'applications'), ...tenantWhere(), where('requestId', '==', request.id)),
       snap => setSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => {},
     )
@@ -658,7 +658,7 @@ function RequestDetail({ request, agencies, onClose }) {
   useEffect(() => {
     if (!request.patientId) return
     const unsub = onSnapshot(
-      query(collection(db, 'documents'), where('patientId', '==', request.patientId)),
+      query(collection(db, 'documents'), ...tenantWhere(), where('patientId', '==', request.patientId)),
       snap => setPatientDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => {},
     )

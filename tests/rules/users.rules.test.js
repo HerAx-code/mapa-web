@@ -39,9 +39,14 @@ async function seedUserDoc(uid, data) {
 // where any authenticated user could write /users/{X} with any role.
 describe('users.create — patient self-create only with role=patient', () => {
   it('allows a patient self-create with role=patient', async () => {
+    // Registration carries the access code; the patient joins its hospital
+    // (multi-hospital Phase 5: an untagged code + user both mean hospital #1).
+    await testEnv.withSecurityRulesDisabled(async (c) =>
+      setDoc(doc(c.firestore(), 'hospitalIds', 'MAPA-2026-00001'), { status: 'available', patId: null }))
     const ctx = testEnv.authenticatedContext('new-user-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'new-user-1'), {
       role: 'patient',
+      hospitalId: 'MAPA-2026-00001',
       agencyId: null,
       name: 'Juan Dela Cruz',
       email: 'juan@example.com',

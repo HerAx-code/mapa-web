@@ -80,6 +80,12 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
 - Order is data → queries → rules. Never tighten rules on `tenantId` before the
   data and queries carry it, and never merge a rules change without the tenancy
   rules tests proving cross-hospital access is denied.
+- **Rules on existing docs are strict on `tenantId` — never give `resource.data`
+  a default** (`get('tenantId', 'hospital-1')`). Rules are checked against a
+  query's filters, where an unfiltered field reads as absent, so a default makes
+  unfiltered admin queries pass and leak other hospitals' docs (reproduced in
+  tests/rules/tenantBoundary.rules.test.js). Every gateway query on tenant data
+  must spread `tenantWhere()` (src/utils/hospitals.js).
 
 ## Co-funding model (current)
 The gateway (the host organization) is the single intake point; agencies only

@@ -3,8 +3,10 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off)
-(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 5 next.
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 6 next.
+**Merge/deploy:** Phases 0–4 are safe to ship as-is; Phase 5 rules ship only in
+the coordinated rollout described under Phase 5.
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -161,22 +163,53 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
     stay on each request's timeline (queried by `requestId`). Phase 9: a Cloud
     Function stamps the case's tenant from `requestId`.
 
-### Phase 5 — Rules enforce the boundary (the real security line)
-- Helpers: `userTenantId()`; `isHospitalAdmin(hid)` =
-  `isAdmin() && userTenantId() == tid`; `isPlatformAdmin()`.
-- Replace every bare `isAdmin()` on tenant data with
-  `isHospitalAdmin(resource.data.tenantId)`.
-- `users` read rule: staff may read users **of their own hospital**; agencies may
-  read only patients who have a request endorsed to them (today: all users).
-- `hospitalIds` (access codes): admin of the owning hospital only.
-- **Tests first:** `tests/rules/tenancy.test.js` — for every tenant collection,
-  Hospital B's admin is DENIED read/write on Hospital A's doc; agency of a
-  non-partner hospital is denied; patient sees only own data. This PR does not
-  merge unless every cross-tenant case is denied.
-- Note: each `get(users/uid)` in rules is a billed read and counts toward the
-  10-gets-per-request limit. If rule cost becomes a problem, move `role`,
-  `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) — tracked
-  as a follow-up, not v1.
+### Phase 5 — Rules enforce the boundary ✅ 2026-11-14 (not deployed)
+- Helpers in `firestore.rules`: `defaultTenant()` (= `'hospital-1'`, must equal
+  `VITE_DEFAULT_HOSPITAL_ID`), `userTenantId()`, `isHospitalAdmin(data)`,
+  `isHospitalSuperAdmin(data)`, `createsInOwnHospital()`, `hospitalAdminWrite()`.
+- Every gateway `isAdmin()` on tenant data is now hospital-scoped: users, requests,
+  applications, documents, documentContents, certificates, reports, auditLog,
+  hospitalIds (+ privateInfo), referralSuggestions, announcements (gateway ones),
+  conversation/message deletes, hospitals (own doc only).
+- Writes stay in the writer's hospital: patients file requests/documents and
+  register (via the access code's tenant) only in their hospital; admins can't
+  create in or move records/users to another hospital (transfers → Phase 6);
+  agency-written GLs and referral suggestions must carry the **case's** tenant.
+- Unchanged by design: agencies keep agencyId-based access across hospitals;
+  network config (agencies, agenciesPublic, documentTypes, assistanceTypes),
+  notificationErrors, docReviewPresence; hospitalIds single-doc `get` stays open to
+  signed-in users (registration verifies a code before the patient has a hospital).
+- **Leak found and fixed during testing.** The first version defaulted a missing
+  doc `tenantId` to hospital #1. Rules are evaluated against a query's *filters*,
+  where an unfiltered field reads as absent — so every **unfiltered** admin query
+  passed and returned other hospitals' docs (reproduced on the emulator: hospital
+  A's admin listed hospital B's request). Gateway access to existing docs is now
+  **strict** (`resource.data.tenantId == userTenantId()`, no default); the default
+  survives only for the signed-in user's doc and for new docs.
+- Client: the remaining admin lookups keyed only by patient/request
+  (Patients, Requests detail) now also carry `tenantWhere()` — required, since an
+  admin query without a tenant filter is denied.
+- Tests: `tests/rules/tenantBoundary.rules.test.js` (54) — every tenant collection
+  cross-hospital read/update/delete denied, own-hospital and other-hospital
+  queries, unfiltered queries denied, agency cross-hospital access kept,
+  registration/creates/moves. Older rules-test fixtures now model the
+  post-backfill state (`tenantId: 'hospital-1'`). 308/308 rules tests pass.
+- **Rollout is one coordinated step — never deploy these rules on their own:**
+  (1) Phases 1–4 deployed, (2) seed hospital #1, (3) backfill `--apply` and
+  re-verify 0 left, (4) deploy indexes and wait for them to build, (5) set
+  `VITE_TENANT_SCOPING=true` + redeploy the app **and** deploy these rules
+  together. Rules without the flag → every gateway list query is denied; rules
+  before the backfill → untagged records unreachable by staff.
+- Accepted gaps (follow-ups):
+  - Agencies can still read every `users` doc (needed for the inbox patient
+    lookup). Scoping it to patients endorsed to the agency needs a denormalized
+    field — Phase 7.
+  - Any hospital's admin can still edit network config (agencies, reference data)
+    until `platform_admin` exists — Phase 6.
+- Note: each `get(users/uid)` in rules is a billed read (cached within one
+  evaluation, so role + tenant cost one). If rule cost becomes a problem, move
+  `role`, `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) —
+  tracked as a follow-up, not v1.
 
 ### Phase 6 — Roles: `platform_admin` + hospital-scoped admins
 - Add `ROLES.PLATFORM_ADMIN`; new `/platform/*` pages: Hospitals list, Add Hospital,

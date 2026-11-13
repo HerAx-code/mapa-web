@@ -37,6 +37,7 @@ async function seedDocumentMeta(docId, patientId, agencyIds = []) {
       name: 'Test Doc',
       status: 'verified',
       agencyIds,
+      tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
     })
   })
 }
@@ -46,6 +47,7 @@ async function seedDocumentContent(docId, patientId, content = 'data:text/plain;
     await setDoc(doc(ctx.firestore(), 'documentContents', docId), {
       patientId,
       content,
+      tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
     })
   })
 }

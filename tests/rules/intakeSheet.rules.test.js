@@ -37,6 +37,7 @@ async function seed(intakeSheet) {
     await setDoc(doc(db, 'users', 'admin-1'),   { role: 'staff_admin' })
     await setDoc(doc(db, 'requests', 'req-1'), {
       patientId: 'patient-1', status: 'under_review', agencyIds: [],
+      tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
       ...(intakeSheet ? { intakeSheet } : {}),
     })
   })

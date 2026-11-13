@@ -31,6 +31,7 @@ async function seedHospitalId(id, overrides = {}) {
     await setDoc(doc(ctx.firestore(), 'hospitalIds', id), {
       status: 'available',
       patId: null,
+      tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
       ...overrides,
     })
   })
@@ -104,7 +105,7 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     )))
   })
 
-  it('allows an admin to read any privateInfo', async () => {
+  it("allows an admin to read their hospital's privateInfo", async () => {
     await seedUser('admin-1', 'super_admin')
     const ctx = testEnv.authenticatedContext('admin-1')
     await assertSucceeds(getDoc(doc(
