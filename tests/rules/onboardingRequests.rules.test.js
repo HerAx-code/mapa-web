@@ -86,3 +86,54 @@ describe('onboardingRequests — the platform admin works the queue', () => {
     await assertFails(updateDoc(doc(db, 'onboardingRequests', 'old'), { status: 'approved-ish' }))
   })
 })
+
+// Hospital onboarding (2026-11-15): richer expression of interest, the Super
+// Admin's stages/verification/agreement/documents, and the go-live gate.
+describe('onboarding — expression of interest and stages', () => {
+  it('accepts the NHFR code, phone, positions and signatory; BARMM MOH type', async () => {
+    await assertSucceeds(setDoc(doc(as('anon5'), 'onboardingRequests', 'anon5'), req({
+      hospitalType: 'BARMM MOH', nhfrCode: 'DOH000000000012345', officialPhone: '(064) 421-0000',
+      contactPosition: 'Head, Medical Social Work', signatoryName: 'Dr. B. Cruz', signatoryPosition: 'Chief of Hospital',
+    })))
+    await assertFails(setDoc(doc(as('anon6'), 'onboardingRequests', 'anon6'), req({ nhfrCode: 'x'.repeat(31) })))
+  })
+
+  it('the Super Admin records verification, agreement, documents and stages', async () => {
+    const db = as('plat')
+    const at = doc(db, 'onboardingRequests', 'old')
+    await assertSucceeds(updateDoc(at, {
+      stage: 'verification', verification: { nhfrCode: 'X', nhfrChecked: true },
+      'documents.loi': { name: 'loi.pdf', path: 'onboarding/old/loi-1.pdf' }, notes: 'Called MSS', updatedAt: serverTimestamp(),
+    }))
+    await assertSucceeds(updateDoc(at, { stage: 'live', status: 'onboarded', liveAt: serverTimestamp() }))
+    await assertFails(updateDoc(at, { stage: 'approved' }))
+  })
+
+  it('nobody else can move a hospital through onboarding', async () => {
+    await assertFails(updateDoc(doc(as('superA'), 'onboardingRequests', 'old'), { stage: 'live' }))
+    await assertFails(updateDoc(doc(as('anon1'), 'onboardingRequests', 'old'), { stage: 'live' }))
+  })
+})
+
+describe('hospitals — onboarding status is the Super Admin\'s', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) =>
+      setDoc(doc(ctx.firestore(), 'hospitals', 'hospital-1'), {
+        facilityName: 'A', accessCodePrefix: 'MAPA', enabled: false, onboarding: { stage: 'setup', requestId: 'old' },
+      }))
+  })
+
+  it('the Super Admin opens registration at go-live', async () => {
+    await assertSucceeds(updateDoc(doc(as('plat'), 'hospitals', 'hospital-1'), {
+      enabled: true, liveAt: serverTimestamp(), onboarding: { stage: 'live', requestId: 'old', planTier: 'pilot' },
+    }))
+  })
+
+  it("the hospital's own admin can't open registration or mark itself live", async () => {
+    const at = doc(as('superA'), 'hospitals', 'hospital-1')
+    await assertFails(updateDoc(at, { enabled: true }))
+    await assertFails(updateDoc(at, { onboarding: { stage: 'live', requestId: 'old' } }))
+    await assertFails(updateDoc(at, { liveAt: serverTimestamp() }))
+    await assertSucceeds(updateDoc(at, { facilityName: 'A Hospital' }))
+  })
+})

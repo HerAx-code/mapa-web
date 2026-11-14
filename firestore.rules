@@ -936,13 +936,22 @@ service cloud.firestore {
     // status starts 'new', the time is the server's. Only the platform admin
     // reads them and moves them through the pipeline.
     match /onboardingRequests/{reqId} {
+      // Expression of interest (hospital onboarding, 2026-11-15): also the
+      // NHFR facility code, the official phone, the requester's position and
+      // the authorized signatory — all optional strings except the original.
       allow create: if isAuth() && reqId == uid() &&
-                       request.resource.data.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt']) &&
+                       request.resource.data.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt',
+                                                             'nhfrCode', 'officialPhone', 'contactPosition', 'signatoryName', 'signatoryPosition']) &&
+                       request.resource.data.get('nhfrCode', '') is string && request.resource.data.get('nhfrCode', '').size() <= 30 &&
+                       request.resource.data.get('officialPhone', '') is string && request.resource.data.get('officialPhone', '').size() <= 40 &&
+                       request.resource.data.get('contactPosition', '') is string && request.resource.data.get('contactPosition', '').size() <= 120 &&
+                       request.resource.data.get('signatoryName', '') is string && request.resource.data.get('signatoryName', '').size() <= 120 &&
+                       request.resource.data.get('signatoryPosition', '') is string && request.resource.data.get('signatoryPosition', '').size() <= 120 &&
                        request.resource.data.status == 'new' &&
                        request.resource.data.createdAt == request.time &&
                        request.resource.data.hospitalName is string &&
                        request.resource.data.hospitalName.size() >= 3 && request.resource.data.hospitalName.size() <= 150 &&
-                       request.resource.data.hospitalType in ['DOH-retained', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
+                       request.resource.data.hospitalType in ['DOH-retained', 'BARMM MOH', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
                        request.resource.data.region is string && request.resource.data.region.size() <= 40 &&
                        request.resource.data.contactName is string &&
                        request.resource.data.contactName.size() >= 2 && request.resource.data.contactName.size() <= 120 &&
@@ -950,9 +959,15 @@ service cloud.firestore {
                        request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+') &&
                        request.resource.data.message is string && request.resource.data.message.size() <= 2000;
       allow read, delete: if isPlatformAdmin();
+      // The Super Admin works the onboarding here: stage, verification,
+      // agreement, training, filed documents, go-live. The hospital's own
+      // submitted details stay as sent.
       allow update: if isPlatformAdmin() &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusUpdatedAt', 'hospitalId']) &&
-                       request.resource.data.status in ['new', 'contacted', 'onboarded', 'declined'];
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                         'status', 'statusUpdatedAt', 'hospitalId', 'stage', 'stageHistory', 'verification',
+                         'agreement', 'training', 'documents', 'liveAt', 'notes', 'updatedAt']) &&
+                       request.resource.data.status in ['new', 'contacted', 'onboarded', 'declined'] &&
+                       request.resource.data.get('stage', 'interest') in ['interest', 'verification', 'agreement', 'setup', 'live', 'declined'];
     }
 
     // ── networkStats ───────────────────────────────────────────────────────────
@@ -986,7 +1001,10 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
                'shortName', 'gatewayName', 'gatewayInitials', 'facilityName',
                'contactEmail', 'accessCodePrefix', 'address', 'logoUrl',
-               'region', 'enabled', 'createdAt', 'updatedAt'
+               'region', 'enabled', 'createdAt', 'updatedAt',
+               // Onboarding status + plan (Super Admin only — the hospital's own
+               // admin can't change them; see the update rule's allowlist).
+               'onboarding', 'liveAt'
              ]);
     }
 
