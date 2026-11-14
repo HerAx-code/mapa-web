@@ -10,12 +10,12 @@ import {
   MdArrowBack, MdSave, MdPrint, MdCheckCircle,
   MdInfo, MdAdd, MdDelete, MdLock, MdAutorenew,
   MdGroups, MdWork, MdReceipt, MdMedicalServices, MdAssignment,
-  MdHourglassEmpty, MdErrorOutline, MdSend, MdEdit,
+  MdHourglassEmpty, MdErrorOutline, MdSend, MdEdit, MdReceiptLong, MdVerified,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import {
   MEANS_CATEGORIES, EMPLOYMENT_TYPES, EMPTY_FAMILY_MEMBER, RELATIONSHIPS, EXPENSE_FIELDS,
-  blankSheet, isIntakeComplete, requiredFieldsStatus, meansTestSuggestion, needsMeansTestReason,
+  blankSheet, isIntakeComplete, requiredFieldsStatus, meansTestSuggestion, needsMeansTestReason, billVerified,
   PATIENT_FACT_KEYS, factsOf, sameFact, factChanges, mergeRemoteFacts,
   SHORTFALL_SOURCES, monthlyShortfall,
   FACT_SECTIONS, sectionFacts, sectionVerification, allSectionsVerified, sectionsNeedingCorrection,
@@ -27,6 +27,7 @@ import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
 import { fetchHospitalBranding } from '../../utils/hospitals'
 import { useHospitalBranding } from '../../hooks/useHospitals'
 import { isGatewayAdminRole } from '../../utils/constants'
+import { peso } from '../../utils/format'
 // Phase 2.3: Field + PesoInput live in components/ui/ now so other
 // intake-style forms can share them without re-declaring the helpers.
 import Field from '../../components/ui/Field'
@@ -36,6 +37,9 @@ import AssessmentSnapshot from '../../components/AssessmentSnapshot'
 const AUTOSAVE_MS = 1500
 
 const SECTIONS = [
+  // Revision 11: the bill comes first — staff confirm the amount against the
+  // billing statement before assessing the household (request mode only).
+  { id: 'bill',     label: 'Bill Amount',         Icon: MdReceiptLong       },
   { id: 'family',   label: 'Family Composition',  Icon: MdGroups            },
   { id: 'income',   label: 'Income & Employment', Icon: MdWork              },
   { id: 'expenses', label: 'Monthly Expenses',    Icon: MdReceipt           },
@@ -46,6 +50,7 @@ const SECTIONS = [
 // Maps each required field to the section that contains it, so the merged
 // rail can show how many required fields remain per section.
 const REQ_SECTION = {
+  'verify.bill':     'bill',
   householdSize:     'family',
   monthlyIncome:     'income',
   diagnosis:         'medical',
@@ -62,6 +67,7 @@ const REQ_SECTION = {
 // Staff-only intake fields set by their own actions rather than the form.
 const STAFF_CONTROL_KEYS = [
   'factsVerification', 'factsLocked', 'factsLockedAt', 'factsLockedBy',
+  'billVerification', 'billVerificationRequired',
   'encodedOnBehalf', 'correctionRequestedAt', 'correctionRequestedBy',
 ]
 
@@ -89,7 +95,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // patientFacts: the patient fills the socioeconomic + medical facts on their
   // own request (the Assessment section stays the gateway-only and is hidden here).
   const backList = patientFacts ? '/patient/request' : isRequestMode ? '/admin/requests' : '/agency/inbox'
-  const visibleSections = patientFacts ? SECTIONS.filter(s => s.id !== 'assess') : SECTIONS
+  // Revision 10: back to THIS applicant's request, not the whole list.
+  const backToRequest = isRequestMode && !patientFacts ? `/admin/requests?open=${id}` : backList
+  const visibleSections = patientFacts
+    ? SECTIONS.filter(s => s.id !== 'assess' && s.id !== 'bill')
+    : isRequestMode ? SECTIONS : SECTIONS.filter(s => s.id !== 'bill')
 
   const [app, setApp]           = useState(null)
   // Phase 8: the case's hospital (an agency viewer has no hospital of its own).
@@ -221,7 +231,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const canEditFacts = !!canEdit && (!isRequestMode || (encodeMode && !remoteIntake.patientFilledAt))
   // Verification state comes from the STORED sheet (staff-only fields).
   const verificationRequired = isRequestMode && (remoteIntake.verificationRequired ?? !isIntakeComplete(app?.intakeSheet))
-  const verifySheet = { ...remoteIntake, verificationRequired }
+  const billVerificationRequired = isRequestMode && (remoteIntake.billVerificationRequired ?? !isIntakeComplete(app?.intakeSheet, app?.totalBill))
+  const verifySheet = { ...remoteIntake, verificationRequired, billVerificationRequired }
 
   // Autosave (debounced)
   // acknowledge: the worker clicked "Mark as reviewed" on the patient-changes
@@ -266,6 +277,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         // Grandfathering: only sheets that weren't already complete when staff
         // first worked them need section verification before endorsement.
         payload.verificationRequired = remote.verificationRequired ?? !isIntakeComplete(remote)
+        // Revision 11: same grandfathering for the bill confirmation.
+        payload.billVerificationRequired = remote.billVerificationRequired ?? !isIntakeComplete(remote, appRef.current?.totalBill)
       }
 
       // reviewedFacts = the patient facts as the social worker last reviewed
@@ -492,6 +505,34 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     if (dirtyRef.current) await performSave()
   }
 
+  // Revision 11: confirm the request's bill against the uploaded billing
+  // statement. Recorded with who/when and the amount confirmed; a later edit
+  // of the bill on the request makes it unconfirmed again (billVerified).
+  const verifyBill = async () => {
+    if (!canEdit || !isRequestMode || app?.totalBill == null) return
+    await flushSave()
+    const remote = appRef.current?.intakeSheet ?? {}
+    const updates = {
+      'intakeSheet.billVerification': {
+        amount: Number(app.totalBill), by: user.name, byUid: user.uid, at: serverTimestamp(),
+      },
+      updatedAt: serverTimestamp(),
+    }
+    if (remote.billVerificationRequired === undefined) updates['intakeSheet.billVerificationRequired'] = !isIntakeComplete(remote, app.totalBill)
+    try {
+      await updateDoc(doc(db, collectionName, app.id), updates)
+      logAudit(user, {
+        action: 'intake_bill_verified', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+        details: `Bill ${peso(app.totalBill)} confirmed against the billing statement`,
+        requestId: app.id, patientId: app.patientId ?? null,
+      })
+      toast.success('Bill amount verified.')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to save the bill verification.')
+    }
+  }
+
   // Revision 9b: verify a section, or flag it for the patient to correct.
   // Stores a copy of the section's answers so a later patient change reads
   // as "changed — check again" (sectionVerification) without another write.
@@ -506,6 +547,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     }
     const updates = { [`intakeSheet.factsVerification.${sectionKey}`]: entry, updatedAt: serverTimestamp() }
     if (remote.verificationRequired === undefined) updates['intakeSheet.verificationRequired'] = !isIntakeComplete(remote)
+    if (remote.billVerificationRequired === undefined) updates['intakeSheet.billVerificationRequired'] = !isIntakeComplete(remote, app.totalBill)
     // 9d: once every section is verified, the answers lock again.
     const after = { ...remote, factsVerification: { ...(remote.factsVerification ?? {}), [sectionKey]: entry } }
     const lockNow = allSectionsVerified(after) && remote.factsLocked !== true
@@ -640,9 +682,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
       ...sheet,
       factsVerification: remoteIntake.factsVerification,
       verificationRequired,
+      billVerification: remoteIntake.billVerification,
+      billVerificationRequired,
       completedBy: intakeSource?.completedBy ?? user?.name,
-    }, user?.name),
-    [sheet, remoteIntake.factsVerification, verificationRequired, intakeSource?.completedBy, user?.name]
+    }, user?.name, isRequestMode ? app?.totalBill : undefined),
+    [sheet, remoteIntake.factsVerification, remoteIntake.billVerification, verificationRequired, billVerificationRequired, intakeSource?.completedBy, user?.name, isRequestMode, app?.totalBill]
   )
   const verifyBar = (key) => (isRequestMode
     ? <SectionVerify state={sectionVerification(verifySheet, key)} canAct={!!canEdit}
@@ -665,7 +709,9 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const billAmount = billSource?.amountNeeded ?? billSource?.totalBill ?? sheet.estimatedTotalCost
 
   // Section completion (rough — used for nav indicators)
+  const billOk = billVerified(remoteIntake, app?.totalBill)
   const sectionDone = {
+    bill:     billOk,
     family:   !!sheet.householdSize && Number(sheet.householdSize) > 0,
     income:   sheet.monthlyIncome !== '' && Number(sheet.monthlyIncome) >= 0,
     expenses: totalExpenses > 0,
@@ -694,9 +740,9 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         <div className="sticky top-0 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-gray-50/95 backdrop-blur border-b border-gray-100 z-20 mb-5 print:hidden">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
-              <Link to={isRequestMode ? backList : `/agency/applications/${app.id}`}
+              <Link to={isRequestMode ? backToRequest : `/agency/applications/${app.id}`}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-brand-600 font-medium">
-                <MdArrowBack size={14} /> {patientFacts ? 'Back to my request' : isRequestMode ? 'Back to requests' : 'Back to application'}
+                <MdArrowBack size={14} /> {patientFacts ? 'Back to my request' : isRequestMode ? 'Back to request' : 'Back to application'}
               </Link>
               <span className="text-gray-300">/</span>
               <p className="text-sm font-semibold text-gray-800 truncate">{app.patientName}</p>
@@ -812,13 +858,20 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     )
                   })}
                 </nav>
-                {complete && (
+                {complete && (isRequestMode && canEdit ? (
+                  // Revision 12: endorse straight from the assessment — opens the
+                  // request with the endorse step (documents must be verified too).
+                  <Link to={`/admin/requests?open=${app.id}&endorse=1`}
+                    className="btn-primary text-sm mt-3 w-full flex items-center justify-center gap-1.5">
+                    <MdSend size={14} /> Endorse to agencies
+                  </Link>
+                ) : (
                   <p className="text-xs text-green-600 mt-3 leading-relaxed">
                     {isRequestMode
-                      ? '✓ Ready to endorse. Return to the request to endorse it to agencies.'
+                      ? '✓ Assessment complete.'
                       : '✓ Ready for approval. Return to the application to issue a Guarantee Letter.'}
                   </p>
-                )}
+                ))}
               </div>
 
               {/* Financial snapshot + advisory means-test suggestion — a gateway
@@ -974,6 +1027,53 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               <p className="text-xs text-gray-500">Agency: {app.agencyName}</p>
               <hr className="my-3 border-gray-300" />
             </div>
+
+            {/* Section: Bill amount (revision 11) — first, so the amount the
+                whole assessment is about is confirmed before anything else. */}
+            {isRequestMode && !patientFacts && (
+            <section ref={el => sectionRefs.current.bill = el} id="bill" className="card p-5 scroll-mt-24">
+              <div className="flex items-center gap-2 mb-4">
+                <MdReceiptLong className="text-brand-500" size={18} />
+                <h2 className="text-sm font-semibold text-gray-800">Bill Amount</h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Total bill (declared)</p>
+                  <p className="text-lg font-bold text-gray-900 tabular-nums">{app.totalBill != null ? peso(app.totalBill) : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">PhilHealth + other coverage</p>
+                  <p className="text-lg font-bold text-gray-900 tabular-nums">{peso((Number(app.philhealthCovered) || 0) + (Number(app.otherCovered) || 0))}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Amount needed</p>
+                  <p className="text-lg font-bold text-brand-700 tabular-nums">{app.amountNeeded != null ? peso(app.amountNeeded) : '—'}</p>
+                </div>
+              </div>
+              {billOk ? (
+                <p className="mt-4 flex items-center gap-1.5 text-sm text-green-700">
+                  <MdVerified size={16} /> Verified against the billing statement by {remoteIntake.billVerification.by}
+                  {tsToDate(remoteIntake.billVerification.at) ? ` · ${tsToDate(remoteIntake.billVerification.at).toLocaleDateString()}` : ''}
+                </p>
+              ) : (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    {remoteIntake.billVerification
+                      ? `The bill changed after it was verified (${peso(remoteIntake.billVerification.amount)} → ${peso(app.totalBill)}). Check it again.`
+                      : 'Open the billing statement (Statement of Account) on the request and check that the total matches the amount above.'}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {canEdit && app.totalBill != null && (
+                      <button type="button" className="btn-primary text-xs flex items-center gap-1.5" onClick={verifyBill}>
+                        <MdCheckCircle size={14} /> Amount matches — verify
+                      </button>
+                    )}
+                    <Link to={backToRequest} className="btn-secondary text-xs">Open the documents / correct the amount</Link>
+                  </div>
+                </div>
+              )}
+            </section>
+            )}
 
             {/* Section: Family */}
             <section ref={el => sectionRefs.current.family = el} id="family" className="card p-5 scroll-mt-24">
@@ -1192,13 +1292,27 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <h2 className="text-sm font-semibold text-gray-800">Social Worker Assessment</h2>
               </div>
               <div className="space-y-3">
+                {/* Revision 14: pick the category with a button (the suggested one
+                    is marked); choosing another requires a reason below. */}
                 <Field label="Means-Test Category" required
-                  hint="Manually classified by the social worker based on income, household size, and observed conditions.">
-                  <SearchableSelect
-                    value={sheet.meansTestCategory}
-                    onChange={v => set('meansTestCategory')({ target: { value: v } })}
-                    disabled={!canEdit}
-                    options={MEANS_CATEGORIES.map(c => ({ value: c.value, label: c.label }))} />
+                  hint="Choose a category. The suggestion comes from income ÷ household size; a different choice needs a written reason.">
+                  <div role="radiogroup" aria-label="Means-Test Category" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {MEANS_CATEGORIES.filter(c => c.value).map(c => {
+                      const on = sheet.meansTestCategory === c.value
+                      const [name, desc] = c.label.split('—').map(x => x.trim())
+                      return (
+                        <button key={c.value} type="button" role="radio" aria-checked={on} disabled={!canEdit}
+                          onClick={() => set('meansTestCategory')({ target: { value: c.value } })}
+                          className={`text-left rounded-lg border px-3 py-2 min-h-[44px] transition-colors disabled:opacity-60 ${on ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                          <span className={`flex items-center gap-1.5 text-xs font-semibold ${on ? 'text-brand-800' : 'text-gray-800'}`}>
+                            {on && <MdCheckCircle size={14} className="text-brand-600" />}{name}
+                            {suggestion?.category === c.value && <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">Suggested</span>}
+                          </span>
+                          {desc && <span className="block text-[11px] text-gray-500 mt-0.5">{desc}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
                   {suggestion && (
                     <p className="text-xs text-gray-600 mt-1.5">
                       Suggested from income ÷ household size: <strong>{meansShortLabel(suggestion.category)}</strong>
@@ -1242,7 +1356,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <p className="text-xs text-blue-700 leading-relaxed">
                   Changes save automatically as you type. {complete
                     ? (isRequestMode
-                        ? 'All required fields are filled — return to the request and endorse it to agencies.'
+                        ? 'All required fields are filled — use “Endorse to agencies” to endorse this request.'
                         : 'All required fields are filled — you can return to the application and click Approve & Issue GL.')
                     : `Fill the ${required.length - completedCount} remaining required field${required.length - completedCount === 1 ? '' : 's'} to unlock ${isRequestMode ? 'endorsement' : 'approval'}.`}
                 </p>
