@@ -41,3 +41,6 @@ backups/
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Private one-click dev logins (DemoAccountsPanel) — real passwords, never commit
+demo-accounts.local.json

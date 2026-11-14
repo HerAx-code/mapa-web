@@ -421,7 +421,8 @@ export default function Login() {
             {(import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true') && (
               <DemoAccountsPanel busy={loading} onPick={(email, password) => {
                 setForm({ email, password })
-                signIn(email, password)
+                // No saved password (private list): just fill the email.
+                if (password) signIn(email, password)
               }} />
             )}
 

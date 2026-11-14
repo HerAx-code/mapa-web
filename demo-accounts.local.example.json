@@ -1,0 +1,11 @@
+{
+  "_readme": "Copy to demo-accounts.local.json (gitignored) to get one-click dev sign-in with YOUR test logins on the Log in page (needs VITE_SHOW_DEMO_ACCOUNTS=true). Never commit real passwords. A blank password makes the button fill in the email only. role: platform_admin (Super Admin) | super_admin (Hospital Admin) | staff_admin | agency_admin | agency | patient.",
+  "accounts": [
+    { "role": "platform_admin", "email": "superadmin@example.org", "password": "", "label": "Network operator" },
+    { "role": "super_admin", "email": "hospital-admin@example.org", "password": "" },
+    { "role": "staff_admin", "email": "staff@example.org", "password": "" },
+    { "role": "agency_admin", "email": "agency-admin@example.org", "password": "", "agencyId": "dswd" },
+    { "role": "agency", "email": "coordinator@example.org", "password": "", "agencyId": "dswd" },
+    { "role": "patient", "email": "patient@example.org", "password": "" }
+  ]
+}

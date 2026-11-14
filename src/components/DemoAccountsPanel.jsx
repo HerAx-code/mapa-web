@@ -2,13 +2,39 @@ import { useEffect, useState } from 'react'
 import { MdWarning } from 'react-icons/md'
 import { ROLE_LABEL_SHORT } from '../utils/constants'
 
-// DEV ONLY — one-click sign-in as any demo account. The list is the SAME one
-// scripts/bootstrap-users.js seeds (scripts/demo-accounts.js), so the buttons
-// can never drift from the accounts that exist again.
+// DEV ONLY — one-click sign-in for local development.
 //
-// Render this only behind a build-time flag (see Login.jsx): the list is
-// loaded with a dynamic import inside that guard, so a production build
-// (flag off) drops it entirely and no demo password ships to users.
+// Where the accounts come from, in order:
+//   1. demo-accounts.local.json at the repo root — YOUR private list of real
+//      test logins (gitignored, never committed; shape in
+//      demo-accounts.local.example.json). Use this when your local app points
+//      at a real project such as production.
+//   2. scripts/demo-accounts.js — the published demo list that
+//      scripts/bootstrap-users.js seeds. Only works on a database seeded by it
+//      (an emulator / dev project), never on production.
+//
+// Render this only behind a build-time flag (see Login.jsx): both sources are
+// loaded lazily inside that guard, so a production build (flag off) drops them
+// and no password ships to users.
+
+// Vite resolves this at build time; {} when the private file doesn't exist.
+const LOCAL_FILES = import.meta.glob('/demo-accounts.local.json', { import: 'default' })
+
+export async function loadDemoAccounts() {
+  const local = Object.values(LOCAL_FILES)[0]
+  if (local) {
+    const data = await local()
+    return { source: 'local', accounts: Array.isArray(data?.accounts) ? data.accounts : [] }
+  }
+  const { USERS } = await import('../../scripts/demo-accounts.js')
+  return {
+    source: 'seeded',
+    accounts: USERS.map((u) => ({
+      email: u.email, password: u.password, role: u.profile.role,
+      agencyId: u.profile.agencyId, active: u.profile.active, loginPanel: u.loginPanel,
+    })),
+  }
+}
 
 // Display order: the network first, then a hospital, then agencies, then the patient.
 const GROUPS = [
@@ -20,52 +46,61 @@ const GROUPS = [
 
 const AGENCY_NAMES = { doh: 'DOH', ambag: 'AMBaG', pcso: 'PCSO', dswd: 'DSWD', philhealth: 'PhilHealth', malasakit: 'Malasakit' }
 
-const labelFor = (u) => {
-  const role = ROLE_LABEL_SHORT[u.profile.role] ?? u.profile.role
-  if (u.profile.agencyId) return `${AGENCY_NAMES[u.profile.agencyId] ?? u.profile.agencyId} · ${u.profile.role === 'agency_admin' ? 'Admin' : 'Coordinator'}`
-  return role
+const titleFor = (a) => {
+  if (a.agencyId) {
+    const agency = AGENCY_NAMES[a.agencyId] ?? a.agencyId
+    return `${agency} · ${a.role === 'agency_admin' ? 'Admin' : 'Coordinator'}`
+  }
+  return ROLE_LABEL_SHORT[a.role] ?? a.role
 }
 
-export default function DemoAccountsPanel({ onPick, busy = false }) {
-  const [users, setUsers] = useState(null)
+export default function DemoAccountsPanel({ onPick, busy = false, load = loadDemoAccounts }) {
+  const [state, setState] = useState(null)
 
   useEffect(() => {
     let alive = true
-    import('../../scripts/demo-accounts.js')
-      .then(({ USERS }) => {
+    load()
+      .then((res) => {
         if (!alive) return
-        // Hide accounts that can't sign in (active:false) or whose agency is
-        // switched off as a funder (loginPanel:false).
-        setUsers(USERS.filter((u) => u.profile.active !== false && u.loginPanel !== false))
+        // Hide accounts that can't sign in (active:false) or are switched off
+        // (loginPanel:false), and anything without a role or email.
+        setState({ ...res, accounts: res.accounts.filter((a) => a.email && a.role && a.active !== false && a.loginPanel !== false) })
       })
-      .catch((err) => { console.warn('[DemoAccountsPanel] could not load demo accounts:', err); if (alive) setUsers([]) })
+      .catch((err) => { console.warn('[DemoAccountsPanel] could not load accounts:', err); if (alive) setState({ source: 'none', accounts: [] }) })
     return () => { alive = false }
-  }, [])
+  }, [load])
 
-  if (!users) return null
+  if (!state) return null
   return (
     <div className="mt-8 card p-4 border border-amber-200 bg-amber-50">
       <p className="text-xs font-medium text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
         <MdWarning size={13} aria-hidden="true" /> Demo accounts — dev only
       </p>
-      <p className="text-xs text-amber-800/80 mt-1 mb-3">Click one to sign in. Seeded by scripts/bootstrap-users.js.</p>
+      <p className="text-xs text-amber-800/80 mt-1 mb-3">
+        {state.source === 'local'
+          ? 'Your private list (demo-accounts.local.json). Accounts without a saved password just fill in the email.'
+          : 'Seeded demo list — works only on a database seeded by scripts/bootstrap-users.js. For a real project, create demo-accounts.local.json.'}
+      </p>
+      {state.accounts.length === 0 && <p className="text-xs text-amber-900">No accounts to show.</p>}
       <div className="space-y-3">
         {GROUPS.map((g) => {
-          const list = users.filter((u) => g.roles.includes(u.profile.role))
+          const list = state.accounts.filter((a) => g.roles.includes(a.role))
           if (!list.length) return null
           return (
             <div key={g.key}>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70 mb-1.5">{g.label}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {list.map((u) => (
+                {list.map((a) => (
                   <button
-                    key={u.email}
+                    key={a.email}
                     type="button"
                     disabled={busy}
                     className="text-left px-3 py-2 min-h-[44px] rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 transition-colors text-xs border border-amber-100 disabled:opacity-60"
-                    onClick={() => onPick(u.email, u.password)}>
-                    <p className="font-medium truncate">{labelFor(u)}</p>
-                    <p className="text-gray-500 truncate">{u.email}</p>
+                    onClick={() => onPick(a.email, a.password || '')}>
+                    <p className="font-medium truncate">
+                      {titleFor(a)}{a.label ? <span className="font-normal text-gray-500"> · {a.label}</span> : null}
+                    </p>
+                    <p className="text-gray-500 truncate">{a.email}{a.password ? '' : ' · enter password'}</p>
                   </button>
                 ))}
               </div>
