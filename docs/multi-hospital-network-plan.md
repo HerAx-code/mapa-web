@@ -209,6 +209,20 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   `VITE_TENANT_SCOPING=true` + redeploy the app **and** deploy these rules
   together. Rules without the flag → every gateway list query is denied; rules
   before the backfill → untagged records unreachable by staff.
+- **⚠ Merging to `main` IS the rules deploy.** `.github/workflows/deploy-rules.yml`
+  tests and deploys `firestore.rules` to production on every push to `main` that
+  touches the rules (it is active: the Phases 0–4 merge, PR #351, deployed its
+  harmless rules on 2026-11-14). So the Phases 5–9 PR (#352) must be merged LAST,
+  as the final step of the window — never "merged now, deployed later":
+  1. Steps (2)–(4b) above, all verified (seed, both backfills at 0 left, indexes
+     built, platform admin created).
+  2. Set `VITE_TENANT_SCOPING=true` in Vercel (Production). Takes effect on the
+     next production build — which the merge below triggers.
+  3. Merge #352 → GitHub deploys the rules and Vercel redeploys the app with the
+     flag, together.
+  4. Preview-test every staff page as a hospital admin, an agency user and the
+     platform admin. Rollback = revert the merge commit (redeploys the previous
+     rules) and set the flag back to `false`.
 - Accepted gaps (follow-ups):
   - ~~Agencies can still read every `users` doc~~ — closed in Phase 7 (only
     patients endorsed to the agency, via `users.agencyIds`).
