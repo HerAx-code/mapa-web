@@ -38,22 +38,25 @@ async function seedUserDoc(uid, data) {
 // admin / agency_admin elevated create. Closes the documented residual
 // where any authenticated user could write /users/{X} with any role.
 describe('users.create — patient self-create only with role=patient', () => {
-  it('allows a patient self-create with role=patient', async () => {
-    // Registration carries the access code; the patient joins its hospital
-    // (multi-hospital Phase 5: an untagged code + user both mean hospital #1).
-    await testEnv.withSecurityRulesDisabled(async (c) => {
-      await setDoc(doc(c.firestore(), 'hospitalIds', 'MAPA-2026-00001'), { status: 'available', patId: null })
-      // Phase 8: registration checks the code's hospital is open.
-      await setDoc(doc(c.firestore(), 'hospitals', 'hospital-1'), { accessCodePrefix: 'MAPA', enabled: true })
-    })
+  it('allows a patient self-create with role=patient (network account, no code)', async () => {
+    // Marketplace: registration needs no access code and joins no hospital —
+    // the patient claims a hospital's code per request.
     const ctx = testEnv.authenticatedContext('new-user-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'new-user-1'), {
       role: 'patient',
-      hospitalId: 'MAPA-2026-00001',
       agencyId: null,
       name: 'Juan Dela Cruz',
       email: 'juan@example.com',
     }))
+  })
+
+  it('rejects a self-create that sets a code, hospital or agency links', async () => {
+    const db = testEnv.authenticatedContext('new-user-2').firestore()
+    const base = { role: 'patient', agencyId: null, name: 'Ana' }
+    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, hospitalId: 'MAPA-2026-00001' }))
+    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, tenantId: 'hospital-1' }))
+    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, tenantIds: ['hospital-1'] }))
+    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, agencyIds: ['dswd'] }))
   })
 
   it("rejects a self-create with role='super_admin' (the privilege-escalation vector)", async () => {

@@ -8,7 +8,7 @@ import {
   MdPhone, MdLocationOn, MdLocalHospital, MdCalendarToday, MdBadge,
 } from 'react-icons/md'
 import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
-import { tenantWhere } from '../../utils/hospitals'
+import { tenantWhere, patientWhere } from '../../utils/hospitals'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -195,7 +195,8 @@ export default function Patients() {
   const [confirmDeletion,      setConfirmDeletion]      = useState(null)
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'patient'))
+    // Marketplace: every patient who has filed with this hospital.
+    const q = query(collection(db, 'users'), ...patientWhere())
     const unsub = onSnapshot(q, snap => {
       setPatients(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
       setLoading(false)

@@ -1,6 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore'
+import { claimCode } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -120,21 +121,29 @@ describe('each hospital issues codes under its own prefix', () => {
   })
 })
 
-describe('a disabled hospital takes no new registrations', () => {
-  const patient = (code, tenantId) => ({ role: 'patient', hospitalId: code, agencyId: null, name: 'Juan', tenantId })
-
-  it('an open hospital registers normally', async () => {
-    await assertSucceeds(setDoc(ref('new1', 'users/new1'), patient('MAPA-2026-00001', A)))
+// Marketplace: patients join a hospital per request by claiming its code;
+// a paused hospital's codes can't be claimed.
+describe('a disabled hospital takes no new patients', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'users', 'new1'), { role: 'patient', name: 'Juan', agencyId: null })
+      await setDoc(doc(db, 'users', 'new2'), { role: 'patient', name: 'Ana', agencyId: null })
+    })
   })
 
-  it("a disabled hospital's code can't be used to sign up", async () => {
-    await assertFails(setDoc(ref('new2', 'users/new2'), patient('CLS-2026-00001', 'closed')))
+  it("an open hospital's code is claimed normally", async () => {
+    await assertSucceeds(claimCode(as('new1'), { uid: 'new1', code: 'MAPA-2026-00001', tenantId: A, tenantIds: [A] }))
+  })
+
+  it("a disabled hospital's code can't be claimed", async () => {
+    await assertFails(claimCode(as('new2'), { uid: 'new2', code: 'CLS-2026-00001', tenantId: 'closed', tenantIds: ['closed'] }))
   })
 })
 
 // Landing page projection: world-readable, and it must mirror its hospital.
 describe('hospitalsPublic — public, and always equal to the hospital doc', () => {
-  const pub = { facilityName: '', shortName: '', accessCodePrefix: 'MAPA', enabled: true }
+  const pub = { facilityName: '', shortName: '', accessCodePrefix: 'MAPA', enabled: true, gatewayName: 'MSS A' }
 
   it('anyone, signed out included, can read it', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) =>
@@ -143,7 +152,7 @@ describe('hospitalsPublic — public, and always equal to the hospital doc', () 
   })
 
   it('the platform admin and the own super admin may write a faithful copy', async () => {
-    await assertSucceeds(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH' }))
+    await assertSucceeds(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH', gatewayName: 'MSS B' }))
     await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), pub))
   })
 
@@ -153,8 +162,17 @@ describe('hospitalsPublic — public, and always equal to the hospital doc', () 
     await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, facilityName: 'Fake Hospital' }))
   })
 
+  // Marketplace: office, location and contact are public too — and mirrored.
+  it('the marketplace fields (office, address, region, email) must mirror the hospital', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) =>
+      updateDoc(doc(ctx.firestore(), 'hospitals', 'hospital-1'), { address: 'Cotabato City', region: 'BARMM' }))
+    await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Somewhere else', region: 'BARMM' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM', contactEmail: 'x@y.ph' }))
+  })
+
   it("another hospital's super admin, patients and extra fields are denied", async () => {
-    await assertFails(setDoc(ref('superA', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH', gatewayName: 'MSS B' }))
     await assertFails(setDoc(ref('new1', 'hospitalsPublic/hospital-1'), pub))
     await assertFails(setDoc(ref('plat', 'hospitalsPublic/hospital-1'), { ...pub, staff: ['x'] }))
   })

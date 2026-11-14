@@ -3,6 +3,7 @@ import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebas
 import {
   doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, collection, query, where, serverTimestamp,
 } from 'firebase/firestore'
+import { fileRequest } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -201,17 +202,18 @@ describe('writes stay inside the writer\'s hospital', () => {
     await assertFails(setDoc(ref('adminB', 'users/newCoord'), { role: 'agency_admin', agencyId: 'dswd' }))
   })
 
-  it('a patient can only file requests and upload documents in their own hospital', async () => {
+  it("a patient files only at their current hospital, with that hospital's code", async () => {
     const req = { patientId: 'patA', status: 'submitted', agencyIds: [], amountCommitted: 0 }
-    await assertFails(setDoc(ref('patA', 'requests/x1'), { ...req, tenantId: B }))
-    await assertSucceeds(setDoc(ref('patA', 'requests/x2'), { ...req, tenantId: A }))
+    await assertFails(fileRequest(as('patA'), { reqId: 'x1', code: 'CODE-A', data: { ...req, tenantId: B } }))
+    await assertSucceeds(fileRequest(as('patA'), { reqId: 'x2', code: 'CODE-A', data: { ...req, tenantId: A } }))
     await assertFails(setDoc(ref('patA', 'documents/x3'), { patientId: 'patA', status: 'pending', tenantId: B }))
   })
 
-  it("registration: the patient joins the access code's hospital, nothing else", async () => {
-    const reg = (uid, code, tenantId) => setDoc(ref(uid, `users/${uid}`), { role: 'patient', hospitalId: code, tenantId })
-    await assertFails(reg('newPat1', 'CODE-B2', A))
-    await assertSucceeds(reg('newPat2', 'CODE-B2', B))
+  // Marketplace: registration joins no hospital (codes are claimed per request).
+  it('registration joins no hospital; a hospital or code at sign-up is refused', async () => {
+    await assertFails(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', hospitalId: 'CODE-B2', tenantId: B }))
+    await assertFails(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', tenantId: B }))
+    await assertSucceeds(setDoc(ref('newPat2', 'users/newPat2'), { role: 'patient', name: 'Pat' }))
   })
 
   it('audit entries and reports can only be tagged with the writer\'s own hospital', async () => {

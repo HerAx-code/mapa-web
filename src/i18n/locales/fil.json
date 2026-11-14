@@ -681,7 +681,78 @@
     }
   },
   "patient": {
+    "gate": {
+      "heading": "Piliin ang inyong ospital",
+      "title": "Saan ninyo ifa-file ang request na ito?",
+      "subtitle": "Piliin ang ospital, saka ilagay ang access code na ibinigay ng social-services office nito. Isang request lang bawat code.",
+      "hospitalLabel": "Ospital",
+      "compare": "Ihambing ang mga ospital",
+      "loadingHospitals": "Nilo-load ang mga ospital…",
+      "codeLabel": "Access code mula sa {{hospital}}",
+      "codeHint": "Ibinigay nang personal ng {{office}}.",
+      "officeFallback": "social-services office",
+      "yourHospital": "ang ospital",
+      "noCode": "Wala pang code? Pumunta sa {{office}} ng {{hospital}} at humingi ng Patient Access Code.",
+      "keepCurrent": "Manatili sa kasalukuyang ospital",
+      "useCode": "Gamitin ang code",
+      "checking": "Sinusuri…",
+      "claimed": "Napili na ang ospital. Maaari na kayong mag-file ng request.",
+      "filingAt": "Ifa-file sa",
+      "change": "Palitan",
+      "errNoCode": "Piliin muna ang ospital at ilagay ang access code nito.",
+      "switchTo": "Piliin ang {{hospital}}",
+      "err": {
+        "format": "Ilagay ang buong code, hal. PREFIX-{{year}}-00001.",
+        "rateLimit": "Masyadong maraming subok. Maghintay muna bago subukang muli.",
+        "notFound": "Hindi namin makita ang code na iyan. Suriin at subukang muli.",
+        "used": "Nagamit na ang code na ito. Isang request lang bawat code — humingi ng bago sa opisina.",
+        "otherHospital": "Galing sa {{hospital}} ang code na ito, hindi sa ospital na pinili ninyo.",
+        "closed": "Hindi tumatanggap ng bagong request ang ospital na ito ngayon.",
+        "error": "Hindi namin masuri ang code. Suriin ang koneksyon at subukang muli."
+      }
+    },
+    "hospitals": {
+      "navLabel": "Pumili ng Ospital",
+      "eyebrow": "Mga Ospital",
+      "title": "Saan kayo hihingi ng tulong?",
+      "subtitle": "Gumagana ang inyong MAPA account sa lahat ng kalahok na ospital. Ihambing ang mga ito, saka mag-file ng request sa napili ninyo.",
+      "how1": "Pumunta sa social-services office ng napiling ospital at humingi ng Patient Access Code.",
+      "how2": "Ihambing ang mga ospital sa ibaba — mga programa, bakanteng slot, kasosyong ahensya at gaano katagal karaniwang inaabot ang request.",
+      "how3": "Pindutin ang “Mag-file dito” at ilagay ang code. Isang request lang bawat code.",
+      "activeNote": "May bukas pa kayong request. Maaari kayong mag-file sa ibang ospital kapag sarado na ito.",
+      "activeLink": "Tingnan ang aking request",
+      "search": "Maghanap ayon sa ospital, lungsod o rehiyon",
+      "programFilter": "Salain ayon sa programa",
+      "allPrograms": "Lahat ng programa",
+      "sortLabel": "Ayusin ang mga ospital",
+      "sortRecommended": "Inirerekomenda",
+      "sortSlots": "Pinakamaraming bakanteng slot",
+      "sortFastest": "Pinakamabilis",
+      "none": "Walang ospital na tumatanggap ng request ngayon. Pakisubukang muli mamaya.",
+      "noMatch": "Walang ospital na tugma sa inyong hinahanap.",
+      "badgeScanned": "Ang inyong na-scan na code",
+      "badgeCurrent": "Kasalukuyang ospital",
+      "badgeBefore": "Nag-file dito dati",
+      "capacity": "Mga programa at bakanteng slot",
+      "slotsOpen": "{{remaining}} sa {{total}} slot ang bakante",
+      "slotsFull": "Walang bakanteng slot ngayon",
+      "slotsUnknown": "Wala pang nakapaskil na slot",
+      "more": "+{{n}} pa",
+      "partners": "Mga kasosyong ahensya",
+      "noPartners": "Wala pang kasosyong ahensya",
+      "partnerCount_one": "{{count}} ahensya",
+      "partnerCount_other": "{{count}} ahensya",
+      "turnaround": "Karaniwang tagal",
+      "turnaroundDays_one": "Mga {{count}} araw bago ma-endorse (mula sa {{cases}} kaso)",
+      "turnaroundDays_other": "Mga {{count}} araw bago ma-endorse (mula sa {{cases}} kaso)",
+      "turnaroundNew": "Kulang pa ang kaso para matantiya",
+      "location": "Lokasyon at contact",
+      "noAddress": "Wala pang nakapaskil na address",
+      "codeHint": "Nagsisimula sa {{prefix}}- ang mga code ng ospital na ito",
+      "fileHere": "Mag-file dito"
+    },
     "nav": {
+      "hospitals": "Pumili ng Ospital",
       "dashboard": "Dashboard",
       "findPrograms": "Maghanap ng Programa",
       "medicalPrograms": "Mga Programang Medikal",
@@ -1136,6 +1207,7 @@
       }
     },
     "track": {
+      "filedAt": "Naka-file sa {{hospital}}",
       "eyebrow": "Ang inyong kahilingan",
       "assistanceType": "Uri ng tulong",
       "title": "Aking Aplikasyon",
@@ -1302,15 +1374,15 @@
         },
         "whoCanUse": {
           "title": "Sino ang maaaring gumamit ng MAPA?",
-          "content": "Sinumang pasyente ng {{facility}} na nasuri na ng Medical Social Services ay maaaring magparehistro at gumamit ng MAPA. Makakatanggap kayo ng Patient Access Code (format: {{codeFormat}}) mula sa {{gateway}} office. Kailangan ninyo ang code na ito upang makagawa ng account."
+          "content": "Sinumang pasyente ng kalahok na ospital ay maaaring gumamit ng MAPA. Gumagana ang isang account sa lahat ng kalahok na ospital. Para mag-file ng request, kailangan ninyo ng Patient Access Code (format: {{codeFormat}}) mula sa social-services office ng ospital na pinili ninyo — isang code bawat request."
         },
         "register": {
           "title": "Paano ako magpaparehistro?",
-          "s1": "Bisitahin ang {{gateway}} upang masuri at makatanggap ng Patient Access Code.",
-          "s2": "Pumunta sa MAPA registration page at punan ang inyong pangalan, email, numero ng telepono, at address.",
-          "s3": "Ipasok ang inyong Patient Access Code at i-click ang Verify upang kumpirmahin.",
-          "s4": "Gumawa ng matibay na password at isumite ang form.",
-          "s5": "Nagawa na ang inyong account. Mag-log in gamit ang inyong email at password."
+          "s1": "Pumunta sa MAPA registration page at punan ang inyong pangalan, email, numero ng telepono, at address.",
+          "s2": "Gumawa ng matibay na password at sumang-ayon sa mga tuntunin. Hindi kailangan ng access code para magparehistro.",
+          "s3": "Buksan ang “Pumili ng Ospital” at ihambing ang mga kalahok na ospital.",
+          "s4": "Pumunta sa social-services office ng napiling ospital para masuri at makatanggap ng Patient Access Code.",
+          "s5": "Pindutin ang “Mag-file dito”, ilagay ang code, at kumpletuhin ang request."
         },
         "upload": {
           "title": "Anong mga dokumento ang isusumite ko?",
@@ -1430,6 +1502,7 @@
     }
   },
   "register": {
+    "stepFinish": "Tapusin",
     "backHome": "Bumalik sa Home",
     "title": "Mag-apply para sa Patient Account",
     "subtitle": "Gumawa ng account upang mag-apply para sa tulong medikal.",
@@ -1438,15 +1511,15 @@
       "sub": "Isang account, pagkatapos ay isumite ang inyong mga kahilingan para sa tulong medikal online — mas kaunting oras sa pila sa opisina.",
       "readyTitle": "Ihanda ang mga ito",
       "ready1": "Ang inyong pangalan at address ayon sa nakasaad sa balidong government ID",
-      "ready2": "Ang inyong Patient Access Code ({{codeFormat}}) mula sa {{gateway}}",
+      "ready2": "Ang access code mula sa ospital na pag-file-an — maaaring idagdag mamaya",
       "ready3": "Isang gumaganang email address para sa mga update sa aprubahan",
       "trustTime": "Umaabot ng mga 3 minuto",
       "trustPrivacy": "Protektado sa ilalim ng Data Privacy Act (RA 10173)",
       "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa {{facility}}",
-      "codeTitle": "Ang access code ang inyong susi.",
-      "codeBody": "Ibinibigay ito nang personal ng social-services office ng inyong ospital. Ang unang bahagi nito — ang prefix — ang nagsasabi sa MAPA kung saang ospital kayo kabilang, kaya awtomatiko kayong mapupunta sa tamang lugar.",
+      "codeTitle": "Isang account, maraming ospital.",
+      "codeBody": "Ihambing ang mga kalahok na ospital, saka mag-file ng request sa napili ninyo. Bibigyan kayo ng access code nang personal ng social-services office nito; ilalagay ninyo ito pag-file.",
       "codeExample": "Halimbawa ng code",
-      "codePrefixNote": "Prefix = ang inyong ospital"
+      "codePrefixNote": "Ipinapakita ng prefix kung aling ospital ang nagbigay"
     },
     "stepPersonal": "Personal na Impormasyon",
     "stepAccount": "Pag-setup ng Account",
@@ -1486,8 +1559,10 @@
       "hidePassword": "Itago ang password"
     },
     "step3": {
-      "sectionTitle": "Patient Access Code",
-      "sectionDesc": "Kinakailangan ang inyong Patient Access Code. Ibinigay ito sa inyo ng {{gateway}}.",
+      "nextBody": "Gumagana ang inyong MAPA account sa lahat ng kalahok na ospital. Tuwing hihingi kayo ng tulong, pipiliin ninyo ang ospital at ilalagay ang access code na ibinigay ng social-services office nito.",
+      "nextTitle": "Susunod: piliin ang ospital",
+      "sectionTitle": "Suriin at sumang-ayon",
+      "sectionDesc": "Suriin ang inyong detalye, saka sumang-ayon sa mga tuntunin para magawa ang account.",
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Ipasok ang 5-digit na numero pagkatapos ng prefix",
       "joiningHospital": "Magpaparehistro ka sa {{hospital}}.",
@@ -1534,6 +1609,7 @@
       "generic": "Nabigo ang pagpaparehistro."
     },
     "toast": {
+      "codeSaved": "Na-save ang access code. Gagamitin ito kapag pinili ninyo ang ospital na iyon.",
       "codeVerified": "Na-verify ang access code!",
       "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account.",
       "alreadyRegistered": "Nakarehistro ka na gamit ang access code na ito. Mangyaring mag-login."

@@ -30,6 +30,7 @@ const Notifications    = lazyWithReload(() => import('./pages/Notifications'))
 // Patient (non-dashboard)
 const UserGuide        = lazyWithReload(() => import('./pages/patient/Guide'))
 const MedicalPrograms  = lazyWithReload(() => import('./pages/patient/MedicalPrograms'))
+const PatientHospitals = lazyWithReload(() => import('./pages/patient/Hospitals'))
 const RequestAssistance = lazyWithReload(() => import('./pages/patient/RequestAssistance'))
 const IntakeWizard      = lazyWithReload(() => import('./pages/patient/IntakeWizard'))
 const TrackStatus      = lazyWithReload(() => import('./pages/patient/TrackStatus'))
@@ -128,6 +129,7 @@ export default function App() {
           {/* Patient */}
           <Route path="/patient/dashboard"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientDashboard /></PrivateRoute>} />
           <Route path="/patient/programs"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><MedicalPrograms /></PrivateRoute>} />
+          <Route path="/patient/hospitals"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientHospitals /></PrivateRoute>} />
           <Route path="/patient/request"    element={<PrivateRoute allowedRoles={PATIENT_ROLES}><RequestAssistance /></PrivateRoute>} />
           <Route path="/patient/request/:id/intake" element={<PrivateRoute allowedRoles={PATIENT_ROLES}><IntakeWizard /></PrivateRoute>} />
           <Route path="/patient/status"     element={<PrivateRoute allowedRoles={PATIENT_ROLES}><TrackStatus /></PrivateRoute>} />

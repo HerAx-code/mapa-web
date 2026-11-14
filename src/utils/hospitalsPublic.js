@@ -3,10 +3,12 @@ import { db } from '../firebase'
 
 /**
  * hospitalsPublic — the public, sign-in-free projection of each hospital
- * (multi-hospital), so the Landing page can list participating hospitals and
- * show a real access-code prefix. hospitals/{id} itself needs sign-in.
+ * (multi-hospital), so the Landing page and the patient marketplace
+ * (/patient/hospitals) can list participating hospitals with a real
+ * access-code prefix, office, location and contact. hospitals/{id} itself
+ * needs sign-in.
  *
- * Only these four fields, and the rules require them to EQUAL the hospital
+ * Only these fields, and the rules require them to EQUAL the hospital
  * doc (getAfter), so the projection can never drift from or contradict it.
  * Same belt-and-braces mirroring as agenciesPublic: every client path that
  * changes a hospital's public fields re-syncs it, best-effort.
@@ -17,6 +19,10 @@ export function projectPublicHospital(h = {}) {
     shortName:        h.shortName ?? '',
     accessCodePrefix: h.accessCodePrefix ?? '',
     enabled:          h.enabled !== false,
+    gatewayName:      h.gatewayName ?? '',
+    address:          h.address ?? '',
+    region:           h.region ?? '',
+    contactEmail:     h.contactEmail ?? '',
   }
 }
 

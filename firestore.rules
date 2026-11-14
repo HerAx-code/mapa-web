@@ -95,6 +95,26 @@ service cloud.firestore {
       return hospitalDoc(tenantId).get('enabled', true) == true;
     }
 
+    // ── Patient marketplace (docs/patient-marketplace-plan.md) ────────────────
+    // A patient's account is network-level: `tenantId` is their CURRENT
+    // hospital (where they're filing), `tenantIds` every hospital they've filed
+    // at. Switching hospital is allowed only together with claiming that
+    // hospital's access code — proven here with getAfter on the code doc in the
+    // same write. The old hospital stays in tenantIds (its gateway keeps access
+    // to the cases it handled).
+    function patientSwitchesHospital() {
+      let code = request.resource.data.get('hospitalId', '');
+      let t = request.resource.data.get('tenantId', '');
+      return isPatient() &&
+        code is string && code != '' && t is string && t != '' &&
+        getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data.get('patId', '') == uid() &&
+        getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data.get('status', '') == 'used' &&
+        tenantOf(getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data) == t &&
+        hospitalOpen(t) &&
+        request.resource.data.get('tenantIds', []).toSet() ==
+          resource.data.get('tenantIds', []).toSet().union([resource.data.get('tenantId', t), t].toSet());
+    }
+
     // accessCodePrefixes/{PREFIX} names the hospital that owns a prefix. Checked
     // with getAfter so the claim and the hospital doc are written in one batch.
     function prefixHeldBy(prefix, hospitalId) {
@@ -199,6 +219,9 @@ service cloud.firestore {
       allow read:   if isAuth() && (
         uid() == userId
         || isHospitalAdmin(resource.data)
+        // Marketplace: a hospital reads every patient who has filed with it
+        // (patient-side twin of agencyIds; array-contains queries prove it).
+        || (isAdmin() && userTenantId() in resource.data.get('tenantIds', []))
         // Phase 7: an agency reads a patient only once the gateway has endorsed
         // that patient to it (the endorse transaction adds the agency to the
         // patient's agencyIds). It used to read EVERY user of every hospital.
@@ -207,12 +230,14 @@ service cloud.firestore {
         || (isPlatformAdmin() && resource.data.role == 'platform_admin')
       );
       allow create: if isAuth() && (
-        // Self-registration joins the hospital that issued the access code.
+        // Marketplace: a patient registers with the NETWORK — no access code,
+        // no hospital yet. They join a hospital per request by claiming its
+        // code (patientSwitchesHospital). Server-owned fields stay unset.
         (uid() == userId && request.resource.data.role == 'patient' &&
-          tenantOf(request.resource.data) ==
-            tenantOf(get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.hospitalId)).data) &&
-          // Phase 8: not into a hospital that has stopped registrations.
-          hospitalOpen(tenantOf(request.resource.data))) ||
+          !('tenantId' in request.resource.data) &&
+          !('tenantIds' in request.resource.data) &&
+          !('agencyIds' in request.resource.data) &&
+          request.resource.data.get('hospitalId', null) == null) ||
         // Gateway staff create gateway staff in their own hospital (Phase 6:
         // a role allowlist — before it, an admin could mint ANY role, which
         // would include platform_admin). Agency users are network-level and
@@ -241,22 +266,28 @@ service cloud.firestore {
       //     their own coordinators without giving them platform-wide write.
       allow update: if isAuth() && (
         (uid() == userId &&
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.agencyId == resource.data.agencyId &&
-          request.resource.data.active == resource.data.active &&
-          request.resource.data.rank == resource.data.rank &&
+          // .get(, null) on both sides: same "unchanged" check, but an account
+          // created without one of these fields (bootstrap/legacy) isn't
+          // silently locked out of every self-update — a missing field read
+          // directly makes the rule error and deny.
+          request.resource.data.get('role', null)     == resource.data.get('role', null) &&
+          request.resource.data.get('agencyId', null) == resource.data.get('agencyId', null) &&
+          request.resource.data.get('active', null)   == resource.data.get('active', null) &&
+          request.resource.data.get('rank', null)     == resource.data.get('rank', null) &&
           // Identity-linking fields are pinned on self-update (abuse hardening
           // #4): a patient must not be able to re-point their hospitalId /
           // patientId at another record, or rename themselves. .get(,null)
           // tolerates roles that lack these fields (staff have no hospitalId).
           // name is pinned for patients only, so staff can still self-rename.
-          request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
-          // Multi-hospital Phase 2: tenantId (which hospital the user belongs
-          // to — NOT hospitalId, which is the access code) is pinned too. A
-          // patient re-pointing it would move their new requests/documents to
-          // another hospital. Transfers are an admin action (decision D2).
-          request.resource.data.get('tenantId', null)   == resource.data.get('tenantId', null) &&
+          // The access code (hospitalId) and the hospitals (tenantId current,
+          // tenantIds all) are pinned — EXCEPT the marketplace switch, which
+          // must prove the new code was just claimed by this patient, issued by
+          // that hospital, and the hospital is open.
+          ((request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
+            request.resource.data.get('tenantId', null)   == resource.data.get('tenantId', null) &&
+            request.resource.data.get('tenantIds', null)  == resource.data.get('tenantIds', null)) ||
+           patientSwitchesHospital()) &&
           (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null)) &&
           // Server-owned counters (abuse hardening #3 + #5): only the Admin SDK
           // triggers (onRequestWritten / onDocumentCountChanged, rules-bypassing)
@@ -275,8 +306,11 @@ service cloud.firestore {
         // one moves to another hospital.
         (isAdmin() &&
           resource.data.get('role', '') in ['super_admin', 'staff_admin', 'patient'] &&
-          tenantOf(resource.data) == userTenantId() &&
+          (tenantOf(resource.data) == userTenantId() ||
+           (resource.data.get('role', '') == 'patient' && userTenantId() in resource.data.get('tenantIds', []))) &&
           tenantOf(request.resource.data) == tenantOf(resource.data) &&
+          request.resource.data.get('tenantIds', null) == resource.data.get('tenantIds', null) &&
+          request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           (request.resource.data.role == resource.data.role ||
            (isGatewayStaffRole(resource.data.role) && isGatewayStaffRole(request.resource.data.role)))) ||
         // Platform admin manages staff and agency users, never patients (no
@@ -409,6 +443,9 @@ service cloud.firestore {
       // users/{uid}.activeRequestId and this rule reads it with a single get()
       // (default null so a patient with none — the normal case — passes). The
       // trigger clears the pointer when the request goes terminal/withdrawn.
+      // Marketplace: filed with the patient's CURRENT access code, which must
+      // not have backed another request, and is bound to this one in the same
+      // write (hospitalIds/{code}.requestId).
       allow create: if isPatient() &&
                        request.resource.data.patientId == uid() &&
                        createsInOwnHospital() &&
@@ -416,7 +453,15 @@ service cloud.firestore {
                        request.resource.data.agencyIds == [] &&
                        request.resource.data.amountCommitted == 0 &&
                        get(/databases/$(database)/documents/users/$(uid()))
-                         .data.get('activeRequestId', null) == null;
+                         .data.get('activeRequestId', null) == null &&
+                       request.resource.data.get('patientHospitalId', '') is string &&
+                       request.resource.data.get('patientHospitalId', '') != '' &&
+                       request.resource.data.patientHospitalId ==
+                         get(/databases/$(database)/documents/users/$(uid())).data.get('hospitalId', '') &&
+                       get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.patientHospitalId))
+                         .data.get('requestId', null) == null &&
+                       getAfter(/databases/$(database)/documents/hospitalIds/$(request.resource.data.patientHospitalId))
+                         .data.get('requestId', '') == requestId;
 
       // Revision 9 — the applicant's answers belong to the applicant. Gateway
       // staff may change anything else on the request (status, assessment,
@@ -789,20 +834,34 @@ service cloud.firestore {
                        prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
     }
 
+    // ── hospitalsPublicStats ──────────────────────────────────────────────────
+    // Marketplace: counts-only per hospital (typical days from filing to first
+    // endorsement), built by the Admin SDK (networkStats). Public; no writes.
+    match /hospitalsPublicStats/{hospitalId} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
     // ── hospitalsPublic ────────────────────────────────────────────────────────
-    // The sign-in-free projection of each hospital for the Landing page (name,
-    // short name, access-code prefix, sign-ups open). World-readable. Written by
+    // The sign-in-free projection of each hospital for the Landing page and the
+    // patient marketplace (name, short name, access-code prefix, sign-ups open,
+    // gateway office, address, region, contact email). World-readable. Written by
     // whoever may edit the hospital (platform admin, or its own super admin),
     // and every field must EQUAL the hospital doc after the write — so the
     // public list can never drift from or contradict the real hospital.
     match /hospitalsPublic/{hospitalId} {
       allow read: if true;
       allow create, update: if (isPlatformAdmin() || (isSuperAdmin() && hospitalId == userTenantId())) &&
-                       request.resource.data.keys().hasOnly(['facilityName', 'shortName', 'accessCodePrefix', 'enabled', 'updatedAt']) &&
+                       request.resource.data.keys().hasOnly(['facilityName', 'shortName', 'accessCodePrefix', 'enabled',
+                                                             'gatewayName', 'address', 'region', 'contactEmail', 'updatedAt']) &&
                        request.resource.data.facilityName     == hospitalAfter(hospitalId).get('facilityName', '') &&
                        request.resource.data.shortName        == hospitalAfter(hospitalId).get('shortName', '') &&
                        request.resource.data.accessCodePrefix == hospitalAfter(hospitalId).get('accessCodePrefix', '') &&
-                       request.resource.data.enabled          == hospitalAfter(hospitalId).get('enabled', true);
+                       request.resource.data.enabled          == hospitalAfter(hospitalId).get('enabled', true) &&
+                       request.resource.data.get('gatewayName', '')  == hospitalAfter(hospitalId).get('gatewayName', '') &&
+                       request.resource.data.get('address', '')      == hospitalAfter(hospitalId).get('address', '') &&
+                       request.resource.data.get('region', '')       == hospitalAfter(hospitalId).get('region', '') &&
+                       request.resource.data.get('contactEmail', '') == hospitalAfter(hospitalId).get('contactEmail', '');
     }
 
     function hospitalAfter(hospitalId) {
@@ -929,7 +988,16 @@ service cloud.firestore {
                        // ID, not by the per-account UID) makes the 30-day
                        // lock survive account-deletion + re-registration.
                        (isAgency() &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt']));
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt'])) ||
+                       // Marketplace: the code's patient binds it to the request
+                       // they're filing, once (a code backs one request).
+                       (isAuth() &&
+                        resource.data.status == 'used' &&
+                        resource.data.patId == uid() &&
+                        resource.data.get('requestId', null) == null &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['requestId']) &&
+                        getAfter(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientId == uid() &&
+                        getAfter(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientHospitalId == hospitalId);
       allow delete: if isHospitalSuperAdmin(resource.data);
 
       // Phase 0.3 hardening (post-review): the patient NAME used to live on

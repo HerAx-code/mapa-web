@@ -1,6 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { fileRequest } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -43,8 +44,10 @@ beforeEach(async () => {
 const as = (uid) => testEnv.authenticatedContext(uid).firestore()
 
 describe('users.tenantId', () => {
-  it('a patient may self-register with a tenantId', async () => {
-    await assertSucceeds(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', hospitalId: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
+  // Marketplace: registration is network-level — no code, no hospital.
+  it('a patient registers with no hospital; a tenantId at sign-up is refused', async () => {
+    await assertFails(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', hospitalId: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
+    await assertSucceeds(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', name: 'Ana' }))
   })
 
   it('a patient may NOT change their own tenantId', async () => {
@@ -78,9 +81,11 @@ describe('users.tenantId', () => {
 
 describe('create paths accept tenantId', () => {
   it('patient request', async () => {
-    await assertSucceeds(setDoc(doc(as('patient-1'), 'requests', 'r1'), {
+    await testEnv.withSecurityRulesDisabled(async (ctx) =>
+      setDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), { status: 'used', patId: 'patient-1', tenantId: 'hospital-1' }))
+    await assertSucceeds(fileRequest(as('patient-1'), { reqId: 'r1', code: 'MAPA-2026-00001', data: {
       patientId: 'patient-1', status: 'submitted', agencyIds: [], amountCommitted: 0, tenantId: 'hospital-1',
-    }))
+    } }))
   })
 
   it('patient document', async () => {
