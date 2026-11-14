@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { collection, query, where, orderBy, limit, onSnapshot, addDoc, getDocs, serverTimestamp } from 'firebase/firestore'
-import { tenantWhere } from '../../utils/hospitals'
+import { tenantWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
@@ -92,7 +92,8 @@ export default function AdminDashboard() {
     )
     const u3 = onSnapshot(
       query(collection(db, 'agencies'), where('enabled', '==', true)),
-      snap => setAgencyCount(snap.size),
+      // Multi-hospital: only this hospital's partner agencies count.
+      snap => setAgencyCount(snap.docs.filter(d => agencyPartnersWith(d.data(), currentTenantId())).length),
       err => { console.error('[Dashboard] agency count failed:', err); setAgencyCount('—') }
     )
     // Open requests = anything still moving through the gateway pipeline (not
@@ -175,6 +176,8 @@ export default function AdminDashboard() {
       snap => {
         const low = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
+          // Multi-hospital: only partners matter — the gateway can't endorse to others.
+          .filter(a => agencyPartnersWith(a, currentTenantId()))
           .filter(a => {
             const total = a.slots?.total ?? 0
             const rem   = a.slots?.remaining ?? 0

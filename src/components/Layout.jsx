@@ -17,7 +17,8 @@ import {
   MdSync,
 } from 'react-icons/md'
 import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
-import { getUsersInScope, inMyTenant } from '../utils/hospitals'
+import { getUsersInScope, inMyTenant, currentTenantId } from '../utils/hospitals'
+import { useOrg } from '../hooks/useOrg'
 import { db } from '../firebase'
 import { getOrCreateConversation, sendMessage } from '../utils/messages'
 import { notify } from '../utils/notifications'
@@ -593,7 +594,19 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
   })
 }
 
+// The hospital a gateway user or patient belongs to (multi-hospital): shown
+// under the brand, the way agency users see their agency. Network users
+// (agency, platform admin) have no hospital; an unconfigured hospital (the
+// neutral env default) shows nothing rather than "the hospital".
+function useMyHospitalName() {
+  const org = useOrg()
+  if (!currentTenantId()) return null
+  const name = org.shortName || org.facilityName
+  return name && name !== 'the hospital' ? name : null
+}
+
 function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unreadMessages = 0 }) {
+  const hospitalName = useMyHospitalName()
   const { t } = useTranslation()
   const msgBadge = unreadMessages > 0 ? unreadMessages : 0
   const msgOverride = {
@@ -608,8 +621,11 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
       <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <Logo size={28} />
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
+            {hospitalName && (
+              <p className="text-xs text-gray-500 leading-tight truncate max-w-[160px]" title={hospitalName}>{hospitalName}</p>
+            )}
           </div>
         </div>
         {/* Close button — mobile only */}

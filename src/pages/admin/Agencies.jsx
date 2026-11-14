@@ -7,7 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
-import { tenantWhere } from '../../utils/hospitals'
+import { tenantWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
 import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -364,7 +364,7 @@ export default function Agencies() {
   // patient data, so it gets no case counts and no messaging.
   const isPlatform          = user?.role === ROLES.PLATFORM_ADMIN
   const canManage           = isPlatform
-  const [agencies,     setAgencies]     = useState([])
+  const [allAgencies,  setAgencies]     = useState([])
   const [appStats,     setAppStats]     = useState({})
   const [agencyUsers,  setAgencyUsers]  = useState([])
   const [loading,      setLoading]      = useState(true)
@@ -378,6 +378,13 @@ export default function Agencies() {
   const [sortBy, setSortBy]             = useState('name')
   const [sortDir, setSortDir]           = useState('asc')
   const [expanded, setExpanded]         = useState(new Set())
+
+  // Hospital admins see their hospital's PARTNER agencies — the only ones its
+  // gateway can endorse to (multi-hospital Phase 7). The platform admin sees
+  // the whole network. Every count and filter below works off this list.
+  const myTenant = currentTenantId()
+  const agencies = isPlatform ? allAgencies : allAgencies.filter(a => agencyPartnersWith(a, myTenant))
+  const nonPartnerCount = allAgencies.length - agencies.length
 
   const toggleExpand = (id) =>
     setExpanded(prev => {
@@ -582,9 +589,18 @@ export default function Agencies() {
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <p className="eyebrow">Directory</p>
-            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agencies</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered medical assistance agencies.</p>
+            <p className="eyebrow">{isPlatform ? 'Network' : 'Directory'}</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{isPlatform ? 'Agencies' : 'Partner agencies'}</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {isPlatform
+                ? 'Every agency in the network — add agencies, manage their teams and slots, and set which hospitals they partner with.'
+                : 'The agencies your hospital can endorse patients to. Partnerships are set by the network admin.'}
+            </p>
+            {!isPlatform && nonPartnerCount > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {nonPartnerCount} other network {nonPartnerCount === 1 ? 'agency does' : 'agencies do'} not partner with your hospital.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {canManage && (
