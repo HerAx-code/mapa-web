@@ -395,7 +395,8 @@ service cloud.firestore {
           (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing') ||
           // Co-funding: patient accepts the coverage plan, advancing their
           // endorsed slice into the agency's review queue.
-          (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing')
+          (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing' &&
+           parentRequestOpen(resource.data))
         )) ||
         // Phase 1.6: an agency may write its own slice, but the identity +
         // endorsement fields are LOCKED — they can't reassign the slice to
@@ -419,10 +420,24 @@ service cloud.firestore {
           request.resource.data.requestId      == resource.data.requestId &&
           request.resource.data.amountRequested == resource.data.amountRequested &&
           (!('amountApproved' in request.resource.data) ||
-            request.resource.data.amountApproved <= resource.data.amountRequested)) ||
+            request.resource.data.amountApproved <= resource.data.amountRequested) &&
+          // Logic review: a slice the hospital closed is final, and nothing is
+          // approved on a request the hospital rejected or closed.
+          resource.data.get('status', '') != 'closed' &&
+          (!(request.resource.data.get('status', '') in ['approved', 'certificate']) ||
+           resource.data.get('status', '') in ['approved', 'certificate'] ||
+           parentRequestOpen(resource.data))) ||
         hospitalAdminWrite()
       );
       allow delete: if isHospitalAdmin(resource.data);
+    }
+
+    // The slice's parent request isn't rejected/closed (legacy slices without
+    // a request pass).
+    function parentRequestOpen(slice) {
+      return slice.get('requestId', null) == null ||
+        !exists(/databases/$(database)/documents/requests/$(slice.requestId)) ||
+        !(get(/databases/$(database)/documents/requests/$(slice.requestId)).data.get('status', '') in ['closed', 'rejected']);
     }
 
     // ── requests ────────────────────────────────────────────────────────────
@@ -501,10 +516,19 @@ service cloud.firestore {
            after.encodedOnBehalf.reason.size() >= 10);
       }
 
-      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk()) ||
+      // Logic review: once an agency has committed money the request can only be
+      // CLOSED (partial), never REJECTED — the patient may already hold a GL.
+      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk() &&
+                        (request.resource.data.get('status', '') != 'rejected' ||
+                         resource.data.get('status', '') == 'rejected' ||
+                         resource.data.get('amountCommitted', 0) == 0)) ||
+        // The patient may withdraw until the request is endorsed to an agency
+        // (the button shows for submitted / under review / assessment).
         (isPatient() && resource.data.patientId == uid() &&
-          resource.data.status == 'submitted' &&
-          request.resource.data.status == 'closed') ||
+          resource.data.status in ['submitted', 'under_review', 'assessment'] &&
+          resource.data.get('agencyIds', []).size() == 0 &&
+          request.resource.data.status == 'closed' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'closeReason', 'updatedAt'])) ||
         // Patient fills the factual portion of their own intake sheet (the
         // the gateway assessment fields are written by admins). Only the intakeSheet
         // field may change via this path.
@@ -552,8 +576,9 @@ service cloud.firestore {
             .hasOnly(['amountCommitted', 'status', 'updatedAt']) &&
           request.resource.data.amountCommitted is number &&
           request.resource.data.amountCommitted >= 0 &&
+          !(resource.data.get('status', '') in ['closed', 'rejected']) &&
           request.resource.data.status in
-            ['submitted', 'endorsed', 'partially_funded', 'fully_funded']);
+            ['under_review', 'endorsed', 'partially_funded', 'fully_funded']);
       allow delete: if isHospitalAdmin(resource.data);
     }
 

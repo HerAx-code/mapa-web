@@ -27,7 +27,8 @@ import PathToZeroBalance from '../../components/admin/requests/PathToZeroBalance
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
-import { tsToDate } from '../../utils/dates'
+import { tsToDate, phTodayKey } from '../../utils/dates'
+import { effectiveSlots, OPEN_SLICE_STATUSES } from '../../utils/requests'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import CompareFacesModal from '../../components/admin/CompareFacesModal'
@@ -139,7 +140,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   // deny a slice to any other agency).
   const caseTenant = request.tenantId ?? currentTenantId()
   const eligible = agencies
-    .filter(a => !usedIds.has(a.id) && (a.slots?.remaining ?? 0) > 0 && agencyPartnersWith(a, caseTenant))
+    .filter(a => !usedIds.has(a.id) && effectiveSlots(a, phTodayKey()).remaining > 0 && agencyPartnersWith(a, caseTenant))
     .map(a => ({
       ...a,
       matches:   (a.assistanceTypes ?? []).includes(request.assistanceType),
@@ -237,7 +238,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         for (let i = 0; i < selectedIds.length; i++) {
           const snp = agencySnaps[i]
           if (!snp.exists()) throw new Error(`GONE:${selectedIds[i]}`)
-          const remaining = snp.data()?.slots?.remaining ?? 0
+          const remaining = effectiveSlots(snp.data(), phTodayKey()).remaining
           if (remaining <= 0) throw new Error(`NO_SLOTS:${selectedIds[i]}`)
         }
 
@@ -259,7 +260,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         for (let i = 0; i < selectedIds.length; i++) {
           const id        = selectedIds[i]
           const aData     = agencySnaps[i].data()
-          const remaining = aData?.slots?.remaining ?? 0
+          const { remaining, stale: slotsStale } = effectiveSlots(aData, phTodayKey())
           const sliceRef  = doc(collection(db, 'applications'))
           tx.set(sliceRef, {
             // A slice belongs to its request's hospital (multi-hospital Phase 2);
@@ -295,6 +296,8 @@ function EndorseModal({ request, slices, agencies, onClose }) {
           })
           tx.update(doc(db, 'agencies', id), {
             'slots.remaining': remaining - 1,
+            // First endorsement of the day also records the daily reset.
+            ...(slotsStale ? { lastResetDate: phTodayKey() } : {}),
           })
           // Capture the projection; mirrored best-effort after the tx commits.
           pubProjectionsToMirror.push({ id, data: { ...aData, slots: { ...aData.slots, remaining: remaining - 1 } } })
@@ -553,7 +556,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
-                            {a.slots?.remaining ?? 0} slots · {budgetTxt}
+                            {effectiveSlots(a, phTodayKey()).remaining} slots · {budgetTxt}
                             {perCap > 0 && <> · max {peso(perCap)}/applicant</>}
                           </p>
                         </div>
@@ -667,7 +670,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // Optional prior-coverage inputs (PhilHealth/insurance + other aid) the social
   // worker records at assessment. Seeded from the request and re-seeded when a
   // different request is opened; local edits stay until saved.
-  const [coverage, setCoverage] = useState({ ph: '', other: '' })
+  const [coverage, setCoverage] = useState({ ph: '', other: '', bill: '', billReason: '' })
   const [busy, setBusy] = useState(false)
   const [timeline, setTimeline] = useState([])
   const [timelineLoading, setTimelineLoading] = useState(true)
@@ -717,6 +720,8 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
     setCoverage({
       ph:    request.philhealthCovered != null ? String(request.philhealthCovered) : '',
       other: request.otherCovered      != null ? String(request.otherCovered)      : '',
+      bill:  String(request.totalBill ?? request.amountNeeded ?? ''),
+      billReason: '',
     })
   }, [request.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -753,8 +758,11 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // requests with no totalBill. Coverage is optional and editable only before
   // endorsement (slices freeze amountRequested at endorse time).
   const billBase       = Number(request.totalBill ?? request.amountNeeded) || 0
+  // Logic review: staff can correct the total bill (to match the billing
+  // statement) before endorsement, with a reason.
+  const billEdited     = coverage.bill !== '' && Number(coverage.bill) !== billBase
   const previewNeeded  = computeAmountNeeded({
-    totalBill:         billBase,
+    totalBill:         billEdited ? Number(coverage.bill) || 0 : billBase,
     philhealthCovered: Number(coverage.ph)    || 0,
     otherCovered:      Number(coverage.other) || 0,
   })
@@ -923,12 +931,27 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
     try {
       const philhealthCovered = Number(coverage.ph)    || 0
       const otherCovered      = Number(coverage.other) || 0
-      const totalBill         = Number(request.totalBill ?? request.amountNeeded) || 0
+      const oldBill           = Number(request.totalBill ?? request.amountNeeded) || 0
+      const totalBill         = coverage.bill !== '' ? Number(coverage.bill) : oldBill
+      if (!(totalBill > 0)) { toast.error('Enter the total bill.'); return }
+      const billChanged       = totalBill !== oldBill
+      if (billChanged && coverage.billReason.trim().length < 5) { toast.error('Give a reason for correcting the bill.'); return }
       const amountNeeded      = computeAmountNeeded({ totalBill, philhealthCovered, otherCovered })
       await updateDoc(doc(db, 'requests', request.id), {
         totalBill, philhealthCovered, otherCovered, amountNeeded,
+        ...(billChanged ? { billCorrection: {
+          from: oldBill, to: totalBill, reason: coverage.billReason.trim(), by: user.name ?? '', byUid: user.uid, at: serverTimestamp(),
+        } } : {}),
         updatedAt: serverTimestamp(),
       })
+      if (billChanged) {
+        logAudit(user, {
+          action: 'bill_corrected', targetType: 'request', targetId: request.id, targetName: request.requestId,
+          details: `Total bill ${peso(oldBill)} → ${peso(totalBill)} · reason: ${coverage.billReason.trim()}`,
+          requestId: request.id, patientId: request.patientId,
+        })
+        setCoverage(c => ({ ...c, billReason: '' }))
+      }
       logAudit(user, {
         action: 'coverage_updated', targetType: 'request', targetId: request.id,
         targetName: request.requestId,
@@ -943,14 +966,40 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   const setRequestStatus = async (status, { reason } = {}) => {
     setBusy(true)
     try {
+      // Logic review: rejecting / closing the request also closes every slice
+      // still open at an agency, so no agency keeps reviewing (or approves
+      // money on) a case the hospital has ended. Committed slices (approved /
+      // GL issued) are left as they are.
+      const openSlices = slices.filter(s => OPEN_SLICE_STATUSES.includes(s.status))
+      const closeNote = status === 'rejected' ? 'The hospital rejected this request.' : 'The hospital closed this request.'
       await runTransaction(db, async (tx) => {
         const reqRef = doc(db, 'requests', request.id)
+        const fresh  = await tx.get(reqRef)
+        if (status === 'rejected' && (fresh.data()?.amountCommitted ?? 0) > 0) throw new Error('HAS_COMMITMENTS')
         tx.update(reqRef, {
           status,
           ...(reason ? { closeReason: reason } : {}),
           updatedAt: serverTimestamp(),
         })
+        for (const s of openSlices) {
+          tx.update(doc(db, 'applications', s.id), {
+            status: 'closed', closedReason: reason ? `${closeNote} ${reason}` : closeNote,
+            closedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          })
+        }
       })
+      // Tell the affected agencies (best-effort).
+      if (openSlices.length) {
+        const agencyIds = [...new Set(openSlices.map(s => s.agencyId).filter(Boolean))]
+        try {
+          const staff = await getDocs(query(collection(db, 'users'),
+            where('agencyId', 'in', agencyIds.slice(0, 10)), where('role', 'in', ['agency', 'agency_admin'])))
+          await Promise.all(staff.docs.map(u => notify(u.id, {
+            type: 'app_advanced', title: 'Endorsement closed',
+            body: `${closeNote} ${request.patientName ?? ''} (${request.requestId ?? ''}) no longer needs your review.`,
+          }).catch(() => {})))
+        } catch (err) { console.warn('[Requests] agency notify after close failed:', err) }
+      }
       logAudit(user, {
         action: status === 'rejected' ? 'request_rejected' : 'request_closed',
         targetType: 'request', targetId: request.id, targetName: request.requestId,
@@ -965,7 +1014,12 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
       }).catch(() => {})
       toast.success(status === 'rejected' ? 'Request rejected.' : 'Request closed.')
       onClose()
-    } catch (err) { console.error(err); toast.error('Failed to update request.') }
+    } catch (err) {
+      console.error(err)
+      toast.error(String(err?.message) === 'HAS_COMMITMENTS'
+        ? 'An agency has already committed funds — close the request instead of rejecting it.'
+        : 'Failed to update request.')
+    }
     finally { setBusy(false) }
   }
 
@@ -1113,9 +1167,22 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                 assessment; the remainder is what gets endorsed to agencies. */}
             <div className="p-3 rounded-lg border border-gray-100 mb-2 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-700">Coverage already applied <span className="text-gray-500 font-normal">(optional)</span></p>
+                <p className="text-sm text-gray-700">Bill &amp; coverage already applied</p>
                 <span className="text-xs text-gray-500">Bill {peso(billBase)}</span>
               </div>
+              <label className="block">
+                <span className="text-xs text-gray-500">Total bill (₱) — correct it if the billing statement differs</span>
+                <input type="number" min="0" inputMode="numeric" className="input"
+                  disabled={!coverageEditable || busy}
+                  value={coverage.bill} onChange={e => setCoverage(c => ({ ...c, bill: e.target.value }))} />
+              </label>
+              {billEdited && (
+                <label className="block">
+                  <span className="text-xs text-gray-500">Reason for the correction (saved to the audit log)</span>
+                  <input className="input" maxLength={200} placeholder="e.g. Statement of Account shows ₱48,250"
+                    value={coverage.billReason} onChange={e => setCoverage(c => ({ ...c, billReason: e.target.value }))} />
+                </label>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
                   <span className="text-xs text-gray-500">PhilHealth / insurance (₱)</span>
@@ -1134,7 +1201,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                 <p className="text-xs text-gray-500">Remaining to agencies:{' '}
                   <span className="font-semibold text-gray-800">{peso(previewNeeded)}</span></p>
                 {coverageEditable
-                  ? <button className="btn-secondary text-xs py-1.5" disabled={busy} onClick={saveCoverage}>Save coverage</button>
+                  ? <button className="btn-secondary text-xs py-1.5" disabled={busy} onClick={saveCoverage}>{billEdited ? 'Save bill & coverage' : 'Save coverage'}</button>
                   : <span className="text-xs text-gray-500 italic">Locked after endorsement</span>}
               </div>
             </div>
@@ -1234,12 +1301,21 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                   </div>
                 </div>
               )}
+              {!terminal && slices.length > 0 && slices.every(s => ['rejected', 'closed'].includes(s.status)) && (
+                <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Every endorsed agency declined. Endorse this request to other agencies, or close it.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2 justify-end">
+                {/* Logic review: once an agency has committed funds the patient
+                    may hold a GL — the request is CLOSED (partial), never rejected. */}
+                {funding.committed === 0 && (
                 <button className="btn-secondary text-sm flex items-center gap-1.5 text-red-500"
                   disabled={busy}
                   onClick={() => setShowRejectModal(true)}>
                   <MdBlock size={14} /> Reject
                 </button>
+                )}
                 {funding.committed > 0 && (
                   <button className="btn-secondary text-sm" disabled={busy}
                     onClick={() => setShowCloseModal(true)}>

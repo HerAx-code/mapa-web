@@ -132,12 +132,42 @@ export function agencyCoverage(agency, need = 0) {
 
 // Derive the request status from its funding figures. the gateway can still override
 // to 'closed' (gave up on the remaining balance) or 'rejected' (ineligible).
-export function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0) {
+// `endorsedBefore`: the request already has slices. When every one of them is
+// declined (nothing committed, nothing outstanding) the case goes back to the
+// gateway as 'under_review' to endorse elsewhere or close — NOT 'submitted',
+// which made it look like a brand-new filing (logic review 2026-11-14).
+export function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0, endorsedBefore = false) {
   const need = Number(amountNeeded) || 0
   if (need > 0 && committed >= need) return 'fully_funded'
   if (committed > 0)                 return 'partially_funded'
   if (outstanding > 0)               return 'endorsed'
-  return 'submitted'
+  return endorsedBefore ? 'under_review' : 'submitted'
+}
+
+// The request statuses the funding maths owns. Anything else (under_review,
+// assessment, closed, rejected) is the gateway's decision and is never
+// overwritten by a slice event — same authority boundary as
+// functions/src/syncRequestFinancials.js. (The maths may still MOVE a request
+// into 'under_review' when every agency declines.)
+export const DERIVED_REQUEST_STATUSES = ['submitted', 'endorsed', 'partially_funded', 'fully_funded']
+export const syncedRequestStatus = (current, next) =>
+  DERIVED_REQUEST_STATUSES.includes(current) ? next : current
+
+// A request the gateway has finished (rejected / closed): no new commitments.
+export const isRequestClosedByGateway = (status) => ['closed', 'rejected'].includes(status)
+
+// Slices still in play (not decided, not committed).
+export const OPEN_SLICE_STATUSES = ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview']
+
+// An agency's slots for TODAY. The daily reset is written lazily (whoever
+// opens the agency dashboard / request queue first), so a stored figure from
+// a previous day means the slots have already refilled.
+export function effectiveSlots(agency, todayKey) {
+  const total = Number(agency?.slots?.total) || 0
+  const stored = Number(agency?.slots?.remaining) || 0
+  // Only a KNOWN earlier reset date means a refill; no date = trust the figure.
+  const stale = total > 0 && !!todayKey && !!agency?.lastResetDate && agency.lastResetDate !== todayKey
+  return { total, remaining: stale ? total : stored, stale }
 }
 
 // When a slice transitions OUT of committed status (reversal, expiry),
@@ -158,7 +188,7 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
   const f = computeFunding(amountNeeded, slices)
   return {
     amountCommitted: f.committed,
-    status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded),
+    status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded, slices.length > 0),
   }
 }
 
@@ -183,7 +213,7 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 // R17 (TrackStatus) introduced the predicate; R18 hoists it here.
 export function isSliceTerminal(app, { isGLExpired } = {}) {
   if (!app) return false
-  if (app.status === 'rejected') return true
+  if (app.status === 'rejected' || app.status === 'closed') return true
   if (app.status === 'certificate') {
     if (app.glStatus === 'redeemed') return true
     if (app.glStatus === 'expired')  return true

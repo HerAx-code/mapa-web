@@ -115,15 +115,15 @@ describe('syncRequestFinancials — derived figure is authoritative', () => {
     // performExpireGL already released that budget back to the agency.
     // An expired certificate slice is in neither COMMITTED_SLICE_STATUSES
     // (isCommittedSlice rejects it) nor OUTSTANDING_SLICE_STATUSES, so
-    // both totals fall to 0 and the request derives back to 'submitted'.
-    // That is the existing web behaviour too -- the parity block below
-    // pins the two implementations together on this exact fixture.
+    // both totals fall to 0. The request had slices, so it goes back to the
+    // gateway as 'under_review' (logic review: not 'submitted', which looked
+    // like a new filing). The parity block below pins web + function together.
     const { updates } = await run(
       { amountNeeded: 25000, amountCommitted: 5000, status: 'partially_funded' },
       [{ status: 'certificate', glStatus: 'expired', amountApproved: 5000 }],
     )
     expect(updates[0].amountCommitted).toBe(0)
-    expect(updates[0].status).toBe('submitted')
+    expect(updates[0].status).toBe('under_review')
   })
 
   it('falls back to endorsed while slices are still outstanding', async () => {

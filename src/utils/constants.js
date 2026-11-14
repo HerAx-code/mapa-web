@@ -139,6 +139,9 @@ export const APP_STATUS_CONFIG = {
   approved:      { label: 'Approved',                 badge: 'badge-green'  },
   certificate:   { label: 'Guarantee Letter Issued',  badge: 'badge-green'  },
   rejected:      { label: 'Rejected',                 badge: 'badge-red'    },
+  // The gateway rejected/closed the parent request while this slice was still
+  // open — no decision by the agency, nothing committed.
+  closed:        { label: 'Closed by hospital',       badge: 'badge-gray'   },
   // Legacy pre-redesign status -- only fires on applications written under
   // the old direct-to-agency model.
   interview:     { label: 'Interview',                badge: 'badge-purple' },

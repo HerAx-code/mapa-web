@@ -83,24 +83,26 @@ function computeFunding(amountNeeded = 0, slices = []) {
   return { committed, outstanding, need }
 }
 
-function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0) {
+function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0, endorsedBefore = false) {
   const need = Number(amountNeeded) || 0
   if (need > 0 && committed >= need) return 'fully_funded'
   if (committed > 0)                 return 'partially_funded'
   if (outstanding > 0)               return 'endorsed'
-  return 'submitted'
+  return endorsedBefore ? 'under_review' : 'submitted'
 }
 
 function deriveRequestFinancials(slices = [], amountNeeded = 0) {
   const f = computeFunding(amountNeeded, slices)
   return {
     amountCommitted: f.committed,
-    status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded),
+    status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded, slices.length > 0),
   }
 }
 
 // The only statuses this function is allowed to write. Anything else on
 // the request is the gateway's call -- see AUTHORITY BOUNDARY above.
+// 'under_review' may be WRITTEN (every slice declined → back to the gateway)
+// but, once there, is the gateway's again and never rewritten.
 const DERIVED_STATUSES = ['submitted', 'endorsed', 'partially_funded', 'fully_funded']
 
 async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {

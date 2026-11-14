@@ -14,7 +14,7 @@ import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { tsToDate, fmtDate } from '../../utils/dates'
-import { computeFunding, deriveRequestFinancials } from '../../utils/requests'
+import { computeFunding, deriveRequestFinancials, syncedRequestStatus, isRequestClosedByGateway } from '../../utils/requests'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
@@ -474,6 +474,8 @@ export default function ApplicationDetail() {
       await runTransaction(db, async (tx) => {
         const agencySnap = await tx.get(agencyRef)
         const reqSnap    = reqRef ? await tx.get(reqRef) : null
+        // Logic review: no commitment on a request the hospital rejected/closed.
+        if (reqSnap?.exists() && isRequestClosedByGateway(reqSnap.data().status)) throw new Error('REQUEST_CLOSED')
         const data       = agencySnap.exists() ? agencySnap.data() : {}
         const allocated  = data.budget?.allocated ?? 0
         const committed  = data.budget?.committed ?? 0
@@ -542,7 +544,7 @@ export default function ApplicationDetail() {
             : 'partially_funded'
           tx.update(reqRef, {
             amountCommitted: newCommitted,
-            status:          newStatus,
+            status:          syncedRequestStatus(r.status, newStatus),
             updatedAt:       serverTimestamp(),
           })
         }
@@ -601,7 +603,9 @@ export default function ApplicationDetail() {
       console.error('[ApplicationDetail] approve error:', err?.code, err?.message, err)
       // Surface the explicit budget message; Firestore wraps thrown errors
       // from inside runTransaction in err.message.
-      if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
+      if (String(err?.message).includes('REQUEST_CLOSED')) {
+        toast.error('The hospital has closed this request — it can no longer be approved.', { duration: 8000 })
+      } else if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
         toast.error(err.message.replace('BUDGET_INSUFFICIENT:', ''), { duration: 8000 })
       } else if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
         // Most common cause: agency user is trying to approve an application
@@ -657,7 +661,7 @@ export default function ApplicationDetail() {
           const next = deriveRequestFinancials(siblings, need)
           tx.update(reqRef, {
             amountCommitted: next.amountCommitted,
-            status:          next.status,
+            status:          syncedRequestStatus(reqSnap.data().status, next.status),
             updatedAt:       serverTimestamp(),
           })
         })
@@ -837,7 +841,7 @@ export default function ApplicationDetail() {
           const next = deriveRequestFinancials(siblings, need)
           tx.update(reqRef, {
             amountCommitted: next.amountCommitted,
-            status:          next.status,
+            status:          syncedRequestStatus(reqSnap.data().status, next.status),
             updatedAt:       serverTimestamp(),
           })
         }
@@ -948,7 +952,7 @@ export default function ApplicationDetail() {
           const next = deriveRequestFinancials(siblings, need)
           tx.update(reqRef, {
             amountCommitted: next.amountCommitted,
-            status:          next.status,
+            status:          syncedRequestStatus(reqSnap.data().status, next.status),
             updatedAt:       serverTimestamp(),
           })
         }

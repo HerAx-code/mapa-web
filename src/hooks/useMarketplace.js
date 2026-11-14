@@ -3,6 +3,8 @@ import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestor
 import { db } from '../firebase'
 import { usePublicHospitals } from './usePublicHospitals'
 import { agencyPartnersWith } from '../utils/hospitals'
+import { effectiveSlots } from '../utils/requests'
+import { phTodayKey } from '../utils/dates'
 
 // Fewer finished cases than this and a turnaround figure says more about luck
 // than about the hospital; networkStats publishes nothing below it either.
@@ -40,10 +42,13 @@ export function useMarketplace() {
       .filter((a) => agencyPartnersWith(a, h.id))
       .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
     const programs = [...new Set(partners.flatMap((a) => a.assistanceTypes ?? []))].sort()
-    const slots = partners.reduce((acc, a) => ({
-      remaining: acc.remaining + (Number(a.slots?.remaining) || 0),
-      total:     acc.total + (Number(a.slots?.total) || 0),
-    }), { remaining: 0, total: 0 })
+    // Today's slots: the daily reset is written lazily, so a figure from an
+    // earlier day means the agency has refilled (effectiveSlots).
+    const today = phTodayKey()
+    const slots = partners.reduce((acc, a) => {
+      const s = effectiveSlots(a, today)
+      return { remaining: acc.remaining + s.remaining, total: acc.total + s.total }
+    }, { remaining: 0, total: 0 })
     const s = stats[h.id]
     const turnaround = s && typeof s.turnaroundDays === 'number' && Number(s.basedOn) >= MIN_TURNAROUND_SAMPLE
       ? { days: Number(s.turnaroundDays), basedOn: Number(s.basedOn) }

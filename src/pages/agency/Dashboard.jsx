@@ -21,7 +21,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
-import { deriveRequestFinancials } from '../../utils/requests'
+import { deriveRequestFinancials, syncedRequestStatus } from '../../utils/requests'
 import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
@@ -180,7 +180,7 @@ export default function AgencyDashboard() {
                 const next = deriveRequestFinancials(siblings, need)
                 tx.update(reqRef, {
                   amountCommitted: next.amountCommitted,
-                  status:          next.status,
+                  status:          syncedRequestStatus(reqSnap.data().status, next.status),
                   updatedAt:       serverTimestamp(),
                 })
               }
