@@ -414,6 +414,38 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   until they are, audit stamping doesn't run (entries stay on request timelines)
   and the stats are refreshed by script.
 
+### Page restructure (follow-up PR, stacked on Phases 5–9) ✅ 2026-11-14
+Pages adapted to the network model, using the "MAPA Platform Redesign" canvas as
+the visual reference. Ships with Phases 5–9 (it depends on them).
+- **Shell:** gateway staff and patients see their hospital's name under the brand
+  (`useOrg`). Platform admin: dark sidebar — Hospitals, Onboarding requests (live
+  badge), Agencies.
+- **Hospital admins:** the Agencies page is "Partner agencies" (only the agencies
+  their hospital can endorse to); Dashboard counts and low-slot alerts consider
+  partners only.
+- **Agencies:** promotions reach only patients of partner hospitals
+  (`promoReachesMe`); Dashboard + Impact get a "By hospital" card; Logs + Funds a
+  hospital filter (`utils/hospitalBreakdown.js`). All hidden while every slice
+  comes from one hospital.
+- **Platform console** (`/platform/hospitals`, home): key-figure tiles + one hospitals
+  table (prefix, region, patients, active requests, partner agencies,
+  Live / Provisioning / Sign-ups paused). The separate Overview page was merged in
+  (routes redirect). Hospitals gain a `region` field. Agency management lives at
+  `/platform/agencies` (hospital admins keep `/admin/agencies`).
+- **Onboarding pipeline:** public `/for-hospitals` page with a request form →
+  `onboardingRequests` (one per anonymous session, pinned shape, platform-only
+  reads) → `/platform/requests` queue → "Set up hospital" pre-fills Add hospital and
+  marks the request onboarded.
+- **Public pages:** `hospitalsPublic` projection (rules: must equal the hospital doc
+  via `getAfter`) feeds the Landing page's participating-hospitals list and real
+  example codes on Landing + Register. Register explains "Prefix = your hospital";
+  Log in gets the canvas brand panel. Landing adds header nav, a live partner-agency
+  strip, patients/hospitals "two doors" and a network band with live counts — every
+  existing patient section kept.
+- **Deliberately not taken from the canvas:** a platform "Patients (all)" page (D1:
+  no patient data at network level); unsourced figures ("167 Malasakit Centers");
+  unverifiable certification badges / legal footnotes.
+
 ---
 
 ## 4. Risks
