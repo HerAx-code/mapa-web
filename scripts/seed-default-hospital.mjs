@@ -75,10 +75,11 @@ async function main() {
 
   if (snap.exists && !FORCE) {
     console.log(`\n[seed-hospital] hospitals/${ID} already exists — left untouched. Pass --force to merge the values above over it.`)
+    if (!DRY_RUN) await syncPublic(snap.data())
     return
   }
   if (DRY_RUN) {
-    console.log(`\n[seed-hospital] WOULD ${snap.exists ? 'merge into' : 'create'} hospitals/${ID}. Re-run without --dry-run to apply.`)
+    console.log(`\n[seed-hospital] WOULD ${snap.exists ? 'merge into' : 'create'} hospitals/${ID} (+ its public projection). Re-run without --dry-run to apply.`)
     return
   }
 
@@ -88,6 +89,20 @@ async function main() {
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
   console.log(`\n[seed-hospital] ✅ hospitals/${ID} ${snap.exists ? 'updated' : 'created'}.`)
+  await syncPublic((await ref.get()).data())
+}
+
+// The sign-in-free projection the Landing page lists (hospitalsPublic; same
+// four fields as src/utils/hospitalsPublic.js projectPublicHospital).
+async function syncPublic(h) {
+  await db.doc(`hospitalsPublic/${ID}`).set({
+    facilityName:     h.facilityName ?? '',
+    shortName:        h.shortName ?? '',
+    accessCodePrefix: h.accessCodePrefix ?? '',
+    enabled:          h.enabled !== false,
+    updatedAt:        FieldValue.serverTimestamp(),
+  })
+  console.log(`[seed-hospital] ✅ hospitalsPublic/${ID} synced (Landing page list).`)
 }
 
 main().catch((err) => { console.error('[seed-hospital] FATAL:', err); process.exit(1) })

@@ -131,3 +131,31 @@ describe('a disabled hospital takes no new registrations', () => {
     await assertFails(setDoc(ref('new2', 'users/new2'), patient('CLS-2026-00001', 'closed')))
   })
 })
+
+// Landing page projection: world-readable, and it must mirror its hospital.
+describe('hospitalsPublic — public, and always equal to the hospital doc', () => {
+  const pub = { facilityName: '', shortName: '', accessCodePrefix: 'MAPA', enabled: true }
+
+  it('anyone, signed out included, can read it', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) =>
+      setDoc(doc(ctx.firestore(), 'hospitalsPublic', 'hospital-1'), pub))
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'hospitalsPublic', 'hospital-1')))
+  })
+
+  it('the platform admin and the own super admin may write a faithful copy', async () => {
+    await assertSucceeds(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH' }))
+    await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), pub))
+  })
+
+  it('a copy that disagrees with the hospital is denied (prefix, sign-ups, name)', async () => {
+    await assertFails(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'MAPA' }))
+    await assertFails(setDoc(ref('plat', 'hospitalsPublic/closed'), { ...pub, accessCodePrefix: 'CLS', enabled: true }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, facilityName: 'Fake Hospital' }))
+  })
+
+  it("another hospital's super admin, patients and extra fields are denied", async () => {
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH' }))
+    await assertFails(setDoc(ref('new1', 'hospitalsPublic/hospital-1'), pub))
+    await assertFails(setDoc(ref('plat', 'hospitalsPublic/hospital-1'), { ...pub, staff: ['x'] }))
+  })
+})

@@ -789,6 +789,26 @@ service cloud.firestore {
                        prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
     }
 
+    // ── hospitalsPublic ────────────────────────────────────────────────────────
+    // The sign-in-free projection of each hospital for the Landing page (name,
+    // short name, access-code prefix, sign-ups open). World-readable. Written by
+    // whoever may edit the hospital (platform admin, or its own super admin),
+    // and every field must EQUAL the hospital doc after the write — so the
+    // public list can never drift from or contradict the real hospital.
+    match /hospitalsPublic/{hospitalId} {
+      allow read: if true;
+      allow create, update: if (isPlatformAdmin() || (isSuperAdmin() && hospitalId == userTenantId())) &&
+                       request.resource.data.keys().hasOnly(['facilityName', 'shortName', 'accessCodePrefix', 'enabled', 'updatedAt']) &&
+                       request.resource.data.facilityName     == hospitalAfter(hospitalId).get('facilityName', '') &&
+                       request.resource.data.shortName        == hospitalAfter(hospitalId).get('shortName', '') &&
+                       request.resource.data.accessCodePrefix == hospitalAfter(hospitalId).get('accessCodePrefix', '') &&
+                       request.resource.data.enabled          == hospitalAfter(hospitalId).get('enabled', true);
+    }
+
+    function hospitalAfter(hospitalId) {
+      return getAfter(/databases/$(database)/documents/hospitals/$(hospitalId)).data;
+    }
+
     // ── networkStats ───────────────────────────────────────────────────────────
     // Phase 9. Per-hospital counts (no patient data) for the platform admin's
     // Network page — computed by the Admin SDK (refreshNetworkStats /

@@ -261,6 +261,8 @@
       "codeHeading": "Kailangan ng Patient Access Code",
       "codeBody": "Naka-print ito at ibinibigay nang personal sa {{gateway}} office. Hindi ito ipinapadala sa text, email, o social media — at walang makapagbibigay nito online.",
       "codeSample": "Halimbawa ng code",
+      "hospitalsHeading": "Mga kasaling ospital",
+      "codeStartsWith": "{{prefix}}-…",
       "codeCta": "Saan ang opisina?"
     },
     "faq": {

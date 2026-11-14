@@ -261,6 +261,8 @@
       "codeHeading": "You will need a Patient Access Code",
       "codeBody": "This is printed and handed to you in person at the {{gateway}} office. It is never sent by text, email, or social media — and no one online can give you one.",
       "codeSample": "Sample code",
+      "hospitalsHeading": "Participating hospitals",
+      "codeStartsWith": "{{prefix}}-…",
       "codeCta": "Where is the office?"
     },
     "faq": {

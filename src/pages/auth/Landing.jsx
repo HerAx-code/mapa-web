@@ -64,6 +64,8 @@ export default function Landing() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [agencies, setAgencies]       = useState([])
+  // Participating hospitals (public projection, multi-hospital).
+  const [hospitals, setHospitals]     = useState([])
   // Program-slot bars fill from empty the first time the Programs section
   // scrolls into view — motion that conveys the data (how full each program
   // is), not decoration. Starts already "in" under reduced motion so the
@@ -100,6 +102,23 @@ export default function Landing() {
         snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .sort((a, b) => a.name?.localeCompare(b.name))
+      ),
+      () => {}
+    )
+    return unsub
+  }, [])
+
+  // Participating hospitals: the public projection (hospitals/{id} needs
+  // sign-in). Empty until a hospital is synced — then the sample code below
+  // falls back to this deployment's own prefix.
+  useEffect(() => {
+    const unsub = onSnapshot(
+      query(collection(db, 'hospitalsPublic'), where('enabled', '==', true)),
+      snap => setHospitals(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(h => h.facilityName && h.accessCodePrefix)
+          .sort((a, b) => a.facilityName.localeCompare(b.facilityName))
       ),
       () => {}
     )
@@ -297,8 +316,26 @@ export default function Landing() {
                 <p className="mt-2 text-sm leading-relaxed text-gray-600">{t('landing.eligibility.codeBody')}</p>
                 <div className="mt-5 rounded-xl border border-dashed border-amber-400 bg-white px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.codeSample')}</p>
-                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">{accessCodePrefixFor(new Date().getFullYear())}00042</p>
+                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">
+                    {hospitals.length
+                      ? `${hospitals[0].accessCodePrefix}-${new Date().getFullYear()}-`
+                      : accessCodePrefixFor(new Date().getFullYear())}00042
+                  </p>
                 </div>
+                {/* Multi-hospital: each hospital issues its own prefix. */}
+                {hospitals.length > 1 && (
+                  <div className="mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.hospitalsHeading')}</p>
+                    <ul className="mt-2 space-y-1.5">
+                      {hospitals.map(h => (
+                        <li key={h.id} className="flex items-baseline justify-between gap-3 text-sm">
+                          <span className="text-gray-800">{h.facilityName}</span>
+                          <span className="font-mono text-xs text-gray-500 whitespace-nowrap">{t('landing.eligibility.codeStartsWith', { prefix: h.accessCodePrefix })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <a href="#help" className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
                   {t('landing.eligibility.codeCta')} <MdChevronRight size={16} />
                 </a>

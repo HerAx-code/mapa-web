@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { logAudit } from '../../utils/auditLog'
+import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import { createStaffAccount } from '../../utils/staffAccounts'
 import { DEFAULT_HOSPITAL_ID } from '../../config/org'
 import { agencyPartnersWith } from '../../utils/hospitals'
@@ -110,11 +111,14 @@ function HospitalModal({ hospital, hospitals, onClose }) {
           .map((k) => [k, deleteField()]))
         batch.update(doc(db, 'hospitals', id), { ...data, ...cleared, updatedAt: serverTimestamp() })
         await batch.commit()
+        const after = { ...Object.fromEntries(Object.entries(hospital).filter(([k]) => !(k in cleared))), ...data }
+        await syncHospitalPublic(id, after)
         logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated' })
         toast.success('Hospital updated.')
       } else {
         batch.set(doc(db, 'hospitals', id), { ...data, enabled: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
         await batch.commit()
+        await syncHospitalPublic(id, { ...data, enabled: true })
         logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN)` })
         toast.success(`${data.facilityName} added. Next, create its first administrator.`)
       }
@@ -288,6 +292,7 @@ export default function Hospitals() {
     setBusy(true)
     try {
       await updateDoc(doc(db, 'hospitals', h.id), { enabled: next, updatedAt: serverTimestamp() })
+      await syncHospitalPublic(h.id, { ...h, enabled: next })
       logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: h.id, targetName: h.facilityName || h.id, details: next ? 'Registrations resumed' : 'Registrations paused' })
       toast.success(next ? 'Registrations resumed.' : 'Registrations paused.')
       setToggling(null)
