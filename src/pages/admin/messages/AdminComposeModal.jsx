@@ -43,7 +43,7 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
   const handleClose = () => hasUnsaved ? setConfirmClose(true) : onClose()
 
   useEffect(() => {
-    getUsersInScope(db, ['patient', 'staff_admin', 'super_admin', 'agency']).then(docs => {
+    getUsersInScope(db, ['patient', 'staff_admin', 'super_admin', 'agency'], user).then(docs => {
       setAllUsers(
         docs
           .map(d => ({ id: d.id, ...d.data() }))

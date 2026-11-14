@@ -31,6 +31,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users', 'coord-1'),   { role: 'agency', agencyId: 'dswd' })
     await setDoc(doc(db, 'users', 'super-1'),   { role: 'super_admin', tenantId: 'hospital-1' })
     await setDoc(doc(db, 'hospitalIds', 'MAPA-2026-00009'), { status: 'available', patId: null, tenantId: 'hospital-1' })
+    await setDoc(doc(db, 'agencies', 'dswd'), { name: 'DSWD', partnerHospitalIds: ['hospital-1'] })
     // Real patient profiles carry agencyId/rank/active (Register.jsx); the
     // self-update rule compares them, so the fixture must too.
     const patient = { role: 'patient', agencyId: null, rank: null, active: true }

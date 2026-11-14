@@ -40,6 +40,11 @@ describe('applications.create — Phase 1.4 forged funding slice', () => {
 
   it('allows CRMC admin to create an endorsement slice', async () => {
     await seedUser('admin-1', 'staff_admin')
+    // Phase 7: the slice's agency must exist and partner with the hospital
+    // (a pre-Phase-7 agency with no list partners with hospital #1).
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), { name: 'Malasakit' })
+    })
     const ctx = testEnv.authenticatedContext('admin-1')
     await assertSucceeds(addDoc(collection(ctx.firestore(), 'applications'), slice()))
   })

@@ -17,6 +17,7 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { tsToDate } from '../../utils/dates'
+import PartnerHospitalsCard from '../../components/admin/PartnerHospitals'
 
 const formatDate = (ts) => {
   const d = tsToDate(ts)
@@ -412,6 +413,11 @@ export default function AgencyProfile() {
           <p className="text-xs text-gray-500 mt-3 leading-relaxed">
             To change document requirements or assistance types, ask the administrator. These tie into the patient application form and certificate templates.
           </p>
+        </div>
+
+        {/* Partner hospitals (Phase 7, read-only — set by the network admin) */}
+        <div className="mb-5">
+          <PartnerHospitalsCard agency={agency} canEdit={false} user={user} />
         </div>
 
         {/* Coordinators (read-only) */}

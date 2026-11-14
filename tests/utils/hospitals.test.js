@@ -17,7 +17,7 @@ vi.mock('firebase/firestore', () => ({
 
 const {
   tenantIdFor, withTenant, currentTenantId, loadHospital, clearHospital, isNetworkRole,
-  tenantWhere, inMyTenant, getUsersInScope,
+  tenantWhere, inMyTenant, getUsersInScope, agencyPartnersWith, partnerHospitalIdsOf,
 } = await import('../../src/utils/hospitals')
 const { ORG, DEFAULT_HOSPITAL_ID } = await import('../../src/config/org')
 
@@ -191,6 +191,57 @@ describe('getUsersInScope', () => {
     await signInAs('bgh')
     getDocs.mockResolvedValue(docs())
     await getUsersInScope({}, ['super_admin'])
+    expect(getDocs).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Phase 7 — agency ↔ hospital partnerships.
+describe('agencyPartnersWith', () => {
+  it('uses the agency partner list', () => {
+    expect(agencyPartnersWith({ partnerHospitalIds: ['bgh'] }, 'bgh')).toBe(true)
+    expect(agencyPartnersWith({ partnerHospitalIds: ['bgh'] }, DEFAULT_HOSPITAL_ID)).toBe(false)
+  })
+
+  it('treats a pre-Phase-7 agency (no list) as hospital #1 only, like the rules', () => {
+    expect(partnerHospitalIdsOf({})).toEqual([DEFAULT_HOSPITAL_ID])
+    expect(agencyPartnersWith({}, DEFAULT_HOSPITAL_ID)).toBe(true)
+    expect(agencyPartnersWith({}, 'bgh')).toBe(false)
+  })
+
+  it('an empty list partners with nobody', () => {
+    expect(agencyPartnersWith({ partnerHospitalIds: [] }, DEFAULT_HOSPITAL_ID)).toBe(false)
+  })
+
+  it('a missing tenant means hospital #1 (pre-backfill case)', () => {
+    expect(agencyPartnersWith({ partnerHospitalIds: [DEFAULT_HOSPITAL_ID] }, undefined)).toBe(true)
+  })
+})
+
+describe('getUsersInScope — agency viewer (Phase 7)', () => {
+  const coord = { role: 'agency', agencyId: 'dswd' }
+
+  it('staff + agency users, and only the patients endorsed to its agency', async () => {
+    getDocs.mockImplementation(async (q) =>
+      q.cs.some((c) => c.field === 'agencyIds') ? docs('pat1', 'sw') : docs('sw', 'admin'))
+    expect((await getUsersInScope({}, null, coord)).map((d) => d.id)).toEqual(['sw', 'admin', 'pat1'])
+    expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
+      [{ field: 'role', op: 'in', value: ['super_admin', 'staff_admin', 'agency', 'agency_admin'] }],
+      [{ field: 'agencyIds', op: 'array-contains', value: 'dswd' }],
+    ])
+  })
+
+  it('never issues an unfiltered or role==patient users query', async () => {
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['patient', 'staff_admin', 'super_admin', 'agency'], coord)
+    for (const [q] of getDocs.mock.calls) {
+      expect(q.cs.length).toBeGreaterThan(0)
+      expect(q.cs.some((c) => c.field === 'role' && (c.value === 'patient' || c.value?.includes?.('patient')))).toBe(false)
+    }
+  })
+
+  it('skips the patient query when patients are not wanted', async () => {
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['staff_admin'], coord)
     expect(getDocs).toHaveBeenCalledTimes(1)
   })
 })

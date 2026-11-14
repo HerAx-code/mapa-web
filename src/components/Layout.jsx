@@ -302,7 +302,7 @@ function ComposeModal({ user, onClose }) {
     // staff/agency-only. Guard the fetch so no patient session loads the
     // user directory even if this modal is ever mounted for one.
     if (user?.role === 'patient') return
-    getUsersInScope(db)
+    getUsersInScope(db, null, user)
       .then(docs => setPatients(
         docs
           .map(d => ({ uid: d.id, ...d.data() }))
@@ -1013,7 +1013,7 @@ export default function Layout({ children, breadcrumb }) {
               now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
             updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
               .then(async () => {
-                const allUsers = await getUsersInScope(db)
+                const allUsers = await getUsersInScope(db, null, user)
                 await Promise.all(allUsers.map(u =>
                   notify(u.id, {
                     type:  'system_announcement',

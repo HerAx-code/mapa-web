@@ -45,6 +45,9 @@ beforeEach(async () => {
       put('users/patB', patient(B, 'CODE-B')),
       put('hospitals/hospital-1', { gatewayName: 'MSS A' }),
       put('hospitals/bgh', { gatewayName: 'MSS B' }),
+      // Shared agencies partner with both hospitals (Phase 7).
+      put('agencies/dswd', { name: 'DSWD', partnerHospitalIds: [A, B] }),
+      put('agencies/pcso', { name: 'PCSO', partnerHospitalIds: [A, B] }),
       put('hospitalIds/CODE-A', { status: 'used', patId: 'patA', tenantId: A }),
       put('hospitalIds/CODE-B', { status: 'used', patId: 'patB', tenantId: B }),
       put('hospitalIds/CODE-A2', { status: 'available', patId: null, tenantId: A }),

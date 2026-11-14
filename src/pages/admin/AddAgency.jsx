@@ -19,6 +19,8 @@ import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { notify } from '../../utils/notifications'
 import { generateTempPassword } from '../../utils/password'
 import AddressPicker from '../../components/AddressPicker'
+import { PartnerHospitalPicker } from '../../components/admin/PartnerHospitals'
+import { useHospitals } from '../../hooks/useHospitals'
 import {
   MdArrowBack, MdLocationOn, MdPhone, MdVisibility, MdVisibilityOff,
   MdContentCopy, MdRefresh,
@@ -76,6 +78,13 @@ export default function AddAgency() {
     .join(', ')
   const [selectedReqs,  setSelectedReqs]  = useState(new Set())
   const [selectedTypes, setSelectedTypes] = useState(new Set())
+  // Phase 7: hospitals whose gateways may endorse to this agency (D4).
+  const { hospitals } = useHospitals()
+  const [partners, setPartners] = useState([])
+  // A one-hospital network has only one sensible answer — preselect it.
+  useEffect(() => {
+    if (hospitals.length === 1) setPartners(p => (p.length ? p : [hospitals[0].id]))
+  }, [hospitals])
   const [docTypesList,  setDocTypesList]  = useState([])
   const [typesList,     setTypesList]     = useState([])
 
@@ -117,6 +126,7 @@ export default function AddAgency() {
     if (!agency.province)        { toast.error('Province is required.'); return }
     if (!agency.city)            { toast.error('City / Municipality is required.'); return }
     if (Number(agency.slotsTotal) < 1) { toast.error('Daily slots must be at least 1.'); return }
+    if (!partners.length)        { toast.error('Pick at least one partner hospital.'); return }
 
     // The first Agency Administrator is mandatory: every agency needs at
     // least one admin who can then add coordinators from the agency portal's
@@ -196,6 +206,7 @@ export default function AddAgency() {
           processingTime: agency.processingTime,
           requirements:   [...selectedReqs],
           assistanceTypes:[...selectedTypes],
+          partnerHospitalIds: partners,
           slots:          { total: slots, remaining: slots },
           enabled:        true,
           createdAt:      serverTimestamp(),
@@ -436,6 +447,12 @@ export default function AddAgency() {
                 ))}
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Partner Hospitals <span className="text-red-400">*</span></label>
+            <p className="text-xs text-gray-500 mb-2">Only these hospitals' gateways can endorse patients to this agency. You can change this later.</p>
+            <PartnerHospitalPicker hospitals={hospitals} value={partners} onChange={setPartners} disabled={saving} />
           </div>
         </div>
 

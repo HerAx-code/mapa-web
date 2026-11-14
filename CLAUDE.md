@@ -71,8 +71,11 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
   **hospital-scoped**; a new **`platform_admin`** role runs the network (onboards
   hospitals/agencies, aggregate analytics, no patient PII).
 - **Agencies are network-level and shared**: an agency partners with many hospitals
-  and funds slices from any partner hospital. Slices carry both `tenantId` and
-  `agencyId`. One budget per agency (per-hospital sub-budgets are future work).
+  (`agencies.partnerHospitalIds`, set by platform_admin; no list = hospital #1 only)
+  and funds slices only from partner hospitals (rules-enforced). Slices carry both
+  `tenantId` and `agencyId`. An agency reads a patient profile only via
+  `users.agencyIds` (written at endorsement). One budget per agency (per-hospital
+  sub-budgets are future work).
 - A patient belongs to **one** hospital, decided by the **per-hospital access-code
   prefix** they register with (prefixes globally unique).
 - Reference data = network defaults (`src/data/referenceData.js`) + optional

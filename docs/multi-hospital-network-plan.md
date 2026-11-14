@@ -3,10 +3,13 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅
-(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 7 next.
-**Merge/deploy:** Phases 0–4 are safe to ship as-is; the Phase 5 + 6 rules ship
-only in the coordinated rollout described under Phase 5 (with the Phase 6 step).
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 8 next.
+**Merge/deploy:** Phases 0–4 are safe to ship as-is. **Phases 5–7 ship together,
+only in the coordinated rollout** described under Phase 5 — their rules depend on
+the backfills, and Phase 6's client already moves agency management to the
+platform admin (merged alone, hospital super admins would lose the agency UI
+before a platform admin exists).
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -156,8 +159,8 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   `VITE_TENANT_SCOPING=true` in Vercel and redeploy, (4) preview-test every staff
   page.
 - **Follow-ups:**
-  - Agency-side Hospital column + filter (Inbox / Dashboard) moves to Phase 7, where
-    agencies get partner hospitals to list.
+  - ~~Agency-side Hospital column + filter~~ — done in Phase 7 (Inbox: hospital
+    label per row + a filter once slices come from more than one hospital).
   - Audit entries by **agency** actors carry no tenant (Phase 2: agencies are
     network-level), so with scoping on they leave the gateway Audit Log page; they
     stay on each request's timeline (queried by `requestId`). Phase 9: a Cloud
@@ -196,7 +199,10 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   post-backfill state (`tenantId: 'hospital-1'`). 308/308 rules tests pass.
 - **Rollout is one coordinated step — never deploy these rules on their own:**
   (1) Phases 1–4 deployed, (2) seed hospital #1, (3) backfill `--apply` and
-  re-verify 0 left, (4) deploy indexes and wait for them to build,
+  re-verify 0 left, (3b) **Phase 7:** `scripts/backfill-partnerships.mjs --apply`
+  and re-verify 0 left (agency partner lists + patients' `agencyIds` — without
+  it agencies lose the patient profile on in-flight cases),
+  (4) deploy indexes and wait for them to build,
   (4b) **Phase 6:** create the network operator with
   `scripts/create-platform-admin.mjs --apply` (once these rules are live, only a
   platform_admin can manage agencies), (5) set
@@ -204,11 +210,9 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   together. Rules without the flag → every gateway list query is denied; rules
   before the backfill → untagged records unreachable by staff.
 - Accepted gaps (follow-ups):
-  - Agencies can still read every `users` doc (needed for the inbox patient
-    lookup). Scoping it to patients endorsed to the agency needs a denormalized
-    field — Phase 7.
-  - Any hospital's admin can still edit network config (agencies, reference data)
-    until `platform_admin` exists — Phase 6.
+  - ~~Agencies can still read every `users` doc~~ — closed in Phase 7 (only
+    patients endorsed to the agency, via `users.agencyIds`).
+  - ~~Any hospital's admin can still edit network config~~ — closed in Phase 6.
 - Note: each `get(users/uid)` in rules is a billed read (cached within one
   evaluation, so role + tenant cost one). If rule cost becomes a problem, move
   `role`, `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) —
@@ -268,13 +272,48 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
     (network config vs. access codes need different roles); use the Admin SDK
     bootstrap scripts.
 
-### Phase 7 — Agency ↔ hospital partnerships
-- `agencies/{id}.partnerHospitalIds: []` (or a `partnerships` collection if
-  per-pair terms are needed later).
-- Endorse / SuggestEndorsement modals list **only agencies partnered with the
-  endorsing hospital**.
-- Rules: an endorse write must target a partner agency.
-- `agenciesPublic` (landing-page teaser) filtered per hospital.
+### Phase 7 — Agency ↔ hospital partnerships ✅ 2026-11-14 (not deployed)
+- **Data.** `agencies/{id}.partnerHospitalIds: [tenantId]` — the hospitals whose
+  gateways may endorse to the agency (a `partnerships` collection only if per-pair
+  terms are ever needed). An agency with **no list** (onboarded before Phase 7)
+  partners with **hospital #1 only** — in the rules (`agencyPartners()`, a default
+  on one concrete doc fetched with `get()`, never a query shape) and in the client
+  (`partnerHospitalIdsOf` / `agencyPartnersWith`, src/utils/hospitals.js).
+- **Who sets it (D4).** The platform admin: a partner picker on Add Agency
+  (required; preselected in a one-hospital network) and a **Partner hospitals** card
+  on the agency page (`src/components/admin/PartnerHospitals.jsx`). Agency staff and
+  hospital admins see it read-only (agency Profile page) and can't change it (rules).
+  The Hospitals page shows each hospital's partner-agency count (flags "None").
+- **Endorsement.** The gateway's endorse modal and the agencies' Suggest-another-
+  agency modal list **only partners of the case's hospital**; the rules deny a slice
+  (`applications` create) or a referral suggestion to any other agency. The
+  patient's Find Programs page lists only their hospital's partners.
+- **Agencies read only their own patients** (closes the Phase 5 gap). `users` read
+  for agency roles: `userAgencyId() in resource.data.agencyIds` (+ staff/agency docs,
+  as before). The endorse flow adds the endorsed agencies to the patient's
+  `users.agencyIds` (after commit, best-effort — like the document `agencyIds`
+  stamps). Patients can't change it. Agency composers use `getUsersInScope(db,
+  roles, viewer)` → staff + agency users + `agencyIds array-contains <agency>`
+  (rules-provable; an unfiltered or `role == patient` query is denied).
+- **Agency inbox.** Hospital label per row; a hospital filter once slices come from
+  more than one hospital (`src/hooks/useHospitals.js`).
+- **Backfill:** `scripts/backfill-partnerships.mjs` (dry run by default, additive,
+  idempotent; plan in `scripts/lib/partnership-backfill-plan.mjs`, unit-tested):
+  agencies without a list → `[hospital #1]`; each patient's `agencyIds` ← every
+  agency holding one of their slices. Verified on the emulator (dry run → apply →
+  re-run reports 0; existing lists and ids untouched).
+- Tests: `tests/rules/partnerships.rules.test.js` (16) — partner-only endorse and
+  suggestion, legacy default, missing agency denied, list ownership, agency patient
+  reads (single doc, array-contains query, broad queries denied), who writes
+  `agencyIds`. Older fixtures seed the agencies their slices name. 372/372 rules
+  tests pass.
+- **Decision — `agenciesPublic` stays network-wide.** The public Landing teaser has
+  no hospital context before sign-in, so it lists the network's programs; the
+  signed-in patient's Find Programs page is the per-hospital view.
+- Follow-ups: the Agencies-page quick "Add agency" modal (not the full Add Agency
+  page) doesn't ask for partners — such an agency defaults to hospital #1; the
+  platform admin sets partners on its page. Per-hospital agency budgets stay D3
+  future work.
 
 ### Phase 8 — Per-hospital access codes + configuration
 - `verifyAccessCode` + `orgConfig.js`: accept any **enabled hospital's** prefix;

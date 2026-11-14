@@ -9,6 +9,8 @@ import PatientPage from '../../components/patient/PatientPage'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { useAuth } from '../../contexts/AuthContext'
+import { tenantIdFor, agencyPartnersWith } from '../../utils/hospitals'
 import { useTranslation } from 'react-i18next'
 
 // Informational catalog of available medical-assistance programs. Patients no
@@ -19,6 +21,10 @@ import { useTranslation } from 'react-i18next'
 export default function MedicalPrograms() {
   const { t }                           = useTranslation()
   const navigate                        = useNavigate()
+  const { user }                        = useAuth()
+  // Phase 7: a patient sees only the agencies their hospital partners with —
+  // the only ones its gateway can endorse them to.
+  const myTenant                        = tenantIdFor(user)
   const [search, setSearch]             = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [agencies, setAgencies]         = useState([])
@@ -31,6 +37,7 @@ export default function MedicalPrograms() {
     const unsub = onSnapshot(q, snap => {
       setAgencies(
         snap.docs.map(d => ({ id: d.id, ...d.data() }))
+          .filter(a => agencyPartnersWith(a, myTenant))
           // Null-safe sort: a corrupt agency doc missing `name` would
           // throw on .localeCompare and wipe the whole catalog -- one
           // bad row should not blank the entire Find Programs page.
@@ -42,7 +49,7 @@ export default function MedicalPrograms() {
       console.error('[MedicalPrograms] agencies snapshot error:', err)
     })
     return unsub
-  }, [])
+  }, [myTenant])
 
   // Live agency promotions — the latest active one per agency, within its
   // scheduled window. Keyed by agencyId so each card can show its own.

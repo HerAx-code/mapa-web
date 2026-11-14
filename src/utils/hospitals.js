@@ -86,11 +86,38 @@ export const inMyTenant = (d) => {
   return !t || !d?.tenantId || d.tenantId === t
 }
 
-// Users in scope for a gateway directory or broadcast: the user's own
-// hospital's users PLUS agency users (network-level, no tenantId). Two
+// Agency ↔ hospital partnerships (Phase 7). An agency onboarded before
+// Phase 7 has no partnerHospitalIds yet and partners with hospital #1 only —
+// the same default the rules apply (firestore.rules agencyPartners).
+export const partnerHospitalIdsOf = (agency) =>
+  Array.isArray(agency?.partnerHospitalIds) ? agency.partnerHospitalIds : [DEFAULT_HOSPITAL_ID]
+export const agencyPartnersWith = (agency, tenantId) =>
+  partnerHospitalIdsOf(agency).includes(tenantId || DEFAULT_HOSPITAL_ID)
+
+const GATEWAY_STAFF_ROLES = ['super_admin', 'staff_admin']
+
+// An agency user's directory (Phase 7): gateway staff + agency users of every
+// hospital, and only the patients endorsed to their agency (the rules let an
+// agency read a patient only when its id is in that patient's agencyIds).
+async function agencyDirectory(db, roles, agencyId) {
+  const users = collection(db, 'users')
+  const wanted = roles ?? [...GATEWAY_STAFF_ROLES, ...AGENCY_ROLES, 'patient']
+  const staffRoles = wanted.filter((r) => GATEWAY_STAFF_ROLES.includes(r) || isAgencyRoleName(r))
+  const queries = []
+  if (staffRoles.length) queries.push(query(users, where('role', 'in', staffRoles)))
+  if (wanted.includes('patient') && agencyId) queries.push(query(users, where('agencyIds', 'array-contains', agencyId)))
+  const snaps = await Promise.all(queries.map((q) => getDocs(q)))
+  const seen = new Set()
+  return snaps.flatMap((s) => s.docs).filter((d) => !seen.has(d.id) && seen.add(d.id))
+}
+
+// Users in scope for a directory or broadcast. Gateway staff: the user's own
+// hospital's users PLUS agency users (network-level, no tenantId) — two
 // queries, because one Firestore query can't express "tenant X or no tenant".
-// `roles` (optional) narrows both. Returns the user docs (snapshots).
-export async function getUsersInScope(db, roles = null) {
+// Agency users (pass `viewer`): see agencyDirectory. `roles` (optional)
+// narrows the result. Returns the user docs (snapshots).
+export async function getUsersInScope(db, roles = null, viewer = null) {
+  if (viewer && isAgencyRoleName(viewer.role)) return agencyDirectory(db, roles, viewer.agencyId)
   const users = collection(db, 'users')
   const t = scopedTenant()
   if (!t) {

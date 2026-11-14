@@ -17,6 +17,7 @@ import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { getOrCreateConversation } from '../../utils/messages'
 import { AgencyModal } from './Agencies'
 import AgencyAvatar from '../../components/AgencyAvatar'
+import PartnerHospitalsCard from '../../components/admin/PartnerHospitals'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
@@ -549,6 +550,9 @@ export default function AgencyDetail() {
               <p className="text-xs text-gray-500 italic">No assistance types listed.</p>
             )}
           </div>
+
+          {/* Partner hospitals (Phase 7) — platform admin edits, others read */}
+          <PartnerHospitalsCard agency={agency} canEdit={canManage} user={user} />
 
           {/* Application stats */}
           <div className="card p-4">

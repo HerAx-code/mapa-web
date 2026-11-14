@@ -13,6 +13,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { logAudit } from '../../utils/auditLog'
 import { createStaffAccount } from '../../utils/staffAccounts'
 import { DEFAULT_HOSPITAL_ID } from '../../config/org'
+import { agencyPartnersWith } from '../../utils/hospitals'
 import {
   emptyHospitalForm, validateHospital, hospitalDocFromForm, normalizeHospitalId, HOSPITAL_FORM_FIELDS,
   normalizePrefix, suggestHospitalId,
@@ -253,6 +254,7 @@ function AdminModal({ hospital, onClose }) {
 export default function Hospitals() {
   const [hospitals, setHospitals] = useState([])
   const [staff, setStaff] = useState([])
+  const [agencies, setAgencies] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)      // 'add' | hospital
   const [addingAdmin, setAddingAdmin] = useState(null)
@@ -267,6 +269,12 @@ export default function Hospitals() {
     query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin'])),
     (snap) => setStaff(snap.docs.map((d) => d.data())),
     (e) => console.error('[Hospitals] staff snapshot error:', e),
+  ), [])
+
+  // Phase 7: how many enabled agencies each hospital can endorse to.
+  useEffect(() => onSnapshot(collection(db, 'agencies'),
+    (snap) => setAgencies(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (e) => console.error('[Hospitals] agencies snapshot error:', e),
   ), [])
 
   const staffByHospital = useMemo(() => {
@@ -314,6 +322,7 @@ export default function Hospitals() {
           <ul className="space-y-3">
             {sorted.map((h) => {
               const counts = staffByHospital[h.id] ?? { super: 0, staff: 0 }
+              const partnerCount = agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
               return (
                 <li key={h.id} className="card p-4 sm:p-5">
                   <div className="flex flex-col sm:flex-row sm:items-start gap-3">
@@ -327,7 +336,7 @@ export default function Hospitals() {
                         {h.id === DEFAULT_HOSPITAL_ID && <span className="badge-gray text-[11px]">Hospital #1</span>}
                         {h.enabled === false && <span className="badge-red text-[11px]">Disabled</span>}
                       </div>
-                      <dl className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
+                      <dl className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2 text-xs">
                         <div><dt className="text-gray-500">ID</dt><dd className="font-mono text-gray-800 truncate">{h.id}</dd></div>
                         <div><dt className="text-gray-500">Access codes</dt><dd className="font-mono text-gray-800">{h.accessCodePrefix ? `${h.accessCodePrefix}-…` : '—'}</dd></div>
                         <div><dt className="text-gray-500">Gateway</dt><dd className="text-gray-800 truncate">{h.gatewayName || '—'}</dd></div>
@@ -335,6 +344,12 @@ export default function Hospitals() {
                           <dt className="text-gray-500">Administrators</dt>
                           <dd className={counts.super === 0 ? 'text-amber-700 font-medium' : 'text-gray-800'}>
                             {counts.super === 0 ? 'No super admin yet' : `${counts.super} super · ${counts.staff} staff`}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-500">Partner agencies</dt>
+                          <dd className={partnerCount === 0 ? 'text-amber-700 font-medium' : 'text-gray-800'}>
+                            {partnerCount === 0 ? 'None — set under Agencies' : partnerCount}
                           </dd>
                         </div>
                       </dl>
@@ -356,7 +371,7 @@ export default function Hospitals() {
         )}
 
         <p className="text-xs text-gray-500 mt-4">
-          Network analytics and agency ↔ hospital partnerships arrive in later phases. Patient records stay with each hospital and are never shown here.
+          A hospital's gateway can endorse only to its partner agencies — set them on each agency's page. Network analytics arrive in a later phase. Patient records stay with each hospital and are never shown here.
         </p>
       </div>
 

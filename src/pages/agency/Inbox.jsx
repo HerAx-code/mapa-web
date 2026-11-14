@@ -11,6 +11,8 @@ import { getOrCreateConversation } from '../../utils/messages'
 import { isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
 import { aging, AGING_TEXT } from '../../utils/aging'
+import { useHospitals, hospitalLabel } from '../../hooks/useHospitals'
+import { DEFAULT_HOSPITAL_ID } from '../../config/org'
 import {
   MdSearch, MdDescription, MdMessage, MdInbox,
   MdOpenInNew, MdClose,
@@ -124,10 +126,22 @@ export default function Inbox() {
     return new Set(Object.keys(counts).filter(id => counts[id] > 1))
   }, [applications])
 
+  // Phase 7: agencies fund slices from every partner hospital — label each row
+  // with its hospital, and offer a filter once more than one appears.
+  const { hospitals } = useHospitals()
+  const [hospitalFilter, setHospitalFilter] = useState('all')
+  const hospitalOf = (a) => a.tenantId || DEFAULT_HOSPITAL_ID
+  const hospitalName = (id) => hospitalLabel(hospitals.find(h => h.id === id)) || id
+  const hospitalsInQueue = useMemo(
+    () => [...new Set(applications.filter(a => a.status !== 'endorsed').map(hospitalOf))],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [applications])
+
   const filtered = applications.filter(a => {
     // 'endorsed' slices are awaiting the patient to accept the coverage plan —
     // they don't enter the agency queue until the patient proceeds (reviewing).
     if (a.status === 'endorsed') return false
+    if (hospitalFilter !== 'all' && hospitalOf(a) !== hospitalFilter) return false
     if (statusFilter !== 'all') {
       if (statusFilter === 'approved' && !['approved','certificate'].includes(a.status)) return false
       if (statusFilter !== 'approved' && a.status !== statusFilter) return false
@@ -217,6 +231,13 @@ export default function Inbox() {
               : 'Showing oldest first (triage view) -- click to flip back to newest first'}>
             {sortMode === 'newest' ? '↓ Newest first' : '↑ Oldest first'}
           </button>
+          {hospitalsInQueue.length > 1 && (
+            <select className="input w-auto flex-shrink-0" aria-label="Filter by hospital"
+              value={hospitalFilter} onChange={e => setHospitalFilter(e.target.value)}>
+              <option value="all">All hospitals</option>
+              {hospitalsInQueue.map(id => <option key={id} value={id}>{hospitalName(id)}</option>)}
+            </select>
+          )}
         </div>
 
         {/* Table */}
@@ -280,7 +301,10 @@ export default function Inbox() {
                               </span>
                             )}
                           </p>
-                          <p className="text-xs text-gray-500">{app.patientContact}</p>
+                          <p className="text-xs text-gray-500">
+                            {app.patientContact}
+                            {hospitals.length > 1 && <span className="text-gray-400"> · {hospitalName(hospitalOf(app))}</span>}
+                          </p>
                         </div>
                       </div>
                     </td>

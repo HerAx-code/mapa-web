@@ -69,6 +69,21 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/hospitals/$(tenantId));
     }
 
+    // ── Agency ↔ hospital partnerships (Phase 7) ───────────────────────────────
+    // agencies/{id}.partnerHospitalIds lists the hospitals whose gateways may
+    // endorse to that agency (decision D4: the platform admin sets it). An
+    // agency onboarded before Phase 7 has no list yet and counts as a partner
+    // of hospital #1 only. The default is safe here: it applies to one concrete
+    // doc fetched with get(), never to a query's shape.
+    function agencyPartners(agencyId) {
+      return get(/databases/$(database)/documents/agencies/$(agencyId)).data
+               .get('partnerHospitalIds', [defaultTenant()]);
+    }
+
+    function partnersWith(agencyId, tenantId) {
+      return tenantId in agencyPartners(agencyId);
+    }
+
     // ── Multi-hospital tenancy (Phase 5, docs/multi-hospital-network-plan.md) ──
     // A hospital is the tenant; tenant docs carry `tenantId` (NOT `hospitalId`,
     // which is the patient's access code). Gateway staff and patients reach only
@@ -167,7 +182,10 @@ service cloud.firestore {
       allow read:   if isAuth() && (
         uid() == userId
         || isHospitalAdmin(resource.data)
-        || isAgency()
+        // Phase 7: an agency reads a patient only once the gateway has endorsed
+        // that patient to it (the endorse transaction adds the agency to the
+        // patient's agencyIds). It used to read EVERY user of every hospital.
+        || (isAgency() && userAgencyId() in resource.data.get('agencyIds', []))
         || resource.data.role in ['super_admin', 'staff_admin', 'agency', 'agency_admin']
         || (isPlatformAdmin() && resource.data.role == 'platform_admin')
       );
@@ -227,7 +245,10 @@ service cloud.firestore {
           // own activeRequestId to unlock a second concurrent request, nor reset
           // documentCount to defeat the upload cap.
           request.resource.data.get('activeRequestId', null) == resource.data.get('activeRequestId', null) &&
-          request.resource.data.get('documentCount', 0) == resource.data.get('documentCount', 0)) ||
+          request.resource.data.get('documentCount', 0) == resource.data.get('documentCount', 0) &&
+          // Phase 7: which agencies may read this profile is written by the
+          // gateway's endorse transaction, never by the patient.
+          request.resource.data.get('agencyIds', null) == resource.data.get('agencyIds', null)) ||
         // Gateway staff edit their own hospital's patients and staff — never
         // agency users (network-level, Phase 6) or a platform_admin (which has
         // no tenant, so tenantOf() would default it to hospital #1). A patient
@@ -292,7 +313,9 @@ service cloud.firestore {
       // src/pages/admin/Requests.jsx (tx.set on a new slice, status
       // 'endorsed'), which runs as an admin. Every other reference is a
       // read. Patients reach slices through requests, never by creating one.
-      allow create: if isAdmin() && createsInOwnHospital();
+      // Phase 7: the gateway endorses only to agencies partnered with its hospital.
+      allow create: if isAdmin() && createsInOwnHospital() &&
+                       partnersWith(request.resource.data.agencyId, tenantOf(request.resource.data));
       allow update: if isAuth() && (
         // Patient can make exactly two transitions on their own application:
         //  1. pending → rejected (self-withdrawal)
@@ -663,8 +686,12 @@ service cloud.firestore {
                        (isAdmin() &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate']) &&
                         request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0)) ||
-                       (isAgencyAdmin() && userAgencyId() == agencyId) ||
+                       // Phase 7: agency staff can't change their own partner
+                       // hospitals (D4 — the platform admin sets them).
+                       (isAgencyAdmin() && userAgencyId() == agencyId &&
+                        request.resource.data.get('partnerHospitalIds', null) == resource.data.get('partnerHospitalIds', null)) ||
                        (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
+                        request.resource.data.get('partnerHospitalIds', null) == resource.data.get('partnerHospitalIds', null) &&
                         request.resource.data.budget.allocated == resource.data.budget.allocated &&
                         // .get(field, default) lets the rule tolerate
                         // budgets where fundSource hasn't been set yet
@@ -1260,7 +1287,9 @@ service cloud.firestore {
                        request.resource.data.reason.size() <= 1000 &&
                        // Belongs to the case's hospital.
                        tenantOf(request.resource.data) ==
-                         tenantOf(get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data);
+                         tenantOf(get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data) &&
+                       // Phase 7: only an agency that hospital partners with.
+                       partnersWith(request.resource.data.toAgencyId, tenantOf(request.resource.data));
       allow update: if hospitalAdminWrite() &&
                        request.resource.data.status in ['accepted', 'declined'];
       allow delete: if false;
