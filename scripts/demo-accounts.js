@@ -27,8 +27,10 @@
  *
  * Adding a new demo account: add it here. Both scripts pick it up
  * automatically on next run. The login page's demo panel
- * (src/pages/auth/Login.jsx) is a SEPARATE hardcoded list -- update it
- * too if the set of loggable accounts changes.
+ * (src/components/DemoAccountsPanel.jsx, shown on Log in when
+ * VITE_SHOW_DEMO_ACCOUNTS or VITE_ENABLE_SEED is 'true') reads THIS list, so
+ * it can't drift from what's seeded. `loginPanel: false` hides an account
+ * from that panel (it is still seeded).
  */
 
 export const USERS = [
@@ -60,6 +62,8 @@ export const USERS = [
     profile: { name: 'Dr. Elena Marasigan',   role: 'agency_admin', agencyId: 'doh',       rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
+    // PhilHealth is modelled as first-charge coverage, not a GL-issuing funder.
+    loginPanel: false,
     email: 'admin@philhealth.gov.ph', password: 'agency123',
     profile: { name: 'Dr. Ramon Aquino',      role: 'agency_admin', agencyId: 'philhealth',rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
@@ -86,6 +90,7 @@ export const USERS = [
     profile: { name: 'Joel Bautista',   role: 'agency', agencyId: 'doh',       rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
+    loginPanel: false,
     email: 'coordinator@philhealth.gov.ph', password: 'agency123',
     profile: { name: 'Grace Villanueva',role: 'agency', agencyId: 'philhealth',rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },

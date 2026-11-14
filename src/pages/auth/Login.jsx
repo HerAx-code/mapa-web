@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageToggle from '../../components/LanguageToggle'
 import Logo from '../../components/ui/Logo'
+import DemoAccountsPanel from '../../components/DemoAccountsPanel'
 import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning, MdShield, MdInfoOutline } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
@@ -127,9 +128,14 @@ export default function Login() {
       toast.error(t('auth.errors.enterCredentials'))
       return
     }
+    await signIn(form.email, form.password)
+  }
+
+  // Shared by the form and the dev-only demo-accounts panel.
+  const signIn = async (email, password) => {
     setLoading(true)
     try {
-      const loggedIn = await login(form.email, form.password)
+      const loggedIn = await login(email, password)
       setLoginError(false)
       // M9: no "Welcome back" toast on login — it was noise on every sign-in and
       // (desktop, bottom-right) overlapped dashboard content. The dashboard's own
@@ -410,50 +416,13 @@ export default function Login() {
             </p>
 
             {/* Fix 1 — Demo accounts only in development */}
-            {import.meta.env.VITE_ENABLE_SEED === 'true' && (
-              <div className="mt-8 card p-4 border border-amber-200 bg-amber-50">
-                <p className="text-xs font-medium text-amber-700 mb-3 uppercase tracking-wide flex items-center gap-1.5">
-                  <MdWarning size={13} /> {t('auth.devOnly')}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {[
-                    { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
-                    { label: 'Hospital Admin',         email: 'admin@example.org',            password: 'admin123',   note: null     },
-                    { label: 'Staff Admin',            email: 'staff@example.org',            password: 'staff123',   note: null     },
-                    { label: 'Super Admin',            email: 'platform@example.org',         password: 'platform123', note: null    },
-                    // The coordination hub and PhilHealth (modelled as the
-                    // first-charge coverage that REDUCES the bill, not an endorsable
-                    // GL-issuing funder — see docs/philhealth-first-plan.md) are
-                    // both deactivated as agencies, so their logins are not shown.
-                    // The GL-issuing funders are DOH-MAIP, PCSO, DSWD and AMBaG.
-                    { label: 'DOH · Admin',            email: 'admin@doh.gov.ph',             password: 'agency123',  note: 'Admin'  },
-                    { label: 'DOH · Coordinator',      email: 'coordinator@doh.gov.ph',       password: 'agency123',  note: 'Active' },
-                    { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           password: 'agency123',  note: 'Admin'  },
-                    { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     password: 'agency123',  note: 'Active' },
-                    { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            password: 'agency123',  note: 'Admin'  },
-                    { label: 'PCSO · Coordinator',     email: 'coordinator@pcso.gov.ph',      password: 'agency123',  note: 'Active' },
-                    { label: 'DSWD · Admin',           email: 'admin@dswd.gov.ph',            password: 'agency123',  note: 'Admin'  },
-                    { label: 'DSWD · Coordinator',     email: 'coordinator@dswd.gov.ph',      password: 'agency123',  note: 'Active' },
-                  ].map(acc => (
-                    <button
-                      key={acc.label}
-                      className="text-left px-3 py-2 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-600 transition-colors text-xs border border-amber-100"
-                      onClick={() => setForm({ email: acc.email, password: acc.password })}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium truncate">{acc.label}</p>
-                        {acc.note && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
-                            acc.note === 'Deactivated' ? 'bg-red-100 text-red-500'
-                            : acc.note === 'Admin'       ? 'bg-purple-100 text-purple-600'
-                            : 'bg-green-100 text-green-600'
-                          }`}>{acc.note}</span>
-                        )}
-                      </div>
-                      <p className="text-gray-500 truncate">{acc.email}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* DEV ONLY: one-click demo sign-in. Build-time flags, so a
+                production build drops the panel and the demo passwords. */}
+            {(import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true') && (
+              <DemoAccountsPanel busy={loading} onPick={(email, password) => {
+                setForm({ email, password })
+                signIn(email, password)
+              }} />
             )}
 
           </div>

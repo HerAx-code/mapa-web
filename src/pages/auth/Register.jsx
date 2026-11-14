@@ -684,6 +684,14 @@ export default function Register() {
               <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-600 mb-6">← {t('register.backHome')}</Link>
             )}
 
+            {/* DEV ONLY (build-time flags): demo accounts live on Log in. */}
+            {(import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true') && (
+              <Link to="/login" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-800 hover:bg-amber-100">
+                <span>Demo accounts (dev only) — sign in as any role with one click</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            )}
+
             <div className="mb-6">
               <h1 className="font-display text-[26px] font-bold tracking-tight text-brand-900">{t('register.title')}</h1>
               <p className="text-sm text-gray-500 mt-1">{t('register.subtitle')}</p>
