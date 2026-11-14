@@ -14,7 +14,7 @@ import {
   MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
   MdPhone, MdSchedule,
   MdCheck, MdWarningAmber, MdChevronRight, MdConfirmationNumber,
-  MdExpandMore, MdGroups, MdMoneyOff, MdFavorite,
+  MdExpandMore, MdGroups, MdMoneyOff, MdFavorite, MdCheckCircle,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import TermsModal from '../../components/TermsModal'
