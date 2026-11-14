@@ -32,7 +32,12 @@ import { db } from '../firebase'
 // AgencyAvatar (without them it falls back to a flat gray block), and `location`
 // is the public office area shown under the name.
 export function projectPublicAgency(data = {}) {
-  const slots = data.slots ?? {}
+  // Per-hospital slots (2026-11-14): the public figure is the sum across the
+  // agency's partner hospitals; agencies without them keep the single count.
+  const per = data.hospitalSlots && Object.values(data.hospitalSlots)
+  const slots = per && per.length
+    ? per.reduce((a, s) => ({ total: a.total + (Number(s?.total) || 0), remaining: a.remaining + (Number(s?.remaining) || 0) }), { total: 0, remaining: 0 })
+    : (data.slots ?? {})
   return {
     name:     data.name ?? '',
     initials: data.initials ?? '',

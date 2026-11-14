@@ -1,6 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc } from 'firebase/firestore'
+import { registerWithCode } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -38,25 +39,30 @@ async function seedUserDoc(uid, data) {
 // admin / agency_admin elevated create. Closes the documented residual
 // where any authenticated user could write /users/{X} with any role.
 describe('users.create — patient self-create only with role=patient', () => {
-  it('allows a patient self-create with role=patient (network account, no code)', async () => {
-    // Marketplace: registration needs no access code and joins no hospital —
-    // the patient claims a hospital's code per request.
-    const ctx = testEnv.authenticatedContext('new-user-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'new-user-1'), {
-      role: 'patient',
-      agencyId: null,
-      name: 'Juan Dela Cruz',
-      email: 'juan@example.com',
-    }))
+  // Owner decision 2026-11-14: the access code is REQUIRED at registration.
+  const seedCode = () => testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'hospitals', 'hospital-1'), { accessCodePrefix: 'MAPA', enabled: true })
+    await setDoc(doc(db, 'hospitalIds', 'MAPA-2026-00001'), { status: 'available', patId: null, tenantId: 'hospital-1' })
   })
 
-  it('rejects a self-create that sets a code, hospital or agency links', async () => {
+  it('allows a patient to register by claiming an access code', async () => {
+    await seedCode()
+    const db = testEnv.authenticatedContext('new-user-1').firestore()
+    await assertSucceeds(registerWithCode(db, { uid: 'new-user-1', code: 'MAPA-2026-00001', tenantId: 'hospital-1',
+      profile: { name: 'Juan Dela Cruz', email: 'juan@example.com' } }))
+  })
+
+  it('rejects registration without a code, with a wrong hospital, or with agency links', async () => {
+    await seedCode()
     const db = testEnv.authenticatedContext('new-user-2').firestore()
     const base = { role: 'patient', agencyId: null, name: 'Ana' }
-    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, hospitalId: 'MAPA-2026-00001' }))
-    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, tenantId: 'hospital-1' }))
-    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, tenantIds: ['hospital-1'] }))
-    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, agencyIds: ['dswd'] }))
+    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), base))
+    // naming a code it did not claim in the same write
+    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, hospitalId: 'MAPA-2026-00001', tenantId: 'hospital-1', tenantIds: ['hospital-1'] }))
+    await assertFails(registerWithCode(db, { uid: 'new-user-2', code: 'MAPA-2026-00001', tenantId: 'other' }))
+    await assertFails(registerWithCode(db, { uid: 'new-user-2', code: 'MAPA-2026-00001', tenantId: 'hospital-1', tenantIds: ['hospital-1', 'x'] }))
+    await assertFails(registerWithCode(db, { uid: 'new-user-2', code: 'MAPA-2026-00001', tenantId: 'hospital-1', profile: { agencyIds: ['dswd'] } }))
   })
 
   it("rejects a self-create with role='super_admin' (the privilege-escalation vector)", async () => {

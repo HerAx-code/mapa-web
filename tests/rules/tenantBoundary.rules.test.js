@@ -3,7 +3,7 @@ import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebas
 import {
   doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, collection, query, where, serverTimestamp,
 } from 'firebase/firestore'
-import { fileRequest } from './helpers/marketplace.js'
+import { fileRequest, registerWithCode } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -209,11 +209,11 @@ describe('writes stay inside the writer\'s hospital', () => {
     await assertFails(setDoc(ref('patA', 'documents/x3'), { patientId: 'patA', status: 'pending', tenantId: B }))
   })
 
-  // Marketplace: registration joins no hospital (codes are claimed per request).
-  it('registration joins no hospital; a hospital or code at sign-up is refused', async () => {
-    await assertFails(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', hospitalId: 'CODE-B2', tenantId: B }))
-    await assertFails(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', tenantId: B }))
-    await assertSucceeds(setDoc(ref('newPat2', 'users/newPat2'), { role: 'patient', name: 'Pat' }))
+  // Registration requires a code, and joins exactly the code's hospital.
+  it("registration joins the access code's hospital, nothing else", async () => {
+    await assertFails(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', name: 'Pat' }))
+    await assertFails(registerWithCode(as('newPat1'), { uid: 'newPat1', code: 'CODE-B2', tenantId: A }))
+    await assertSucceeds(registerWithCode(as('newPat2'), { uid: 'newPat2', code: 'CODE-B2', tenantId: B }))
   })
 
   it('audit entries and reports can only be tagged with the writer\'s own hospital', async () => {

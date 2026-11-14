@@ -115,6 +115,21 @@ service cloud.firestore {
           resource.data.get('tenantIds', []).toSet().union([resource.data.get('tenantId', t), t].toSet());
     }
 
+    // Registration (owner decision 2026-11-14): the access code is REQUIRED at
+    // sign-up. The new profile must name the code it claims in the same write
+    // (getAfter), the code's hospital, and that hospital only in tenantIds.
+    // That code then backs the patient's first request.
+    function patientRegistersWithCode() {
+      let code = request.resource.data.get('hospitalId', '');
+      let t = request.resource.data.get('tenantId', '');
+      return code is string && code != '' && t is string && t != '' &&
+        getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data.get('patId', '') == uid() &&
+        getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data.get('status', '') == 'used' &&
+        tenantOf(getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data) == t &&
+        hospitalOpen(t) &&
+        request.resource.data.get('tenantIds', []) == [t];
+    }
+
     // accessCodePrefixes/{PREFIX} names the hospital that owns a prefix. Checked
     // with getAfter so the claim and the hospital doc are written in one batch.
     function prefixHeldBy(prefix, hospitalId) {
@@ -230,14 +245,13 @@ service cloud.firestore {
         || (isPlatformAdmin() && resource.data.role == 'platform_admin')
       );
       allow create: if isAuth() && (
-        // Marketplace: a patient registers with the NETWORK — no access code,
-        // no hospital yet. They join a hospital per request by claiming its
-        // code (patientSwitchesHospital). Server-owned fields stay unset.
+        // A patient registers WITH an access code (required, 2026-11-14): it
+        // decides their first hospital and backs their first request. Later
+        // requests claim a new code (patientSwitchesHospital). agencyIds stays
+        // server-owned.
         (uid() == userId && request.resource.data.role == 'patient' &&
-          !('tenantId' in request.resource.data) &&
-          !('tenantIds' in request.resource.data) &&
           !('agencyIds' in request.resource.data) &&
-          request.resource.data.get('hospitalId', null) == null) ||
+          patientRegistersWithCode()) ||
         // Gateway staff create gateway staff in their own hospital (Phase 6:
         // a role allowlist — before it, an admin could mint ANY role, which
         // would include platform_admin). Agency users are network-level and
@@ -395,7 +409,8 @@ service cloud.firestore {
           (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing') ||
           // Co-funding: patient accepts the coverage plan, advancing their
           // endorsed slice into the agency's review queue.
-          (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing')
+          (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing' &&
+           parentRequestOpen(resource.data))
         )) ||
         // Phase 1.6: an agency may write its own slice, but the identity +
         // endorsement fields are LOCKED — they can't reassign the slice to
@@ -419,10 +434,24 @@ service cloud.firestore {
           request.resource.data.requestId      == resource.data.requestId &&
           request.resource.data.amountRequested == resource.data.amountRequested &&
           (!('amountApproved' in request.resource.data) ||
-            request.resource.data.amountApproved <= resource.data.amountRequested)) ||
+            request.resource.data.amountApproved <= resource.data.amountRequested) &&
+          // Logic review: a slice the hospital closed is final, and nothing is
+          // approved on a request the hospital rejected or closed.
+          resource.data.get('status', '') != 'closed' &&
+          (!(request.resource.data.get('status', '') in ['approved', 'certificate']) ||
+           resource.data.get('status', '') in ['approved', 'certificate'] ||
+           parentRequestOpen(resource.data))) ||
         hospitalAdminWrite()
       );
       allow delete: if isHospitalAdmin(resource.data);
+    }
+
+    // The slice's parent request isn't rejected/closed (legacy slices without
+    // a request pass).
+    function parentRequestOpen(slice) {
+      return slice.get('requestId', null) == null ||
+        !exists(/databases/$(database)/documents/requests/$(slice.requestId)) ||
+        !(get(/databases/$(database)/documents/requests/$(slice.requestId)).data.get('status', '') in ['closed', 'rejected']);
     }
 
     // ── requests ────────────────────────────────────────────────────────────
@@ -501,10 +530,19 @@ service cloud.firestore {
            after.encodedOnBehalf.reason.size() >= 10);
       }
 
-      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk()) ||
+      // Logic review: once an agency has committed money the request can only be
+      // CLOSED (partial), never REJECTED — the patient may already hold a GL.
+      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk() &&
+                        (request.resource.data.get('status', '') != 'rejected' ||
+                         resource.data.get('status', '') == 'rejected' ||
+                         resource.data.get('amountCommitted', 0) == 0)) ||
+        // The patient may withdraw until the request is endorsed to an agency
+        // (the button shows for submitted / under review / assessment).
         (isPatient() && resource.data.patientId == uid() &&
-          resource.data.status == 'submitted' &&
-          request.resource.data.status == 'closed') ||
+          resource.data.status in ['submitted', 'under_review', 'assessment'] &&
+          resource.data.get('agencyIds', []).size() == 0 &&
+          request.resource.data.status == 'closed' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'closeReason', 'updatedAt'])) ||
         // Patient fills the factual portion of their own intake sheet (the
         // the gateway assessment fields are written by admins). Only the intakeSheet
         // field may change via this path.
@@ -552,8 +590,9 @@ service cloud.firestore {
             .hasOnly(['amountCommitted', 'status', 'updatedAt']) &&
           request.resource.data.amountCommitted is number &&
           request.resource.data.amountCommitted >= 0 &&
+          !(resource.data.get('status', '') in ['closed', 'rejected']) &&
           request.resource.data.status in
-            ['submitted', 'endorsed', 'partially_funded', 'fully_funded']);
+            ['under_review', 'endorsed', 'partially_funded', 'fully_funded']);
       allow delete: if isHospitalAdmin(resource.data);
     }
 
@@ -762,8 +801,15 @@ service cloud.firestore {
       //     coordinators.
       allow update: if isPlatformAdmin() ||
                        (isAdmin() &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate']) &&
-                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0)) ||
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate', 'hospitalSlots']) &&
+                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
+                        // Per-hospital slots (2026-11-14): a hospital admin uses
+                        // only ITS hospital's daily share and never changes the
+                        // total the agency admin set.
+                        request.resource.data.get('hospitalSlots', {}).diff(resource.data.get('hospitalSlots', {}))
+                          .affectedKeys().hasOnly([userTenantId()]) &&
+                        request.resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0) ==
+                          resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0)) ||
                        // Phase 7: agency staff can't change their own partner
                        // hospitals (D4 — the platform admin sets them).
                        (isAgencyAdmin() && userAgencyId() == agencyId &&
@@ -890,13 +936,22 @@ service cloud.firestore {
     // status starts 'new', the time is the server's. Only the platform admin
     // reads them and moves them through the pipeline.
     match /onboardingRequests/{reqId} {
+      // Expression of interest (hospital onboarding, 2026-11-15): also the
+      // NHFR facility code, the official phone, the requester's position and
+      // the authorized signatory — all optional strings except the original.
       allow create: if isAuth() && reqId == uid() &&
-                       request.resource.data.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt']) &&
+                       request.resource.data.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt',
+                                                             'nhfrCode', 'officialPhone', 'contactPosition', 'signatoryName', 'signatoryPosition']) &&
+                       request.resource.data.get('nhfrCode', '') is string && request.resource.data.get('nhfrCode', '').size() <= 30 &&
+                       request.resource.data.get('officialPhone', '') is string && request.resource.data.get('officialPhone', '').size() <= 40 &&
+                       request.resource.data.get('contactPosition', '') is string && request.resource.data.get('contactPosition', '').size() <= 120 &&
+                       request.resource.data.get('signatoryName', '') is string && request.resource.data.get('signatoryName', '').size() <= 120 &&
+                       request.resource.data.get('signatoryPosition', '') is string && request.resource.data.get('signatoryPosition', '').size() <= 120 &&
                        request.resource.data.status == 'new' &&
                        request.resource.data.createdAt == request.time &&
                        request.resource.data.hospitalName is string &&
                        request.resource.data.hospitalName.size() >= 3 && request.resource.data.hospitalName.size() <= 150 &&
-                       request.resource.data.hospitalType in ['DOH-retained', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
+                       request.resource.data.hospitalType in ['DOH-retained', 'BARMM MOH', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
                        request.resource.data.region is string && request.resource.data.region.size() <= 40 &&
                        request.resource.data.contactName is string &&
                        request.resource.data.contactName.size() >= 2 && request.resource.data.contactName.size() <= 120 &&
@@ -904,9 +959,15 @@ service cloud.firestore {
                        request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+') &&
                        request.resource.data.message is string && request.resource.data.message.size() <= 2000;
       allow read, delete: if isPlatformAdmin();
+      // The Super Admin works the onboarding here: stage, verification,
+      // agreement, training, filed documents, go-live. The hospital's own
+      // submitted details stay as sent.
       allow update: if isPlatformAdmin() &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusUpdatedAt', 'hospitalId']) &&
-                       request.resource.data.status in ['new', 'contacted', 'onboarded', 'declined'];
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                         'status', 'statusUpdatedAt', 'hospitalId', 'stage', 'stageHistory', 'verification',
+                         'agreement', 'training', 'documents', 'liveAt', 'notes', 'updatedAt']) &&
+                       request.resource.data.status in ['new', 'contacted', 'onboarded', 'declined'] &&
+                       request.resource.data.get('stage', 'interest') in ['interest', 'verification', 'agreement', 'setup', 'live', 'declined'];
     }
 
     // ── networkStats ───────────────────────────────────────────────────────────
@@ -940,7 +1001,10 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
                'shortName', 'gatewayName', 'gatewayInitials', 'facilityName',
                'contactEmail', 'accessCodePrefix', 'address', 'logoUrl',
-               'region', 'enabled', 'createdAt', 'updatedAt'
+               'region', 'enabled', 'createdAt', 'updatedAt',
+               // Onboarding status + plan (Super Admin only — the hospital's own
+               // admin can't change them; see the update rule's allowlist).
+               'onboarding', 'liveAt'
              ]);
     }
 

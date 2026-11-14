@@ -31,6 +31,20 @@ service firebase.storage {
     function isPatient() {
       return isAuth() && userDoc().data.role == 'patient';
     }
+    function isPlatformAdmin() {
+      return isAuth() && userDoc().data.role == 'platform_admin';
+    }
+
+    // ── Hospital onboarding documents ───────────────────────────────────
+    // Letters of intent, MOAs, data processing agreements, DPO designations,
+    // PIAs, go-live acceptances — filed by the Super Admin from what the
+    // hospital sends. Network operator only: no hospital or patient access.
+    match /onboarding/{reqId}/{file} {
+      allow read: if isPlatformAdmin();
+      allow write: if isPlatformAdmin()
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
+    }
 
     // ── Signed GL scans ────────────────────────────────────────────────
     match /certificates/{appId}/{file} {

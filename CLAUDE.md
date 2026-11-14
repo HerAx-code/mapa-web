@@ -49,10 +49,11 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
   promotions, agency audit log; partner hospitals read-only.
 - `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
   any partner hospital; reads only patients endorsed to the agency.
-- `patient` — patient portal, own data only. **Network account** (patient
-  marketplace, docs/patient-marketplace-plan.md): registers with no hospital and
-  no code, compares hospitals at `/patient/hospitals`, and files each request at
-  the hospital they choose by entering THAT hospital's access code.
+- `patient` — patient portal, own data only. **Registers WITH an access code**
+  (owner decision 2026-11-14): the code's hospital is their first hospital and
+  the same code backs their first request. One account works network-wide:
+  for any later request they compare hospitals at `/patient/hospitals` and
+  claim a NEW code from the hospital they choose (one code = one request).
 
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.
@@ -61,7 +62,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match the gateway's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the gateway social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
-- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is the **per-request** gate (patient marketplace — it used to be the registration gate). Issued in person by a hospital's gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique). Claiming a code (`src/utils/accessCodes.js` `claimAccessCode`, one transaction) makes the code's hospital the patient's current one (`users.tenantId`), adds it to `users.tenantIds`, and sets `users.hospitalId`; the request is then written in ONE batch with `hospitalIds/{code}.requestId`, so **a code backs exactly one request**. A hospital with `enabled: false` takes no new claims. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
+- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is **required at registration and for every request** (2026-11-14): the registration code backs the first request; each later request needs a new code. A rejected/closed request consumes its code — staff use document Redo for fixable problems. Issued in person by a hospital's gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique). Claiming a code (`src/utils/accessCodes.js` `claimAccessCode`, one transaction) makes the code's hospital the patient's current one (`users.tenantId`), adds it to `users.tenantIds`, and sets `users.hospitalId`; the request is then written in ONE batch with `hospitalIds/{code}.requestId`, so **a code backs exactly one request**. A hospital with `enabled: false` takes no new claims. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
 
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
@@ -76,7 +77,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
-`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8), `networkStats` (per-hospital counts for platform_admin, Admin-SDK written; Phase 9), `hospitalsPublic` (sign-in-free hospital projection for Landing/Register and the patient marketplace — name, prefix, office, address, region, contact email; must equal the hospital doc), `hospitalsPublicStats` (per-hospital typical turnaround for the marketplace, counts only, Admin-SDK written by networkStats), `onboardingRequests` (hospitals asking to join, from the public /for-hospitals page; platform_admin only)
+`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8), `networkStats` (per-hospital counts for platform_admin, Admin-SDK written; Phase 9), `hospitalsPublic` (sign-in-free hospital projection for Landing/Register and the patient marketplace — name, prefix, office, address, region, contact email; must equal the hospital doc), `hospitalsPublicStats` (per-hospital typical turnaround for the marketplace, counts only, Admin-SDK written by networkStats), `onboardingRequests` (hospital onboarding records: the public /for-hospitals expression of interest, then the Super Admin's stages Interest → Verification → Agreement → Setup & training → Live at /platform/onboarding/:id, with verification, agreement, training and filed documents in Storage `onboarding/{id}/`; platform_admin only — see reports/Hospital onboarding requirements.md and src/utils/onboarding.js). **A hospital set up from onboarding starts with patient registration closed (`enabled: false`, `onboarding.stage`); only the go-live step opens it — don't add other paths that flip `enabled` for an onboarding hospital.**
 
 ## Tenancy (multi-hospital network — all phases built, not yet deployed)
 MAPA is moving from one host facility per deployment to **one deployment serving many
@@ -88,8 +89,18 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
   that field already means the patient's access code (`hospitalIds` collection). Gateway roles (`super_admin`, `staff_admin`) become
   **hospital-scoped**; a new **`platform_admin`** role runs the network (onboards
   hospitals/agencies, aggregate analytics, no patient PII).
+- **Hospital #1 (`hospital-1`) was merged into Cotabato Regional and Medical Center
+  (`cotabato-regional-and-medical-center`) and deleted (2026-11-14).** `hospital-1`
+  remains only as the rules/env fallback id for records with no hospital — it
+  matches no hospital now, which is the safe outcome. Do NOT run
+  scripts/seed-default-hospital.mjs against production (it would recreate it).
+- **Agency slots are per partner hospital** (`agencies.hospitalSlots[hospitalId]
+  = { total, remaining, lastResetDate }`, set by the agency admin on Slot
+  Management; `effectiveSlots(agency, today, hospitalId)` in src/utils/requests.js).
+  A hospital without its own entry uses the agency-wide `slots`. A hospital's
+  endorsement consumes only its own share (rules-enforced).
 - **Agencies are network-level and shared**: an agency partners with many hospitals
-  (`agencies.partnerHospitalIds`, set by platform_admin; no list = hospital #1 only)
+  (`agencies.partnerHospitalIds`, set by platform_admin; no list = no hospital)
   and funds slices only from partner hospitals (rules-enforced). Slices carry both
   `tenantId` and `agencyId`. An agency reads a patient profile only via
   `users.agencyIds` (written at endorsement). One budget per agency (per-hospital

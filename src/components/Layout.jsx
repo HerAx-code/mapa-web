@@ -95,7 +95,7 @@ const AGENCY_NAV = [
 // Network operator (multi-hospital Phase 6). No patient-facing pages.
 const PLATFORM_NAV = [
   { to: '/platform/hospitals', icon: MdLocalHospital, label: 'Hospitals' },
-  { to: '/platform/requests',  icon: MdInbox,         label: 'Onboarding requests' },
+  { to: '/platform/onboarding', icon: MdInbox,        label: 'Onboarding' },
   { to: '/platform/agencies',  icon: MdBusiness,      label: 'Agencies'  },
 ]
 
@@ -661,7 +661,7 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
         )}
         {role === ROLES.PLATFORM_ADMIN && (
           <>
-            <NavItems items={PLATFORM_NAV} onClose={onClose} dark badgeOverrides={{ '/platform/requests': newRequests }} />
+            <NavItems items={PLATFORM_NAV} onClose={onClose} dark badgeOverrides={{ '/platform/onboarding': newRequests }} />
           </>
         )}
         {(role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN) && (

@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
-import { fileRequest } from './helpers/marketplace.js'
+import { fileRequest, registerWithCode } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -45,9 +45,10 @@ const as = (uid) => testEnv.authenticatedContext(uid).firestore()
 
 describe('users.tenantId', () => {
   // Marketplace: registration is network-level — no code, no hospital.
-  it('a patient registers with no hospital; a tenantId at sign-up is refused', async () => {
-    await assertFails(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', hospitalId: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
-    await assertSucceeds(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', name: 'Ana' }))
+  // Registration requires the code; the code's hospital is the patient's.
+  it("a patient registers by claiming a code and joins that code's hospital", async () => {
+    await assertFails(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', name: 'Ana' }))
+    await assertSucceeds(registerWithCode(as('patient-2'), { uid: 'patient-2', code: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
   })
 
   it('a patient may NOT change their own tenantId', async () => {

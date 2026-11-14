@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useOnboardingRequests } from '../../hooks/useOnboardingRequests'
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, deleteField, serverTimestamp, writeBatch } from 'firebase/firestore'
 import {
-  MdAdd, MdEdit, MdClose, MdLocalHospital, MdPersonAdd, MdVisibility, MdVisibilityOff, MdBlock, MdCheckCircle,
+  MdAdd, MdEdit, MdClose, MdLocalHospital, MdPersonAdd, MdVisibility, MdVisibilityOff, MdBlock, MdCheckCircle, MdInbox,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
@@ -137,9 +137,16 @@ function HospitalModal({ hospital, hospitals, agencies = [], onClose, onCreated,
         logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: [prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated', partnerChanges.length ? `partner agencies: ${[...partners].join(', ') || 'none'}` : ''].filter(Boolean).join('; ') })
         toast.success('Hospital updated.')
       } else {
-        batch.set(doc(db, 'hospitals', id), { ...data, enabled: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+        // Onboarding (2026-11-15): a hospital set up from an onboarding record
+        // starts with patient registration CLOSED; the go-live step in its
+        // onboarding workspace opens it. Hospitals added directly stay open.
+        const openNow = !fromRequest
+        batch.set(doc(db, 'hospitals', id), {
+          ...data, enabled: openNow, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          ...(fromRequest ? { onboarding: { stage: 'setup', requestId: fromRequest } } : {}),
+        })
         await batch.commit()
-        await syncHospitalPublic(id, { ...data, enabled: true })
+        await syncHospitalPublic(id, { ...data, enabled: openNow })
         logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN; partner agencies: ${[...partners].join(', ') || 'none yet'})` })
         if (fromRequest) {
           await updateDoc(doc(db, 'onboardingRequests', fromRequest), { status: 'onboarded', hospitalId: id, statusUpdatedAt: serverTimestamp() })
@@ -147,7 +154,7 @@ function HospitalModal({ hospital, hospitals, agencies = [], onClose, onCreated,
         }
         toast.success(`${data.facilityName} added. Next, create its first Hospital Admin.`)
         onClose()
-        onCreated?.({ id, ...data, enabled: true })
+        onCreated?.({ id, ...data, enabled: openNow })
         return
       }
       onClose()
@@ -423,6 +430,7 @@ export default function Hospitals() {
   // Paused = sign-ups stopped by the network admin.
   const partnerCountOf = (h) => agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
   const statusOf = (h) => {
+    if (h.onboarding?.stage && h.onboarding.stage !== 'live') return { label: 'Onboarding', cls: 'bg-blue-50 text-blue-800' }
     if (h.enabled === false) return { label: 'Sign-ups paused', cls: 'bg-amber-50 text-amber-800' }
     if (!(staffByHospital[h.id]?.super > 0) || partnerCountOf(h) === 0) return { label: 'Provisioning', cls: 'bg-amber-50 text-amber-800' }
     return { label: 'Live', cls: 'bg-green-50 text-green-800' }
@@ -472,7 +480,7 @@ export default function Hospitals() {
               <p className="font-semibold text-brand-900">{newCount} {newCount === 1 ? 'hospital has' : 'hospitals have'} requested onboarding</p>
               <p className="text-[13px] text-gray-600 mt-0.5">Contact them, then set each one up as a hospital.</p>
             </div>
-            <Link to="/platform/requests" className="btn-primary text-sm">Review requests</Link>
+            <Link to="/platform/onboarding" className="btn-primary text-sm">Open onboarding</Link>
           </div>
         )}
 
@@ -570,11 +578,21 @@ export default function Hospitals() {
                             aria-label={`Edit ${h.facilityName || h.id}`} title="Edit" onClick={() => setEditing(h)}>
                             <MdEdit size={18} />
                           </button>
+                          {/* Still onboarding: registration opens only through
+                              go-live in the onboarding workspace, never here. */}
+                          {h.onboarding?.stage && h.onboarding.stage !== 'live' ? (
+                            <Link to={`/platform/onboarding/${h.onboarding.requestId}`}
+                              className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50"
+                              aria-label={`Open onboarding for ${h.facilityName || h.id}`} title="Open onboarding">
+                              <MdInbox size={18} />
+                            </Link>
+                          ) : (
                           <button className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-700 hover:bg-amber-50"
                             aria-label={h.enabled === false ? `Resume sign-ups at ${h.facilityName || h.id}` : `Pause sign-ups at ${h.facilityName || h.id}`}
                             title={h.enabled === false ? 'Resume sign-ups' : 'Pause sign-ups'} onClick={() => setToggling(h)}>
                             {h.enabled === false ? <MdCheckCircle size={18} /> : <MdBlock size={18} />}
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>

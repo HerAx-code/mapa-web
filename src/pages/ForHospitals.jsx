@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
-import { MdArrowBack, MdTune, MdGavel, MdLock, MdHub, MdCheckCircle } from 'react-icons/md'
+import { MdArrowBack, MdTune, MdGavel, MdLock, MdHub, MdCheckCircle, MdDescription, MdVerified, MdHandshake, MdSchool, MdRocketLaunch } from 'react-icons/md'
 import { auth, db, signInAnonymously } from '../firebase'
 import Logo from '../components/ui/Logo'
 import { PH_REGIONS } from '../utils/hospitalConfig'
+import { OWNERSHIP_TYPES } from '../utils/onboarding'
 
-// "For hospitals" — the public onboarding page (MAPA Platform Redesign canvas).
-// A hospital's social-services office asks to join the network; the request
-// lands in the platform admin's queue (/platform/requests). Institution-facing,
+// "For hospitals" — the public onboarding page. A hospital sends an
+// EXPRESSION OF INTEREST here; the formal start is a letter of intent from the
+// hospital head, then verification, a MOA signed by both sides with the Data
+// Privacy Act paperwork, setup + training, and go-live (reports/Hospital
+// onboarding requirements.md, revalidated 2026-11-15). Institution-facing,
 // so English like the other staff surfaces.
 //
 // Security: a public write surface. The visitor is signed in anonymously (as
@@ -17,27 +20,49 @@ import { PH_REGIONS } from '../utils/hospitalConfig'
 // ONE request per session with a pinned shape (firestore.rules
 // onboardingRequests). The anonymous session is signed out afterwards.
 
-const HOSPITAL_TYPES = ['DOH-retained', 'LGU', 'SUC', 'DND', 'Private', 'Other']
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 const FEATURES = [
   { icon: MdTune,  title: "Configure, don't rebuild", body: 'Your name, funders, document checklists and access-code prefix are settings. No code fork, no separate install.' },
-  { icon: MdGavel, title: 'RA 11463 workflow',        body: 'The one-stop-shop process — verify once, assess once, endorse to every agency that can help — built in.' },
+  { icon: MdGavel, title: 'RA 11463 workflow',        body: 'The one-stop-shop process — verify once, assess once, endorse to the funders that can help — built in.' },
   { icon: MdLock,  title: 'Your data, isolated',      body: "Each hospital's patient records are walled off from every other hospital, enforced by security rules, not trust." },
   { icon: MdHub,   title: 'Shared agency queues',     body: 'Funding agencies you partner with work one queue across all their partner hospitals.' },
 ]
 
-function Field({ id, label, children }) {
+const STEPS = [
+  { icon: MdDescription,  title: 'Expression of interest', body: 'Send this form, then a letter of intent signed by your hospital head.' },
+  { icon: MdVerified,     title: 'Verification',           body: 'We check your facility against the DOH registry (NHFR code, License to Operate, PhilHealth) and call your official number.' },
+  { icon: MdHandshake,    title: 'Agreement',              body: 'A no-cost MOA signed by both sides, a data processing agreement, your Data Protection Officer and a privacy impact assessment.' },
+  { icon: MdSchool,       title: 'Setup & training',       body: 'We set up your hospital, your staff practice in a training hospital with sample patients, and you sign a go-live acceptance.' },
+  { icon: MdRocketLaunch, title: 'Go-live',                body: 'Patients can register with your access codes. We stay close during the first weeks.' },
+]
+
+const NEEDS = [
+  'NHFR facility code and DOH License to Operate',
+  'PhilHealth accreditation number (if accredited)',
+  'Letter of intent from the hospital head',
+  'Proof of the signatory’s authority',
+  'A designated Data Protection Officer',
+  'A Hospital Admin and a backup admin from your social-services office',
+]
+
+function Field({ id, label, hint, children }) {
   return (
     <div>
       <label htmlFor={id} className="block text-[13.5px] font-semibold text-gray-700 mb-1.5">{label}</label>
       {children}
+      {hint && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
     </div>
   )
 }
 
+const EMPTY = {
+  hospitalName: '', hospitalType: 'DOH-retained', region: '', nhfrCode: '', officialPhone: '',
+  contactName: '', contactPosition: '', email: '', signatoryName: '', signatoryPosition: '', message: '',
+}
+
 export default function ForHospitals() {
-  const [form, setForm] = useState({ hospitalName: '', hospitalType: 'DOH-retained', region: '', contactName: '', email: '', message: '' })
+  const [form, setForm] = useState(EMPTY)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -88,9 +113,51 @@ export default function ForHospitals() {
           </span>
           <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-brand-900 mt-5 leading-[1.05]">Bring MAPA to your hospital</h1>
           <p className="text-[17px] leading-relaxed text-gray-600 mt-5 max-w-xl">
-            Run your medical assistance desk as a digital one-stop shop. Adopt MAPA by configuring it — your name, your funders,
-            your document rules — never forking or rewriting. One workflow, your settings, your data kept to your hospital.
+            Run your medical assistance desk as a digital one-stop shop — configured to your hospital, your funders and your
+            document rules, with your patients' data kept to your hospital.
           </p>
+          <p className="mt-4 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-800">
+            <span>Free during the pilot</span><span aria-hidden="true">·</span>
+            <span>No obligation to purchase</span><span aria-hidden="true">·</span>
+            <span>Patients never pay</span>
+          </p>
+
+          {/* How joining works */}
+          <h2 className="font-display text-xl font-bold text-brand-900 mt-10">How joining works</h2>
+          <ol className="mt-4 space-y-3">
+            {STEPS.map(({ icon: Icon, title, body }, i) => (
+              <li key={title} className="flex gap-3 rounded-2xl border border-gray-200/80 bg-white p-4">
+                <span aria-hidden="true" className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><Icon size={18} /></span>
+                <div>
+                  <p className="font-semibold text-brand-900"><span className="text-gray-400 mr-1.5">{i + 1}.</span>{title}</p>
+                  <p className="text-sm leading-relaxed text-gray-600 mt-0.5">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* What you'll need + who signs */}
+          <div className="grid gap-4 md:grid-cols-2 mt-8">
+            <div className="rounded-2xl border border-gray-200/80 bg-white p-5">
+              <h2 className="font-semibold text-brand-900">What you'll need</h2>
+              <ul className="mt-3 space-y-2">
+                {NEEDS.map(n => (
+                  <li key={n} className="flex gap-2 text-sm text-gray-700"><MdCheckCircle size={16} className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden="true" />{n}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-gray-200/80 bg-white p-5">
+              <h2 className="font-semibold text-brand-900">Who signs the MOA</h2>
+              <dl className="mt-3 space-y-2.5 text-sm">
+                {OWNERSHIP_TYPES.filter(o => ['DOH-retained', 'BARMM MOH', 'LGU', 'Private'].includes(o.value)).map(o => (
+                  <div key={o.value}>
+                    <dt className="font-medium text-gray-800">{o.label}</dt>
+                    <dd className="text-gray-600">{o.signer} · <span className="text-gray-500">{o.authority}</span></dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
 
           <div className="grid sm:grid-cols-2 gap-4 mt-8">
             {FEATURES.map(({ icon: Icon, title, body }) => (
@@ -102,11 +169,6 @@ export default function ForHospitals() {
             ))}
           </div>
 
-          <blockquote className="mt-8 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 p-6 text-white">
-            <p className="font-display text-xl leading-snug">“Hospitals differ in settings, not process.”</p>
-            <p className="text-sm text-brand-100 mt-2">RA 11463 sets one Malasakit workflow — MAPA lets each hospital configure it and go live.</p>
-          </blockquote>
-
           <Link to="/" className="mt-8 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700">
             <MdArrowBack size={16} /> Back to home
           </Link>
@@ -116,24 +178,25 @@ export default function ForHospitals() {
           {sent ? (
             <div className="text-center py-8">
               <MdCheckCircle size={44} className="mx-auto text-brand-500" />
-              <h2 className="font-display text-2xl font-bold text-brand-900 mt-3">Request received</h2>
+              <h2 className="font-display text-2xl font-bold text-brand-900 mt-3">Expression of interest received</h2>
               <p className="text-sm text-gray-600 mt-2 max-w-xs mx-auto">
-                Thank you. The MAPA network team will reach out to {form.email.trim()} with a setup walkthrough.
+                Thank you. The MAPA network team will contact {form.email.trim()}. To start formally, please prepare a
+                letter of intent signed by your hospital head.
               </p>
               <Link to="/" className="btn-secondary mt-6 inline-flex">Back to home</Link>
             </div>
           ) : (
             <form onSubmit={submit} noValidate>
-              <h2 className="font-display text-2xl font-bold text-brand-900">Request onboarding</h2>
-              <p className="text-sm text-gray-500 mt-1.5">We'll reach out with a setup walkthrough and a data-privacy pack.</p>
+              <h2 className="font-display text-2xl font-bold text-brand-900">Express interest</h2>
+              <p className="text-sm text-gray-500 mt-1.5">This starts the conversation. The formal start is a letter of intent from your hospital head.</p>
               <div className="mt-6 space-y-4">
-                <Field id="fh-name" label="Hospital name">
+                <Field id="fh-name" label="Hospital name (as licensed)">
                   <input id="fh-name" className="input" maxLength={150} value={form.hospitalName} onChange={set('hospitalName')} autoComplete="organization" />
                 </Field>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field id="fh-type" label="Hospital type">
+                  <Field id="fh-type" label="Ownership">
                     <select id="fh-type" className="input" value={form.hospitalType} onChange={set('hospitalType')}>
-                      {HOSPITAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      {OWNERSHIP_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </Field>
                   <Field id="fh-region" label="Region">
@@ -141,19 +204,40 @@ export default function ForHospitals() {
                     <datalist id="fh-regions">{PH_REGIONS.map((r) => <option key={r} value={r} />)}</datalist>
                   </Field>
                 </div>
-                <Field id="fh-contact" label="Contact person">
-                  <input id="fh-contact" className="input" maxLength={120} value={form.contactName} onChange={set('contactName')} autoComplete="name" />
-                </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field id="fh-nhfr" label="NHFR facility code (optional)" hint="From your DOH license.">
+                    <input id="fh-nhfr" className="input font-mono" maxLength={30} value={form.nhfrCode} onChange={set('nhfrCode')} />
+                  </Field>
+                  <Field id="fh-phone" label="Hospital official phone">
+                    <input id="fh-phone" type="tel" className="input" maxLength={40} value={form.officialPhone} onChange={set('officialPhone')} autoComplete="tel" />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field id="fh-contact" label="Your name">
+                    <input id="fh-contact" className="input" maxLength={120} value={form.contactName} onChange={set('contactName')} autoComplete="name" />
+                  </Field>
+                  <Field id="fh-position" label="Your position">
+                    <input id="fh-position" className="input" maxLength={120} value={form.contactPosition} onChange={set('contactPosition')} placeholder="e.g. Head, Medical Social Work" />
+                  </Field>
+                </div>
                 <Field id="fh-email" label="Work email">
                   <input id="fh-email" type="email" className="input" maxLength={200} value={form.email} onChange={set('email')} autoComplete="email" />
                 </Field>
-                <Field id="fh-msg" label="Anything we should know? (optional)">
-                  <textarea id="fh-msg" className="input min-h-[96px]" maxLength={2000} value={form.message} onChange={set('message')} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field id="fh-sig" label="Authorized signatory (optional)">
+                    <input id="fh-sig" className="input" maxLength={120} value={form.signatoryName} onChange={set('signatoryName')} />
+                  </Field>
+                  <Field id="fh-sigpos" label="Signatory's position">
+                    <input id="fh-sigpos" className="input" maxLength={120} value={form.signatoryPosition} onChange={set('signatoryPosition')} placeholder="e.g. Chief of Hospital" />
+                  </Field>
+                </div>
+                <Field id="fh-msg" label="Funders you work with, or anything we should know (optional)">
+                  <textarea id="fh-msg" className="input min-h-[96px]" maxLength={2000} value={form.message} onChange={set('message')} placeholder="e.g. PCSO, DSWD, AMBaG; Malasakit Center on site" />
                 </Field>
               </div>
               {error && <p role="alert" className="text-sm text-red-600 mt-4">{error}</p>}
               <button type="submit" className="btn-primary w-full justify-center mt-6 min-h-[48px]" disabled={sending}>
-                {sending ? 'Sending…' : 'Request onboarding'}
+                {sending ? 'Sending…' : 'Send expression of interest'}
               </button>
               <p className="text-xs text-gray-500 mt-3">We use these details only to contact your office about joining MAPA.</p>
             </form>

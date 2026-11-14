@@ -88,7 +88,7 @@ export const getNotifRoute = (type, role) => {
     // ── Agency / catalog (admin actions) ──
     new_agency:              agenciesPath,
     // A hospital asked to join (public For-hospitals form) — network operator.
-    onboarding_request:      role === 'platform_admin' ? '/platform/requests' : null,
+    onboarding_request:      role === 'platform_admin' ? '/platform/onboarding' : null,
     agency_updated:          agenciesPath ?? (isAgency ? '/agency/program' : null),
     agency_enabled:          agenciesPath ?? (isAgency ? '/agency/program' : null),
     agency_disabled:         agenciesPath ?? (isAgency ? '/agency/program' : null),
