@@ -40,6 +40,12 @@ export const normalizeHospitalId = (s) =>
 
 export const normalizePrefix = (s) => String(s ?? '').trim().toUpperCase()
 
+// The prefix as typed into the hospital form: people often type the whole code
+// format ("CRMC-YYYY-NNNNN") or paste a code ("CRMC-2026-00001"); keep only the
+// part before the first dash, letters and digits, at most 10.
+export const prefixFromInput = (s) =>
+  String(s ?? '').toUpperCase().split('-')[0].replace(/[^A-Z0-9]/g, '').slice(0, 10)
+
 // Suggest an id from the facility name: "Cotabato Provincial Hospital" → "cotabato-provincial-hospital".
 export const suggestHospitalId = (facilityName) => normalizeHospitalId(facilityName).slice(0, 40).replace(/-+$/, '')
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   validateHospital, hospitalDocFromForm, normalizeHospitalId, normalizePrefix,
-  suggestHospitalId, emptyHospitalForm, nextPartnerLists,
+  suggestHospitalId, emptyHospitalForm, nextPartnerLists, prefixFromInput,
 } from '../../src/utils/hospitalConfig'
 
 // Multi-hospital Phase 6 — the platform admin's hospital onboarding form.
@@ -104,5 +104,19 @@ describe('nextPartnerLists', () => {
 
   it('no changes, no writes', () => {
     expect(nextPartnerLists(agencies, 'cph', new Set(['pcso']))).toEqual([])
+  })
+})
+
+// The hospital form's prefix box keeps only the prefix part.
+describe('prefixFromInput', () => {
+  it('drops the code format or a pasted code after the first dash', () => {
+    expect(prefixFromInput('CRMC-YYYY-NNNNN')).toBe('CRMC')
+    expect(prefixFromInput('crmc-2026-00001')).toBe('CRMC')
+  })
+
+  it('upper-cases and keeps letters and digits only, max 10', () => {
+    expect(prefixFromInput(' bgh ')).toBe('BGH')
+    expect(prefixFromInput('C.R.M.C')).toBe('CRMC')
+    expect(prefixFromInput('ABCDEFGHIJKLMN')).toBe('ABCDEFGHIJ')
   })
 })

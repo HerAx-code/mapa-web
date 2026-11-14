@@ -22,7 +22,7 @@ import { agencyPartnersWith } from '../../utils/hospitals'
 import { nextPartnerLists } from '../../utils/hospitalConfig'
 import {
   emptyHospitalForm, validateHospital, hospitalDocFromForm, normalizeHospitalId, HOSPITAL_FORM_FIELDS,
-  normalizePrefix, suggestHospitalId, PH_REGIONS,
+  normalizePrefix, prefixFromInput, suggestHospitalId, PH_REGIONS,
 } from '../../utils/hospitalConfig'
 
 // Network operator view (multi-hospital Phase 6, docs/multi-hospital-network-plan.md).
@@ -185,9 +185,11 @@ function HospitalModal({ hospital, hospitals, agencies = [], onClose, onCreated,
           <input className="input" value={form.shortName} onChange={set('shortName')} />
         </Field>
         <Field label="Access-code prefix" required error={err('accessCodePrefix')}
-          hint={`Codes look like ${normalizePrefix(form.accessCodePrefix) || 'PREFIX'}-YYYY-NNNNN.`}>
-          <input className="input font-mono uppercase" value={form.accessCodePrefix}
-            onChange={(e) => setForm((p) => ({ ...p, accessCodePrefix: normalizePrefix(e.target.value) }))} />
+          hint={`Just the letters. Codes will look like ${normalizePrefix(form.accessCodePrefix) || 'CRMC'}-${new Date().getFullYear()}-00001.`}>
+          {/* Only the prefix: typing or pasting a full code / the format
+              ("CRMC-YYYY-NNNNN") keeps just "CRMC". */}
+          <input className="input font-mono uppercase" value={form.accessCodePrefix} placeholder="e.g. CRMC" maxLength={10}
+            onChange={(e) => setForm((p) => ({ ...p, accessCodePrefix: prefixFromInput(e.target.value) }))} />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_8rem] gap-4">

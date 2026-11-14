@@ -48,7 +48,7 @@ const AGENCY_NAMES = { doh: 'DOH', ambag: 'AMBaG', pcso: 'PCSO', dswd: 'DSWD', p
 
 const titleFor = (a) => {
   if (a.agencyId) {
-    const agency = AGENCY_NAMES[a.agencyId] ?? a.agencyId
+    const agency = a.agencyName || AGENCY_NAMES[a.agencyId] || a.agencyId
     return `${agency} · ${a.role === 'agency_admin' ? 'Admin' : 'Coordinator'}`
   }
   return ROLE_LABEL_SHORT[a.role] ?? a.role
