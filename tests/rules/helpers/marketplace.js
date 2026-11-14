@@ -11,6 +11,16 @@ export function fileRequest(db, { reqId, code, data }) {
   return b.commit()
 }
 
+// Register the way Register.jsx does (code REQUIRED, 2026-11-14): claim the
+// code and create the profile in one write; the code's hospital is the
+// patient's first hospital.
+export function registerWithCode(db, { uid, code, tenantId, tenantIds = [tenantId], profile = {} }) {
+  const b = writeBatch(db)
+  b.update(doc(db, 'hospitalIds', code), { status: 'used', patId: uid })
+  b.set(doc(db, 'users', uid), { role: 'patient', agencyId: null, name: 'Pat', ...profile, hospitalId: code, tenantId, tenantIds })
+  return b.commit()
+}
+
 // Join a hospital by claiming its access code: the code flips available → used
 // and the patient's current hospital / hospitals / code move together.
 export function claimCode(db, { uid, code, tenantId, tenantIds, codeExtra = {} }) {

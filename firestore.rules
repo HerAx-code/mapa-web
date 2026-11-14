@@ -115,6 +115,21 @@ service cloud.firestore {
           resource.data.get('tenantIds', []).toSet().union([resource.data.get('tenantId', t), t].toSet());
     }
 
+    // Registration (owner decision 2026-11-14): the access code is REQUIRED at
+    // sign-up. The new profile must name the code it claims in the same write
+    // (getAfter), the code's hospital, and that hospital only in tenantIds.
+    // That code then backs the patient's first request.
+    function patientRegistersWithCode() {
+      let code = request.resource.data.get('hospitalId', '');
+      let t = request.resource.data.get('tenantId', '');
+      return code is string && code != '' && t is string && t != '' &&
+        getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data.get('patId', '') == uid() &&
+        getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data.get('status', '') == 'used' &&
+        tenantOf(getAfter(/databases/$(database)/documents/hospitalIds/$(code)).data) == t &&
+        hospitalOpen(t) &&
+        request.resource.data.get('tenantIds', []) == [t];
+    }
+
     // accessCodePrefixes/{PREFIX} names the hospital that owns a prefix. Checked
     // with getAfter so the claim and the hospital doc are written in one batch.
     function prefixHeldBy(prefix, hospitalId) {
@@ -230,14 +245,13 @@ service cloud.firestore {
         || (isPlatformAdmin() && resource.data.role == 'platform_admin')
       );
       allow create: if isAuth() && (
-        // Marketplace: a patient registers with the NETWORK — no access code,
-        // no hospital yet. They join a hospital per request by claiming its
-        // code (patientSwitchesHospital). Server-owned fields stay unset.
+        // A patient registers WITH an access code (required, 2026-11-14): it
+        // decides their first hospital and backs their first request. Later
+        // requests claim a new code (patientSwitchesHospital). agencyIds stays
+        // server-owned.
         (uid() == userId && request.resource.data.role == 'patient' &&
-          !('tenantId' in request.resource.data) &&
-          !('tenantIds' in request.resource.data) &&
           !('agencyIds' in request.resource.data) &&
-          request.resource.data.get('hospitalId', null) == null) ||
+          patientRegistersWithCode()) ||
         // Gateway staff create gateway staff in their own hospital (Phase 6:
         // a role allowlist — before it, an admin could mint ANY role, which
         // would include platform_admin). Agency users are network-level and
@@ -787,8 +801,15 @@ service cloud.firestore {
       //     coordinators.
       allow update: if isPlatformAdmin() ||
                        (isAdmin() &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate']) &&
-                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0)) ||
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate', 'hospitalSlots']) &&
+                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
+                        // Per-hospital slots (2026-11-14): a hospital admin uses
+                        // only ITS hospital's daily share and never changes the
+                        // total the agency admin set.
+                        request.resource.data.get('hospitalSlots', {}).diff(resource.data.get('hospitalSlots', {}))
+                          .affectedKeys().hasOnly([userTenantId()]) &&
+                        request.resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0) ==
+                          resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0)) ||
                        // Phase 7: agency staff can't change their own partner
                        // hospitals (D4 — the platform admin sets them).
                        (isAgencyAdmin() && userAgencyId() == agencyId &&

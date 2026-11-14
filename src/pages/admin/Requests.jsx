@@ -5,7 +5,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, updateDoc,
-  serverTimestamp, runTransaction, arrayUnion, writeBatch,
+  serverTimestamp, runTransaction, arrayUnion, writeBatch, FieldPath,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -140,7 +140,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   // deny a slice to any other agency).
   const caseTenant = request.tenantId ?? currentTenantId()
   const eligible = agencies
-    .filter(a => !usedIds.has(a.id) && effectiveSlots(a, phTodayKey()).remaining > 0 && agencyPartnersWith(a, caseTenant))
+    .filter(a => !usedIds.has(a.id) && effectiveSlots(a, phTodayKey(), caseTenant).remaining > 0 && agencyPartnersWith(a, caseTenant))
     .map(a => ({
       ...a,
       matches:   (a.assistanceTypes ?? []).includes(request.assistanceType),
@@ -238,7 +238,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         for (let i = 0; i < selectedIds.length; i++) {
           const snp = agencySnaps[i]
           if (!snp.exists()) throw new Error(`GONE:${selectedIds[i]}`)
-          const remaining = effectiveSlots(snp.data(), phTodayKey()).remaining
+          const remaining = effectiveSlots(snp.data(), phTodayKey(), caseTenant).remaining
           if (remaining <= 0) throw new Error(`NO_SLOTS:${selectedIds[i]}`)
         }
 
@@ -260,7 +260,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         for (let i = 0; i < selectedIds.length; i++) {
           const id        = selectedIds[i]
           const aData     = agencySnaps[i].data()
-          const { remaining, stale: slotsStale } = effectiveSlots(aData, phTodayKey())
+          const { remaining, stale: slotsStale, perHospital } = effectiveSlots(aData, phTodayKey(), caseTenant)
           const sliceRef  = doc(collection(db, 'applications'))
           tx.set(sliceRef, {
             // A slice belongs to its request's hospital (multi-hospital Phase 2);
@@ -294,13 +294,22 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             // ApproveModal so the operator sees the referral context.
             gatewayNotes:      notesValue,
           })
-          tx.update(doc(db, 'agencies', id), {
-            'slots.remaining': remaining - 1,
-            // First endorsement of the day also records the daily reset.
-            ...(slotsStale ? { lastResetDate: phTodayKey() } : {}),
-          })
+          // Per-hospital slots: use THIS hospital's daily share; otherwise the
+          // agency-wide default. The first endorsement of the day records the reset.
+          if (perHospital) {
+            tx.update(doc(db, 'agencies', id),
+              new FieldPath('hospitalSlots', caseTenant, 'remaining'), remaining - 1,
+              ...(slotsStale ? [new FieldPath('hospitalSlots', caseTenant, 'lastResetDate'), phTodayKey()] : []))
+          } else {
+            tx.update(doc(db, 'agencies', id), {
+              'slots.remaining': remaining - 1,
+              ...(slotsStale ? { lastResetDate: phTodayKey() } : {}),
+            })
+          }
           // Capture the projection; mirrored best-effort after the tx commits.
-          pubProjectionsToMirror.push({ id, data: { ...aData, slots: { ...aData.slots, remaining: remaining - 1 } } })
+          pubProjectionsToMirror.push({ id, data: perHospital
+            ? { ...aData, hospitalSlots: { ...aData.hospitalSlots, [caseTenant]: { ...aData.hospitalSlots[caseTenant], remaining: remaining - 1 } } }
+            : { ...aData, slots: { ...aData.slots, remaining: remaining - 1 } } })
         }
 
         // R8 fix (2026-06-03): the document agencyIds stamps used to live
@@ -556,7 +565,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             )}
                           </div>
                           <p className="text-xs text-gray-500">
-                            {effectiveSlots(a, phTodayKey()).remaining} slots · {budgetTxt}
+                            {effectiveSlots(a, phTodayKey(), caseTenant).remaining} slots today for this hospital · {budgetTxt}
                             {perCap > 0 && <> · max {peso(perCap)}/applicant</>}
                           </p>
                         </div>
@@ -1005,12 +1014,15 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
         targetType: 'request', targetId: request.id, targetName: request.requestId,
         details: reason ?? status,
       })
+      // Item 10 (one code per request): tell the patient a new request needs a
+      // new access code from the hospital.
+      const nextCode = ' To apply again, ask the hospital\'s social-services office for a new access code.'
       await notify(request.patientId, {
         type:  'app_advanced',
         title: status === 'rejected' ? 'Request not approved' : 'Request closed',
-        body:  reason || (status === 'rejected'
+        body:  (reason || (status === 'rejected'
           ? 'Your assistance request was not approved.'
-          : 'Your assistance request was closed.'),
+          : 'Your assistance request was closed.')) + nextCode,
       }).catch(() => {})
       toast.success(status === 'rejected' ? 'Request rejected.' : 'Request closed.')
       onClose()
@@ -1360,7 +1372,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
           setShowRejectModal(false)
         }}
         title="Reject this request?"
-        body="The patient will see the reason below. Use this only when the request can't move forward — e.g., the bill or the indigency situation doesn't meet criteria."
+        body="The patient will see the reason below. Their access code is used up: to apply again they need a NEW code from the hospital. Use this only when the request can't move forward — e.g., the bill or the indigency situation doesn't meet criteria. For a fixable problem (an unclear or wrong document), use the document's Redo instead."
         tone="danger"
         confirmLabel="Reject Request"
         confirmLabelBusy="Rejecting…"

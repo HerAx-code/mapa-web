@@ -1,32 +1,52 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
-  MdShield, MdVisibility, MdVisibilityOff,
+  MdShield, MdVerified, MdVisibility, MdVisibilityOff,
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
-  MdSchedule, MdPlace, MdLocalHospital,
+  MdSchedule, MdPlace,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import LanguageToggle from '../../components/LanguageToggle'
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../../firebase'
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
+import { auth, db, functions, signInAnonymously, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { loadHospital } from '../../utils/hospitals'
 import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
 import TermsModal from '../../components/TermsModal'
 import AddressPicker from '../../components/AddressPicker'
 import { TERMS_VERSION } from '../../utils/constants'
 import { hasReservedToken } from '../../utils/names'
-import { ORG, accessCodeRe } from '../../config/org'
+import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
-import { PENDING_CODE_KEY } from '../../utils/accessCodes'
+import { fmtDate } from '../../utils/dates'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 
-// Marketplace (docs/patient-marketplace-plan.md): registration joins the
-// NETWORK, not a hospital. The patient picks a hospital — and enters that
-// hospital's access code — each time they file a request.
-const ACCESS_CODE_RE = accessCodeRe()
+const CURRENT_YEAR        = new Date().getFullYear()
+const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
+const ACCESS_CODE_RE      = accessCodeRe()
+// Match any hospital's prefix + YYYY- the patient types (multi-hospital
+// Phase 8: each hospital issues its own prefix) — codes from a prior calendar
+// year must remain enterable. Group 1 = the prefix typed, group 2 = the year.
+const ACCESS_CODE_PREFIX_RE = new RegExp(`^(${ACCESS_CODE_PREFIX_PATTERN})-(\\d{4})-`)
+// The hospital an access code belongs to (multi-hospital Phase 8): its
+// tenantId names a hospitals/{id} doc, whose `enabled` flag gates new
+// registrations. Both reads are allowed to the anonymous session Register signs
+// in before verifying. A hospital doc we can't read counts as open (the rules
+// still enforce `enabled` at sign-up), so a read hiccup never blocks a patient.
+async function codeHospital(code) {
+  try {
+    const codeSnap = await getDoc(doc(db, 'hospitalIds', code))
+    const tenantId = codeSnap.data()?.tenantId || DEFAULT_HOSPITAL_ID
+    const hSnap    = await getDoc(doc(db, 'hospitals', tenantId))
+    const h        = hSnap.exists() ? hSnap.data() : null
+    return { enabled: h?.enabled !== false, name: h?.facilityName || '' }
+  } catch {
+    return { enabled: true, name: '' }
+  }
+}
 
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
@@ -147,7 +167,7 @@ export default function Register() {
   const STEPS = [
     { num: 1, label: t('register.stepPersonal') },
     { num: 2, label: t('register.stepAccount')  },
-    { num: 3, label: t('register.stepFinish')   },
+    { num: 3, label: t('register.stepCode')     },
   ]
 
   // Restore in-progress registration from sessionStorage so a refresh /
@@ -164,10 +184,15 @@ export default function Register() {
   const draft = loadDraft()
 
   const [step, setStep]                     = useState(draft?.step ?? 1)
-  // A real hospital prefix for the code example (the first participating
-  // hospital's, else this deployment's own).
+  const [hospitalVerified, setHospitalVerified] = useState(false)
+  // Which hospital the verified code belongs to (Phase 8) — shown so the
+  // patient can confirm before creating the account.
+  const [codeHospitalName, setCodeHospitalName] = useState('')
+  // A real hospital prefix for the examples (multi-hospital): the first
+  // participating hospital's, else this deployment's own.
   const publicHospitals = usePublicHospitals()
   const examplePrefix = publicHospitals[0]?.accessCodePrefix || ORG.accessCodePrefix
+  const [verifying, setVerifying]           = useState(false)
   const [loading, setLoading]               = useState(false)
   const [showPw, setShowPw]                 = useState(false)
   const [showConfirmPw, setShowConfirmPw]   = useState(false)
@@ -183,6 +208,7 @@ export default function Register() {
     email: '',
     contactNumber: '',
     barangay: '', city: '', province: '',
+    hospitalId: HOSPITAL_PREFIX,
     ...(draft?.form ?? {}),
     // Always start with empty passwords regardless of any persisted state
     password: '', confirmPassword: '',
@@ -190,8 +216,7 @@ export default function Register() {
 
   // Persist non-sensitive form fields + current step on every change.
   useEffect(() => {
-    // eslint-disable-next-line no-unused-vars
-    const { password, confirmPassword, hospitalId, ...safe } = form
+    const { password, confirmPassword, ...safe } = form
     try {
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form: safe, step }))
     } catch {}
@@ -236,6 +261,22 @@ export default function Register() {
         setErrors(prev => ({ ...prev, email: t('register.errors.emailInUse') }))
       }
     } catch { /* network blip — defer to submit-time check */ }
+  }
+
+  const handleHospitalIdChange = (e) => {
+    const val = e.target.value.toUpperCase()
+    // Honor whatever prefix + year the patient typed — codes from prior years
+    // stay valid. Once a full <PREFIX>-YYYY- is typed only 5 digits may follow; before
+    // that the patient may type any hospital's prefix (Phase 8), so letters,
+    // digits and dashes pass through.
+    const prefixMatch = val.match(ACCESS_CODE_PREFIX_RE)
+    const next = prefixMatch
+      ? `${prefixMatch[1]}-${prefixMatch[2]}-` + val.slice(prefixMatch[0].length).replace(/\D/g, '').slice(0, 5)
+      : val.replace(/[^A-Z0-9-]/g, '').slice(0, 16)
+    setForm(prev => ({ ...prev, hospitalId: next }))
+    setCodeHospitalName('')
+    setHospitalVerified(false)
+    if (errors.hospitalId) setErrors(prev => ({ ...prev, hospitalId: '' }))
   }
 
   const strength = getStrength(form.password, t)
@@ -285,7 +326,9 @@ export default function Register() {
 
   const validateStep3 = () => {
     const e = {}
-    if (!agreedToTerms) e.terms = t('register.errors.termsRequired')
+    if (!ACCESS_CODE_RE.test(form.hospitalId)) e.hospitalId = t('register.errors.codeFormat', { year: CURRENT_YEAR })
+    else if (!hospitalVerified)                e.hospitalId = t('register.errors.codeVerifyFirst')
+    if (!agreedToTerms)                        e.terms      = t('register.errors.termsRequired')
     return e
   }
 
@@ -317,18 +360,129 @@ export default function Register() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // A scanned code slip (/register?code=…) no longer decides anything at
-  // sign-up: keep the code for the request flow, which pre-selects its
-  // hospital, and strip it from the URL so it doesn't linger in history.
-  useEffect(() => {
-    const qrCode = (searchParams.get('code') || '').trim().toUpperCase()
-    if (!qrCode) return
-    if (ACCESS_CODE_RE.test(qrCode)) {
-      try { sessionStorage.setItem(PENDING_CODE_KEY, qrCode) } catch { /* ignore */ }
-      toast(t('register.toast.codeSaved'), { icon: 'ℹ️', duration: 6000 })
+  // ── Hospital ID verify ──────────────────────────────────────────────────
+
+  // #17 — Per-session rate limit on Verify. Without throttle, a script
+  // could iterate <PREFIX>-YYYY-00001..99999 to enumerate which codes are
+  // claimed (and by side effect, leak the names of registered patients).
+  // This is a SOFT layer: a determined attacker can clear sessionStorage
+  // or open many tabs. A proper fix would be a Cloud Function with per-IP
+  // throttle + reCAPTCHA v3; deferred until pilot abuse signals show up.
+  const VERIFY_BUCKET_KEY = 'mapa_verify_attempts'
+  const VERIFY_WINDOW_MS  = 60 * 60 * 1000   // 1 hour rolling window
+  const VERIFY_MAX        = 10                // attempts/window
+  const recordVerifyAttempt = () => {
+    try {
+      const now = Date.now()
+      const raw = sessionStorage.getItem(VERIFY_BUCKET_KEY)
+      const all = raw ? JSON.parse(raw) : []
+      const recent = all.filter(t => now - t < VERIFY_WINDOW_MS)
+      recent.push(now)
+      sessionStorage.setItem(VERIFY_BUCKET_KEY, JSON.stringify(recent))
+      return recent.length
+    } catch { return 0 }
+  }
+  const countRecentVerifyAttempts = () => {
+    try {
+      const raw = sessionStorage.getItem(VERIFY_BUCKET_KEY)
+      if (!raw) return 0
+      const now = Date.now()
+      return JSON.parse(raw).filter(t => now - t < VERIFY_WINDOW_MS).length
+    } catch { return 0 }
+  }
+
+  // codeArg is a string only when called programmatically (the QR auto-verify);
+  // when wired to onClick the first arg is the event, so we fall back to state.
+  // opts.fromQR routes an already-used code to login instead of showing an error.
+  const handleVerify = async (codeArg, opts = {}) => {
+    const code = typeof codeArg === 'string' ? codeArg : form.hospitalId
+    if (!ACCESS_CODE_RE.test(code)) {
+      setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeFormat', { year: CURRENT_YEAR }) }))
+      return
     }
+    if (countRecentVerifyAttempts() >= VERIFY_MAX) {
+      setErrors(prev => ({ ...prev, hospitalId: t('register.errors.verifyRateLimit') }))
+      return
+    }
+    recordVerifyAttempt()
+    setVerifying(true)
+    try {
+      // Phase 3.5: prefer the rate-limited Cloud Function path. If the
+      // function is unreachable (cold-start error, network blip), fall
+      // back to the direct Firestore read so registration still works
+      // -- the parent doc post-Phase-0.3 leaks nothing PII-sensitive
+      // and the client-side throttle (countRecentVerifyAttempts above)
+      // is still in place.
+      let available = null, exists = null, usedFallback = false
+      try {
+        if (!auth.currentUser) await signInAnonymously(auth)
+        const call = httpsCallable(functions, 'verifyAccessCode')
+        const result = await call({ code })
+        // Phase 8: the code's hospital has paused registrations.
+        if (result.data.hospitalClosed) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
+          return
+        }
+        available = result.data.available
+        exists    = result.data.exists
+      } catch (err) {
+        // resource-exhausted = real throttle hit, surface it directly.
+        if (err?.code === 'functions/resource-exhausted') {
+          setErrors(prev => ({ ...prev, hospitalId: err.message ?? t('register.errors.verifyRateLimit') }))
+          return
+        }
+        console.warn('[Register] verifyAccessCode function failed; falling back to direct read:', err)
+        usedFallback = true
+        const snap = await getDoc(doc(db, 'hospitalIds', code))
+        exists    = snap.exists()
+        available = exists && snap.data().status === 'available'
+      }
+
+      if (!exists) {
+        setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeNotFound') }))
+      } else if (!available) {
+        // A used code scanned from a slip / card / wristband means the patient
+        // already registered — send them to login instead of a dead-end error.
+        if (opts.fromQR) {
+          toast(t('register.toast.alreadyRegistered'), { icon: 'ℹ️', duration: 6000 })
+          navigate('/login')
+          return
+        }
+        setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeUsed') }))
+      } else {
+        // Phase 8: the code decides the hospital. Refuse a disabled hospital's
+        // code here (the rules refuse it at sign-up too) and name the hospital.
+        const hospital = await codeHospital(code)
+        if (!hospital.enabled) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
+          return
+        }
+        setCodeHospitalName(hospital.name)
+        setHospitalVerified(true)
+        setErrors(prev => ({ ...prev, hospitalId: '' }))
+        toast.success(t('register.toast.codeVerified'))
+        if (usedFallback) {
+          console.warn('[Register] verified via Firestore fallback path -- function may need attention')
+        }
+      }
+    } catch {
+      toast.error(t('register.errors.verifyFailed'))
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  // Consume a ?code= from a scanned QR (access-code slip / card / wristband):
+  // prefill the field, verify it once, then strip it from the URL so it doesn't
+  // linger in history/referrer. A used code routes to login (handleVerify
+  // fromQR). Manual entry stays the fallback for anyone without a scannable code.
+  useEffect(() => {
+    const qrCode = searchParams.get('code')
+    if (!qrCode || !ACCESS_CODE_RE.test(qrCode)) return
+    setForm(prev => ({ ...prev, hospitalId: qrCode }))
     searchParams.delete('code')
     setSearchParams(searchParams, { replace: true })
+    handleVerify(qrCode, { fromQR: true })
     // Run once on mount; deps intentionally omitted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -366,7 +520,7 @@ export default function Register() {
         city:     form.city.trim(),
         province: form.province.trim(),
         suffix:   form.suffix || null,
-        patientId,
+        hospitalId: form.hospitalId, patientId,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
         // Terms of Use acceptance record (who = this uid, when, which version).
@@ -375,29 +529,80 @@ export default function Register() {
         createdAt: serverTimestamp(),
       }
 
-      // Network account: no hospital and no code yet (the rules refuse
-      // either at sign-up). The first request claims both.
+      // Owner decision 2026-11-14: the access code is REQUIRED at registration.
+      // It decides the patient's hospital and is the code for their FIRST
+      // request (claimed here, bound to the request when they file). Later
+      // requests need a new code — from any hospital (patient marketplace).
+      let joinedTenant = null
+      // #2 — Transactional hospital ID claim: re-read status INSIDE the
+      // transaction and abort if another patient won the race between
+      // the patient's Verify click and Submit. Prevents a second patient's
+      // claim from silently overwriting the first patient's record.
+      //
+      // Phase 0.3 hardening: the patient NAME is written to a dedicated
+      // sub-doc (hospitalIds/{id}/privateInfo/details) instead of the
+      // parent. The parent allows unauthenticated GET during registration
+      // and previously leaked `usedBy: name` on every claimed code. Now
+      // the parent only carries the uid (`patId`) and status; the name
+      // sits behind the auth-gated sub-collection rule. All three writes
+      // (users, parent hospitalIds, privateInfo) commit atomically in the
+      // same transaction.
       try {
-        await setDoc(doc(db, 'users', uid), userData)
-      } catch (writeErr) {
+        await runTransaction(db, async (tx) => {
+          const hidRef  = doc(db, 'hospitalIds', form.hospitalId)
+          const hidSnap = await tx.get(hidRef)
+          if (!hidSnap.exists()) throw new Error('CODE_NOT_FOUND')
+          if (hidSnap.data().status !== 'available') throw new Error('CODE_USED')
+          // Tenant (multi-hospital Phase 2): the patient joins the hospital
+          // that issued the access code. Codes carry tenantId from Phase 2 on;
+          // older codes belong to hospital #1 (Phase 3 backfills them).
+          joinedTenant = hidSnap.data().tenantId || DEFAULT_HOSPITAL_ID
+          tx.set(doc(db, 'users', uid), { ...userData, tenantId: joinedTenant, tenantIds: [joinedTenant] })
+          tx.update(hidRef, {
+            status: 'used', patId: uid,
+            date: fmtDate(new Date()),
+            time: new Date().toLocaleTimeString(),
+          })
+          tx.set(doc(db, 'hospitalIds', form.hospitalId, 'privateInfo', 'details'), {
+            usedBy:    name,
+            usedById:  uid,
+            createdAt: serverTimestamp(),
+          })
+        })
+      } catch (txErr) {
         // #1 — Roll back the orphan Auth account so the patient can retry
-        // without their email being "already in use" with no profile.
+        // (e.g. with a different access code) without their email being
+        // permanently "already in use" with no profile attached.
         try { await deleteUser(createdAuthUser) }
-        catch (delErr) { console.error('[Register] orphan Auth rollback failed (profile write):', delErr) }
+        catch (delErr) { console.error('[Register] orphan Auth rollback failed (tx path):', delErr) }
         createdAuthUser = null
-        throw writeErr
+        if (String(txErr.message) === 'CODE_USED') {
+          setErrors({ hospitalId: t('register.errors.codeUsed') })
+          setHospitalVerified(false)
+          setStep(3)
+          return
+        }
+        if (String(txErr.message) === 'CODE_NOT_FOUND') {
+          setErrors({ hospitalId: t('register.errors.codeNotFound') })
+          setHospitalVerified(false)
+          setStep(3)
+          return
+        }
+        throw txErr
       }
 
       // Immediately sync role into AuthContext so PrivateRoute sees 'patient'
       // before onAuthStateChanged re-reads the doc (timing fix)
-      updateUser({ uid, ...userData })
+      // Brand the session with the patient's hospital before the first page.
+      if (joinedTenant) await loadHospital(joinedTenant)
+      updateUser({ uid, ...userData, tenantId: joinedTenant, tenantIds: joinedTenant ? [joinedTenant] : [] })
 
       // Successful registration — discard the draft so a future visit to
       // /register doesn't pre-fill someone else's data.
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
 
       toast.success(t('register.toast.welcome', { name: form.firstName }))
-      navigate('/patient/hospitals')
+      navigate('/patient/request')
     } catch (err) {
       // #1 — If Auth account was created before this throw and not already
       // rolled back inside the transaction handler above, drop it so the
@@ -454,7 +659,7 @@ export default function Register() {
               ))}
             </ul>
           </div>
-          {/* Marketplace: a code from the CHOSEN hospital, per request. */}
+          {/* Multi-hospital: the code's prefix decides the hospital. */}
           <div className="mt-6 rounded-2xl border border-white/15 bg-white/[0.07] p-4">
             <h3 className="text-[13px] font-semibold text-white">{t('register.brand.codeTitle')}</h3>
             <p className="mt-1.5 text-[12.5px] leading-relaxed text-brand-100/85">{t('register.brand.codeBody')}</p>
@@ -507,10 +712,12 @@ export default function Register() {
 
           {/* All step content + nav buttons live inside one <form> so the
               keyboard's Go / Done key triggers the appropriate action.
-              On Step 3 it creates the account. */}
+              On Step 3, an unverified code routes Enter to Verify first
+              so the patient doesn't have to switch hands to a tiny button. */}
           <form onSubmit={(e) => {
             e.preventDefault()
             if (step < 3) handleNext()
+            else if (!hospitalVerified) handleVerify()
             else handleSubmit()
           }}>
 
@@ -669,7 +876,7 @@ export default function Register() {
             </div>
           )}
 
-          {/* ── Step 3 — Review + Terms ── */}
+          {/* ── Step 3 — Access Code + Terms ── */}
           {step === 3 && (
             <div className="space-y-4">
               <div className="mb-2">
@@ -677,13 +884,80 @@ export default function Register() {
                 <p className="text-xs text-gray-500 mt-0.5">{t('register.step3.sectionDesc')}</p>
               </div>
 
-              {/* What happens next: the hospital is chosen per request. */}
-              <div className="flex gap-3 rounded-xl border border-brand-100 bg-brand-50 p-3">
-                <MdLocalHospital size={20} className="mt-0.5 flex-shrink-0 text-brand-600" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold text-brand-900">{t('register.step3.nextTitle')}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-brand-800">{t('register.step3.nextBody')}</p>
+              <div>
+                <label htmlFor="reg-accessCode" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
+                {/* Stack vertically on mobile so the input has room to show
+                    the full "<PREFIX>-YYYY-NNNNN" code without truncation.
+                    Verify uses the secondary button style — it's a sub-action,
+                    not the page goal (Create Account is). */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    id="reg-accessCode"
+                    data-field="hospitalId"
+                    className={`${inputCls('hospitalId')} flex-1 font-mono ${hospitalVerified ? 'border-green-400 bg-green-50' : ''}`}
+                    placeholder={`${HOSPITAL_PREFIX}00001`}
+                    value={form.hospitalId}
+                    onChange={handleHospitalIdChange}
+                    // Numeric keypad once the prefix + year are in; a text
+                    // keypad before, so another hospital's prefix can be typed.
+                    inputMode={ACCESS_CODE_PREFIX_RE.test(form.hospitalId) ? 'numeric' : 'text'}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    disabled={hospitalVerified}
+                  />
+                  {hospitalVerified ? (
+                    <div className="flex items-center gap-2 px-2 flex-shrink-0">
+                      <span className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                        <MdVerified size={18} /> {t('register.step3.verified')}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-xs text-gray-500 hover:text-gray-600 underline underline-offset-2"
+                        onClick={() => setHospitalVerified(false)}>
+                        {t('register.step3.edit')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button"
+                      className="btn-secondary px-4 sm:flex-shrink-0 flex items-center justify-center min-h-[40px] sm:min-w-[80px]"
+                      onClick={handleVerify} disabled={verifying}>
+                      {verifying
+                        ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        : t('register.step3.verifyBtn')}
+                    </button>
+                  )}
                 </div>
+                <FieldError msg={errors.hospitalId} />
+                {!errors.hospitalId && !hospitalVerified && (
+                  <>
+                    <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 lg:hidden">{t('register.step3.prefixHint', { prefix: examplePrefix })}</p>
+                  </>
+                )}
+                {hospitalVerified && codeHospitalName && (
+                  <p className="text-sm text-green-700 mt-1">{t('register.step3.joiningHospital', { hospital: codeHospitalName })}</p>
+                )}
+                {/* If the code shows as already used, give the patient an
+                    actionable recovery path — they may be a real holder
+                    whose code was claimed by someone else. Without this
+                    fallback, the patient is stuck with no way forward. */}
+                {errors.hospitalId === t('register.errors.codeUsed') && (
+                  <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs text-amber-700 mb-2">
+                      {t('register.step3.codeUsedRecovery')}
+                    </p>
+                    <a href={`mailto:${ORG.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                      className="text-xs text-amber-700 font-semibold underline underline-offset-2">
+                      {t('register.step3.codeUsedRecoveryAction')} →
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                <p className="text-xs text-blue-700">
+                  {t('register.step3.noCodeHint')}
+                </p>
               </div>
 
               {/* Review summary — collapsed by default. Lets the patient

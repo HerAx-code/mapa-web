@@ -23,10 +23,17 @@ describe('syncedRequestStatus — slice events never overwrite gateway decisions
 describe('effectiveSlots — today’s figure', () => {
   const a = { slots: { total: 25, remaining: 0 }, lastResetDate: '2026-11-13' }
   it('a figure from an earlier day means the slots refilled', () => {
-    expect(effectiveSlots(a, '2026-11-14')).toEqual({ total: 25, remaining: 25, stale: true })
+    expect(effectiveSlots(a, '2026-11-14')).toMatchObject({ total: 25, remaining: 25, stale: true, perHospital: false })
   })
   it("today's figure is used as stored", () => {
-    expect(effectiveSlots({ ...a, lastResetDate: '2026-11-14' }, '2026-11-14')).toEqual({ total: 25, remaining: 0, stale: false })
+    expect(effectiveSlots({ ...a, lastResetDate: '2026-11-14' }, '2026-11-14')).toMatchObject({ total: 25, remaining: 0, stale: false })
+  })
+  it('a hospital with its own daily count uses it; others use the agency default', () => {
+    const ag = { ...a, lastResetDate: '2026-11-14', hospitalSlots: { crmc: { total: 5, remaining: 2, lastResetDate: '2026-11-14' } } }
+    expect(effectiveSlots(ag, '2026-11-14', 'crmc')).toMatchObject({ total: 5, remaining: 2, perHospital: true })
+    expect(effectiveSlots(ag, '2026-11-14', 'other')).toMatchObject({ total: 25, remaining: 0, perHospital: false })
+    expect(effectiveSlots({ ...ag, hospitalSlots: { crmc: { total: 5, remaining: 0, lastResetDate: '2026-11-13' } } }, '2026-11-14', 'crmc'))
+      .toMatchObject({ remaining: 5, stale: true })
   })
 })
 

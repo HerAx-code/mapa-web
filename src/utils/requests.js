@@ -159,15 +159,19 @@ export const isRequestClosedByGateway = (status) => ['closed', 'rejected'].inclu
 // Slices still in play (not decided, not committed).
 export const OPEN_SLICE_STATUSES = ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview']
 
-// An agency's slots for TODAY. The daily reset is written lazily (whoever
-// opens the agency dashboard / request queue first), so a stored figure from
-// a previous day means the slots have already refilled.
-export function effectiveSlots(agency, todayKey) {
-  const total = Number(agency?.slots?.total) || 0
-  const stored = Number(agency?.slots?.remaining) || 0
-  // Only a KNOWN earlier reset date means a refill; no date = trust the figure.
-  const stale = total > 0 && !!todayKey && !!agency?.lastResetDate && agency.lastResetDate !== todayKey
-  return { total, remaining: stale ? total : stored, stale }
+// An agency's slots for TODAY — per partner hospital (owner decision
+// 2026-11-14: each hospital gets its own daily count, set by the agency
+// admin in agencies.hospitalSlots[hospitalId] = { total, remaining,
+// lastResetDate }). A hospital without its own entry falls back to the
+// agency-wide default (agencies.slots). The daily reset is written lazily, so
+// a stored figure from a KNOWN earlier day means the slots have refilled.
+export function effectiveSlots(agency, todayKey, hospitalId) {
+  const own = hospitalId ? agency?.hospitalSlots?.[hospitalId] : null
+  const src = own ?? { ...(agency?.slots ?? {}), lastResetDate: agency?.lastResetDate }
+  const total  = Number(src.total) || 0
+  const stored = Number(src.remaining) || 0
+  const stale  = total > 0 && !!todayKey && !!src.lastResetDate && src.lastResetDate !== todayKey
+  return { total, remaining: stale ? total : Math.min(stored, total || stored), stale, perHospital: !!own }
 }
 
 // When a slice transitions OUT of committed status (reversal, expiry),

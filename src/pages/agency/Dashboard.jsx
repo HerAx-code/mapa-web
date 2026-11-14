@@ -22,6 +22,7 @@ import {
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
 import { deriveRequestFinancials, syncedRequestStatus } from '../../utils/requests'
+import HospitalSlotsCard from '../../components/agency/HospitalSlotsCard'
 import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
@@ -351,6 +352,11 @@ export default function AgencyDashboard() {
           <p className="text-xs text-gray-500">
             {slots.total - slots.remaining} used · {slots.remaining} remaining · resets midnight
           </p>
+        </div>
+
+        {/* Where requests come from: today's slots + open cases per hospital. */}
+        <div className="mb-5">
+          <HospitalSlotsCard agency={agency} user={user} applications={applications} />
         </div>
 
         {/* Budget alerts — the budget summary now lives in the hero above;

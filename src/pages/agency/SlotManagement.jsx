@@ -9,6 +9,7 @@ import { logAudit } from '../../utils/auditLog'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { phTodayKey } from '../../utils/dates'
 import toast from 'react-hot-toast'
+import HospitalSlotsCard from '../../components/agency/HospitalSlotsCard'
 
 const MAX_CAPACITY     = 100
 const HISTORY_KEEP     = 10  // keep last N adjustments on the agency doc
@@ -208,14 +209,17 @@ export default function SlotManagement() {
           {/* Controls */}
           <div className="space-y-4 min-w-0">
 
-          {/* Default capacity */}
+          {/* Per-hospital daily slots (2026-11-14) — the agency admin sets them. */}
+          <HospitalSlotsCard agency={agency} user={user} canEdit={user?.role === 'agency_admin'} />
+
+          {/* Default capacity — used by partner hospitals without their own count */}
           <div className="card p-5 border-l-4 border-brand-500">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center"><MdConfirmationNumber className="text-brand-500" size={20} /></div>
                 <div>
                   <p className="text-sm font-medium text-gray-800">Default Slot Capacity</p>
-                  <p className="text-xs text-gray-500">Max 100 per day</p>
+                  <p className="text-xs text-gray-500">Agency-wide · used by partner hospitals without their own daily slots · max 100 per day</p>
                 </div>
               </div>
               {editing ? (

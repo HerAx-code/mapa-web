@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import {
   collection, query, where, orderBy, onSnapshot,
   doc, updateDoc, getDoc, getDocs, serverTimestamp,
-  writeBatch, increment, runTransaction, Timestamp,
+  writeBatch, increment, runTransaction, Timestamp, FieldPath,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -44,6 +44,7 @@ import {
 import CompactStepper from './applicationDetail/CompactStepper'
 import { getPrimaryActions } from './applicationDetail/primaryActions'
 import { buildTimelineStages } from './applicationDetail/helpers'
+import { useHospitalBranding } from '../../hooks/useHospitals'
 
 // Phase 2.1 split removed: peso, daysSince, formatDate, SECTION_DEFS,
 // VARIANT_CLS, TONE_CLS, CompactStepper, getPrimaryActions, and
@@ -60,6 +61,9 @@ export default function ApplicationDetail() {
   const queueFilter    = searchParams.get('queue') ?? 'all'
 
   const [app, setApp]                       = useState(null)
+  // Which hospital endorsed this case (the request's hospital) — shown in the
+  // header so the agency always knows where the request came from.
+  const caseHospital                         = useHospitalBranding(app?.tenantId)
   const [appLoading, setAppLoading]         = useState(true)
   const [request, setRequest]               = useState(null)
   const [siblings, setSiblings]             = useState([])
@@ -679,9 +683,17 @@ export default function ApplicationDetail() {
         await runTransaction(db, async (tx) => {
           const snap = await tx.get(agencyRef)
           if (!snap.exists()) return
-          const current = snap.data()?.slots?.remaining ?? 0
-          const total   = snap.data()?.slots?.total    ?? 0
-          tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
+          // Give the slot back to the hospital it came from (per-hospital
+          // slots), else to the agency-wide default.
+          const own = app.tenantId ? snap.data()?.hospitalSlots?.[app.tenantId] : null
+          if (own) {
+            tx.update(agencyRef, new FieldPath('hospitalSlots', app.tenantId, 'remaining'),
+              Math.min((Number(own.remaining) || 0) + 1, Number(own.total) || 0))
+          } else {
+            const current = snap.data()?.slots?.remaining ?? 0
+            const total   = snap.data()?.slots?.total    ?? 0
+            tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
+          }
         })
       } catch (err) {
         // Slot restore is best-effort — the rejection already committed.
@@ -1119,6 +1131,12 @@ export default function ApplicationDetail() {
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 font-medium">
             <MdArrowBack size={16} /> Back to Inbox
           </Link>
+          {app.tenantId && caseHospital?.facilityName && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700"
+              title="The hospital that assessed and endorsed this case">
+              From {caseHospital.facilityName}
+            </span>
+          )}
           <div className="flex items-center gap-2">
             {queueIds.length > 0 && (
               <>

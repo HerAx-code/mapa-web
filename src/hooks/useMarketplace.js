@@ -46,7 +46,7 @@ export function useMarketplace() {
     // earlier day means the agency has refilled (effectiveSlots).
     const today = phTodayKey()
     const slots = partners.reduce((acc, a) => {
-      const s = effectiveSlots(a, today)
+      const s = effectiveSlots(a, today, h.id)
       return { remaining: acc.remaining + s.remaining, total: acc.total + s.total }
     }, { remaining: 0, total: 0 })
     const s = stats[h.id]
