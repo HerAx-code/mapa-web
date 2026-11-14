@@ -3,9 +3,9 @@
 **Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅
-(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 8 next.
-**Merge/deploy:** Phases 0–4 are safe to ship as-is. **Phases 5–7 ship together,
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅ · Phase 8 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 9 next.
+**Merge/deploy:** Phases 0–4 are safe to ship as-is. **Phases 5–8 ship together,
 only in the coordinated rollout** described under Phase 5 — their rules depend on
 the backfills, and Phase 6's client already moves agency management to the
 platform admin (merged alone, hospital super admins would lose the agency UI
@@ -315,15 +315,57 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   platform admin sets partners on its page. Per-hospital agency budgets stay D3
   future work.
 
-### Phase 8 — Per-hospital access codes + configuration
-- `verifyAccessCode` + `orgConfig.js`: accept any **enabled hospital's** prefix;
-  the matched prefix's hospital sets `users.tenantId` at registration
-  (Register already copies `hospitalIds/{code}.tenantId` since Phase 2).
-- Guarantee Letter, intake sheet (`intakeSheetHTML.js`), emails (`api/send-email.js`)
-  render the **endorsing hospital's** name/logo/address.
-- Optional per-hospital overrides of `referenceData.js` (document sets,
-  thresholds) stored on the hospital doc.
-- Hospital Settings page for the hospital `super_admin` (branding + contact).
+### Phase 8 — Per-hospital access codes + configuration ✅ 2026-11-14 (not deployed)
+- **Each hospital issues codes under its own prefix.** `accessCodePrefix` joined the
+  hospital branding fields (`applyHospital`), so a gateway's Access Codes page
+  issues `<its prefix>-YYYY-NNNNN`. Rules: a code may be created only under the
+  issuing hospital's prefix (`hospitalIds` create), so hospitals can never collide
+  in the single `hospitalIds/{code}` namespace.
+- **Registration accepts any hospital's code.** Web (`accessCodeRe()`) and the
+  `verifyAccessCode` function check the prefix *format* (`[A-Z][A-Z0-9]{1,9}`); the
+  code doc decides whether it exists and which hospital the patient joins
+  (`users.tenantId` ← the code's `tenantId`, since Phase 2). Register's input mask
+  no longer snaps back to the deployment prefix, the keypad is text until the
+  prefix + year are in, and after verifying it tells the patient which hospital
+  they're joining (bilingual).
+- **Prefixes are unique server-side (D5).** New collection
+  `accessCodePrefixes/{PREFIX}` = `{ tenantId }`: created once by the platform admin
+  in the same batch as the hospital (rules: `prefixHeldBy` via `getAfter`), never
+  changed or deleted — a retired prefix stays reserved because its codes still
+  exist. A hospital may carry only a prefix it holds. `seed-default-hospital.mjs`
+  claims hospital #1's prefix (also when the hospital doc already exists).
+- **`enabled` = new sign-ups open.** Platform admin: "Pause / Resume sign-ups" on the
+  Hospitals page. A paused hospital's codes are refused by Register, by
+  `verifyAccessCode` (`hospitalClosed: true`), and by the rules (patient
+  self-create checks `hospitalOpen`). Its staff and existing patients are
+  unaffected.
+- **Documents carry the case hospital's identity.** `brandingFor(hospital)` (pure,
+  `src/config/org.js`) + `fetchHospitalBranding(tenantId)` (cached) +
+  `useHospitalBranding`. The Guarantee Letter (`GuaranteeLetter` `org` prop, GL
+  viewer) and the intake sheet (`buildIntakeSheetHTML({ org })`, whose seal was a
+  module-level constant frozen at first load) print the CASE's hospital — an agency
+  user used to get hospital #1's name and seal on every hospital's letter. The
+  hospital address prints in the header when set.
+- **Emails:** the footer names the sender's hospital; agency and platform senders
+  (no hospital) sign with the network brand only, never hospital #1's name.
+- **Hospital Settings** (`/admin/settings`, super admin): name, short name, gateway
+  office, seal initials, contact email, address — applied live after saving. The
+  prefix and sign-up status show read-only (network decisions).
+- Tests: `tests/rules/accessCodes.rules.test.js` (13) — claims (batch, taken,
+  retired, re-use own, malformed, permanent, platform-only), own-prefix issuance,
+  paused-hospital sign-up; function tests for any prefix / unknown prefix / paused
+  hospital; unit tests for `brandingFor`, `accessCodeRe`, `fetchHospitalBranding`
+  and the intake sheet's case branding. 385/385 rules, 402 unit, 96 function, 133
+  component tests pass.
+- Deferred, by design:
+  - **Per-hospital reference-data overrides** (document sets, thresholds) — the
+    per-type checklist itself is still flag-off (`VITE_PER_TYPE_DOCS`) pending the
+    gateway's confirmation of the real lists; overriding unconfirmed defaults per
+    hospital would multiply guesses. Revisit when the flag goes on.
+  - **Logo upload** (`logoUrl` is allowed by the rules; no Storage upload UI yet).
+  - The Landing page's example code shows hospital #1's prefix (no hospital before
+    sign-in). `buildCertificateHTML` in agency/CertificateGenerator.jsx is unused
+    (the page opens the GL viewer) and still reads `ORG` — delete in a cleanup.
 
 ### Phase 9 — Functions + analytics + polish
 - Cloud Functions: stamp/propagate `tenantId` where they create docs

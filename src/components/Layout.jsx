@@ -101,6 +101,7 @@ const ADMIN_NAV = {
     { to: '/admin/agencies',        icon: MdBusiness,             label: 'Agencies'              },
     { to: '/admin/accounts',        icon: MdSupervisedUserCircle,  label: 'Admin Accounts'       },
     { to: '/admin/announcements',   icon: MdCampaign,             label: 'Announcements'    },
+    { to: '/admin/settings',        icon: MdSettings,             label: 'Hospital Settings', superOnly: true },
   ],
   operations: [
     { to: '/admin/requests',    icon: MdReceiptLong,  label: 'Requests' },
@@ -726,11 +727,12 @@ const APPS = {
     { label: 'Messages',       icon: MdEmail,                to: '/admin/messages'    },
     { label: 'Reports',        icon: MdFlag,                 to: '/admin/reports'     },
     { label: 'Audit Log',      icon: MdHistory,              to: '/admin/auditlog'    },
+    { label: 'Settings',       icon: MdSettings,             to: '/admin/settings'    },
   ],
 }
 APPS[ROLES.PLATFORM_ADMIN] = PLATFORM_NAV
 APPS[ROLES.STAFF_ADMIN] = APPS[ROLES.SUPER_ADMIN].filter(a =>
-  a.to !== '/admin/accounts' && a.to !== '/admin/auditlog'
+  a.to !== '/admin/accounts' && a.to !== '/admin/auditlog' && a.to !== '/admin/settings'
 )
 
 function AppsPanel({ role, onNavigate, onClose }) {

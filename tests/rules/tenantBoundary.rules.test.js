@@ -43,8 +43,8 @@ beforeEach(async () => {
       put('users/coord', { role: 'agency', agencyId: 'dswd' }),
       put('users/patA', patient(A, 'CODE-A')),
       put('users/patB', patient(B, 'CODE-B')),
-      put('hospitals/hospital-1', { gatewayName: 'MSS A' }),
-      put('hospitals/bgh', { gatewayName: 'MSS B' }),
+      put('hospitals/hospital-1', { gatewayName: 'MSS A', accessCodePrefix: 'MAPA' }),
+      put('hospitals/bgh', { gatewayName: 'MSS B', accessCodePrefix: 'BGH' }),
       // Shared agencies partner with both hospitals (Phase 7).
       put('agencies/dswd', { name: 'DSWD', partnerHospitalIds: [A, B] }),
       put('agencies/pcso', { name: 'PCSO', partnerHospitalIds: [A, B] }),
@@ -110,8 +110,10 @@ describe("another hospital's records are off-limits to gateway staff", () => {
   it("hospital A super admin cannot edit, reissue or delete B's access codes", async () => {
     await assertFails(updateDoc(ref('superA', 'hospitalIds/CODE-B2'), { status: 'revoked' }))
     await assertFails(deleteDoc(ref('superA', 'hospitalIds/CODE-B2')))
-    await assertFails(setDoc(ref('superA', 'hospitalIds/NEW-1'), { status: 'available', patId: null, tenantId: B }))
-    await assertSucceeds(setDoc(ref('superA', 'hospitalIds/NEW-2'), { status: 'available', patId: null, tenantId: A }))
+    await assertFails(setDoc(ref('superA', 'hospitalIds/BGH-2026-00099'), { status: 'available', patId: null, tenantId: B }))
+    // Phase 8: codes only under the issuing hospital's own prefix.
+    await assertFails(setDoc(ref('superA', 'hospitalIds/BGH-2026-00098'), { status: 'available', patId: null, tenantId: A }))
+    await assertSucceeds(setDoc(ref('superA', 'hospitalIds/MAPA-2026-00099'), { status: 'available', patId: null, tenantId: A }))
   })
 
   it("hospital A super admin cannot rebrand hospital B", async () => {

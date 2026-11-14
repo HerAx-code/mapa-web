@@ -84,6 +84,23 @@ service cloud.firestore {
       return tenantId in agencyPartners(agencyId);
     }
 
+    // ── Per-hospital access codes (Phase 8) ────────────────────────────────────
+    function hospitalDoc(tenantId) {
+      return get(/databases/$(database)/documents/hospitals/$(tenantId)).data;
+    }
+
+    // A disabled hospital takes no new registrations (its existing patients and
+    // staff are unaffected).
+    function hospitalOpen(tenantId) {
+      return hospitalDoc(tenantId).get('enabled', true) == true;
+    }
+
+    // accessCodePrefixes/{PREFIX} names the hospital that owns a prefix. Checked
+    // with getAfter so the claim and the hospital doc are written in one batch.
+    function prefixHeldBy(prefix, hospitalId) {
+      return getAfter(/databases/$(database)/documents/accessCodePrefixes/$(prefix)).data.tenantId == hospitalId;
+    }
+
     // ── Multi-hospital tenancy (Phase 5, docs/multi-hospital-network-plan.md) ──
     // A hospital is the tenant; tenant docs carry `tenantId` (NOT `hospitalId`,
     // which is the patient's access code). Gateway staff and patients reach only
@@ -193,7 +210,9 @@ service cloud.firestore {
         // Self-registration joins the hospital that issued the access code.
         (uid() == userId && request.resource.data.role == 'patient' &&
           tenantOf(request.resource.data) ==
-            tenantOf(get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.hospitalId)).data)) ||
+            tenantOf(get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.hospitalId)).data) &&
+          // Phase 8: not into a hospital that has stopped registrations.
+          hospitalOpen(tenantOf(request.resource.data))) ||
         // Gateway staff create gateway staff in their own hospital (Phase 6:
         // a role allowlist — before it, an admin could mint ANY role, which
         // would include platform_admin). Agency users are network-level and
@@ -753,14 +772,38 @@ service cloud.firestore {
       // A hospital's own super admin edits only its BRANDING — not the
       // access-code prefix (globally unique, decides which hospital a patient
       // joins) and not `enabled` (network decisions).
-      allow create: if isPlatformAdmin() && hospitalKeysOk();
+      // Phase 8: a hospital may only carry a prefix it holds the claim to
+      // (accessCodePrefixes below) — server-side prefix uniqueness (D5).
+      allow create: if isPlatformAdmin() && hospitalKeysOk() &&
+                      (!('accessCodePrefix' in request.resource.data) ||
+                       prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
       allow update: if hospitalKeysOk() && (
                       isPlatformAdmin() ||
                       (isSuperAdmin() && hospitalId == userTenantId() &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                          'shortName', 'gatewayName', 'gatewayInitials', 'facilityName',
                          'contactEmail', 'address', 'logoUrl', 'updatedAt'
-                       ])));
+                       ]))) &&
+                      (!('accessCodePrefix' in request.resource.data) ||
+                       request.resource.data.accessCodePrefix == resource.data.get('accessCodePrefix', '') ||
+                       prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
+    }
+
+    // ── accessCodePrefixes ─────────────────────────────────────────────────────
+    // Phase 8. One doc per access-code prefix ever used, naming its hospital.
+    // Access codes live in ONE namespace (hospitalIds/{code}), so two hospitals
+    // sharing a prefix would collide; a claim is created once by the platform
+    // admin and never changed or deleted — a retired prefix stays reserved
+    // because codes issued under it still exist. Readable by any signed-in user
+    // (prefixes are printed on every code card).
+    match /accessCodePrefixes/{prefix} {
+      allow read:   if isAuth();
+      allow create: if isPlatformAdmin() &&
+                       prefix.matches('[A-Z][A-Z0-9]{1,9}') &&
+                       request.resource.data.keys().hasOnly(['tenantId', 'createdAt']) &&
+                       getAfter(/databases/$(database)/documents/hospitals/$(request.resource.data.tenantId)).data
+                         .get('accessCodePrefix', '') == prefix;
+      allow update, delete: if false;
     }
 
     function hospitalKeysOk() {
@@ -803,7 +846,11 @@ service cloud.firestore {
       // is the gateway's job, scoped to its own hospital.
       allow get:    if isAuth();
       allow list:   if isHospitalAdmin(resource.data);
-      allow create: if isSuperAdmin() && createsInOwnHospital();
+      // Phase 8: a hospital issues codes only under its own prefix, so codes
+      // from different hospitals can never collide in this one namespace.
+      allow create: if isSuperAdmin() && createsInOwnHospital() &&
+                       hospitalId.matches(hospitalDoc(tenantOf(request.resource.data)).get('accessCodePrefix', '') +
+                                          '-[0-9]{4}-[0-9]{5}');
       allow update: if hospitalAdminWrite() ||
                        // Phase 1.5: the claim branch pinned status and patId
                        // but left every OTHER field on the doc writable in

@@ -45,6 +45,29 @@ describe('buildIntakeSheetHTML', () => {
   })
 })
 
+// Multi-hospital Phase 8 — the sheet prints in the CASE hospital's identity
+// (an agency viewer passes brandingFor(case hospital)), escaped like the rest.
+describe('buildIntakeSheetHTML — case hospital branding', () => {
+  const app = { requestId: 'REQ-1', assistanceType: 'Hospital Bills', patientName: 'Ana', submittedAt: null }
+  const org = {
+    name: 'MAPA', fullName: 'Medical Assistance Portal Access',
+    facilityName: 'Bangsamoro <General> Hospital', gatewayName: 'Malasakit Desk',
+    gatewayInitials: 'BGH', address: 'Cotabato City',
+  }
+  const html = buildIntakeSheetHTML({ app, sheet, agency: null, currentUser: { name: 'SW' }, org })
+
+  it("uses the given hospital's name, seal, gateway and address", () => {
+    expect(html).toContain('Bangsamoro &lt;General&gt; Hospital')
+    expect(html).toContain('>BGH<')
+    expect(html).toContain('Malasakit Desk')
+    expect(html).toContain('Cotabato City')
+  })
+
+  it("never shows the default hospital's gateway when another is given", () => {
+    expect(html).not.toContain('Medical Social Services')
+  })
+})
+
 // Intake improvement A1 — every stored value is HTML-escaped. The printout is
 // opened as a same-origin blob page, so patient-typed markup must never run.
 describe('buildIntakeSheetHTML — escaping (stored XSS)', () => {

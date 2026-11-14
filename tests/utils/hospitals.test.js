@@ -17,7 +17,7 @@ vi.mock('firebase/firestore', () => ({
 
 const {
   tenantIdFor, withTenant, currentTenantId, loadHospital, clearHospital, isNetworkRole,
-  tenantWhere, inMyTenant, getUsersInScope, agencyPartnersWith, partnerHospitalIdsOf,
+  tenantWhere, inMyTenant, getUsersInScope, agencyPartnersWith, partnerHospitalIdsOf, fetchHospitalBranding,
 } = await import('../../src/utils/hospitals')
 const { ORG, DEFAULT_HOSPITAL_ID } = await import('../../src/config/org')
 
@@ -243,5 +243,37 @@ describe('getUsersInScope — agency viewer (Phase 7)', () => {
     getDocs.mockResolvedValue(docs())
     await getUsersInScope({}, ['staff_admin'], coord)
     expect(getDocs).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Phase 8 — documents print in the case hospital's identity.
+describe('fetchHospitalBranding', () => {
+  it("loads another hospital's branding (agency viewer) and caches it", async () => {
+    await signInAs(null)                       // agency: no tenant
+    getDoc.mockReset()
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'BGH Hospital' }) })
+    const b = await fetchHospitalBranding('bgh')
+    expect(b.facilityName).toBe('BGH Hospital')
+    await fetchHospitalBranding('bgh')
+    expect(getDoc).toHaveBeenCalledTimes(1)
+    expect(ORG.facilityName).not.toBe('BGH Hospital')   // the viewer's ORG is untouched
+  })
+
+  it("uses the viewer's own branding for its own hospital (no read)", async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'Mine' }) })
+    await loadHospital('bgh')
+    getDoc.mockReset()
+    expect((await fetchHospitalBranding('bgh')).facilityName).toBe('Mine')
+    expect(getDoc).not.toHaveBeenCalled()
+  })
+
+  it('falls back to env branding when the read fails, and retries next time', async () => {
+    await signInAs(null)
+    getDoc.mockReset()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    getDoc.mockRejectedValueOnce(new Error('offline'))
+    expect((await fetchHospitalBranding('cph')).facilityName).toBe(ORG.facilityName)
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'CPH' }) })
+    expect((await fetchHospitalBranding('cph')).facilityName).toBe('CPH')
   })
 })

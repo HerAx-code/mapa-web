@@ -43,7 +43,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match the gateway's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the gateway social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
-- Patient Access Code (`<PREFIX>-YYYY-NNNNN`, default prefix `MAPA`, set via `ORG.accessCodePrefix`) is the registration gate. Issued in person by the gateway office. (`legacyAccessCodePrefixes` is empty — a clean MAPA-only cut; add a prefix there if a future migration needs to keep accepting old codes.)
+- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is the registration gate. Issued in person by the gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique); the code doc's `tenantId` decides which hospital the patient joins, and a hospital with `enabled: false` takes no new sign-ups. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
 
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
@@ -58,7 +58,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
-`hospitals` (multi-hospital tenants; Phase 1)
+`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8)
 
 ## Tenancy (multi-hospital network — in progress)
 MAPA is moving from one host facility per deployment to **one deployment serving many

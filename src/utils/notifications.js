@@ -1,6 +1,7 @@
 import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { ORG } from '../config/org'
+import { currentTenantId } from './hospitals'
 
 // #10 — Notification failures should never break a user-facing action
 // (an app submission, a status change, a doc upload). We catch the write
@@ -81,13 +82,17 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
     // ── Email (if the user has one on file) ──
     const email = udata?.email
     if (email) {
-      const plain = `${body ?? ''}\n\n— ${ORG.name} · ${ORG.facilityName}`
+      // Phase 8: the footer names the sender's hospital. Agency and platform
+      // senders have none (network-level), so theirs is just the network brand —
+      // never the default hospital's name on another hospital's patient.
+      const footer = currentTenantId() ? `${ORG.name} · ${ORG.facilityName}` : ORG.name
+      const plain = `${body ?? ''}\n\n— ${footer}`
       const html = [
         '<div style="font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111827;">',
         `<h2 style="margin:0 0 12px;color:#111827;font-size:18px;">${escapeHtml(title ?? '')}</h2>`,
         `<p style="margin:0 0 16px;color:#374151;line-height:1.5;font-size:14px;">${escapeHtml(body ?? '').replace(/\n/g, '<br>')}</p>`,
         '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;">',
-        `<p style="margin:0;color:#9ca3af;font-size:12px;">${escapeHtml(ORG.name)} · ${escapeHtml(ORG.facilityName)}</p>`,
+        `<p style="margin:0;color:#9ca3af;font-size:12px;">${escapeHtml(footer)}</p>`,
         '</div>',
       ].join('')
       // Fire-and-forget so a slow SMTP server doesn't drag down the UX.

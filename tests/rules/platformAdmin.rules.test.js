@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import {
-  doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, collection, query, where, increment,
+  doc, setDoc, getDoc, updateDoc, deleteDoc, getDocs, collection, query, where, increment, writeBatch,
 } from 'firebase/firestore'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -98,9 +98,17 @@ describe('platform_admin never reaches patient data', () => {
 describe('hospitals — platform_admin onboards, the hospital edits its branding', () => {
   const NEW = { gatewayName: 'MSS', gatewayInitials: 'MSS', facilityName: 'Cotabato Provincial Hospital', accessCodePrefix: 'CPH', enabled: true }
 
+  // Phase 8: a prefix needs its claim (accessCodePrefixes) in the same batch.
   it('platform_admin creates a hospital and edits any hospital', async () => {
-    await assertSucceeds(setDoc(ref('plat', 'hospitals/cph'), NEW))
-    await assertSucceeds(updateDoc(ref('plat', 'hospitals/bgh'), { accessCodePrefix: 'BGHX', enabled: false }))
+    const db = as('plat')
+    const b1 = writeBatch(db)
+    b1.set(doc(db, 'hospitals', 'cph'), NEW)
+    b1.set(doc(db, 'accessCodePrefixes', 'CPH'), { tenantId: 'cph' })
+    await assertSucceeds(b1.commit())
+    const b2 = writeBatch(db)
+    b2.update(doc(db, 'hospitals', 'bgh'), { accessCodePrefix: 'BGHX', enabled: false })
+    b2.set(doc(db, 'accessCodePrefixes', 'BGHX'), { tenantId: 'bgh' })
+    await assertSucceeds(b2.commit())
   })
 
   it('platform_admin cannot add keys outside the allowlist or delete a hospital', async () => {

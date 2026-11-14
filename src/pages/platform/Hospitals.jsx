@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, deleteField, serverTimestamp, writeBatch } from 'firebase/firestore'
 import {
-  MdAdd, MdEdit, MdClose, MdLocalHospital, MdPersonAdd, MdVisibility, MdVisibilityOff,
+  MdAdd, MdEdit, MdClose, MdLocalHospital, MdPersonAdd, MdVisibility, MdVisibilityOff, MdBlock, MdCheckCircle,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
+import ConfirmModal from '../../components/ConfirmModal'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -86,17 +87,34 @@ function HospitalModal({ hospital, hospitals, onClose }) {
     setSaving(true)
     try {
       const data = hospitalDocFromForm(form)
+      const id = isEdit ? hospital.id : form.id
+      // Phase 8: a prefix is claimed once, network-wide (accessCodePrefixes),
+      // in the same batch as the hospital — the rules require it. Retired
+      // prefixes stay claimed, so check before writing for a clear message.
+      const prefixChanged = !isEdit || data.accessCodePrefix !== hospital.accessCodePrefix
+      let needClaim = false
+      if (prefixChanged) {
+        const claim = await getDoc(doc(db, 'accessCodePrefixes', data.accessCodePrefix))
+        if (claim.exists() && claim.data().tenantId !== id) {
+          toast.error(`The prefix ${data.accessCodePrefix} is reserved by another hospital (current or past codes).`)
+          return
+        }
+        needClaim = !claim.exists()
+      }
+      const batch = writeBatch(db)
+      if (needClaim) batch.set(doc(db, 'accessCodePrefixes', data.accessCodePrefix), { tenantId: id, createdAt: serverTimestamp() })
       if (isEdit) {
         // An optional field cleared in the form is removed, not left stale.
         const cleared = Object.fromEntries(HOSPITAL_FORM_FIELDS
           .filter((k) => !(k in data) && k in hospital)
           .map((k) => [k, deleteField()]))
-        await updateDoc(doc(db, 'hospitals', hospital.id), { ...data, ...cleared, updatedAt: serverTimestamp() })
-        logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: hospital.id, targetName: data.facilityName, details: 'Hospital details updated' })
+        batch.update(doc(db, 'hospitals', id), { ...data, ...cleared, updatedAt: serverTimestamp() })
+        await batch.commit()
+        logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated' })
         toast.success('Hospital updated.')
       } else {
-        const id = form.id
-        await setDoc(doc(db, 'hospitals', id), { ...data, enabled: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+        batch.set(doc(db, 'hospitals', id), { ...data, enabled: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+        await batch.commit()
         logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN)` })
         toast.success(`${data.facilityName} added. Next, create its first administrator.`)
       }
@@ -258,6 +276,28 @@ export default function Hospitals() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)      // 'add' | hospital
   const [addingAdmin, setAddingAdmin] = useState(null)
+  const [toggling, setToggling] = useState(null)     // hospital whose registrations to pause/resume
+  const [busy, setBusy] = useState(false)
+  const { user } = useAuth()
+
+  // Phase 8: `enabled` gates NEW registrations with the hospital's codes
+  // (rules + Register). Its staff and existing patients keep working.
+  const handleToggle = async () => {
+    const h = toggling
+    const next = h.enabled === false
+    setBusy(true)
+    try {
+      await updateDoc(doc(db, 'hospitals', h.id), { enabled: next, updatedAt: serverTimestamp() })
+      logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: h.id, targetName: h.facilityName || h.id, details: next ? 'Registrations resumed' : 'Registrations paused' })
+      toast.success(next ? 'Registrations resumed.' : 'Registrations paused.')
+      setToggling(null)
+    } catch (e) {
+      console.error(e)
+      toast.error('Could not update the hospital.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => onSnapshot(collection(db, 'hospitals'), (snap) => {
     setHospitals(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
@@ -334,7 +374,7 @@ export default function Hospitals() {
                         <p className="text-sm font-semibold text-gray-900">{h.facilityName || h.id}</p>
                         {h.shortName && <span className="text-xs text-gray-500">· {h.shortName}</span>}
                         {h.id === DEFAULT_HOSPITAL_ID && <span className="badge-gray text-[11px]">Hospital #1</span>}
-                        {h.enabled === false && <span className="badge-red text-[11px]">Disabled</span>}
+                        {h.enabled === false && <span className="badge-red text-[11px]">Sign-ups paused</span>}
                       </div>
                       <dl className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2 text-xs">
                         <div><dt className="text-gray-500">ID</dt><dd className="font-mono text-gray-800 truncate">{h.id}</dd></div>
@@ -362,6 +402,11 @@ export default function Hospitals() {
                       <button className="btn-secondary text-xs flex items-center gap-1 justify-center min-h-[36px]" onClick={() => setEditing(h)}>
                         <MdEdit size={14} /> Edit
                       </button>
+                      <button className="btn-secondary text-xs flex items-center gap-1 justify-center min-h-[36px]" onClick={() => setToggling(h)}>
+                        {h.enabled === false
+                          ? <><MdCheckCircle size={14} /> Resume sign-ups</>
+                          : <><MdBlock size={14} /> Pause sign-ups</>}
+                      </button>
                     </div>
                   </div>
                 </li>
@@ -382,6 +427,20 @@ export default function Hospitals() {
           onClose={() => setEditing(null)} />
       )}
       {addingAdmin && <AdminModal hospital={addingAdmin} onClose={() => setAddingAdmin(null)} />}
+      <ConfirmModal
+        open={!!toggling}
+        onClose={() => !busy && setToggling(null)}
+        onConfirm={handleToggle}
+        title={toggling?.enabled === false
+          ? `Resume sign-ups at ${toggling?.facilityName || toggling?.id}?`
+          : `Pause sign-ups at ${toggling?.facilityName || toggling?.id}?`}
+        body={toggling?.enabled === false
+          ? 'Patients can register with this hospital\'s access codes again.'
+          : 'New patients can no longer register with this hospital\'s access codes. Its staff and existing patients are not affected.'}
+        tone={toggling?.enabled === false ? 'primary' : 'danger'}
+        confirmLabel={toggling?.enabled === false ? 'Resume' : 'Pause sign-ups'}
+        confirmLabelBusy="Saving…"
+      />
     </Layout>
   )
 }

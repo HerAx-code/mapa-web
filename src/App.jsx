@@ -75,6 +75,7 @@ const AgencyDetail     = lazyWithReload(() => import('./pages/admin/AgencyDetail
 const AuditLog         = lazyWithReload(() => import('./pages/admin/AuditLog'))
 const Announcements    = lazyWithReload(() => import('./pages/admin/Announcements'))
 const ExportPreview    = lazyWithReload(() => import('./pages/admin/ExportPreview'))
+const HospitalSettings = lazyWithReload(() => import('./pages/admin/HospitalSettings'))
 // Platform (network operator, multi-hospital Phase 6)
 const PlatformHospitals = lazyWithReload(() => import('./pages/platform/Hospitals'))
 // Funds page removed — the gateway has zero fund authority. Each agency manages
@@ -177,6 +178,7 @@ export default function App() {
           {/* /admin/funds removed — see import note above */}
           <Route path="/admin/auditlog"        element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><AuditLog /></PrivateRoute>} />
           <Route path="/admin/announcements"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Announcements /></PrivateRoute>} />
+          <Route path="/admin/settings"       element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><HospitalSettings /></PrivateRoute>} />
 
           {/* Platform (network operator) */}
           <Route path="/platform/hospitals" element={<PrivateRoute allowedRoles={[ROLES.PLATFORM_ADMIN]}><PlatformHospitals /></PrivateRoute>} />

@@ -41,8 +41,11 @@ describe('users.create — patient self-create only with role=patient', () => {
   it('allows a patient self-create with role=patient', async () => {
     // Registration carries the access code; the patient joins its hospital
     // (multi-hospital Phase 5: an untagged code + user both mean hospital #1).
-    await testEnv.withSecurityRulesDisabled(async (c) =>
-      setDoc(doc(c.firestore(), 'hospitalIds', 'MAPA-2026-00001'), { status: 'available', patId: null }))
+    await testEnv.withSecurityRulesDisabled(async (c) => {
+      await setDoc(doc(c.firestore(), 'hospitalIds', 'MAPA-2026-00001'), { status: 'available', patId: null })
+      // Phase 8: registration checks the code's hospital is open.
+      await setDoc(doc(c.firestore(), 'hospitals', 'hospital-1'), { accessCodePrefix: 'MAPA', enabled: true })
+    })
     const ctx = testEnv.authenticatedContext('new-user-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'users', 'new-user-1'), {
       role: 'patient',

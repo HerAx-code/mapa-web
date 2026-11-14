@@ -7,7 +7,7 @@
 // rules, Register, Patients and the GL all read it that way.
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
-import { applyHospital, DEFAULT_HOSPITAL_ID } from '../config/org'
+import { ORG, applyHospital, brandingFor, DEFAULT_HOSPITAL_ID } from '../config/org'
 
 // Agencies are network-level (decision D1/D4): they partner with many
 // hospitals, so an agency user belongs to no tenant. Records an agency writes
@@ -56,6 +56,7 @@ export async function loadHospital(tenantId) {
 // Sign-out: no tenant, env branding.
 export const clearHospital = () => {
   currentTenant = null
+  brandingCache.clear()
   applyHospital(null)
 }
 
@@ -136,3 +137,28 @@ export async function getUsersInScope(db, roles = null, viewer = null) {
   const seen = new Set()
   return snaps.flatMap((s) => s.docs).filter((d) => !seen.has(d.id) && seen.add(d.id))
 }
+
+// ── Case-hospital branding (Phase 8) ─────────────────────────────────────────
+// Documents (Guarantee Letter, intake sheet) print in the identity of the
+// hospital that OWNS the case, not the viewer's. Gateway staff and patients are
+// in that hospital already (ORG); an agency user — network-level — needs the
+// case's hospital loaded. Cached per hospital for the session; a failed read
+// isn't cached, so it retries next time.
+const brandingCache = new Map()
+
+export function fetchHospitalBranding(tenantId) {
+  const id = tenantId || DEFAULT_HOSPITAL_ID
+  if (currentTenant && id === currentTenant) return Promise.resolve({ ...ORG })
+  if (!brandingCache.has(id)) {
+    brandingCache.set(id, getDoc(doc(db, 'hospitals', id))
+      .then((snap) => brandingFor(snap.exists() ? snap.data() : null))
+      .catch((err) => {
+        console.warn('[hospitals] branding load failed for', id, err)
+        brandingCache.delete(id)
+        return brandingFor(null)
+      }))
+  }
+  return brandingCache.get(id)
+}
+
+export const clearBrandingCache = () => brandingCache.clear()

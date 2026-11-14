@@ -65,6 +65,7 @@ function makeFakeDb({
   uidThrottleDoc = null,
   ipThrottleDoc  = null,
   hospitalIdDoc  = null,
+  hospitalDoc    = null,     // hospitals/{tenantId}; null = missing (counts as open)
   throwOnGet = false,
 } = {}) {
   const writes = []
@@ -98,6 +99,12 @@ function makeFakeDb({
               data:   () => hospitalIdDoc,
             }
           },
+        }
+      }
+      if (path.startsWith('hospitals/')) {
+        return {
+          _path: path,
+          get: async () => ({ exists: hospitalDoc !== null, data: () => hospitalDoc }),
         }
       }
       throw new Error('Unmocked doc path: ' + path)
@@ -155,10 +162,12 @@ describe('verifyAccessCode: input validation', () => {
       .rejects.toMatchObject({ code: 'invalid-argument' })
   })
 
-  it('rejects malformed code (wrong prefix)', async () => {
+  it('rejects a malformed prefix (too short / starts with a digit / punctuation)', async () => {
     const db = makeFakeDb()
-    await expect(handleVerifyAccessCode({ uid: 'u', code: 'WRONG-2026-00001', ip: TEST_IP, db, serverTimestamp }))
-      .rejects.toMatchObject({ code: 'invalid-argument' })
+    for (const code of ['W-2026-00001', '1AB-2026-00001', 'A.B-2026-00001', 'TOOLONGPREFIX-2026-00001']) {
+      await expect(handleVerifyAccessCode({ uid: 'u', code, ip: TEST_IP, db, serverTimestamp }))
+        .rejects.toMatchObject({ code: 'invalid-argument' })
+    }
   })
 
   it('rejects malformed code (wrong digit count)', async () => {
@@ -183,11 +192,30 @@ describe('verifyAccessCode: input validation', () => {
     expect(out).toEqual({ available: true, exists: true })
   })
 
-  it('rejects a legacy CRMC prefix (MAPA-only clean cut — no legacy acceptance)', async () => {
-    const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
-    await expect(handleVerifyAccessCode({
+  // Multi-hospital Phase 8: every hospital issues its own prefix; the code doc
+  // decides whether the code exists.
+  it("accepts another hospital's prefix", async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available', tenantId: 'bgh' }, hospitalDoc: { enabled: true } })
+    const out = await handleVerifyAccessCode({
+      uid: 'u', code: 'BGH-2026-00001', ip: TEST_IP, db, serverTimestamp,
+    })
+    expect(out).toEqual({ available: true, exists: true })
+  })
+
+  it('an unknown prefix is simply not found (no format error)', async () => {
+    const db = makeFakeDb()
+    const out = await handleVerifyAccessCode({
       uid: 'u', code: 'CRMC-2026-00001', ip: TEST_IP, db, serverTimestamp,
-    })).rejects.toMatchObject({ code: 'invalid-argument' })
+    })
+    expect(out).toEqual({ available: false, exists: false })
+  })
+
+  it("refuses a code whose hospital has paused registrations", async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available', tenantId: 'bgh' }, hospitalDoc: { enabled: false } })
+    const out = await handleVerifyAccessCode({
+      uid: 'u', code: 'BGH-2026-00001', ip: TEST_IP, db, serverTimestamp,
+    })
+    expect(out).toEqual({ available: false, exists: true, hospitalClosed: true })
   })
 })
 

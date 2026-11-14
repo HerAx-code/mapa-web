@@ -18,17 +18,34 @@ import TermsModal from '../../components/TermsModal'
 import AddressPicker from '../../components/AddressPicker'
 import { TERMS_VERSION } from '../../utils/constants'
 import { hasReservedToken } from '../../utils/names'
-import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes, DEFAULT_HOSPITAL_ID } from '../../config/org'
+import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
 
 const CURRENT_YEAR        = new Date().getFullYear()
 const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
 const ACCESS_CODE_RE      = accessCodeRe()
-// Match any accepted prefix + YYYY- the patient types — codes issued in a
-// prior calendar year (or under a legacy prefix) must remain enterable.
-// Group 1 = the prefix actually typed, group 2 = the year.
-const ACCESS_CODE_PREFIX_RE = new RegExp(`^(${acceptedAccessCodePrefixes().join('|')})-(\\d{4})-`)
+// Match any hospital's prefix + YYYY- the patient types (multi-hospital
+// Phase 8: each hospital issues its own prefix) — codes from a prior calendar
+// year must remain enterable. Group 1 = the prefix typed, group 2 = the year.
+const ACCESS_CODE_PREFIX_RE = new RegExp(`^(${ACCESS_CODE_PREFIX_PATTERN})-(\\d{4})-`)
+// The hospital an access code belongs to (multi-hospital Phase 8): its
+// tenantId names a hospitals/{id} doc, whose `enabled` flag gates new
+// registrations. Both reads are allowed to the anonymous session Register signs
+// in before verifying. A hospital doc we can't read counts as open (the rules
+// still enforce `enabled` at sign-up), so a read hiccup never blocks a patient.
+async function codeHospital(code) {
+  try {
+    const codeSnap = await getDoc(doc(db, 'hospitalIds', code))
+    const tenantId = codeSnap.data()?.tenantId || DEFAULT_HOSPITAL_ID
+    const hSnap    = await getDoc(doc(db, 'hospitals', tenantId))
+    const h        = hSnap.exists() ? hSnap.data() : null
+    return { enabled: h?.enabled !== false, name: h?.facilityName || '' }
+  } catch {
+    return { enabled: true, name: '' }
+  }
+}
+
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
 const SUFFIXES        = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
@@ -166,6 +183,9 @@ export default function Register() {
 
   const [step, setStep]                     = useState(draft?.step ?? 1)
   const [hospitalVerified, setHospitalVerified] = useState(false)
+  // Which hospital the verified code belongs to (Phase 8) — shown so the
+  // patient can confirm before creating the account.
+  const [codeHospitalName, setCodeHospitalName] = useState('')
   const [verifying, setVerifying]           = useState(false)
   const [loading, setLoading]               = useState(false)
   const [showPw, setShowPw]                 = useState(false)
@@ -240,12 +260,15 @@ export default function Register() {
   const handleHospitalIdChange = (e) => {
     const val = e.target.value.toUpperCase()
     // Honor whatever prefix + year the patient typed — codes from prior years
-    // or a legacy prefix are still valid. Fall back to the current issuing
-    // prefix only if the input doesn't yet contain a parseable <PREFIX>-YYYY-.
+    // stay valid. Once a full <PREFIX>-YYYY- is typed only 5 digits may follow; before
+    // that the patient may type any hospital's prefix (Phase 8), so letters,
+    // digits and dashes pass through.
     const prefixMatch = val.match(ACCESS_CODE_PREFIX_RE)
-    const prefix      = prefixMatch ? `${prefixMatch[1]}-${prefixMatch[2]}-` : HOSPITAL_PREFIX
-    const suffix      = val.slice(prefix.length).replace(/\D/g, '').slice(0, 5)
-    setForm(prev => ({ ...prev, hospitalId: prefix + suffix }))
+    const next = prefixMatch
+      ? `${prefixMatch[1]}-${prefixMatch[2]}-` + val.slice(prefixMatch[0].length).replace(/\D/g, '').slice(0, 5)
+      : val.replace(/[^A-Z0-9-]/g, '').slice(0, 16)
+    setForm(prev => ({ ...prev, hospitalId: next }))
+    setCodeHospitalName('')
     setHospitalVerified(false)
     if (errors.hospitalId) setErrors(prev => ({ ...prev, hospitalId: '' }))
   }
@@ -389,6 +412,11 @@ export default function Register() {
         if (!auth.currentUser) await signInAnonymously(auth)
         const call = httpsCallable(functions, 'verifyAccessCode')
         const result = await call({ code })
+        // Phase 8: the code's hospital has paused registrations.
+        if (result.data.hospitalClosed) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
+          return
+        }
         available = result.data.available
         exists    = result.data.exists
       } catch (err) {
@@ -416,6 +444,14 @@ export default function Register() {
         }
         setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeUsed') }))
       } else {
+        // Phase 8: the code decides the hospital. Refuse a disabled hospital's
+        // code here (the rules refuse it at sign-up too) and name the hospital.
+        const hospital = await codeHospital(code)
+        if (!hospital.enabled) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
+          return
+        }
+        setCodeHospitalName(hospital.name)
         setHospitalVerified(true)
         setErrors(prev => ({ ...prev, hospitalId: '' }))
         toast.success(t('register.toast.codeVerified'))
@@ -828,7 +864,9 @@ export default function Register() {
                     placeholder={`${HOSPITAL_PREFIX}00001`}
                     value={form.hospitalId}
                     onChange={handleHospitalIdChange}
-                    inputMode="numeric"
+                    // Numeric keypad once the prefix + year are in; a text
+                    // keypad before, so another hospital's prefix can be typed.
+                    inputMode={ACCESS_CODE_PREFIX_RE.test(form.hospitalId) ? 'numeric' : 'text'}
                     autoCapitalize="characters"
                     autoComplete="off"
                     disabled={hospitalVerified}
@@ -858,6 +896,9 @@ export default function Register() {
                 <FieldError msg={errors.hospitalId} />
                 {!errors.hospitalId && !hospitalVerified && (
                   <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
+                )}
+                {hospitalVerified && codeHospitalName && (
+                  <p className="text-sm text-green-700 mt-1">{t('register.step3.joiningHospital', { hospital: codeHospitalName })}</p>
                 )}
                 {/* If the code shows as already used, give the patient an
                     actionable recovery path — they may be a real holder

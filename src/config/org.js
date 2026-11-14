@@ -50,6 +50,10 @@ export const ORG = {
 
   // Where patients are told to go / write for an access code.
   contactEmail: env.VITE_ORG_CONTACT_EMAIL || 'support@example.org',
+
+  // Hospital address line for printed documents (multi-hospital Phase 8).
+  // Empty = the document's own fallback.
+  address: '',
 }
 
 // ── Multi-hospital tenancy (docs/multi-hospital-network-plan.md, Phase 1) ───
@@ -71,10 +75,10 @@ export const DEFAULT_HOSPITAL_ID = env.VITE_DEFAULT_HOSPITAL_ID || 'hospital-1'
 
 // Fields a hospital doc may override. NOT here on purpose:
 //   - name / fullName: the MAPA product brand is network-wide, not per hospital.
-//   - accessCodePrefix: verifyAccessCode (server) still validates against the
-//     single env prefix; issuing codes with a hospital prefix before Phase 8
-//     makes the server reject them.
-const HOSPITAL_FIELDS = ['shortName', 'gatewayName', 'gatewayInitials', 'facilityName', 'contactEmail']
+// accessCodePrefix joined in Phase 8: each hospital issues codes under its own
+// prefix, and registration accepts any hospital's code (the code doc says which
+// hospital the patient joins).
+const HOSPITAL_FIELDS = ['shortName', 'gatewayName', 'gatewayInitials', 'facilityName', 'contactEmail', 'accessCodePrefix', 'address']
 
 const ENV_ORG = { ...ORG }
 
@@ -83,19 +87,28 @@ const listeners = new Set()
 // Subscribe to hospital changes. Returns an unsubscribe function.
 export const onOrgChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
 
+// The ORG-shaped branding of one hospital, without touching ORG: env defaults
+// with the hospital doc's non-blank fields on top. Used to print a document in
+// the CASE's hospital identity when the viewer belongs to another (an agency
+// user printing a hospital #2 Guarantee Letter) — Phase 8.
+export function brandingFor(hospital) {
+  const out = { ...ENV_ORG }
+  if (hospital) {
+    for (const key of HOSPITAL_FIELDS) {
+      const v = hospital[key]
+      if (typeof v === 'string' && v.trim()) out[key] = v.trim()
+    }
+    // A configured facility is a proper noun, used verbatim in both languages.
+    if (out.facilityName !== ENV_ORG.facilityName) out.facilityNameFil = out.facilityName
+  }
+  return out
+}
+
 // Apply a hospital doc's data (or null = back to env defaults, e.g. on sign-out
 // or when the doc is missing/unreadable). Blank values fall back to env so a
 // half-filled hospital doc never blanks out the UI.
 export function applyHospital(hospital) {
-  Object.assign(ORG, ENV_ORG)
-  if (hospital) {
-    for (const key of HOSPITAL_FIELDS) {
-      const v = hospital[key]
-      if (typeof v === 'string' && v.trim()) ORG[key] = v.trim()
-    }
-    // A configured facility is a proper noun, used verbatim in both languages.
-    if (ORG.facilityName !== ENV_ORG.facilityName) ORG.facilityNameFil = ORG.facilityName
-  }
+  Object.assign(ORG, brandingFor(hospital))
   listeners.forEach((fn) => fn(ORG))
 }
 
@@ -103,9 +116,15 @@ export function applyHospital(hospital) {
 export const acceptedAccessCodePrefixes = () =>
   [ORG.accessCodePrefix, ...ORG.legacyAccessCodePrefixes].filter(Boolean)
 
-// Validator for a full access code, e.g. MAPA-2026-00001 (or a legacy the gateway- one).
+// Any hospital's prefix shape (Phase 8) — same rule as the hospital form
+// (src/utils/hospitalConfig.js ACCESS_PREFIX_RE). Which prefixes exist is data
+// (hospitals), so only the FORMAT is checked here; the code doc decides the rest.
+export const ACCESS_CODE_PREFIX_PATTERN = '[A-Z][A-Z0-9]{1,9}'
+
+// Validator for a full access code from any hospital, e.g. MAPA-2026-00001 or
+// BGH-2026-00001.
 export const accessCodeRe = () =>
-  new RegExp(`^(${acceptedAccessCodePrefixes().join('|')})-\\d{4}-\\d{5}$`)
+  new RegExp(`^${ACCESS_CODE_PREFIX_PATTERN}-\\d{4}-\\d{5}$`)
 
 // The active issuing prefix for a given year, e.g. "MAPA-2026-".
 export const accessCodePrefixFor = (year) => `${ORG.accessCodePrefix}-${year}-`

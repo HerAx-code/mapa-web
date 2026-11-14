@@ -2,7 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const crypto = require('node:crypto')
-const { accessCodeRe, accessCodeFormatHint } = require('./orgConfig')
+const { accessCodeRe, accessCodeFormatHint, DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 
 /**
  * verifyAccessCode — Phase 3.5 server-side rate-limited access-code check.
@@ -33,6 +33,8 @@ const { accessCodeRe, accessCodeFormatHint } = require('./orgConfig')
  *   auth:  required (anonymous sign-in is fine; throttle keys are uid
  *          AND a hash of request.rawRequest.ip)
  *   returns: { available: boolean, exists: boolean }
+ *            (+ hospitalClosed: true when the code's hospital has paused
+ *             registrations — multi-hospital Phase 8)
  *
  *   On throttle exceed (either tier): throws HttpsError('resource-exhausted')
  *   On unauth:                         throws HttpsError('unauthenticated')
@@ -43,8 +45,8 @@ const { accessCodeRe, accessCodeFormatHint } = require('./orgConfig')
  * bottom unpacks request.auth + request.rawRequest.ip and calls it.
  */
 
-// Accepts the active issuing prefix plus any legacy prefixes (see orgConfig),
-// so patients holding a code from a prior deployment are never locked out.
+// Accepts any hospital's prefix FORMAT (see orgConfig, multi-hospital Phase 8);
+// the code doc itself decides whether it exists and which hospital it joins.
 const CODE_RE = accessCodeRe()
 const WINDOW_MS = 60 * 60 * 1000  // 1 hour
 const MAX_UID_ATTEMPTS = 10
@@ -150,7 +152,14 @@ async function handleVerifyAccessCode({ uid, code, ip, db, now = () => Date.now(
     if (!codeSnap.exists) {
       return { available: false, exists: false }
     }
-    const status = codeSnap.data().status
+    const { status, tenantId } = codeSnap.data()
+    // Multi-hospital Phase 8: a code from a hospital that has paused
+    // registrations is not claimable (the rules refuse the sign-up too). A
+    // missing hospital doc (pre-rollout) counts as open.
+    const hospitalSnap = await db.doc(`hospitals/${tenantId || DEFAULT_HOSPITAL_ID}`).get()
+    if (hospitalSnap.exists && hospitalSnap.data().enabled === false) {
+      return { available: false, exists: true, hospitalClosed: true }
+    }
     return {
       available: status === 'available',
       exists: true,
