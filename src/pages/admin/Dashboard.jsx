@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast'
 import { logAudit } from '../../utils/auditLog'
 import Tour from '../../components/Tour'
+import GettingStartedCard from '../../components/admin/GettingStartedCard'
 import PipelineFunnel from '../../components/admin/PipelineFunnel'
 import { stageCounts } from '../../utils/queueBuckets'
 import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
@@ -354,7 +355,7 @@ export default function AdminDashboard() {
     [pipelineReqs])
 
   return (
-    <Layout breadcrumb={isSuperAdmin ? 'System Administration' : 'Operations'}>
+    <Layout breadcrumb={isSuperAdmin ? 'Hospital Administration' : 'Operations'}>
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header — compact; processing-health chips inline (super admin), so
@@ -363,7 +364,7 @@ export default function AdminDashboard() {
           <div className="min-w-0">
             <p className="eyebrow">Console</p>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              {isSuperAdmin ? 'System Administration' : 'Operations'}
+              {isSuperAdmin ? 'Hospital Administration' : 'Operations'}
             </h1>
           </div>
           {isSuperAdmin && slaMetrics && (
@@ -381,6 +382,9 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* First-run checklist for a newly onboarded hospital (Hospital Admin). */}
+        {isSuperAdmin && <GettingStartedCard />}
 
         {/* KPI tiles — live workload first */}
         <div data-tour-id="admin-metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">

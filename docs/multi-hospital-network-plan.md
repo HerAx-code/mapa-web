@@ -443,6 +443,22 @@ the visual reference. Ships with Phases 5–9 (it depends on them).
   `onboardingRequests` (one per anonymous session, pinned shape, platform-only
   reads) → `/platform/requests` queue → "Set up hospital" pre-fills Add hospital and
   marks the request onboarded.
+- **Onboarding, end to end** (request → live hospital):
+  1. A hospital submits the public form; `onOnboardingRequestCreated` (Cloud
+     Function) notifies every Super Admin in-app — the sender is anonymous, so
+     the rules wouldn't let it write staff notifications itself. Until functions
+     are deployed the sidebar badge + console callout carry it.
+  2. The queue flags a possible duplicate (name already on the network).
+  3. "Set up hospital" pre-fills Add hospital; the form also picks the hospital's
+     **partner agencies**, written to each agency's `partnerHospitalIds` in the
+     same batch (`nextPartnerLists`: an agency with no list keeps hospital #1).
+  4. Saving goes straight to "Add first Hospital Admin"; the request is marked
+     onboarded and linked.
+  5. A hospital shows **Provisioning** until it has a Hospital Admin **and** a
+     partner agency; the console's "Finish setting up" checklist links each
+     missing step.
+  6. The new Hospital Admin's dashboard shows a **Getting started** checklist
+     (branding → access codes → staff → partner agencies) until done or dismissed.
 - **Public pages:** `hospitalsPublic` projection (rules: must equal the hospital doc
   via `getAfter`) feeds the Landing page's participating-hospitals list and real
   example codes on Landing + Register. Register explains "Prefix = your hospital";

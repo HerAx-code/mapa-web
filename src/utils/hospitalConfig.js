@@ -1,3 +1,5 @@
+import { DEFAULT_HOSPITAL_ID } from '../config/org'
+
 // Hospital onboarding form rules — multi-hospital Phase 6 (platform admin).
 // Pure functions (no Firestore) so they are unit-tested in
 // tests/utils/hospitalConfig.test.js. See docs/multi-hospital-network-plan.md.
@@ -74,6 +76,24 @@ export function validateHospital(form, hospitals = [], editingId = null) {
   if (email && !EMAIL_RE.test(email)) errors.contactEmail = 'Enter a valid email address.'
 
   return errors
+}
+
+// Partner-list updates when a hospital's partner agencies are chosen in the
+// hospital form. `selected` = Set of agency ids that should partner with
+// `hospitalId`. Returns [{ agencyId, partnerHospitalIds }] for the agencies
+// whose partnership CHANGES only. An agency with no list yet implicitly
+// partners with hospital #1 (DEFAULT_HOSPITAL_ID); its new explicit list keeps
+// that, so adding a hospital never silently drops hospital #1's partnership.
+export function nextPartnerLists(agencies, hospitalId, selected, defaultHospitalId = DEFAULT_HOSPITAL_ID) {
+  const out = []
+  for (const a of agencies) {
+    const current = Array.isArray(a.partnerHospitalIds) ? a.partnerHospitalIds : [defaultHospitalId]
+    const has = current.includes(hospitalId)
+    const want = selected.has(a.id)
+    if (has === want) continue
+    out.push({ agencyId: a.id, partnerHospitalIds: want ? [...current, hospitalId] : current.filter((id) => id !== hospitalId) })
+  }
+  return out
 }
 
 // The doc written to hospitals/{id}: trimmed, prefix upper-cased, empty

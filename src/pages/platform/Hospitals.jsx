@@ -19,6 +19,7 @@ import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import { createStaffAccount } from '../../utils/staffAccounts'
 import { DEFAULT_HOSPITAL_ID } from '../../config/org'
 import { agencyPartnersWith } from '../../utils/hospitals'
+import { nextPartnerLists } from '../../utils/hospitalConfig'
 import {
   emptyHospitalForm, validateHospital, hospitalDocFromForm, normalizeHospitalId, HOSPITAL_FORM_FIELDS,
   normalizePrefix, suggestHospitalId, PH_REGIONS,
@@ -66,7 +67,9 @@ function Field({ label, required, error, hint, children }) {
 
 // `initial` pre-fills a new hospital (from an onboarding request); `fromRequest`
 // is that request's id, marked onboarded once the hospital exists.
-function HospitalModal({ hospital, hospitals, onClose, initial = null, fromRequest = null }) {
+// `agencies` = every agency (for the partner picker); `onCreated(hospital)` runs
+// after a NEW hospital is saved, so the console can go straight to its first admin.
+function HospitalModal({ hospital, hospitals, agencies = [], onClose, onCreated, initial = null, fromRequest = null }) {
   const { user } = useAuth()
   const isEdit = !!hospital
   const [form, setForm] = useState(() => (isEdit
@@ -75,6 +78,12 @@ function HospitalModal({ hospital, hospitals, onClose, initial = null, fromReque
   const [idTouched, setIdTouched] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Partner agencies — saved on each agency's partnerHospitalIds in the same
+  // batch as the hospital, so a new hospital can endorse from day one.
+  const enabledAgencies = agencies.filter((a) => a.enabled !== false)
+  const [partners, setPartners] = useState(() => new Set(
+    isEdit ? agencies.filter((a) => agencyPartnersWith(a, hospital.id)).map((a) => a.id) : []))
+  const togglePartner = (id) => setPartners((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   const errors = validateHospital(form, hospitals, isEdit ? hospital.id : null)
   const err = (k) => (showErrors ? errors[k] : undefined)
@@ -111,6 +120,11 @@ function HospitalModal({ hospital, hospitals, onClose, initial = null, fromReque
       }
       const batch = writeBatch(db)
       if (needClaim) batch.set(doc(db, 'accessCodePrefixes', data.accessCodePrefix), { tenantId: id, createdAt: serverTimestamp() })
+      // Only agencies whose partnership with this hospital actually changes.
+      const partnerChanges = nextPartnerLists(agencies, id, partners)
+      for (const { agencyId, partnerHospitalIds } of partnerChanges) {
+        batch.update(doc(db, 'agencies', agencyId), { partnerHospitalIds, updatedAt: serverTimestamp() })
+      }
       if (isEdit) {
         // An optional field cleared in the form is removed, not left stale.
         const cleared = Object.fromEntries(HOSPITAL_FORM_FIELDS
@@ -120,18 +134,21 @@ function HospitalModal({ hospital, hospitals, onClose, initial = null, fromReque
         await batch.commit()
         const after = { ...Object.fromEntries(Object.entries(hospital).filter(([k]) => !(k in cleared))), ...data }
         await syncHospitalPublic(id, after)
-        logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated' })
+        logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: [prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated', partnerChanges.length ? `partner agencies: ${[...partners].join(', ') || 'none'}` : ''].filter(Boolean).join('; ') })
         toast.success('Hospital updated.')
       } else {
         batch.set(doc(db, 'hospitals', id), { ...data, enabled: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
         await batch.commit()
         await syncHospitalPublic(id, { ...data, enabled: true })
-        logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN)` })
+        logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN; partner agencies: ${[...partners].join(', ') || 'none yet'})` })
         if (fromRequest) {
           await updateDoc(doc(db, 'onboardingRequests', fromRequest), { status: 'onboarded', hospitalId: id, statusUpdatedAt: serverTimestamp() })
             .catch((err) => console.warn('[Hospitals] could not link the onboarding request:', err))
         }
-        toast.success(`${data.facilityName} added. Next, create its first administrator.`)
+        toast.success(`${data.facilityName} added. Next, create its first Hospital Admin.`)
+        onClose()
+        onCreated?.({ id, ...data, enabled: true })
+        return
       }
       onClose()
     } catch (e) {
@@ -195,6 +212,27 @@ function HospitalModal({ hospital, hospitals, onClose, initial = null, fromReque
           </datalist>
         </Field>
       </div>
+      <fieldset>
+        <legend className="block text-xs font-medium text-gray-700 mb-1">Partner agencies</legend>
+        <p className="text-xs text-gray-500 mb-2">This hospital's gateway can endorse patients only to the agencies ticked here.</p>
+        {enabledAgencies.length === 0 ? (
+          <p className="text-xs text-gray-500">No agencies yet — add them under Agencies.</p>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            {enabledAgencies.map((a) => (
+              <li key={a.id}>
+                <label className="flex items-center gap-2.5 min-h-[40px] px-2 rounded-lg hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
+                  <input type="checkbox" className="w-4 h-4 accent-brand-500" checked={partners.has(a.id)} onChange={() => togglePartner(a.id)} />
+                  <span className="truncate">{a.name || a.id}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        {partners.size === 0 && enabledAgencies.length > 0 && (
+          <p className="text-xs text-amber-700 mt-1.5">With no partner agencies the hospital stays "Provisioning" — its gateway can't endorse anyone yet.</p>
+        )}
+      </fieldset>
       {isEdit && hospital.accessCodePrefix && normalizePrefix(form.accessCodePrefix) !== hospital.accessCodePrefix && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5">
           Changing the prefix affects new access codes only. Codes already issued keep their old prefix.
@@ -381,9 +419,10 @@ export default function Hospitals() {
 
   // Live = taking sign-ups and staffed; Provisioning = no super admin yet;
   // Paused = sign-ups stopped by the network admin.
+  const partnerCountOf = (h) => agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
   const statusOf = (h) => {
     if (h.enabled === false) return { label: 'Sign-ups paused', cls: 'bg-amber-50 text-amber-800' }
-    if (!(staffByHospital[h.id]?.super > 0)) return { label: 'Provisioning', cls: 'bg-amber-50 text-amber-800' }
+    if (!(staffByHospital[h.id]?.super > 0) || partnerCountOf(h) === 0) return { label: 'Provisioning', cls: 'bg-amber-50 text-amber-800' }
     return { label: 'Live', cls: 'bg-green-50 text-green-800' }
   }
   const liveCount = sorted.filter((h) => statusOf(h).label === 'Live').length
@@ -435,6 +474,41 @@ export default function Hospitals() {
           </div>
         )}
 
+        {/* Finish setting up: a hospital is Live only with a Hospital Admin AND
+            at least one partner agency (else its gateway can't endorse). */}
+        {!loading && sorted.some((h) => !(staffByHospital[h.id]?.super > 0) || partnerCountOf(h) === 0) && (
+          <div className="card p-4 sm:p-5 mb-5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Finish setting up</p>
+            <ul className="space-y-3">
+              {sorted.filter((h) => !(staffByHospital[h.id]?.super > 0) || partnerCountOf(h) === 0).map((h) => {
+                const hasAdmin = staffByHospital[h.id]?.super > 0
+                const partnerCount = partnerCountOf(h)
+                const Step = ({ done, children, action }) => (
+                  <li className="flex flex-wrap items-center gap-2 text-sm">
+                    <span aria-hidden="true" className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${done ? 'bg-brand-500 text-white' : 'border-2 border-gray-300 text-gray-400'}`}>{done ? '✓' : ''}</span>
+                    <span className={done ? 'text-gray-500' : 'text-gray-800'}>{children}</span>
+                    {!done && action}
+                  </li>
+                )
+                return (
+                  <li key={h.id} className="rounded-xl border border-gray-100 p-3">
+                    <p className="font-semibold text-gray-900 mb-2">{h.facilityName || h.id}</p>
+                    <ul className="space-y-1.5">
+                      <Step done>Hospital created · access codes <span className="font-mono">{h.accessCodePrefix}-…</span></Step>
+                      <Step done={hasAdmin} action={<button className="text-xs font-semibold text-brand-600 hover:text-brand-700" onClick={() => setAddingAdmin(h)}>Add Hospital Admin →</button>}>
+                        First Hospital Admin
+                      </Step>
+                      <Step done={partnerCount > 0} action={<button className="text-xs font-semibold text-brand-600 hover:text-brand-700" onClick={() => setEditing(h)}>Choose partner agencies →</button>}>
+                        Partner agencies{partnerCount > 0 ? ` (${partnerCount})` : ''}
+                      </Step>
+                    </ul>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
         {loading ? (
           <div className="card p-8 flex justify-center">
             <div className="w-8 h-8 border-2 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
@@ -464,7 +538,7 @@ export default function Hospitals() {
                 {sorted.map((h) => {
                   const s = stats?.hospitals?.[h.id]
                   const counts = staffByHospital[h.id] ?? { super: 0, staff: 0 }
-                  const partnerCount = agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
+                  const partnerCount = partnerCountOf(h)
                   const status = statusOf(h)
                   return (
                     <tr key={h.id} className="border-t border-gray-100 align-middle">
@@ -522,6 +596,8 @@ export default function Hospitals() {
         <HospitalModal
           hospital={editing === 'add' ? null : editing}
           hospitals={hospitals}
+          agencies={agencies}
+          onCreated={(h) => setAddingAdmin(h)}
           initial={editing === 'add' ? prefill?.initial : null}
           fromRequest={editing === 'add' ? prefill?.fromRequest : null}
           onClose={() => { setEditing(null); setPrefill(null) }} />

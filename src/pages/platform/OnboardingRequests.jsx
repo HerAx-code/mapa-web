@@ -9,6 +9,11 @@ import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { tsToDate } from '../../utils/dates'
 import { useOnboardingRequests } from '../../hooks/useOnboardingRequests'
+import { useHospitals } from '../../hooks/useHospitals'
+
+// Loose name match for the "already on the network" hint: case, spacing and
+// punctuation don't matter ("Davao Regional Med. Center" ~ "davao regional med center").
+const normName = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 // Onboarding requests — hospitals that asked to join from the public
 // "For hospitals" page (MAPA Platform Redesign canvas). The network admin
@@ -31,6 +36,11 @@ export default function OnboardingRequests() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { requests, loading } = useOnboardingRequests(true)
+  const { hospitals } = useHospitals()
+  const existingMatch = (r) => {
+    const n = normName(r.hospitalName)
+    return n ? hospitals.find((h) => normName(h.facilityName) === n || (h.shortName && normName(h.shortName) === n)) : null
+  }
   const [tab, setTab] = useState('new')
   const [busyId, setBusyId] = useState(null)
 
@@ -110,6 +120,11 @@ export default function OnboardingRequests() {
                       </p>
                       {r.message && <p className="text-sm text-gray-600 mt-2 whitespace-pre-line">{r.message}</p>}
                       {r.hospitalId && <p className="text-xs text-green-700 mt-2">Set up as <span className="font-mono">{r.hospitalId}</span></p>}
+                      {!r.hospitalId && existingMatch(r) && (
+                        <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1.5 mt-2 inline-block">
+                          Possible duplicate — already on the network as <span className="font-semibold">{existingMatch(r).facilityName || existingMatch(r).id}</span>.
+                        </p>
+                      )}
                     </div>
                     <div className="flex sm:flex-col gap-2 flex-shrink-0">
                       {status !== 'onboarded' && (

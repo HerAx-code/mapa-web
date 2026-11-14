@@ -30,6 +30,7 @@ const NOTIF_CONFIG = {
   agency_updated:      { Icon: MdSettings,         bg: 'bg-blue-100',   color: 'text-blue-600'   },
   agency_deleted:      { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
   new_agency:          { Icon: MdLocalHospital,    bg: 'bg-teal-100',   color: 'text-teal-600'   },
+  onboarding_request:  { Icon: MdLocalHospital,    bg: 'bg-brand-100',  color: 'text-brand-700'  },
   assistance_added:    { Icon: MdFavorite,         bg: 'bg-pink-100',   color: 'text-pink-600'   },
   assistance_updated:  { Icon: MdEdit,             bg: 'bg-amber-100',  color: 'text-amber-600'  },
   assistance_deleted:  { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
@@ -86,6 +87,8 @@ export const getNotifRoute = (type, role) => {
 
     // ── Agency / catalog (admin actions) ──
     new_agency:              agenciesPath,
+    // A hospital asked to join (public For-hospitals form) — network operator.
+    onboarding_request:      role === 'platform_admin' ? '/platform/requests' : null,
     agency_updated:          agenciesPath ?? (isAgency ? '/agency/program' : null),
     agency_enabled:          agenciesPath ?? (isAgency ? '/agency/program' : null),
     agency_disabled:         agenciesPath ?? (isAgency ? '/agency/program' : null),

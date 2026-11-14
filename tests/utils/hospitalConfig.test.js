@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   validateHospital, hospitalDocFromForm, normalizeHospitalId, normalizePrefix,
-  suggestHospitalId, emptyHospitalForm,
+  suggestHospitalId, emptyHospitalForm, nextPartnerLists,
 } from '../../src/utils/hospitalConfig'
 
 // Multi-hospital Phase 6 — the platform admin's hospital onboarding form.
@@ -72,5 +72,37 @@ describe('id + prefix helpers', () => {
 
   it('upper-cases prefixes', () => {
     expect(normalizePrefix(' bgh ')).toBe('BGH')
+  })
+})
+
+// Partner agencies chosen in the hospital form → each agency's partner list.
+describe('nextPartnerLists', () => {
+  const agencies = [
+    { id: 'dswd', partnerHospitalIds: ['hospital-1'] },
+    { id: 'pcso', partnerHospitalIds: ['hospital-1', 'cph'] },
+    { id: 'legacy' },                                            // no list = hospital #1
+  ]
+
+  it('adds and removes only where the partnership changes', () => {
+    expect(nextPartnerLists(agencies, 'cph', new Set(['dswd']))).toEqual([
+      { agencyId: 'dswd', partnerHospitalIds: ['hospital-1', 'cph'] },
+      { agencyId: 'pcso', partnerHospitalIds: ['hospital-1'] },
+    ])
+  })
+
+  it("keeps hospital #1 when a legacy agency (no list) gains a new hospital", () => {
+    expect(nextPartnerLists(agencies, 'cph', new Set(['pcso', 'legacy']))).toEqual([
+      { agencyId: 'legacy', partnerHospitalIds: ['hospital-1', 'cph'] },
+    ])
+  })
+
+  it('removing hospital #1 from a legacy agency writes an explicit empty list', () => {
+    expect(nextPartnerLists(agencies, 'hospital-1', new Set(['dswd', 'pcso']))).toEqual([
+      { agencyId: 'legacy', partnerHospitalIds: [] },
+    ])
+  })
+
+  it('no changes, no writes', () => {
+    expect(nextPartnerLists(agencies, 'cph', new Set(['pcso']))).toEqual([])
   })
 })

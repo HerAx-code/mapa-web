@@ -22,6 +22,7 @@ const { onSliceProceeded }       = require('./src/onSliceProceeded')
 const { onDocumentCountChanged } = require('./src/onDocumentCountChanged')
 const { onAuditLogCreated }      = require('./src/onAuditLogCreated')
 const { refreshNetworkStats }    = require('./src/refreshNetworkStats')
+const { onOnboardingRequestCreated } = require('./src/onOnboardingRequestCreated')
 
 exports.resetAgencySlots        = resetAgencySlots
 exports.glExpirySweep           = glExpirySweep
@@ -35,3 +36,4 @@ exports.onSliceProceeded        = onSliceProceeded
 exports.onDocumentCountChanged  = onDocumentCountChanged
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
+exports.onOnboardingRequestCreated = onOnboardingRequestCreated

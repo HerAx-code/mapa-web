@@ -136,6 +136,7 @@ const NOTIF_ICONS = {
   agency_updated:     { icon: MdInfo,          color: 'text-blue-500',   bg: 'bg-blue-50'   },
   agency_deleted:     { icon: MdCancel,        color: 'text-red-600',    bg: 'bg-red-50'    },
   new_agency:         { icon: MdBusiness,      color: 'text-teal-500',   bg: 'bg-teal-50'   },
+  onboarding_request: { icon: MdLocalHospital, color: 'text-brand-600',  bg: 'bg-brand-50'  },
   // Assistance types
   assistance_added:   { icon: MdFavorite, color: 'text-pink-500',  bg: 'bg-pink-50'  },
   assistance_updated: { icon: MdFavorite, color: 'text-amber-500', bg: 'bg-amber-50' },
