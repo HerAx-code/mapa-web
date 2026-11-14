@@ -30,11 +30,27 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 
 ## User Roles
-- platform_admin — *(multi-hospital Phase 6, not yet deployed)* network operator ("Network Admin"): onboards hospitals + their first admins, owns agencies + reference data, no tenant, **no patient PII** (not in `isAdmin()`). Created only via `scripts/create-platform-admin.mjs`
-- super_admin — full access to **its own hospital** (hospital-scoped under multi-hospital tenancy); agencies + reference data move to platform_admin in Phase 6
-- staff_admin — operations (no accounts, audit, announcements, coordinators)
-- agency — agency portal, own applications only
-- patient — patient portal, own data only (self-registers with Patient Access Code)
+Display names differ from the stored role ids (owner decision 2026-11-14: labels
+only, ids never renamed — they're data, rules and tests). Use the ids in code;
+show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.js).
+- `platform_admin` → **"Super Admin"** — the network operator *(multi-hospital
+  Phase 6, not yet deployed)*: onboards hospitals (prefix, region, sign-ups
+  open/paused, first admins, onboarding-request queue), owns agencies (incl.
+  partner hospitals, teams, slots) + reference data, sees network counts only.
+  No tenant, **no patient PII** (not in `isAdmin()`). Created only via
+  `scripts/create-platform-admin.mjs`.
+- `super_admin` → **"Hospital Admin"** — full gateway access to **its own
+  hospital**: request queue (verify / assess / endorse to partner agencies),
+  patients, access codes (own prefix), staff accounts, audit log, Hospital
+  Settings (branding), announcements, messages, reports, export.
+- `staff_admin` → "Staff Admin" — the hospital's day-to-day gateway work; no staff
+  accounts, audit log, Hospital Settings, access-code issue/delete or user deletion.
+- `agency_admin` → "Agency Admin" — agency portal + budget allocation, own team,
+  promotions, agency audit log; partner hospitals read-only.
+- `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
+  any partner hospital; reads only patients endorsed to the agency.
+- `patient` — patient portal, own data only; self-registers with an access code,
+  which binds them to that code's hospital.
 
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.

@@ -89,7 +89,7 @@ export default function PartnerHospitalsCard({ agency, canEdit, user }) {
             ))}
           </ul>
           {legacy && (
-            <p className="text-xs text-gray-500 mt-2">Not set yet — treated as hospital #1 only until the network admin picks partners.</p>
+            <p className="text-xs text-gray-500 mt-2">Not set yet — treated as hospital #1 only until the super admin picks partners.</p>
           )}
         </>
       )}

@@ -418,9 +418,9 @@ export default function Login() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
-                    { label: 'Super Admin',            email: 'admin@example.org',            password: 'admin123',   note: null     },
+                    { label: 'Hospital Admin',         email: 'admin@example.org',            password: 'admin123',   note: null     },
                     { label: 'Staff Admin',            email: 'staff@example.org',            password: 'staff123',   note: null     },
-                    { label: 'Network Admin',          email: 'platform@example.org',         password: 'platform123', note: null    },
+                    { label: 'Super Admin',            email: 'platform@example.org',         password: 'platform123', note: null    },
                     // The coordination hub and PhilHealth (modelled as the
                     // first-charge coverage that REDUCES the bill, not an endorsable
                     // GL-issuing funder — see docs/philhealth-first-plan.md) are

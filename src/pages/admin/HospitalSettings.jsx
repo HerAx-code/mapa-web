@@ -141,7 +141,7 @@ export default function HospitalSettings() {
                   </dd>
                 </div>
               </dl>
-              <p className="text-xs text-gray-500 mt-3">Ask the network administrator to change these.</p>
+              <p className="text-xs text-gray-500 mt-3">Ask the super admin (network operator) to change these.</p>
             </div>
           </>
         )}

@@ -86,9 +86,12 @@ export const TERMS_VERSION = '2026-10-18'
 
 // Canonical display labels for roles. Import from here instead of redefining
 // per-file so wording stays consistent across the UI.
+// Display names (role ids are stored data and never renamed): the network
+// operator `platform_admin` is shown as "Super Admin"; the hospital-scoped
+// `super_admin` is shown as "Hospital Admin" (owner decision 2026-11-14).
 export const ROLE_LABEL = {
-  platform_admin: 'Network Administrator',
-  super_admin:  'Super Administrator',
+  platform_admin: 'Super Administrator',
+  super_admin:  'Hospital Administrator',
   staff_admin:  'Staff Administrator',
   agency_admin: 'Agency Administrator',
   agency:       'Agency Coordinator',
@@ -97,8 +100,8 @@ export const ROLE_LABEL = {
 
 // Short labels for tight UI spaces (chips, table cells, badges).
 export const ROLE_LABEL_SHORT = {
-  platform_admin: 'Network Admin',
-  super_admin:  'Super Admin',
+  platform_admin: 'Super Admin',
+  super_admin:  'Hospital Admin',
   staff_admin:  'Staff Admin',
   agency_admin: 'Agency Admin',
   agency:       'Agency Coordinator',

@@ -646,7 +646,7 @@ const ADMIN_FAQS = [
   { q: 'How do I issue a Patient Access Code?',       a: 'Navigate to Patient Access Codes and click "Add One" or "Bulk Add". The system auto-generates the next sequential code to issue to the patient.' },
   { q: 'How do I disable an agency?',                 a: 'Go to Agencies and click "Disable" on the agency card. This hides them from patients temporarily without deleting their data.' },
   { q: 'Where can I see all patient applications?',   a: 'Go to App Logs under Operations to view all submissions across agencies, with filters by status, agency, and date range.' },
-  { q: 'How do I add a new admin account?',           a: 'Contact a super administrator to provision new admin accounts. Account creation is restricted to authorized personnel only.' },
+  { q: 'How do I add a new admin account?',           a: 'Contact your hospital administrator to provision new admin accounts. Account creation is restricted to authorized personnel only.' },
   { q: 'How do I top up an agency\'s budget?',        a: 'Go to Funds, open the agency\'s ledger, and add a period entry. Each top-up is recorded in the audit log.' },
   { q: 'Where do I see audit history?',               a: 'Open Audit Log under Operations. Every admin action — verifications, account changes, budget edits — is recorded with the actor, target, and timestamp.' },
 ]

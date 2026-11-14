@@ -230,7 +230,7 @@ function AdminModal({ hospital, onClose }) {
       })
       logAudit(user, {
         action: 'account_created', targetType: 'account', targetId: uid, targetName: form.name.trim(),
-        details: `${form.role === 'super_admin' ? 'Super Admin' : 'Staff Admin'} for ${hospital.facilityName || hospital.id}`,
+        details: `${form.role === 'super_admin' ? 'Hospital Admin' : 'Staff Admin'} for ${hospital.facilityName || hospital.id}`,
       })
       toast.success(`${form.name.trim()} can now sign in to ${hospital.facilityName || hospital.id}.`)
       onClose()
@@ -263,12 +263,12 @@ function AdminModal({ hospital, onClose }) {
       <Field label="Contact number">
         <input className="input" placeholder="09XXXXXXXXX" value={form.contact} onChange={set('contact')} />
       </Field>
-      <Field label="Role" required hint="The hospital's super admin adds the rest of its staff from Admin Accounts.">
+      <Field label="Role" required hint="The hospital admin adds the rest of its staff from Admin Accounts.">
         <SearchableSelect
           value={form.role}
           onChange={(v) => setForm((p) => ({ ...p, role: v }))}
           options={[
-            { value: 'super_admin', label: 'Super Admin' },
+            { value: 'super_admin', label: 'Hospital Admin' },
             { value: 'staff_admin', label: 'Staff Admin' },
           ]} />
       </Field>
@@ -473,7 +473,7 @@ export default function Hospitals() {
                         <p className="text-xs text-gray-500 mt-0.5">
                           <span className="font-mono">{h.id}</span>
                           {h.id === DEFAULT_HOSPITAL_ID && ' · hospital #1'}
-                          {' · '}{counts.super} super · {counts.staff} staff
+                          {' · '}{counts.super} hospital admin{counts.super === 1 ? '' : 's'} · {counts.staff} staff
                         </p>
                       </td>
                       <td className="px-4 py-3.5 font-mono text-xs text-gray-600">{h.accessCodePrefix ? `${h.accessCodePrefix}-` : '—'}</td>

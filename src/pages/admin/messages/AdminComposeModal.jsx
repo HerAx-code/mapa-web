@@ -8,7 +8,7 @@ import { MdClose, MdSend } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { MAX_CHARS } from './helpers'
 
-const ROLE_LABEL = { patient: 'Patient', staff_admin: 'Staff Admin', super_admin: 'Super Admin', agency: 'Agency' }
+const ROLE_LABEL = { patient: 'Patient', staff_admin: 'Staff Admin', super_admin: 'Hospital Admin', agency: 'Agency' }
 
 /**
  * Admin-side compose panel — search any user, pick one, send the first

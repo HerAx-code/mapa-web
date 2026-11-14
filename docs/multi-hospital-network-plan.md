@@ -414,6 +414,13 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   until they are, audit stamping doesn't run (entries stay on request timelines)
   and the stats are refreshed by script.
 
+### Role display names ✅ 2026-11-14 (owner decision: labels only)
+`platform_admin` is shown as **"Super Admin"** (the network operator) and
+`super_admin` as **"Hospital Admin"** (one hospital's full gateway admin). Stored
+role ids, rules and tests are unchanged — renaming the ids would mean migrating
+every user doc and a window where an old `super_admin` record means network
+operator. Labels live in `ROLE_LABEL` / `ROLE_LABEL_SHORT`.
+
 ### Page restructure (follow-up PR, stacked on Phases 5–9) ✅ 2026-11-14
 Pages adapted to the network model, using the "MAPA Platform Redesign" canvas as
 the visual reference. Ships with Phases 5–9 (it depends on them).

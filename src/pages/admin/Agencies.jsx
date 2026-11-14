@@ -595,7 +595,7 @@ export default function Agencies() {
             <p className="text-sm text-gray-500 mt-1">
               {isPlatform
                 ? 'Every agency in the network — add agencies, manage their teams and slots, and set which hospitals they partner with.'
-                : 'The agencies your hospital can endorse patients to. Partnerships are set by the network admin.'}
+                : 'The agencies your hospital can endorse patients to. Partnerships are set by the super admin.'}
             </p>
             {!isPlatform && nonPartnerCount > 0 && (
               <p className="text-xs text-gray-500 mt-1">

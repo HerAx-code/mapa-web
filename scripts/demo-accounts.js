@@ -35,12 +35,12 @@ export const USERS = [
   // network operator (multi-hospital Phase 6): hospitals, agencies, reference data
   {
     email: 'platform@mapa.gov.ph', password: 'platform123',
-    profile: { name: 'Network Admin', role: 'platform_admin', rank: null, agencyId: null, contact: null, cooldown: 0, deletion: false },
+    profile: { name: 'Super Admin', role: 'platform_admin', rank: null, agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
   // gateway admins
   {
     email: 'admin@mapa.gov.ph', password: 'admin123',
-    profile: { name: 'Super Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
+    profile: { name: 'Hospital Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
   {
     email: 'staff@mapa.gov.ph', password: 'staff123',

@@ -196,7 +196,7 @@ function AccountModal({ account, onClose }) {
               value={form.role}
               onChange={v => set('role')({ target: { value: v } })}
               options={[
-                { value: 'super_admin', label: 'Super Admin' },
+                { value: 'super_admin', label: 'Hospital Admin' },
                 { value: 'staff_admin', label: 'Staff Admin' },
               ]} />
             <p className="text-xs text-gray-500 mt-1">Agency staff are managed under each agency.</p>
@@ -288,7 +288,7 @@ export default function Accounts() {
   const isFiltered = search || roleFilter !== 'all' || statusFilter !== 'all'
   const clearAll   = () => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') }
   const roleGroups = [
-    { role: 'super_admin', label: 'Super Admins' },
+    { role: 'super_admin', label: 'Hospital Admins' },
     { role: 'staff_admin', label: 'Staff Admins' },
   ].map(g => ({ ...g, members: filtered.filter(a => a.role === g.role) })).filter(g => g.members.length > 0)
   const otherMembers = filtered.filter(a => a.role !== 'super_admin' && a.role !== 'staff_admin')
@@ -380,7 +380,7 @@ export default function Accounts() {
           <aside className="lg:sticky lg:top-[68px] space-y-4">
             <div className="card grid grid-cols-3 divide-x divide-gray-100 overflow-hidden text-center">
               {[
-                { label: 'Super', value: superCount, color: 'text-purple-600' },
+                { label: 'Hospital', value: superCount, color: 'text-purple-600' },
                 { label: 'Staff', value: staffCount, color: 'text-blue-600'   },
                 { label: 'Off',   value: offCount,   color: offCount ? 'text-red-500' : 'text-gray-500' },
               ].map((m, i) => (
@@ -402,7 +402,7 @@ export default function Accounts() {
               <ul className="-mx-1.5 space-y-px">
                 {[
                   ['all', 'All roles', accounts.length],
-                  ['super_admin', 'Super Admin', superCount],
+                  ['super_admin', 'Hospital Admin', superCount],
                   ['staff_admin', 'Staff Admin', staffCount],
                 ].map(([key, label, n]) => {
                   const active = roleFilter === key

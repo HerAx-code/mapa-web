@@ -28,7 +28,7 @@ const argv = process.argv.slice(2)
 const APPLY = argv.includes('--apply')
 const val = (flag, dflt) => { const i = argv.indexOf(flag); return i >= 0 && argv[i + 1] ? argv[i + 1] : dflt }
 const EMAIL = val('--email', '').trim().toLowerCase()
-const NAME  = val('--name', 'Network Administrator').trim()
+const NAME  = val('--name', 'Super Administrator').trim()
 
 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(EMAIL)) {
   console.error('[platform-admin] --email <address> is required.')

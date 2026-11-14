@@ -408,7 +408,7 @@ function ComposeModal({ user, onClose }) {
                     style={{ maxHeight: recipientMaxH }}
                     className={`absolute left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-10 overflow-y-auto ${recipientDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                     {filtered.map(p => {
-                      const roleLabel = { super_admin: 'Super Admin', staff_admin: 'Staff Admin', agency: 'Agency', patient: 'Patient' }[p.role] ?? p.role
+                      const roleLabel = { super_admin: 'Hospital Admin', staff_admin: 'Staff Admin', agency: 'Agency', patient: 'Patient' }[p.role] ?? p.role
                       return (
                         <button key={p.uid}
                           className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 text-left"

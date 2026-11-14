@@ -97,7 +97,7 @@ const DATE_FILTERS = [
   { key: 'month', label: 'This Month' },
 ]
 
-const ROLE_LABEL = { super_admin: 'Super Admin', staff_admin: 'Staff Admin' }
+const ROLE_LABEL = { super_admin: 'Hospital Admin', staff_admin: 'Staff Admin' }
 const ROLE_AVATAR = {
   super_admin: 'bg-purple-100 text-purple-700',
   staff_admin: 'bg-blue-100 text-blue-700',
