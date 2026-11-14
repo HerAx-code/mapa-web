@@ -125,7 +125,10 @@
       "a2desc": "Ang anumang insurance o naunang saklaw na mayroon kayo, tulad ng PhilHealth, ay inilalapat muna sa inyong bayarin; sinasaklaw ng mga kasosyong ahensya ang natitira hanggang maging zero ito.",
       "a3title": "Ang inyong datos, ang inyong karapatan",
       "a3desc": "I-download ang inyong mga rekord, tingnan kung sino ang nag-access, at humiling ng pagbura — protektado sa ilalim ng RA 10173.",
-      "trust": "Protektado sa ilalim ng Data Privacy Act ng Pilipinas (RA 10173). Naka-encrypt ang inyong health data at hindi kailanman ibinebenta."
+      "trust": "Protektado sa ilalim ng Data Privacy Act ng Pilipinas (RA 10173). Naka-encrypt ang inyong health data at hindi kailanman ibinebenta.",
+      "sub": "Isang lugar para subaybayan ang inyong tulong medikal sa bawat ahensya — isang beses na beripikasyon, laging nakikita ang progreso.",
+      "chipPrivacy": "Protektado ng RA 10173",
+      "chipLanguages": "Filipino / English"
     },
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
@@ -170,6 +173,37 @@
     "devOnly": "Dev lamang — Demo accounts"
   },
   "landing": {
+    "nav": {
+      "how": "Paano ito gumagana",
+      "programs": "Mga programa",
+      "forHospitals": "Para sa mga ospital"
+    },
+    "trust": {
+      "heading": "Isang aplikasyon, abot ang bawat katuwang na ahensya"
+    },
+    "doors": {
+      "patientsTitle": "Para sa mga pasyente",
+      "patientsBody": "Mag-apply nang isang beses gamit ang inyong mga dokumento at live selfie. Isang beses lang kayong susuriin — walang paulit-ulit na interview — at makikita ninyo ang desisyon ng bawat ahensya sa iisang pahina, sa Filipino o English.",
+      "p1": "Isang beses mag-apply, isang beses masuri",
+      "p2": "Isang tracker para sa lahat ng ahensya",
+      "p3": "Gumagana sa cellphone at mabagal na internet",
+      "patientsCta": "Magsimula",
+      "hospitalsTitle": "Para sa mga ospital",
+      "hospitalsBody": "Patakbuhin nang digital ang inyong medical assistance desk. Gamitin ang MAPA sa pamamagitan ng pag-configure — ang inyong pangalan, mga katuwang na ahensya, at mga dokumento — nang hindi bumubuo ng sariling bersyon. Iisang proseso, sariling settings.",
+      "h1": "I-configure, hindi bubuuin muli",
+      "h2": "One-stop-shop na proseso ng RA 11463",
+      "h3": "Hiwalay ang datos ng bawat ospital",
+      "hospitalsCta": "Humiling ng onboarding"
+    },
+    "network": {
+      "eyebrow": "Ang mas malaking layunin",
+      "heading": "Isang pintuan — hindi isa pang hiwalay na sistema",
+      "body": "Ang pasyenteng nangangailangan ng tulong mula sa ilang ahensya ay hindi dapat mag-apply nang ilang beses. Isang beses sinusuri ng MAPA at ipinapadala ang bawat bahagi ng bayarin sa bawat ahensya — walang pila, walang paulit-ulit na pag-encode o pag-apply.",
+      "hospitals": "kasaling ospital",
+      "agencies": "katuwang na ahensya",
+      "perPatient": "aplikasyon bawat pasyente",
+      "balance": "balanse — ang layunin"
+    },
     "header": {
       "downloadApp": "I-install ang App",
       "mobileToast": "Malapit nang ilunsad ang MAPA mobile app. Sundan ang {{org}} para sa updates.",
@@ -261,6 +295,8 @@
       "codeHeading": "Kailangan ng Patient Access Code",
       "codeBody": "Naka-print ito at ibinibigay nang personal sa {{gateway}} office. Hindi ito ipinapadala sa text, email, o social media — at walang makapagbibigay nito online.",
       "codeSample": "Halimbawa ng code",
+      "hospitalsHeading": "Mga kasaling ospital",
+      "codeStartsWith": "{{prefix}}-…",
       "codeCta": "Saan ang opisina?"
     },
     "faq": {
@@ -292,6 +328,7 @@
       "hours": "Lunes hanggang Biyernes, 8:00 AM – 5:00 PM. Sarado sa holiday."
     },
     "footer": {
+      "forHospitals": "Para sa mga ospital",
       "brandDesc": "Ang opisyal na online system ng {{facility}} para sa pagproseso ng medical assistance applications.",
       "quickLinks": "Mabilisang Links",
       "registerPatient": "Mag-register bilang Pasyente",
@@ -335,6 +372,7 @@
     "more": "Higit pa",
     "systemAdmin": "System Admin",
     "network": "Network",
+    "platformAdmin": "Platform admin",
     "operations": "Operations",
     "help": {
       "title": "Kailangan ng tulong?",
@@ -1404,7 +1442,11 @@
       "ready3": "Isang gumaganang email address para sa mga update sa aprubahan",
       "trustTime": "Umaabot ng mga 3 minuto",
       "trustPrivacy": "Protektado sa ilalim ng Data Privacy Act (RA 10173)",
-      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa {{facility}}"
+      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa {{facility}}",
+      "codeTitle": "Ang access code ang inyong susi.",
+      "codeBody": "Ibinibigay ito nang personal ng social-services office ng inyong ospital. Ang unang bahagi nito — ang prefix — ang nagsasabi sa MAPA kung saang ospital kayo kabilang, kaya awtomatiko kayong mapupunta sa tamang lugar.",
+      "codeExample": "Halimbawa ng code",
+      "codePrefixNote": "Prefix = ang inyong ospital"
     },
     "stepPersonal": "Personal na Impormasyon",
     "stepAccount": "Pag-setup ng Account",
@@ -1449,6 +1491,7 @@
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Ipasok ang 5-digit na numero pagkatapos ng prefix",
       "joiningHospital": "Magpaparehistro ka sa {{hospital}}.",
+      "prefixHint": "Ang mga letra bago ang unang gitling (gaya ng {{prefix}}-) ang nagsasabi sa MAPA kung saang ospital ka kabilang.",
       "verifyBtn": "I-verify",
       "verified": "Na-verify",
       "edit": "I-edit",

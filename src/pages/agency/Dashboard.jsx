@@ -2,6 +2,7 @@ import Layout from '../../components/Layout'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import BudgetHero from '../../components/agency/BudgetHero'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
+import { HospitalBreakdownCard } from '../../components/agency/HospitalBreakdown'
 import { useFeedAnnouncements } from '../../utils/announcements'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
@@ -326,6 +327,10 @@ export default function AgencyDashboard() {
             <p className="text-xs text-gray-500 mt-1">all time</p>
           </div>
         </div>
+
+        {/* Multi-hospital: queue + approvals per partner hospital (hidden while
+            every slice comes from one hospital). */}
+        <HospitalBreakdownCard slices={applications} className="mb-5" />
 
         {/* R38: "What's new" feed — the gateway notices + own agency's promos.
             Renders null when empty so the dashboard stays clean for

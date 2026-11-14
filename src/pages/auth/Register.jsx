@@ -21,6 +21,7 @@ import { hasReservedToken } from '../../utils/names'
 import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
+import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 
 const CURRENT_YEAR        = new Date().getFullYear()
 const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
@@ -186,6 +187,10 @@ export default function Register() {
   // Which hospital the verified code belongs to (Phase 8) — shown so the
   // patient can confirm before creating the account.
   const [codeHospitalName, setCodeHospitalName] = useState('')
+  // A real hospital prefix for the examples (multi-hospital): the first
+  // participating hospital's, else this deployment's own.
+  const publicHospitals = usePublicHospitals()
+  const examplePrefix = publicHospitals[0]?.accessCodePrefix || ORG.accessCodePrefix
   const [verifying, setVerifying]           = useState(false)
   const [loading, setLoading]               = useState(false)
   const [showPw, setShowPw]                 = useState(false)
@@ -628,7 +633,7 @@ export default function Register() {
               className="h-10 w-10 rounded-[11px] object-contain ring-1 ring-white/15" />
             <span className="font-display text-[19px] font-bold tracking-tight text-white">MAPA</span>
           </span>
-          <h2 className="mt-10 text-[28px] font-semibold leading-[1.15] tracking-tight text-white text-balance">
+          <h2 className="mt-10 font-display text-[28px] font-bold leading-[1.12] tracking-tight text-white text-balance">
             {t('register.brand.headline')}
           </h2>
           <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-brand-100/85">
@@ -644,6 +649,18 @@ export default function Register() {
                 </li>
               ))}
             </ul>
+          </div>
+          {/* Multi-hospital: the code's prefix decides the hospital. */}
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/[0.07] p-4">
+            <h3 className="text-[13px] font-semibold text-white">{t('register.brand.codeTitle')}</h3>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-brand-100/85">{t('register.brand.codeBody')}</p>
+            <div className="mt-3 rounded-xl border border-dashed border-brand-300/60 bg-brand-900/40 px-3 py-2.5">
+              <p className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-100/70">{t('register.brand.codeExample')}</p>
+              <p className="mt-0.5 font-mono text-[15px] font-semibold tracking-[0.12em] text-white">
+                <span className="text-brand-300">{examplePrefix}</span>-{new Date().getFullYear()}-00014
+              </p>
+              <p className="mt-1 text-[11.5px] text-brand-100/80">{t('register.brand.codePrefixNote')}</p>
+            </div>
           </div>
         </div>
         <div className="relative space-y-2.5 px-10 py-8 text-[13px] text-brand-100/80">
@@ -668,7 +685,7 @@ export default function Register() {
             )}
 
             <div className="mb-6">
-              <h1 className="text-[26px] font-bold tracking-tight text-gray-900">{t('register.title')}</h1>
+              <h1 className="font-display text-[26px] font-bold tracking-tight text-brand-900">{t('register.title')}</h1>
               <p className="text-sm text-gray-500 mt-1">{t('register.subtitle')}</p>
             </div>
 
@@ -895,7 +912,10 @@ export default function Register() {
                 </div>
                 <FieldError msg={errors.hospitalId} />
                 {!errors.hospitalId && !hospitalVerified && (
-                  <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
+                  <>
+                    <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 lg:hidden">{t('register.step3.prefixHint', { prefix: examplePrefix })}</p>
+                  </>
                 )}
                 {hospitalVerified && codeHospitalName && (
                   <p className="text-sm text-green-700 mt-1">{t('register.step3.joiningHospital', { hospital: codeHospitalName })}</p>

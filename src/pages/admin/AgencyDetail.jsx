@@ -116,6 +116,7 @@ export default function AgencyDetail() {
   // admin has no patient data — no case counts, no slice cascade, no messaging.
   const isPlatform    = user?.role === ROLES.PLATFORM_ADMIN
   const canManage     = isPlatform
+  const base          = isPlatform ? '/platform/agencies' : '/admin/agencies'
 
   const [agency,        setAgency]        = useState(null)
   const [coordinators,  setCoordinators]  = useState([])
@@ -153,7 +154,7 @@ export default function AgencyDetail() {
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'agencies', id), snap => {
-      if (!snap.exists()) { navigate('/admin/agencies'); return }
+      if (!snap.exists()) { navigate(base); return }
       setAgency({ id: snap.id, ...snap.data() })
       setLoading(false)
     }, () => { setLoading(false); toast.error('Failed to load agency.') })
@@ -330,7 +331,7 @@ export default function AgencyDetail() {
       await deleteDoc(doc(db, 'agencies', id))
       logAudit(user, { action: 'agency_deleted', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency permanently deleted' })
       toast.success('Agency deleted.')
-      navigate('/admin/agencies')
+      navigate(base)
     } catch (err) {
       console.error(err); toast.error('Failed to delete agency.')
       setDeletingAgency(false)
@@ -471,7 +472,7 @@ export default function AgencyDetail() {
 
         {/* Back */}
         <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-5"
-          onClick={() => navigate('/admin/agencies')}>
+          onClick={() => navigate(base)}>
           <MdArrowBack size={16} /> Back to Agencies
         </button>
 

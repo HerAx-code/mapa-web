@@ -52,6 +52,9 @@ export const getNotifRoute = (type, role) => {
   const isAdmin   = role === 'super_admin' || role === 'staff_admin'
   const isAgency  = role === 'agency' || role === 'agency_admin'
   const isPatient = role === 'patient'
+  // Agency events: hospital admins see their partner directory; the platform
+  // admin manages agencies under /platform (multi-hospital).
+  const agenciesPath = role === 'platform_admin' ? '/platform/agencies' : (isAdmin ? '/admin/agencies' : null)
   const map = {
     // ── Application lifecycle ──
     doc_verified:            isPatient ? '/patient/request'    : isAgency ? '/agency/inbox' : '/admin/requests',
@@ -82,11 +85,11 @@ export const getNotifRoute = (type, role) => {
     password_reset_sent:     null, // user already has the email, in-app navigation isn't needed
 
     // ── Agency / catalog (admin actions) ──
-    new_agency:              isAdmin   ? '/admin/agencies'     : null,
-    agency_updated:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_enabled:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_disabled:         isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_deleted:          isAdmin   ? '/admin/agencies'     : null,
+    new_agency:              agenciesPath,
+    agency_updated:          agenciesPath ?? (isAgency ? '/agency/program' : null),
+    agency_enabled:          agenciesPath ?? (isAgency ? '/agency/program' : null),
+    agency_disabled:         agenciesPath ?? (isAgency ? '/agency/program' : null),
+    agency_deleted:          agenciesPath,
     // Assistance/Document Types admin pages were removed (now seeded config);
     // these legacy notification types no longer deep-link anywhere.
     doctype_added:           null,

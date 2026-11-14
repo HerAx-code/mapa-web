@@ -264,7 +264,7 @@ export default function AddAgency() {
       }
 
       toast.success(`${agency.name.trim()} created with its Agency Administrator account.`)
-      navigate('/admin/agencies')
+      navigate('/platform/agencies')
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') toast.error('Coordinator email is already registered.')
       else toast.error('Failed to create agency. Please try again.')
@@ -290,7 +290,7 @@ export default function AddAgency() {
         {/* Back */}
         <button
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-5"
-          onClick={() => navigate('/admin/agencies')}>
+          onClick={() => navigate('/platform/agencies')}>
           <MdArrowBack size={16} /> Back to Agencies
         </button>
 
@@ -520,7 +520,7 @@ export default function AddAgency() {
 
         {/* ── Actions ── */}
         <div className="flex items-center justify-between">
-          <button className="btn-secondary" onClick={() => navigate('/admin/agencies')}>
+          <button className="btn-secondary" onClick={() => navigate('/platform/agencies')}>
             Cancel
           </button>
           <button className="btn-primary px-6" onClick={handleSave} disabled={saving}>

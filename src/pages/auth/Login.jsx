@@ -223,17 +223,18 @@ export default function Login() {
         </div>
 
         <div className="relative px-12 py-10">
-          <h2 className="max-w-md text-[32px] font-semibold leading-[1.15] tracking-tight text-white text-balance">
+          <h2 className="max-w-md font-display text-[33px] font-bold leading-[1.1] tracking-tight text-white text-balance">
             {t('auth.brand.headline')}
           </h2>
-          <ul className="mt-10 max-w-md space-y-6">
-            {[1, 2, 3].map(i => (
-              <li key={i} className="border-l-2 border-brand-400 pl-5">
-                <h3 className="text-[15px] font-semibold text-white">{t(`auth.brand.a${i}title`)}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-brand-100/80">{t(`auth.brand.a${i}desc`)}</p>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-4 max-w-sm text-[15.5px] leading-relaxed text-brand-100/90">{t('auth.brand.sub')}</p>
+          <div className="mt-7 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[12.5px] font-semibold text-white">
+              <MdShield size={13} aria-hidden="true" /> {t('auth.brand.chipPrivacy')}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[12.5px] font-semibold text-white">
+              {t('auth.brand.chipLanguages')}
+            </span>
+          </div>
         </div>
 
         <div className="relative flex items-center gap-2.5 border-t border-white/10 px-12 py-6">
@@ -264,7 +265,7 @@ export default function Login() {
 
         <div className="flex flex-1 items-center justify-center px-6 pb-10 sm:px-10">
           <div className="w-full max-w-[420px]">
-            <h1 className="text-[28px] sm:text-[30px] font-bold leading-tight tracking-tight text-gray-900">
+            <h1 className="font-display text-[28px] sm:text-[30px] font-bold leading-tight tracking-tight text-brand-900">
               {t('auth.welcome')}
             </h1>
             <p className="mt-2 text-[15px] text-gray-500">{t('auth.signinSubtitle')}</p>

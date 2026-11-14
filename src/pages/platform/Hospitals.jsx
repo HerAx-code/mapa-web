@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useOnboardingRequests } from '../../hooks/useOnboardingRequests'
 import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, deleteField, serverTimestamp, writeBatch } from 'firebase/firestore'
 import {
   MdAdd, MdEdit, MdClose, MdLocalHospital, MdPersonAdd, MdVisibility, MdVisibilityOff, MdBlock, MdCheckCircle,
@@ -12,12 +14,14 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { logAudit } from '../../utils/auditLog'
+import { tsToDate } from '../../utils/dates'
+import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import { createStaffAccount } from '../../utils/staffAccounts'
 import { DEFAULT_HOSPITAL_ID } from '../../config/org'
 import { agencyPartnersWith } from '../../utils/hospitals'
 import {
   emptyHospitalForm, validateHospital, hospitalDocFromForm, normalizeHospitalId, HOSPITAL_FORM_FIELDS,
-  normalizePrefix, suggestHospitalId,
+  normalizePrefix, suggestHospitalId, PH_REGIONS,
 } from '../../utils/hospitalConfig'
 
 // Network operator view (multi-hospital Phase 6, docs/multi-hospital-network-plan.md).
@@ -60,10 +64,14 @@ function Field({ label, required, error, hint, children }) {
   )
 }
 
-function HospitalModal({ hospital, hospitals, onClose }) {
+// `initial` pre-fills a new hospital (from an onboarding request); `fromRequest`
+// is that request's id, marked onboarded once the hospital exists.
+function HospitalModal({ hospital, hospitals, onClose, initial = null, fromRequest = null }) {
   const { user } = useAuth()
   const isEdit = !!hospital
-  const [form, setForm] = useState(() => (isEdit ? { ...emptyHospitalForm(), ...hospital } : emptyHospitalForm()))
+  const [form, setForm] = useState(() => (isEdit
+    ? { ...emptyHospitalForm(), ...hospital }
+    : { ...emptyHospitalForm(), ...(initial ?? {}), id: initial?.facilityName ? suggestHospitalId(initial.facilityName) : '' }))
   const [idTouched, setIdTouched] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -110,12 +118,19 @@ function HospitalModal({ hospital, hospitals, onClose }) {
           .map((k) => [k, deleteField()]))
         batch.update(doc(db, 'hospitals', id), { ...data, ...cleared, updatedAt: serverTimestamp() })
         await batch.commit()
+        const after = { ...Object.fromEntries(Object.entries(hospital).filter(([k]) => !(k in cleared))), ...data }
+        await syncHospitalPublic(id, after)
         logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated' })
         toast.success('Hospital updated.')
       } else {
         batch.set(doc(db, 'hospitals', id), { ...data, enabled: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
         await batch.commit()
+        await syncHospitalPublic(id, { ...data, enabled: true })
         logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN)` })
+        if (fromRequest) {
+          await updateDoc(doc(db, 'onboardingRequests', fromRequest), { status: 'onboarded', hospitalId: id, statusUpdatedAt: serverTimestamp() })
+            .catch((err) => console.warn('[Hospitals] could not link the onboarding request:', err))
+        }
         toast.success(`${data.facilityName} added. Next, create its first administrator.`)
       }
       onClose()
@@ -169,9 +184,17 @@ function HospitalModal({ hospital, hospitals, onClose }) {
       <Field label="Contact email" error={err('contactEmail')} hint="Where patients ask about access codes.">
         <input type="email" className="input" value={form.contactEmail} onChange={set('contactEmail')} />
       </Field>
-      <Field label="Address">
-        <input className="input" value={form.address} onChange={set('address')} />
-      </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_11rem] gap-4">
+        <Field label="Address">
+          <input className="input" value={form.address} onChange={set('address')} />
+        </Field>
+        <Field label="Region">
+          <input className="input" list="ph-regions" value={form.region} onChange={set('region')} placeholder="e.g. BARMM" />
+          <datalist id="ph-regions">
+            {PH_REGIONS.map((r) => <option key={r} value={r} />)}
+          </datalist>
+        </Field>
+      </div>
       {isEdit && hospital.accessCodePrefix && normalizePrefix(form.accessCodePrefix) !== hospital.accessCodePrefix && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5">
           Changing the prefix affects new access codes only. Codes already issued keep their old prefix.
@@ -279,6 +302,20 @@ export default function Hospitals() {
   const [toggling, setToggling] = useState(null)     // hospital whose registrations to pause/resume
   const [busy, setBusy] = useState(false)
   const { user } = useAuth()
+  const { newCount } = useOnboardingRequests(true)
+
+  // Arriving from "Set up hospital" on an onboarding request: open Add hospital
+  // pre-filled, then clear the navigation state so a refresh doesn't reopen it.
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [prefill, setPrefill] = useState(null)
+  useEffect(() => {
+    if (location.state?.prefill) {
+      setPrefill({ initial: location.state.prefill, fromRequest: location.state.fromRequest ?? null })
+      setEditing('add')
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Phase 8: `enabled` gates NEW registrations with the hospital's codes
   // (rules + Register). Its staff and existing patients keep working.
@@ -288,6 +325,7 @@ export default function Hospitals() {
     setBusy(true)
     try {
       await updateDoc(doc(db, 'hospitals', h.id), { enabled: next, updatedAt: serverTimestamp() })
+      await syncHospitalPublic(h.id, { ...h, enabled: next })
       logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: h.id, targetName: h.facilityName || h.id, details: next ? 'Registrations resumed' : 'Registrations paused' })
       toast.success(next ? 'Registrations resumed.' : 'Registrations paused.')
       setToggling(null)
@@ -328,25 +366,74 @@ export default function Hospitals() {
     return m
   }, [staff])
 
+  // Network figures (counts only) — networkStats/current, built by the Admin
+  // SDK (refreshNetworkStats / scripts/compute-network-stats.mjs) because the
+  // platform admin may not read the patient records being counted.
+  const [stats, setStats] = useState(null)
+  useEffect(() => onSnapshot(doc(db, 'networkStats', 'current'),
+    (snap) => setStats(snap.exists() ? snap.data() : null),
+    (e) => console.error('[Hospitals] stats snapshot error:', e),
+  ), [])
+
   const sorted = useMemo(() => [...hospitals].sort((a, b) =>
     (a.id === DEFAULT_HOSPITAL_ID ? -1 : b.id === DEFAULT_HOSPITAL_ID ? 1 : 0) ||
     String(a.facilityName || a.id).localeCompare(String(b.facilityName || b.id))), [hospitals])
 
+  // Live = taking sign-ups and staffed; Provisioning = no super admin yet;
+  // Paused = sign-ups stopped by the network admin.
+  const statusOf = (h) => {
+    if (h.enabled === false) return { label: 'Sign-ups paused', cls: 'bg-amber-50 text-amber-800' }
+    if (!(staffByHospital[h.id]?.super > 0)) return { label: 'Provisioning', cls: 'bg-amber-50 text-amber-800' }
+    return { label: 'Live', cls: 'bg-green-50 text-green-800' }
+  }
+  const liveCount = sorted.filter((h) => statusOf(h).label === 'Live').length
+  const activeAgencies = agencies.filter((a) => a.enabled !== false).length
+  const totals = stats?.totals
+  const inProgress = totals ? (totals.requests?.inReview ?? 0) + (totals.requests?.inFunding ?? 0) : null
+  const statsAt = tsToDate(stats?.generatedAt)
+  const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('en-PH'))
+
   return (
     <Layout breadcrumb="Hospitals">
-      <div className="w-full p-4 sm:p-6 max-w-[1100px] mx-auto">
+      <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
           <div>
-            <p className="eyebrow">Network</p>
-            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Hospitals</h1>
+            <p className="eyebrow">Network overview</p>
+            <h1 className="font-display text-[28px] font-bold tracking-tight text-brand-900 mt-1">Hospitals</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Each hospital runs its own gateway, staff, patients and access codes. Agencies are shared across all of them.
+              Every hospital on the network. Patient data stays isolated per hospital — you see counts, never records.
             </p>
           </div>
           <button className="btn-primary flex items-center gap-1.5 self-start" onClick={() => setEditing('add')}>
             <MdAdd size={16} /> Add hospital
           </button>
         </div>
+
+        {/* Key figures */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
+          {[
+            ['Hospitals live', `${liveCount}${sorted.length > liveCount ? ` of ${sorted.length}` : ''}`],
+            ['Patients network-wide', fmt(totals?.patients)],
+            ['Requests in progress', fmt(inProgress)],
+            ['Funding agencies', fmt(activeAgencies)],
+          ].map(([label, value]) => (
+            <div key={label} className="card p-4 sm:p-5">
+              <p className="text-xs sm:text-[13px] text-gray-500">{label}</p>
+              <p className="font-display text-2xl sm:text-[30px] font-bold text-brand-900 mt-1 tabular-nums">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {newCount > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-brand-100 bg-gradient-to-br from-white to-brand-50 p-4 sm:p-5">
+            <span aria-hidden="true" className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-brand-100 bg-white text-brand-600"><MdLocalHospital size={20} /></span>
+            <div className="min-w-[200px] flex-1">
+              <p className="font-semibold text-brand-900">{newCount} {newCount === 1 ? 'hospital has' : 'hospitals have'} requested onboarding</p>
+              <p className="text-[13px] text-gray-600 mt-0.5">Contact them, then set each one up as a hospital.</p>
+            </div>
+            <Link to="/platform/requests" className="btn-primary text-sm">Review requests</Link>
+          </div>
+        )}
 
         {loading ? (
           <div className="card p-8 flex justify-center">
@@ -359,64 +446,75 @@ export default function Hospitals() {
             <p className="text-xs text-gray-500 mt-1">Run scripts/seed-default-hospital.mjs for hospital #1, or add one here.</p>
           </div>
         ) : (
-          <ul className="space-y-3">
-            {sorted.map((h) => {
-              const counts = staffByHospital[h.id] ?? { super: 0, staff: 0 }
-              const partnerCount = agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
-              return (
-                <li key={h.id} className="card p-4 sm:p-5">
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
-                      <MdLocalHospital size={20} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-gray-900">{h.facilityName || h.id}</p>
-                        {h.shortName && <span className="text-xs text-gray-500">· {h.shortName}</span>}
-                        {h.id === DEFAULT_HOSPITAL_ID && <span className="badge-gray text-[11px]">Hospital #1</span>}
-                        {h.enabled === false && <span className="badge-red text-[11px]">Sign-ups paused</span>}
-                      </div>
-                      <dl className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2 text-xs">
-                        <div><dt className="text-gray-500">ID</dt><dd className="font-mono text-gray-800 truncate">{h.id}</dd></div>
-                        <div><dt className="text-gray-500">Access codes</dt><dd className="font-mono text-gray-800">{h.accessCodePrefix ? `${h.accessCodePrefix}-…` : '—'}</dd></div>
-                        <div><dt className="text-gray-500">Gateway</dt><dd className="text-gray-800 truncate">{h.gatewayName || '—'}</dd></div>
-                        <div>
-                          <dt className="text-gray-500">Administrators</dt>
-                          <dd className={counts.super === 0 ? 'text-amber-700 font-medium' : 'text-gray-800'}>
-                            {counts.super === 0 ? 'No super admin yet' : `${counts.super} super · ${counts.staff} staff`}
-                          </dd>
+          <div className="card overflow-x-auto">
+            <table className="w-full min-w-[880px] text-sm">
+              <thead>
+                <tr className="bg-gray-50/70 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3">Hospital</th>
+                  <th className="px-4 py-3">Prefix</th>
+                  <th className="px-4 py-3">Region</th>
+                  <th className="px-4 py-3 text-right">Patients</th>
+                  <th className="px-4 py-3 text-right">Active requests</th>
+                  <th className="px-4 py-3 text-right">Partner agencies</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((h) => {
+                  const s = stats?.hospitals?.[h.id]
+                  const counts = staffByHospital[h.id] ?? { super: 0, staff: 0 }
+                  const partnerCount = agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
+                  const status = statusOf(h)
+                  return (
+                    <tr key={h.id} className="border-t border-gray-100 align-middle">
+                      <td className="px-4 py-3.5">
+                        <p className="font-semibold text-gray-900">{h.facilityName || h.id}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          <span className="font-mono">{h.id}</span>
+                          {h.id === DEFAULT_HOSPITAL_ID && ' · hospital #1'}
+                          {' · '}{counts.super} super · {counts.staff} staff
+                        </p>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-gray-600">{h.accessCodePrefix ? `${h.accessCodePrefix}-` : '—'}</td>
+                      <td className="px-4 py-3.5 text-gray-600">{h.region || '—'}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums">{s ? fmt(s.patients) : '—'}</td>
+                      <td className="px-4 py-3.5 text-right tabular-nums">{s ? fmt((s.requests?.inReview ?? 0) + (s.requests?.inFunding ?? 0)) : '—'}</td>
+                      <td className={`px-4 py-3.5 text-right tabular-nums ${partnerCount === 0 ? 'text-amber-700 font-semibold' : ''}`}>{partnerCount}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11.5px] font-bold whitespace-nowrap ${status.cls}`}>{status.label}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex justify-end gap-1">
+                          <button className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50"
+                            aria-label={`Add an administrator to ${h.facilityName || h.id}`} title="Add admin" onClick={() => setAddingAdmin(h)}>
+                            <MdPersonAdd size={18} />
+                          </button>
+                          <button className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50"
+                            aria-label={`Edit ${h.facilityName || h.id}`} title="Edit" onClick={() => setEditing(h)}>
+                            <MdEdit size={18} />
+                          </button>
+                          <button className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-700 hover:bg-amber-50"
+                            aria-label={h.enabled === false ? `Resume sign-ups at ${h.facilityName || h.id}` : `Pause sign-ups at ${h.facilityName || h.id}`}
+                            title={h.enabled === false ? 'Resume sign-ups' : 'Pause sign-ups'} onClick={() => setToggling(h)}>
+                            {h.enabled === false ? <MdCheckCircle size={18} /> : <MdBlock size={18} />}
+                          </button>
                         </div>
-                        <div>
-                          <dt className="text-gray-500">Partner agencies</dt>
-                          <dd className={partnerCount === 0 ? 'text-amber-700 font-medium' : 'text-gray-800'}>
-                            {partnerCount === 0 ? 'None — set under Agencies' : partnerCount}
-                          </dd>
-                        </div>
-                      </dl>
-                      {h.contactEmail && <p className="text-xs text-gray-500 mt-2 truncate">{h.contactEmail}{h.address ? ` · ${h.address}` : ''}</p>}
-                    </div>
-                    <div className="flex sm:flex-col gap-2 flex-shrink-0">
-                      <button className="btn-secondary text-xs flex items-center gap-1 justify-center min-h-[36px]" onClick={() => setAddingAdmin(h)}>
-                        <MdPersonAdd size={14} /> Add admin
-                      </button>
-                      <button className="btn-secondary text-xs flex items-center gap-1 justify-center min-h-[36px]" onClick={() => setEditing(h)}>
-                        <MdEdit size={14} /> Edit
-                      </button>
-                      <button className="btn-secondary text-xs flex items-center gap-1 justify-center min-h-[36px]" onClick={() => setToggling(h)}>
-                        {h.enabled === false
-                          ? <><MdCheckCircle size={14} /> Resume sign-ups</>
-                          : <><MdBlock size={14} /> Pause sign-ups</>}
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        <p className="text-xs text-gray-500 mt-4">
-          A hospital's gateway can endorse only to its partner agencies — set them on each agency's page. Per-hospital figures are on the Network page. Patient records stay with each hospital and are never shown here.
+        <p className="text-xs text-gray-500 mt-3">
+          {stats
+            ? `Patient and request figures updated ${statsAt ? statsAt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'recently'} — they refresh every 6 hours (or run scripts/compute-network-stats.mjs).`
+            : 'Patient and request figures appear once network stats are generated (scheduled function, or scripts/compute-network-stats.mjs --apply).'}
+          {' '}A hospital admin sees only their own hospital — enforced by per-hospital security rules.
+          A hospital can endorse only to its partner agencies; set them on each agency's page.
         </p>
       </div>
 
@@ -424,7 +522,9 @@ export default function Hospitals() {
         <HospitalModal
           hospital={editing === 'add' ? null : editing}
           hospitals={hospitals}
-          onClose={() => setEditing(null)} />
+          initial={editing === 'add' ? prefill?.initial : null}
+          fromRequest={editing === 'add' ? prefill?.fromRequest : null}
+          onClose={() => { setEditing(null); setPrefill(null) }} />
       )}
       {addingAdmin && <AdminModal hospital={addingAdmin} onClose={() => setAddingAdmin(null)} />}
       <ConfirmModal
