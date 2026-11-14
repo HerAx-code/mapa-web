@@ -221,7 +221,8 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
           return addr ? <p className="patient-detail">Address: {addr}</p> : null
         })()}
         <p className="patient-detail">Contact No.: {app.patientContact || patient.contact || '—'}</p>
-        <p className="patient-detail">Hospital ID: {patient.hospitalId || '—'}</p>
+        {/* The CASE's access code (marketplace: the patient's current code may be another hospital's). */}
+        <p className="patient-detail">Hospital ID: {app?.patientHospitalId || patient.hospitalId || '—'}</p>
       </div>
 
       <p className="approved-text">

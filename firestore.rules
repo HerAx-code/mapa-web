@@ -304,11 +304,21 @@ service cloud.firestore {
         // no tenant, so tenantOf() would default it to hospital #1). A patient
         // stays a patient; staff move only between the two gateway roles; no
         // one moves to another hospital.
+        // Strict tenant match (no hospital-#1 default): a network patient who
+        // has not filed anywhere yet belongs to NO hospital (marketplace).
+        // Locking the network-wide account (active / deletion) is left to the
+        // patient's CURRENT hospital; past hospitals may edit the profile only.
         (isAdmin() &&
           resource.data.get('role', '') in ['super_admin', 'staff_admin', 'patient'] &&
-          (tenantOf(resource.data) == userTenantId() ||
-           (resource.data.get('role', '') == 'patient' && userTenantId() in resource.data.get('tenantIds', []))) &&
-          tenantOf(request.resource.data) == tenantOf(resource.data) &&
+          (resource.data.get('role', '') == 'patient'
+            ? (resource.data.get('tenantId', '') == userTenantId() ||
+               userTenantId() in resource.data.get('tenantIds', []))
+            : tenantOf(resource.data) == userTenantId()) &&
+          request.resource.data.get('tenantId', null) == resource.data.get('tenantId', null) &&
+          (resource.data.get('role', '') != 'patient' ||
+           resource.data.get('tenantId', '') == userTenantId() ||
+           (request.resource.data.get('active', null)   == resource.data.get('active', null) &&
+            request.resource.data.get('deletion', null) == resource.data.get('deletion', null))) &&
           request.resource.data.get('tenantIds', null) == resource.data.get('tenantIds', null) &&
           request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           (request.resource.data.role == resource.data.role ||
@@ -330,8 +340,12 @@ service cloud.firestore {
           request.resource.data.get('tenantId', null) == resource.data.get('tenantId', null) &&
           request.resource.data.role in ['agency', 'agency_admin'])
       );
+      // A patient account is network-wide (marketplace): a hospital may erase
+      // it only when the patient has filed with no OTHER hospital.
       allow delete: if (isHospitalSuperAdmin(resource.data) &&
-                        resource.data.get('role', '') in ['super_admin', 'staff_admin', 'patient']) ||
+                        (resource.data.get('role', '') in ['super_admin', 'staff_admin'] ||
+                         (resource.data.get('role', '') == 'patient' &&
+                          resource.data.get('tenantIds', []).toSet().difference([userTenantId()].toSet()).size() == 0))) ||
                        (isPlatformAdmin() &&
                         (isGatewayStaffRole(resource.data.get('role', '')) || isNetworkUserDoc(resource.data)));
     }
@@ -967,7 +981,11 @@ service cloud.firestore {
       allow create: if isSuperAdmin() && createsInOwnHospital() &&
                        hospitalId.matches(hospitalDoc(tenantOf(request.resource.data)).get('accessCodePrefix', '') +
                                           '-[0-9]{4}-[0-9]{5}');
-      allow update: if hospitalAdminWrite() ||
+      // A code that backs a request (requestId, marketplace) is part of that
+      // case's record: the gateway can't reset, re-bind or delete it.
+      allow update: if (hospitalAdminWrite() &&
+                        resource.data.get('requestId', null) == null &&
+                        request.resource.data.get('requestId', null) == null) ||
                        // Phase 1.5: the claim branch pinned status and patId
                        // but left every OTHER field on the doc writable in
                        // the same operation -- a registering user could
@@ -998,7 +1016,7 @@ service cloud.firestore {
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['requestId']) &&
                         getAfter(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientId == uid() &&
                         getAfter(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientHospitalId == hospitalId);
-      allow delete: if isHospitalSuperAdmin(resource.data);
+      allow delete: if isHospitalSuperAdmin(resource.data) && resource.data.get('requestId', null) == null;
 
       // Phase 0.3 hardening (post-review): the patient NAME used to live on
       // the parent hospitalIds doc as `usedBy`, but the parent allows
