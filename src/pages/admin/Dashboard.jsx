@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { collection, query, where, orderBy, limit, onSnapshot, addDoc, getDocs, serverTimestamp } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
@@ -85,7 +86,7 @@ export default function AdminDashboard() {
   // co-funding model. See /agency/allocation (agency_admin role).
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'users'),    where('role',    '==', 'patient')),
+      query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'patient')),
       snap => setPatientCount(snap.size),
       err => { console.error('[Dashboard] patient count failed:', err); setPatientCount('—') }
     )
@@ -97,12 +98,12 @@ export default function AdminDashboard() {
     // Open requests = anything still moving through the gateway pipeline (not
     // closed/rejected/fully_funded). This is the gateway's actual day-to-day queue.
     const u4 = onSnapshot(
-      query(collection(db, 'requests'), where('status', 'in', ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded'])),
+      query(collection(db, 'requests'), ...tenantWhere(), where('status', 'in', ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded'])),
       snap => { setOpenRequests(snap.size); setPipelineReqs(snap.docs.map(d => d.data())) },
       () => { setOpenRequests('—'); setPipelineReqs([]) }
     )
     const u5 = onSnapshot(
-      query(collection(db, 'documents'), where('status', '==', 'pending')),
+      query(collection(db, 'documents'), ...tenantWhere(), where('status', '==', 'pending')),
       snap => setPendingDocs(snap.size), () => setPendingDocs('—')
     )
     return () => { u1(); u3(); u4(); u5() }
@@ -111,7 +112,7 @@ export default function AdminDashboard() {
   // Recent activity feeds
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'users'), where('role', '==', 'patient'), orderBy('createdAt', 'desc'), limit(5)),
+      query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'patient'), orderBy('createdAt', 'desc'), limit(5)),
       snap => setRecentPatients(snap.docs.map(d => ({
         id: d.id, targetId: d.id, type: 'registration',
         body: d.data().name ?? 'Unknown patient',
@@ -120,7 +121,7 @@ export default function AdminDashboard() {
       err => { console.error('[Dashboard] recent patients failed:', err); setRecentPatients([]) }
     )
     const u2 = onSnapshot(
-      query(collection(db, 'documents'), orderBy('createdAt', 'desc'), limit(8)),
+      query(collection(db, 'documents'), ...tenantWhere(), orderBy('createdAt', 'desc'), limit(8)),
       snap => setRecentDocs(snap.docs.map(d => ({
         id: d.id, targetId: d.id,
         type: d.data().status === 'verified' ? 'doc_verified'
@@ -131,7 +132,7 @@ export default function AdminDashboard() {
       err => { console.error('[Dashboard] recent docs failed:', err); setRecentDocs([]) }
     )
     const u3 = onSnapshot(
-      query(collection(db, 'applications'), orderBy('submittedAt', 'desc'), limit(10)),
+      query(collection(db, 'applications'), ...tenantWhere(), orderBy('submittedAt', 'desc'), limit(10)),
       snap => setRecentApps(snap.docs.map(d => {
         const data = d.data()
         const type = data.status === 'approved'    ? 'app_approved'
@@ -160,7 +161,7 @@ export default function AdminDashboard() {
   // here to avoid double-flagging.
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'applications'), where('status', 'in', ['pending', 'reviewing', 'awaiting_info'])),
+      query(collection(db, 'applications'), ...tenantWhere(), where('status', 'in', ['pending', 'reviewing', 'awaiting_info'])),
       snap => {
         const stale = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
@@ -184,7 +185,7 @@ export default function AdminDashboard() {
       err => { console.error('[Dashboard] low-slot agencies failed:', err); setLowSlotAgencies([]) }
     )
     const u3 = onSnapshot(
-      query(collection(db, 'reports'), where('status', 'in', ['open', 'in_progress'])),
+      query(collection(db, 'reports'), ...tenantWhere(), where('status', 'in', ['open', 'in_progress'])),
       snap => setOpenReports(snap.size),
       () => setOpenReports(0)
     )
@@ -195,7 +196,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!isSuperAdmin) return
     const u1 = onSnapshot(
-      query(collection(db, 'applications'), where('status', 'in', ['approved', 'certificate'])),
+      query(collection(db, 'applications'), ...tenantWhere(), where('status', 'in', ['approved', 'certificate'])),
       snap => {
         setApprovedApps(snap.docs.map(d => ({ id: d.id, ...d.data() })))
         setApprovedCount(snap.size)
@@ -207,7 +208,7 @@ export default function AdminDashboard() {
       }
     )
     const u2 = onSnapshot(
-      query(collection(db, 'applications'), where('status', '==', 'rejected')),
+      query(collection(db, 'applications'), ...tenantWhere(), where('status', '==', 'rejected')),
       snap => setRejectedCount(snap.size),
       err => { console.error('[Dashboard] rejected count failed:', err); setRejectedCount('—') }
     )

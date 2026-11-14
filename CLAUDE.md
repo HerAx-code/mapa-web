@@ -30,7 +30,8 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 
 ## User Roles
-- super_admin — full system access
+- platform_admin — *(planned, multi-hospital Phase 6)* network operator: onboards hospitals + agencies, aggregate analytics, no patient PII
+- super_admin — full system access (becoming hospital-scoped under multi-hospital tenancy)
 - staff_admin — operations (no accounts, audit, announcements, coordinators)
 - agency — agency portal, own applications only
 - patient — patient portal, own data only (self-registers with Patient Access Code)
@@ -52,11 +53,33 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Interview appointment / self-service booking system — **removed** (was built, now reversed). Assessment is remote/async; see docs/remove-interview-scheduling-plan.md.
 - Donor portal
 - Fraud detection engine (manual judgment by social workers)
-- Multi-hospital network (one host facility per deployment)
+- ~~Multi-hospital network (one host facility per deployment)~~ — **now in scope** (owner decision 2026-11-13). MAPA is becoming one gateway shared by many BARMM hospitals; see Tenancy below and docs/multi-hospital-network-plan.md.
 - Real-time IHOMIS integration (use manual case number reference instead)
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
+`hospitals` (multi-hospital tenants; Phase 1)
+
+## Tenancy (multi-hospital network — in progress)
+MAPA is moving from one host facility per deployment to **one deployment serving many
+hospitals** (docs/multi-hospital-network-plan.md — read it before touching rules,
+queries, roles, access codes, or org config). Locked decisions (2026-11-13):
+- A **hospital is the tenant**: its gateway staff, patients, access codes, requests,
+  documents, intake sheets, conversations, certificates, reports, announcements and
+  audit log carry a **`tenantId`** (the `hospitals/{id}` doc id). NOT `hospitalId` —
+  that field already means the patient's access code (`hospitalIds` collection). Gateway roles (`super_admin`, `staff_admin`) become
+  **hospital-scoped**; a new **`platform_admin`** role runs the network (onboards
+  hospitals/agencies, aggregate analytics, no patient PII).
+- **Agencies are network-level and shared**: an agency partners with many hospitals
+  and funds slices from any partner hospital. Slices carry both `tenantId` and
+  `agencyId`. One budget per agency (per-hospital sub-budgets are future work).
+- A patient belongs to **one** hospital, decided by the **per-hospital access-code
+  prefix** they register with (prefixes globally unique).
+- Reference data = network defaults (`src/data/referenceData.js`) + optional
+  per-hospital overrides. Existing production data backfills to **hospital #1**.
+- Order is data → queries → rules. Never tighten rules on `tenantId` before the
+  data and queries carry it, and never merge a rules change without the tenancy
+  rules tests proving cross-hospital access is denied.
 
 ## Co-funding model (current)
 The gateway (the host organization) is the single intake point; agencies only
@@ -112,4 +135,5 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - docs/patient-abuse-hardening-plan.md — the patient-surface abuse hardening (#1–#5, all shipped); accepted risks recorded in docs/threat-model.md
 - docs/assistance-model-remediation-plan.md — the assistance-model remediation (coverage-model redesign shipped 2026-10-12; agency single-source + eligibility/capacity/charging-order still open). `src/data/referenceData.js` is the catalog/requirement source of truth.
 - docs/document-requirements-checklist.md — hand to the gateway to confirm the real per-type document sets + thresholds; the gate before enabling `VITE_PER_TYPE_DOCS` in prod.
+- docs/multi-hospital-network-plan.md — the multi-hospital tenancy plan (hospital = tenant, shared agencies, platform_admin, phased data → queries → rules rollout)
 - (add others as you create them)

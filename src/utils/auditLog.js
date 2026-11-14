@@ -1,5 +1,6 @@
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
+import { withTenant } from './hospitals'
 
 /**
  * Write an entry to the auditLog collection.
@@ -23,7 +24,9 @@ export const logAudit = (actor, {
   action, targetType = '', targetId = '', targetName = '', details = '',
   requestId = null, patientId = null,
 }) => {
-  addDoc(collection(db, 'auditLog'), {
+  // tenantId = the actor's hospital (multi-hospital Phase 2); omitted for
+  // agency actors, who are network-level.
+  addDoc(collection(db, 'auditLog'), withTenant({
     action,
     actorId:        actor?.uid      ?? 'system',
     actorName:      actor?.name     ?? 'System',
@@ -36,5 +39,5 @@ export const logAudit = (actor, {
     requestId,
     patientId,
     createdAt:  serverTimestamp(),
-  }).catch(e => console.error('auditLog write failed:', e))
+  })).catch(e => console.error('auditLog write failed:', e))
 }

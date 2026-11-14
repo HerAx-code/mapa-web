@@ -7,6 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdSend, MdGroups } from 'react-icons/md'
 import { ORG } from '../../config/org'
+import { withTenant } from '../../utils/hospitals'
 import toast from 'react-hot-toast'
 
 /**
@@ -80,7 +81,8 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
     setSaving(true)
     try {
       const target = agencies.find(a => a.id === toAgencyId)
-      await addDoc(collection(db, 'referralSuggestions'), {
+      // Belongs to the case's hospital, not the agency's (multi-hospital Phase 2).
+      await addDoc(collection(db, 'referralSuggestions'), withTenant({
         fromAgencyId: user.agencyId,
         fromUserId:   user.uid,
         fromUserName: user.name ?? user.email ?? 'Unknown',
@@ -102,7 +104,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
         // it requires threading suggestionId through the EndorseModal
         // flow which we judged not worth the added complexity. Dropped.
         // Existing docs with the field retain it harmlessly.
-      })
+      }, app.tenantId ?? request?.tenantId))
       toast.success(`Suggestion sent to ${ORG.gatewayName}. They will decide whether to endorse.`)
       onClose()
     } catch (err) {

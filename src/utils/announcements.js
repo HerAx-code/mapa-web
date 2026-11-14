@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { inMyTenant } from './hospitals'
 import { MdBuildCircle, MdWarning, MdInfo } from 'react-icons/md'
 import { db } from '../firebase'
 
@@ -141,7 +142,7 @@ export const useFeedAnnouncements = ({ role, agencyId, uid }) => {
       query(collection(db, 'announcements'), where('active', '==', true)),
       (snap) => {
         const now = Date.now()
-        const allLive = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        const allLive = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(inMyTenant)
         const dismissed = new Set(readDismissed(uid))
 
         // Prune dismissed IDs that no longer correspond to a live doc —

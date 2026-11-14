@@ -6,7 +6,7 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from './locales/en.json'
 import fil from './locales/fil.json'
-import { ORG, accessCodeFormatHint, accessCodePrefixFor } from '../config/org'
+import { ORG, accessCodeFormatHint, accessCodePrefixFor, onOrgChange } from '../config/org'
 
 const STORAGE_KEY = 'mapa.lang'
 
@@ -56,6 +56,15 @@ i18n
       defaultVariables: ORG_VARS, // {{org}}, {{gateway}}, {{prefix}}, … everywhere
     },
   })
+
+// Multi-hospital (Phase 1): the signed-in user's hospital is applied to ORG
+// after this module has already built ORG_VARS, so re-sync the hospital-level
+// tokens in place (same object i18next holds by reference).
+onOrgChange(() => {
+  ORG_VARS.gateway      = ORG.gatewayName
+  ORG_VARS.contactEmail = ORG.contactEmail
+  ORG_VARS.facility     = facilityFor(i18n.language)
+})
 
 i18n.on('languageChanged', (lng) => {
   // Live-swap the facility default so {{facility}} localizes. This handler is

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -62,7 +63,7 @@ export default function Reports() {
   const [resolutionNote, setResolutionNote] = useState('')
 
   useEffect(() => {
-    const q = query(collection(db, 'reports'), orderBy('createdAt', 'desc'))
+    const q = query(collection(db, 'reports'), ...tenantWhere(), orderBy('createdAt', 'desc'))
     const unsub = onSnapshot(q, snap => {
       // Filter out Budget Requests client-side. Firestore's '!=' filter
       // forces an orderBy on the inequality field first, which would

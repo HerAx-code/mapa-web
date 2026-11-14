@@ -7,6 +7,7 @@ import {
   collection, doc, query, where, onSnapshot,
   updateDoc, deleteDoc, serverTimestamp, getDocs, writeBatch,
 } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { sendPasswordResetEmail } from 'firebase/auth'
 import { db, auth } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -169,7 +170,7 @@ export default function AgencyDetail() {
 
   useEffect(() => {
     const unsub = onSnapshot(
-      query(collection(db, 'applications'), where('agencyId', '==', id)),
+      query(collection(db, 'applications'), ...tenantWhere(), where('agencyId', '==', id)),
       snap => {
         const s = { total: 0, pending: 0, approved: 0, rejected: 0 }
         const pendings = []

@@ -4,6 +4,7 @@ import SearchableSelect from '../../components/ui/SearchableSelect'
 import {
   collection, query, orderBy, limit, getDocs, startAfter, getCountFromServer,
 } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
@@ -170,7 +171,7 @@ export default function AuditLog() {
     try {
       const constraints = [orderBy('createdAt', 'desc'), limit(PAGE_SIZE)]
       if (cursor) constraints.push(startAfter(cursor))
-      const snap = await getDocs(query(collection(db, 'auditLog'), ...constraints))
+      const snap = await getDocs(query(collection(db, 'auditLog'), ...tenantWhere(), ...constraints))
       const batch = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       setEntries(prev => cursor ? [...prev, ...batch] : batch)
       setLastVisible(snap.docs[snap.docs.length - 1] ?? null)
@@ -185,7 +186,7 @@ export default function AuditLog() {
 
   useEffect(() => {
     loadEntries()
-    getCountFromServer(collection(db, 'auditLog'))
+    getCountFromServer(query(collection(db, 'auditLog'), ...tenantWhere()))
       .then(snap => setTotalCount(snap.data().count))
       .catch(() => setTotalCount(0))
   }, [])

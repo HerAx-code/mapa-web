@@ -8,6 +8,7 @@ import {
   MdPhone, MdLocationOn, MdLocalHospital, MdCalendarToday, MdBadge,
 } from 'react-icons/md'
 import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -194,7 +195,7 @@ export default function Patients() {
   const [confirmDeletion,      setConfirmDeletion]      = useState(null)
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', '==', 'patient'))
+    const q = query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'patient'))
     const unsub = onSnapshot(q, snap => {
       setPatients(snap.docs.map(d => ({ uid: d.id, ...d.data() })))
       setLoading(false)
@@ -227,6 +228,7 @@ export default function Patients() {
   useEffect(() => {
     getDocs(query(
       collection(db, 'applications'),
+      ...tenantWhere(),
       where('status', 'in', ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview', 'approved'])
     )).then(snap => {
       setActiveApplicantIds(new Set(snap.docs.map(d => d.data().patientId).filter(Boolean)))

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
+import { getUsersInScope } from '../../../utils/hospitals'
 import { db } from '../../../firebase'
 import { sendMessage, getOrCreateConversation } from '../../../utils/messages'
 import { useDropdownPlacement } from '../../../hooks/useDropdownPlacement'
@@ -42,11 +43,9 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
   const handleClose = () => hasUnsaved ? setConfirmClose(true) : onClose()
 
   useEffect(() => {
-    getDocs(query(collection(db, 'users'),
-      where('role', 'in', ['patient', 'staff_admin', 'super_admin', 'agency'])
-    )).then(snap => {
+    getUsersInScope(db, ['patient', 'staff_admin', 'super_admin', 'agency']).then(docs => {
       setAllUsers(
-        snap.docs
+        docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(u => u.id !== user.uid)
           .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))

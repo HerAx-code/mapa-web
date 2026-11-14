@@ -5,7 +5,8 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { withTenant, tenantWhere } from '../../utils/hospitals'
+import { collection, query, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { fmtDate } from '../../utils/dates'
 import { accessCodePrefixFor, ORG } from '../../config/org'
@@ -49,7 +50,9 @@ function BulkAddModal({ nextNum, onClose }) {
       for (let i = 0; i < n; i++) {
         const num   = String(startNum + i).padStart(5, '0')
         const newId = `${prefix}${num}`
-        batch.set(doc(db, 'hospitalIds', newId), {
+        // An access code belongs to the issuing hospital; Register copies its
+        // tenantId onto the patient (multi-hospital Phase 2).
+        batch.set(doc(db, 'hospitalIds', newId), withTenant({
           // Phase 0.3: parent doc no longer carries usedBy (PII moved
           // to /privateInfo/details on claim).
           status:    'available',
@@ -57,7 +60,7 @@ function BulkAddModal({ nextNum, onClose }) {
           date:      fmtDate(new Date()),
           time:      '',
           createdAt: serverTimestamp(),
-        })
+        }))
       }
       await batch.commit()
       const first = `${prefix}${String(startNum).padStart(5, '0')}`
@@ -153,7 +156,7 @@ export default function HospitalIDs() {
     // `usedBy` field back into the row for display. Only 'used' codes
     // have a sub-doc; available codes skip the read. Read count is
     // bounded by the active claim set (a few hundred at pilot scale).
-    const unsub = onSnapshot(collection(db, 'hospitalIds'), async (snap) => {
+    const unsub = onSnapshot(query(collection(db, 'hospitalIds'), ...tenantWhere()), async (snap) => {
       const docs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => b.id.localeCompare(a.id))
@@ -204,7 +207,7 @@ export default function HospitalIDs() {
       const year  = new Date().getFullYear()
       const num   = String(nextNum).padStart(5, '0')
       const newId = `${accessCodePrefixFor(year)}${num}`
-      await setDoc(doc(db, 'hospitalIds', newId), {
+      await setDoc(doc(db, 'hospitalIds', newId), withTenant({
         // Phase 0.3: usedBy no longer lives on the parent doc; it's
         // created in /privateInfo/details by the claim transaction in
         // Register.jsx. Available codes have no sub-doc.
@@ -213,7 +216,7 @@ export default function HospitalIDs() {
         date:      fmtDate(new Date()),
         time:      '',
         createdAt: serverTimestamp(),
-      })
+      }))
       logAudit(user, { action: 'hospitalid_added', targetType: 'hospitalId', targetId: newId, targetName: newId, details: 'Single ID added' })
       toast.success(`${newId} added.`)
     } catch (err) { console.error(err); toast.error('Failed to add Hospital ID. Please try again.') }

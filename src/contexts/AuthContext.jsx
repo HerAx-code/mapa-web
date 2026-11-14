@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } f
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { ORG } from '../config/org'
+import { loadHospital, tenantIdFor, clearHospital } from '../utils/hospitals'
 
 const AuthContext = createContext(null)
 
@@ -37,6 +38,10 @@ export function AuthProvider({ children }) {
             setLoading(false)
             return
           }
+          // Apply the user's hospital to ORG BEFORE any page renders (the
+          // spinner below holds until loading flips), so every ORG read —
+          // pages, GL/intake HTML, emails — already shows this hospital.
+          await loadHospital(tenantIdFor(data))
           setUser({ uid: fbUser.uid, email: fbUser.email, ...data })
         } else {
           // User doc not present (yet). Two legitimate possibilities:
@@ -58,6 +63,7 @@ export function AuthProvider({ children }) {
           setUser(null)
         }
       } else {
+        clearHospital()
         setUser(null)
       }
       setLoading(false)
@@ -92,6 +98,7 @@ export function AuthProvider({ children }) {
       throw new Error(`This account is marked for deletion. Contact ${ORG.gatewayName} to restore it.`)
     }
     const userData = { uid: cred.user.uid, email, ...data }
+    await loadHospital(tenantIdFor(data))
     setUser(userData)
     return userData
   }

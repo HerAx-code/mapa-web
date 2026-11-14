@@ -6,6 +6,7 @@ import AgencyAvatar from '../../components/AgencyAvatar'
 import {
   collection, addDoc, setDoc, deleteDoc, doc, serverTimestamp, query, orderBy, where, getDocs,
 } from 'firebase/firestore'
+import { tenantWhere } from '../../utils/hospitals'
 import {
   getAuth, createUserWithEmailAndPassword,
   signOut as fbSignOut, sendPasswordResetEmail, deleteUser,
@@ -233,7 +234,7 @@ export default function AddAgency() {
       })
       try {
         const usersSnap = await getDocs(
-          query(collection(db, 'users'), where('role', 'in', ['super_admin', 'staff_admin']))
+          query(collection(db, 'users'), ...tenantWhere(), where('role', 'in', ['super_admin', 'staff_admin']))
         )
         await Promise.all(usersSnap.docs.map(d =>
           notify(d.id, {
