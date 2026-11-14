@@ -125,7 +125,10 @@
       "a2desc": "Ang anumang insurance o naunang saklaw na mayroon kayo, tulad ng PhilHealth, ay inilalapat muna sa inyong bayarin; sinasaklaw ng mga kasosyong ahensya ang natitira hanggang maging zero ito.",
       "a3title": "Ang inyong datos, ang inyong karapatan",
       "a3desc": "I-download ang inyong mga rekord, tingnan kung sino ang nag-access, at humiling ng pagbura — protektado sa ilalim ng RA 10173.",
-      "trust": "Protektado sa ilalim ng Data Privacy Act ng Pilipinas (RA 10173). Naka-encrypt ang inyong health data at hindi kailanman ibinebenta."
+      "trust": "Protektado sa ilalim ng Data Privacy Act ng Pilipinas (RA 10173). Naka-encrypt ang inyong health data at hindi kailanman ibinebenta.",
+      "sub": "Isang lugar para subaybayan ang inyong tulong medikal sa bawat ahensya — isang beses na beripikasyon, laging nakikita ang progreso.",
+      "chipPrivacy": "Protektado ng RA 10173",
+      "chipLanguages": "Filipino / English"
     },
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
@@ -1407,7 +1410,11 @@
       "ready3": "Isang gumaganang email address para sa mga update sa aprubahan",
       "trustTime": "Umaabot ng mga 3 minuto",
       "trustPrivacy": "Protektado sa ilalim ng Data Privacy Act (RA 10173)",
-      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa {{facility}}"
+      "trustHelp": "Kailangan ng code? Pumunta sa Medical Social Services sa {{facility}}",
+      "codeTitle": "Ang access code ang inyong susi.",
+      "codeBody": "Ibinibigay ito nang personal ng social-services office ng inyong ospital. Ang unang bahagi nito — ang prefix — ang nagsasabi sa MAPA kung saang ospital kayo kabilang, kaya awtomatiko kayong mapupunta sa tamang lugar.",
+      "codeExample": "Halimbawa ng code",
+      "codePrefixNote": "Prefix = ang inyong ospital"
     },
     "stepPersonal": "Personal na Impormasyon",
     "stepAccount": "Pag-setup ng Account",
@@ -1452,6 +1459,7 @@
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Ipasok ang 5-digit na numero pagkatapos ng prefix",
       "joiningHospital": "Magpaparehistro ka sa {{hospital}}.",
+      "prefixHint": "Ang mga letra bago ang unang gitling (gaya ng {{prefix}}-) ang nagsasabi sa MAPA kung saang ospital ka kabilang.",
       "verifyBtn": "I-verify",
       "verified": "Na-verify",
       "edit": "I-edit",

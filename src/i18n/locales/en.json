@@ -125,7 +125,10 @@
       "a2desc": "Any insurance or prior coverage you have, like PhilHealth, is applied to your bill first; partner agencies cover the rest until it reaches zero.",
       "a3title": "Your data, your rights",
       "a3desc": "Download your records, see who accessed them, and request erasure — protected under RA 10173.",
-      "trust": "Secured under the Philippine Data Privacy Act (RA 10173). Your health data is encrypted and never sold."
+      "trust": "Secured under the Philippine Data Privacy Act (RA 10173). Your health data is encrypted and never sold.",
+      "sub": "One place to follow your medical assistance through every agency — verified once, tracked always.",
+      "chipPrivacy": "RA 10173 protected",
+      "chipLanguages": "Filipino / English"
     },
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
@@ -1407,7 +1410,11 @@
       "ready3": "A working email address for approval updates",
       "trustTime": "Takes about 3 minutes",
       "trustPrivacy": "Protected under the Data Privacy Act (RA 10173)",
-      "trustHelp": "Need a code? Visit Medical Social Services at {{facility}}"
+      "trustHelp": "Need a code? Visit Medical Social Services at {{facility}}",
+      "codeTitle": "Your access code is your door in.",
+      "codeBody": "Your hospital's social-services office gives it to you in person. Its first part — the prefix — tells MAPA which hospital you belong to, so you land in the right place automatically.",
+      "codeExample": "Example code",
+      "codePrefixNote": "Prefix = your hospital"
     },
     "stepPersonal": "Personal Info",
     "stepAccount": "Account Setup",
@@ -1452,6 +1459,7 @@
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Enter the 5-digit number after the prefix",
       "joiningHospital": "You are registering with {{hospital}}.",
+      "prefixHint": "The letters before the first dash (like {{prefix}}-) tell MAPA which hospital you belong to.",
       "verifyBtn": "Verify",
       "verified": "Verified",
       "edit": "Edit",
