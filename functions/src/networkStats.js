@@ -35,6 +35,8 @@ async function hospitalStats({ db, AggregateField, tenantId }) {
   for (const [group, statuses] of Object.entries(REQUEST_GROUPS)) {
     requests[group] = await countOf(inTenant('requests').where('status', 'in', statuses))
   }
+  // sum() needs the composite index applications (status, tenantId,
+  // amountApproved) — in firestore.indexes.json; the emulator doesn't enforce it.
   const approved = await inTenant('applications')
     .where('status', 'in', APPROVED_SLICE)
     .aggregate({ count: AggregateField.count(), total: AggregateField.sum('amountApproved') })
