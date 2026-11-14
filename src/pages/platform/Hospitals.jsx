@@ -430,6 +430,7 @@ export default function Hospitals() {
   // Paused = sign-ups stopped by the network admin.
   const partnerCountOf = (h) => agencies.filter((a) => a.enabled !== false && agencyPartnersWith(a, h.id)).length
   const statusOf = (h) => {
+    if (h.onboarding?.training) return { label: 'Training', cls: 'bg-gray-100 text-gray-700' }
     if (h.onboarding?.stage && h.onboarding.stage !== 'live') return { label: 'Onboarding', cls: 'bg-blue-50 text-blue-800' }
     if (h.enabled === false) return { label: 'Sign-ups paused', cls: 'bg-amber-50 text-amber-800' }
     if (!(staffByHospital[h.id]?.super > 0) || partnerCountOf(h) === 0) return { label: 'Provisioning', cls: 'bg-amber-50 text-amber-800' }

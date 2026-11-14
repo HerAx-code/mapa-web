@@ -29,6 +29,9 @@ export function projectPublicHospital(h = {}) {
 // Never throws — a failed mirror must not break the hospital write before it.
 export async function syncHospitalPublic(hospitalId, hospitalData) {
   if (!hospitalId) return
+  // The Training Hospital (onboarding practice, sample patients only) is never
+  // published: it must not appear on Landing, Register or the marketplace.
+  if (hospitalData?.onboarding?.training) return
   try {
     await setDoc(doc(db, 'hospitalsPublic', hospitalId),
       { ...projectPublicHospital(hospitalData), updatedAt: serverTimestamp() })
