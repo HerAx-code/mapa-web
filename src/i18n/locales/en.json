@@ -173,6 +173,37 @@
     "devOnly": "Dev only — Demo accounts"
   },
   "landing": {
+    "nav": {
+      "how": "How it works",
+      "programs": "Programs",
+      "forHospitals": "For hospitals"
+    },
+    "trust": {
+      "heading": "One application reaches every partner agency"
+    },
+    "doors": {
+      "patientsTitle": "For patients",
+      "patientsBody": "Apply once with your documents and a live selfie. You're assessed a single time — no repeated interviews — and you follow every agency's decision from one status page, in Filipino or English.",
+      "p1": "Apply once, assessed once",
+      "p2": "One tracker across all agencies",
+      "p3": "Works on phones and slow networks",
+      "patientsCta": "Get started",
+      "hospitalsTitle": "For hospitals",
+      "hospitalsBody": "Run your medical assistance desk digitally. Adopt MAPA by configuring it — your name, your funders, your documents — never forking or rewriting. One workflow, your settings.",
+      "h1": "Configure, don't rebuild",
+      "h2": "RA 11463 one-stop-shop workflow",
+      "h3": "Your data isolated per hospital",
+      "hospitalsCta": "Request onboarding"
+    },
+    "network": {
+      "eyebrow": "The bigger idea",
+      "heading": "One front door — not another silo",
+      "body": "A patient who needs help from several agencies shouldn't have to apply several times. MAPA assesses once and routes each part of the bill to each agency — no queuing, re-encoding, or applying again.",
+      "hospitals": "participating hospitals",
+      "agencies": "partner agencies",
+      "perPatient": "application per patient",
+      "balance": "balance — the goal"
+    },
     "header": {
       "downloadApp": "Install App",
       "mobileToast": "The MAPA mobile app is coming soon. Follow {{org}} for updates.",
@@ -297,6 +328,7 @@
       "hours": "Monday to Friday, 8:00 AM – 5:00 PM. Closed on holidays."
     },
     "footer": {
+      "forHospitals": "For hospitals",
       "brandDesc": "The official online system of {{facility}} for processing medical assistance applications.",
       "quickLinks": "Quick Links",
       "registerPatient": "Register as Patient",
