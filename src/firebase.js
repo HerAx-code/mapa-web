@@ -3,6 +3,7 @@ import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-ch
 import { getAuth, signInAnonymously } from 'firebase/auth'
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  terminate, clearIndexedDbPersistence,
 } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getFunctions, httpsCallable } from 'firebase/functions'
@@ -68,6 +69,21 @@ export const db = initializeFirestore(app, {
     tabManager: persistentMultipleTabManager(),
   }),
 })
+
+// Sign-out: wipe the local cache so the NEXT account on this device never
+// sees the previous one's documents (shared / borrowed phones; switching
+// accounts in one browser). Clearing needs the client terminated, so the page
+// reloads afterwards (on whatever route the caller navigated to). Best-effort:
+// with another tab still open the clear is refused and the cache stays.
+export async function clearLocalCache() {
+  try {
+    await terminate(db)
+    await clearIndexedDbPersistence(db)
+  } catch (err) {
+    console.warn('[firebase] local cache not cleared:', err?.code ?? err)
+  }
+  setTimeout(() => window.location.reload(), 0)
+}
 
 // Cloud Storage — used to host signed Guarantee Letter scans so they
 // aren't constrained by Firestore's 1 MiB doc cap. See storage.rules.

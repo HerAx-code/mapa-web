@@ -136,7 +136,7 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   `hospitals/<tenant>` doesn't exist.
 
 ### Phase 4 — Tenant-scoped queries (client) ✅ 2026-11-14 — dormant behind a flag
-- **`VITE_TENANT_SCOPING` (default `false`).** Turning it on before the Phase 3
+- **`VITE_TENANT_SCOPING` (default `false` → since 2026-11-14 default ON; set `false` only for an un-backfilled database).** Turning it on before the Phase 3
   backfill would hide every record without a `tenantId`, so the code ships dormant.
 - Helpers in `src/utils/hospitals.js` (unit-tested):
   - `tenantWhere()` → `[where('tenantId','==',tid)]` (or `[]` when off / agency user),

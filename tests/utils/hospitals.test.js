@@ -103,7 +103,8 @@ describe('loadHospital / clearHospital', () => {
   })
 })
 
-// Phase 4 — tenant-scoped reads, dormant until VITE_TENANT_SCOPING=true.
+// Phase 4 — tenant-scoped reads: ON by default; VITE_TENANT_SCOPING=false
+// switches them off (un-backfilled databases only).
 const signInAs = async (tenantId) => {
   getDoc.mockResolvedValue({ exists: () => false })
   await loadHospital(tenantId)
@@ -111,7 +112,13 @@ const signInAs = async (tenantId) => {
 const docs = (...ids) => ({ docs: ids.map((id) => ({ id })) })
 
 describe('tenantWhere', () => {
-  it('adds nothing while scoping is off (the default)', async () => {
+  it('is ON by default (no env flag set)', async () => {
+    await signInAs('bgh')
+    expect(tenantWhere()).toEqual([{ field: 'tenantId', op: '==', value: 'bgh' }])
+  })
+
+  it('adds nothing when switched off with VITE_TENANT_SCOPING=false', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'false')
     await signInAs('bgh')
     expect(tenantWhere()).toEqual([])
   })
@@ -131,6 +138,7 @@ describe('tenantWhere', () => {
 
 describe('inMyTenant', () => {
   it('keeps everything while scoping is off', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'false')
     await signInAs('bgh')
     expect(inMyTenant({ tenantId: 'other' })).toBe(true)
   })
@@ -146,6 +154,7 @@ describe('inMyTenant', () => {
 
 describe('getUsersInScope', () => {
   it('scoping off: one plain query, as before', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'false')
     getDocs.mockResolvedValue(docs('a', 'b'))
     await signInAs('bgh')
     expect((await getUsersInScope({})).map((d) => d.id)).toEqual(['a', 'b'])

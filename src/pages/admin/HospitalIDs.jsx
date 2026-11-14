@@ -5,7 +5,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant, tenantWhere } from '../../utils/hospitals'
+import { withTenant, tenantWhere, inMyTenant } from '../../utils/hospitals'
 import { collection, query, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { fmtDate } from '../../utils/dates'
@@ -15,14 +15,15 @@ import toast from 'react-hot-toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-// Fix: use max existing number instead of count to avoid collisions
-const getNextNum = (ids) => {
-  if (ids.length === 0) return 1
-  const nums = ids.map(h => {
-    const parts = h.id.split('-')
-    return parseInt(parts[parts.length - 1], 10) || 0
-  })
-  return Math.max(...nums) + 1
+// Next number = max existing + 1 (not count, to avoid collisions), counted
+// over THIS hospital's codes for the current prefix + year only — so a stray
+// row from another hospital (or an older prefix/year) can never make the
+// sequence skip.
+const getNextNum = (ids, prefix = accessCodePrefixFor(new Date().getFullYear())) => {
+  const nums = ids
+    .filter(h => h.id.startsWith(prefix))
+    .map(h => parseInt(h.id.slice(prefix.length), 10) || 0)
+  return nums.length ? Math.max(...nums) + 1 : 1
 }
 
 // ── Bulk Add Modal ────────────────────────────────────────────────────────
@@ -159,6 +160,9 @@ export default function HospitalIDs() {
     const unsub = onSnapshot(query(collection(db, 'hospitalIds'), ...tenantWhere()), async (snap) => {
       const docs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
+        // Belt and braces: never show another hospital's codes, even if the
+        // local cache answers before the server (see tenantScopingOn).
+        .filter(d => inMyTenant(d))
         .sort((a, b) => b.id.localeCompare(a.id))
       try {
         const usedIds = docs.filter(d => d.status === 'used').map(d => d.id)
