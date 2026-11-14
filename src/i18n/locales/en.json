@@ -681,7 +681,78 @@
     }
   },
   "patient": {
+    "gate": {
+      "heading": "Choose your hospital",
+      "title": "Where will you file this request?",
+      "subtitle": "Choose the hospital, then enter the access code its social-services office gave you. Each code is good for one request.",
+      "hospitalLabel": "Hospital",
+      "compare": "Compare hospitals",
+      "loadingHospitals": "Loading hospitals…",
+      "codeLabel": "Access code from {{hospital}}",
+      "codeHint": "Given to you in person by the {{office}}.",
+      "officeFallback": "social-services office",
+      "yourHospital": "the hospital",
+      "noCode": "No code yet? Visit the {{office}} at {{hospital}} and ask for a Patient Access Code.",
+      "keepCurrent": "Keep current hospital",
+      "useCode": "Use this code",
+      "checking": "Checking…",
+      "claimed": "Hospital chosen. You can now file your request.",
+      "filingAt": "Filing at",
+      "change": "Change",
+      "errNoCode": "Choose your hospital and enter its access code first.",
+      "switchTo": "Choose {{hospital}} instead",
+      "err": {
+        "format": "Enter the full code, e.g. PREFIX-{{year}}-00001.",
+        "rateLimit": "Too many tries. Please wait a while and try again.",
+        "notFound": "We couldn't find that code. Check it and try again.",
+        "used": "This code was already used. Each code is good for one request — ask the office for a new one.",
+        "otherHospital": "This code is from {{hospital}}, not the hospital you chose.",
+        "closed": "This hospital is not taking new requests right now.",
+        "error": "We couldn't check the code. Check your connection and try again."
+      }
+    },
+    "hospitals": {
+      "navLabel": "Choose a Hospital",
+      "eyebrow": "Hospitals",
+      "title": "Where will you get help?",
+      "subtitle": "Your MAPA account works at every participating hospital. Compare them, then file your request at the one you choose.",
+      "how1": "Visit the social-services office of the hospital you choose and ask for a Patient Access Code.",
+      "how2": "Compare the hospitals below — programs, open slots, partner agencies and how long requests usually take.",
+      "how3": "Tap “File a request here” and enter the code. Each code is good for one request.",
+      "activeNote": "You already have an open request. You can file at another hospital after it is closed.",
+      "activeLink": "See my request",
+      "search": "Search by hospital, city or region",
+      "programFilter": "Filter by program",
+      "allPrograms": "All programs",
+      "sortLabel": "Sort hospitals",
+      "sortRecommended": "Recommended",
+      "sortSlots": "Most open slots",
+      "sortFastest": "Fastest",
+      "none": "No hospitals are taking requests right now. Please check again later.",
+      "noMatch": "No hospital matches your search.",
+      "badgeScanned": "Your scanned code",
+      "badgeCurrent": "Current hospital",
+      "badgeBefore": "Filed here before",
+      "capacity": "Programs and open slots",
+      "slotsOpen": "{{remaining}} of {{total}} slots open",
+      "slotsFull": "No open slots right now",
+      "slotsUnknown": "Slots not posted yet",
+      "more": "+{{n}} more",
+      "partners": "Partner agencies",
+      "noPartners": "No partner agencies yet",
+      "partnerCount_one": "{{count}} agency",
+      "partnerCount_other": "{{count}} agencies",
+      "turnaround": "Typical turnaround",
+      "turnaroundDays_one": "About {{count}} day to endorsement (from {{cases}} cases)",
+      "turnaroundDays_other": "About {{count}} days to endorsement (from {{cases}} cases)",
+      "turnaroundNew": "Not enough cases yet to tell",
+      "location": "Location and contact",
+      "noAddress": "Address not posted yet",
+      "codeHint": "Codes from this hospital start with {{prefix}}-",
+      "fileHere": "File a request here"
+    },
     "nav": {
+      "hospitals": "Choose a Hospital",
       "dashboard": "Dashboard",
       "findPrograms": "Find Programs",
       "medicalPrograms": "Medical Programs",
@@ -1136,6 +1207,7 @@
       }
     },
     "track": {
+      "filedAt": "Filed at {{hospital}}",
       "eyebrow": "Your request",
       "assistanceType": "Assistance type",
       "title": "My Application",
@@ -1302,15 +1374,15 @@
         },
         "whoCanUse": {
           "title": "Who can use MAPA?",
-          "content": "Any patient of {{facility}} who has been assessed by Medical Social Services can register and use MAPA. You will receive a Patient Access Code (format: {{codeFormat}}) from the {{gateway}} office. You must have this code to create an account."
+          "content": "Any patient of a participating hospital can use MAPA. One account works at every participating hospital. To file a request, you need a Patient Access Code (format: {{codeFormat}}) from the social-services office of the hospital you choose — one code per request."
         },
         "register": {
           "title": "How do I register?",
-          "s1": "Visit {{gateway}} to be assessed and receive your Patient Access Code.",
-          "s2": "Go to the MAPA registration page and fill in your full name, email, contact number, and address.",
-          "s3": "Enter your Patient Access Code and click Verify to confirm it.",
-          "s4": "Create a secure password and submit the form.",
-          "s5": "Your account is created. Log in with your email and password."
+          "s1": "Go to the MAPA registration page and fill in your full name, email, contact number, and address.",
+          "s2": "Create a secure password and agree to the terms. No access code is needed to register.",
+          "s3": "Open “Choose a Hospital” and compare the participating hospitals.",
+          "s4": "Visit the social-services office of the hospital you choose to be assessed and receive a Patient Access Code.",
+          "s5": "Tap “File a request here”, enter the code, and complete your request."
         },
         "upload": {
           "title": "What documents do I submit?",
@@ -1430,6 +1502,7 @@
     }
   },
   "register": {
+    "stepFinish": "Finish",
     "backHome": "Back to Home",
     "title": "Apply for Patient Account",
     "subtitle": "Create an account to apply for medical assistance.",
@@ -1438,15 +1511,15 @@
       "sub": "One account, then submit your medical assistance requests online — less time queuing at the office.",
       "readyTitle": "Have these ready",
       "ready1": "Your name and address as they appear on a valid government ID",
-      "ready2": "Your Patient Access Code ({{codeFormat}}) from {{gateway}}",
+      "ready2": "The access code from the hospital you will file at — you can add it later",
       "ready3": "A working email address for approval updates",
       "trustTime": "Takes about 3 minutes",
       "trustPrivacy": "Protected under the Data Privacy Act (RA 10173)",
       "trustHelp": "Need a code? Visit Medical Social Services at {{facility}}",
-      "codeTitle": "Your access code is your door in.",
-      "codeBody": "Your hospital's social-services office gives it to you in person. Its first part — the prefix — tells MAPA which hospital you belong to, so you land in the right place automatically.",
+      "codeTitle": "One account, many hospitals.",
+      "codeBody": "Compare the participating hospitals, then file your request at the one you choose. Its social-services office gives you an access code in person; you enter it when you file.",
       "codeExample": "Example code",
-      "codePrefixNote": "Prefix = your hospital"
+      "codePrefixNote": "The prefix shows which hospital issued it"
     },
     "stepPersonal": "Personal Info",
     "stepAccount": "Account Setup",
@@ -1486,8 +1559,10 @@
       "hidePassword": "Hide password"
     },
     "step3": {
-      "sectionTitle": "Patient Access Code",
-      "sectionDesc": "Your Patient Access Code is required. It was provided to you by {{gateway}}.",
+      "nextBody": "Your MAPA account works at every participating hospital. Each time you ask for help, you choose the hospital and enter the access code its social-services office gave you.",
+      "nextTitle": "Next: choose your hospital",
+      "sectionTitle": "Review and agree",
+      "sectionDesc": "Check your details, then agree to the terms to create your account.",
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Enter the 5-digit number after the prefix",
       "joiningHospital": "You are registering with {{hospital}}.",
@@ -1534,6 +1609,7 @@
       "generic": "Registration failed."
     },
     "toast": {
+      "codeSaved": "Access code saved. You'll use it when you choose that hospital.",
       "codeVerified": "Access code verified!",
       "welcome": "Welcome, {{name}}! Your account has been created.",
       "alreadyRegistered": "You have already registered with this access code. Please log in."

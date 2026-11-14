@@ -49,8 +49,10 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
   promotions, agency audit log; partner hospitals read-only.
 - `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
   any partner hospital; reads only patients endorsed to the agency.
-- `patient` — patient portal, own data only; self-registers with an access code,
-  which binds them to that code's hospital.
+- `patient` — patient portal, own data only. **Network account** (patient
+  marketplace, docs/patient-marketplace-plan.md): registers with no hospital and
+  no code, compares hospitals at `/patient/hospitals`, and files each request at
+  the hospital they choose by entering THAT hospital's access code.
 
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.
@@ -59,7 +61,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match the gateway's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the gateway social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
-- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is the registration gate. Issued in person by the gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique); the code doc's `tenantId` decides which hospital the patient joins, and a hospital with `enabled: false` takes no new sign-ups. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
+- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is the **per-request** gate (patient marketplace — it used to be the registration gate). Issued in person by a hospital's gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique). Claiming a code (`src/utils/accessCodes.js` `claimAccessCode`, one transaction) makes the code's hospital the patient's current one (`users.tenantId`), adds it to `users.tenantIds`, and sets `users.hospitalId`; the request is then written in ONE batch with `hospitalIds/{code}.requestId`, so **a code backs exactly one request**. A hospital with `enabled: false` takes no new claims. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
 
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
@@ -74,7 +76,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
-`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8), `networkStats` (per-hospital counts for platform_admin, Admin-SDK written; Phase 9), `hospitalsPublic` (sign-in-free hospital projection for Landing/Register; must equal the hospital doc), `onboardingRequests` (hospitals asking to join, from the public /for-hospitals page; platform_admin only)
+`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8), `networkStats` (per-hospital counts for platform_admin, Admin-SDK written; Phase 9), `hospitalsPublic` (sign-in-free hospital projection for Landing/Register and the patient marketplace — name, prefix, office, address, region, contact email; must equal the hospital doc), `hospitalsPublicStats` (per-hospital typical turnaround for the marketplace, counts only, Admin-SDK written by networkStats), `onboardingRequests` (hospitals asking to join, from the public /for-hospitals page; platform_admin only)
 
 ## Tenancy (multi-hospital network — all phases built, not yet deployed)
 MAPA is moving from one host facility per deployment to **one deployment serving many
@@ -92,8 +94,14 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
   `tenantId` and `agencyId`. An agency reads a patient profile only via
   `users.agencyIds` (written at endorsement). One budget per agency (per-hospital
   sub-budgets are future work).
-- A patient belongs to **one** hospital, decided by the **per-hospital access-code
-  prefix** they register with (prefixes globally unique).
+- ~~A patient belongs to **one** hospital, decided by the access code they register
+  with.~~ **Superseded by the patient marketplace (2026-11-14,
+  docs/patient-marketplace-plan.md):** a patient account is network-level;
+  `users.tenantId` is the patient's CURRENT hospital (where they are filing) and
+  `users.tenantIds` every hospital they have filed with. A hospital lists/reads its
+  patients through `tenantIds` (`patientWhere()` in src/utils/hospitals.js — use it,
+  not `tenantWhere()`, for patient queries); the rules let a patient move
+  `tenantId` only together with claiming that hospital's code.
 - Reference data = network defaults (`src/data/referenceData.js`) + optional
   per-hospital overrides. Existing production data backfills to **hospital #1**.
 - Order is data → queries → rules. Never tighten rules on `tenantId` before the

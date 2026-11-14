@@ -143,7 +143,7 @@ describe('a disabled hospital takes no new patients', () => {
 
 // Landing page projection: world-readable, and it must mirror its hospital.
 describe('hospitalsPublic — public, and always equal to the hospital doc', () => {
-  const pub = { facilityName: '', shortName: '', accessCodePrefix: 'MAPA', enabled: true }
+  const pub = { facilityName: '', shortName: '', accessCodePrefix: 'MAPA', enabled: true, gatewayName: 'MSS A' }
 
   it('anyone, signed out included, can read it', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) =>
@@ -152,7 +152,7 @@ describe('hospitalsPublic — public, and always equal to the hospital doc', () 
   })
 
   it('the platform admin and the own super admin may write a faithful copy', async () => {
-    await assertSucceeds(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH' }))
+    await assertSucceeds(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH', gatewayName: 'MSS B' }))
     await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), pub))
   })
 
@@ -162,8 +162,17 @@ describe('hospitalsPublic — public, and always equal to the hospital doc', () 
     await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, facilityName: 'Fake Hospital' }))
   })
 
+  // Marketplace: office, location and contact are public too — and mirrored.
+  it('the marketplace fields (office, address, region, email) must mirror the hospital', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) =>
+      updateDoc(doc(ctx.firestore(), 'hospitals', 'hospital-1'), { address: 'Cotabato City', region: 'BARMM' }))
+    await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Somewhere else', region: 'BARMM' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM', contactEmail: 'x@y.ph' }))
+  })
+
   it("another hospital's super admin, patients and extra fields are denied", async () => {
-    await assertFails(setDoc(ref('superA', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH', gatewayName: 'MSS B' }))
     await assertFails(setDoc(ref('new1', 'hospitalsPublic/hospital-1'), pub))
     await assertFails(setDoc(ref('plat', 'hospitalsPublic/hospital-1'), { ...pub, staff: ['x'] }))
   })

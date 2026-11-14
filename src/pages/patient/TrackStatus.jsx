@@ -23,6 +23,8 @@ import GLDocumentPanel from '../../components/GLDocumentPanel'
 import Tour from '../../components/Tour'
 import { patientTrackStatusTour } from '../../utils/tours'
 import { tsToDate } from '../../utils/dates'
+import { usePublicHospitals } from '../../hooks/usePublicHospitals'
+import { ORG, DEFAULT_HOSPITAL_ID } from '../../config/org'
 
 
 // The request-lifecycle stepper now lives in JourneyStepper (the DETAIL
@@ -156,6 +158,7 @@ const buildStages = (app, t) => {
 
 export default function TrackStatus() {
   const { user }                        = useAuth()
+  const publicHospitals                 = usePublicHospitals()
   const navigate                        = useNavigate()
   const { t }                           = useTranslation()
   // Phase 3.3: agencyMap from LiveDataContext (single shared snapshot)
@@ -331,6 +334,13 @@ export default function TrackStatus() {
   const REQ_ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
   const activeRequest = requests.find(r => REQ_ACTIVE(r.status)) ?? null
   const pastRequests  = requests.filter(r => !REQ_ACTIVE(r.status))
+  // Marketplace: a request's hospital by name (the public list), else this
+  // session's hospital for its own requests, else nothing better than the id.
+  const hospitalName = (tenantId) => {
+    const id = tenantId || DEFAULT_HOSPITAL_ID
+    return publicHospitals.find(h => h.id === id)?.facilityName ||
+      (id === (user?.tenantId || DEFAULT_HOSPITAL_ID) ? ORG.facilityName : id)
+  }
 
   // Slices of the active request — the per-agency coverage breakdown.
   useEffect(() => {
@@ -517,7 +527,9 @@ export default function TrackStatus() {
               <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
 
               <div className="card p-5">
-              <p className="eyebrow mb-3">{t('patient.track.assistanceType')} · {activeRequest.assistanceType}</p>
+              <p className="eyebrow mb-1">{t('patient.track.assistanceType')} · {activeRequest.assistanceType}</p>
+              {/* Marketplace: which hospital this request was filed at. */}
+              <p className="text-xs text-gray-500 mb-3">{t('patient.track.filedAt', { hospital: hospitalName(activeRequest.tenantId) })}</p>
 
               {/* Lifecycle stepper — the DETAIL fidelity of the one canonical
                   journey model (shared with the JourneyStrip glance above). */}

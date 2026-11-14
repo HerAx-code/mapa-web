@@ -23,7 +23,7 @@ import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getFirestore, AggregateField, FieldValue } from 'firebase-admin/firestore'
 
 const require = createRequire(import.meta.url)
-const { computeNetworkStats, writeNetworkStats } = require('../functions/src/networkStats.js')
+const { computeNetworkStats, computePublicStats, writeNetworkStats } = require('../functions/src/networkStats.js')
 
 const APPLY = process.argv.slice(2).includes('--apply')
 
@@ -43,9 +43,16 @@ async function main() {
     `${String(s.requests.closed).padStart(6)}  ${String(s.approvedSlices).padStart(8)}  ${peso(s.amountApproved).padStart(11)}`)
   for (const [id, s] of Object.entries(stats.hospitals)) row(id, s)
   row('NETWORK', stats.totals)
+
+  // Marketplace: the public turnaround per hospital (hospitalsPublicStats).
+  const pub = stats.publicStats ?? await computePublicStats({ db })
+  console.log('\nhospital             turnaround (median days to 1st endorsement)')
+  for (const [id, s] of Object.entries(pub)) {
+    console.log(`${id.padEnd(20)} ${s.turnaroundDays == null ? `— (only ${s.basedOn} case(s); not published)` : `${s.turnaroundDays} days from ${s.basedOn} cases`}`)
+  }
   console.log(APPLY
-    ? '\n[network-stats] ✅ Saved networkStats/current.'
-    : '\n[network-stats] Printed only. Re-run with --apply to save networkStats/current.')
+    ? '\n[network-stats] ✅ Saved networkStats/current and hospitalsPublicStats/*.'
+    : '\n[network-stats] Printed only. Re-run with --apply to save networkStats/current and hospitalsPublicStats/*.')
 }
 
 main().catch((err) => { console.error('[network-stats] FATAL:', err); process.exit(1) })

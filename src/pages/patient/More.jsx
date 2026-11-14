@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
-  MdSearch, MdMenuBook,
+  MdSearch, MdMenuBook, MdLocalHospital,
   MdPerson, MdShield, MdHelp, MdFlag, MdCloudDownload, MdWarning,
   MdLogout, MdChevronRight, MdLanguage, MdTour, MdSecurity,
 } from 'react-icons/md'
@@ -98,6 +98,7 @@ export default function PatientMore() {
     {
       heading: t('patient.more.navigation'),
       items: [
+        { icon: MdLocalHospital, label: t('patient.nav.hospitals'), to: '/patient/hospitals' },
         { icon: MdSearch,    label: t('patient.nav.findPrograms'), to: '/patient/programs' },
         { icon: MdMenuBook,  label: t('patient.nav.userGuide'),    to: '/patient/guide'      },
       ],

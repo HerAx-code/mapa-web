@@ -153,14 +153,17 @@ describe('getUsersInScope', () => {
     expect(getDocs.mock.calls[0][0]).toEqual({ name: 'users', cs: [] })
   })
 
-  it('scoping on: own hospital + agency users, de-duplicated', async () => {
+  it('scoping on: own hospital + its patients + agency users, de-duplicated', async () => {
     vi.stubEnv('VITE_TENANT_SCOPING', 'true')
     await signInAs('bgh')
     getDocs.mockImplementation(async (q) =>
-      q.cs.some((c) => c.field === 'tenantId') ? docs('pat', 'sw') : docs('coord', 'sw'))
-    expect((await getUsersInScope({})).map((d) => d.id)).toEqual(['pat', 'sw', 'coord'])
+      q.cs.some((c) => c.field === 'tenantId') ? docs('pat', 'sw')
+        : q.cs.some((c) => c.field === 'tenantIds') ? docs('pat', 'moved')
+        : docs('coord', 'sw'))
+    expect((await getUsersInScope({})).map((d) => d.id)).toEqual(['pat', 'sw', 'moved', 'coord'])
     expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
       [{ field: 'tenantId', op: '==', value: 'bgh' }],
+      [{ field: 'tenantIds', op: 'array-contains', value: 'bgh' }, { field: 'role', op: '==', value: 'patient' }],
       [{ field: 'role', op: 'in', value: ['agency', 'agency_admin'] }],
     ])
   })
@@ -172,6 +175,8 @@ describe('getUsersInScope', () => {
     await getUsersInScope({}, ['patient', 'staff_admin', 'agency'])
     expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
       [{ field: 'tenantId', op: '==', value: 'bgh' }, { field: 'role', op: 'in', value: ['patient', 'staff_admin'] }],
+      // Marketplace: patients who filed here but are now at another hospital.
+      [{ field: 'tenantIds', op: 'array-contains', value: 'bgh' }, { field: 'role', op: '==', value: 'patient' }],
       [{ field: 'role', op: 'in', value: ['agency'] }],
     ])
   })
@@ -183,6 +188,7 @@ describe('getUsersInScope', () => {
     await getUsersInScope({}, ['patient', 'platform_admin'])
     expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
       [{ field: 'tenantId', op: '==', value: 'bgh' }, { field: 'role', op: 'in', value: ['patient'] }],
+      [{ field: 'tenantIds', op: 'array-contains', value: 'bgh' }, { field: 'role', op: '==', value: 'patient' }],
     ])
   })
 

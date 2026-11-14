@@ -93,13 +93,17 @@ async function main() {
 }
 
 // The sign-in-free projection the Landing page lists (hospitalsPublic; same
-// four fields as src/utils/hospitalsPublic.js projectPublicHospital).
+// fields as src/utils/hospitalsPublic.js projectPublicHospital).
 async function syncPublic(h) {
   await db.doc(`hospitalsPublic/${ID}`).set({
     facilityName:     h.facilityName ?? '',
     shortName:        h.shortName ?? '',
     accessCodePrefix: h.accessCodePrefix ?? '',
     enabled:          h.enabled !== false,
+    gatewayName:      h.gatewayName ?? '',
+    address:          h.address ?? '',
+    region:           h.region ?? '',
+    contactEmail:     h.contactEmail ?? '',
     updatedAt:        FieldValue.serverTimestamp(),
   })
   console.log(`[seed-hospital] ✅ hospitalsPublic/${ID} synced (Landing page list).`)

@@ -10,6 +10,14 @@
  * Counts and peso totals only — no names, ids or per-patient values. Records
  * without a tenantId (before the Phase 3 backfill) are not counted.
  *
+ * Patient marketplace (docs/patient-marketplace-plan.md): a hospital's patients
+ * are everyone who has filed with it (users.tenantIds). It also publishes, per
+ * hospital, the TYPICAL TURNAROUND patients compare when choosing where to file
+ * — the median days from filing to the first endorsement, over requests filed
+ * in the last TURNAROUND_WINDOW_DAYS — to the world-readable
+ * hospitalsPublicStats/{id}. A median of a count, never a single case: below
+ * MIN_TURNAROUND_SAMPLE requests nothing is published.
+ *
  * PURE: no firebase-functions import, so the manual runner
  * (scripts/compute-network-stats.mjs) shares this exact code with the scheduled
  * function (refreshNetworkStats.js). Dependencies are passed in for testing.
@@ -23,6 +31,46 @@ const REQUEST_GROUPS = {
   closed: ['closed', 'rejected'],
 }
 const APPROVED_SLICE = ['approved', 'certificate']
+const TURNAROUND_WINDOW_DAYS = 180
+const MIN_TURNAROUND_SAMPLE  = 5
+const DAY_MS = 86400000
+
+const toMs = (v) => (v == null ? null
+  : typeof v.toMillis === 'function' ? v.toMillis()
+  : v instanceof Date ? v.getTime()
+  : typeof v === 'number' ? v : null)
+
+function median(xs) {
+  const s = [...xs].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+// Median days from filing to the first endorsement at one hospital, or null
+// below the minimum sample. Reads only requestId/endorsedAt and submittedAt.
+async function hospitalTurnaround({ db, tenantId, now }) {
+  const since = now - TURNAROUND_WINDOW_DAYS * DAY_MS
+  const firstEndorsed = new Map()
+  const slices = await db.collection('applications').where('tenantId', '==', tenantId).select('requestId', 'endorsedAt').get()
+  for (const d of slices.docs) {
+    const { requestId, endorsedAt } = d.data()
+    const t = toMs(endorsedAt)
+    if (!requestId || t == null) continue
+    if (!firstEndorsed.has(requestId) || t < firstEndorsed.get(requestId)) firstEndorsed.set(requestId, t)
+  }
+  const days = []
+  const requests = await db.collection('requests').where('tenantId', '==', tenantId).select('submittedAt').get()
+  for (const d of requests.docs) {
+    const sub = toMs(d.data().submittedAt)
+    const end = firstEndorsed.get(d.id)
+    if (sub == null || end == null || end < sub || sub < since) continue
+    days.push((end - sub) / DAY_MS)
+  }
+  return {
+    turnaroundDays: days.length >= MIN_TURNAROUND_SAMPLE ? Math.round(median(days) * 10) / 10 : null,
+    basedOn: days.length,
+  }
+}
 
 async function countOf(query) {
   const snap = await query.count().get()
@@ -42,7 +90,7 @@ async function hospitalStats({ db, AggregateField, tenantId }) {
     .aggregate({ count: AggregateField.count(), total: AggregateField.sum('amountApproved') })
     .get()
   return {
-    patients: await countOf(inTenant('users').where('role', '==', 'patient')),
+    patients: await countOf(db.collection('users').where('tenantIds', 'array-contains', tenantId).where('role', '==', 'patient')),
     requests,
     approvedSlices: approved.data().count ?? 0,
     amountApproved: approved.data().total ?? 0,
@@ -71,10 +119,25 @@ async function computeNetworkStats({ db, AggregateField }) {
   return { hospitals: byHospital, totals: summarize(byHospital) }
 }
 
-async function writeNetworkStats({ db, AggregateField, serverTimestamp }) {
-  const stats = await computeNetworkStats({ db, AggregateField })
-  await db.doc('networkStats/current').set({ ...stats, generatedAt: serverTimestamp() })
-  return stats
+// Per-hospital public turnaround: { [hospitalId]: { turnaroundDays, basedOn } }.
+async function computePublicStats({ db, now = Date.now() }) {
+  const hospitals = await db.collection('hospitals').get()
+  const out = {}
+  for (const h of hospitals.docs) out[h.id] = await hospitalTurnaround({ db, tenantId: h.id, now })
+  return out
 }
 
-module.exports = { REQUEST_GROUPS, computeNetworkStats, writeNetworkStats, summarize }
+async function writeNetworkStats({ db, AggregateField, serverTimestamp, now = Date.now() }) {
+  const stats = await computeNetworkStats({ db, AggregateField })
+  await db.doc('networkStats/current').set({ ...stats, generatedAt: serverTimestamp() })
+  const publicStats = await computePublicStats({ db, now })
+  for (const [id, s] of Object.entries(publicStats)) {
+    await db.doc(`hospitalsPublicStats/${id}`).set({ ...s, windowDays: TURNAROUND_WINDOW_DAYS, generatedAt: serverTimestamp() })
+  }
+  return { ...stats, publicStats }
+}
+
+module.exports = {
+  REQUEST_GROUPS, MIN_TURNAROUND_SAMPLE, TURNAROUND_WINDOW_DAYS,
+  computeNetworkStats, computePublicStats, writeNetworkStats, summarize,
+}

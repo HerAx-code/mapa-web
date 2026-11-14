@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { collection, query, where, orderBy, limit, onSnapshot, addDoc, getDocs, serverTimestamp } from 'firebase/firestore'
-import { tenantWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
+import { tenantWhere, patientWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
   // co-funding model. See /agency/allocation (agency_admin role).
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'patient')),
+      query(collection(db, 'users'), ...patientWhere()),
       snap => setPatientCount(snap.size),
       err => { console.error('[Dashboard] patient count failed:', err); setPatientCount('—') }
     )
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
   // Recent activity feeds
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'users'), ...tenantWhere(), where('role', '==', 'patient'), orderBy('createdAt', 'desc'), limit(5)),
+      query(collection(db, 'users'), ...patientWhere(), orderBy('createdAt', 'desc'), limit(5)),
       snap => setRecentPatients(snap.docs.map(d => ({
         id: d.id, targetId: d.id, type: 'registration',
         body: d.data().name ?? 'Unknown patient',

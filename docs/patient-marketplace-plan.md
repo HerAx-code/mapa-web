@@ -24,7 +24,6 @@ in-person gate exactly where it matters (filing), while the patient chooses.
 | `users/{patient}.tenantIds` | **Every** hospital the patient has filed at. A hospital's gateway may read/maintain the patient's profile only when its id is in here (the patient-side twin of agencies' `users.agencyIds`). |
 | `users/{patient}.hospitalId` | The patient's **current** access code (unchanged meaning). |
 | `hospitalIds/{code}.requestId` | The request this code backed — set in the same batch as the request; a code backs one request only. |
-| `patientCooldowns/{patientId}` | The 30-day post-approval cooldown, **per patient** (was stored on the patient's single access code; with a code per request a patient could dodge it at another hospital). |
 | `hospitalsPublicStats/{hospitalId}` | Public counts for the marketplace: typical days from filing to first endorsement (`turnaroundDays`, published only when based on ≥ 5 requests). Admin-SDK written; no patient data. |
 
 ## 3. Flows
@@ -32,9 +31,14 @@ in-person gate exactly where it matters (filing), while the patient chooses.
 **Register:** personal info → account. No access code step. Patient doc carries no
 hospital yet.
 
-**Choose a hospital** (`/patient/hospitals`, also step 0 of Request Assistance):
-cards per participating hospital (hospitalsPublic) — location + contact, partner
-agencies and the assistance types they fund, today's open slots, typical turnaround.
+**Choose a hospital** (`/patient/hospitals`, `src/pages/patient/Hospitals.jsx`; data
+from `src/hooks/useMarketplace.js`): cards per participating hospital (hospitalsPublic)
+— location + contact, partner agencies and the assistance types they fund, the
+partners' open slots, typical turnaround — with search, a program filter and sorting
+(recommended / most open slots / fastest). "File a request here" opens Request
+Assistance with `?hospital=<id>`, where `src/components/patient/HospitalGate.jsx`
+(the gate before the wizard) takes the code. The wizard then shows a "Filing at …
+· Change" bar.
 
 **File a request at the chosen hospital:**
 1. Patient enters the hospital's access code → checked (exists, available, issued
@@ -51,8 +55,12 @@ agencies and the assistance types they fund, today's open slots, typical turnaro
 **Gateway:** the Patients page lists patients whose `tenantIds` include the
 hospital; everything request-scoped is unchanged (requests are already tenant-tagged).
 
-**Agencies:** cooldown read/written on `patientCooldowns/{patientId}` (the legacy
-code-level cooldown is still honoured when present).
+**Agencies:** unchanged. The 30-day approval cooldown already follows the patient:
+the approving agency checks its own earlier approvals by `patientId`, across every
+hospital's slices, and a patient keeps ONE account across hospitals, so changing
+hospital resets nothing. (The code-level cooldown on `hospitalIds` only ever applied
+to pre-co-funding applications without a `requestId`; it is left as is. A separate
+`patientCooldowns` collection was considered and dropped as redundant.)
 
 ## 4. Rules (summary)
 - Patient self-create: no access code required; no `tenantId` / `tenantIds` /
@@ -64,14 +72,13 @@ code-level cooldown is still honoured when present).
   or the legacy `tenantId` match. Gateway edits never move a patient's hospitals.
 - Request create: the code (`patientHospitalId`) must be the patient's, issued by the
   request's hospital, and getAfter(code).requestId == this request.
-- `patientCooldowns`: agencies holding the patient's case read/write; the patient and
-  their hospitals read.
 - `hospitalsPublicStats`: world-readable, no client writes.
 
 ## 5. Rollout (data → client+rules, one coordinated merge)
 1. `scripts/backfill-marketplace.mjs --apply` (dry run first): patients get
-   `tenantIds = [tenantId]`; existing code cooldowns are copied to
-   `patientCooldowns`; codes already backing a request get `requestId`. Re-run → 0.
+   `tenantIds = [tenantId]`; codes already backing a request get `requestId`;
+   `hospitalsPublic` is re-synced with the marketplace fields (office, address,
+   region, contact email). Re-run → 0.
 2. Deploy indexes (users `tenantIds` array-contains + role).
 3. Merge the PR → rules deploy + app rebuild together.
 4. `node scripts/compute-network-stats.mjs --apply` → turnaround published.

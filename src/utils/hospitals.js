@@ -79,6 +79,17 @@ export const tenantWhere = () => {
   return t ? [where('tenantId', '==', t)] : []
 }
 
+// A hospital's PATIENTS (marketplace, docs/patient-marketplace-plan.md): every
+// patient who has filed with it — users.tenantIds — not only those whose
+// current hospital it is (users.tenantId moves when a patient files elsewhere,
+// and the old hospital keeps its case). Spread into query() on users.
+export const patientWhere = () => {
+  const t = scopedTenant()
+  return t
+    ? [where('tenantIds', 'array-contains', t), where('role', '==', 'patient')]
+    : [where('role', '==', 'patient')]
+}
+
 // Client-side counterpart for small collections everyone may read
 // (announcements): keep the user's hospital's docs plus network-wide ones
 // (no tenantId — agency announcements, pre-tenancy docs).
@@ -132,6 +143,8 @@ export async function getUsersInScope(db, roles = null, viewer = null) {
   const queries = []
   if (hospitalRoles === null)  queries.push(query(users, where('tenantId', '==', t)))
   else if (hospitalRoles.length) queries.push(query(users, where('tenantId', '==', t), where('role', 'in', hospitalRoles)))
+  // Marketplace: patients who filed here but are now at another hospital.
+  if (hospitalRoles === null || hospitalRoles.includes('patient')) queries.push(query(users, ...patientWhere()))
   if (networkRoles.length) queries.push(query(users, where('role', 'in', networkRoles)))
   const snaps = await Promise.all(queries.map((q) => getDocs(q)))
   const seen = new Set()

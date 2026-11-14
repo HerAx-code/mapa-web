@@ -834,23 +834,6 @@ service cloud.firestore {
                        prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
     }
 
-    // ── patientCooldowns ───────────────────────────────────────────────────────
-    // Marketplace: the 30-day post-approval cooldown lives on the PATIENT (it
-    // used to sit on their single access code; with a code per request a
-    // patient could otherwise dodge it at another hospital). Written by the
-    // agency approving / reversing a slice for this patient; read by agencies
-    // on the case, the patient's hospitals and the patient.
-    match /patientCooldowns/{patientId} {
-      allow read: if isAuth() && (
-                     uid() == patientId ||
-                     (isAgency() && userAgencyId() in get(/databases/$(database)/documents/users/$(patientId)).data.get('agencyIds', [])) ||
-                     (isAdmin() && userTenantId() in get(/databases/$(database)/documents/users/$(patientId)).data.get('tenantIds', [])));
-      allow create, update: if isAgency() &&
-                     userAgencyId() in get(/databases/$(database)/documents/users/$(patientId)).data.get('agencyIds', []) &&
-                     request.resource.data.keys().hasOnly(['cooldownUntilAt', 'lastApprovedAt', 'lastAgencyId', 'updatedAt']);
-      allow delete: if false;
-    }
-
     // ── hospitalsPublicStats ──────────────────────────────────────────────────
     // Marketplace: counts-only per hospital (typical days from filing to first
     // endorsement), built by the Admin SDK (networkStats). Public; no writes.
@@ -860,19 +843,25 @@ service cloud.firestore {
     }
 
     // ── hospitalsPublic ────────────────────────────────────────────────────────
-    // The sign-in-free projection of each hospital for the Landing page (name,
-    // short name, access-code prefix, sign-ups open). World-readable. Written by
+    // The sign-in-free projection of each hospital for the Landing page and the
+    // patient marketplace (name, short name, access-code prefix, sign-ups open,
+    // gateway office, address, region, contact email). World-readable. Written by
     // whoever may edit the hospital (platform admin, or its own super admin),
     // and every field must EQUAL the hospital doc after the write — so the
     // public list can never drift from or contradict the real hospital.
     match /hospitalsPublic/{hospitalId} {
       allow read: if true;
       allow create, update: if (isPlatformAdmin() || (isSuperAdmin() && hospitalId == userTenantId())) &&
-                       request.resource.data.keys().hasOnly(['facilityName', 'shortName', 'accessCodePrefix', 'enabled', 'updatedAt']) &&
+                       request.resource.data.keys().hasOnly(['facilityName', 'shortName', 'accessCodePrefix', 'enabled',
+                                                             'gatewayName', 'address', 'region', 'contactEmail', 'updatedAt']) &&
                        request.resource.data.facilityName     == hospitalAfter(hospitalId).get('facilityName', '') &&
                        request.resource.data.shortName        == hospitalAfter(hospitalId).get('shortName', '') &&
                        request.resource.data.accessCodePrefix == hospitalAfter(hospitalId).get('accessCodePrefix', '') &&
-                       request.resource.data.enabled          == hospitalAfter(hospitalId).get('enabled', true);
+                       request.resource.data.enabled          == hospitalAfter(hospitalId).get('enabled', true) &&
+                       request.resource.data.get('gatewayName', '')  == hospitalAfter(hospitalId).get('gatewayName', '') &&
+                       request.resource.data.get('address', '')      == hospitalAfter(hospitalId).get('address', '') &&
+                       request.resource.data.get('region', '')       == hospitalAfter(hospitalId).get('region', '') &&
+                       request.resource.data.get('contactEmail', '') == hospitalAfter(hospitalId).get('contactEmail', '');
     }
 
     function hospitalAfter(hospitalId) {

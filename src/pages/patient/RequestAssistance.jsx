@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import {
   collection, query, where, onSnapshot, getDocs,
-  doc, setDoc, updateDoc, writeBatch, serverTimestamp,
+  doc, updateDoc, writeBatch, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -13,7 +13,11 @@ import {
 } from '../../utils/requests'
 import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
-import { tenantIdFor } from '../../utils/hospitals'
+import { tenantIdFor, loadHospital } from '../../utils/hospitals'
+import { currentCodeIsUnused } from '../../utils/accessCodes'
+import { useMarketplace } from '../../hooks/useMarketplace'
+import HospitalGate from '../../components/patient/HospitalGate'
+import { ORG, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import { saveRequestDraft, loadRequestDraft, clearRequestDraft } from '../../utils/requestDraft'
 import { runIdOcr, isIdType, LOW_OCR_CONFIDENCE } from '../../utils/idOcr'
 import { assessImageQuality } from '../../utils/imageQuality'
@@ -34,7 +38,7 @@ import { useTranslation } from 'react-i18next'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
-  MdContentCopy, MdHistory,
+  MdContentCopy, MdHistory, MdLocalHospital,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -53,8 +57,43 @@ const ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
 
 export default function RequestAssistance() {
   const { t }      = useTranslation()
-  const { user }   = useAuth()
+  const { user, updateUser } = useAuth()
   const navigate   = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // ── Marketplace: where this request is filed ─────────────────────────────
+  // A request is filed at the patient's CURRENT hospital with a code that
+  // hospital issued and that backs no other request (the rules bind one code
+  // to one request). codeReady: null while checking, then whether the current
+  // code can still be filed with. ?hospital= (from /patient/hospitals) asks to
+  // file somewhere else, which means claiming that hospital's code first.
+  const { hospitals } = useMarketplace()
+  const [codeReady, setCodeReady]       = useState(null)
+  const [changingHospital, setChanging] = useState(false)
+  const wantedHospital = searchParams.get('hospital')
+  useEffect(() => {
+    if (!user?.uid) return
+    let alive = true
+    setCodeReady(null)
+    currentCodeIsUnused(user).then(ok => { if (alive) setCodeReady(ok) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, user?.hospitalId, user?.tenantId])
+  const myTenant = user?.tenantId || DEFAULT_HOSPITAL_ID
+  const currentHospital = hospitals.find(h => h.id === user?.tenantId)
+  const clearWanted = () => {
+    if (!searchParams.has('hospital')) return
+    searchParams.delete('hospital')
+    setSearchParams(searchParams, { replace: true })
+  }
+  const onHospitalClaimed = async (fields) => {
+    updateUser(fields)
+    await loadHospital(fields.tenantId)   // ORG branding = the chosen hospital
+    setCodeReady(true)
+    setChanging(false)
+    clearWanted()
+    toast.success(t('patient.gate.claimed'))
+  }
 
   const [types,         setTypes]         = useState([])
   const [reqDocTypes,   setReqDocTypes]   = useState([])
@@ -580,11 +619,15 @@ export default function RequestAssistance() {
     if (!user?.uid) return
     const unsub = onSnapshot(
       query(collection(db, 'documents'), where('patientId', '==', user.uid)),
-      snap => setMyDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      // Marketplace: only documents filed at the CURRENT hospital count —
+      // another hospital's gateway can't read (or verify) them, so they're
+      // neither reused nor replaced in a request filed here.
+      snap => setMyDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(d => (d.tenantId || DEFAULT_HOSPITAL_ID) === myTenant)),
       (err) => console.error('[RequestAssistance] documents snapshot error:', err),
     )
     return unsub
-  }, [user?.uid])
+  }, [user?.uid, myTenant])
 
   // Agency details (requirements / procedure / description) for the coverage
   // plan. Agencies are publicly readable, so a one-shot fetch is enough.
@@ -642,6 +685,7 @@ export default function RequestAssistance() {
   const handleSubmit = async () => {
     if (submitting) return
     if (activeRequest)            { toast.error(t('patient.request.errActive')); return }
+    if (!user.hospitalId || !codeReady) { toast.error(t('patient.gate.errNoCode')); setChanging(true); return }
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
     if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
@@ -761,7 +805,11 @@ export default function RequestAssistance() {
 
       const requestId = generateRequestId()
       const reqRef    = doc(collection(db, 'requests'))
-      await setDoc(reqRef, {
+      // Marketplace: the request and its access code are bound in ONE write —
+      // the rules refuse a request whose code isn't bound to it here, and a
+      // code that already backs another request.
+      const batch = writeBatch(db)
+      batch.set(reqRef, {
         requestId,
         patientId:         user.uid,
         patientName:       user.name ?? '',
@@ -793,8 +841,11 @@ export default function RequestAssistance() {
         submittedAt:       serverTimestamp(),
         updatedAt:         serverTimestamp(),
       })
+      batch.update(doc(db, 'hospitalIds', user.hospitalId), { requestId: reqRef.id })
+      await batch.commit()
 
       setSubmittedId(requestId)
+      setCodeReady(false)   // this code now backs the request; the next one needs a new code
       // Request is filed — the staged draft is no longer needed. Clearing here
       // (plus the submittedId autosave guard) keeps a stale draft from
       // resurrecting the just-submitted request on the next visit.
@@ -1076,6 +1127,29 @@ export default function RequestAssistance() {
     )
   }
 
+  // ── Marketplace gate: choose the hospital + claim its code ────────────────
+  const gateNeeded = codeReady === false || changingHospital ||
+    (!!wantedHospital && wantedHospital !== user?.tenantId)
+  if (!activeRequest && codeReady !== null && gateNeeded) {
+    return (
+      <Layout breadcrumb={t('patient.request.navLabel')}>
+        <div className="px-4 py-5 sm:p-6 w-full max-w-xl mx-auto">
+          <div className="mb-4">
+            <p className="eyebrow">{t('patient.request.eyebrow')}</p>
+            <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.gate.heading')}</h1>
+          </div>
+          <HospitalGate
+            user={user}
+            hospitals={hospitals}
+            initialId={wantedHospital || user?.tenantId || ''}
+            onClaimed={onHospitalClaimed}
+            onCancel={codeReady ? () => { setChanging(false); clearWanted() } : undefined}
+          />
+        </div>
+      </Layout>
+    )
+  }
+
   // ── Request form — guided wizard ───────────────────────────────────────────
   const STEP_LABELS = [
     t('patient.request.stepNeed'), t('patient.request.stepDocs'),
@@ -1101,6 +1175,20 @@ export default function RequestAssistance() {
           <p className="eyebrow">{t('patient.request.eyebrow')}</p>
           <h1 className="font-display text-[26px] font-bold tracking-tight text-gray-900 mt-1">{t('patient.request.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">{t('patient.request.subtitle')}</p>
+        </div>
+
+        {/* Where this request is filed (marketplace) — with a way to change it. */}
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+          <MdLocalHospital size={20} className="flex-shrink-0 text-brand-500" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('patient.gate.filingAt')}</p>
+            <p className="truncate text-sm font-semibold text-gray-900">{currentHospital?.facilityName || ORG.facilityName}</p>
+            {user?.hospitalId && <p className="font-mono text-[11px] text-gray-500">{user.hospitalId}</p>}
+          </div>
+          <button type="button" onClick={() => setChanging(true)}
+            className="flex-shrink-0 min-h-[44px] px-2 text-xs font-semibold text-brand-600 hover:text-brand-700 underline">
+            {t('patient.gate.change')}
+          </button>
         </div>
 
         {/* Draft restored — reassure the patient their progress came back, and

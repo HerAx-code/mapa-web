@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, getDoc, getDocs, updateDoc, collection, query, where, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, getDocs, updateDoc, collection, query, where, serverTimestamp } from 'firebase/firestore'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileRequest, claimCode } from './helpers/marketplace.js'
@@ -8,7 +8,7 @@ import { fileRequest, claimCode } from './helpers/marketplace.js'
 // Patient marketplace (docs/patient-marketplace-plan.md): a network-level
 // patient chooses the hospital per request by claiming that hospital's access
 // code; a hospital sees only patients who filed with it; a code backs one
-// request; the cooldown lives on the patient.
+// request.
 const A = 'hospital-1'
 const B = 'bgh'
 let testEnv
@@ -51,7 +51,6 @@ beforeEach(async () => {
       put('hospitalIds/BGH-2026-00001', { status: 'available', patId: null, tenantId: B }),
       put('hospitalIds/BGH-2026-00002', { status: 'available', patId: null, tenantId: B }),
       put('requests/rA', { patientId: 'patA', status: 'endorsed', agencyIds: ['dswd'], tenantId: A, patientHospitalId: 'MAPA-2026-00001' }),
-      put('patientCooldowns/patA', { cooldownUntilAt: null }),
       put('hospitalsPublicStats/hospital-1', { turnaroundDays: 4, basedOn: 12 }),
     ])
   })
@@ -148,29 +147,10 @@ describe('hospitals see only patients who filed with them', () => {
   })
 })
 
-describe('patientCooldowns — per patient', () => {
-  it('an agency on the case reads and writes it; others cannot', async () => {
-    await assertSucceeds(getDoc(ref('coord', 'patientCooldowns/patA')))
-    await assertSucceeds(setDoc(ref('coord', 'patientCooldowns/patA'), { cooldownUntilAt: null, lastApprovedAt: serverTimestamp(), lastAgencyId: 'dswd' }))
-    await assertFails(getDoc(ref('coordX', 'patientCooldowns/patA')))
-    await assertFails(setDoc(ref('coordX', 'patientCooldowns/patA'), { cooldownUntilAt: null }))
-  })
-
-  it("the patient and the patient's hospitals read it; nobody else writes it", async () => {
-    await assertSucceeds(getDoc(ref('patA', 'patientCooldowns/patA')))
-    await assertSucceeds(getDoc(ref('adminA', 'patientCooldowns/patA')))
-    await assertFails(getDoc(ref('adminB', 'patientCooldowns/patA')))
-    await assertFails(setDoc(ref('patA', 'patientCooldowns/patA'), { cooldownUntilAt: null }))
-    await assertFails(setDoc(ref('coord', 'patientCooldowns/patA'), { cooldownUntilAt: null, extra: 1 }))
-  })
-})
-
 describe('hospitalsPublicStats — public counts, no client writes', () => {
   it('anyone reads; nobody writes', async () => {
     await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'hospitalsPublicStats', 'hospital-1')))
-    const db = as('adminA')
-    await assertFails(setDoc(doc(db, 'hospitalsPublicStats', 'hospital-1'), { turnaroundDays: 1 }))
+    await assertFails(setDoc(doc(as('adminA'), 'hospitalsPublicStats', 'hospital-1'), { turnaroundDays: 1 }))
     await assertFails(setDoc(doc(as('plat'), 'hospitalsPublicStats', 'hospital-1'), { turnaroundDays: 1 }))
-    void writeBatch
   })
 })
