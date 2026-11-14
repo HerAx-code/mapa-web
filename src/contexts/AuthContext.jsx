@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, deleteUser } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from '../firebase'
+import { auth, db, clearLocalCache } from '../firebase'
 import { ORG } from '../config/org'
 import { loadHospital, tenantIdFor, clearHospital } from '../utils/hospitals'
 
@@ -103,7 +103,12 @@ export function AuthProvider({ children }) {
     return userData
   }
 
-  const logout = () => signOut(auth)
+  // Sign out, then clear this device's cached Firestore data (the page
+  // reloads on the route the caller navigates to).
+  const logout = async () => {
+    await signOut(auth)
+    await clearLocalCache()
+  }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

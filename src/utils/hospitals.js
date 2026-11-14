@@ -62,11 +62,14 @@ export const clearHospital = () => {
 
 // ── Phase 4: tenant-scoped reads ─────────────────────────────────────────
 //
-// DORMANT until VITE_TENANT_SCOPING=true. Turning it on before the Phase 3
-// backfill has run would hide every existing record (they have no tenantId
-// yet), so the switch is flipped only after the backfill verifies 0 left.
-// Read at call time (not module load) so tests can toggle it.
-export const tenantScopingOn = () => import.meta.env.VITE_TENANT_SCOPING === 'true'
+// ON unless VITE_TENANT_SCOPING=false. It was dormant until the Phase 3
+// backfill; the backfill has run and the deployed rules are strict on tenantId,
+// so an unscoped gateway query is simply refused by the server — and, worse,
+// first answered from the browser's local cache with whatever a PREVIOUS
+// account on this device had loaded (another hospital's access codes showed on
+// the Access Codes page that way, 2026-11-14). `false` is only for a database
+// that hasn't been backfilled. Read at call time so tests can toggle it.
+export const tenantScopingOn = () => import.meta.env.VITE_TENANT_SCOPING !== 'false'
 
 const scopedTenant = () => (tenantScopingOn() ? currentTenant : null)
 
