@@ -1,6 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, addDoc, updateDoc, deleteDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { fileRequest } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -153,6 +154,13 @@ describe('applications.update — Phase 1.6 identity lock', () => {
 // Ownership was enforced, entry state was not: a patient could submit a
 // request pre-advanced past CRMC verification, or pre-loaded with agencies.
 describe('requests.create — Phase 1.4 self-endorsement', () => {
+  // Marketplace: a request is filed with the patient's current access code,
+  // bound to it in the same batch. Seed a patient holding a claimed code.
+  const seedFiler = async (extra = {}) => testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore()
+    await setDoc(doc(db, 'users', 'patient-1'), { role: 'patient', agencyId: null, hospitalId: 'MAPA-2026-00777', ...extra })
+    await setDoc(doc(db, 'hospitalIds', 'MAPA-2026-00777'), { status: 'used', patId: 'patient-1' })
+  })
   const req = (over = {}) => ({
     requestId: 'MAPA-2026-00001', patientId: 'patient-1',
     assistanceType: 'Hospital Bills', amountNeeded: 25000,
@@ -161,9 +169,9 @@ describe('requests.create — Phase 1.4 self-endorsement', () => {
   })
 
   it('allows the real submit path', async () => {
-    await seedUser('patient-1', 'patient')
+    await seedFiler()
     const ctx = testEnv.authenticatedContext('patient-1')
-    await assertSucceeds(addDoc(collection(ctx.firestore(), 'requests'), req()))
+    await assertSucceeds(fileRequest(ctx.firestore(), { reqId: 'r-ok', code: 'MAPA-2026-00777', data: req() }))
   })
 
   it('REGRESSION GUARD: rejects a request created as fully_funded', async () => {
@@ -198,9 +206,9 @@ describe('requests.create — Phase 1.4 self-endorsement', () => {
   // trigger mirrors an active request into users/{uid}.activeRequestId; the rule
   // reads it and blocks a second create while it is set.
   it('allows a create when the patient has no active request (activeRequestId absent)', async () => {
-    await seedUser('patient-1', 'patient') // no activeRequestId
+    await seedFiler() // no activeRequestId
     const ctx = testEnv.authenticatedContext('patient-1')
-    await assertSucceeds(addDoc(collection(ctx.firestore(), 'requests'), req()))
+    await assertSucceeds(fileRequest(ctx.firestore(), { reqId: 'r-ok2', code: 'MAPA-2026-00777', data: req() }))
   })
 
   it('rejects a second request while activeRequestId is set', async () => {
