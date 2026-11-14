@@ -17,7 +17,7 @@ vi.mock('firebase/firestore', () => ({
 
 const {
   tenantIdFor, withTenant, currentTenantId, loadHospital, clearHospital, isNetworkRole,
-  tenantWhere, inMyTenant, getUsersInScope, agencyPartnersWith, partnerHospitalIdsOf, fetchHospitalBranding,
+  tenantWhere, inMyTenant, getUsersInScope, agencyPartnersWith, partnerHospitalIdsOf, fetchHospitalBranding, promoReachesMe,
 } = await import('../../src/utils/hospitals')
 const { ORG, DEFAULT_HOSPITAL_ID } = await import('../../src/config/org')
 
@@ -275,5 +275,31 @@ describe('fetchHospitalBranding', () => {
     expect((await fetchHospitalBranding('cph')).facilityName).toBe(ORG.facilityName)
     getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'CPH' }) })
     expect((await fetchHospitalBranding('cph')).facilityName).toBe('CPH')
+  })
+})
+
+// Agency promotions reach only patients of partner hospitals.
+describe('promoReachesMe', () => {
+  const agencyMap = { dswd: { partnerHospitalIds: ['bgh'] }, legacy: {} }
+  const promo = (agencyId) => ({ source: 'agency', agencyId })
+
+  it("a partner hospital's patient sees it; another hospital's does not", async () => {
+    await signInAs('bgh')
+    expect(promoReachesMe(promo('dswd'), agencyMap)).toBe(true)
+    await signInAs(DEFAULT_HOSPITAL_ID)
+    expect(promoReachesMe(promo('dswd'), agencyMap)).toBe(false)
+    expect(promoReachesMe(promo('legacy'), agencyMap)).toBe(true)     // no list = hospital #1
+  })
+
+  it("hides a promotion whose agency isn't loaded (never leaks it)", async () => {
+    await signInAs('bgh')
+    expect(promoReachesMe(promo('ghost'), agencyMap)).toBe(false)
+  })
+
+  it('gateway announcements and network users are unaffected', async () => {
+    await signInAs('bgh')
+    expect(promoReachesMe({ title: 'Maintenance' }, agencyMap)).toBe(true)
+    await signInAs(null)
+    expect(promoReachesMe(promo('dswd'), agencyMap)).toBe(true)
   })
 })

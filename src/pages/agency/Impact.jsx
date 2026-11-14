@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { computeAnalytics, formatMonth } from '../../utils/analytics'
 import BarList from '../../components/charts/BarList'
 import TrendArea from '../../components/charts/TrendArea'
+import { HospitalBreakdownCard } from '../../components/agency/HospitalBreakdown'
 import {
   MdPayments, MdGroup, MdWorkspacePremium, MdDownload, MdInsights,
 } from 'react-icons/md'
@@ -144,6 +145,8 @@ export default function AgencyImpact() {
               <h2 className="text-base font-semibold text-gray-900 mb-4">By assistance type</h2>
               <BarList data={a.byType} />
             </div>
+
+            <HospitalBreakdownCard slices={slices ?? []} />
           </div>
         )}
       </div>

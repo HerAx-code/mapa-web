@@ -162,3 +162,14 @@ export function fetchHospitalBranding(tenantId) {
 }
 
 export const clearBrandingCache = () => brandingCache.clear()
+
+// An agency's promotion (announcement source 'agency') reaches a hospital's
+// patients only when that agency partners with the hospital — the only
+// agencies its gateway can endorse them to. Network users (agency staff,
+// platform admin: no tenant) see every promotion; an agency we can't find
+// (not loaded yet, or deleted) hides its promotion rather than leak it.
+export const promoReachesMe = (ann, agencyMap) => {
+  if (ann?.source !== 'agency' || !ann.agencyId || !currentTenant) return true
+  const agency = agencyMap?.[ann.agencyId]
+  return agency ? agencyPartnersWith(agency, currentTenant) : false
+}
