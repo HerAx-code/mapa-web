@@ -1,11 +1,11 @@
 # Multi-Hospital Network Plan — one MAPA gateway for many BARMM hospitals
 
-**Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
+**Status:** ✅ **ALL PHASES BUILT (2026-11-14), NOT YET MERGED OR DEPLOYED** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅ · Phase 8 ✅
-(local branch `docs/multi-hospital-phase0`, not yet merged or deployed). Phase 9 next.
-**Merge/deploy:** Phases 0–4 are safe to ship as-is. **Phases 5–8 ship together,
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅ · Phase 8 ✅ · Phase 9 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged or deployed).
+**Merge/deploy:** Phases 0–4 are safe to ship as-is. **Phases 5–9 ship together,
 only in the coordinated rollout** described under Phase 5 — their rules depend on
 the backfills, and Phase 6's client already moves agency management to the
 platform admin (merged alone, hospital super admins would lose the agency UI
@@ -163,8 +163,8 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
     label per row + a filter once slices come from more than one hospital).
   - Audit entries by **agency** actors carry no tenant (Phase 2: agencies are
     network-level), so with scoping on they leave the gateway Audit Log page; they
-    stay on each request's timeline (queried by `requestId`). Phase 9: a Cloud
-    Function stamps the case's tenant from `requestId`.
+    stay on each request's timeline (queried by `requestId`). ~~Phase 9~~ — done:
+    `onAuditLogCreated` stamps the case's tenant (needs Cloud Functions deployed).
 
 ### Phase 5 — Rules enforce the boundary ✅ 2026-11-14 (not deployed)
 - Helpers in `firestore.rules`: `defaultTenant()` (= `'hospital-1'`, must equal
@@ -367,11 +367,38 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
     sign-in). `buildCertificateHTML` in agency/CertificateGenerator.jsx is unused
     (the page opens the GL viewer) and still reads `ORG` — delete in a cleanup.
 
-### Phase 9 — Functions + analytics + polish
-- Cloud Functions: stamp/propagate `tenantId` where they create docs
-  (notifications, `onRequestWritten`, `syncRequestFinancials`, `glExpirySweep`).
-- Admin analytics scoped per hospital; platform analytics across hospitals.
-- Optional: per-hospital agency sub-budgets (D3 follow-up).
+### Phase 9 — Functions + analytics + polish ✅ 2026-11-14 (not deployed)
+- **Leak fixed: new-request / withdrawal notifications went to every hospital's
+  staff.** `onRequestWritten.notifyAdmins` queried every super/staff admin in the
+  network, so another hospital's staff got the patient's name, bill and request id.
+  It now notifies only the request's hospital (staff are read and filtered by
+  `tenantId`, untagged = hospital #1 — Firestore can't query a missing field).
+  The other functions needed no change: none creates hospital records
+  (`syncRequestFinancials`, `glExpirySweep`, `purgeSelfieOnClose`,
+  `onDocumentCountChanged` update existing docs; notifications are per-user;
+  `onSliceProceeded` notifies the network-level agency).
+- **`onAuditLogCreated`** (new trigger): an untagged entry about a case (agency
+  actors) gets the case's `tenantId` — from `requestId`, else the slice for an
+  `application` entry — so it reappears on the hospital's Audit Log page. Network
+  actions (agency budget/team, platform admin) stay untagged.
+- **Network analytics for the platform admin** — counts only. Firestore count/sum
+  queries need read access to the counted docs, which the platform admin must not
+  have, so `functions/src/networkStats.js` (pure, shared) computes per-hospital
+  figures with the Admin SDK into one doc, `networkStats/current` (rules: platform
+  admin read, no client writes): patients, requests in review / in funding / fully
+  funded / closed, approved GLs and pesos approved. Refreshed every 6 hours by
+  `refreshNetworkStats` (scheduled), or by hand with
+  `scripts/compute-network-stats.mjs --apply` while functions aren't deployed.
+  Shown on the new `/platform/network` page. Verified end to end on the emulator.
+- Hospital admin analytics were already hospital-scoped by Phase 4's
+  `tenantWhere()` (Analytics, Dashboard).
+- Tests: `tests/functions/networkStats.test.js`, `onAuditLogCreated.test.js`,
+  hospital-scoping cases in `onRequestWritten.test.js`; networkStats rules in
+  `platformAdmin.rules.test.js`. 391 rules, 402 unit, 110 function, 133 component.
+- Deferred, by design: **per-hospital agency sub-budgets** (D3 — one budget per
+  agency for v1). Cloud Functions are still not deployed on the live project;
+  until they are, audit stamping doesn't run (entries stay on request timelines)
+  and the stats are refreshed by script.
 
 ---
 

@@ -58,9 +58,9 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
-`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8)
+`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8), `networkStats` (per-hospital counts for platform_admin, Admin-SDK written; Phase 9)
 
-## Tenancy (multi-hospital network — in progress)
+## Tenancy (multi-hospital network — all phases built, not yet deployed)
 MAPA is moving from one host facility per deployment to **one deployment serving many
 hospitals** (docs/multi-hospital-network-plan.md — read it before touching rules,
 queries, roles, access codes, or org config). Locked decisions (2026-11-13):

@@ -92,6 +92,7 @@ const AGENCY_NAV = [
 // Network operator (multi-hospital Phase 6). No patient-facing pages.
 const PLATFORM_NAV = [
   { to: '/platform/hospitals', icon: MdLocalHospital, label: 'Hospitals' },
+  { to: '/platform/network',   icon: MdInsights,      label: 'Network'   },
   { to: '/admin/agencies',     icon: MdBusiness,      label: 'Agencies'  },
 ]
 

@@ -789,6 +789,16 @@ service cloud.firestore {
                        prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
     }
 
+    // ── networkStats ───────────────────────────────────────────────────────────
+    // Phase 9. Per-hospital counts (no patient data) for the platform admin's
+    // Network page — computed by the Admin SDK (refreshNetworkStats /
+    // scripts/compute-network-stats.mjs) because the platform admin may not
+    // read the records being counted. No client writes.
+    match /networkStats/{statId} {
+      allow read:  if isPlatformAdmin();
+      allow write: if false;
+    }
+
     // ── accessCodePrefixes ─────────────────────────────────────────────────────
     // Phase 8. One doc per access-code prefix ever used, naming its hospital.
     // Access codes live in ONE namespace (hospitalIds/{code}), so two hospitals

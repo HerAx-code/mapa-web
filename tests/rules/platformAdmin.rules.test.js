@@ -249,3 +249,22 @@ describe('audit trail', () => {
     await assertFails(setDoc(ref('plat', 'auditLog/p2'), { actorId: 'plat', details: 'x', tenantId: B }))
   })
 })
+
+describe('networkStats (Phase 9) — the platform admin reads counts, nobody writes', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) =>
+      setDoc(doc(ctx.firestore(), 'networkStats', 'current'), { totals: { patients: 3 } }))
+  })
+
+  it('platform_admin reads it', async () => {
+    await assertSucceeds(getDoc(ref('plat', 'networkStats/current')))
+  })
+
+  it.each(['superA', 'staffA', 'coord', 'patA'])('%s cannot read it', async (uid) => {
+    await assertFails(getDoc(ref(uid, 'networkStats/current')))
+  })
+
+  it('no client writes it, not even the platform admin', async () => {
+    await assertFails(setDoc(ref('plat', 'networkStats/current'), { totals: {} }))
+  })
+})

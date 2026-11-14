@@ -78,6 +78,7 @@ const ExportPreview    = lazyWithReload(() => import('./pages/admin/ExportPrevie
 const HospitalSettings = lazyWithReload(() => import('./pages/admin/HospitalSettings'))
 // Platform (network operator, multi-hospital Phase 6)
 const PlatformHospitals = lazyWithReload(() => import('./pages/platform/Hospitals'))
+const PlatformNetwork   = lazyWithReload(() => import('./pages/platform/Network'))
 // Funds page removed — the gateway has zero fund authority. Each agency manages
 // its own budget via /agency/allocation (Agency Administrator role).
 
@@ -182,6 +183,7 @@ export default function App() {
 
           {/* Platform (network operator) */}
           <Route path="/platform/hospitals" element={<PrivateRoute allowedRoles={[ROLES.PLATFORM_ADMIN]}><PlatformHospitals /></PrivateRoute>} />
+          <Route path="/platform/network"   element={<PrivateRoute allowedRoles={[ROLES.PLATFORM_ADMIN]}><PlatformNetwork /></PrivateRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />

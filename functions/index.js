@@ -20,6 +20,8 @@ const { purgeSelfieOnClose }     = require('./src/purgeSelfieOnClose')
 const { onRequestWritten }       = require('./src/onRequestWritten')
 const { onSliceProceeded }       = require('./src/onSliceProceeded')
 const { onDocumentCountChanged } = require('./src/onDocumentCountChanged')
+const { onAuditLogCreated }      = require('./src/onAuditLogCreated')
+const { refreshNetworkStats }    = require('./src/refreshNetworkStats')
 
 exports.resetAgencySlots        = resetAgencySlots
 exports.glExpirySweep           = glExpirySweep
@@ -31,3 +33,5 @@ exports.purgeSelfieOnClose      = purgeSelfieOnClose
 exports.onRequestWritten        = onRequestWritten
 exports.onSliceProceeded        = onSliceProceeded
 exports.onDocumentCountChanged  = onDocumentCountChanged
+exports.onAuditLogCreated       = onAuditLogCreated
+exports.refreshNetworkStats     = refreshNetworkStats
