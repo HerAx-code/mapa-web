@@ -29,7 +29,7 @@ export function deriveRequestStage(request = {}, docs = []) {
   const totalDocs     = docs.length
   const verifiedDocs  = docs.filter(d => d?.status === 'verified').length
   const docsVerified  = totalDocs > 0 && verifiedDocs === totalDocs
-  const intakeComplete = isIntakeComplete(request?.intakeSheet)
+  const intakeComplete = isIntakeComplete(request?.intakeSheet, request?.totalBill)
   const canEndorse    = docsVerified && intakeComplete
 
   const done = { verify: docsVerified, assess: intakeComplete, endorse: false }

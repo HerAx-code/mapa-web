@@ -959,7 +959,7 @@
       "repName": "Your full name (representative)",
       "repNamePlaceholder": "e.g. Maria Dela Cruz",
       "repRelationship": "Relationship to the patient",
-      "repRelationshipPlaceholder": "e.g. Daughter, Spouse, Guardian",
+      "repRelationshipPlaceholder": "Select relationship…",
       "repId": "Your Valid ID (representative)",
       "repSelfie": "Your live selfie (representative)",
       "repAuth": "I confirm I am authorized to file this request on the patient's behalf and that the information is true.",

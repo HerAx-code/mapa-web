@@ -25,6 +25,7 @@ import { compareFaces, hasFace } from '../../utils/faceCheck'
 import { isPatientIntakeComplete } from '../../utils/intakeSheet'
 import { fmtDate } from '../../utils/dates'
 import { requiredDocsFor } from '../../data/referenceData'
+import { RELATIONSHIPS } from '../../utils/intakeSheet'
 import SelfieCaptureModal from '../../components/SelfieCaptureModal'
 import StatusBadge from '../../components/ui/StatusBadge'
 import BalanceHero from '../../components/patient/BalanceHero'
@@ -56,7 +57,11 @@ const PER_TYPE_DOCS = import.meta.env.VITE_PER_TYPE_DOCS === 'true'
 const ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
 
 export default function RequestAssistance() {
-  const { t }      = useTranslation()
+  const { t, i18n } = useTranslation()
+  // Revision 8: the representative's relationship is chosen from the same
+  // fixed list as the intake sheet (stored as the value, shown in EN/FIL).
+  const isFil = (i18n.language ?? '').toLowerCase().startsWith('fil')
+  const relLabel = (v) => { const r = RELATIONSHIPS.find(x => x.value === v); return r ? (isFil ? r.fil : r.en) : (v || '') }
   const { user, updateUser } = useAuth()
   const navigate   = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1288,7 +1293,10 @@ export default function RequestAssistance() {
                 </div>
                 <div>
                   <label htmlFor="req-rep-relationship" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.repRelationship')} <span className="text-red-400">*</span></label>
-                  <input id="req-rep-relationship" className="input" value={repForm.relationship} onChange={setRep('relationship')} placeholder={t('patient.request.repRelationshipPlaceholder')} />
+                  <select id="req-rep-relationship" className="input min-h-[44px]" value={repForm.relationship} onChange={setRep('relationship')}>
+                    <option value="">{t('patient.request.repRelationshipPlaceholder')}</option>
+                    {RELATIONSHIPS.map(r => <option key={r.value} value={r.value}>{isFil ? r.fil : r.en}</option>)}
+                  </select>
                 </div>
                 {/* Representative ID */}
                 <div className="p-3 rounded-lg border border-gray-100">
@@ -1392,7 +1400,7 @@ export default function RequestAssistance() {
             {filedByRep && (
               <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
                 <span className="text-gray-500">{t('patient.request.repName')}</span>
-                <span className="font-medium text-gray-800 text-right">{repForm.name} ({repForm.relationship})</span>
+                <span className="font-medium text-gray-800 text-right">{repForm.name} ({relLabel(repForm.relationship)})</span>
               </div>
             )}
           </div>

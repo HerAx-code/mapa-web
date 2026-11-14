@@ -185,9 +185,20 @@ export const blankSheet = () => ({
   meansTestOverrideReason: '',
 })
 
+// Revision 11: the bill amount is confirmed by staff against the uploaded
+// billing statement (intakeSheet.billVerification). It counts only while it
+// matches the request's current bill — editing the bill afterwards needs a
+// fresh confirmation. `bill` unknown (agency views) → confirmed at all.
+export const billVerified = (s, bill) => {
+  const v = s?.billVerification
+  if (!v || v.amount == null) return false
+  return bill == null || Number(v.amount) === Number(bill)
+}
+
 // The full sheet is complete when BOTH the patient facts AND the gateway
-// assessment (means-test + recommendation) are present.
-export const isIntakeComplete = (s) => {
+// assessment (means-test + recommendation) are present. `bill` = the request's
+// totalBill, for the bill-confirmation check.
+export const isIntakeComplete = (s, bill) => {
   if (!s) return false
   return Boolean(
     s.householdSize && Number(s.householdSize) > 0 &&
@@ -200,6 +211,9 @@ export const isIntakeComplete = (s) => {
     // Only for sheets flagged verificationRequired (set when staff first work
     // a not-yet-complete sheet) — already-assessed cases are grandfathered.
     (!s.verificationRequired || allSectionsVerified(s)) &&
+    // Revision 11: same grandfathering — only sheets flagged
+    // billVerificationRequired need the bill confirmed.
+    (!s.billVerificationRequired || billVerified(s, bill)) &&
     s.completedBy
   )
 }
@@ -216,16 +230,18 @@ export const isPatientIntakeComplete = (s) => {
 }
 
 // Returns array of { key, label, done } for each required field.
-export const requiredFieldsStatus = (sheet, currentUserName) => {
+export const requiredFieldsStatus = (sheet, currentUserName, bill) => {
   if (!sheet) sheet = {}
   const fields = [
+    ...(sheet.billVerificationRequired ? [{ key: 'verify.bill', label: 'Bill amount verified' }] : []),
     ...REQUIRED_FIELDS,
     ...(needsMeansTestReason(sheet) ? [MEANS_TEST_REASON_FIELD] : []),
     ...(sheet.verificationRequired ? FACT_SECTIONS.map(sec => ({ key: `verify.${sec.key}`, label: `${sec.label} verified` })) : []),
   ]
   return fields.map(f => {
     let done = false
-    if (f.key.startsWith('verify.'))   done = sectionVerification(sheet, f.key.slice(7)).status === 'verified'
+    if (f.key === 'verify.bill')        done = billVerified(sheet, bill)
+    else if (f.key.startsWith('verify.')) done = sectionVerification(sheet, f.key.slice(7)).status === 'verified'
     else if (f.key === 'householdSize') done = !!sheet.householdSize && Number(sheet.householdSize) > 0
     else if (f.key === 'monthlyIncome') done = sheet.monthlyIncome !== '' && Number(sheet.monthlyIncome) >= 0
     else if (f.key === 'completedBy')   done = !!(sheet.completedBy || currentUserName)

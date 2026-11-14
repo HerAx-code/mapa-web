@@ -32,6 +32,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import CompareFacesModal from '../../components/admin/CompareFacesModal'
 import ConfirmModal from '../../components/ConfirmModal'
+import { MEANS_CATEGORIES, billVerified, relationshipLabel } from '../../utils/intakeSheet'
 import StatusBadge from '../../components/ui/StatusBadge'
 import CaseTimeline from '../../components/CaseTimeline'
 import {
@@ -153,6 +154,24 @@ function EndorseModal({ request, slices, agencies, onClose }) {
 
   const selectedCount = selected.size
   const canSubmit     = !saving && selectedCount > 0 && headroom > 0
+  // Revision 15: "Endorse this application?" — a confirmation that shows the
+  // case-assessment summary before anything is written.
+  const [confirming, setConfirming] = useState(false)
+  const intake = request.intakeSheet ?? {}
+  const meansLabel = MEANS_CATEGORIES.find(c => c.value === intake.meansTestCategory)?.label?.split('—')[0]?.trim() || '—'
+  const chosenNames = agencies.filter(a => selected.has(a.id)).map(a => a.name)
+  const summaryRows = [
+    ['Patient', request.patientName || '—'],
+    ['Request', request.requestId || request.id],
+    ['Assistance type', request.assistanceType || '—'],
+    ['Total bill', `${peso(request.totalBill ?? 0)}${billVerified(intake, request.totalBill) ? ' · verified' : ''}`],
+    ['Amount needed', peso(request.amountNeeded ?? 0)],
+    ['Means-test category', meansLabel],
+    ['Household', intake.householdSize ? `${intake.householdSize} ${Number(intake.householdSize) === 1 ? 'person' : 'people'}` : '—'],
+    ['Monthly household income', intake.monthlyIncome !== undefined && intake.monthlyIncome !== '' && intake.monthlyIncome !== null ? peso(intake.monthlyIncome) : '—'],
+    ['Diagnosis', intake.diagnosis || '—'],
+    ['Assessed by', intake.completedBy || '—'],
+  ]
 
   const toggle = (id) => {
     setSelected(prev => {
@@ -576,7 +595,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
 
         <div className="px-5 pb-4 pt-2 flex gap-2 justify-end border-t border-gray-50 sticky bottom-0 bg-white">
           <button className="btn-secondary text-sm" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="btn-primary text-sm flex items-center gap-1.5" onClick={handleEndorse}
+          <button className="btn-primary text-sm flex items-center gap-1.5" onClick={() => setConfirming(true)}
             disabled={!canSubmit}>
             <MdSend size={14} /> {saving
               ? 'Endorsing…'
@@ -586,13 +605,45 @@ function EndorseModal({ request, slices, agencies, onClose }) {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        onConfirm={async () => { await handleEndorse(); setConfirming(false) }}
+        title="Endorse this application?"
+        confirmLabel={`Yes, endorse to ${selectedCount} ${selectedCount === 1 ? 'agency' : 'agencies'}`}
+        confirmLabelBusy="Endorsing…"
+        body={
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">Check the case-assessment summary. The selected agencies will see this case and the patient is notified.</p>
+            <dl className="divide-y divide-gray-100 rounded-lg border border-gray-100 text-xs">
+              {summaryRows.map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3 px-3 py-1.5">
+                  <dt className="text-gray-500">{k}</dt>
+                  <dd className="text-right font-medium text-gray-800 break-words">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            {intake.recommendation?.trim() && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Recommendation</p>
+                <p className="mt-0.5 text-xs text-gray-700 whitespace-pre-line line-clamp-4">{intake.recommendation.trim()}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Endorsing to</p>
+              <p className="mt-0.5 text-xs font-medium text-gray-800">{chosenNames.join(', ') || '—'}</p>
+            </div>
+          </div>
+        }
+      />
     </div>
   )
 }
 
 // ── Request detail modal ─────────────────────────────────────────────────────
 
-function RequestDetail({ request, agencies, onClose }) {
+function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [slices, setSlices] = useState([])
@@ -723,6 +774,16 @@ function RequestDetail({ request, agencies, onClose }) {
   const allVerified    = stage.docsVerified
   const intakeComplete = stage.intakeComplete
   const canEndorse     = stage.canEndorse
+
+  // Revision 12: arriving from the Case Assessment's "Endorse to agencies"
+  // opens the endorse step as soon as the gate is met (documents verified +
+  // assessment complete). If it isn't, the stage rail shows what's missing.
+  const autoEndorseDone = useRef(false)
+  useEffect(() => {
+    if (!autoEndorse || autoEndorseDone.current || !canEndorse) return
+    autoEndorseDone.current = true
+    setShowEndorse(true)
+  }, [autoEndorse, canEndorse])
 
   // Verify / reject / un-verify a document. First verify or reject also
   // moves the request out of 'submitted' into 'under_review'. Rejection
@@ -1006,7 +1067,7 @@ function RequestDetail({ request, agencies, onClose }) {
           {request.filedBy && (
             <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-800">
               <p className="font-semibold flex items-center gap-1.5"><MdPerson size={13} /> Filed by a representative</p>
-              <p className="mt-0.5">{request.filedBy.name} · {request.filedBy.relationship}</p>
+              <p className="mt-0.5">{request.filedBy.name} · {relationshipLabel(request.filedBy.relationship)}</p>
               <p className="text-amber-700/80 mt-0.5">Verify the representative's ID and selfie in the documents below.</p>
             </div>
           )}
@@ -1289,7 +1350,10 @@ export default function Requests() {
   const [allSlices, setAllSlices] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Revision 10/12: /admin/requests?open=<id>[&endorse=1] opens that request
+  // (from the Case Assessment's back link / endorse button).
+  const [autoEndorseId, setAutoEndorseId] = useState(null)
   // Seed from ?q= so the ⌘K palette's "Requests matching …" lands pre-filtered.
   const [search,   setSearch]   = useState(() => searchParams.get('q') ?? '')
   const [filter,   setFilter]   = useState('needs_action')
@@ -1489,6 +1553,20 @@ export default function Requests() {
     return null
   }
 
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || requests.length === 0) return
+    const req = requests.find(r => r.id === openId)
+    if (req) {
+      setSelected(req)
+      if (searchParams.get('endorse') === '1') setAutoEndorseId(openId)
+    }
+    const next = new URLSearchParams(searchParams)
+    next.delete('open'); next.delete('endorse')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requests, searchParams])
+
   // Keep the open detail in sync with live request updates
   const selectedLive = selected ? requests.find(r => r.id === selected.id) ?? selected : null
 
@@ -1607,7 +1685,9 @@ export default function Requests() {
   if (selectedLive) {
     return (
       <Layout breadcrumb="Assistance Requests">
-        <RequestDetail request={selectedLive} agencies={agencies} onClose={() => setSelected(null)} />
+        <RequestDetail request={selectedLive} agencies={agencies}
+          autoEndorse={autoEndorseId === selectedLive.id}
+          onClose={() => { setSelected(null); setAutoEndorseId(null) }} />
       </Layout>
     )
   }
