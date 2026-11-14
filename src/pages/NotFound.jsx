@@ -11,7 +11,7 @@ export default function NotFound() {
     const dash = {
       [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
       [ROLES.STAFF_ADMIN]:  '/admin/dashboard',
-      [ROLES.PLATFORM_ADMIN]: '/platform/overview',
+      [ROLES.PLATFORM_ADMIN]: '/platform/hospitals',
       [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
       [ROLES.AGENCY]:       '/agency/dashboard',
       [ROLES.PATIENT]:      '/patient/request',

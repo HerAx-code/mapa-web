@@ -809,6 +809,33 @@ service cloud.firestore {
       return getAfter(/databases/$(database)/documents/hospitals/$(hospitalId)).data;
     }
 
+    // ── onboardingRequests ─────────────────────────────────────────────────────
+    // A hospital asks to join the network from the public "For hospitals" page.
+    // The page signs the visitor in anonymously (as Register does) and the
+    // request's id is that session's uid — so one request per session, created
+    // once and never overwritten by its sender. Shape and sizes are pinned,
+    // status starts 'new', the time is the server's. Only the platform admin
+    // reads them and moves them through the pipeline.
+    match /onboardingRequests/{reqId} {
+      allow create: if isAuth() && reqId == uid() &&
+                       request.resource.data.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt']) &&
+                       request.resource.data.status == 'new' &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.hospitalName is string &&
+                       request.resource.data.hospitalName.size() >= 3 && request.resource.data.hospitalName.size() <= 150 &&
+                       request.resource.data.hospitalType in ['DOH-retained', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
+                       request.resource.data.region is string && request.resource.data.region.size() <= 40 &&
+                       request.resource.data.contactName is string &&
+                       request.resource.data.contactName.size() >= 2 && request.resource.data.contactName.size() <= 120 &&
+                       request.resource.data.email is string && request.resource.data.email.size() <= 200 &&
+                       request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+') &&
+                       request.resource.data.message is string && request.resource.data.message.size() <= 2000;
+      allow read, delete: if isPlatformAdmin();
+      allow update: if isPlatformAdmin() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusUpdatedAt', 'hospitalId']) &&
+                       request.resource.data.status in ['new', 'contacted', 'onboarded', 'declined'];
+    }
+
     // ── networkStats ───────────────────────────────────────────────────────────
     // Phase 9. Per-hospital counts (no patient data) for the platform admin's
     // Network page — computed by the Admin SDK (refreshNetworkStats /
@@ -840,7 +867,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
                'shortName', 'gatewayName', 'gatewayInitials', 'facilityName',
                'contactEmail', 'accessCodePrefix', 'address', 'logoUrl',
-               'enabled', 'createdAt', 'updatedAt'
+               'region', 'enabled', 'createdAt', 'updatedAt'
              ]);
     }
 

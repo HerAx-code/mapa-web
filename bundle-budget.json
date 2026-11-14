@@ -1,10 +1,10 @@
 {
-  "_comment": "Gzipped production-bundle size budgets in KB. `npm run budget` (and CI) fails if any is exceeded. These guard first-load weight for indigent patients on slow connections. When a change legitimately grows a bundle, bump the relevant number here in the same PR and say why — that keeps growth a deliberate, reviewed decision instead of silent drift. Headroom over the 2026-09-29 baseline is ~10-15%. 2026-11-14: totalJs 1050 -> 1060 for multi-hospital Phase 6 (the lazy platform-admin Hospitals page, ~5 KB gz, loaded only by the network operator; initial/index unchanged within budget). 2026-11-14: totalJs 1060 -> 1075 for multi-hospital Phases 7-8 (partner pickers, Hospital Settings page, case-hospital branding; lazy staff chunks — the patient boot path stays ~386 KB of 410).",
+  "_comment": "Gzipped production-bundle size budgets in KB. `npm run budget` (and CI) fails if any is exceeded. These guard first-load weight for indigent patients on slow connections. When a change legitimately grows a bundle, bump the relevant number here in the same PR and say why — that keeps growth a deliberate, reviewed decision instead of silent drift. Headroom over the 2026-09-29 baseline is ~10-15%. 2026-11-14: totalJs 1050 -> 1060 for multi-hospital Phase 6 (the lazy platform-admin Hospitals page, ~5 KB gz, loaded only by the network operator; initial/index unchanged within budget). 2026-11-14: totalJs 1060 -> 1075 for multi-hospital Phases 7-8 (partner pickers, Hospital Settings page, case-hospital branding; lazy staff chunks — the patient boot path stays ~386 KB of 410). 2026-11-14: chunk index 185 -> 188 for the multi-hospital page restructure (the shared shell gained the user's hospital name, the platform admin's sidebar + onboarding badge, and partner-filtered promotions — every role loads it; initial JS ~387 of 410).",
   "initialJs": 410,
   "totalJs": 1075,
   "totalCss": 18,
   "chunks": {
-    "index": 185,
+    "index": 188,
     "vendor-firebase": 175,
     "vendor-react": 62,
     "face-api.esm": 360

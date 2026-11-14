@@ -17,12 +17,20 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // in src/config/org.js.
 export const HOSPITAL_FORM_FIELDS = [
   'facilityName', 'shortName', 'gatewayName', 'gatewayInitials',
-  'accessCodePrefix', 'contactEmail', 'address',
+  'accessCodePrefix', 'contactEmail', 'address', 'region',
+]
+
+// Philippine regions, offered as suggestions for the hospital's region (the
+// network admin's console groups hospitals by it). Free text is still allowed.
+export const PH_REGIONS = [
+  'NCR', 'CAR', 'Region I', 'Region II', 'Region III', 'Region IV-A', 'MIMAROPA',
+  'Region V', 'Region VI', 'NIR', 'Region VII', 'Region VIII', 'Region IX',
+  'Region X', 'Region XI', 'Region XII', 'Caraga', 'BARMM',
 ]
 
 export const emptyHospitalForm = () => ({
   id: '', facilityName: '', shortName: '', gatewayName: 'Medical Social Services',
-  gatewayInitials: 'MSS', accessCodePrefix: '', contactEmail: '', address: '',
+  gatewayInitials: 'MSS', accessCodePrefix: '', contactEmail: '', address: '', region: '',
 })
 
 export const normalizeHospitalId = (s) =>

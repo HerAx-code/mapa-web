@@ -78,7 +78,8 @@ const ExportPreview    = lazyWithReload(() => import('./pages/admin/ExportPrevie
 const HospitalSettings = lazyWithReload(() => import('./pages/admin/HospitalSettings'))
 // Platform (network operator, multi-hospital Phase 6)
 const PlatformHospitals = lazyWithReload(() => import('./pages/platform/Hospitals'))
-const PlatformNetwork   = lazyWithReload(() => import('./pages/platform/Network'))
+const PlatformRequests  = lazyWithReload(() => import('./pages/platform/OnboardingRequests'))
+const ForHospitals      = lazyWithReload(() => import('./pages/ForHospitals'))
 // Funds page removed — the gateway has zero fund authority. Each agency manages
 // its own budget via /agency/allocation (Agency Administrator role).
 
@@ -114,6 +115,7 @@ export default function App() {
           <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/install"  element={<InstallApp />} />
+          <Route path="/for-hospitals" element={<ForHospitals />} />
           {import.meta.env.VITE_ENABLE_SEED === 'true' && (
             <Route path="/seed" element={<Seed />} />
           )}
@@ -183,10 +185,11 @@ export default function App() {
           <Route path="/admin/settings"       element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><HospitalSettings /></PrivateRoute>} />
 
           {/* Platform (network operator) */}
-          <Route path="/platform"                element={<Navigate to="/platform/overview" replace />} />
-          <Route path="/platform/overview"       element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><PlatformNetwork /></PrivateRoute>} />
-          <Route path="/platform/network"        element={<Navigate to="/platform/overview" replace />} />
+          <Route path="/platform"                element={<Navigate to="/platform/hospitals" replace />} />
+          <Route path="/platform/overview"       element={<Navigate to="/platform/hospitals" replace />} />
+          <Route path="/platform/network"        element={<Navigate to="/platform/hospitals" replace />} />
           <Route path="/platform/hospitals"      element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><PlatformHospitals /></PrivateRoute>} />
+          <Route path="/platform/requests"       element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><PlatformRequests /></PrivateRoute>} />
           <Route path="/platform/agencies"       element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><Agencies /></PrivateRoute>} />
           <Route path="/platform/agencies/new"   element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><AddAgency /></PrivateRoute>} />
           <Route path="/platform/agencies/:id"   element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><AgencyDetail /></PrivateRoute>} />

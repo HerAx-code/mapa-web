@@ -19,6 +19,7 @@ import {
 import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
 import { getUsersInScope, inMyTenant, currentTenantId } from '../utils/hospitals'
 import { useOrg } from '../hooks/useOrg'
+import { useOnboardingRequests } from '../hooks/useOnboardingRequests'
 import { db } from '../firebase'
 import { getOrCreateConversation, sendMessage } from '../utils/messages'
 import { notify } from '../utils/notifications'
@@ -92,8 +93,8 @@ const AGENCY_NAV = [
 
 // Network operator (multi-hospital Phase 6). No patient-facing pages.
 const PLATFORM_NAV = [
-  { to: '/platform/overview',  icon: MdInsights,      label: 'Overview'  },
   { to: '/platform/hospitals', icon: MdLocalHospital, label: 'Hospitals' },
+  { to: '/platform/requests',  icon: MdInbox,         label: 'Onboarding requests' },
   { to: '/platform/agencies',  icon: MdBusiness,      label: 'Agencies'  },
 ]
 
@@ -570,7 +571,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
 
 // ── Sidebar content ───────────────────────────────────────────────────────
 
-function NavItems({ items, onClose, badgeOverrides = {} }) {
+function NavItems({ items, onClose, badgeOverrides = {}, dark = false }) {
   const { t } = useTranslation()
   return items.map(item => {
     const badge = item.to in badgeOverrides ? badgeOverrides[item.to] : item.badge
@@ -580,12 +581,12 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
         key={item.to}
         to={item.to}
         onClick={onClose}
-        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        className={({ isActive }) => `${dark ? 'nav-item-dark' : 'nav-item'} ${isActive ? 'active' : ''}`}
       >
         <item.icon size={18} className="flex-shrink-0" />
         <span className="flex-1 truncate">{label}</span>
         {badge > 0 && (
-          <span className="text-xs font-bold bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
+          <span className={`text-xs font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center flex-shrink-0 ${dark ? 'bg-brand-400 text-brand-900' : 'bg-red-500 text-white'}`}>
             {badge > 9 ? '9+' : badge}
           </span>
         )}
@@ -607,6 +608,7 @@ function useMyHospitalName() {
 
 function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unreadMessages = 0 }) {
   const hospitalName = useMyHospitalName()
+  const { newCount: newRequests } = useOnboardingRequests(role === ROLES.PLATFORM_ADMIN)
   const { t } = useTranslation()
   const msgBadge = unreadMessages > 0 ? unreadMessages : 0
   const msgOverride = {
@@ -622,7 +624,10 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
         <div className="flex items-center gap-2.5">
           <Logo size={28} />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
+            <p className={`text-sm font-semibold leading-tight ${role === ROLES.PLATFORM_ADMIN ? 'text-white' : 'text-gray-900'}`}>MAPA</p>
+            {role === ROLES.PLATFORM_ADMIN && (
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-brand-100 leading-tight">{t('shell.platformAdmin')}</p>
+            )}
             {hospitalName && (
               <p className="text-xs text-gray-500 leading-tight truncate max-w-[160px]" title={hospitalName}>{hospitalName}</p>
             )}
@@ -654,8 +659,7 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
         )}
         {role === ROLES.PLATFORM_ADMIN && (
           <>
-            <p className="eyebrow px-3 mb-2">{t('shell.network')}</p>
-            <NavItems items={PLATFORM_NAV} onClose={onClose} />
+            <NavItems items={PLATFORM_NAV} onClose={onClose} dark badgeOverrides={{ '/platform/requests': newRequests }} />
           </>
         )}
         {(role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN) && (
@@ -1168,7 +1172,8 @@ export default function Layout({ children, breadcrumb }) {
 
       {/* ── Sidebar ──────────────────────────────────────────────────── */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 flex-shrink-0
+        fixed inset-y-0 left-0 z-50 w-56 border-r flex-shrink-0
+        ${user?.role === ROLES.PLATFORM_ADMIN ? 'bg-gradient-to-b from-brand-900 to-[#021a0c] border-brand-900' : 'bg-white border-gray-100'}
         transform transition-transform duration-200 ease-in-out
         lg:static lg:translate-x-0 print:hidden
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}

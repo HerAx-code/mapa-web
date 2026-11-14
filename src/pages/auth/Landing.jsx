@@ -35,7 +35,7 @@ const DASHBOARD = {
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
   [ROLES.STAFF_ADMIN]:  '/admin/dashboard',
-  [ROLES.PLATFORM_ADMIN]: '/platform/overview',
+  [ROLES.PLATFORM_ADMIN]: '/platform/hospitals',
 }
 
 // One section-header treatment used everywhere on the page — a warm display
