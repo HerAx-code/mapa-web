@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
-import { inMyTenant } from './hospitals'
+import { inMyTenant, promoReachesMe } from './hospitals'
+import { useLiveData } from '../contexts/LiveDataContext'
 import { MdBuildCircle, MdWarning, MdInfo } from 'react-icons/md'
 import { db } from '../firebase'
 
@@ -135,6 +136,10 @@ export const dismissAnnouncement = (uid, id) => {
 // listener per logged-in dashboard mount.
 export const useFeedAnnouncements = ({ role, agencyId, uid }) => {
   const [items, setItems] = useState([])
+  // Multi-hospital: agency promotions only for patients of partner hospitals.
+  // Applied after the snapshot so a partnership change re-filters without
+  // re-subscribing.
+  const { agencyMap } = useLiveData()
 
   useEffect(() => {
     if (!uid || !role) return
@@ -187,5 +192,5 @@ export const useFeedAnnouncements = ({ role, agencyId, uid }) => {
     return () => unsub()
   }, [uid, role, agencyId])
 
-  return items
+  return useMemo(() => items.filter(a => promoReachesMe(a, agencyMap)), [items, agencyMap])
 }

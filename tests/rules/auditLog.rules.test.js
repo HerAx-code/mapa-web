@@ -123,14 +123,16 @@ describe('auditLog — immutability (L13a)', () => {
 describe('auditLog.read — role scoping', () => {
   beforeEach(async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await addDoc(collection(ctx.firestore(), 'auditLog'), payload('user-alice', { actorAgencyId: 'malasakit' }))
+      await addDoc(collection(ctx.firestore(), 'auditLog'), payload('user-alice', { actorAgencyId: 'malasakit', tenantId: 'hospital-1' }))
     })
   })
 
-  it('super_admin can read any entry', async () => {
+  // Multi-hospital Phase 5: a super_admin reads its own hospital's entries,
+  // and must query by tenantId (rules are not filters).
+  it("super_admin can read their hospital's entries", async () => {
     await seedUser('admin-1', 'super_admin')
     const ctx = testEnv.authenticatedContext('admin-1')
-    const snap = await ctx.firestore().collection('auditLog').get()
+    const snap = await ctx.firestore().collection('auditLog').where('tenantId', '==', 'hospital-1').get()
     expect(snap.size).toBeGreaterThan(0)
   })
 

@@ -45,10 +45,16 @@ describe('hospitals — read', () => {
 })
 
 describe('hospitals — write', () => {
-  it('super_admin can create and update with allowed keys', async () => {
+  it("super_admin can update their own hospital's doc with allowed keys", async () => {
+    await assertSucceeds(updateDoc(hospital1(as('super-1')), { contactEmail: 'mss@example.org' }))
+  })
+
+  // Phase 5: a hospital super_admin is scoped to its own hospital (super-1 has
+  // no tenantId, so it is hospital #1). Creating other hospitals is the
+  // platform_admin's job (Phase 6).
+  it('super_admin cannot create or edit another hospital', async () => {
     const db = as('super-1')
-    await assertSucceeds(setDoc(doc(db, 'hospitals', 'hospital-2'), { gatewayName: 'MSS', facilityName: 'BGH', enabled: true }))
-    await assertSucceeds(updateDoc(hospital1(db), { contactEmail: 'mss@example.org' }))
+    await assertFails(setDoc(doc(db, 'hospitals', 'hospital-2'), { gatewayName: 'MSS', facilityName: 'BGH', enabled: true }))
   })
 
   it('super_admin cannot add keys outside the allowlist', async () => {

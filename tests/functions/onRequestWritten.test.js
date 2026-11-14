@@ -27,7 +27,8 @@ const serverTimestamp = () => 'TS'
 // Mock db: users.where(...).get() → two admins; notifications/{id}/items.add() captured.
 function makeDb(admins = [{ id: 'a1' }, { id: 'a2' }]) {
   const writes = []
-  const usersSnap = { empty: admins.length === 0, size: admins.length, docs: admins }
+  const docs = admins.map(({ id, ...data }) => ({ id, data: () => data }))
+  const usersSnap = { empty: docs.length === 0, size: docs.length, docs }
   const chain = { where: () => chain, get: async () => usersSnap }
   return {
     writes,
@@ -38,6 +39,35 @@ function makeDb(admins = [{ id: 'a1' }, { id: 'a2' }]) {
     },
   }
 }
+
+// Multi-hospital Phase 9 — staff notifications stay inside the request's hospital.
+describe('handleRequestWritten — hospital scoping', () => {
+  const staff = [
+    { id: 'a1', tenantId: 'hospital-1' },
+    { id: 'legacy' },                       // pre-backfill: hospital #1
+    { id: 'b1', tenantId: 'bgh' },
+  ]
+
+  it("notifies only the request's hospital's staff", async () => {
+    const db = makeDb(staff)
+    const r = await handleRequestWritten({ db, before: null, after: { patientName: 'Ana', tenantId: 'bgh', requestId: 'R1' }, requestId: 'x', serverTimestamp })
+    expect(r.notified).toBe(1)
+    expect(db.writes.map(w => w.id)).toEqual(['b1'])
+  })
+
+  it('an untagged request belongs to hospital #1 (and so do untagged staff)', async () => {
+    const db = makeDb(staff)
+    await handleRequestWritten({ db, before: null, after: { patientName: 'Ana', requestId: 'R2' }, requestId: 'x', serverTimestamp })
+    expect(db.writes.map(w => w.id)).toEqual(['a1', 'legacy'])
+  })
+
+  it('withdrawals are scoped the same way', async () => {
+    const db = makeDb(staff)
+    const after = { status: 'closed', closeReason: 'Withdrawn by applicant.', tenantId: 'bgh', requestId: 'R3' }
+    await handleRequestWritten({ db, before: { status: 'submitted' }, after, requestId: 'x', serverTimestamp })
+    expect(db.writes.map(w => w.id)).toEqual(['b1'])
+  })
+})
 
 describe('handleRequestWritten', () => {
   it('notifies all admins on a new request (create)', async () => {

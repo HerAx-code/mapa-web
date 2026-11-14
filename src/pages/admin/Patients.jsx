@@ -32,8 +32,8 @@ function ProfileModal({ patient, onClose, onMessage }) {
   useEffect(() => {
     if (!patient?.uid) return
     Promise.all([
-      getDocs(query(collection(db, 'applications'), where('patientId', '==', patient.uid))),
-      getDocs(query(collection(db, 'documents'),    where('patientId', '==', patient.uid))),
+      getDocs(query(collection(db, 'applications'), ...tenantWhere(), where('patientId', '==', patient.uid))),
+      getDocs(query(collection(db, 'documents'), ...tenantWhere(), where('patientId', '==', patient.uid))),
     ]).then(([appsSnap, docsSnap]) => {
       const apps = appsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       setActiveApp(apps.find(a => !['rejected', 'certificate'].includes(a.status)) ?? null)
@@ -319,10 +319,10 @@ export default function Patients() {
       // certificates -- the doc ID IS the appId, so we look up via the
       // already-fetched applications list).
       const [docsSnap, contentsSnap, appsSnap, requestsSnap, notifsSnap, convsSnap] = await Promise.all([
-        getDocs(query(collection(db, 'documents'),        where('patientId', '==', uid))),
-        getDocs(query(collection(db, 'documentContents'), where('patientId', '==', uid))),
-        getDocs(query(collection(db, 'applications'),     where('patientId', '==', uid))),
-        getDocs(query(collection(db, 'requests'),         where('patientId', '==', uid))),
+        getDocs(query(collection(db, 'documents'), ...tenantWhere(), where('patientId', '==', uid))),
+        getDocs(query(collection(db, 'documentContents'), ...tenantWhere(), where('patientId', '==', uid))),
+        getDocs(query(collection(db, 'applications'), ...tenantWhere(), where('patientId', '==', uid))),
+        getDocs(query(collection(db, 'requests'), ...tenantWhere(), where('patientId', '==', uid))),
         getDocs(collection(db, 'notifications', uid, 'items')),
         getDocs(query(collection(db, 'conversations'),    where('participants', 'array-contains', uid))),
       ])
@@ -332,6 +332,7 @@ export default function Patients() {
       const certSnaps = await Promise.all(
         appsSnap.docs.map(a => getDocs(query(
           collection(db, 'certificates'),
+          ...tenantWhere(),
           where('__name__', '==', a.id),
         )).catch(() => null))
       )

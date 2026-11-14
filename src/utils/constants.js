@@ -48,7 +48,11 @@ export const PERIOD_ADJECTIVE = {
 //   - STAFF_ADMIN — the gateway operations staff. Same as super_admin minus
 //     destructive actions.
 //   - PATIENT — applicant.
+//   - PLATFORM_ADMIN — the network operator (multi-hospital Phase 6): onboards
+//     hospitals + their first admins, owns agencies and reference data. No
+//     hospital, no patient data. Created only by scripts/create-platform-admin.mjs.
 export const ROLES = {
+  PLATFORM_ADMIN: 'platform_admin',
   SUPER_ADMIN:  'super_admin',
   STAFF_ADMIN:  'staff_admin',
   AGENCY_ADMIN: 'agency_admin',
@@ -60,6 +64,7 @@ export const ROLES = {
 // agency_admin inherits agency permissions automatically.
 export const isAgencyRole = (role) => role === ROLES.AGENCY || role === ROLES.AGENCY_ADMIN
 export const isGatewayAdminRole = (role) => role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN
+export const isPlatformAdminRole = (role) => role === ROLES.PLATFORM_ADMIN
 
 // Idle session timeout (security-improvement-plan §1.3; see
 // docs/session-timeout-and-terms-plan.md). STAFF ONLY — patients are exempt,
@@ -70,7 +75,7 @@ export const SESSION_IDLE_MS     = 15 * 60 * 1000       // log out after 15 min 
 export const SESSION_WARN_MS     = 90 * 1000            // warn 90s before logout
 export const SESSION_ABSOLUTE_MS = 10 * 60 * 60 * 1000  // hard cap ~10h since app load
 // A staff role is subject to the timeout; patients (and logged-out) are not.
-export const isTimeoutRole = (role) => isGatewayAdminRole(role) || isAgencyRole(role)
+export const isTimeoutRole = (role) => isGatewayAdminRole(role) || isAgencyRole(role) || isPlatformAdminRole(role)
 
 // Terms of Use version (docs/session-timeout-and-terms-plan.md). Patients accept
 // at registration; the accepted version is stamped on their user doc. Bump this
@@ -81,8 +86,12 @@ export const TERMS_VERSION = '2026-10-18'
 
 // Canonical display labels for roles. Import from here instead of redefining
 // per-file so wording stays consistent across the UI.
+// Display names (role ids are stored data and never renamed): the network
+// operator `platform_admin` is shown as "Super Admin"; the hospital-scoped
+// `super_admin` is shown as "Hospital Admin" (owner decision 2026-11-14).
 export const ROLE_LABEL = {
-  super_admin:  'Super Administrator',
+  platform_admin: 'Super Administrator',
+  super_admin:  'Hospital Administrator',
   staff_admin:  'Staff Administrator',
   agency_admin: 'Agency Administrator',
   agency:       'Agency Coordinator',
@@ -91,7 +100,8 @@ export const ROLE_LABEL = {
 
 // Short labels for tight UI spaces (chips, table cells, badges).
 export const ROLE_LABEL_SHORT = {
-  super_admin:  'Super Admin',
+  platform_admin: 'Super Admin',
+  super_admin:  'Hospital Admin',
   staff_admin:  'Staff Admin',
   agency_admin: 'Agency Admin',
   agency:       'Agency Coordinator',
@@ -100,6 +110,7 @@ export const ROLE_LABEL_SHORT = {
 
 // Badge color classes per role for consistent UI tinting.
 export const ROLE_BADGE = {
+  platform_admin: 'badge-purple',
   super_admin:  'badge-purple',
   staff_admin:  'badge-blue',
   agency_admin: 'badge-amber',

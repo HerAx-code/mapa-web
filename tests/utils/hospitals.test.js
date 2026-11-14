@@ -17,7 +17,7 @@ vi.mock('firebase/firestore', () => ({
 
 const {
   tenantIdFor, withTenant, currentTenantId, loadHospital, clearHospital, isNetworkRole,
-  tenantWhere, inMyTenant, getUsersInScope,
+  tenantWhere, inMyTenant, getUsersInScope, agencyPartnersWith, partnerHospitalIdsOf, fetchHospitalBranding, promoReachesMe,
 } = await import('../../src/utils/hospitals')
 const { ORG, DEFAULT_HOSPITAL_ID } = await import('../../src/config/org')
 
@@ -43,6 +43,11 @@ describe('tenantIdFor', () => {
     expect(isNetworkRole('agency')).toBe(true)
     expect(tenantIdFor({ role: 'agency', tenantId: 'bgh' })).toBeNull()
     expect(tenantIdFor({ role: 'agency_admin' })).toBeNull()
+  })
+
+  it('gives the platform admin no tenant (network operator, Phase 6)', () => {
+    expect(isNetworkRole('platform_admin')).toBe(true)
+    expect(tenantIdFor({ role: 'platform_admin', tenantId: 'bgh' })).toBeNull()
   })
 
   it('is null when signed out', () => {
@@ -171,11 +176,130 @@ describe('getUsersInScope', () => {
     ])
   })
 
+  it('scoping on: platform admins are never directory recipients', async () => {
+    vi.stubEnv('VITE_TENANT_SCOPING', 'true')
+    await signInAs('bgh')
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['patient', 'platform_admin'])
+    expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
+      [{ field: 'tenantId', op: '==', value: 'bgh' }, { field: 'role', op: 'in', value: ['patient'] }],
+    ])
+  })
+
   it('scoping on, hospital roles only: no agency query', async () => {
     vi.stubEnv('VITE_TENANT_SCOPING', 'true')
     await signInAs('bgh')
     getDocs.mockResolvedValue(docs())
     await getUsersInScope({}, ['super_admin'])
     expect(getDocs).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Phase 7 — agency ↔ hospital partnerships.
+describe('agencyPartnersWith', () => {
+  it('uses the agency partner list', () => {
+    expect(agencyPartnersWith({ partnerHospitalIds: ['bgh'] }, 'bgh')).toBe(true)
+    expect(agencyPartnersWith({ partnerHospitalIds: ['bgh'] }, DEFAULT_HOSPITAL_ID)).toBe(false)
+  })
+
+  it('treats a pre-Phase-7 agency (no list) as hospital #1 only, like the rules', () => {
+    expect(partnerHospitalIdsOf({})).toEqual([DEFAULT_HOSPITAL_ID])
+    expect(agencyPartnersWith({}, DEFAULT_HOSPITAL_ID)).toBe(true)
+    expect(agencyPartnersWith({}, 'bgh')).toBe(false)
+  })
+
+  it('an empty list partners with nobody', () => {
+    expect(agencyPartnersWith({ partnerHospitalIds: [] }, DEFAULT_HOSPITAL_ID)).toBe(false)
+  })
+
+  it('a missing tenant means hospital #1 (pre-backfill case)', () => {
+    expect(agencyPartnersWith({ partnerHospitalIds: [DEFAULT_HOSPITAL_ID] }, undefined)).toBe(true)
+  })
+})
+
+describe('getUsersInScope — agency viewer (Phase 7)', () => {
+  const coord = { role: 'agency', agencyId: 'dswd' }
+
+  it('staff + agency users, and only the patients endorsed to its agency', async () => {
+    getDocs.mockImplementation(async (q) =>
+      q.cs.some((c) => c.field === 'agencyIds') ? docs('pat1', 'sw') : docs('sw', 'admin'))
+    expect((await getUsersInScope({}, null, coord)).map((d) => d.id)).toEqual(['sw', 'admin', 'pat1'])
+    expect(getDocs.mock.calls.map(([q]) => q.cs)).toEqual([
+      [{ field: 'role', op: 'in', value: ['super_admin', 'staff_admin', 'agency', 'agency_admin'] }],
+      [{ field: 'agencyIds', op: 'array-contains', value: 'dswd' }],
+    ])
+  })
+
+  it('never issues an unfiltered or role==patient users query', async () => {
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['patient', 'staff_admin', 'super_admin', 'agency'], coord)
+    for (const [q] of getDocs.mock.calls) {
+      expect(q.cs.length).toBeGreaterThan(0)
+      expect(q.cs.some((c) => c.field === 'role' && (c.value === 'patient' || c.value?.includes?.('patient')))).toBe(false)
+    }
+  })
+
+  it('skips the patient query when patients are not wanted', async () => {
+    getDocs.mockResolvedValue(docs())
+    await getUsersInScope({}, ['staff_admin'], coord)
+    expect(getDocs).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Phase 8 — documents print in the case hospital's identity.
+describe('fetchHospitalBranding', () => {
+  it("loads another hospital's branding (agency viewer) and caches it", async () => {
+    await signInAs(null)                       // agency: no tenant
+    getDoc.mockReset()
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'BGH Hospital' }) })
+    const b = await fetchHospitalBranding('bgh')
+    expect(b.facilityName).toBe('BGH Hospital')
+    await fetchHospitalBranding('bgh')
+    expect(getDoc).toHaveBeenCalledTimes(1)
+    expect(ORG.facilityName).not.toBe('BGH Hospital')   // the viewer's ORG is untouched
+  })
+
+  it("uses the viewer's own branding for its own hospital (no read)", async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'Mine' }) })
+    await loadHospital('bgh')
+    getDoc.mockReset()
+    expect((await fetchHospitalBranding('bgh')).facilityName).toBe('Mine')
+    expect(getDoc).not.toHaveBeenCalled()
+  })
+
+  it('falls back to env branding when the read fails, and retries next time', async () => {
+    await signInAs(null)
+    getDoc.mockReset()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    getDoc.mockRejectedValueOnce(new Error('offline'))
+    expect((await fetchHospitalBranding('cph')).facilityName).toBe(ORG.facilityName)
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ facilityName: 'CPH' }) })
+    expect((await fetchHospitalBranding('cph')).facilityName).toBe('CPH')
+  })
+})
+
+// Agency promotions reach only patients of partner hospitals.
+describe('promoReachesMe', () => {
+  const agencyMap = { dswd: { partnerHospitalIds: ['bgh'] }, legacy: {} }
+  const promo = (agencyId) => ({ source: 'agency', agencyId })
+
+  it("a partner hospital's patient sees it; another hospital's does not", async () => {
+    await signInAs('bgh')
+    expect(promoReachesMe(promo('dswd'), agencyMap)).toBe(true)
+    await signInAs(DEFAULT_HOSPITAL_ID)
+    expect(promoReachesMe(promo('dswd'), agencyMap)).toBe(false)
+    expect(promoReachesMe(promo('legacy'), agencyMap)).toBe(true)     // no list = hospital #1
+  })
+
+  it("hides a promotion whose agency isn't loaded (never leaks it)", async () => {
+    await signInAs('bgh')
+    expect(promoReachesMe(promo('ghost'), agencyMap)).toBe(false)
+  })
+
+  it('gateway announcements and network users are unaffected', async () => {
+    await signInAs('bgh')
+    expect(promoReachesMe({ title: 'Maintenance' }, agencyMap)).toBe(true)
+    await signInAs(null)
+    expect(promoReachesMe(promo('dswd'), agencyMap)).toBe(true)
   })
 })

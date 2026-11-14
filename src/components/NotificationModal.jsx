@@ -30,6 +30,7 @@ const NOTIF_CONFIG = {
   agency_updated:      { Icon: MdSettings,         bg: 'bg-blue-100',   color: 'text-blue-600'   },
   agency_deleted:      { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
   new_agency:          { Icon: MdLocalHospital,    bg: 'bg-teal-100',   color: 'text-teal-600'   },
+  onboarding_request:  { Icon: MdLocalHospital,    bg: 'bg-brand-100',  color: 'text-brand-700'  },
   assistance_added:    { Icon: MdFavorite,         bg: 'bg-pink-100',   color: 'text-pink-600'   },
   assistance_updated:  { Icon: MdEdit,             bg: 'bg-amber-100',  color: 'text-amber-600'  },
   assistance_deleted:  { Icon: MdDelete,           bg: 'bg-red-100',    color: 'text-red-600'    },
@@ -52,6 +53,9 @@ export const getNotifRoute = (type, role) => {
   const isAdmin   = role === 'super_admin' || role === 'staff_admin'
   const isAgency  = role === 'agency' || role === 'agency_admin'
   const isPatient = role === 'patient'
+  // Agency events: hospital admins see their partner directory; the platform
+  // admin manages agencies under /platform (multi-hospital).
+  const agenciesPath = role === 'platform_admin' ? '/platform/agencies' : (isAdmin ? '/admin/agencies' : null)
   const map = {
     // ── Application lifecycle ──
     doc_verified:            isPatient ? '/patient/request'    : isAgency ? '/agency/inbox' : '/admin/requests',
@@ -82,11 +86,13 @@ export const getNotifRoute = (type, role) => {
     password_reset_sent:     null, // user already has the email, in-app navigation isn't needed
 
     // ── Agency / catalog (admin actions) ──
-    new_agency:              isAdmin   ? '/admin/agencies'     : null,
-    agency_updated:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_enabled:          isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_disabled:         isAdmin   ? '/admin/agencies'     : isAgency ? '/agency/program' : null,
-    agency_deleted:          isAdmin   ? '/admin/agencies'     : null,
+    new_agency:              agenciesPath,
+    // A hospital asked to join (public For-hospitals form) — network operator.
+    onboarding_request:      role === 'platform_admin' ? '/platform/requests' : null,
+    agency_updated:          agenciesPath ?? (isAgency ? '/agency/program' : null),
+    agency_enabled:          agenciesPath ?? (isAgency ? '/agency/program' : null),
+    agency_disabled:         agenciesPath ?? (isAgency ? '/agency/program' : null),
+    agency_deleted:          agenciesPath,
     // Assistance/Document Types admin pages were removed (now seeded config);
     // these legacy notification types no longer deep-link anywhere.
     doctype_added:           null,

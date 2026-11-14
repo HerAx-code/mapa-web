@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
 import GuaranteeLetter from '../../components/GuaranteeLetter'
+import { useHospitalBranding } from '../../hooks/useHospitals'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
@@ -24,6 +25,9 @@ export default function GLViewer() {
   const { user }     = useAuth()
 
   const [app, setApp]                 = useState(null)
+  // Phase 8: the letter is issued in the endorsing hospital's name, not the
+  // (network-level) agency viewer's default branding.
+  const caseOrg                       = useHospitalBranding(app?.tenantId)
   const [patient, setPatient]         = useState({})
   const [agency, setAgency]           = useState(null)
   const [signedScan, setSignedScan]   = useState(null)
@@ -186,6 +190,7 @@ export default function GLViewer() {
                 app={app}
                 patient={patient}
                 signatory={signatory}
+                org={caseOrg}
               />
             </div>
           </div>

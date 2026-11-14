@@ -17,7 +17,9 @@ import {
   MdSync,
 } from 'react-icons/md'
 import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
-import { getUsersInScope, inMyTenant } from '../utils/hospitals'
+import { getUsersInScope, inMyTenant, currentTenantId } from '../utils/hospitals'
+import { useOrg } from '../hooks/useOrg'
+import { useOnboardingRequests } from '../hooks/useOnboardingRequests'
 import { db } from '../firebase'
 import { getOrCreateConversation, sendMessage } from '../utils/messages'
 import { notify } from '../utils/notifications'
@@ -89,12 +91,20 @@ const AGENCY_NAV = [
   { to: '/agency/guide',        icon: MdMenuBook,       label: 'User Guide' },
 ]
 
+// Network operator (multi-hospital Phase 6). No patient-facing pages.
+const PLATFORM_NAV = [
+  { to: '/platform/hospitals', icon: MdLocalHospital, label: 'Hospitals' },
+  { to: '/platform/requests',  icon: MdInbox,         label: 'Onboarding requests' },
+  { to: '/platform/agencies',  icon: MdBusiness,      label: 'Agencies'  },
+]
+
 const ADMIN_NAV = {
   management: [
     { to: '/admin/dashboard',       icon: MdDashboard,            label: 'Dashboard'        },
-    { to: '/admin/agencies',        icon: MdBusiness,             label: 'Agencies'              },
+    { to: '/admin/agencies',        icon: MdBusiness,             label: 'Partner Agencies'      },
     { to: '/admin/accounts',        icon: MdSupervisedUserCircle,  label: 'Admin Accounts'       },
     { to: '/admin/announcements',   icon: MdCampaign,             label: 'Announcements'    },
+    { to: '/admin/settings',        icon: MdSettings,             label: 'Hospital Settings', superOnly: true },
   ],
   operations: [
     { to: '/admin/requests',    icon: MdReceiptLong,  label: 'Requests' },
@@ -126,6 +136,7 @@ const NOTIF_ICONS = {
   agency_updated:     { icon: MdInfo,          color: 'text-blue-500',   bg: 'bg-blue-50'   },
   agency_deleted:     { icon: MdCancel,        color: 'text-red-600',    bg: 'bg-red-50'    },
   new_agency:         { icon: MdBusiness,      color: 'text-teal-500',   bg: 'bg-teal-50'   },
+  onboarding_request: { icon: MdLocalHospital, color: 'text-brand-600',  bg: 'bg-brand-50'  },
   // Assistance types
   assistance_added:   { icon: MdFavorite, color: 'text-pink-500',  bg: 'bg-pink-50'  },
   assistance_updated: { icon: MdFavorite, color: 'text-amber-500', bg: 'bg-amber-50' },
@@ -296,7 +307,7 @@ function ComposeModal({ user, onClose }) {
     // staff/agency-only. Guard the fetch so no patient session loads the
     // user directory even if this modal is ever mounted for one.
     if (user?.role === 'patient') return
-    getUsersInScope(db)
+    getUsersInScope(db, null, user)
       .then(docs => setPatients(
         docs
           .map(d => ({ uid: d.id, ...d.data() }))
@@ -398,7 +409,7 @@ function ComposeModal({ user, onClose }) {
                     style={{ maxHeight: recipientMaxH }}
                     className={`absolute left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-10 overflow-y-auto ${recipientDropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
                     {filtered.map(p => {
-                      const roleLabel = { super_admin: 'Super Admin', staff_admin: 'Staff Admin', agency: 'Agency', patient: 'Patient' }[p.role] ?? p.role
+                      const roleLabel = { super_admin: 'Hospital Admin', staff_admin: 'Staff Admin', agency: 'Agency', patient: 'Patient' }[p.role] ?? p.role
                       return (
                         <button key={p.uid}
                           className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 text-left"
@@ -561,7 +572,7 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
 
 // ── Sidebar content ───────────────────────────────────────────────────────
 
-function NavItems({ items, onClose, badgeOverrides = {} }) {
+function NavItems({ items, onClose, badgeOverrides = {}, dark = false }) {
   const { t } = useTranslation()
   return items.map(item => {
     const badge = item.to in badgeOverrides ? badgeOverrides[item.to] : item.badge
@@ -571,12 +582,12 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
         key={item.to}
         to={item.to}
         onClick={onClose}
-        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        className={({ isActive }) => `${dark ? 'nav-item-dark' : 'nav-item'} ${isActive ? 'active' : ''}`}
       >
         <item.icon size={18} className="flex-shrink-0" />
         <span className="flex-1 truncate">{label}</span>
         {badge > 0 && (
-          <span className="text-xs font-bold bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
+          <span className={`text-xs font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center flex-shrink-0 ${dark ? 'bg-brand-400 text-brand-900' : 'bg-red-500 text-white'}`}>
             {badge > 9 ? '9+' : badge}
           </span>
         )}
@@ -585,7 +596,20 @@ function NavItems({ items, onClose, badgeOverrides = {} }) {
   })
 }
 
+// The hospital a gateway user or patient belongs to (multi-hospital): shown
+// under the brand, the way agency users see their agency. Network users
+// (agency, platform admin) have no hospital; an unconfigured hospital (the
+// neutral env default) shows nothing rather than "the hospital".
+function useMyHospitalName() {
+  const org = useOrg()
+  if (!currentTenantId()) return null
+  const name = org.shortName || org.facilityName
+  return name && name !== 'the hospital' ? name : null
+}
+
 function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unreadMessages = 0 }) {
+  const hospitalName = useMyHospitalName()
+  const { newCount: newRequests } = useOnboardingRequests(role === ROLES.PLATFORM_ADMIN)
   const { t } = useTranslation()
   const msgBadge = unreadMessages > 0 ? unreadMessages : 0
   const msgOverride = {
@@ -600,8 +624,14 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
       <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <Logo size={28} />
-          <div>
-            <p className="text-sm font-semibold text-gray-900 leading-tight">MAPA</p>
+          <div className="min-w-0">
+            <p className={`text-sm font-semibold leading-tight ${role === ROLES.PLATFORM_ADMIN ? 'text-white' : 'text-gray-900'}`}>MAPA</p>
+            {role === ROLES.PLATFORM_ADMIN && (
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-brand-100 leading-tight">{t('shell.platformAdmin')}</p>
+            )}
+            {hospitalName && (
+              <p className="text-xs text-gray-500 leading-tight truncate max-w-[160px]" title={hospitalName}>{hospitalName}</p>
+            )}
           </div>
         </div>
         {/* Close button — mobile only */}
@@ -626,6 +656,11 @@ function SidebarContent({ role, agencyName, onClose, agencyInboxCount = 0, unrea
               onClose={onClose}
               badgeOverrides={msgOverride}
             />
+          </>
+        )}
+        {role === ROLES.PLATFORM_ADMIN && (
+          <>
+            <NavItems items={PLATFORM_NAV} onClose={onClose} dark badgeOverrides={{ '/platform/requests': newRequests }} />
           </>
         )}
         {(role === ROLES.SUPER_ADMIN || role === ROLES.STAFF_ADMIN) && (
@@ -714,10 +749,12 @@ const APPS = {
     { label: 'Messages',       icon: MdEmail,                to: '/admin/messages'    },
     { label: 'Reports',        icon: MdFlag,                 to: '/admin/reports'     },
     { label: 'Audit Log',      icon: MdHistory,              to: '/admin/auditlog'    },
+    { label: 'Settings',       icon: MdSettings,             to: '/admin/settings'    },
   ],
 }
+APPS[ROLES.PLATFORM_ADMIN] = PLATFORM_NAV
 APPS[ROLES.STAFF_ADMIN] = APPS[ROLES.SUPER_ADMIN].filter(a =>
-  a.to !== '/admin/accounts' && a.to !== '/admin/auditlog'
+  a.to !== '/admin/accounts' && a.to !== '/admin/auditlog' && a.to !== '/admin/settings'
 )
 
 function AppsPanel({ role, onNavigate, onClose }) {
@@ -996,10 +1033,11 @@ export default function Layout({ children, breadcrumb }) {
           // 24h reminder: upcoming within 24h, not yet reminded — first user
           // triggers it. Skipped for agency announcements (not maintenance
           // windows, and they shouldn't notify non-patients).
-          if (ann.source !== 'agency' && now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
+          if (ann.source !== 'agency' && user?.role !== ROLES.PLATFORM_ADMIN &&
+              now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
             updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
               .then(async () => {
-                const allUsers = await getUsersInScope(db)
+                const allUsers = await getUsersInScope(db, null, user)
                 await Promise.all(allUsers.map(u =>
                   notify(u.id, {
                     type:  'system_announcement',
@@ -1061,6 +1099,7 @@ export default function Layout({ children, breadcrumb }) {
       case ROLES.PATIENT:      return 'bg-brand-50 text-brand-600 border-brand-400'
       case ROLES.AGENCY:       return 'bg-blue-50 text-blue-600 border-blue-400'
       case ROLES.AGENCY_ADMIN: return 'bg-teal-50 text-teal-600 border-teal-400'
+      case ROLES.PLATFORM_ADMIN: return 'bg-purple-50 text-purple-600 border-purple-400'
       case ROLES.SUPER_ADMIN:  return 'bg-purple-50 text-purple-600 border-purple-400'
       case ROLES.STAFF_ADMIN:  return 'bg-purple-50 text-purple-600 border-purple-400'
       default:                 return 'bg-gray-100 text-gray-600 border-gray-300'
@@ -1134,7 +1173,8 @@ export default function Layout({ children, breadcrumb }) {
 
       {/* ── Sidebar ──────────────────────────────────────────────────── */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-56 bg-white border-r border-gray-100 flex-shrink-0
+        fixed inset-y-0 left-0 z-50 w-56 border-r flex-shrink-0
+        ${user?.role === ROLES.PLATFORM_ADMIN ? 'bg-gradient-to-b from-brand-900 to-[#021a0c] border-brand-900' : 'bg-white border-gray-100'}
         transform transition-transform duration-200 ease-in-out
         lg:static lg:translate-x-0 print:hidden
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -1207,7 +1247,10 @@ export default function Layout({ children, breadcrumb }) {
                 tab in BottomTabBar; hiding the topbar icon there removes
                 the duplicate entry point. Non-patient and lg+ unchanged. */}
             <div className={`relative ${
-              user?.role === ROLES.PATIENT ? 'hidden lg:block' : ''
+              user?.role === ROLES.PATIENT ? 'hidden lg:block'
+                // The network operator has no messaging (no directory, no
+                // patients) — Phase 6.
+                : user?.role === ROLES.PLATFORM_ADMIN ? 'hidden' : ''
             }`}>
               <button
                 className="nav-icon-btn"

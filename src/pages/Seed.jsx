@@ -21,6 +21,12 @@ import { AGENCIES, INITIAL_BUDGET } from '../data/agencies.seed'
 //   GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
 //     node scripts/bootstrap-users.js
 // then sign in as the admin account and click Seed Database here.
+//
+// Multi-hospital Phase 6: agencies, document types and assistance types are
+// network config writable only by the platform_admin, and access codes only by
+// a hospital admin, so under the Phase 5/6 rules no single login can run every
+// step below. Prefer the Admin SDK scripts (bootstrap-reference-data.js,
+// seed-default-hospital.mjs) against a rules-enforcing project.
 
 // 20 demo access codes under the active issuing prefix, e.g. MAPA-2026-00001.
 const SEED_ID_PREFIX = accessCodePrefixFor(new Date().getFullYear())

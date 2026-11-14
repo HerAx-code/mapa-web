@@ -30,11 +30,27 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 
 ## User Roles
-- platform_admin — *(planned, multi-hospital Phase 6)* network operator: onboards hospitals + agencies, aggregate analytics, no patient PII
-- super_admin — full system access (becoming hospital-scoped under multi-hospital tenancy)
-- staff_admin — operations (no accounts, audit, announcements, coordinators)
-- agency — agency portal, own applications only
-- patient — patient portal, own data only (self-registers with Patient Access Code)
+Display names differ from the stored role ids (owner decision 2026-11-14: labels
+only, ids never renamed — they're data, rules and tests). Use the ids in code;
+show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.js).
+- `platform_admin` → **"Super Admin"** — the network operator *(multi-hospital
+  Phase 6, not yet deployed)*: onboards hospitals (prefix, region, sign-ups
+  open/paused, first admins, onboarding-request queue), owns agencies (incl.
+  partner hospitals, teams, slots) + reference data, sees network counts only.
+  No tenant, **no patient PII** (not in `isAdmin()`). Created only via
+  `scripts/create-platform-admin.mjs`.
+- `super_admin` → **"Hospital Admin"** — full gateway access to **its own
+  hospital**: request queue (verify / assess / endorse to partner agencies),
+  patients, access codes (own prefix), staff accounts, audit log, Hospital
+  Settings (branding), announcements, messages, reports, export.
+- `staff_admin` → "Staff Admin" — the hospital's day-to-day gateway work; no staff
+  accounts, audit log, Hospital Settings, access-code issue/delete or user deletion.
+- `agency_admin` → "Agency Admin" — agency portal + budget allocation, own team,
+  promotions, agency audit log; partner hospitals read-only.
+- `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
+  any partner hospital; reads only patients endorsed to the agency.
+- `patient` — patient portal, own data only; self-registers with an access code,
+  which binds them to that code's hospital.
 
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.
@@ -43,7 +59,7 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match the gateway's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the gateway social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
-- Patient Access Code (`<PREFIX>-YYYY-NNNNN`, default prefix `MAPA`, set via `ORG.accessCodePrefix`) is the registration gate. Issued in person by the gateway office. (`legacyAccessCodePrefixes` is empty — a clean MAPA-only cut; add a prefix there if a future migration needs to keep accepting old codes.)
+- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is the registration gate. Issued in person by the gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique); the code doc's `tenantId` decides which hospital the patient joins, and a hospital with `enabled: false` takes no new sign-ups. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
 
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
@@ -58,9 +74,9 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 
 ## Firestore Collections
 users, requests, applications, documents, documentContents, documentTypes, assistanceTypes, agencies, hospitalIds, certificates, conversations, notifications/{uid}/items, reports, announcements, auditLog, docReviewPresence
-`hospitals` (multi-hospital tenants; Phase 1)
+`hospitals` (multi-hospital tenants; Phase 1), `accessCodePrefixes` (prefix → hospital claims; Phase 8), `networkStats` (per-hospital counts for platform_admin, Admin-SDK written; Phase 9), `hospitalsPublic` (sign-in-free hospital projection for Landing/Register; must equal the hospital doc), `onboardingRequests` (hospitals asking to join, from the public /for-hospitals page; platform_admin only)
 
-## Tenancy (multi-hospital network — in progress)
+## Tenancy (multi-hospital network — all phases built, not yet deployed)
 MAPA is moving from one host facility per deployment to **one deployment serving many
 hospitals** (docs/multi-hospital-network-plan.md — read it before touching rules,
 queries, roles, access codes, or org config). Locked decisions (2026-11-13):
@@ -71,8 +87,11 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
   **hospital-scoped**; a new **`platform_admin`** role runs the network (onboards
   hospitals/agencies, aggregate analytics, no patient PII).
 - **Agencies are network-level and shared**: an agency partners with many hospitals
-  and funds slices from any partner hospital. Slices carry both `tenantId` and
-  `agencyId`. One budget per agency (per-hospital sub-budgets are future work).
+  (`agencies.partnerHospitalIds`, set by platform_admin; no list = hospital #1 only)
+  and funds slices only from partner hospitals (rules-enforced). Slices carry both
+  `tenantId` and `agencyId`. An agency reads a patient profile only via
+  `users.agencyIds` (written at endorsement). One budget per agency (per-hospital
+  sub-budgets are future work).
 - A patient belongs to **one** hospital, decided by the **per-hospital access-code
   prefix** they register with (prefixes globally unique).
 - Reference data = network defaults (`src/data/referenceData.js`) + optional
@@ -80,6 +99,12 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
 - Order is data → queries → rules. Never tighten rules on `tenantId` before the
   data and queries carry it, and never merge a rules change without the tenancy
   rules tests proving cross-hospital access is denied.
+- **Rules on existing docs are strict on `tenantId` — never give `resource.data`
+  a default** (`get('tenantId', 'hospital-1')`). Rules are checked against a
+  query's filters, where an unfiltered field reads as absent, so a default makes
+  unfiltered admin queries pass and leak other hospitals' docs (reproduced in
+  tests/rules/tenantBoundary.rules.test.js). Every gateway query on tenant data
+  must spread `tenantWhere()` (src/utils/hospitals.js).
 
 ## Co-funding model (current)
 The gateway (the host organization) is the single intake point; agencies only

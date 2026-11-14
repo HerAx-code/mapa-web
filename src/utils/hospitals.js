@@ -7,16 +7,20 @@
 // rules, Register, Patients and the GL all read it that way.
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
-import { applyHospital, DEFAULT_HOSPITAL_ID } from '../config/org'
+import { ORG, applyHospital, brandingFor, DEFAULT_HOSPITAL_ID } from '../config/org'
 
 // Agencies are network-level (decision D1/D4): they partner with many
 // hospitals, so an agency user belongs to no tenant. Records an agency writes
 // about a case take the tenant of that case (request / slice), never the
-// agency's.
-const NETWORK_ROLES = ['agency', 'agency_admin']
+// agency's. The platform_admin (Phase 6) runs the network and has no tenant
+// either.
+const AGENCY_ROLES  = ['agency', 'agency_admin']
+const NETWORK_ROLES = [...AGENCY_ROLES, 'platform_admin']
 export const isNetworkRole = (role) => NETWORK_ROLES.includes(role)
+const isAgencyRoleName = (role) => AGENCY_ROLES.includes(role)
 
-// Which hospital a signed-in user belongs to — null for agency users.
+// Which hospital a signed-in user belongs to — null for agency users and the
+// platform admin.
 // Users carry no tenantId until the Phase 3 backfill, so patients and gateway
 // staff fall back to the default (hospital #1).
 export const tenantIdFor = (user) =>
@@ -52,6 +56,7 @@ export async function loadHospital(tenantId) {
 // Sign-out: no tenant, env branding.
 export const clearHospital = () => {
   currentTenant = null
+  brandingCache.clear()
   applyHospital(null)
 }
 
@@ -82,19 +87,48 @@ export const inMyTenant = (d) => {
   return !t || !d?.tenantId || d.tenantId === t
 }
 
-// Users in scope for a gateway directory or broadcast: the user's own
-// hospital's users PLUS agency users (network-level, no tenantId). Two
+// Agency ↔ hospital partnerships (Phase 7). An agency onboarded before
+// Phase 7 has no partnerHospitalIds yet and partners with hospital #1 only —
+// the same default the rules apply (firestore.rules agencyPartners).
+export const partnerHospitalIdsOf = (agency) =>
+  Array.isArray(agency?.partnerHospitalIds) ? agency.partnerHospitalIds : [DEFAULT_HOSPITAL_ID]
+export const agencyPartnersWith = (agency, tenantId) =>
+  partnerHospitalIdsOf(agency).includes(tenantId || DEFAULT_HOSPITAL_ID)
+
+const GATEWAY_STAFF_ROLES = ['super_admin', 'staff_admin']
+
+// An agency user's directory (Phase 7): gateway staff + agency users of every
+// hospital, and only the patients endorsed to their agency (the rules let an
+// agency read a patient only when its id is in that patient's agencyIds).
+async function agencyDirectory(db, roles, agencyId) {
+  const users = collection(db, 'users')
+  const wanted = roles ?? [...GATEWAY_STAFF_ROLES, ...AGENCY_ROLES, 'patient']
+  const staffRoles = wanted.filter((r) => GATEWAY_STAFF_ROLES.includes(r) || isAgencyRoleName(r))
+  const queries = []
+  if (staffRoles.length) queries.push(query(users, where('role', 'in', staffRoles)))
+  if (wanted.includes('patient') && agencyId) queries.push(query(users, where('agencyIds', 'array-contains', agencyId)))
+  const snaps = await Promise.all(queries.map((q) => getDocs(q)))
+  const seen = new Set()
+  return snaps.flatMap((s) => s.docs).filter((d) => !seen.has(d.id) && seen.add(d.id))
+}
+
+// Users in scope for a directory or broadcast. Gateway staff: the user's own
+// hospital's users PLUS agency users (network-level, no tenantId) — two
 // queries, because one Firestore query can't express "tenant X or no tenant".
-// `roles` (optional) narrows both. Returns the user docs (snapshots).
-export async function getUsersInScope(db, roles = null) {
+// Agency users (pass `viewer`): see agencyDirectory. `roles` (optional)
+// narrows the result. Returns the user docs (snapshots).
+export async function getUsersInScope(db, roles = null, viewer = null) {
+  if (viewer && isAgencyRoleName(viewer.role)) return agencyDirectory(db, roles, viewer.agencyId)
   const users = collection(db, 'users')
   const t = scopedTenant()
   if (!t) {
     const snap = await getDocs(roles ? query(users, where('role', 'in', roles)) : users)
     return snap.docs
   }
+  // Directories reach the staff's own hospital plus agency users — never
+  // platform admins (they aren't messaging or broadcast recipients).
   const hospitalRoles = roles ? roles.filter((r) => !isNetworkRole(r)) : null
-  const networkRoles  = roles ? roles.filter(isNetworkRole) : NETWORK_ROLES
+  const networkRoles  = roles ? roles.filter(isAgencyRoleName) : AGENCY_ROLES
   const queries = []
   if (hospitalRoles === null)  queries.push(query(users, where('tenantId', '==', t)))
   else if (hospitalRoles.length) queries.push(query(users, where('tenantId', '==', t), where('role', 'in', hospitalRoles)))
@@ -102,4 +136,40 @@ export async function getUsersInScope(db, roles = null) {
   const snaps = await Promise.all(queries.map((q) => getDocs(q)))
   const seen = new Set()
   return snaps.flatMap((s) => s.docs).filter((d) => !seen.has(d.id) && seen.add(d.id))
+}
+
+// ── Case-hospital branding (Phase 8) ─────────────────────────────────────────
+// Documents (Guarantee Letter, intake sheet) print in the identity of the
+// hospital that OWNS the case, not the viewer's. Gateway staff and patients are
+// in that hospital already (ORG); an agency user — network-level — needs the
+// case's hospital loaded. Cached per hospital for the session; a failed read
+// isn't cached, so it retries next time.
+const brandingCache = new Map()
+
+export function fetchHospitalBranding(tenantId) {
+  const id = tenantId || DEFAULT_HOSPITAL_ID
+  if (currentTenant && id === currentTenant) return Promise.resolve({ ...ORG })
+  if (!brandingCache.has(id)) {
+    brandingCache.set(id, getDoc(doc(db, 'hospitals', id))
+      .then((snap) => brandingFor(snap.exists() ? snap.data() : null))
+      .catch((err) => {
+        console.warn('[hospitals] branding load failed for', id, err)
+        brandingCache.delete(id)
+        return brandingFor(null)
+      }))
+  }
+  return brandingCache.get(id)
+}
+
+export const clearBrandingCache = () => brandingCache.clear()
+
+// An agency's promotion (announcement source 'agency') reaches a hospital's
+// patients only when that agency partners with the hospital — the only
+// agencies its gateway can endorse them to. Network users (agency staff,
+// platform admin: no tenant) see every promotion; an agency we can't find
+// (not loaded yet, or deleted) hides its promotion rather than leak it.
+export const promoReachesMe = (ann, agencyMap) => {
+  if (ann?.source !== 'agency' || !ann.agencyId || !currentTenant) return true
+  const agency = agencyMap?.[ann.agencyId]
+  return agency ? agencyPartnersWith(agency, currentTenant) : false
 }

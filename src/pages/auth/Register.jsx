@@ -18,17 +18,35 @@ import TermsModal from '../../components/TermsModal'
 import AddressPicker from '../../components/AddressPicker'
 import { TERMS_VERSION } from '../../utils/constants'
 import { hasReservedToken } from '../../utils/names'
-import { ORG, accessCodeRe, accessCodePrefixFor, acceptedAccessCodePrefixes, DEFAULT_HOSPITAL_ID } from '../../config/org'
+import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
+import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 
 const CURRENT_YEAR        = new Date().getFullYear()
 const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
 const ACCESS_CODE_RE      = accessCodeRe()
-// Match any accepted prefix + YYYY- the patient types — codes issued in a
-// prior calendar year (or under a legacy prefix) must remain enterable.
-// Group 1 = the prefix actually typed, group 2 = the year.
-const ACCESS_CODE_PREFIX_RE = new RegExp(`^(${acceptedAccessCodePrefixes().join('|')})-(\\d{4})-`)
+// Match any hospital's prefix + YYYY- the patient types (multi-hospital
+// Phase 8: each hospital issues its own prefix) — codes from a prior calendar
+// year must remain enterable. Group 1 = the prefix typed, group 2 = the year.
+const ACCESS_CODE_PREFIX_RE = new RegExp(`^(${ACCESS_CODE_PREFIX_PATTERN})-(\\d{4})-`)
+// The hospital an access code belongs to (multi-hospital Phase 8): its
+// tenantId names a hospitals/{id} doc, whose `enabled` flag gates new
+// registrations. Both reads are allowed to the anonymous session Register signs
+// in before verifying. A hospital doc we can't read counts as open (the rules
+// still enforce `enabled` at sign-up), so a read hiccup never blocks a patient.
+async function codeHospital(code) {
+  try {
+    const codeSnap = await getDoc(doc(db, 'hospitalIds', code))
+    const tenantId = codeSnap.data()?.tenantId || DEFAULT_HOSPITAL_ID
+    const hSnap    = await getDoc(doc(db, 'hospitals', tenantId))
+    const h        = hSnap.exists() ? hSnap.data() : null
+    return { enabled: h?.enabled !== false, name: h?.facilityName || '' }
+  } catch {
+    return { enabled: true, name: '' }
+  }
+}
+
 const EMAIL_RE        = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_RE         = /^[A-Za-zÑñ\s\-'.,]*$/
 const SUFFIXES        = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V']
@@ -166,6 +184,13 @@ export default function Register() {
 
   const [step, setStep]                     = useState(draft?.step ?? 1)
   const [hospitalVerified, setHospitalVerified] = useState(false)
+  // Which hospital the verified code belongs to (Phase 8) — shown so the
+  // patient can confirm before creating the account.
+  const [codeHospitalName, setCodeHospitalName] = useState('')
+  // A real hospital prefix for the examples (multi-hospital): the first
+  // participating hospital's, else this deployment's own.
+  const publicHospitals = usePublicHospitals()
+  const examplePrefix = publicHospitals[0]?.accessCodePrefix || ORG.accessCodePrefix
   const [verifying, setVerifying]           = useState(false)
   const [loading, setLoading]               = useState(false)
   const [showPw, setShowPw]                 = useState(false)
@@ -240,12 +265,15 @@ export default function Register() {
   const handleHospitalIdChange = (e) => {
     const val = e.target.value.toUpperCase()
     // Honor whatever prefix + year the patient typed — codes from prior years
-    // or a legacy prefix are still valid. Fall back to the current issuing
-    // prefix only if the input doesn't yet contain a parseable <PREFIX>-YYYY-.
+    // stay valid. Once a full <PREFIX>-YYYY- is typed only 5 digits may follow; before
+    // that the patient may type any hospital's prefix (Phase 8), so letters,
+    // digits and dashes pass through.
     const prefixMatch = val.match(ACCESS_CODE_PREFIX_RE)
-    const prefix      = prefixMatch ? `${prefixMatch[1]}-${prefixMatch[2]}-` : HOSPITAL_PREFIX
-    const suffix      = val.slice(prefix.length).replace(/\D/g, '').slice(0, 5)
-    setForm(prev => ({ ...prev, hospitalId: prefix + suffix }))
+    const next = prefixMatch
+      ? `${prefixMatch[1]}-${prefixMatch[2]}-` + val.slice(prefixMatch[0].length).replace(/\D/g, '').slice(0, 5)
+      : val.replace(/[^A-Z0-9-]/g, '').slice(0, 16)
+    setForm(prev => ({ ...prev, hospitalId: next }))
+    setCodeHospitalName('')
     setHospitalVerified(false)
     if (errors.hospitalId) setErrors(prev => ({ ...prev, hospitalId: '' }))
   }
@@ -389,6 +417,11 @@ export default function Register() {
         if (!auth.currentUser) await signInAnonymously(auth)
         const call = httpsCallable(functions, 'verifyAccessCode')
         const result = await call({ code })
+        // Phase 8: the code's hospital has paused registrations.
+        if (result.data.hospitalClosed) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
+          return
+        }
         available = result.data.available
         exists    = result.data.exists
       } catch (err) {
@@ -416,6 +449,14 @@ export default function Register() {
         }
         setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeUsed') }))
       } else {
+        // Phase 8: the code decides the hospital. Refuse a disabled hospital's
+        // code here (the rules refuse it at sign-up too) and name the hospital.
+        const hospital = await codeHospital(code)
+        if (!hospital.enabled) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
+          return
+        }
+        setCodeHospitalName(hospital.name)
         setHospitalVerified(true)
         setErrors(prev => ({ ...prev, hospitalId: '' }))
         toast.success(t('register.toast.codeVerified'))
@@ -592,7 +633,7 @@ export default function Register() {
               className="h-10 w-10 rounded-[11px] object-contain ring-1 ring-white/15" />
             <span className="font-display text-[19px] font-bold tracking-tight text-white">MAPA</span>
           </span>
-          <h2 className="mt-10 text-[28px] font-semibold leading-[1.15] tracking-tight text-white text-balance">
+          <h2 className="mt-10 font-display text-[28px] font-bold leading-[1.12] tracking-tight text-white text-balance">
             {t('register.brand.headline')}
           </h2>
           <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-brand-100/85">
@@ -608,6 +649,18 @@ export default function Register() {
                 </li>
               ))}
             </ul>
+          </div>
+          {/* Multi-hospital: the code's prefix decides the hospital. */}
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/[0.07] p-4">
+            <h3 className="text-[13px] font-semibold text-white">{t('register.brand.codeTitle')}</h3>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-brand-100/85">{t('register.brand.codeBody')}</p>
+            <div className="mt-3 rounded-xl border border-dashed border-brand-300/60 bg-brand-900/40 px-3 py-2.5">
+              <p className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-100/70">{t('register.brand.codeExample')}</p>
+              <p className="mt-0.5 font-mono text-[15px] font-semibold tracking-[0.12em] text-white">
+                <span className="text-brand-300">{examplePrefix}</span>-{new Date().getFullYear()}-00014
+              </p>
+              <p className="mt-1 text-[11.5px] text-brand-100/80">{t('register.brand.codePrefixNote')}</p>
+            </div>
           </div>
         </div>
         <div className="relative space-y-2.5 px-10 py-8 text-[13px] text-brand-100/80">
@@ -631,8 +684,16 @@ export default function Register() {
               <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-600 mb-6">← {t('register.backHome')}</Link>
             )}
 
+            {/* DEV ONLY (build-time flags): demo accounts live on Log in. */}
+            {(import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true') && (
+              <Link to="/login" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-800 hover:bg-amber-100">
+                <span>Demo accounts (dev only) — sign in as any role with one click</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            )}
+
             <div className="mb-6">
-              <h1 className="text-[26px] font-bold tracking-tight text-gray-900">{t('register.title')}</h1>
+              <h1 className="font-display text-[26px] font-bold tracking-tight text-brand-900">{t('register.title')}</h1>
               <p className="text-sm text-gray-500 mt-1">{t('register.subtitle')}</p>
             </div>
 
@@ -828,7 +889,9 @@ export default function Register() {
                     placeholder={`${HOSPITAL_PREFIX}00001`}
                     value={form.hospitalId}
                     onChange={handleHospitalIdChange}
-                    inputMode="numeric"
+                    // Numeric keypad once the prefix + year are in; a text
+                    // keypad before, so another hospital's prefix can be typed.
+                    inputMode={ACCESS_CODE_PREFIX_RE.test(form.hospitalId) ? 'numeric' : 'text'}
                     autoCapitalize="characters"
                     autoComplete="off"
                     disabled={hospitalVerified}
@@ -857,7 +920,13 @@ export default function Register() {
                 </div>
                 <FieldError msg={errors.hospitalId} />
                 {!errors.hospitalId && !hospitalVerified && (
-                  <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
+                  <>
+                    <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 lg:hidden">{t('register.step3.prefixHint', { prefix: examplePrefix })}</p>
+                  </>
+                )}
+                {hospitalVerified && codeHospitalName && (
+                  <p className="text-sm text-green-700 mt-1">{t('register.step3.joiningHospital', { hospital: codeHospitalName })}</p>
                 )}
                 {/* If the code shows as already used, give the patient an
                     actionable recovery path — they may be a real holder

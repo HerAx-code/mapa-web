@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageToggle from '../../components/LanguageToggle'
 import Logo from '../../components/ui/Logo'
+import DemoAccountsPanel from '../../components/DemoAccountsPanel'
 import { MdVisibility, MdVisibilityOff, MdEmail, MdClose, MdWarning, MdShield, MdInfoOutline } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
@@ -30,6 +31,7 @@ const DASHBOARD = {
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
   [ROLES.STAFF_ADMIN]:  '/admin/dashboard',
+  [ROLES.PLATFORM_ADMIN]: '/platform/hospitals',
 }
 
 // Fix 4 — human-readable Firebase error messages
@@ -126,9 +128,14 @@ export default function Login() {
       toast.error(t('auth.errors.enterCredentials'))
       return
     }
+    await signIn(form.email, form.password)
+  }
+
+  // Shared by the form and the dev-only demo-accounts panel.
+  const signIn = async (email, password) => {
     setLoading(true)
     try {
-      const loggedIn = await login(form.email, form.password)
+      const loggedIn = await login(email, password)
       setLoginError(false)
       // M9: no "Welcome back" toast on login — it was noise on every sign-in and
       // (desktop, bottom-right) overlapped dashboard content. The dashboard's own
@@ -222,17 +229,18 @@ export default function Login() {
         </div>
 
         <div className="relative px-12 py-10">
-          <h2 className="max-w-md text-[32px] font-semibold leading-[1.15] tracking-tight text-white text-balance">
+          <h2 className="max-w-md font-display text-[33px] font-bold leading-[1.1] tracking-tight text-white text-balance">
             {t('auth.brand.headline')}
           </h2>
-          <ul className="mt-10 max-w-md space-y-6">
-            {[1, 2, 3].map(i => (
-              <li key={i} className="border-l-2 border-brand-400 pl-5">
-                <h3 className="text-[15px] font-semibold text-white">{t(`auth.brand.a${i}title`)}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-brand-100/80">{t(`auth.brand.a${i}desc`)}</p>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-4 max-w-sm text-[15.5px] leading-relaxed text-brand-100/90">{t('auth.brand.sub')}</p>
+          <div className="mt-7 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[12.5px] font-semibold text-white">
+              <MdShield size={13} aria-hidden="true" /> {t('auth.brand.chipPrivacy')}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[12.5px] font-semibold text-white">
+              {t('auth.brand.chipLanguages')}
+            </span>
+          </div>
         </div>
 
         <div className="relative flex items-center gap-2.5 border-t border-white/10 px-12 py-6">
@@ -263,7 +271,7 @@ export default function Login() {
 
         <div className="flex flex-1 items-center justify-center px-6 pb-10 sm:px-10">
           <div className="w-full max-w-[420px]">
-            <h1 className="text-[28px] sm:text-[30px] font-bold leading-tight tracking-tight text-gray-900">
+            <h1 className="font-display text-[28px] sm:text-[30px] font-bold leading-tight tracking-tight text-brand-900">
               {t('auth.welcome')}
             </h1>
             <p className="mt-2 text-[15px] text-gray-500">{t('auth.signinSubtitle')}</p>
@@ -408,49 +416,13 @@ export default function Login() {
             </p>
 
             {/* Fix 1 — Demo accounts only in development */}
-            {import.meta.env.VITE_ENABLE_SEED === 'true' && (
-              <div className="mt-8 card p-4 border border-amber-200 bg-amber-50">
-                <p className="text-xs font-medium text-amber-700 mb-3 uppercase tracking-wide flex items-center gap-1.5">
-                  <MdWarning size={13} /> {t('auth.devOnly')}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {[
-                    { label: 'Patient',                email: 'patient@gmail.com',            password: 'patient123', note: null     },
-                    { label: 'Super Admin',            email: 'admin@example.org',            password: 'admin123',   note: null     },
-                    { label: 'Staff Admin',            email: 'staff@example.org',            password: 'staff123',   note: null     },
-                    // The coordination hub and PhilHealth (modelled as the
-                    // first-charge coverage that REDUCES the bill, not an endorsable
-                    // GL-issuing funder — see docs/philhealth-first-plan.md) are
-                    // both deactivated as agencies, so their logins are not shown.
-                    // The GL-issuing funders are DOH-MAIP, PCSO, DSWD and AMBaG.
-                    { label: 'DOH · Admin',            email: 'admin@doh.gov.ph',             password: 'agency123',  note: 'Admin'  },
-                    { label: 'DOH · Coordinator',      email: 'coordinator@doh.gov.ph',       password: 'agency123',  note: 'Active' },
-                    { label: 'AMBaG · Admin',          email: 'admin@ambag.gov.ph',           password: 'agency123',  note: 'Admin'  },
-                    { label: 'AMBaG · Coordinator',    email: 'coordinator@ambag.gov.ph',     password: 'agency123',  note: 'Active' },
-                    { label: 'PCSO · Admin',           email: 'admin@pcso.gov.ph',            password: 'agency123',  note: 'Admin'  },
-                    { label: 'PCSO · Coordinator',     email: 'coordinator@pcso.gov.ph',      password: 'agency123',  note: 'Active' },
-                    { label: 'DSWD · Admin',           email: 'admin@dswd.gov.ph',            password: 'agency123',  note: 'Admin'  },
-                    { label: 'DSWD · Coordinator',     email: 'coordinator@dswd.gov.ph',      password: 'agency123',  note: 'Active' },
-                  ].map(acc => (
-                    <button
-                      key={acc.label}
-                      className="text-left px-3 py-2 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-600 transition-colors text-xs border border-amber-100"
-                      onClick={() => setForm({ email: acc.email, password: acc.password })}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium truncate">{acc.label}</p>
-                        {acc.note && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium ${
-                            acc.note === 'Deactivated' ? 'bg-red-100 text-red-500'
-                            : acc.note === 'Admin'       ? 'bg-purple-100 text-purple-600'
-                            : 'bg-green-100 text-green-600'
-                          }`}>{acc.note}</span>
-                        )}
-                      </div>
-                      <p className="text-gray-500 truncate">{acc.email}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* DEV ONLY: one-click demo sign-in. Build-time flags, so a
+                production build drops the panel and the demo passwords. */}
+            {(import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true') && (
+              <DemoAccountsPanel busy={loading} onPick={(email, password) => {
+                setForm({ email, password })
+                signIn(email, password)
+              }} />
             )}
 
           </div>

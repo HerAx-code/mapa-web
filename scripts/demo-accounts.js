@@ -7,7 +7,8 @@
  * the credentials shown on the login page's "DEV ONLY -- DEMO ACCOUNTS"
  * panel always match what's actually in Firebase Auth + Firestore.
  *
- * The 15 accounts cover every role in the system:
+ * The 16 accounts cover every role in the system:
+ *   - 1 network operator (platform_admin, multi-hospital Phase 6)
  *   - 2 gateway admins (super_admin + staff_admin)
  *   - 6 agency_admins (one per agency)
  *   - 6 agency coordinators (one per agency)
@@ -26,15 +27,22 @@
  *
  * Adding a new demo account: add it here. Both scripts pick it up
  * automatically on next run. The login page's demo panel
- * (src/pages/auth/Login.jsx) is a SEPARATE hardcoded list -- update it
- * too if the set of loggable accounts changes.
+ * (src/components/DemoAccountsPanel.jsx, shown on Log in when
+ * VITE_SHOW_DEMO_ACCOUNTS or VITE_ENABLE_SEED is 'true') reads THIS list, so
+ * it can't drift from what's seeded. `loginPanel: false` hides an account
+ * from that panel (it is still seeded).
  */
 
 export const USERS = [
+  // network operator (multi-hospital Phase 6): hospitals, agencies, reference data
+  {
+    email: 'platform@mapa.gov.ph', password: 'platform123',
+    profile: { name: 'Super Admin', role: 'platform_admin', rank: null, agencyId: null, contact: null, cooldown: 0, deletion: false },
+  },
   // gateway admins
   {
     email: 'admin@mapa.gov.ph', password: 'admin123',
-    profile: { name: 'Super Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
+    profile: { name: 'Hospital Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
   },
   {
     email: 'staff@mapa.gov.ph', password: 'staff123',
@@ -54,6 +62,8 @@ export const USERS = [
     profile: { name: 'Dr. Elena Marasigan',   role: 'agency_admin', agencyId: 'doh',       rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
+    // PhilHealth is modelled as first-charge coverage, not a GL-issuing funder.
+    loginPanel: false,
     email: 'admin@philhealth.gov.ph', password: 'agency123',
     profile: { name: 'Dr. Ramon Aquino',      role: 'agency_admin', agencyId: 'philhealth',rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
@@ -80,6 +90,7 @@ export const USERS = [
     profile: { name: 'Joel Bautista',   role: 'agency', agencyId: 'doh',       rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
+    loginPanel: false,
     email: 'coordinator@philhealth.gov.ph', password: 'agency123',
     profile: { name: 'Grace Villanueva',role: 'agency', agencyId: 'philhealth',rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },

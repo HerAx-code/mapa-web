@@ -125,7 +125,10 @@
       "a2desc": "Any insurance or prior coverage you have, like PhilHealth, is applied to your bill first; partner agencies cover the rest until it reaches zero.",
       "a3title": "Your data, your rights",
       "a3desc": "Download your records, see who accessed them, and request erasure — protected under RA 10173.",
-      "trust": "Secured under the Philippine Data Privacy Act (RA 10173). Your health data is encrypted and never sold."
+      "trust": "Secured under the Philippine Data Privacy Act (RA 10173). Your health data is encrypted and never sold.",
+      "sub": "One place to follow your medical assistance through every agency — verified once, tracked always.",
+      "chipPrivacy": "RA 10173 protected",
+      "chipLanguages": "Filipino / English"
     },
     "email": "Email address",
     "emailPlaceholder": "juan@gmail.com",
@@ -170,6 +173,37 @@
     "devOnly": "Dev only — Demo accounts"
   },
   "landing": {
+    "nav": {
+      "how": "How it works",
+      "programs": "Programs",
+      "forHospitals": "For hospitals"
+    },
+    "trust": {
+      "heading": "One application reaches every partner agency"
+    },
+    "doors": {
+      "patientsTitle": "For patients",
+      "patientsBody": "Apply once with your documents and a live selfie. You're assessed a single time — no repeated interviews — and you follow every agency's decision from one status page, in Filipino or English.",
+      "p1": "Apply once, assessed once",
+      "p2": "One tracker across all agencies",
+      "p3": "Works on phones and slow networks",
+      "patientsCta": "Get started",
+      "hospitalsTitle": "For hospitals",
+      "hospitalsBody": "Run your medical assistance desk digitally. Adopt MAPA by configuring it — your name, your funders, your documents — never forking or rewriting. One workflow, your settings.",
+      "h1": "Configure, don't rebuild",
+      "h2": "RA 11463 one-stop-shop workflow",
+      "h3": "Your data isolated per hospital",
+      "hospitalsCta": "Request onboarding"
+    },
+    "network": {
+      "eyebrow": "The bigger idea",
+      "heading": "One front door — not another silo",
+      "body": "A patient who needs help from several agencies shouldn't have to apply several times. MAPA assesses once and routes each part of the bill to each agency — no queuing, re-encoding, or applying again.",
+      "hospitals": "participating hospitals",
+      "agencies": "partner agencies",
+      "perPatient": "application per patient",
+      "balance": "balance — the goal"
+    },
     "header": {
       "downloadApp": "Install App",
       "mobileToast": "The MAPA mobile app is coming soon. Follow {{org}} for updates.",
@@ -261,6 +295,8 @@
       "codeHeading": "You will need a Patient Access Code",
       "codeBody": "This is printed and handed to you in person at the {{gateway}} office. It is never sent by text, email, or social media — and no one online can give you one.",
       "codeSample": "Sample code",
+      "hospitalsHeading": "Participating hospitals",
+      "codeStartsWith": "{{prefix}}-…",
       "codeCta": "Where is the office?"
     },
     "faq": {
@@ -292,6 +328,7 @@
       "hours": "Monday to Friday, 8:00 AM – 5:00 PM. Closed on holidays."
     },
     "footer": {
+      "forHospitals": "For hospitals",
       "brandDesc": "The official online system of {{facility}} for processing medical assistance applications.",
       "quickLinks": "Quick Links",
       "registerPatient": "Register as Patient",
@@ -334,6 +371,8 @@
     "menu": "Menu",
     "more": "More",
     "systemAdmin": "System Admin",
+    "network": "Network",
+    "platformAdmin": "Super admin",
     "operations": "Operations",
     "help": {
       "title": "Need help?",
@@ -1403,7 +1442,11 @@
       "ready3": "A working email address for approval updates",
       "trustTime": "Takes about 3 minutes",
       "trustPrivacy": "Protected under the Data Privacy Act (RA 10173)",
-      "trustHelp": "Need a code? Visit Medical Social Services at {{facility}}"
+      "trustHelp": "Need a code? Visit Medical Social Services at {{facility}}",
+      "codeTitle": "Your access code is your door in.",
+      "codeBody": "Your hospital's social-services office gives it to you in person. Its first part — the prefix — tells MAPA which hospital you belong to, so you land in the right place automatically.",
+      "codeExample": "Example code",
+      "codePrefixNote": "Prefix = your hospital"
     },
     "stepPersonal": "Personal Info",
     "stepAccount": "Account Setup",
@@ -1447,6 +1490,8 @@
       "sectionDesc": "Your Patient Access Code is required. It was provided to you by {{gateway}}.",
       "accessCode": "Patient Access Code",
       "accessCodeHint": "Enter the 5-digit number after the prefix",
+      "joiningHospital": "You are registering with {{hospital}}.",
+      "prefixHint": "The letters before the first dash (like {{prefix}}-) tell MAPA which hospital you belong to.",
       "verifyBtn": "Verify",
       "verified": "Verified",
       "edit": "Edit",
@@ -1480,6 +1525,7 @@
       "codeVerifyFirst": "Please verify your Patient Access Code first.",
       "termsRequired": "You must accept the Privacy Notice and Terms of Use.",
       "codeNotFound": "Access code not found. Please check and try again.",
+      "hospitalClosed": "This hospital is not accepting new registrations right now. Please ask its social service office.",
       "codeUsed": "This access code has already been used.",
       "verifyFailed": "Verification failed. Please try again.",
       "verifyRateLimit": "Too many verification attempts from this device. Please wait an hour before trying again, or contact {{gateway}} for help.",

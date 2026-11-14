@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { ORG, applyHospital, onOrgChange } from '../../src/config/org'
+import { ORG, applyHospital, onOrgChange, brandingFor, accessCodeRe } from '../../src/config/org'
 
 // Multi-hospital Phase 1 — a hospital doc overrides ORG in place, with the
 // env values as the fallback (docs/multi-hospital-network-plan.md).
@@ -31,11 +31,17 @@ describe('applyHospital', () => {
     expect(ORG.facilityNameFil).toBe('Bangsamoro General Hospital')
   })
 
-  it('never lets a hospital rename the product or change the access-code prefix', () => {
-    applyHospital({ name: 'X', fullName: 'Y', accessCodePrefix: 'BGH' }, 'bgh')
+  it('never lets a hospital rename the product', () => {
+    applyHospital({ name: 'X', fullName: 'Y' }, 'bgh')
     expect(ORG.name).toBe(ENV.name)
     expect(ORG.fullName).toBe(ENV.fullName)
-    expect(ORG.accessCodePrefix).toBe(ENV.accessCodePrefix)
+  })
+
+  // Phase 8: each hospital issues codes under its own prefix.
+  it("uses the hospital's access-code prefix and address", () => {
+    applyHospital({ accessCodePrefix: 'BGH', address: 'Cotabato City' }, 'bgh')
+    expect(ORG.accessCodePrefix).toBe('BGH')
+    expect(ORG.address).toBe('Cotabato City')
   })
 
   it('keeps the env value for blank or non-string fields', () => {
@@ -58,5 +64,34 @@ describe('applyHospital', () => {
     off()
     applyHospital(null)
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Phase 8 — a case hospital's branding without touching the viewer's ORG.
+describe('brandingFor', () => {
+  it("returns the hospital's branding and leaves ORG alone", () => {
+    const b = brandingFor({ facilityName: 'Bangsamoro General Hospital', gatewayInitials: 'BGH' })
+    expect(b.facilityName).toBe('Bangsamoro General Hospital')
+    expect(b.facilityNameFil).toBe('Bangsamoro General Hospital')
+    expect(b.gatewayInitials).toBe('BGH')
+    expect(ORG).toEqual(ENV)
+  })
+
+  it('falls back to env for a missing hospital', () => {
+    expect(brandingFor(null)).toEqual(ENV)
+  })
+})
+
+describe('accessCodeRe (any hospital, Phase 8)', () => {
+  it("accepts any well-formed hospital prefix", () => {
+    expect(accessCodeRe().test('MAPA-2026-00001')).toBe(true)
+    expect(accessCodeRe().test('BGH-2026-00001')).toBe(true)
+    expect(accessCodeRe().test('CPH2-2026-00001')).toBe(true)
+  })
+
+  it('rejects malformed codes', () => {
+    for (const c of ['B-2026-00001', '1AB-2026-00001', 'BGH-26-00001', 'BGH-2026-0001', 'bgh-2026-00001', 'BGH-2026-00001X']) {
+      expect(accessCodeRe().test(c)).toBe(false)
+    }
   })
 })

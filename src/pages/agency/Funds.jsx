@@ -5,6 +5,8 @@ import { collection, query, where, onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { PERIOD_ADJECTIVE } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
+import { HospitalFilterSelect } from '../../components/agency/HospitalBreakdown'
+import { filterByHospital } from '../../utils/hospitalBreakdown'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   MdSearch, MdCheckCircle, MdCancel, MdHourglassEmpty,
@@ -54,6 +56,9 @@ export default function AgencyFunds() {
   const [apps,       setApps]       = useState([])
   const [loading,    setLoading]    = useState(true)
   const [search,     setSearch]     = useState('')
+  // Multi-hospital: scope the GL event list to one partner hospital. The
+  // budget card stays agency-wide (one budget per agency, decision D3).
+  const [hospitalFilter, setHospitalFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [startDate,  setStartDate]  = useState('')
   const [endDate,    setEndDate]    = useState('')
@@ -91,9 +96,10 @@ export default function AgencyFunds() {
   // approvedAmount + a reversedAt timestamp, so amounts and timestamps are
   // accurate end-to-end. Older docs that predate the preserve-on-reverse
   // change may still show "amount n/a" — that's fine for legacy data.
+  const appsInScope = useMemo(() => filterByHospital(apps, hospitalFilter), [apps, hospitalFilter])
   const events = useMemo(() => {
     const out = []
-    for (const a of apps) {
+    for (const a of appsInScope) {
       const isReversed     = !!a.reversedAt || !!a.reversalReason
       const approvedAmount = Number(a.approvedAmount) || 0
       const hasAmount      = approvedAmount > 0
@@ -163,7 +169,7 @@ export default function AgencyFunds() {
       }
     }
     return out.sort((x, y) => (y.date?.getTime() ?? 0) - (x.date?.getTime() ?? 0))
-  }, [apps])
+  }, [appsInScope])
 
   // Filters
   const filtered = useMemo(() => {
@@ -313,6 +319,7 @@ export default function AgencyFunds() {
                 placeholder="Search by patient name or application ID..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+            <HospitalFilterSelect slices={apps} value={hospitalFilter} onChange={setHospitalFilter} />
             <div className="flex items-center gap-2">
               <MdFilterList size={14} className="text-gray-500 flex-shrink-0" />
               <label className="text-xs text-gray-500">From</label>

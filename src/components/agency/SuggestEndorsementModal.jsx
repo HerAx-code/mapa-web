@@ -7,7 +7,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdSend, MdGroups } from 'react-icons/md'
 import { ORG } from '../../config/org'
-import { withTenant } from '../../utils/hospitals'
+import { withTenant, agencyPartnersWith } from '../../utils/hospitals'
 import toast from 'react-hot-toast'
 
 /**
@@ -49,7 +49,9 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
 
   // Load all enabled agencies that aren't already on this case.
   // Sibling agencies are excluded -- suggesting an agency that already
-  // holds a slice would be a no-op for the gateway.
+  // holds a slice would be a no-op for the gateway. Phase 7: and only agencies
+  // partnered with the case's hospital (the gateway can endorse no other).
+  const caseTenant = app?.tenantId ?? request?.tenantId
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -58,7 +60,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
         const alreadyOn = new Set(siblings.map(s => s.agencyId))
         const list = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .filter(a => a.enabled !== false && !alreadyOn.has(a.id))
+          .filter(a => a.enabled !== false && !alreadyOn.has(a.id) && agencyPartnersWith(a, caseTenant))
         if (!cancelled) setAgencies(list)
       } catch (e) {
         console.error('[SuggestEndorsement] agency load failed:', e)
@@ -67,7 +69,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
       }
     })()
     return () => { cancelled = true }
-  }, [siblings])
+  }, [siblings, caseTenant])
 
   const handleSubmit = async () => {
     if (!toAgencyId) {

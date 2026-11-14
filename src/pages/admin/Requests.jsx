@@ -12,7 +12,7 @@ import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant, currentTenantId, tenantWhere } from '../../utils/hospitals'
+import { withTenant, currentTenantId, tenantWhere, agencyPartnersWith } from '../../utils/hospitals'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
@@ -134,8 +134,11 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const patientProvince = request.patientProvince ?? ''
   // The remaining balance this endorsement targets (what still needs funding).
   const coverRank = { full: 2, partial: 1, none: 0 }
+  // Phase 7: only agencies partnered with this request's hospital (the rules
+  // deny a slice to any other agency).
+  const caseTenant = request.tenantId ?? currentTenantId()
   const eligible = agencies
-    .filter(a => !usedIds.has(a.id) && (a.slots?.remaining ?? 0) > 0)
+    .filter(a => !usedIds.has(a.id) && (a.slots?.remaining ?? 0) > 0 && agencyPartnersWith(a, caseTenant))
     .map(a => ({
       ...a,
       matches:   (a.assistanceTypes ?? []).includes(request.assistanceType),
@@ -313,6 +316,18 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         }
       }
 
+      // Phase 7: let the endorsed agencies read this patient's profile (the
+      // rules allow an agency a patient only via users.agencyIds). Best-effort
+      // and after commit, like the document stamps above: a missing profile
+      // must never roll back the endorsement. Re-endorsing re-applies it.
+      if (request.patientId) {
+        try {
+          await updateDoc(doc(db, 'users', request.patientId), { agencyIds: arrayUnion(...selectedIds) })
+        } catch (err) {
+          console.error('[endorse] patient agencyIds stamp failed:', request.patientId, err)
+        }
+      }
+
       // Best-effort mirror of the public Landing projection for each endorsed
       // agency (syncAgencyPublic swallows its own errors). Runs after commit so
       // it can never roll back the endorsement, and reconciles via Resync / the
@@ -430,7 +445,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
               The full amount is already committed or endorsed. Nothing left to endorse.
             </div>
           ) : eligible.length === 0 ? (
-            <p className="text-xs text-amber-600">No eligible agencies (need open slots and not already endorsed for this request).</p>
+            <p className="text-xs text-amber-600">No eligible agencies (need open slots, a partnership with this hospital, and not already endorsed for this request).</p>
           ) : (
             <>
               {/* Header + helpers */}
@@ -639,7 +654,7 @@ function RequestDetail({ request, agencies, onClose }) {
 
   useEffect(() => {
     const unsub = onSnapshot(
-      query(collection(db, 'applications'), where('requestId', '==', request.id)),
+      query(collection(db, 'applications'), ...tenantWhere(), where('requestId', '==', request.id)),
       snap => setSlices(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => {},
     )
@@ -658,7 +673,7 @@ function RequestDetail({ request, agencies, onClose }) {
   useEffect(() => {
     if (!request.patientId) return
     const unsub = onSnapshot(
-      query(collection(db, 'documents'), where('patientId', '==', request.patientId)),
+      query(collection(db, 'documents'), ...tenantWhere(), where('patientId', '==', request.patientId)),
       snap => setPatientDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
       () => {},
     )

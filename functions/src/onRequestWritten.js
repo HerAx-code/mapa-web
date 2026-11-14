@@ -1,6 +1,7 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
+const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 
 /**
  * onRequestWritten — server-side staff notifications for request lifecycle
@@ -77,17 +78,24 @@ async function syncActiveRequest({ db, before, after, requestId, FieldValue }) {
 exports.syncActiveRequest = syncActiveRequest
 exports.isActiveStatus = isActiveStatus
 
-async function notifyAdmins({ db, serverTimestamp, type, title, body }) {
+// Multi-hospital Phase 9: only the REQUEST's hospital's gateway staff. This
+// used to notify every super/staff admin in the network — another hospital's
+// staff got this patient's name, bill and request id. Staff are few, so read
+// them and filter here: an untagged (pre-backfill) admin is hospital #1, and
+// Firestore can't query for a missing field.
+async function notifyAdmins({ db, serverTimestamp, tenantId, type, title, body }) {
+  const tenant = tenantId || DEFAULT_HOSPITAL_ID
   const snap = await db.collection('users')
     .where('role', 'in', ['super_admin', 'staff_admin'])
     .get()
-  if (snap.empty) return 0
-  await Promise.all(snap.docs.map(d =>
+  const staff = snap.docs.filter(d => ((d.data() ?? {}).tenantId || DEFAULT_HOSPITAL_ID) === tenant)
+  if (!staff.length) return 0
+  await Promise.all(staff.map(d =>
     db.collection('notifications').doc(d.id).collection('items').add({
       type, title, body, read: false, createdAt: serverTimestamp(), fromUid: null,
     }),
   ))
-  return snap.size
+  return staff.length
 }
 
 async function notifyOnRequestWritten({ db, before, after, requestId, serverTimestamp }) {
@@ -96,7 +104,7 @@ async function notifyOnRequestWritten({ db, before, after, requestId, serverTime
     const name = after.patientName || 'A patient'
     const type = after.assistanceType || 'assistance'
     const rid  = after.requestId || requestId
-    const n = await notifyAdmins({ db, serverTimestamp,
+    const n = await notifyAdmins({ db, serverTimestamp, tenantId: after.tenantId,
       type: 'app_submitted', title: 'New assistance request',
       body: `${name} submitted a ${type} request — total bill ${peso(after.totalBill)}. ID: ${rid}.` })
     return { event: 'created', notified: n }
@@ -111,7 +119,7 @@ async function notifyOnRequestWritten({ db, before, after, requestId, serverTime
     const name = after.patientName || 'A patient'
     const type = after.assistanceType || 'assistance'
     const rid  = after.requestId || requestId
-    const n = await notifyAdmins({ db, serverTimestamp,
+    const n = await notifyAdmins({ db, serverTimestamp, tenantId: after.tenantId,
       type: 'app_withdrawn', title: 'Request withdrawn',
       body: `${name} withdrew their ${type} request (${rid}).` })
     return { event: 'withdrawn', notified: n }

@@ -1,10 +1,15 @@
 # Multi-Hospital Network Plan — one MAPA gateway for many BARMM hospitals
 
-**Status:** 🚧 **IN PROGRESS** — owner chose **Option B (true multi-tenancy)**
+**Status:** ✅ **ALL PHASES BUILT (2026-11-14), NOT YET MERGED OR DEPLOYED** — owner chose **Option B (true multi-tenancy)**
 over one-deployment-per-hospital, to match the capstone title *"a multi-agency
 co-funding gateway for hospitals in BARMM."* Decisions D1–D8 **locked 2026-11-13**
-(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off)
-(local branch `docs/multi-hospital-phase0`, not yet merged). Phase 5 next.
+(owner accepted the recommended defaults). Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ · Phase 3 script ✅ · Phase 4 ✅ (flag off) · Phase 5 ✅ · Phase 6 ✅ · Phase 7 ✅ · Phase 8 ✅ · Phase 9 ✅
+(local branch `docs/multi-hospital-phase0`, not yet merged or deployed).
+**Merge/deploy:** Phases 0–4 are safe to ship as-is. **Phases 5–9 ship together,
+only in the coordinated rollout** described under Phase 5 — their rules depend on
+the backfills, and Phase 6's client already moves agency management to the
+platform admin (merged alone, hospital super admins would lose the agency UI
+before a platform admin exists).
 **Supersedes:** the CLAUDE.md *Out Of Scope* line "Multi-hospital network (one host
 facility per deployment)" — that line must change in Phase 0 before any code lands.
 **Principle (same as de-crmc-genericization-plan.md):** one accurate,
@@ -154,59 +159,315 @@ gateway roles and the `users` read rule ("admins and agencies can read all users
   `VITE_TENANT_SCOPING=true` in Vercel and redeploy, (4) preview-test every staff
   page.
 - **Follow-ups:**
-  - Agency-side Hospital column + filter (Inbox / Dashboard) moves to Phase 7, where
-    agencies get partner hospitals to list.
+  - ~~Agency-side Hospital column + filter~~ — done in Phase 7 (Inbox: hospital
+    label per row + a filter once slices come from more than one hospital).
   - Audit entries by **agency** actors carry no tenant (Phase 2: agencies are
     network-level), so with scoping on they leave the gateway Audit Log page; they
-    stay on each request's timeline (queried by `requestId`). Phase 9: a Cloud
-    Function stamps the case's tenant from `requestId`.
+    stay on each request's timeline (queried by `requestId`). ~~Phase 9~~ — done:
+    `onAuditLogCreated` stamps the case's tenant (needs Cloud Functions deployed).
 
-### Phase 5 — Rules enforce the boundary (the real security line)
-- Helpers: `userTenantId()`; `isHospitalAdmin(hid)` =
-  `isAdmin() && userTenantId() == tid`; `isPlatformAdmin()`.
-- Replace every bare `isAdmin()` on tenant data with
-  `isHospitalAdmin(resource.data.tenantId)`.
-- `users` read rule: staff may read users **of their own hospital**; agencies may
-  read only patients who have a request endorsed to them (today: all users).
-- `hospitalIds` (access codes): admin of the owning hospital only.
-- **Tests first:** `tests/rules/tenancy.test.js` — for every tenant collection,
-  Hospital B's admin is DENIED read/write on Hospital A's doc; agency of a
-  non-partner hospital is denied; patient sees only own data. This PR does not
-  merge unless every cross-tenant case is denied.
-- Note: each `get(users/uid)` in rules is a billed read and counts toward the
-  10-gets-per-request limit. If rule cost becomes a problem, move `role`,
-  `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) — tracked
-  as a follow-up, not v1.
+### Phase 5 — Rules enforce the boundary ✅ 2026-11-14 (not deployed)
+- Helpers in `firestore.rules`: `defaultTenant()` (= `'hospital-1'`, must equal
+  `VITE_DEFAULT_HOSPITAL_ID`), `userTenantId()`, `isHospitalAdmin(data)`,
+  `isHospitalSuperAdmin(data)`, `createsInOwnHospital()`, `hospitalAdminWrite()`.
+- Every gateway `isAdmin()` on tenant data is now hospital-scoped: users, requests,
+  applications, documents, documentContents, certificates, reports, auditLog,
+  hospitalIds (+ privateInfo), referralSuggestions, announcements (gateway ones),
+  conversation/message deletes, hospitals (own doc only).
+- Writes stay in the writer's hospital: patients file requests/documents and
+  register (via the access code's tenant) only in their hospital; admins can't
+  create in or move records/users to another hospital (transfers → Phase 6);
+  agency-written GLs and referral suggestions must carry the **case's** tenant.
+- Unchanged by design: agencies keep agencyId-based access across hospitals;
+  network config (agencies, agenciesPublic, documentTypes, assistanceTypes),
+  notificationErrors, docReviewPresence; hospitalIds single-doc `get` stays open to
+  signed-in users (registration verifies a code before the patient has a hospital).
+- **Leak found and fixed during testing.** The first version defaulted a missing
+  doc `tenantId` to hospital #1. Rules are evaluated against a query's *filters*,
+  where an unfiltered field reads as absent — so every **unfiltered** admin query
+  passed and returned other hospitals' docs (reproduced on the emulator: hospital
+  A's admin listed hospital B's request). Gateway access to existing docs is now
+  **strict** (`resource.data.tenantId == userTenantId()`, no default); the default
+  survives only for the signed-in user's doc and for new docs.
+- Client: the remaining admin lookups keyed only by patient/request
+  (Patients, Requests detail) now also carry `tenantWhere()` — required, since an
+  admin query without a tenant filter is denied.
+- Tests: `tests/rules/tenantBoundary.rules.test.js` (54) — every tenant collection
+  cross-hospital read/update/delete denied, own-hospital and other-hospital
+  queries, unfiltered queries denied, agency cross-hospital access kept,
+  registration/creates/moves. Older rules-test fixtures now model the
+  post-backfill state (`tenantId: 'hospital-1'`). 308/308 rules tests pass.
+- **Rollout is one coordinated step — never deploy these rules on their own:**
+  (1) Phases 1–4 deployed, (2) seed hospital #1, (3) backfill `--apply` and
+  re-verify 0 left, (3b) **Phase 7:** `scripts/backfill-partnerships.mjs --apply`
+  and re-verify 0 left (agency partner lists + patients' `agencyIds` — without
+  it agencies lose the patient profile on in-flight cases),
+  (4) deploy indexes and wait for them to build,
+  (4b) **Phase 6:** create the network operator with
+  `scripts/create-platform-admin.mjs --apply` (once these rules are live, only a
+  platform_admin can manage agencies), (5) set
+  `VITE_TENANT_SCOPING=true` + redeploy the app **and** deploy these rules
+  together. Rules without the flag → every gateway list query is denied; rules
+  before the backfill → untagged records unreachable by staff.
+- **⚠ Merging to `main` IS the rules deploy.** `.github/workflows/deploy-rules.yml`
+  tests and deploys `firestore.rules` to production on every push to `main` that
+  touches the rules (it is active: the Phases 0–4 merge, PR #351, deployed its
+  harmless rules on 2026-11-14). So the Phases 5–9 PR (#352) must be merged LAST,
+  as the final step of the window — never "merged now, deployed later":
+  1. Steps (2)–(4b) above, all verified (seed, both backfills at 0 left, indexes
+     built, platform admin created).
+  2. Set `VITE_TENANT_SCOPING=true` in Vercel (Production). Takes effect on the
+     next production build — which the merge below triggers.
+  3. Merge #352 → GitHub deploys the rules and Vercel redeploys the app with the
+     flag, together.
+  4. Preview-test every staff page as a hospital admin, an agency user and the
+     platform admin. Rollback = revert the merge commit (redeploys the previous
+     rules) and set the flag back to `false`.
+- Accepted gaps (follow-ups):
+  - ~~Agencies can still read every `users` doc~~ — closed in Phase 7 (only
+    patients endorsed to the agency, via `users.agencyIds`).
+  - ~~Any hospital's admin can still edit network config~~ — closed in Phase 6.
+- Note: each `get(users/uid)` in rules is a billed read (cached within one
+  evaluation, so role + tenant cost one). If rule cost becomes a problem, move
+  `role`, `tenantId`, `agencyId` into **custom claims** (set by a Cloud Function) —
+  tracked as a follow-up, not v1.
 
-### Phase 6 — Roles: `platform_admin` + hospital-scoped admins
-- Add `ROLES.PLATFORM_ADMIN`; new `/platform/*` pages: Hospitals list, Add Hospital,
-  Agencies (network-wide), Partnerships, Network analytics (aggregates, no PII).
-- `admin/Accounts.jsx`: hospital admins create staff only in their own hospital.
-- MFA required for `platform_admin` (same as other staff roles).
+### Phase 6 — Roles: `platform_admin` + hospital-scoped admins ✅ 2026-11-14 (not deployed)
+- **Role.** `ROLES.PLATFORM_ADMIN` (`'platform_admin'`, shown as "Network Admin"):
+  no tenant (`tenantIdFor` → null, like agency users), **no patient data** — it is
+  not in `isAdmin()`, so every hospital-scoped rule denies it. MFA + idle timeout
+  apply as for other staff. Created only by `scripts/create-platform-admin.mjs`
+  (Admin SDK, dry run by default, refuses an email that already has another role,
+  prints a one-time password link); a demo account is in `scripts/demo-accounts.js`.
+- **Pages.**
+  - `/platform/hospitals` (`src/pages/platform/Hospitals.jsx`): list hospitals with
+    their admin counts, **add** a hospital (id, name, gateway office, access-code
+    prefix, contact), **edit** it, and **add its first administrator** (secondary
+    Auth app, `src/utils/staffAccounts.js`). Form rules in
+    `src/utils/hospitalConfig.js` (unit-tested): slug ids, prefixes `[A-Z][A-Z0-9]{1,9}`
+    (they go into the access-code regex), **prefix unique across hospitals** (D5).
+  - Agencies: the existing `/admin/agencies` pages, now managed by the platform
+    admin (add, edit, enable/disable, slots, team, public resync). Hospital admins
+    keep a read-only directory. The platform view shows no case counts and no
+    messaging; disabling an agency **holds** its in-flight slices (the platform
+    admin can't read or reject them) and each hospital re-endorses.
+- **Rules.**
+  - `users`: hospital admins create/edit only gateway staff (+ their own patients'
+    non-role fields) in their own hospital — a **role allowlist**; before it, an
+    admin could mint any role, which would have included `platform_admin`. They can
+    no longer create/edit/delete agency users or touch a platform admin (whose
+    missing tenantId would otherwise default to hospital #1). The platform admin
+    creates staff into an **existing** hospital, agency users with no tenant,
+    transfers staff between hospitals (D2), and never touches patients or other
+    platform admins.
+  - `hospitals`: platform admin creates + edits; a hospital's super admin edits only
+    its own **branding** (not `accessCodePrefix`, not `enabled`).
+  - `agencies`: create/delete/edit → platform admin. Hospital admins keep only
+    `slots.remaining` + `lastResetDate` (the endorse decrement and the daily-reset
+    fallback); `slots.total` pinned. `agenciesPublic` delete → platform admin.
+  - `documentTypes`, `assistanceTypes` → platform admin only.
+- Tests: `tests/rules/platformAdmin.rules.test.js` (44: no PII reachable, onboarding,
+  user management bounds, agency/reference-data ownership, slot paths kept),
+  role-escalation cases in `users.rules.test.js`, `tests/utils/hospitalConfig.test.js`.
+  356/356 rules tests pass.
+- Deferred, by design:
+  - **Network analytics** — Firestore counts need read access to the counted docs,
+    and the platform admin must not read patient records, so aggregates come from
+    a Cloud Function-maintained stats doc (Phase 9).
+  - **Partnerships** → Phase 7. **`enabled` enforcement** (a disabled hospital's
+    codes stop registering) and a server-side prefix-uniqueness guarantee → Phase 8
+    with per-hospital access codes; until then the platform admin is the only
+    writer and the form checks uniqueness.
+  - **Patient transfer** between hospitals moves every record they own — an Admin
+    SDK script, not a client action (future).
+  - A platform audit view: its entries are untagged and readable by no one yet
+    (Phase 9).
+  - The dev `/seed` page can no longer run end to end under the Phase 5/6 rules
+    (network config vs. access codes need different roles); use the Admin SDK
+    bootstrap scripts.
 
-### Phase 7 — Agency ↔ hospital partnerships
-- `agencies/{id}.partnerHospitalIds: []` (or a `partnerships` collection if
-  per-pair terms are needed later).
-- Endorse / SuggestEndorsement modals list **only agencies partnered with the
-  endorsing hospital**.
-- Rules: an endorse write must target a partner agency.
-- `agenciesPublic` (landing-page teaser) filtered per hospital.
+### Phase 7 — Agency ↔ hospital partnerships ✅ 2026-11-14 (not deployed)
+- **Data.** `agencies/{id}.partnerHospitalIds: [tenantId]` — the hospitals whose
+  gateways may endorse to the agency (a `partnerships` collection only if per-pair
+  terms are ever needed). An agency with **no list** (onboarded before Phase 7)
+  partners with **hospital #1 only** — in the rules (`agencyPartners()`, a default
+  on one concrete doc fetched with `get()`, never a query shape) and in the client
+  (`partnerHospitalIdsOf` / `agencyPartnersWith`, src/utils/hospitals.js).
+- **Who sets it (D4).** The platform admin: a partner picker on Add Agency
+  (required; preselected in a one-hospital network) and a **Partner hospitals** card
+  on the agency page (`src/components/admin/PartnerHospitals.jsx`). Agency staff and
+  hospital admins see it read-only (agency Profile page) and can't change it (rules).
+  The Hospitals page shows each hospital's partner-agency count (flags "None").
+- **Endorsement.** The gateway's endorse modal and the agencies' Suggest-another-
+  agency modal list **only partners of the case's hospital**; the rules deny a slice
+  (`applications` create) or a referral suggestion to any other agency. The
+  patient's Find Programs page lists only their hospital's partners.
+- **Agencies read only their own patients** (closes the Phase 5 gap). `users` read
+  for agency roles: `userAgencyId() in resource.data.agencyIds` (+ staff/agency docs,
+  as before). The endorse flow adds the endorsed agencies to the patient's
+  `users.agencyIds` (after commit, best-effort — like the document `agencyIds`
+  stamps). Patients can't change it. Agency composers use `getUsersInScope(db,
+  roles, viewer)` → staff + agency users + `agencyIds array-contains <agency>`
+  (rules-provable; an unfiltered or `role == patient` query is denied).
+- **Agency inbox.** Hospital label per row; a hospital filter once slices come from
+  more than one hospital (`src/hooks/useHospitals.js`).
+- **Backfill:** `scripts/backfill-partnerships.mjs` (dry run by default, additive,
+  idempotent; plan in `scripts/lib/partnership-backfill-plan.mjs`, unit-tested):
+  agencies without a list → `[hospital #1]`; each patient's `agencyIds` ← every
+  agency holding one of their slices. Verified on the emulator (dry run → apply →
+  re-run reports 0; existing lists and ids untouched).
+- Tests: `tests/rules/partnerships.rules.test.js` (16) — partner-only endorse and
+  suggestion, legacy default, missing agency denied, list ownership, agency patient
+  reads (single doc, array-contains query, broad queries denied), who writes
+  `agencyIds`. Older fixtures seed the agencies their slices name. 372/372 rules
+  tests pass.
+- **Decision — `agenciesPublic` stays network-wide.** The public Landing teaser has
+  no hospital context before sign-in, so it lists the network's programs; the
+  signed-in patient's Find Programs page is the per-hospital view.
+- Follow-ups: the Agencies-page quick "Add agency" modal (not the full Add Agency
+  page) doesn't ask for partners — such an agency defaults to hospital #1; the
+  platform admin sets partners on its page. Per-hospital agency budgets stay D3
+  future work.
 
-### Phase 8 — Per-hospital access codes + configuration
-- `verifyAccessCode` + `orgConfig.js`: accept any **enabled hospital's** prefix;
-  the matched prefix's hospital sets `users.tenantId` at registration
-  (Register already copies `hospitalIds/{code}.tenantId` since Phase 2).
-- Guarantee Letter, intake sheet (`intakeSheetHTML.js`), emails (`api/send-email.js`)
-  render the **endorsing hospital's** name/logo/address.
-- Optional per-hospital overrides of `referenceData.js` (document sets,
-  thresholds) stored on the hospital doc.
-- Hospital Settings page for the hospital `super_admin` (branding + contact).
+### Phase 8 — Per-hospital access codes + configuration ✅ 2026-11-14 (not deployed)
+- **Each hospital issues codes under its own prefix.** `accessCodePrefix` joined the
+  hospital branding fields (`applyHospital`), so a gateway's Access Codes page
+  issues `<its prefix>-YYYY-NNNNN`. Rules: a code may be created only under the
+  issuing hospital's prefix (`hospitalIds` create), so hospitals can never collide
+  in the single `hospitalIds/{code}` namespace.
+- **Registration accepts any hospital's code.** Web (`accessCodeRe()`) and the
+  `verifyAccessCode` function check the prefix *format* (`[A-Z][A-Z0-9]{1,9}`); the
+  code doc decides whether it exists and which hospital the patient joins
+  (`users.tenantId` ← the code's `tenantId`, since Phase 2). Register's input mask
+  no longer snaps back to the deployment prefix, the keypad is text until the
+  prefix + year are in, and after verifying it tells the patient which hospital
+  they're joining (bilingual).
+- **Prefixes are unique server-side (D5).** New collection
+  `accessCodePrefixes/{PREFIX}` = `{ tenantId }`: created once by the platform admin
+  in the same batch as the hospital (rules: `prefixHeldBy` via `getAfter`), never
+  changed or deleted — a retired prefix stays reserved because its codes still
+  exist. A hospital may carry only a prefix it holds. `seed-default-hospital.mjs`
+  claims hospital #1's prefix (also when the hospital doc already exists).
+- **`enabled` = new sign-ups open.** Platform admin: "Pause / Resume sign-ups" on the
+  Hospitals page. A paused hospital's codes are refused by Register, by
+  `verifyAccessCode` (`hospitalClosed: true`), and by the rules (patient
+  self-create checks `hospitalOpen`). Its staff and existing patients are
+  unaffected.
+- **Documents carry the case hospital's identity.** `brandingFor(hospital)` (pure,
+  `src/config/org.js`) + `fetchHospitalBranding(tenantId)` (cached) +
+  `useHospitalBranding`. The Guarantee Letter (`GuaranteeLetter` `org` prop, GL
+  viewer) and the intake sheet (`buildIntakeSheetHTML({ org })`, whose seal was a
+  module-level constant frozen at first load) print the CASE's hospital — an agency
+  user used to get hospital #1's name and seal on every hospital's letter. The
+  hospital address prints in the header when set.
+- **Emails:** the footer names the sender's hospital; agency and platform senders
+  (no hospital) sign with the network brand only, never hospital #1's name.
+- **Hospital Settings** (`/admin/settings`, super admin): name, short name, gateway
+  office, seal initials, contact email, address — applied live after saving. The
+  prefix and sign-up status show read-only (network decisions).
+- Tests: `tests/rules/accessCodes.rules.test.js` (13) — claims (batch, taken,
+  retired, re-use own, malformed, permanent, platform-only), own-prefix issuance,
+  paused-hospital sign-up; function tests for any prefix / unknown prefix / paused
+  hospital; unit tests for `brandingFor`, `accessCodeRe`, `fetchHospitalBranding`
+  and the intake sheet's case branding. 385/385 rules, 402 unit, 96 function, 133
+  component tests pass.
+- Deferred, by design:
+  - **Per-hospital reference-data overrides** (document sets, thresholds) — the
+    per-type checklist itself is still flag-off (`VITE_PER_TYPE_DOCS`) pending the
+    gateway's confirmation of the real lists; overriding unconfirmed defaults per
+    hospital would multiply guesses. Revisit when the flag goes on.
+  - **Logo upload** (`logoUrl` is allowed by the rules; no Storage upload UI yet).
+  - The Landing page's example code shows hospital #1's prefix (no hospital before
+    sign-in). `buildCertificateHTML` in agency/CertificateGenerator.jsx is unused
+    (the page opens the GL viewer) and still reads `ORG` — delete in a cleanup.
 
-### Phase 9 — Functions + analytics + polish
-- Cloud Functions: stamp/propagate `tenantId` where they create docs
-  (notifications, `onRequestWritten`, `syncRequestFinancials`, `glExpirySweep`).
-- Admin analytics scoped per hospital; platform analytics across hospitals.
-- Optional: per-hospital agency sub-budgets (D3 follow-up).
+### Phase 9 — Functions + analytics + polish ✅ 2026-11-14 (not deployed)
+- **Leak fixed: new-request / withdrawal notifications went to every hospital's
+  staff.** `onRequestWritten.notifyAdmins` queried every super/staff admin in the
+  network, so another hospital's staff got the patient's name, bill and request id.
+  It now notifies only the request's hospital (staff are read and filtered by
+  `tenantId`, untagged = hospital #1 — Firestore can't query a missing field).
+  The other functions needed no change: none creates hospital records
+  (`syncRequestFinancials`, `glExpirySweep`, `purgeSelfieOnClose`,
+  `onDocumentCountChanged` update existing docs; notifications are per-user;
+  `onSliceProceeded` notifies the network-level agency).
+- **`onAuditLogCreated`** (new trigger): an untagged entry about a case (agency
+  actors) gets the case's `tenantId` — from `requestId`, else the slice for an
+  `application` entry — so it reappears on the hospital's Audit Log page. Network
+  actions (agency budget/team, platform admin) stay untagged.
+- **Network analytics for the platform admin** — counts only. Firestore count/sum
+  queries need read access to the counted docs, which the platform admin must not
+  have, so `functions/src/networkStats.js` (pure, shared) computes per-hospital
+  figures with the Admin SDK into one doc, `networkStats/current` (rules: platform
+  admin read, no client writes): patients, requests in review / in funding / fully
+  funded / closed, approved GLs and pesos approved. Refreshed every 6 hours by
+  `refreshNetworkStats` (scheduled), or by hand with
+  `scripts/compute-network-stats.mjs --apply` while functions aren't deployed.
+  Shown on the new `/platform/network` page. Verified end to end on the emulator.
+- Hospital admin analytics were already hospital-scoped by Phase 4's
+  `tenantWhere()` (Analytics, Dashboard).
+- Tests: `tests/functions/networkStats.test.js`, `onAuditLogCreated.test.js`,
+  hospital-scoping cases in `onRequestWritten.test.js`; networkStats rules in
+  `platformAdmin.rules.test.js`. 391 rules, 402 unit, 110 function, 133 component.
+- Deferred, by design: **per-hospital agency sub-budgets** (D3 — one budget per
+  agency for v1). Cloud Functions are still not deployed on the live project;
+  until they are, audit stamping doesn't run (entries stay on request timelines)
+  and the stats are refreshed by script.
+
+### Role display names ✅ 2026-11-14 (owner decision: labels only)
+`platform_admin` is shown as **"Super Admin"** (the network operator) and
+`super_admin` as **"Hospital Admin"** (one hospital's full gateway admin). Stored
+role ids, rules and tests are unchanged — renaming the ids would mean migrating
+every user doc and a window where an old `super_admin` record means network
+operator. Labels live in `ROLE_LABEL` / `ROLE_LABEL_SHORT`.
+
+### Page restructure (follow-up PR, stacked on Phases 5–9) ✅ 2026-11-14
+Pages adapted to the network model, using the "MAPA Platform Redesign" canvas as
+the visual reference. Ships with Phases 5–9 (it depends on them).
+- **Shell:** gateway staff and patients see their hospital's name under the brand
+  (`useOrg`). Platform admin: dark sidebar — Hospitals, Onboarding requests (live
+  badge), Agencies.
+- **Hospital admins:** the Agencies page is "Partner agencies" (only the agencies
+  their hospital can endorse to); Dashboard counts and low-slot alerts consider
+  partners only.
+- **Agencies:** promotions reach only patients of partner hospitals
+  (`promoReachesMe`); Dashboard + Impact get a "By hospital" card; Logs + Funds a
+  hospital filter (`utils/hospitalBreakdown.js`). All hidden while every slice
+  comes from one hospital.
+- **Platform console** (`/platform/hospitals`, home): key-figure tiles + one hospitals
+  table (prefix, region, patients, active requests, partner agencies,
+  Live / Provisioning / Sign-ups paused). The separate Overview page was merged in
+  (routes redirect). Hospitals gain a `region` field. Agency management lives at
+  `/platform/agencies` (hospital admins keep `/admin/agencies`).
+- **Onboarding pipeline:** public `/for-hospitals` page with a request form →
+  `onboardingRequests` (one per anonymous session, pinned shape, platform-only
+  reads) → `/platform/requests` queue → "Set up hospital" pre-fills Add hospital and
+  marks the request onboarded.
+- **Onboarding, end to end** (request → live hospital):
+  1. A hospital submits the public form; `onOnboardingRequestCreated` (Cloud
+     Function) notifies every Super Admin in-app — the sender is anonymous, so
+     the rules wouldn't let it write staff notifications itself. Until functions
+     are deployed the sidebar badge + console callout carry it.
+  2. The queue flags a possible duplicate (name already on the network).
+  3. "Set up hospital" pre-fills Add hospital; the form also picks the hospital's
+     **partner agencies**, written to each agency's `partnerHospitalIds` in the
+     same batch (`nextPartnerLists`: an agency with no list keeps hospital #1).
+  4. Saving goes straight to "Add first Hospital Admin"; the request is marked
+     onboarded and linked.
+  5. A hospital shows **Provisioning** until it has a Hospital Admin **and** a
+     partner agency; the console's "Finish setting up" checklist links each
+     missing step.
+  6. The new Hospital Admin's dashboard shows a **Getting started** checklist
+     (branding → access codes → staff → partner agencies) until done or dismissed.
+- **Public pages:** `hospitalsPublic` projection (rules: must equal the hospital doc
+  via `getAfter`) feeds the Landing page's participating-hospitals list and real
+  example codes on Landing + Register. Register explains "Prefix = your hospital";
+  Log in gets the canvas brand panel. Landing adds header nav, a live partner-agency
+  strip, patients/hospitals "two doors" and a network band with live counts — every
+  existing patient section kept.
+- **Deliberately not taken from the canvas:** a platform "Patients (all)" page (D1:
+  no patient data at network level); unsourced figures ("167 Malasakit Centers");
+  unverifiable certification badges / legal footnotes.
 
 ---
 

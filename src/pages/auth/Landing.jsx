@@ -14,12 +14,13 @@ import {
   MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
   MdPhone, MdSchedule,
   MdCheck, MdWarningAmber, MdChevronRight, MdConfirmationNumber,
-  MdExpandMore, MdGroups, MdMoneyOff, MdFavorite,
+  MdExpandMore, MdGroups, MdMoneyOff, MdFavorite, MdCheckCircle,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import TermsModal from '../../components/TermsModal'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import LanguageToggle from '../../components/LanguageToggle'
+import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 
 // Per-role landing destination when a signed-in user hits Landing or
 // the PWA bounces them out of standalone mode. Patient lands on the
@@ -35,6 +36,7 @@ const DASHBOARD = {
   [ROLES.AGENCY_ADMIN]: '/agency/dashboard',
   [ROLES.SUPER_ADMIN]:  '/admin/dashboard',
   [ROLES.STAFF_ADMIN]:  '/admin/dashboard',
+  [ROLES.PLATFORM_ADMIN]: '/platform/hospitals',
 }
 
 // One section-header treatment used everywhere on the page — a warm display
@@ -63,6 +65,8 @@ export default function Landing() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [agencies, setAgencies]       = useState([])
+  // Participating hospitals (public projection, multi-hospital).
+  const hospitals = usePublicHospitals()
   // Program-slot bars fill from empty the first time the Programs section
   // scrolls into view — motion that conveys the data (how full each program
   // is), not decoration. Starts already "in" under reduced motion so the
@@ -136,6 +140,11 @@ export default function Landing() {
           bar seated rather than floating. */}
       <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-canvas/95 backdrop-blur px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
         <Logo size={30} withWordmark />
+        <nav aria-label={t('landing.nav.how')} className="hidden md:flex items-center gap-6 text-[14px] font-medium text-gray-600">
+          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}>{t('landing.nav.how')}</button>
+          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => programsRef.current?.scrollIntoView({ behavior: 'smooth' })}>{t('landing.nav.programs')}</button>
+          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => navigate('/for-hospitals')}>{t('landing.nav.forHospitals')}</button>
+        </nav>
         <div className="flex items-center gap-1">
           <LanguageToggle />
           <button
@@ -263,6 +272,51 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Partner agencies — live names from the public projection (no
+          hardcoded funder list). Hidden until agencies are synced. */}
+      {agencies.length > 0 && (
+        <section className="border-y border-brand-900/5 bg-white px-5 sm:px-6">
+          <div className="max-w-5xl mx-auto py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p className="text-sm font-semibold text-gray-700">{t('landing.trust.heading')}</p>
+            <ul className="flex flex-wrap gap-2">
+              {agencies.map(a => (
+                <li key={a.id} className="rounded-full border border-brand-900/10 bg-white px-3.5 py-1.5 text-[13px] font-semibold text-gray-700">{a.name}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* Two doors — patients apply; hospitals join the network. New visitors only. */}
+      {!user && (
+        <section className="px-5 sm:px-6 pt-16 sm:pt-20">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="lp-card p-7 sm:p-8 flex flex-col">
+              <span className="lp-chip bg-brand-50 text-brand-600"><MdHowToReg size={22} /></span>
+              <h3 className="mt-4 font-display text-[24px] font-bold text-brand-900">{t('landing.doors.patientsTitle')}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-600">{t('landing.doors.patientsBody')}</p>
+              <ul className="mt-4 space-y-2.5">
+                {['p1', 'p2', 'p3'].map(k => (
+                  <li key={k} className="flex gap-2.5 text-[14.5px] text-gray-800"><MdCheckCircle size={18} className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden="true" />{t(`landing.doors.${k}`)}</li>
+                ))}
+              </ul>
+              <button type="button" className="btn-primary mt-6 self-start min-h-[44px]" onClick={() => navigate('/register')}>{t('landing.doors.patientsCta')}</button>
+            </div>
+            <div className="lp-card p-7 sm:p-8 flex flex-col bg-gradient-to-br from-white to-brand-50">
+              <span className="lp-chip bg-white text-brand-600 border border-brand-100"><MdLocalHospital size={22} /></span>
+              <h3 className="mt-4 font-display text-[24px] font-bold text-brand-900">{t('landing.doors.hospitalsTitle')}</h3>
+              <p className="mt-2 text-[15px] leading-relaxed text-gray-600">{t('landing.doors.hospitalsBody')}</p>
+              <ul className="mt-4 space-y-2.5">
+                {['h1', 'h2', 'h3'].map(k => (
+                  <li key={k} className="flex gap-2.5 text-[14.5px] text-gray-800"><MdCheckCircle size={18} className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden="true" />{t(`landing.doors.${k}`)}</li>
+                ))}
+              </ul>
+              <button type="button" className="btn-secondary mt-6 self-start min-h-[44px]" onClick={() => navigate('/for-hospitals')}>{t('landing.doors.hospitalsCta')}</button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Who can apply — eligibility checklist + the Patient Access Code,
           the real gate to registering. New visitors only. */}
       {!user && <section id="eligibility" className="px-5 sm:px-6 py-16 sm:py-20">
@@ -296,8 +350,26 @@ export default function Landing() {
                 <p className="mt-2 text-sm leading-relaxed text-gray-600">{t('landing.eligibility.codeBody')}</p>
                 <div className="mt-5 rounded-xl border border-dashed border-amber-400 bg-white px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.codeSample')}</p>
-                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">{accessCodePrefixFor(new Date().getFullYear())}00042</p>
+                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">
+                    {hospitals.length
+                      ? `${hospitals[0].accessCodePrefix}-${new Date().getFullYear()}-`
+                      : accessCodePrefixFor(new Date().getFullYear())}00042
+                  </p>
                 </div>
+                {/* Multi-hospital: each hospital issues its own prefix. */}
+                {hospitals.length > 1 && (
+                  <div className="mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.hospitalsHeading')}</p>
+                    <ul className="mt-2 space-y-1.5">
+                      {hospitals.map(h => (
+                        <li key={h.id} className="flex items-baseline justify-between gap-3 text-sm">
+                          <span className="text-gray-800">{h.facilityName}</span>
+                          <span className="font-mono text-xs text-gray-500 whitespace-nowrap">{t('landing.eligibility.codeStartsWith', { prefix: h.accessCodePrefix })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <a href="#help" className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
                   {t('landing.eligibility.codeCta')} <MdChevronRight size={16} />
                 </a>
@@ -480,6 +552,33 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* The bigger idea — one front door. Live counts only (no unsourced
+          figures): participating hospitals + partner agencies from the public
+          projections; the other two are the product's promise, not stats. */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900 px-5 sm:px-6 text-white">
+        <div className="relative max-w-5xl mx-auto py-16 sm:py-20 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] items-center">
+          <div>
+            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold">{t('landing.network.eyebrow')}</span>
+            <h2 className="mt-4 font-display text-[28px] sm:text-[36px] font-bold leading-tight">{t('landing.network.heading')}</h2>
+            <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-brand-100">{t('landing.network.body')}</p>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 sm:gap-4">
+            {[
+              [hospitals.length || '—', t('landing.network.hospitals')],
+              [agencies.length || '—', t('landing.network.agencies')],
+              ['1', t('landing.network.perPatient')],
+              ['0', t('landing.network.balance')],
+            ].map(([n, label]) => (
+              <div key={label} className="rounded-2xl border border-white/15 bg-white/[0.07] p-5">
+                <dt className="sr-only">{label}</dt>
+                <dd className="font-display text-[32px] font-bold leading-none">{n}</dd>
+                <dd className="mt-2 text-[13px] text-brand-100">{label}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
       {/* FAQ — the real questions a worried first-time applicant asks. Native
           <details> (zero JS, accessible) inside one soft card. Everyone. */}
       <section id="faq" className="px-5 sm:px-6 py-16 sm:py-20">
@@ -597,6 +696,13 @@ export default function Landing() {
                     onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
                     className="text-xs text-brand-100/70 hover:text-white transition-colors">
                     {t('landing.footer.howItWorks')}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => navigate('/for-hospitals')}
+                    className="text-xs text-brand-100/70 hover:text-white transition-colors">
+                    {t('landing.footer.forHospitals')}
                   </button>
                 </li>
               </ul>

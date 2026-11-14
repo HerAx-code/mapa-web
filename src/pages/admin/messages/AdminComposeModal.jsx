@@ -8,7 +8,7 @@ import { MdClose, MdSend } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { MAX_CHARS } from './helpers'
 
-const ROLE_LABEL = { patient: 'Patient', staff_admin: 'Staff Admin', super_admin: 'Super Admin', agency: 'Agency' }
+const ROLE_LABEL = { patient: 'Patient', staff_admin: 'Staff Admin', super_admin: 'Hospital Admin', agency: 'Agency' }
 
 /**
  * Admin-side compose panel — search any user, pick one, send the first
@@ -43,7 +43,7 @@ export default function AdminComposeModal({ user, onClose, onCreated }) {
   const handleClose = () => hasUnsaved ? setConfirmClose(true) : onClose()
 
   useEffect(() => {
-    getUsersInScope(db, ['patient', 'staff_admin', 'super_admin', 'agency']).then(docs => {
+    getUsersInScope(db, ['patient', 'staff_admin', 'super_admin', 'agency'], user).then(docs => {
       setAllUsers(
         docs
           .map(d => ({ id: d.id, ...d.data() }))

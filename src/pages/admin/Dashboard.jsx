@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { collection, query, where, orderBy, limit, onSnapshot, addDoc, getDocs, serverTimestamp } from 'firebase/firestore'
-import { tenantWhere } from '../../utils/hospitals'
+import { tenantWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
 import { db } from '../../firebase'
 import {
   MdBusiness, MdSupervisedUserCircle, MdFactCheck,
@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast'
 import { logAudit } from '../../utils/auditLog'
 import Tour from '../../components/Tour'
+import GettingStartedCard from '../../components/admin/GettingStartedCard'
 import PipelineFunnel from '../../components/admin/PipelineFunnel'
 import { stageCounts } from '../../utils/queueBuckets'
 import { adminDashboardTour, resetTourFlag } from '../../utils/tours'
@@ -92,7 +93,8 @@ export default function AdminDashboard() {
     )
     const u3 = onSnapshot(
       query(collection(db, 'agencies'), where('enabled', '==', true)),
-      snap => setAgencyCount(snap.size),
+      // Multi-hospital: only this hospital's partner agencies count.
+      snap => setAgencyCount(snap.docs.filter(d => agencyPartnersWith(d.data(), currentTenantId())).length),
       err => { console.error('[Dashboard] agency count failed:', err); setAgencyCount('—') }
     )
     // Open requests = anything still moving through the gateway pipeline (not
@@ -175,6 +177,8 @@ export default function AdminDashboard() {
       snap => {
         const low = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
+          // Multi-hospital: only partners matter — the gateway can't endorse to others.
+          .filter(a => agencyPartnersWith(a, currentTenantId()))
           .filter(a => {
             const total = a.slots?.total ?? 0
             const rem   = a.slots?.remaining ?? 0
@@ -351,7 +355,7 @@ export default function AdminDashboard() {
     [pipelineReqs])
 
   return (
-    <Layout breadcrumb={isSuperAdmin ? 'System Administration' : 'Operations'}>
+    <Layout breadcrumb={isSuperAdmin ? 'Hospital Administration' : 'Operations'}>
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header — compact; processing-health chips inline (super admin), so
@@ -360,7 +364,7 @@ export default function AdminDashboard() {
           <div className="min-w-0">
             <p className="eyebrow">Console</p>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              {isSuperAdmin ? 'System Administration' : 'Operations'}
+              {isSuperAdmin ? 'Hospital Administration' : 'Operations'}
             </h1>
           </div>
           {isSuperAdmin && slaMetrics && (
@@ -378,6 +382,9 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* First-run checklist for a newly onboarded hospital (Hospital Admin). */}
+        {isSuperAdmin && <GettingStartedCard />}
 
         {/* KPI tiles — live workload first */}
         <div data-tour-id="admin-metrics" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">

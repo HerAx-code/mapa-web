@@ -24,6 +24,8 @@ import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import { tsToDate } from '../../utils/dates'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
+import { fetchHospitalBranding } from '../../utils/hospitals'
+import { useHospitalBranding } from '../../hooks/useHospitals'
 import { isGatewayAdminRole } from '../../utils/constants'
 // Phase 2.3: Field + PesoInput live in components/ui/ now so other
 // intake-style forms can share them without re-declaring the helpers.
@@ -90,6 +92,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const visibleSections = patientFacts ? SECTIONS.filter(s => s.id !== 'assess') : SECTIONS
 
   const [app, setApp]           = useState(null)
+  // Phase 8: the case's hospital (an agency viewer has no hospital of its own).
+  const caseOrg                 = useHospitalBranding(app?.tenantId)
   const [loading, setLoading]   = useState(true)
   const [sheet, setSheet]       = useState(() => blankSheet())
   const [hydrated, setHydrated] = useState(false)
@@ -607,6 +611,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         sheet,
         agency: null,
         currentUser: user,
+        org: await fetchHospitalBranding(app.tenantId),
       })
       const blob = new Blob([html], { type: 'text/html' })
       const url  = URL.createObjectURL(blob)
@@ -756,8 +761,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               {app.status === 'rejected'
                 ? `This ${isRequestMode ? 'request' : 'application'} was rejected — the assessment is now read-only.`
                 : isRequestMode
-                  ? `You are viewing this case assessment in read-only mode. Only ${ORG.gatewayName} staff can edit it.`
-                  : `The case assessment is owned by ${ORG.gatewayName} on the parent request. This view is read-only.`}
+                  ? `You are viewing this case assessment in read-only mode. Only ${caseOrg.gatewayName} staff can edit it.`
+                  : `The case assessment is owned by ${caseOrg.gatewayName} on the parent request. This view is read-only.`}
             </p>
           </div>
         )}

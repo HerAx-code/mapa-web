@@ -17,6 +17,7 @@ import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { getOrCreateConversation } from '../../utils/messages'
 import { AgencyModal } from './Agencies'
 import AgencyAvatar from '../../components/AgencyAvatar'
+import PartnerHospitalsCard from '../../components/admin/PartnerHospitals'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
@@ -24,7 +25,7 @@ import {
   MdLocationOn, MdPhone,
   MdAttachMoney, MdArrowUpward, MdArrowDownward,
 } from 'react-icons/md'
-import { PERIOD_ADJECTIVE } from '../../utils/constants'
+import { PERIOD_ADJECTIVE, ROLES } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
 import toast from 'react-hot-toast'
 
@@ -110,7 +111,12 @@ export default function AgencyDetail() {
   const { id }        = useParams()
   const navigate      = useNavigate()
   const { user }      = useAuth()
-  const isSuperAdmin  = user?.role === 'super_admin'
+  // Phase 6: agency management (edit, enable/disable, slots, team) belongs to
+  // the platform admin; hospital admins get a read-only view. The platform
+  // admin has no patient data — no case counts, no slice cascade, no messaging.
+  const isPlatform    = user?.role === ROLES.PLATFORM_ADMIN
+  const canManage     = isPlatform
+  const base          = isPlatform ? '/platform/agencies' : '/admin/agencies'
 
   const [agency,        setAgency]        = useState(null)
   const [coordinators,  setCoordinators]  = useState([])
@@ -148,7 +154,7 @@ export default function AgencyDetail() {
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'agencies', id), snap => {
-      if (!snap.exists()) { navigate('/admin/agencies'); return }
+      if (!snap.exists()) { navigate(base); return }
       setAgency({ id: snap.id, ...snap.data() })
       setLoading(false)
     }, () => { setLoading(false); toast.error('Failed to load agency.') })
@@ -169,6 +175,7 @@ export default function AgencyDetail() {
   }, [id])
 
   useEffect(() => {
+    if (isPlatform) return undefined
     const unsub = onSnapshot(
       query(collection(db, 'applications'), ...tenantWhere(), where('agencyId', '==', id)),
       snap => {
@@ -190,7 +197,7 @@ export default function AgencyDetail() {
       (err) => console.error('[AgencyDetail] appStats snapshot error:', err),
     )
     return unsub
-  }, [id])
+  }, [id, isPlatform])
 
   // ── Agency actions ────────────────────────────────────────────────────
 
@@ -324,7 +331,7 @@ export default function AgencyDetail() {
       await deleteDoc(doc(db, 'agencies', id))
       logAudit(user, { action: 'agency_deleted', targetType: 'agency', targetId: id, targetName: agency.name, details: 'Agency permanently deleted' })
       toast.success('Agency deleted.')
-      navigate('/admin/agencies')
+      navigate(base)
     } catch (err) {
       console.error(err); toast.error('Failed to delete agency.')
       setDeletingAgency(false)
@@ -465,7 +472,7 @@ export default function AgencyDetail() {
 
         {/* Back */}
         <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-5"
-          onClick={() => navigate('/admin/agencies')}>
+          onClick={() => navigate(base)}>
           <MdArrowBack size={16} /> Back to Agencies
         </button>
 
@@ -492,9 +499,11 @@ export default function AgencyDetail() {
 
             {/* Quick actions */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
-                onClick={handleMessage}><MdMessage size={16} /></button>
-              {isSuperAdmin && (
+              {!isPlatform && (
+                <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
+                  onClick={handleMessage}><MdMessage size={16} /></button>
+              )}
+              {canManage && (
                 <>
                   <button className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"
                     onClick={() => setShowEdit(true)}><MdEdit size={16} /></button>
@@ -543,10 +552,15 @@ export default function AgencyDetail() {
             )}
           </div>
 
+          {/* Partner hospitals (Phase 7) — platform admin edits, others read */}
+          <PartnerHospitalsCard agency={agency} canEdit={canManage} user={user} />
+
           {/* Application stats */}
           <div className="card p-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Applications</p>
-            {appStats ? (
+            {isPlatform ? (
+              <p className="text-xs text-gray-500">Case counts stay with each hospital — the network view carries no patient data.</p>
+            ) : appStats ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Total',    value: appStats.total,    color: 'text-gray-800'  },
@@ -580,7 +594,7 @@ export default function AgencyDetail() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Today's Slots</p>
-              {isSuperAdmin && !editSlots && (
+              {canManage && !editSlots && (
                 <div className="flex items-center gap-2">
                   <button className="text-xs text-brand-500 hover:text-brand-600 font-medium"
                     onClick={() => { setEditSlots(true); setNewTotal(agency.slots?.total ?? 25) }}>
@@ -601,7 +615,7 @@ export default function AgencyDetail() {
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(slotPct, 100)}%` }} />
             </div>
-            {editSlots && isSuperAdmin && (
+            {editSlots && canManage && (
               <div className="flex items-center gap-2 mt-3">
                 <input type="number" min={1} className="input w-20 text-sm text-center py-1 px-2"
                   value={newTotal} onChange={e => setNewTotal(Number(e.target.value))} />
@@ -756,7 +770,7 @@ export default function AgencyDetail() {
                         {coord.contact && <p className="text-xs text-gray-500">{coord.contact}</p>}
                         <p className="text-xs text-gray-300 mt-0.5">Added {fmtDate(coord.createdAt)}</p>
                       </div>
-                      {isSuperAdmin && (
+                      {canManage && (
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button
                             title={isAdmin
@@ -842,7 +856,9 @@ export default function AgencyDetail() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 id="disable-modal-title" className="text-base font-semibold text-gray-900">Disable {agency.name}?</h2>
               <p className="text-xs text-gray-500 mt-1">
-                {pendingApps.length === 0
+                {isPlatform
+                  ? 'New endorsements stop at once. Applications already with this agency are held: patients see an "Application paused" notice until you re-enable, and each hospital\'s gateway can re-endorse them to another agency.'
+                  : pendingApps.length === 0
                   ? 'No applications are currently in flight. Disabling will simply hide this agency from new applicants.'
                   : `${pendingApps.length} application${pendingApps.length === 1 ? '' : 's'} are currently in flight. Choose what happens to them.`}
               </p>
@@ -881,7 +897,7 @@ export default function AgencyDetail() {
               <button className="btn-secondary text-sm" onClick={() => setShowDisableDialog(false)} disabled={disabling}>
                 Cancel
               </button>
-              <button className="btn-danger text-sm" onClick={() => handleDisableWithCascade({ choice: disableChoice })} disabled={disabling}>
+              <button className="btn-danger text-sm" onClick={() => handleDisableWithCascade({ choice: isPlatform ? 'hold' : disableChoice })} disabled={disabling}>
                 {disabling ? 'Disabling…' : 'Confirm Disable'}
               </button>
             </div>

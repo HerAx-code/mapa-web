@@ -5,7 +5,8 @@
  * Creates hospitals/{DEFAULT_HOSPITAL_ID} — "hospital #1", the current host —
  * from this deployment's VITE_ORG_* / VITE_ACCESS_CODE_PREFIX values, so the
  * live app shows exactly what it showed before tenancy. Every user resolves to
- * this hospital until Phase 2 stamps hospitalId on user docs.
+ * this hospital until the Phase 3 backfill stamps tenantId on records. Also
+ * claims its access-code prefix (accessCodePrefixes, Phase 8).
  * See docs/multi-hospital-network-plan.md.
  *
  * SAFETY: never overwrites an existing hospital doc (use --force to merge the
@@ -52,12 +53,33 @@ async function main() {
 
   const ref = db.doc(`hospitals/${ID}`)
   const snap = await ref.get()
+
+  // Phase 8: the access-code prefix is claimed network-wide
+  // (accessCodePrefixes/{PREFIX} = { tenantId }); the rules let a hospital
+  // carry only a prefix it holds. Make sure hospital #1 holds its own — even
+  // when the hospital doc already exists.
+  const prefix = (snap.exists && !FORCE && snap.data().accessCodePrefix) || hospital.accessCodePrefix
+  const claimRef = db.doc(`accessCodePrefixes/${prefix}`)
+  const claim = await claimRef.get()
+  if (claim.exists && claim.data().tenantId !== ID) {
+    console.error(`\n[seed-hospital] REFUSED: prefix ${prefix} is already claimed by hospitals/${claim.data().tenantId}.`)
+    process.exit(1)
+  }
+  if (!claim.exists) {
+    if (DRY_RUN) console.log(`[seed-hospital] WOULD claim access-code prefix ${prefix} for ${ID}.`)
+    else {
+      await claimRef.set({ tenantId: ID, createdAt: FieldValue.serverTimestamp() })
+      console.log(`[seed-hospital] ✅ claimed access-code prefix ${prefix} for ${ID}.`)
+    }
+  }
+
   if (snap.exists && !FORCE) {
     console.log(`\n[seed-hospital] hospitals/${ID} already exists — left untouched. Pass --force to merge the values above over it.`)
+    if (!DRY_RUN) await syncPublic(snap.data())
     return
   }
   if (DRY_RUN) {
-    console.log(`\n[seed-hospital] WOULD ${snap.exists ? 'merge into' : 'create'} hospitals/${ID}. Re-run without --dry-run to apply.`)
+    console.log(`\n[seed-hospital] WOULD ${snap.exists ? 'merge into' : 'create'} hospitals/${ID} (+ its public projection). Re-run without --dry-run to apply.`)
     return
   }
 
@@ -67,6 +89,20 @@ async function main() {
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true })
   console.log(`\n[seed-hospital] ✅ hospitals/${ID} ${snap.exists ? 'updated' : 'created'}.`)
+  await syncPublic((await ref.get()).data())
+}
+
+// The sign-in-free projection the Landing page lists (hospitalsPublic; same
+// four fields as src/utils/hospitalsPublic.js projectPublicHospital).
+async function syncPublic(h) {
+  await db.doc(`hospitalsPublic/${ID}`).set({
+    facilityName:     h.facilityName ?? '',
+    shortName:        h.shortName ?? '',
+    accessCodePrefix: h.accessCodePrefix ?? '',
+    enabled:          h.enabled !== false,
+    updatedAt:        FieldValue.serverTimestamp(),
+  })
+  console.log(`[seed-hospital] ✅ hospitalsPublic/${ID} synced (Landing page list).`)
 }
 
 main().catch((err) => { console.error('[seed-hospital] FATAL:', err); process.exit(1) })

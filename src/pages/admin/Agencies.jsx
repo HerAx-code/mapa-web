@@ -7,10 +7,11 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
-import { tenantWhere } from '../../utils/hospitals'
+import { tenantWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
 import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
+import { ROLES } from '../../utils/constants'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -358,8 +359,13 @@ export function AgencyModal({ agency, onClose, onSave }) {
 export default function Agencies() {
   const navigate            = useNavigate()
   const { user }            = useAuth()
-  const isSuperAdmin        = user?.role === 'super_admin'
-  const [agencies,     setAgencies]     = useState([])
+  // Phase 6: agencies are network config — the platform admin manages them;
+  // hospital admins see a read-only directory. The platform admin has no
+  // patient data, so it gets no case counts and no messaging.
+  const isPlatform          = user?.role === ROLES.PLATFORM_ADMIN
+  const canManage           = isPlatform
+  const base                = isPlatform ? '/platform/agencies' : '/admin/agencies'
+  const [allAgencies,  setAgencies]     = useState([])
   const [appStats,     setAppStats]     = useState({})
   const [agencyUsers,  setAgencyUsers]  = useState([])
   const [loading,      setLoading]      = useState(true)
@@ -373,6 +379,13 @@ export default function Agencies() {
   const [sortBy, setSortBy]             = useState('name')
   const [sortDir, setSortDir]           = useState('asc')
   const [expanded, setExpanded]         = useState(new Set())
+
+  // Hospital admins see their hospital's PARTNER agencies — the only ones its
+  // gateway can endorse to (multi-hospital Phase 7). The platform admin sees
+  // the whole network. Every count and filter below works off this list.
+  const myTenant = currentTenantId()
+  const agencies = isPlatform ? allAgencies : allAgencies.filter(a => agencyPartnersWith(a, myTenant))
+  const nonPartnerCount = allAgencies.length - agencies.length
 
   const toggleExpand = (id) =>
     setExpanded(prev => {
@@ -402,6 +415,7 @@ export default function Agencies() {
   }, [])
 
   useEffect(() => {
+    if (isPlatform) return undefined
     const unsub = onSnapshot(query(collection(db, 'applications'), ...tenantWhere()), snap => {
       const stats = {}
       snap.docs.forEach(d => {
@@ -416,7 +430,7 @@ export default function Agencies() {
       setAppStats(stats)
     }, () => {})
     return unsub
-  }, [])
+  }, [isPlatform])
 
   // ── Action handlers ──────────────────────────────────────────────────
 
@@ -570,17 +584,27 @@ export default function Agencies() {
   }, {})
 
   return (
-    <Layout breadcrumb="Agencies">
+    <Layout breadcrumb={isPlatform ? 'Agencies' : 'Partner Agencies'}>
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div>
-            <p className="eyebrow">Directory</p>
-            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Agencies</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered medical assistance agencies.</p>
+            <p className="eyebrow">{isPlatform ? 'Network' : 'Directory'}</p>
+            <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">{isPlatform ? 'Agencies' : 'Partner agencies'}</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {isPlatform
+                ? 'Every agency in the network — add agencies, manage their teams and slots, and set which hospitals they partner with.'
+                : 'The agencies your hospital can endorse patients to. Partnerships are set by the super admin.'}
+            </p>
+            {!isPlatform && nonPartnerCount > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {nonPartnerCount} other network {nonPartnerCount === 1 ? 'agency does' : 'agencies do'} not partner with your hospital.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {canManage && (
             <button
               className="btn-secondary flex items-center gap-1.5 disabled:opacity-60"
               onClick={handleResyncPublic}
@@ -589,8 +613,9 @@ export default function Agencies() {
               <MdRefresh size={16} className={resyncing ? 'animate-spin' : ''} />
               {resyncing ? 'Resyncing…' : 'Resync public'}
             </button>
-            {isSuperAdmin && (
-              <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate('/admin/agencies/new')}>
+            )}
+            {canManage && (
+              <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate(`${base}/new`)}>
                 <MdAdd size={16} /> Add Agency
               </button>
             )}
@@ -688,7 +713,7 @@ export default function Agencies() {
 
                 {/* Clickable row → detail page */}
                 <div className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors select-none"
-                  onClick={() => navigate(`/admin/agencies/${agency.id}`)}>
+                  onClick={() => navigate(`${base}/${agency.id}`)}>
 
                   <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
 
@@ -742,9 +767,11 @@ export default function Agencies() {
 
                   {/* Quick actions — stop propagation so row click doesn't also fire */}
                   <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
-                      onClick={() => handleMessageAgency(agency)}><MdMessage size={16} /></button>
-                    {isSuperAdmin && (
+                    {!isPlatform && (
+                      <button className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Message"
+                        onClick={() => handleMessageAgency(agency)}><MdMessage size={16} /></button>
+                    )}
+                    {canManage && (
                       <>
                         <button
                           className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${agency.enabled ? 'border-red-200 text-red-500 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50'}`}
@@ -791,7 +818,7 @@ export default function Agencies() {
                   ? 'Try changing your search or filter.'
                   : 'Add your first agency or run the seed script.'}
               </p>
-              {!search && statusFilter === 'all' && (
+              {canManage && !search && statusFilter === 'all' && (
                 <button className="btn-primary text-sm mx-auto" onClick={() => setModal('add')}>
                   <MdAdd size={15} className="inline mr-1" /> Add First Agency
                 </button>

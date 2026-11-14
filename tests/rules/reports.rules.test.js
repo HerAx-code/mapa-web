@@ -165,9 +165,9 @@ describe('reports.read — admin and agency-admin scoping', () => {
     })
   }
 
-  it('allows an admin to read any report', async () => {
+  it("allows an admin to read their hospital's reports", async () => {
     await seedUser('admin-1', 'super_admin')
-    await seedReport('r1', { reportedBy: 'patient-1', status: 'open' })
+    await seedReport('r1', { reportedBy: 'patient-1', status: 'open', tenantId: 'hospital-1' })
     const ctx = testEnv.authenticatedContext('admin-1')
     await assertSucceeds(getDoc(doc(ctx.firestore(), 'reports', 'r1')))
   })

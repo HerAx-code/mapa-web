@@ -9,6 +9,8 @@ import { APP_STATUS_CONFIG } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
 import { groupByDay } from '../../utils/groupByDay'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { HospitalFilterSelect, useSliceHospitalLabel } from '../../components/agency/HospitalBreakdown'
+import { sliceHospital } from '../../utils/hospitalBreakdown'
 
 // Pull labels straight from the canonical APP_STATUS_CONFIG so the CSV status
 // column matches the rendered cell. <StatusBadge /> handles in-list rendering.
@@ -41,6 +43,7 @@ export default function AgencyLogs() {
   const [search, setSearch]   = useState('')
   const [filter, setFilter]   = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
+  const [hospitalFilter, setHospitalFilter] = useState('all')
 
   useEffect(() => {
     if (!user?.agencyId) return
@@ -69,7 +72,9 @@ export default function AgencyLogs() {
     return dateFilter === 'week' ? days <= 7 : dateFilter === 'month' ? days <= 31 : true
   }
 
+  const hospitalLabel = useSliceHospitalLabel(apps)
   const filtered = apps.filter(a => {
+    if (hospitalFilter !== 'all' && sliceHospital(a) !== hospitalFilter) return false
     if (filter !== 'all' && a.status !== filter) return false
     if (!inDateRange(a)) return false
     const q = search.toLowerCase()
@@ -82,8 +87,8 @@ export default function AgencyLogs() {
   const openTotal     = countOf('endorsed') + countOf('reviewing') + countOf('awaiting_info') + countOf('pending') + countOf('interview')
   const approvedTotal = countOf('approved') + countOf('certificate')
   const dayGroups  = groupByDay(filtered, a => a.submittedAt)
-  const isFiltered = search || filter !== 'all' || dateFilter !== 'all'
-  const clearAll   = () => { setSearch(''); setFilter('all'); setDateFilter('all') }
+  const isFiltered = search || filter !== 'all' || dateFilter !== 'all' || hospitalFilter !== 'all'
+  const clearAll   = () => { setSearch(''); setFilter('all'); setDateFilter('all'); setHospitalFilter('all') }
 
   return (
     <Layout breadcrumb="Application Logs">
@@ -102,6 +107,7 @@ export default function AgencyLogs() {
               { label: 'Application ID', getValue: a => a.appId ?? '' },
               { label: 'Patient',        getValue: a => a.patientName ?? '' },
               { label: 'Contact',        getValue: a => a.patientContact ?? '' },
+              { label: 'Hospital',       getValue: a => hospitalLabel(sliceHospital(a)) ?? sliceHospital(a) },
               { label: 'Status',         getValue: a => statusLabel(a.status) },
               { label: 'Submitted',      getValue: a => formatDate(a.submittedAt) },
             ], filtered)}>
@@ -132,6 +138,8 @@ export default function AgencyLogs() {
               <input className="input pl-9 text-sm" placeholder="Patient, contact, or app ID"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
+
+            <HospitalFilterSelect slices={apps} value={hospitalFilter} onChange={setHospitalFilter} className="w-full text-sm" />
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Status</p>
@@ -213,7 +221,10 @@ export default function AgencyLogs() {
                             {a.patientName || '—'}
                             <span className="ml-2 font-mono text-xs font-normal text-gray-500">{a.appId || a.id.slice(0, 12)}</span>
                           </p>
-                          <p className="text-xs text-gray-500 truncate">{a.patientContact || 'No contact'}</p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {a.patientContact || 'No contact'}
+                            {hospitalLabel(sliceHospital(a)) && <span className="text-gray-400"> · {hospitalLabel(sliceHospital(a))}</span>}
+                          </p>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <StatusBadge status={a.status} />

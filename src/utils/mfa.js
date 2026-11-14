@@ -17,7 +17,7 @@ import {
 import { ORG } from '../config/org'
 
 // Roles for which MFA is expected. Patients are intentionally absent.
-export const MFA_ROLES = ['super_admin', 'staff_admin', 'agency_admin', 'agency']
+export const MFA_ROLES = ['platform_admin', 'super_admin', 'staff_admin', 'agency_admin', 'agency']
 export const roleNeedsMfa = (role) => MFA_ROLES.includes(role)
 
 // Enforcement mode. Start at 'prompt' (a dismissible nudge) so enabling MFA on
