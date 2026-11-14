@@ -256,7 +256,9 @@ export default function HospitalIDs() {
         revokedAt: serverTimestamp(),
       })
       batch.delete(doc(db, 'hospitalIds', h.id, 'privateInfo', 'details'))
-      if (h.patId) batch.update(doc(db, 'users', h.patId), { hospitalId: null })
+      // Marketplace: the patient's profile is not touched (a hospital can't
+      // re-point a patient's code). With patId cleared the code is no longer
+      // theirs, so they're asked for a new one when they next file.
       await batch.commit()
       logAudit(user, { action: 'hospitalid_revoked', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: `Previously used by ${h.usedBy ?? '—'}` })
       toast.success(`${h.id} reset to Available.`)
@@ -387,7 +389,6 @@ export default function HospitalIDs() {
       // sub-collections on parent delete; without this explicit delete
       // the privateInfo/details doc would orphan as an unreachable record.
       const batch = writeBatch(db)
-      if (h.patId) batch.update(doc(db, 'users', h.patId), { hospitalId: null })
       batch.delete(doc(db, 'hospitalIds', h.id, 'privateInfo', 'details'))
       batch.delete(doc(db, 'hospitalIds', h.id))
       await batch.commit()
@@ -523,6 +524,9 @@ export default function HospitalIDs() {
                       const isDeleting = confirmDelete?.id === h.id
                       const isRevoking = confirmRevoke?.id === h.id
                       const isUsed     = h.status === 'used'
+                      // Marketplace: a code that backs a request is part of
+                      // that case's record — never reset or deleted.
+                      const isBound    = !!h.requestId
                       return (
                         <li key={h.id}>
                           <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
@@ -532,7 +536,9 @@ export default function HospitalIDs() {
                               {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-500">{h.patId}</span>}</> : <span className="text-gray-300">Unclaimed</span>}
                             </div>
                             <span className="text-xs text-gray-500 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
-                            {isSuperAdmin ? (
+                            {isSuperAdmin && isBound ? (
+                              <span className="text-xs text-gray-400 flex-shrink-0" title="This code backs a request, so it stays on that case's record.">Filed</span>
+                            ) : isSuperAdmin ? (
                               <div className="flex items-center gap-0.5 flex-shrink-0">
                                 {isUsed && (
                                   <button title="Reset to Available (revoke from current patient)" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setConfirmRevoke(h)}><MdRefresh size={15} /></button>
@@ -544,7 +550,7 @@ export default function HospitalIDs() {
                           {isRevoking && (
                             <div className="flex items-center gap-3 border-t border-amber-100 bg-amber-50 px-4 py-3">
                               <MdWarning size={16} className="text-amber-500 flex-shrink-0" />
-                              <p className="text-sm text-amber-800 flex-1">Reset <strong className="font-mono">{h.id}</strong> to Available? <span className="font-normal">Currently linked to <strong>{h.usedBy ?? '—'}</strong>. They lose access; the code returns to the pool. Their profile remains; only the hospitalId link is cleared.</span></p>
+                              <p className="text-sm text-amber-800 flex-1">Reset <strong className="font-mono">{h.id}</strong> to Available? <span className="font-normal">Currently linked to <strong>{h.usedBy ?? '—'}</strong>. They haven't filed with it yet; the code returns to the pool and they'll need a new code to file.</span></p>
                               <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0" onClick={() => setConfirmRevoke(null)}>Cancel</button>
                               <button className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600 flex-shrink-0" onClick={async () => { await handleRevoke(h); setConfirmRevoke(null) }}>Reset to Available</button>
                             </div>

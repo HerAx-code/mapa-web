@@ -10,7 +10,7 @@ import AgencyAvatar from '../../components/AgencyAvatar'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { tenantIdFor, agencyPartnersWith } from '../../utils/hospitals'
+import { agencyPartnersWith } from '../../utils/hospitals'
 import { useTranslation } from 'react-i18next'
 
 // Informational catalog of available medical-assistance programs. Patients no
@@ -24,7 +24,9 @@ export default function MedicalPrograms() {
   const { user }                        = useAuth()
   // Phase 7: a patient sees only the agencies their hospital partners with —
   // the only ones its gateway can endorse them to.
-  const myTenant                        = tenantIdFor(user)
+  // Marketplace: a patient who hasn't chosen a hospital yet browses every
+  // program in the network; once filing somewhere, that hospital's partners.
+  const myTenant                        = user?.tenantId ?? null
   const [search, setSearch]             = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [agencies, setAgencies]         = useState([])
@@ -37,7 +39,7 @@ export default function MedicalPrograms() {
     const unsub = onSnapshot(q, snap => {
       setAgencies(
         snap.docs.map(d => ({ id: d.id, ...d.data() }))
-          .filter(a => agencyPartnersWith(a, myTenant))
+          .filter(a => !myTenant || agencyPartnersWith(a, myTenant))
           // Null-safe sort: a corrupt agency doc missing `name` would
           // throw on .localeCompare and wipe the whole catalog -- one
           // bad row should not blank the entire Find Programs page.

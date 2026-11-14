@@ -1348,7 +1348,7 @@ export default function ApplicationDetail() {
                       { label: 'Name',        value: app.patientName },
                       { label: 'Contact',     value: app.patientContact || '—' },
                       { label: 'Address',     value: patientProfile?.address || '—' },
-                      { label: 'Access Code', value: patientProfile?.hospitalId || '—' },
+                      { label: 'Access Code', value: app?.patientHospitalId || patientProfile?.hospitalId || '—' },
                     ].map((r, i) => (
                       <div key={i} className="bg-gray-50 rounded-lg p-3">
                         <p className="text-xs text-gray-500 mb-0.5">{r.label}</p>

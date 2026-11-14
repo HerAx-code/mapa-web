@@ -182,7 +182,7 @@ export const buildCertificateHTML = ({ app, patient, approvalDate, issueDate, si
     <div><span class="patient-name">${app.patientName}</span></div>
     ${patient.address ? `<p class="patient-detail">Address: ${patient.address}</p>` : ''}
     <p class="patient-detail">Contact No.: ${app.patientContact || patient.contact || '—'}</p>
-    <p class="patient-detail">Hospital ID: ${patient.hospitalId || '—'}</p>
+    <p class="patient-detail">Hospital ID: ${app.patientHospitalId || patient.hospitalId || '—'}</p>
   </div>
 
   <p class="approved-text">

@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, getDoc, getDocs, updateDoc, collection, query, where, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, collection, query, where, serverTimestamp } from 'firebase/firestore'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileRequest, claimCode } from './helpers/marketplace.js'
@@ -144,6 +144,41 @@ describe('hospitals see only patients who filed with them', () => {
     await assertFails(updateDoc(ref('adminA', 'users/patA'), { tenantId: B }))
     await assertFails(updateDoc(ref('adminA', 'users/patA'), { hospitalId: 'MAPA-2026-00002' }))
     await assertFails(updateDoc(ref('adminB', 'users/patA'), { contact: '0917' }))
+  })
+})
+
+// Consistency fixes (2026-11-14 logic review).
+describe('network accounts: who may lock, erase or re-point', () => {
+  const seed = (fn) => testEnv.withSecurityRulesDisabled(async (ctx) => fn(ctx.firestore()))
+  beforeEach(async () => seed(async (db) => {
+    await setDoc(doc(db, 'users', 'superA'), { role: 'super_admin', tenantId: A })
+    await setDoc(doc(db, 'users', 'superB'), { role: 'super_admin', tenantId: B })
+    // Filed at A, now filing at B.
+    await setDoc(doc(db, 'users', 'moved'), pat({ tenantId: B, tenantIds: [A, B], hospitalId: 'BGH-2026-00002' }))
+  }))
+
+  it("hospital #1 can't edit a patient who hasn't chosen any hospital", async () => {
+    await assertFails(updateDoc(ref('adminA', 'users/fresh'), { contact: '0917' }))
+    await assertFails(updateDoc(ref('adminA', 'users/fresh'), { active: false }))
+  })
+
+  it('only the CURRENT hospital may lock the network account; a past one edits the profile only', async () => {
+    await assertSucceeds(updateDoc(ref('adminA', 'users/moved'), { contact: '0917' }))
+    await assertFails(updateDoc(ref('adminA', 'users/moved'), { deletion: true }))
+    await assertFails(updateDoc(ref('adminA', 'users/moved'), { active: false }))
+    await assertSucceeds(updateDoc(ref('adminB', 'users/moved'), { deletion: true }))
+  })
+
+  it('a hospital may erase a patient only when it is their sole hospital', async () => {
+    await assertFails(deleteDoc(ref('superB', 'users/moved')))   // also A's patient
+    await assertSucceeds(deleteDoc(ref('superA', 'users/patA')))  // A only
+  })
+
+  it('a code that backs a request is permanent; an unfiled claimed code can be reset', async () => {
+    const reset = { status: 'available', patId: null }
+    await assertFails(updateDoc(ref('superA', 'hospitalIds/MAPA-2026-00001'), reset))
+    await assertFails(deleteDoc(ref('superA', 'hospitalIds/MAPA-2026-00001')))
+    await assertSucceeds(updateDoc(ref('superA', 'hospitalIds/MAPA-2026-00003'), reset))
   })
 })
 

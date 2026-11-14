@@ -8,7 +8,7 @@ import {
   MdPhone, MdLocationOn, MdLocalHospital, MdCalendarToday, MdBadge,
 } from 'react-icons/md'
 import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
-import { tenantWhere, patientWhere } from '../../utils/hospitals'
+import { tenantWhere, patientWhere, currentTenantId } from '../../utils/hospitals'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -561,7 +561,10 @@ export default function Patients() {
                         onClick={() => setConfirmHolding(confirmHolding?.uid === p.uid ? null : p)}>
                         <MdSchedule size={15} />
                       </button>
-                      {p.deletion ? (
+                      {/* Marketplace: the account is network-wide — only the
+                          patient's CURRENT hospital may lock it, and only a
+                          hospital that is their sole one may erase it. */}
+                      {p.tenantId !== currentTenantId() ? null : p.deletion ? (
                         <button title="Restore Account"
                           className={`p-1.5 rounded-lg transition-colors ${confirmDeletion?.uid === p.uid ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-green-600 hover:bg-green-50'}`}
                           onClick={() => setConfirmDeletion(confirmDeletion?.uid === p.uid ? null : p)}>
@@ -574,7 +577,7 @@ export default function Patients() {
                           <MdDelete size={15} />
                         </button>
                       )}
-                      {isSuperAdmin && p.deletion && (
+                      {isSuperAdmin && p.deletion && (p.tenantIds ?? [p.tenantId]).every(t => t === currentTenantId()) && (
                         <button title="Delete Permanently"
                           className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           onClick={() => setConfirmDeletePatient(p)}>
