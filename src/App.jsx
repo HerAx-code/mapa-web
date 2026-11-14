@@ -85,9 +85,10 @@ const PlatformNetwork   = lazyWithReload(() => import('./pages/platform/Network'
 const PATIENT_ROLES = [ROLES.PATIENT]
 const AGENCY_ROLES  = [ROLES.AGENCY, ROLES.AGENCY_ADMIN]
 const ADMIN_ROLES   = [ROLES.SUPER_ADMIN, ROLES.STAFF_ADMIN]
-// Agencies are network config (Phase 6): the platform admin manages them;
-// hospital admins keep the read-only directory.
-const AGENCY_DIRECTORY_ROLES = [...ADMIN_ROLES, ROLES.PLATFORM_ADMIN]
+// Agencies are network config (Phase 6): the platform admin manages them under
+// /platform/agencies; hospital admins keep the read-only partner directory at
+// /admin/agencies. Same page components, framed per role.
+const PLATFORM_ROLES = [ROLES.PLATFORM_ADMIN]
 
 // Suspense fallback during chunk download. Light placeholder rather
 // than a spinner so the transition between routes feels seamless —
@@ -163,9 +164,9 @@ export default function App() {
           <Route path="/admin/requests/:id/intake" element={<PrivateRoute allowedRoles={ADMIN_ROLES}><IntakeSheet collectionName="requests" /></PrivateRoute>} />
           <Route path="/admin/patients"   element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Patients /></PrivateRoute>} />
           <Route path="/admin/hospitalids"element={<PrivateRoute allowedRoles={ADMIN_ROLES}><HospitalIDs /></PrivateRoute>} />
-          <Route path="/admin/agencies"      element={<PrivateRoute allowedRoles={AGENCY_DIRECTORY_ROLES}><Agencies /></PrivateRoute>} />
-          <Route path="/admin/agencies/new"  element={<PrivateRoute allowedRoles={[ROLES.PLATFORM_ADMIN]}><AddAgency /></PrivateRoute>} />
-          <Route path="/admin/agencies/:id"  element={<PrivateRoute allowedRoles={AGENCY_DIRECTORY_ROLES}><AgencyDetail /></PrivateRoute>} />
+          <Route path="/admin/agencies"      element={<PrivateRoute allowedRoles={ADMIN_ROLES}><Agencies /></PrivateRoute>} />
+          <Route path="/admin/agencies/new"  element={<Navigate to="/admin/agencies" replace />} />
+          <Route path="/admin/agencies/:id"  element={<PrivateRoute allowedRoles={ADMIN_ROLES}><AgencyDetail /></PrivateRoute>} />
           {/* /admin/coordinators removed — agency team management now lives
               under /admin/agencies/:id. Redirect handles any stale bookmarks. */}
           <Route path="/admin/coordinators" element={<Navigate to="/admin/agencies" replace />} />
@@ -182,8 +183,13 @@ export default function App() {
           <Route path="/admin/settings"       element={<PrivateRoute allowedRoles={[ROLES.SUPER_ADMIN]}><HospitalSettings /></PrivateRoute>} />
 
           {/* Platform (network operator) */}
-          <Route path="/platform/hospitals" element={<PrivateRoute allowedRoles={[ROLES.PLATFORM_ADMIN]}><PlatformHospitals /></PrivateRoute>} />
-          <Route path="/platform/network"   element={<PrivateRoute allowedRoles={[ROLES.PLATFORM_ADMIN]}><PlatformNetwork /></PrivateRoute>} />
+          <Route path="/platform"                element={<Navigate to="/platform/overview" replace />} />
+          <Route path="/platform/overview"       element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><PlatformNetwork /></PrivateRoute>} />
+          <Route path="/platform/network"        element={<Navigate to="/platform/overview" replace />} />
+          <Route path="/platform/hospitals"      element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><PlatformHospitals /></PrivateRoute>} />
+          <Route path="/platform/agencies"       element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><Agencies /></PrivateRoute>} />
+          <Route path="/platform/agencies/new"   element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><AddAgency /></PrivateRoute>} />
+          <Route path="/platform/agencies/:id"   element={<PrivateRoute allowedRoles={PLATFORM_ROLES}><AgencyDetail /></PrivateRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />

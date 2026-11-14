@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { MdInsights } from 'react-icons/md'
+import { Link } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import { db } from '../../firebase'
 import { useHospitals } from '../../hooks/useHospitals'
+import { useLiveData } from '../../contexts/LiveDataContext'
 import { tsToDate } from '../../utils/dates'
 
 // Network overview — multi-hospital Phase 9 (docs/multi-hospital-network-plan.md).
@@ -25,6 +27,10 @@ const COLUMNS = [
 
 export default function Network() {
   const { hospitals } = useHospitals()
+  const { agencyMap } = useLiveData()
+  const agencyList = Object.values(agencyMap ?? {})
+  const activeAgencies = agencyList.filter((a) => a.enabled !== false).length
+  const pausedHospitals = hospitals.filter((h) => h.enabled === false).length
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -40,13 +46,19 @@ export default function Network() {
   const updated = tsToDate(stats?.generatedAt)
 
   return (
-    <Layout breadcrumb="Network">
+    <Layout breadcrumb="Overview">
       <div className="w-full p-4 sm:p-6 max-w-[1200px] mx-auto">
         <div className="mb-5">
           <p className="eyebrow">Network</p>
-          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Network overview</h1>
+          <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Overview</h1>
           <p className="text-sm text-gray-500 mt-1">
             How each hospital's gateway is doing. Counts only — patient records stay with each hospital.
+          </p>
+          <p className="text-sm text-gray-700 mt-2">
+            <Link to="/platform/hospitals" className="font-medium text-brand-600 hover:text-brand-700">{hospitals.length} {hospitals.length === 1 ? 'hospital' : 'hospitals'}</Link>
+            {pausedHospitals > 0 && <span className="text-amber-700"> ({pausedHospitals} with sign-ups paused)</span>}
+            <span className="text-gray-400"> · </span>
+            <Link to="/platform/agencies" className="font-medium text-brand-600 hover:text-brand-700">{activeAgencies} active {activeAgencies === 1 ? 'agency' : 'agencies'}</Link>
           </p>
         </div>
 

@@ -92,15 +92,15 @@ const AGENCY_NAV = [
 
 // Network operator (multi-hospital Phase 6). No patient-facing pages.
 const PLATFORM_NAV = [
+  { to: '/platform/overview',  icon: MdInsights,      label: 'Overview'  },
   { to: '/platform/hospitals', icon: MdLocalHospital, label: 'Hospitals' },
-  { to: '/platform/network',   icon: MdInsights,      label: 'Network'   },
-  { to: '/admin/agencies',     icon: MdBusiness,      label: 'Agencies'  },
+  { to: '/platform/agencies',  icon: MdBusiness,      label: 'Agencies'  },
 ]
 
 const ADMIN_NAV = {
   management: [
     { to: '/admin/dashboard',       icon: MdDashboard,            label: 'Dashboard'        },
-    { to: '/admin/agencies',        icon: MdBusiness,             label: 'Agencies'              },
+    { to: '/admin/agencies',        icon: MdBusiness,             label: 'Partner Agencies'      },
     { to: '/admin/accounts',        icon: MdSupervisedUserCircle,  label: 'Admin Accounts'       },
     { to: '/admin/announcements',   icon: MdCampaign,             label: 'Announcements'    },
     { to: '/admin/settings',        icon: MdSettings,             label: 'Hospital Settings', superOnly: true },

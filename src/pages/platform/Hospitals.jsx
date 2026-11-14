@@ -416,7 +416,7 @@ export default function Hospitals() {
         )}
 
         <p className="text-xs text-gray-500 mt-4">
-          A hospital's gateway can endorse only to its partner agencies — set them on each agency's page. Per-hospital figures are on the Network page. Patient records stay with each hospital and are never shown here.
+          A hospital's gateway can endorse only to its partner agencies — set them on each agency's page. Per-hospital figures are on the Overview page. Patient records stay with each hospital and are never shown here.
         </p>
       </div>
 

@@ -364,6 +364,7 @@ export default function Agencies() {
   // patient data, so it gets no case counts and no messaging.
   const isPlatform          = user?.role === ROLES.PLATFORM_ADMIN
   const canManage           = isPlatform
+  const base                = isPlatform ? '/platform/agencies' : '/admin/agencies'
   const [allAgencies,  setAgencies]     = useState([])
   const [appStats,     setAppStats]     = useState({})
   const [agencyUsers,  setAgencyUsers]  = useState([])
@@ -583,7 +584,7 @@ export default function Agencies() {
   }, {})
 
   return (
-    <Layout breadcrumb="Agencies">
+    <Layout breadcrumb={isPlatform ? 'Agencies' : 'Partner Agencies'}>
       <div className="w-full p-4 sm:p-6 max-w-[1400px] mx-auto">
 
         {/* Header */}
@@ -614,7 +615,7 @@ export default function Agencies() {
             </button>
             )}
             {canManage && (
-              <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate('/admin/agencies/new')}>
+              <button className="btn-primary flex items-center gap-1.5" onClick={() => navigate(`${base}/new`)}>
                 <MdAdd size={16} /> Add Agency
               </button>
             )}
@@ -712,7 +713,7 @@ export default function Agencies() {
 
                 {/* Clickable row → detail page */}
                 <div className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors select-none"
-                  onClick={() => navigate(`/admin/agencies/${agency.id}`)}>
+                  onClick={() => navigate(`${base}/${agency.id}`)}>
 
                   <AgencyAvatar agency={agency} className="w-10 h-10 rounded-xl text-sm" />
 
