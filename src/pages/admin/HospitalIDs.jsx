@@ -26,6 +26,21 @@ const getNextNum = (ids, prefix = accessCodePrefixFor(new Date().getFullYear()))
   return nums.length ? Math.max(...nums) + 1 : 1
 }
 
+// The first `n` code ids from `start` up that don't exist ANYWHERE. Codes are
+// one network-wide namespace and a hospital lists only its own, so a number
+// can already be taken by another hospital's code under the same prefix (a
+// prefix handed over from a hospital that used it before — e.g. hospital #1's
+// legacy CRMC-* codes). A plain get is allowed for any signed-in user.
+async function freeCodeIds(prefix, start, n) {
+  const ids = []
+  for (let num = start; ids.length < n && num < start + n + 500; num++) {
+    const id = `${prefix}${String(num).padStart(5, '0')}`
+    if (!(await getDoc(doc(db, 'hospitalIds', id))).exists()) ids.push(id)
+  }
+  if (ids.length < n) throw new Error('NO_FREE_IDS')
+  return ids
+}
+
 // ── Bulk Add Modal ────────────────────────────────────────────────────────
 
 function BulkAddModal({ nextNum, onClose }) {
@@ -48,9 +63,8 @@ function BulkAddModal({ nextNum, onClose }) {
     setAdding(true)
     try {
       const batch = writeBatch(db)
-      for (let i = 0; i < n; i++) {
-        const num   = String(startNum + i).padStart(5, '0')
-        const newId = `${prefix}${num}`
+      const ids = await freeCodeIds(prefix, startNum, n)
+      for (const newId of ids) {
         // An access code belongs to the issuing hospital; Register copies its
         // tenantId onto the patient (multi-hospital Phase 2).
         batch.set(doc(db, 'hospitalIds', newId), withTenant({
@@ -64,8 +78,8 @@ function BulkAddModal({ nextNum, onClose }) {
         }))
       }
       await batch.commit()
-      const first = `${prefix}${String(startNum).padStart(5, '0')}`
-      const last  = `${prefix}${String(endNum).padStart(5, '0')}`
+      const first = ids[0]
+      const last  = ids[ids.length - 1]
       logAudit(user, { action: 'hospitalid_bulk', targetType: 'hospitalId', targetName: `${first} → ${last}`, details: `Bulk added ${n} hospital ID${n !== 1 ? 's' : ''}` })
       toast.success(`${n} Hospital ID${n !== 1 ? 's' : ''} added.`)
       onClose()
@@ -208,9 +222,7 @@ export default function HospitalIDs() {
 
   const handleAddOne = async () => {
     try {
-      const year  = new Date().getFullYear()
-      const num   = String(nextNum).padStart(5, '0')
-      const newId = `${accessCodePrefixFor(year)}${num}`
+      const [newId] = await freeCodeIds(accessCodePrefixFor(new Date().getFullYear()), nextNum, 1)
       await setDoc(doc(db, 'hospitalIds', newId), withTenant({
         // Phase 0.3: usedBy no longer lives on the parent doc; it's
         // created in /privateInfo/details by the claim transaction in
