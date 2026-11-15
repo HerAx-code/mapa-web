@@ -285,10 +285,11 @@
       "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-{{gateway}}. Isumbong agad sa {{gateway}}."
     },
     "eligibility": {
+      "notCovered": "Hindi pa saklaw: pagpapagamot nang hindi naka-admit, gaya ng dialysis o chemotherapy sessions, o mga gamot na binili sa labas ng ospital. Magtanong sa social-services office ng ospital tungkol sa ibang tulong.",
       "title": "Sino ang maaaring mag-apply",
       "intro": "Para sa mga pasyente ng {{facility}} na hindi kayang bayaran ang bill. Hindi kailangang marunong sa computer — maikli ang form, at may staff na maaaring tumulong sa inyo.",
       "qualifyHeading": "Maaari kayong mag-apply kung…",
-      "q1": "Kayo ay naka-admit o ginamot sa isang kalahok na ospital.",
+      "q1": "Kayo ay naka-admit sa isang kalahok na ospital, o na-discharge na may hindi pa nababayarang bill sa ospital.",
       "q2": "May hindi pa bayad na bill o billing statement.",
       "q3": "Naitala kayong indigent patient ng social worker.",
       "q4": "Kayo ang pasyente, o kapamilyang nag-aapply para sa kanya.",

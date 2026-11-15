@@ -337,6 +337,9 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
+                {/* MAPA covers hospital bills of admitted (or discharged, with an
+                    unpaid bill) patients — say plainly what isn't covered yet. */}
+                <p className="mt-4 rounded-xl bg-gray-50 px-3.5 py-2.5 text-xs leading-relaxed text-gray-600">{t('landing.eligibility.notCovered')}</p>
               </div>
             </div>
             {/* Access-code card — amber, because it's the one thing they must
