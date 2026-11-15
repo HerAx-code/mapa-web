@@ -71,7 +71,9 @@ export default function OnboardingWorkspace() {
     const data = { id: snap.id, ...snap.data() }
     setR(data)
     setDraft(d => d ?? {
-      verification: { nhfrCode: data.nhfrCode ?? '', ownershipType: data.hospitalType ?? '', callbackPhone: data.officialPhone ?? '', ...(data.verification ?? {}) },
+      // callbackPhone starts EMPTY: the call-back goes to the number in the DOH
+      // registry / license, never the number typed in the request form.
+      verification: { nhfrCode: data.nhfrCode ?? '', ownershipType: data.hospitalType ?? '', ...(data.verification ?? {}) },
       agreement: { planTier: 'pilot', noProcureClause: false, ...(data.agreement ?? {}) },
       training: { ...(data.training ?? {}) },
       notes: data.notes ?? '',
@@ -178,7 +180,7 @@ export default function OnboardingWorkspace() {
   }
 
   const createHospital = () => navigate('/platform/hospitals', {
-    state: { prefill: { facilityName: r.hospitalName, region: r.region || '', contactEmail: r.officialEmail || r.email || '' }, fromRequest: id },
+    state: { prefill: { facilityName: r.hospitalName, region: r.region || '', contactEmail: r.officialEmail || r.email || '', address: [r.city, r.province].filter(Boolean).join(', ') }, fromRequest: id },
   })
 
   const goLive = async () => {
@@ -329,12 +331,13 @@ export default function OnboardingWorkspace() {
                 <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5"><MdPhoneInTalk size={16} className="text-brand-500" /> Call-back</p>
                 <p className="text-xs text-gray-500">Call the hospital on its official number from the registry or license, confirm the request and the contact person.</p>
                 <div className="flex flex-wrap items-end gap-2">
-                  <div className="flex-1 min-w-[12rem]"><Input label="Official number called" value={v.callbackPhone ?? ''} onChange={setSection('verification', 'callbackPhone')} /></div>
+                  <div className="flex-1 min-w-[12rem]"><Input label="Number from the DOH registry or license" value={v.callbackPhone ?? ''} onChange={setSection('verification', 'callbackPhone')} /></div>
                   <button type="button" className="btn-secondary text-xs min-h-[38px]" disabled={!v.callbackPhone?.trim()}
                     onClick={() => setDraft(d => ({ ...d, verification: { ...d.verification, callbackAt: new Date().toISOString(), callbackBy: user?.name ?? '' } }))}>
                     Record call-back now
                   </button>
                 </div>
+                {r.officialPhone && <p className="text-xs text-gray-500">The request gave {r.officialPhone} — for reference only; don't use it for the call-back.</p>}
                 {v.callbackAt && <p className="text-xs text-green-700">Confirmed {fmt(new Date(v.callbackAt))} by {v.callbackBy}</p>}
               </div>
               {v.verifiedAt && <p className="text-xs text-green-700">Verified {fmt(new Date(v.verifiedAt))} by {v.verifiedBy}</p>}
@@ -342,6 +345,9 @@ export default function OnboardingWorkspace() {
 
             {view === 'agreement' && (<>
               <p className="text-xs text-gray-500">Signatory for a {owner.label.toLowerCase()}: <strong className="text-gray-700">{owner.signer}</strong> — authority: {owner.authority}.</p>
+              {(r.signatoryName || r.signatoryPosition) && (
+                <p className="text-xs text-gray-500">Head of facility named in the request: <strong className="text-gray-700">{[r.signatoryName, r.signatoryPosition].filter(Boolean).join(', ')}</strong> — the signed MOA should match.</p>
+              )}
               <div className="space-y-2">
                 {['authority', 'moa', 'dpa', 'dpo', 'pia', 'dsa'].map(s => <DocSlot key={s} slot={s} />)}
               </div>
@@ -365,6 +371,12 @@ export default function OnboardingWorkspace() {
             </>)}
 
             {view === 'setup' && (<>
+              {((r.funders ?? []).length > 0 || r.contactName) && (
+                <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
+                  {(r.funders ?? []).length > 0 && <p>Funders the hospital works with (from the request): <strong className="text-gray-700">{r.funders.join(', ')}</strong> — link partner agencies to match.</p>}
+                  {r.contactName && <p>Requesting officer (a possible first Hospital Admin): <strong className="text-gray-700">{[r.contactName, r.contactPosition].filter(Boolean).join(', ')}</strong>{r.email ? ` · ${r.email}` : ''}. Choose the admins with the hospital.</p>}
+                </div>
+              )}
               {r.hospitalId ? (
                 <p className="text-sm text-gray-700">Hospital <span className="font-mono text-xs">{r.hospitalId}</span> is set up{hospital?.enabled === false ? ' with new patient requests closed until go-live' : ''}.
                   {' '}<Link className="text-brand-600 font-medium" to="/platform/hospitals">Manage admins and partner funders</Link></p>

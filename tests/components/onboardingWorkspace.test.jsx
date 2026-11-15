@@ -60,4 +60,12 @@ describe('OnboardingWorkspace', () => {
     const btn = await screen.findByRole('button', { name: /Approve go-live and open patient requests/ })
     expect(btn.disabled).toBe(true)
   })
+
+  // The call-back goes to the DOH registry number, never the number typed in
+  // the request (onboarding coherence review, 2026-11-15).
+  it('starts the call-back number empty and shows the typed number for reference only', async () => {
+    await renderAt()
+    expect(screen.getByLabelText('Number from the DOH registry or license').value).toBe('')
+    expect(screen.getByText(/The request gave 064-000 — for reference only/)).toBeTruthy()
+  })
 })

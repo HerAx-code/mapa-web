@@ -7,7 +7,7 @@ import { auth, db, signInAnonymously } from '../firebase'
 import Logo from '../components/ui/Logo'
 import { ORG } from '../config/org'
 import { PH_REGIONS } from '../utils/hospitalConfig'
-import { OWNERSHIP_TYPES, ownershipOf } from '../utils/onboarding'
+import { OWNERSHIP_TYPES, ownershipOf, REPLY_WORKING_DAYS } from '../utils/onboarding'
 
 // "For hospitals" — the public page where a hospital REQUESTS TO JOIN the MAPA
 // network (form 2, 2026-11-15; reports/Hospital onboarding requirements.md).
@@ -28,7 +28,8 @@ import { OWNERSHIP_TYPES, ownershipOf } from '../utils/onboarding'
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 export const PRIVACY_NOTICE_VERSION = '2026-11-15'
-export const RESPONSE_WORKING_DAYS = 5
+// The reply promised on the acknowledgement; the Super Admin board flags it.
+export const RESPONSE_WORKING_DAYS = REPLY_WORKING_DAYS
 
 const OFFICES = ['Medical Social Service', 'Malasakit Center', 'Hospital Administration', 'Other']
 const FUNDERS = ['DOH MAIFIP', 'PCSO', 'DSWD AICS', 'PhilHealth', 'LGU assistance', 'Legislator / party-list offices', 'Other']

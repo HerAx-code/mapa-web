@@ -5,7 +5,7 @@ import Layout from '../../components/Layout'
 import { tsToDate } from '../../utils/dates'
 import { useOnboardingRequests } from '../../hooks/useOnboardingRequests'
 import { useHospitals } from '../../hooks/useHospitals'
-import { STAGES, DECLINED, stageOf, stageLabel, stageChecklist, ownershipOf, needsAttention } from '../../utils/onboarding'
+import { STAGES, DECLINED, stageOf, stageLabel, stageChecklist, ownershipOf, needsAttention, replyOverdue, REPLY_WORKING_DAYS } from '../../utils/onboarding'
 
 // Loose name match for the "already on the network" hint: case, spacing and
 // punctuation don't matter ("Davao Regional Med. Center" ~ "davao regional med center").
@@ -24,6 +24,14 @@ export default function OnboardingRequests() {
     return n ? hospitals.find((h) => normName(h.facilityName) === n || (h.shortName && normName(h.shortName) === n)) : null
   }
   const hospitalOf = (r) => hospitals.find(h => h.id === r.hospitalId)
+  // Another request with the same NHFR facility code is the same facility.
+  const normNhfr = (c) => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const sameNhfr = (r) => {
+    const c = normNhfr(r.nhfrCode)
+    return c ? requests.find(o => o.id !== r.id && normNhfr(o.nhfrCode) === c) : null
+  }
+  // Promised call-back past due (REPLY_WORKING_DAYS working days).
+  const overdueCount = requests.filter(r => replyOverdue(r)).length
 
   const shown = requests.filter((r) => stageOf(r) === tab)
 
@@ -40,6 +48,11 @@ export default function OnboardingRequests() {
         <div className="mb-5">
           <p className="eyebrow">Network</p>
           <h1 className="font-display text-[28px] font-bold tracking-tight text-brand-900 mt-1">Onboarding</h1>
+          {overdueCount > 0 && (
+            <p className="mt-2 inline-block rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700">
+              {overdueCount} request{overdueCount === 1 ? '' : 's'} past the {REPLY_WORKING_DAYS}-working-day reply promised to hospitals
+            </p>
+          )}
           <p className="text-sm text-gray-500 mt-1">Hospitals joining MAPA: interest → verification → agreement → setup &amp; training → live.</p>
         </div>
 
@@ -71,6 +84,8 @@ export default function OnboardingRequests() {
               const d = daysInStage(r)
               const step = tab === 'live' || tab === DECLINED ? null : nextStep(r)
               const dup = !r.hospitalId && existingMatch(r)
+              const twin = sameNhfr(r)
+              const late = replyOverdue(r)
               const attention = tab === 'live' && needsAttention({ ...r, liveAt: r.liveAt ?? hospitalOf(r)?.liveAt })
               return (
                 <li key={r.id}>
@@ -82,6 +97,8 @@ export default function OnboardingRequests() {
                       </p>
                       {step && <p className="text-sm text-gray-700 mt-1.5">Next: {step}</p>}
                       {attention && <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1 mt-1.5 inline-block">Compliance date due or overdue</p>}
+                      {late && <p className="text-xs text-red-700 bg-red-50 rounded-lg px-2.5 py-1 mt-1.5 inline-block">Reply overdue — call-back not recorded within {REPLY_WORKING_DAYS} working days</p>}
+                      {twin && <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1 mt-1.5 inline-block">Same NHFR code as {twin.referenceNo || twin.hospitalName}</p>}
                       {dup && <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1 mt-1.5 inline-block">Possible duplicate — already on the network as {dup.facilityName || dup.id}</p>}
                     </div>
                     <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600">Open <MdArrowForward size={16} /></span>
