@@ -5,6 +5,7 @@ import { tsToDate } from '../../utils/dates'
 import { ORG } from '../../config/org'
 import StatusBadge from '../ui/StatusBadge'
 import DuplicateAccountCheck from './DuplicateAccountCheck'
+import { docChecksFor, checksComplete } from '../../utils/docChecks'
 
 // Advisory verdict → text colour, reusing the OCR line's green/amber/gray
 // pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
@@ -31,7 +32,12 @@ export default function VerifyDocsPanel({
   // Batch "Verify all" commits every pending doc in one tap, so it confirms
   // first (single-doc Verify stays one-click for a fast review queue).
   const [confirmBulk, setConfirmBulk] = useState(false)
-  const pendingDocs = reqDocs.filter(d => d.status === 'pending' && !d._missing)
+  // Documents with a checklist (src/utils/docChecks.js) are verified one by
+  // one with their ticks; "Verify all" covers only the rest.
+  const pendingDocs = reqDocs.filter(d => d.status === 'pending' && !d._missing && docChecksFor(d).length === 0)
+  const [checking, setChecking] = useState(null) // doc id whose checklist is open
+  const [ticks, setTicks] = useState({})
+  const openChecklist = (d) => { setChecking(d.id); setTicks({}) }
   return (
     <div className="space-y-4">
     {/* ⓘ Identity review (ID-verification Phase 5) — the social-worker identity
@@ -175,10 +181,39 @@ export default function VerifyDocsPanel({
                     </div>
                   </div>
                 )}
+                {d.status === 'verified' && d.checks?.items && (
+                  <ul className="mt-1 pl-6 space-y-0.5">
+                    {docChecksFor(d).filter(i => d.checks.items[i.key]).map(i => (
+                      <li key={i.key} className="text-xs text-green-700">✓ {i.label}</li>
+                    ))}
+                  </ul>
+                )}
+                {checking === d.id && d.status !== 'verified' && (
+                  <fieldset className="mt-2 ml-6 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <legend className="px-1 text-xs font-semibold text-gray-700">Before verifying, check:</legend>
+                    {docChecksFor(d).map(i => (
+                      <label key={i.key} className="flex items-start gap-2 py-1 text-xs text-gray-700 cursor-pointer">
+                        <input type="checkbox" className="mt-0.5" checked={!!ticks[i.key]}
+                          onChange={e => setTicks(t => ({ ...t, [i.key]: e.target.checked }))} />
+                        <span>{i.label}</span>
+                      </label>
+                    ))}
+                    <p className="mt-1 text-[11px] text-gray-500">If something is missing, reject the document so the patient can upload a proper copy.</p>
+                    <div className="mt-2 flex gap-2">
+                      <button type="button" className="text-xs font-semibold text-white bg-green-600 px-2.5 py-1 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                        disabled={busy || !checksComplete(docChecksFor(d), ticks)}
+                        onClick={() => { onReviewDoc(d, 'verified', null, ticks); setChecking(null) }}>
+                        Verify document
+                      </button>
+                      <button type="button" className="text-xs text-gray-500 border border-gray-200 bg-white px-2 py-1 rounded-lg hover:bg-gray-50"
+                        onClick={() => setChecking(null)}>Cancel</button>
+                    </div>
+                  </fieldset>
+                )}
                 <div className="flex gap-2 mt-2 pl-6 flex-wrap">
-                  {d.status !== 'verified' && (
+                  {d.status !== 'verified' && checking !== d.id && (
                     <button className="text-xs font-medium text-green-600 hover:text-green-700 flex items-center gap-1 disabled:opacity-50"
-                      disabled={busy} onClick={() => onReviewDoc(d, 'verified')}>
+                      disabled={busy} onClick={() => (docChecksFor(d).length ? openChecklist(d) : onReviewDoc(d, 'verified'))}>
                       <MdCheckCircle size={14} /> Verify
                     </button>
                   )}

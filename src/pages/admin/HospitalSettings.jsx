@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { doc, getDoc, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore'
+import { useHospitalSettings } from '../../hooks/useVerification'
+import { policyOf } from '../../utils/verificationPolicy'
 import toast from 'react-hot-toast'
 import Layout from '../../components/Layout'
 import { db } from '../../firebase'
@@ -25,6 +27,67 @@ function Field({ label, hint, error, children }) {
       {error
         ? <p className="text-xs text-red-500 mt-1">{error}</p>
         : hint && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
+    </div>
+  )
+}
+
+// Input verification Phase 2: when a request needs a recorded verification
+// call before it can be endorsed. Kept in hospitalSettings/{tenant}, which only
+// this hospital's staff can read — patients must not see the amount threshold.
+function VerificationPolicyCard({ user, tenantId }) {
+  const saved = useHospitalSettings()
+  const policy = policyOf(saved)
+  const [amount, setAmount] = useState(null)       // null = not edited yet
+  const [onDuplicate, setOnDuplicate] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const amountValue = amount ?? (policy.interviewAboveAmount ?? '')
+  const dupValue = onDuplicate ?? policy.interviewOnDuplicate
+  const amountNum = String(amountValue).trim() === '' ? null : Number(amountValue)
+  const amountBad = amountNum != null && (!Number.isFinite(amountNum) || amountNum <= 0)
+
+  const save = async () => {
+    if (amountBad) return
+    setSaving(true)
+    try {
+      await setDoc(doc(db, 'hospitalSettings', tenantId), {
+        tenantId, interviewAboveAmount: amountNum, interviewOnDuplicate: !!dupValue,
+        updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
+      })
+      logAudit(user, {
+        action: 'verification_policy_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
+        details: `Verification call: ${amountNum ? `amount ₱${amountNum.toLocaleString()} or more` : 'no amount rule'}; ${dupValue ? 'on' : 'off'} for duplicate-account flags`,
+      })
+      setAmount(null); setOnDuplicate(null)
+      toast.success('Verification settings saved.')
+    } catch (e) {
+      console.error(e)
+      toast.error('Could not save. Please try again.')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="card p-5 mt-4 space-y-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">Verification call</p>
+        <p className="text-xs text-gray-500 mt-1">
+          When your staff must speak with the patient (phone, video or in person) and record it before endorsing.
+          Patients don’t see these settings. A bill number used on another request always needs a call.
+        </p>
+      </div>
+      <Field label="Amount needed at or above (₱)" error={amountBad ? 'Enter an amount above zero, or leave it blank.' : undefined}
+        hint="Leave blank for no amount rule.">
+        <input className="input sm:w-56" inputMode="numeric" value={amountValue}
+          onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} />
+      </Field>
+      <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+        <input type="checkbox" className="mt-0.5" checked={!!dupValue} onChange={(e) => setOnDuplicate(e.target.checked)} />
+        <span>When another account looks like the same patient (same national ID card, or same name and phone)</span>
+      </label>
+      <div className="flex justify-end">
+        <button className="btn-primary text-sm" onClick={save} disabled={saving || amountBad}>
+          {saving ? 'Saving…' : 'Save verification settings'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -126,6 +189,8 @@ export default function HospitalSettings() {
                 </button>
               </div>
             </div>
+
+            <VerificationPolicyCard user={user} tenantId={tenantId} />
 
             <div className="card p-5 mt-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Set by the network</p>

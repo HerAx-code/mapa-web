@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { normalizeBillNumber, billKeyId, BILL_CHECK_SOURCES, billCheckSourceLabel } from '../../utils/billKeys'
+import { interviewReasons, CALL_METHODS } from '../../utils/verificationPolicy'
+import { useIdentityFlag, useHospitalSettings } from '../../hooks/useVerification'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
@@ -548,7 +550,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
           by: user.name ?? '', byUid: user.uid, at: serverTimestamp(),
           ...(reused ? { overrideReason: billOverride.trim(), previousRequestId: prev.requestId } : {}),
         })
-        tx.update(doc(db, collectionName, app.id), updates)
+        // A reused bill number is kept on the verification: it makes the
+        // hospital's verification-call rule apply (verificationPolicy.js).
+        tx.update(doc(db, collectionName, app.id), reused
+          ? { ...updates, 'intakeSheet.billVerification': { ...updates['intakeSheet.billVerification'], reusedFromRequestId: prev.requestId } }
+          : updates)
         return { reused: reused ? prev : null }
       })
       if (outcome.conflict) { setBillConflict(outcome.conflict); return }
@@ -567,6 +573,34 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     } catch (err) {
       console.error(err)
       toast.error('Failed to save the bill verification.')
+    }
+  }
+
+  // Input verification Phase 2: record the verification call (or desk
+  // interview) the hospital's policy requires before endorsing — who, how,
+  // and what was confirmed. Required notes keep it from being a bare tick.
+  const [callForm, setCallForm] = useState({ method: '', notes: '' })
+  const recordCall = async () => {
+    if (!canEdit || !isRequestMode || !callForm.method || callForm.notes.trim().length < 10) return
+    await flushSave()
+    try {
+      await updateDoc(doc(db, collectionName, app.id), {
+        'intakeSheet.verificationCall': {
+          method: callForm.method, notes: callForm.notes.trim(),
+          by: user.name ?? '', byUid: user.uid, at: serverTimestamp(),
+        },
+        updatedAt: serverTimestamp(),
+      })
+      logAudit(user, {
+        action: 'verification_call_recorded', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+        details: `${CALL_METHODS.find(m => m.value === callForm.method)?.label}: ${callForm.notes.trim()}`,
+        requestId: app.id, patientId: app.patientId ?? null,
+      })
+      setCallForm({ method: '', notes: '' })
+      toast.success('Verification call recorded.')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to record the call.')
     }
   }
 
@@ -747,6 +781,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
 
   // Section completion (rough — used for nav indicators)
   const billOk = billVerified(remoteIntake, app?.totalBill)
+  const identityFlag = useIdentityFlag(isRequestMode && !patientFacts ? app?.patientId : null)
+  const hospitalPolicy = useHospitalSettings()
+  const callReasons = isRequestMode && app ? interviewReasons({ request: app, settings: hospitalPolicy, identityFlag }) : []
+  const verificationCall = remoteIntake.verificationCall
   const sectionDone = {
     bill:     billOk,
     family:   !!sheet.householdSize && Number(sheet.householdSize) > 0,
@@ -1141,6 +1179,62 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     )}
                     <Link to={backToRequest} className="btn-secondary text-xs">Open the documents / correct the amount</Link>
                   </div>
+                </div>
+              )}
+            </section>
+            )}
+
+            {/* Section: Verification call (input verification Phase 2) — only
+                when the hospital's policy asks for one, or one was recorded. */}
+            {isRequestMode && !patientFacts && (callReasons.length > 0 || verificationCall) && (
+            <section id="call" className="card p-5 scroll-mt-24">
+              <div className="flex items-center gap-2 mb-2">
+                <MdVerified className="text-brand-500" size={18} />
+                <h2 className="text-sm font-semibold text-gray-800">Verification call</h2>
+              </div>
+              {callReasons.length > 0 && (
+                <ul className="mb-3 text-xs text-gray-600 list-disc pl-5 space-y-0.5">
+                  {callReasons.map(r => <li key={r.key}>{r.label}</li>)}
+                </ul>
+              )}
+              {verificationCall?.at ? (
+                <div className="text-sm text-green-700">
+                  <p className="flex items-center gap-1.5">
+                    <MdCheckCircle size={16} />
+                    {CALL_METHODS.find(m => m.value === verificationCall.method)?.label ?? 'Call'} recorded by {verificationCall.by}
+                    {tsToDate(verificationCall.at) ? ` · ${tsToDate(verificationCall.at).toLocaleDateString()}` : ''}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-700 whitespace-pre-wrap">{verificationCall.notes}</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Before endorsing, speak with the patient (or their representative) and check the answers that matter here — who the patient is,
+                    the household and income, other help received — against the documents. Use the phone number on the hospital record, not only the one on the account.
+                  </p>
+                  {canEdit && (
+                    <div className="mt-3 grid gap-3">
+                      <div className="sm:w-64">
+                        <label htmlFor="call-method" className="block text-xs font-medium text-gray-700 mb-1">How</label>
+                        <select id="call-method" className="input text-sm" value={callForm.method}
+                          onChange={e => setCallForm(f => ({ ...f, method: e.target.value }))}>
+                          <option value="">Select…</option>
+                          {CALL_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="call-notes" className="block text-xs font-medium text-gray-700 mb-1">What you confirmed</label>
+                        <textarea id="call-notes" rows={3} className="input text-sm" placeholder="e.g. Spoke with the patient's daughter; confirmed admission, household of 5, no other assistance yet"
+                          value={callForm.notes} onChange={e => setCallForm(f => ({ ...f, notes: e.target.value }))} />
+                      </div>
+                      <div>
+                        <button type="button" className="btn-primary text-xs flex items-center gap-1.5" onClick={recordCall}
+                          disabled={!callForm.method || callForm.notes.trim().length < 10}>
+                          <MdCheckCircle size={14} /> Record the call
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </section>

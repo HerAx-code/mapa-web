@@ -18,6 +18,8 @@ import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
 import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
+import { interviewReasons } from '../../utils/verificationPolicy'
+import { useIdentityFlag, useHospitalSettings } from '../../hooks/useVerification'
 import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
 import { overdueCount, isOverdue, slaState, slaLabel, SLA_HOURS } from '../../utils/sla'
 import QueueTabs from '../../components/admin/requests/QueueTabs'
@@ -787,7 +789,12 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // shared requestStage model (unit-tested to mirror the old inline logic
   // exactly), so the queue chips, the coming stage rail, and this endorse gate
   // stay in lock-step. Variable names preserved so the JSX below is unchanged.
-  const stage = deriveRequestStage(request, reqDocs)
+  // Input verification Phase 2: the hospital's policy may require a recorded
+  // verification call (high amount, a duplicate-account flag, a reused bill).
+  const identityFlag  = useIdentityFlag(request.patientId)
+  const hospitalPolicy = useHospitalSettings()
+  const callReasons   = interviewReasons({ request, settings: hospitalPolicy, identityFlag })
+  const stage = deriveRequestStage(request, reqDocs, { callReasons })
   const allVerified    = stage.docsVerified
   const intakeComplete = stage.intakeComplete
   const canEndorse     = stage.canEndorse
@@ -808,7 +815,9 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // so the patient knows exactly what to fix. 'pending' is the un-verify
   // (operator correction) path -- clears reviewer/reason and skips the
   // patient notification (they were never told about the prior decision).
-  const reviewDoc = async (docItem, newStatus, reason = null) => {
+  // `checks` (input verification Phase 2): the ticked document checklist
+  // (src/utils/docChecks.js), stored with the verification; cleared otherwise.
+  const reviewDoc = async (docItem, newStatus, reason = null, checks = null) => {
     setBusy(true)
     try {
       const cleanReason = (reason ?? '').trim() || null
@@ -820,6 +829,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
         // Persist the rejection reason so the doc viewer / audit trail
         // can surface it. Clear it on re-verify or un-verify.
         rejectionReason: newStatus === 'rejected' ? cleanReason : null,
+        checks: newStatus === 'verified' && checks ? { items: checks, by: user.name ?? '', byUid: user.uid } : null,
       })
       const updatedAttached = (request.attachedDocuments ?? []).map(a =>
         a.documentId === docItem.id ? { ...a, status: newStatus } : a)
@@ -833,7 +843,8 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
               : newStatus === 'rejected' ? 'doc_rejected'
               : 'doc_unverified',
         targetType: 'document', targetId: docItem.id, targetName: docItem.name,
-        details: `${docItem.name}` + (cleanReason ? ` · reason: ${cleanReason}` : ''),
+        details: `${docItem.name}` + (cleanReason ? ` · reason: ${cleanReason}` : '')
+          + (newStatus === 'verified' && checks ? ` · checked: ${Object.keys(checks).filter(k => checks[k]).join(', ')}` : ''),
         // requestId/patientId so the entry appears in the request Activity
         // timeline (matches the bulk-verify path, which already sets these).
         requestId: request.id, patientId: request.patientId,
@@ -1304,7 +1315,12 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                     Before endorsing, finish {stage.blockers.length} step{stage.blockers.length > 1 ? 's' : ''}:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {stage.blockers.map(b => (
+                    {stage.blockers.map(b => b.call ? (
+                      <Link key="call" to={`/admin/requests/${request.id}/intake#call`}
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800 hover:bg-amber-100">
+                        {b.label} <span className="text-amber-600/80">· {b.detail}</span>
+                      </Link>
+                    ) : (
                       <span key={b.key}
                         className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800">
                         {b.label} <span className="text-amber-600/80">· {b.detail}</span>
