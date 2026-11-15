@@ -49,7 +49,8 @@ describe('users.tenantId', () => {
   // Marketplace: registration is network-level — no code, no hospital.
   // Registration requires the code; the code's hospital is the patient's.
   it("a patient registers by claiming a code and joins that code's hospital", async () => {
-    await assertFails(setDoc(doc(as('patient-2'), 'users', 'patient-2'), { role: 'patient', name: 'Ana' }))
+    // Open sign-up (2026-11-15): a no-code account is allowed (it has no hospital).
+    await assertSucceeds(setDoc(doc(as('patient-2b'), 'users', 'patient-2b'), { role: 'patient', name: 'Ana' }))
     await assertSucceeds(registerWithCode(as('patient-2'), { uid: 'patient-2', code: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
   })
 

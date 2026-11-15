@@ -338,10 +338,20 @@ export default function Register() {
     return e
   }
 
+  // Owner decision 2026-11-15 (reports/Access code at registration.md): the
+  // access code is OPTIONAL at sign-up. Blank, or just the prefix, means "no
+  // code yet" — a network account with no hospital; the patient enters a code
+  // when they file. A code that IS typed must be complete and verified.
+  const codeTyped = () => {
+    const v = form.hospitalId.trim().toUpperCase()
+    return v !== '' && v !== HOSPITAL_PREFIX && !/^[A-Z]+-\d{4}-?$/.test(v) && !/^[A-Z]+-?$/.test(v)
+  }
   const validateStep3 = () => {
     const e = {}
-    if (!ACCESS_CODE_RE.test(form.hospitalId)) e.hospitalId = t('register.errors.codeFormat', { year: CURRENT_YEAR })
-    else if (!hospitalVerified)                e.hospitalId = t('register.errors.codeVerifyFirst')
+    if (codeTyped()) {
+      if (!ACCESS_CODE_RE.test(form.hospitalId)) e.hospitalId = t('register.errors.codeFormat', { year: CURRENT_YEAR })
+      else if (!hospitalVerified)                e.hospitalId = t('register.errors.codeVerifyFirst')
+    }
     if (!agreedToTerms)                        e.terms      = t('register.errors.termsRequired')
     return e
   }
@@ -561,7 +571,7 @@ export default function Register() {
         suffix:   (officialName?.nameParts ? officialName.nameParts.suffix : form.suffix) || null,
         birthdate: form.birthdate,
         lastName:  officialName?.nameParts?.lastName ?? form.lastName.trim(),
-        hospitalId: form.hospitalId, patientId,
+        hospitalId: codeTyped() ? form.hospitalId : null, patientId,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
         // Terms of Use acceptance record (who = this uid, when, which version).
@@ -575,6 +585,17 @@ export default function Register() {
       // request (claimed here, bound to the request when they file). Later
       // requests need a new code — from any hospital (patient marketplace).
       let joinedTenant = null
+      if (!codeTyped()) {
+        // No code: a network account with no hospital yet (open sign-up).
+        try {
+          await setDoc(doc(db, 'users', uid), userData)
+        } catch (createErr) {
+          try { await deleteUser(createdAuthUser) }
+          catch (delErr) { console.error('[Register] orphan Auth rollback failed (open sign-up):', delErr) }
+          createdAuthUser = null
+          throw createErr
+        }
+      } else
       // #2 — Transactional hospital ID claim: re-read status INSIDE the
       // transaction and abort if another patient won the race between
       // the patient's Verify click and Submit. Prevents a second patient's
@@ -645,7 +666,8 @@ export default function Register() {
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
 
       toast.success(t('register.toast.welcome', { name: form.firstName }))
-      navigate('/patient/request')
+      // No hospital yet: start by comparing hospitals; with a code, file there.
+      navigate(joinedTenant ? '/patient/request' : '/patient/hospitals')
     } catch (err) {
       // #1 — If Auth account was created before this throw and not already
       // rolled back inside the transaction handler above, drop it so the
@@ -760,7 +782,7 @@ export default function Register() {
           <form onSubmit={(e) => {
             e.preventDefault()
             if (step < 3) handleNext()
-            else if (!hospitalVerified) handleVerify()
+            else if (codeTyped() && !hospitalVerified) handleVerify()
             else handleSubmit()
           }}>
 
