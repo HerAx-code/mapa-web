@@ -37,6 +37,7 @@ import { PHILID_QR_ENABLED } from '../../utils/philIdQr'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import { DECLARATION_VERSION } from '../../utils/verificationPolicy'
+import { canReuseDocument } from '../../utils/documentReuse'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
@@ -648,12 +649,17 @@ export default function RequestAssistance() {
   }, [])
 
   const existingTypeNames = new Set(myDocs.map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase()))
-  // Verified docs on file, by type name — reusable types satisfy the checklist
-  // without re-upload; non-reusable ones (Billing/SOA) must be supplied fresh.
+  // Verified docs on file, by type name — reusable types (Valid ID, PhilHealth
+  // ID) satisfy the checklist without re-upload while the verification is under
+  // 12 months old (utils/documentReuse.js); others must be supplied fresh.
   const verifiedTypeNames = new Set(
-    myDocs.filter(d => d.status === 'verified').map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase())
+    myDocs.filter(d => canReuseDocument(d)).map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase())
   )
   const docForType = (name) => myDocs.find(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase())
+  // The newest document of this type that may be reused (verified < 12 months).
+  const reusableDocFor = (name) => myDocs
+    .filter(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase() && canReuseDocument(d))
+    .sort((a, b) => (b.reviewedAt?.toMillis?.() ?? 0) - (a.reviewedAt?.toMillis?.() ?? 0))[0] ?? null
   // When a representative files for a patient who can't take their own live
   // selfie (bedridden, hospitalised, face/hands bandaged), the patient's own
   // selfie is exempt — the rep instead proves THEIR identity (rep ID + rep
@@ -745,15 +751,16 @@ export default function RequestAssistance() {
             console.error('[request] doc upload failed:', tp.name, uploadErr)
             throw new Error(`UPLOAD_FAILED:${tp.name}`)
           }
-        } else if (tp.reusable && existing && existing.status === 'verified') {
-          // Reusable type satisfied by a previously verified doc — attach it
-          // without re-upload (matches isSatisfied()).
+        } else if (tp.reusable && reusableDocFor(tp.name)) {
+          // Reusable type satisfied by a recently verified doc — attach the
+          // newest one without re-upload (matches isSatisfied()).
+          const reuse = reusableDocFor(tp.name)
           attachedDocuments.push({
-            documentId:       existing.id,
-            name:             existing.name ?? tp.name,
-            documentTypeName: existing.documentTypeName ?? tp.name,
-            status:           existing.status ?? 'verified',
-            date:             existing.date ?? '',
+            documentId:       reuse.id,
+            name:             reuse.name ?? tp.name,
+            documentTypeName: reuse.documentTypeName ?? tp.name,
+            status:           reuse.status ?? 'verified',
+            date:             reuse.date ?? '',
           })
         }
       }
