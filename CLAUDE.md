@@ -200,4 +200,5 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - docs/assistance-model-remediation-plan.md — the assistance-model remediation (coverage-model redesign shipped 2026-10-12; agency single-source + eligibility/capacity/charging-order still open). `src/data/referenceData.js` is the catalog/requirement source of truth.
 - docs/document-requirements-checklist.md — hand to the gateway to confirm the real per-type document sets + thresholds; the gate before enabling `VITE_PER_TYPE_DOCS` in prod.
 - docs/multi-hospital-network-plan.md — the multi-hospital tenancy plan (hospital = tenant, shared agencies, platform_admin, phased data → queries → rules rollout)
+- docs/outpatient-support-plan.md — outpatient support (planned, not built; waits for the CRMC meeting). Also proposes replacing the per-agency 30-day cooldown with an expense record + per-program repeat intervals.
 - (add others as you create them)
