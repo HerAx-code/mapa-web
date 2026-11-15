@@ -484,7 +484,7 @@ export default function PatientDashboard() {
             Status timeline below / on the Status tab. */}
         {activeRequest && (
           <div className="card px-3 py-3.5">
-            <JourneyStrip status={activeRequest.status} />
+            <JourneyStrip request={activeRequest} />
           </div>
         )}
 

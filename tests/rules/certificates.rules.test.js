@@ -2,6 +2,7 @@ import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore'
+import { approveWithMark } from './helpers/approval.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -273,18 +274,14 @@ describe('applications.update — amountApproved capped at amountRequested', () 
     await seedUser('coord-1', 'agency', 'malasakit')
     await seedApp()
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
-      ...APP, status: 'approved', amountApproved: 5000,
-    }))
+    await assertSucceeds(approveWithMark(ctx.firestore(), 'app-1', APP, { status: 'approved', amountApproved: 5000 }))
   })
 
   it('rejects an agency approving MORE than the endorsed cap', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     await seedApp()
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertFails(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
-      ...APP, status: 'approved', amountApproved: 6000,
-    }))
+    await assertFails(approveWithMark(ctx.firestore(), 'app-1', APP, { status: 'approved', amountApproved: 6000 }))
   })
 
   it('allows a non-approval update that carries no amountApproved', async () => {

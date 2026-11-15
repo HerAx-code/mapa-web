@@ -40,7 +40,7 @@ import { DECLARATION_VERSION } from '../../utils/verificationPolicy'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
-  MdContentCopy, MdHistory, MdLocalHospital,
+  MdContentCopy, MdHistory, MdLocalHospital, MdSchedule,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -921,6 +921,26 @@ export default function RequestAssistance() {
                 <MdContentCopy size={13} />
               </button>
             </p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  // ── Holding period (Patients page, rules-enforced) — no new request ───────
+  if (!loading && !activeRequest && Number(user?.cooldown) > 0) {
+    return (
+      <Layout breadcrumb={t('patient.request.navLabel')}>
+        <div className="px-4 py-6 sm:p-6 w-full max-w-xl mx-auto">
+          <div className="card p-6 sm:p-8 text-center space-y-4">
+            <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
+              <MdSchedule size={30} className="text-amber-500" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">{t('patient.request.holdTitle')}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">{t('patient.request.holdDesc')}</p>
+            <button className="btn-primary w-full min-h-[44px] text-sm" onClick={() => navigate('/patient/messages')}>
+              {t('patient.request.holdMessage')}
+            </button>
           </div>
         </div>
       </Layout>

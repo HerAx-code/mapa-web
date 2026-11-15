@@ -31,6 +31,17 @@ export const JOURNEY_STAGES = [
 
 export const JOURNEY_TOTAL = JOURNEY_STAGES.length // 6
 
+// Nothing writes status 'assessment' any more (the gateway's verify → assess →
+// endorse queue runs off documents + intake sheet, src/utils/requestStage.js),
+// so the patient's Assessment step is derived the same way: every attached
+// document verified while the request is not yet endorsed.
+export function inAssessment(request) {
+  if (!['submitted', 'under_review', 'assessment'].includes(request?.status)) return false
+  if (request.status === 'assessment') return true
+  const docs = request.attachedDocuments ?? []
+  return docs.length > 0 && docs.every(a => a?.status === 'verified')
+}
+
 // Derive the journey view for a request.
 //   - rejected / closed are OUTCOMES, not stages (the caller shows an outcome
 //     treatment; closed still resolves a rank so a partial stepper can render).
@@ -51,7 +62,9 @@ export function journeyState(request) {
   const outcome = status === 'closed' ? 'closed' : null
   const rank = status === 'closed'
     ? (REQ_RANK.partially_funded ?? 4)   // closed = gave up on the remaining balance
-    : (REQ_RANK[status] ?? 0)
+    : inAssessment(request)
+      ? 2
+      : (REQ_RANK[status] ?? 0)
 
   const stages = JOURNEY_STAGES.map((s) => ({
     ...s,

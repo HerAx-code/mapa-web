@@ -9,9 +9,9 @@ import { journeyState } from '../../utils/journey'
 // everywhere. Driven by request.status via journeyState, in lockstep with the
 // server. i18n labels: patient.journey.stage.<key>.label.
 
-export default function JourneyStrip({ status, className = '' }) {
+export default function JourneyStrip({ status, request, className = '' }) {
   const { t } = useTranslation()
-  const { stages } = journeyState({ status })
+  const { stages } = journeyState(request ?? { status })
 
   return (
     <div className={`flex items-start justify-between ${className}`} role="list" aria-label={t('patient.journey.label')}>

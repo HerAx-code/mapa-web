@@ -632,23 +632,24 @@ function SettingsModal({ onClose }) {
 // Staff/admin FAQs remain English-only — internal staff per CLAUDE.md.
 
 const AGENCY_FAQS = [
-  { q: 'How do I review a new application?',          a: 'Open the Inbox — pending applications appear at the top. Click one to open the intake sheet, review the endorsed details, and either request changes or move it to approval.' },
-  { q: 'Do I schedule an interview with the patient?', a: 'No. The gateway office (Medical Social Services) conducts one remote assessment on the parent request and shares the result with every endorsed agency, so your agency makes the funding decision from that — there is no per-agency interview. If you need to clarify something, reach the patient or the gateway through Messages.' },
-  { q: 'How do I issue a Guarantee Letter?',          a: 'On an approved application, open GL Letters and click "Issue GL". Fill in the amount and any notes; the system generates a printable letter and decrements your committed budget.' },
-  { q: 'How do I mark a Guarantee Letter as redeemed?', a: 'Open GL Letters, find the issued GL, and click "Mark as Redeemed" after the patient claims it at the provider. Optionally attach the signed scan. This moves the amount from committed to disbursed.' },
-  { q: 'Why can\'t I approve this application?',      a: 'The patient may already have an approval for the same assistance type within the last 30 days (cooldown), or your remaining budget is below the requested amount. Check the warning banner for the specific reason.' },
-  { q: 'Where do I see my agency\'s budget?',         a: 'Your Dashboard shows the current period\'s budget, committed amount (issued GLs), and disbursed amount (redeemed GLs). For period changes, contact a staff administrator.' },
-  { q: 'How do patients message me?',                 a: 'Open Messages — every conversation is linked to an application. Replies notify the patient by email and in-app.' },
+  { q: 'How do I review a new application?', a: 'Open the Application Inbox. Each case was already verified and assessed by the hospital\'s social-services office, so open it to read the intake sheet and documents, then approve it, ask for more information or reject it.' },
+  { q: 'Do I schedule an interview with the patient?', a: 'No. The hospital\'s social-services office does one remote assessment on the request and shares it with every agency it endorses the case to. Your agency makes the funding decision from that. To clarify something, message the patient or the hospital through Messages.' },
+  { q: 'How do I issue a Guarantee Letter?', a: 'The Guarantee Letter is issued when you approve: click "Approve & Issue GL" and enter the amount, purpose and provider (Payable To). Then print it, have it wet-signed, click "Mark as Issued" in the GL viewer and upload the signed scan so the patient can download it.' },
+  { q: 'How do I mark a Guarantee Letter as redeemed?', a: 'Open the application and click "Mark GL Redeemed" once the provider has claimed it. This moves the amount from committed to disbursed. If it was a mistake, you can undo it from the same page.' },
+  { q: 'Why can\'t I approve this application?', a: 'Your agency approved assistance for this patient on another request less than 30 days ago (each agency can approve once every 30 days per patient; other agencies are not affected). Or the amount is above your remaining budget, the amount the hospital endorsed, or your per-applicant cap, or the hospital has closed the request. The approval window shows which.' },
+  { q: 'Where do I see my agency\'s budget?', a: 'Your Dashboard and the Funds page show the budget, the committed amount (approved Guarantee Letters) and the disbursed amount (redeemed ones). Your Agency Admin sets the budget on Budget Allocation.' },
+  { q: 'How do patients message me?', a: 'Open Messages. Patients and hospital staff can message your agency about cases endorsed to it; they are notified in the app and by email when you reply.' },
 ]
 
 const ADMIN_FAQS = [
-  { q: 'How do I verify a patient document?',         a: 'Go to Doc Review under Operations. Click Verify or Reject on each pending document.' },
-  { q: 'How do I issue a Patient Access Code?',       a: 'Open Patient Access Codes and click "Issue code". Type the patient\'s name, birthdate, mobile number, visit date and the ID you saw, then print the slip. The code works only for that patient (last name + birthdate) and for one request. Only the Hospital Admin can issue, reset or delete codes.' },
-  { q: 'How do I disable an agency?',                 a: 'Go to Agencies and click "Disable" on the agency card. This hides them from patients temporarily without deleting their data.' },
-  { q: 'Where can I see all patient applications?',   a: 'Go to App Logs under Operations to view all submissions across agencies, with filters by status, agency, and date range.' },
-  { q: 'How do I add a new admin account?',           a: 'Contact your hospital administrator to provision new admin accounts. Account creation is restricted to authorized personnel only.' },
-  { q: 'How do I top up an agency\'s budget?',        a: 'Go to Funds, open the agency\'s ledger, and add a period entry. Each top-up is recorded in the audit log.' },
-  { q: 'Where do I see audit history?',               a: 'Open Audit Log under Operations. Every admin action — verifications, account changes, budget edits — is recorded with the actor, target, and timestamp.' },
+  { q: 'How do I verify a patient document?', a: 'Open Requests and pick a request in the Verify queue. Open each document and click Verify or Reject; some documents have a short checklist to tick first.' },
+  { q: 'How do I issue a Patient Access Code?', a: 'Open Access Codes and click "Issue code". Type the patient\'s name, birthdate, mobile number, visit date and the ID you saw, then print the slip. The code works only for that patient (last name + birthdate) and for one request. Hospital Admins and Staff Admins can issue codes; only the Hospital Admin can reset or delete one.' },
+  { q: 'What does a holding period do?', a: 'On Patients, a holding period stops the patient from filing a new request or moving to another hospital until it is lifted. Only the patient\'s current hospital can set or lift it, and the patient is notified either way.' },
+  { q: 'Can we add or disable an agency?', a: 'Agencies are shared across the network and managed by the MAPA Super Admin. Partner Agencies lists the agencies your hospital works with; contact the Super Admin to add a partner or pause one.' },
+  { q: 'Where can I see all patient applications?', a: 'Go to App Logs to view every agency slice from your hospital, with filters by status, agency and date range.' },
+  { q: 'How do I add a new staff account?', a: 'The Hospital Admin adds staff on Admin Accounts. Staff Admins can\'t create accounts.' },
+  { q: 'Who sets an agency\'s budget?', a: 'Each agency\'s own Agency Admin, on their Budget Allocation page. The hospital doesn\'t manage agency budgets.' },
+  { q: 'Where do I see audit history?', a: 'The Hospital Admin can open Audit Log. Every staff action (verifications, endorsements, access codes, account changes) is recorded with who did it, on what, and when.' },
 ]
 
 function HelpModal({ onClose, onOpenReport }) {

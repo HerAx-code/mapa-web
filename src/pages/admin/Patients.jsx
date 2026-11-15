@@ -272,8 +272,8 @@ export default function Patients() {
         type:  'app_advanced',
         title: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed',
         body:  newCooldown > 0
-          ? 'A holding period has been applied to your account by the administrator.'
-          : 'Your holding period has been removed. You may submit a new assistance request anytime.',
+          ? 'A holding period has been placed on your account. You can\'t file a new assistance request until it is lifted. Message the social-services office if you have questions.'
+          : 'The holding period on your account has been lifted. You can file a new assistance request again.',
       })
       logAudit(adminUser, { action: newCooldown > 0 ? 'holding_applied' : 'holding_removed', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed' })
       toast.success(`Holding period ${newCooldown > 0 ? 'applied to' : 'removed from'} ${patient.name}.`)
@@ -571,11 +571,16 @@ export default function Patients() {
                         onClick={() => handleMessage(p)}>
                         <MdMessage size={15} />
                       </button>
+                      {/* Holding period: only the patient's CURRENT hospital sets or
+                          lifts it (rules-enforced); it blocks new requests and
+                          switching hospitals. */}
+                      {p.tenantId === currentTenantId() && (
                       <button title={p.cooldown > 0 ? 'Remove Holding Period' : 'Apply Holding Period'}
                         className={`p-1.5 rounded-lg transition-colors ${confirmHolding?.uid === p.uid ? 'text-amber-600 bg-amber-50' : 'text-gray-500 hover:text-amber-500 hover:bg-amber-50'}`}
                         onClick={() => setConfirmHolding(confirmHolding?.uid === p.uid ? null : p)}>
                         <MdSchedule size={15} />
                       </button>
+                      )}
                       {/* Marketplace: the account is network-wide — only the
                           patient's CURRENT hospital may lock it, and only a
                           hospital that is their sole one may erase it. */}
@@ -612,7 +617,7 @@ export default function Patients() {
                         <p className="text-sm text-amber-700 flex-1">
                           {p.cooldown > 0
                             ? <>Remove holding period from <strong>{p.name}</strong>? They will be able to submit new assistance requests again.</>
-                            : <>Apply a holding period to <strong>{p.name}</strong>? They will not be able to submit new assistance requests until it is removed.</>
+                            : <>Apply a holding period to <strong>{p.name}</strong>? They won't be able to file a new request or move to another hospital until you lift it.</>
                           }
                         </p>
                         <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"

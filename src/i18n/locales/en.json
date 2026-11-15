@@ -771,6 +771,9 @@
       "requestAssistance": "Request Assistance"
     },
     "request": {
+      "holdMessage": "Go to Messages",
+      "holdDesc": "{{gateway}} has put a holding period on your account, so you can't file a new request or move to another hospital for now. Message the social-services office to ask why or when it will be lifted.",
+      "holdTitle": "Your account is on hold",
       "declarationConfirmRep": "I confirm this declaration on behalf of the patient.",
       "declarationConfirm": "I confirm this declaration.",
       "declarationPenalty": "Giving false information or altered documents to get assistance is punishable. Under the Malasakit Centers Act (RA 11463), the assistance is cancelled, twice the amount must be paid back, and the person may be jailed for 6 months to 2 years. Falsified documents can also be charged under the Revised Penal Code and the Cybercrime Prevention Act.",
@@ -1250,7 +1253,7 @@
       "reasonForRejection": "Reason for rejection:",
       "certNotReady": "Guarantee Letter not yet available. Please check back later.",
       "downloadFailed": "Failed to download Guarantee Letter.",
-      "withdrawSuccess": "Request withdrawn. You may submit a new request anytime.",
+      "withdrawSuccess": "Request withdrawn. To file a new one, get a new access code from the hospital.",
       "withdrawFailed": "Failed to withdraw. Please try again.",
       "reviewCoverage": "Review coverage & proceed",
       "reqStages": {
@@ -1385,7 +1388,7 @@
       "sections": {
         "whatIsMapa": {
           "title": "What is MAPA?",
-          "content": "MAPA (Medical Assistance Portal Access) is the official online system of {{facility}} for processing medical assistance applications. It allows patients to apply for financial or material assistance from partner government agencies such as DSWD, PCSO, and DOH — all in one place, without lining up at multiple offices."
+          "content": "MAPA (Medical Assistance Portal Access) is an online system shared by participating hospitals for medical financial assistance. You file one request with the hospital you choose. Its social-services office checks your documents, assesses your case remotely and endorses it to partner agencies such as DSWD, PCSO and DOH, which can each cover part of your bill. You don't need to line up at each agency's office."
         },
         "whoCanUse": {
           "title": "Who can use MAPA?",
@@ -1411,23 +1414,23 @@
         },
         "apply": {
           "title": "How do I request assistance?",
-          "s1": "Go to Request Assistance from the sidebar or the bottom tab.",
-          "s2": "Choose the type of assistance you need and enter the amount you need help with, based on your billing statement.",
-          "s3": "Attach your billing statement (Statement of Account), confirm the declaration, and submit your request.",
-          "s4": "{{gateway}} reviews your request and endorses it to one or more agencies that can help cover your bill.",
+          "s1": "Choose the hospital where you are admitted (or were billed) and get a Patient Access Code from its social-services office. It is issued in the patient's name and works for one request. If you entered a code when you registered, it covers your first request.",
+          "s2": "Open Request Assistance from the sidebar or the bottom tab, and enter the code if you are asked for it.",
+          "s3": "Choose the type of assistance, enter the amount you need based on your billing statement, attach the required documents and take a live selfie.",
+          "s4": "Confirm the declaration and submit. {{gateway}} checks your documents, assesses your case and endorses it to one or more agencies that can help cover your bill.",
           "s5": "Open Request Assistance to see your coverage plan, then tap Proceed to send it to those agencies.",
           "s6": "Complete each agency's requirements and reply to any messages from your social worker.",
           "s7": "Once an agency approves, you will receive a Guarantee Letter to claim your assistance.",
           "note": "Important: You can have only one active request at a time. Track its progress anytime under My Application."
         },
         "withdraw": {
-          "title": "Can I cancel or withdraw my application?",
-          "s1": "Go to My Application from the sidebar.",
-          "s2": "Find your active application under the In Progress tab.",
-          "s3": "Scroll to the bottom of the application card.",
-          "s4": "Tap Withdraw Application — a confirmation will appear.",
-          "s5": "Tap Yes, Withdraw to confirm. The spot will be returned and you can apply again.",
-          "note": "You can only withdraw while your application is in Pending Review status. Once the agency starts reviewing, withdrawal is no longer available."
+          "title": "Can I cancel or withdraw my request?",
+          "s1": "Open Request Assistance from the sidebar or the bottom tab. Your active request is shown there.",
+          "s2": "Scroll to the bottom of the request.",
+          "s3": "Tap Withdraw Application. A confirmation appears.",
+          "s4": "Tap Yes, Withdraw. The request is closed and can't be reopened.",
+          "s5": "The access code used for it is spent. To file again, get a new code from the hospital's social-services office.",
+          "note": "You can withdraw until {{gateway}} endorses your request to an agency. After that, message your social worker instead."
         },
         "cofunding": {
           "title": "What is co-funding? Why do I see multiple agencies?",
