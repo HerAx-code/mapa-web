@@ -1,3 +1,5 @@
+import { loadRules } from './helpers/rules.js'
+import { issueCode, issuedRecord } from './helpers/codes.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import {
@@ -20,7 +22,7 @@ beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'mapa-rules-test-tenant-boundary',
     firestore: {
-      rules: fs.readFileSync(path.resolve('firestore.rules'), 'utf8'),
+      rules: loadRules(),
       host: 'localhost',
       port: 8080,
     },
@@ -111,10 +113,11 @@ describe("another hospital's records are off-limits to gateway staff", () => {
   it("hospital A super admin cannot edit, reissue or delete B's access codes", async () => {
     await assertFails(updateDoc(ref('superA', 'hospitalIds/CODE-B2'), { status: 'revoked' }))
     await assertFails(deleteDoc(ref('superA', 'hospitalIds/CODE-B2')))
-    await assertFails(setDoc(ref('superA', 'hospitalIds/BGH-2026-00099'), { status: 'available', patId: null, tenantId: B }))
+    const issued = issuedRecord({ issuedByUid: 'superA' })
+    await assertFails(issueCode(as('superA'), 'BGH-2026-00099', { tenantId: B, issued }))
     // Phase 8: codes only under the issuing hospital's own prefix.
-    await assertFails(setDoc(ref('superA', 'hospitalIds/BGH-2026-00098'), { status: 'available', patId: null, tenantId: A }))
-    await assertSucceeds(setDoc(ref('superA', 'hospitalIds/MAPA-2026-00099'), { status: 'available', patId: null, tenantId: A }))
+    await assertFails(issueCode(as('superA'), 'BGH-2026-00098', { tenantId: A, issued }))
+    await assertSucceeds(issueCode(as('superA'), 'MAPA-2026-00099', { tenantId: A, issued }))
   })
 
   it("hospital A super admin cannot rebrand hospital B", async () => {

@@ -1,3 +1,4 @@
+import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, addDoc, updateDoc, deleteDoc, collection, serverTimestamp } from 'firebase/firestore'
@@ -11,7 +12,7 @@ beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'mapa-rules-test-writesinks',
     firestore: {
-      rules: fs.readFileSync(path.resolve('firestore.rules'), 'utf8'),
+      rules: loadRules(),
       host: 'localhost',
       port: 8080,
     },

@@ -53,6 +53,11 @@ vi.mock('firebase-admin', () => ({
 let handleVerifyAccessCode
 beforeAll(() => {
   ;({ handleVerifyAccessCode } = require('../../functions/src/verifyAccessCode'))
+  // Blank (pre-2026-11-15) codes expire at BLANK_CODE_CUTOFF; pin the clock
+  // before it so these suites don't change result on that date. Only Date is
+  // faked — timers and promises run normally.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-11-20T00:00:00+08:00'))
 })
 
 // ── Fake Firestore ────────────────────────────────────────────────────
@@ -66,6 +71,7 @@ function makeFakeDb({
   ipThrottleDoc  = null,
   hospitalIdDoc  = null,
   hospitalDoc    = null,     // hospitals/{tenantId}; null = missing (counts as open)
+  issuedDoc      = null,     // hospitalIds/{code}/privateInfo/issued (patient-bound codes)
   throwOnGet = false,
 } = {}) {
   const writes = []
@@ -88,6 +94,9 @@ function makeFakeDb({
           throttleByPath.set(path, ipThrottleDoc)
         }
         return ref
+      }
+      if (path.startsWith('hospitalIds/') && path.endsWith('/privateInfo/issued')) {
+        return { _path: path, get: async () => ({ exists: issuedDoc !== null, data: () => issuedDoc ?? undefined }) }
       }
       if (path.startsWith('hospitalIds/')) {
         return {
@@ -391,5 +400,28 @@ describe('verifyAccessCode: code resolution', () => {
     await expect(handleVerifyAccessCode({
       uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp,
     })).rejects.toMatchObject({ code: 'internal' })
+  })
+})
+
+// ── Patient-bound codes (2026-11-15) ─────────────────────────────────────
+describe('verifyAccessCode: patient-bound codes', () => {
+  const issued = { name: 'Ana Dela Cruz', nameParts: { firstName: 'Ana', middleName: '', lastName: 'Dela Cruz', suffix: '' }, proof: 'DELACRUZ|1990-05-01', birthdate: '1990-05-01' }
+  const call = (db, extra) => handleVerifyAccessCode({ uid: 'u', code: 'MAPA-2026-00001', ip: TEST_IP, db, serverTimestamp, ...extra })
+
+  it('matches the last name (letters only) + birthdate and returns the recorded name', async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available', bound: true }, issuedDoc: issued })
+    const out = await call(db, { lastName: 'dela-cruz', birthdate: '1990-05-01' })
+    expect(out).toEqual({ available: true, exists: true, bound: true, match: true, name: 'Ana Dela Cruz', nameParts: issued.nameParts })
+  })
+  it('a mismatch reveals nothing about the patient', async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available', bound: true }, issuedDoc: issued })
+    const out = await call(db, { lastName: 'Santos', birthdate: '1990-05-01' })
+    expect(out).toEqual({ available: true, exists: true, bound: true, match: false })
+    expect(await call(db, {})).toEqual({ available: true, exists: true, bound: true, match: false })
+  })
+  it('blank codes expire at the cutoff', async () => {
+    const db = makeFakeDb({ hospitalIdDoc: { status: 'available' } })
+    expect(await call(db, { now: () => Date.parse('2026-12-15T00:00:00+08:00') })).toEqual({ available: false, exists: true, expired: true })
+    expect(await call(db, { now: () => Date.parse('2026-12-14T23:59:00+08:00') })).toEqual({ available: true, exists: true })
   })
 })

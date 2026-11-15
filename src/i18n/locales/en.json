@@ -682,6 +682,9 @@
   },
   "patient": {
     "gate": {
+      "birthdate": "Patient's birthdate",
+      "lastName": "Patient's last name",
+      "identityHint": "The code works only for the patient it was issued to. Enter the patient's last name and birthdate as given to the hospital.",
       "heading": "Choose your hospital",
       "title": "Where will you file this request?",
       "subtitle": "Choose the hospital, then enter the access code its social-services office gave you. Each code is good for one request.",
@@ -702,6 +705,9 @@
       "errNoCode": "Choose your hospital and enter its access code first.",
       "switchTo": "Choose {{hospital}} instead",
       "err": {
+        "needDetails": "Enter the patient's last name and birthdate.",
+        "expired": "This code is no longer valid. Ask the hospital's social service office for a new code.",
+        "mismatch": "This code was issued to a different name or birthdate. Check them, or ask the office that gave you the code.",
         "format": "Enter the full code, e.g. PREFIX-{{year}}-00001.",
         "rateLimit": "Too many tries. Please wait a while and try again.",
         "notFound": "We couldn't find that code. Check it and try again.",
@@ -1534,6 +1540,7 @@
     "stepCode": "Access Code",
     "stepProgress": "Step {{current}} of {{total}} · {{label}}",
     "step1": {
+      "birthdate": "Birthdate",
       "sectionTitle": "Personal Information",
       "sectionDesc": "Enter your name and contact details as they appear on your official ID.",
       "firstName": "First Name",
@@ -1567,6 +1574,8 @@
       "hidePassword": "Hide password"
     },
     "step3": {
+      "boundHint": "The code works only for the patient it was issued to: your last name and birthdate must match the hospital's record.",
+      "officialName": "Your account will use the name the hospital recorded: {{name}}",
       "nextBody": "Your MAPA account works at every participating hospital. Each time you ask for help, you choose the hospital and enter the access code its social-services office gave you.",
       "nextTitle": "Next: choose your hospital",
       "sectionTitle": "Patient Access Code",
@@ -1591,6 +1600,9 @@
     "haveAccount": "Already have an account?",
     "signIn": "Sign in",
     "errors": {
+      "codeExpired": "This code is no longer valid. Ask the hospital's social service office for a new code.",
+      "codeMismatch": "This code was issued to a different name or birthdate. Check your last name and birthdate in step 1 — they must match what the hospital recorded — or ask the office that gave you the code.",
+      "birthdateRequired": "Enter your birthdate.",
       "firstNameRequired": "First name is required.",
       "nameLettersOnly": "Letters only.",
       "nameReserved": "Please enter your real name (this looks like a role or system word).",

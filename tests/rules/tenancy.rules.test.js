@@ -1,3 +1,5 @@
+import { loadRules } from './helpers/rules.js'
+import { issueCode, issuedRecord } from './helpers/codes.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -15,7 +17,7 @@ beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'mapa-rules-test-tenancy',
     firestore: {
-      rules: fs.readFileSync(path.resolve('firestore.rules'), 'utf8'),
+      rules: loadRules(),
       host: 'localhost',
       port: 8080,
     },
@@ -97,7 +99,7 @@ describe('create paths accept tenantId', () => {
 
   it('admin slice, access code (super_admin only), audit entry', async () => {
     await assertSucceeds(setDoc(doc(as('admin-1'), 'applications', 'a1'), { patientId: 'patient-1', agencyId: 'dswd', status: 'endorsed', tenantId: 'hospital-1' }))
-    await assertSucceeds(setDoc(doc(as('super-1'), 'hospitalIds', 'MAPA-2026-00002'), { status: 'available', patId: null, tenantId: 'hospital-1' }))
+    await assertSucceeds(issueCode(as('super-1'), 'MAPA-2026-00002', { tenantId: 'hospital-1', issued: issuedRecord({ issuedByUid: 'super-1' }) }))
     await assertSucceeds(setDoc(doc(as('admin-1'), 'auditLog', 'l1'), { actorId: 'admin-1', details: 'x', tenantId: 'hospital-1' }))
   })
 

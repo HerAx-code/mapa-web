@@ -1,3 +1,4 @@
+import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, getDoc, deleteDoc, runTransaction } from 'firebase/firestore'
@@ -15,7 +16,7 @@ let testEnv
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'mapa-rules-test-input-verification',
-    firestore: { rules: fs.readFileSync(path.resolve('firestore.rules'), 'utf8'), host: 'localhost', port: 8080 },
+    firestore: { rules: loadRules(), host: 'localhost', port: 8080 },
   })
 })
 afterAll(async () => testEnv?.cleanup())
