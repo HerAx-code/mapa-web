@@ -1,11 +1,11 @@
 /**
  * DemoAccountsPanel (dev only) — reads the same list bootstrap-users.js seeds,
- * groups it by role with the current display names, hides accounts that can't
- * sign in (active:false) or are switched off (loginPanel:false), and signs in
- * with one click.
+ * shows it as ONE dropdown grouped by role with the current display names,
+ * hides accounts that can't sign in (active:false) or are switched off
+ * (loginPanel:false), and signs in with the chosen account.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import DemoAccountsPanel from '../../src/components/DemoAccountsPanel'
 import { USERS } from '../../scripts/demo-accounts.js'
 
@@ -15,32 +15,41 @@ const seeded = async () => ({
   source: 'seeded',
   accounts: USERS.map((u) => ({ email: u.email, password: u.password, role: u.profile.role, agencyId: u.profile.agencyId, active: u.profile.active, loginPanel: u.loginPanel })),
 })
+const select = () => screen.findByLabelText(/Demo accounts/)
 
 describe('DemoAccountsPanel', () => {
-  it('lists every sign-in-able seeded account, grouped, with the new role names', async () => {
+  it('is one dropdown, grouped by role, with the new role names', async () => {
     render(<DemoAccountsPanel onPick={() => {}} load={seeded} />)
-    expect(await screen.findByText('Network')).toBeTruthy()
-    expect(screen.getByText('Super Admin')).toBeTruthy()          // platform_admin
-    expect(screen.getByText('Hospital Admin')).toBeTruthy()       // super_admin
-    expect(screen.getByText('Staff Admin')).toBeTruthy()
-    expect(screen.getByText('platform@mapa.gov.ph')).toBeTruthy() // the seeded emails, not stale ones
-    expect(screen.getByText('admin@mapa.gov.ph')).toBeTruthy()
-    expect(screen.getByText('patient@gmail.com')).toBeTruthy()
+    const box = await select()
+    expect(box.tagName).toBe('SELECT')
+    const groups = [...box.querySelectorAll('optgroup')].map((g) => g.label)
+    expect(groups).toEqual(['Network', 'Hospital', 'Agencies', 'Patient'])
+    expect(within(box).getByRole('option', { name: /^Super Admin — platform@mapa.gov.ph/ })).toBeTruthy()
+    expect(within(box).getByRole('option', { name: /^Hospital Admin — admin@mapa.gov.ph/ })).toBeTruthy()
+    expect(within(box).getByRole('option', { name: /^Staff Admin — staff@mapa.gov.ph/ })).toBeTruthy()
+    expect(within(box).getByRole('option', { name: /patient@gmail.com/ })).toBeTruthy()
   })
 
   it('hides deactivated and switched-off accounts', async () => {
     render(<DemoAccountsPanel onPick={() => {}} load={seeded} />)
-    await screen.findByText('Network')
+    const box = await select()
     const hidden = USERS.filter((u) => u.profile.active === false || u.loginPanel === false)
     expect(hidden.length).toBeGreaterThan(0)
-    for (const u of hidden) expect(screen.queryByText(u.email)).toBeNull()
+    for (const u of hidden) expect(box.querySelector(`option[value="${u.email}"]`)).toBeNull()
   })
 
-  it('signs in with the clicked account', async () => {
+  it('signs in with the chosen account', async () => {
     const onPick = vi.fn()
     render(<DemoAccountsPanel onPick={onPick} load={seeded} />)
-    fireEvent.click(await screen.findByText('admin@mapa.gov.ph'))
+    fireEvent.change(await select(), { target: { value: 'admin@mapa.gov.ph' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(onPick).toHaveBeenCalledWith('admin@mapa.gov.ph', 'admin123')
+  })
+
+  it('does nothing until an account is chosen', async () => {
+    render(<DemoAccountsPanel onPick={() => {}} load={seeded} />)
+    await select()
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
   })
 
   it('a private-list entry without a password only hands over the email', async () => {
@@ -49,8 +58,9 @@ describe('DemoAccountsPanel', () => {
       { role: 'platform_admin', email: 'ops@hospital.example', password: '', label: 'Network operator' },
     ] })
     render(<DemoAccountsPanel onPick={onPick} load={local} />)
-    expect(await screen.findByText(/Your private list/)).toBeTruthy()
-    fireEvent.click(screen.getByText(/ops@hospital.example/))
+    expect(await screen.findByText(/your private list/)).toBeTruthy()
+    fireEvent.change(await select(), { target: { value: 'ops@hospital.example' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Fill in email' }))
     expect(onPick).toHaveBeenCalledWith('ops@hospital.example', '')
   })
 })
