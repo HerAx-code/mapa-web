@@ -2,7 +2,8 @@ import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
+import { normalizeBillNumber, billKeyId, BILL_CHECK_SOURCES, billCheckSourceLabel } from '../../utils/billKeys'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
@@ -508,25 +509,61 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // Revision 11: confirm the request's bill against the uploaded billing
   // statement. Recorded with who/when and the amount confirmed; a later edit
   // of the bill on the request makes it unconfirmed again (billVerified).
+  // Input verification Phase 1: the confirmation also records the bill number
+  // and where it was checked, and claims billKeys/{tenant}__{billNo} in the same
+  // transaction. A bill number already confirmed on ANOTHER request stops here
+  // and shows that request; staff may still use it with a written reason (a
+  // closed request refiled), which is audited.
+  const [billForm, setBillForm] = useState({ billNumber: '', source: '' })
+  const [billConflict, setBillConflict] = useState(null)
+  const [billOverride, setBillOverride] = useState('')
   const verifyBill = async () => {
     if (!canEdit || !isRequestMode || app?.totalBill == null) return
+    const billNumber = normalizeBillNumber(billForm.billNumber)
+    if (!billNumber || !billForm.source) return
+    if (billConflict && billOverride.trim().length < 5) return
     await flushSave()
     const remote = appRef.current?.intakeSheet ?? {}
+    const tenantId = app.tenantId
+    const keyRef = doc(db, 'billKeys', billKeyId(tenantId, billNumber))
     const updates = {
       'intakeSheet.billVerification': {
-        amount: Number(app.totalBill), by: user.name, byUid: user.uid, at: serverTimestamp(),
+        amount: Number(app.totalBill),
+        philhealth: Number(app.philhealthCovered) || 0,
+        otherCovered: Number(app.otherCovered) || 0,
+        billNumber, source: billForm.source,
+        by: user.name, byUid: user.uid, at: serverTimestamp(),
       },
       updatedAt: serverTimestamp(),
     }
     if (remote.billVerificationRequired === undefined) updates['intakeSheet.billVerificationRequired'] = !isIntakeComplete(remote, app.totalBill)
     try {
-      await updateDoc(doc(db, collectionName, app.id), updates)
+      const outcome = await runTransaction(db, async (tx) => {
+        const k = await tx.get(keyRef)
+        const prev = k.exists() ? k.data() : null
+        const reused = !!prev && prev.requestId !== app.id
+        if (reused && !billConflict) return { conflict: prev }
+        tx.set(keyRef, {
+          tenantId, billNumber, requestId: app.id, requestRef: app.requestId ?? '',
+          by: user.name ?? '', byUid: user.uid, at: serverTimestamp(),
+          ...(reused ? { overrideReason: billOverride.trim(), previousRequestId: prev.requestId } : {}),
+        })
+        tx.update(doc(db, collectionName, app.id), updates)
+        return { reused: reused ? prev : null }
+      })
+      if (outcome.conflict) { setBillConflict(outcome.conflict); return }
       logAudit(user, {
         action: 'intake_bill_verified', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
-        details: `Bill ${peso(app.totalBill)} confirmed against the billing statement`,
+        details: `Bill ${peso(app.totalBill)} (no. ${billNumber}) confirmed against: ${billCheckSourceLabel(billForm.source)}`,
         requestId: app.id, patientId: app.patientId ?? null,
       })
-      toast.success('Bill amount verified.')
+      if (outcome.reused) logAudit(user, {
+        action: 'bill_number_reused', targetType: 'request', targetId: app.id, targetName: app.requestId ?? '',
+        details: `Bill no. ${billNumber} was confirmed on request ${outcome.reused.requestRef || outcome.reused.requestId}; used here because: ${billOverride.trim()}`,
+        requestId: app.id, patientId: app.patientId ?? null,
+      })
+      setBillConflict(null); setBillOverride(''); setBillForm({ billNumber: '', source: '' })
+      toast.success('Bill verified.')
     } catch (err) {
       console.error(err)
       toast.error('Failed to save the bill verification.')
@@ -1052,7 +1089,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               </div>
               {billOk ? (
                 <p className="mt-4 flex items-center gap-1.5 text-sm text-green-700">
-                  <MdVerified size={16} /> Verified against the billing statement by {remoteIntake.billVerification.by}
+                  <MdVerified size={16} />
+                  {remoteIntake.billVerification.source
+                    ? `Bill no. ${remoteIntake.billVerification.billNumber} verified against the ${remoteIntake.billVerification.source === 'billing_system' ? 'hospital billing system' : 'signed printed bill'} by ${remoteIntake.billVerification.by}`
+                    : `Verified against the billing statement by ${remoteIntake.billVerification.by}`}
                   {tsToDate(remoteIntake.billVerification.at) ? ` · ${tsToDate(remoteIntake.billVerification.at).toLocaleDateString()}` : ''}
                 </p>
               ) : (
@@ -1060,12 +1100,43 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <p className="text-xs text-amber-800 leading-relaxed">
                     {remoteIntake.billVerification
                       ? `The bill changed after it was verified (${peso(remoteIntake.billVerification.amount)} → ${peso(app.totalBill)}). Check it again.`
-                      : 'Open the billing statement (Statement of Account) on the request and check that the total matches the amount above.'}
+                      : 'Check the total and the PhilHealth / other deductions above against the hospital’s own record of this bill — the billing system or a bill signed by the billing clerk — not only the patient’s upload.'}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  {canEdit && app.totalBill != null && (
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="bill-number" className="block text-xs font-medium text-gray-700 mb-1">Bill / SOA number</label>
+                        <input id="bill-number" className="input text-sm" placeholder="As printed on the bill"
+                          value={billForm.billNumber}
+                          onChange={e => { setBillForm(f => ({ ...f, billNumber: e.target.value })); setBillConflict(null); setBillOverride('') }} />
+                      </div>
+                      <div>
+                        <label htmlFor="bill-source" className="block text-xs font-medium text-gray-700 mb-1">Checked against</label>
+                        <select id="bill-source" className="input text-sm" value={billForm.source}
+                          onChange={e => setBillForm(f => ({ ...f, source: e.target.value }))}>
+                          <option value="">Select…</option>
+                          {BILL_CHECK_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                  {billConflict && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+                      <p className="text-xs text-red-800 leading-relaxed">
+                        This bill number was already confirmed on request <strong>{billConflict.requestRef || billConflict.requestId}</strong>
+                        {billConflict.by ? ` by ${billConflict.by}` : ''}{tsToDate(billConflict.at) ? ` on ${tsToDate(billConflict.at).toLocaleDateString()}` : ''}.
+                        The same bill should not be funded twice. If that request was closed or rejected and this is the same bill being refiled, say why to use it here.
+                      </p>
+                      <label htmlFor="bill-override" className="sr-only">Reason to use this bill number again</label>
+                      <textarea id="bill-override" rows={2} className="input text-sm mt-2" placeholder="Reason (recorded in the audit log)"
+                        value={billOverride} onChange={e => setBillOverride(e.target.value)} />
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {canEdit && app.totalBill != null && (
-                      <button type="button" className="btn-primary text-xs flex items-center gap-1.5" onClick={verifyBill}>
-                        <MdCheckCircle size={14} /> Amount matches — verify
+                      <button type="button" className="btn-primary text-xs flex items-center gap-1.5" onClick={verifyBill}
+                        disabled={!normalizeBillNumber(billForm.billNumber) || !billForm.source || (billConflict && billOverride.trim().length < 5)}>
+                        <MdCheckCircle size={14} /> {billConflict ? 'Use this bill number here' : 'Bill matches — verify'}
                       </button>
                     )}
                     <Link to={backToRequest} className="btn-secondary text-xs">Open the documents / correct the amount</Link>

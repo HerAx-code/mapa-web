@@ -980,6 +980,50 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Input verification Phase 1 (reports/Patient input verification.md) ───
+    // Duplicate-account flags, written by functions/src/identityIndex.js with
+    // the Admin SDK. The doc id starts with the hospital's tenantId, so a
+    // gateway reads only its own hospital's flags — the id check also covers a
+    // get() of a missing doc, so another hospital can't probe existence. The
+    // keyed-hash index itself is server-only.
+    match /identityFlags/{flagId} {
+      allow read:  if isAdmin() && flagId.split('__')[0] == userTenantId();
+      allow write: if false;
+    }
+    match /identityIndex/{id} {
+      allow read, write: if false;
+    }
+    match /identityIndexByUser/{id} {
+      allow read, write: if false;
+    }
+
+    // One doc per confirmed bill number at a hospital: {tenantId}__{BILLNO}.
+    // Written when staff confirm a request's bill, so the same bill confirmed
+    // on another request shows up ("already used on request X"). Moving a key
+    // to another request needs a written reason (a closed request refiled).
+    // Never deleted — it is the record that the bill was used.
+    function billKeyOk(keyId) {
+      let d = request.resource.data;
+      return isAdmin() && keyId.split('__')[0] == userTenantId() &&
+        d.tenantId == userTenantId() &&
+        d.keys().hasOnly(['tenantId', 'billNumber', 'requestId', 'requestRef', 'by', 'byUid', 'at',
+                          'overrideReason', 'previousRequestId']) &&
+        d.requestId is string && d.requestId != '' &&
+        d.billNumber is string && keyId == userTenantId() + '__' + d.billNumber &&
+        d.byUid == uid();
+    }
+    match /billKeys/{keyId} {
+      allow read:   if isAdmin() && keyId.split('__')[0] == userTenantId();
+      allow create: if billKeyOk(keyId);
+      allow update: if billKeyOk(keyId) &&
+                       resource.data.tenantId == userTenantId() &&
+                       (request.resource.data.requestId == resource.data.requestId ||
+                        (request.resource.data.get('overrideReason', '') is string &&
+                         request.resource.data.get('overrideReason', '').size() >= 5 &&
+                         request.resource.data.get('previousRequestId', '') == resource.data.requestId));
+      allow delete: if false;
+    }
+
     // ── accessCodePrefixes ─────────────────────────────────────────────────────
     // Phase 8. One doc per access-code prefix ever used, naming its hospital.
     // Access codes live in ONE namespace (hospitalIds/{code}), so two hospitals
