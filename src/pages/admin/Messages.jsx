@@ -2,7 +2,7 @@ import { useState, useEffect, Fragment } from 'react'
 import Layout from '../../components/Layout'
 import {
   collection, query, where, orderBy, onSnapshot,
-  doc, updateDoc, deleteDoc, serverTimestamp, getDocs, writeBatch,
+  doc, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
-  MdSearch, MdCheckCircle, MdDelete, MdDone,
+  MdSearch, MdCheckCircle, MdDone,
   MdMessage,
 } from 'react-icons/md'
 
@@ -48,7 +48,6 @@ export default function Messages() {
 
   const [showCompose,       setShowCompose]       = useState(false)
   const [pendingOpenConvId, setPendingOpenConvId] = useState(null)
-  const [confirmDelete,     setConfirmDelete]     = useState(false)
 
   // ── Load conversations ─────────────────────────────────────────────────
   useEffect(() => {
@@ -137,23 +136,8 @@ export default function Messages() {
     setSelected(new Set())
   }
 
-  const performDelete = async () => {
-    await Promise.all([...selected].map(async (id) => {
-      const msgsSnap = await getDocs(collection(db, 'conversations', id, 'messages'))
-      if (msgsSnap.empty) return
-      for (let i = 0; i < msgsSnap.docs.length; i += 500) {
-        const b = writeBatch(db)
-        msgsSnap.docs.slice(i, i + 500).forEach(d => b.delete(d.ref))
-        await b.commit()
-      }
-    }))
-    const batch = writeBatch(db)
-    for (const id of selected) batch.delete(doc(db, 'conversations', id))
-    await batch.commit()
-    if (selected.has(activeConvId)) { setActiveConvId(null); setThreadText('') }
-    setSelected(new Set())
-    setConfirmDelete(false)
-  }
+  // Conversations are part of the case record: no one deletes them (owner
+  // decision 2026-11-16; firestore.rules denies conversation deletes).
 
   const unreadCount = conversations.filter(c => (c.unread?.[user?.uid] ?? 0) > 0).length
 
@@ -447,19 +431,6 @@ export default function Messages() {
             </div>
           )}
 
-          {/* Delete confirmation */}
-          {confirmDelete && (
-            <div className="bg-red-50 border-b border-red-200 px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
-              <p className="text-xs text-red-700 flex-1">
-                Delete <strong>{selected.size}</strong> conversation{selected.size !== 1 ? 's' : ''} for all participants?
-              </p>
-              <button className="text-xs text-gray-500 font-medium hover:text-gray-700"
-                onClick={() => setConfirmDelete(false)}>Cancel</button>
-              <button className="text-xs text-white bg-red-500 px-2.5 py-1 rounded-lg hover:bg-red-600"
-                onClick={performDelete}>Delete</button>
-            </div>
-          )}
-
           {/* Toolbar */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 bg-gray-50 flex-shrink-0">
             <input type="checkbox" className="w-4 h-4 accent-brand-500 flex-shrink-0"
@@ -470,10 +441,6 @@ export default function Messages() {
                 <button onClick={markSelectedRead}
                   className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200 bg-white px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors">
                   <MdDone size={13} /> Read
-                </button>
-                <button onClick={() => setConfirmDelete(true)}
-                  className="flex items-center gap-1 text-xs text-red-500 border border-red-200 bg-white px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
-                  <MdDelete size={13} /> Delete
                 </button>
                 <span className="text-xs text-gray-500">{selected.size} selected</span>
               </>

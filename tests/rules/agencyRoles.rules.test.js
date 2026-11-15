@@ -96,3 +96,11 @@ describe('agenciesPublic projection', () => {
       { name: 'PCSO', enabled: true, slots: { total: 1, remaining: 1 } }))
   })
 })
+
+describe('owner decisions 2026-11-16', () => {
+  it('only the Agency Admin edits the Agency Profile', async () => {
+    await assertFails(updateDoc(ag('coord'), { description: 'Changed by a coordinator' }))
+    await assertFails(updateDoc(ag('coord'), { officeHours: '8-5' }))
+    await assertSucceeds(updateDoc(ag('aadmin'), { description: 'Changed by the Agency Admin' }))
+  })
+})

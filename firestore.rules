@@ -892,11 +892,12 @@ service cloud.firestore {
                        // settings the Agency Admin owns are pinned: slot
                        // capacity, per-hospital totals, manual slot
                        // adjustments, budget allocation/period/fund source,
-                       // per-applicant cap, assistance types, name, enabled.
+                       // per-applicant cap, assistance types, name, enabled, and
+                       // the Agency Profile text (owner decision 2026-11-16: the
+                       // Agency Admin edits the profile). Allowlist, not denylist.
                        (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
-                        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                          'partnerHospitalIds', 'enabled', 'name', 'maxPerApplicant',
-                          'assistanceTypes', 'slotAdjustments']) &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'budget', 'slots', 'lastResetDate', 'hospitalSlots', 'slotRestoredFor']) &&
                         request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
                         coordinatorBudgetOk() && coordinatorHospitalSlotsOk());
       allow delete: if isPlatformAdmin();
@@ -1461,7 +1462,9 @@ service cloud.firestore {
       // read-receipt writes in the two admin message components.
       allow update: if isAuth() && uid() in resource.data.participants &&
                        request.resource.data.participants == resource.data.participants;
-      allow delete: if isHospitalAdmin(resource.data) || (isAuth() && uid() in resource.data.participants);
+      // Owner decision 2026-11-16: conversations are part of the case record;
+      // no one deletes them (staff, agencies or patients). Admin SDK only.
+      allow delete: if false;
 
       match /messages/{msgId} {
         allow read:   if isAuth() && uid() in
@@ -1489,7 +1492,7 @@ service cloud.firestore {
           // conversation without lastAt is permissive rather than erroring.
           (!isPatient() ||
            request.time >= get(/databases/$(database)/documents/conversations/$(convId)).data.get('lastAt', timestamp.value(0)) + duration.value(5, 's'));
-        allow delete: if isHospitalAdmin(get(/databases/$(database)/documents/conversations/$(convId)).data);
+        allow delete: if false;  // case record (owner decision 2026-11-16)
       }
     }
 
@@ -1523,8 +1526,10 @@ service cloud.firestore {
       // their hospital's requests written by (tenant-less) agency actors — the
       // request timeline queries by requestId.
       allow read:   if isHospitalSuperAdmin(resource.data) ||
-                       (isSuperAdmin() && resource.data.requestId != null &&
-                        isHospitalSuperAdmin(get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data)) ||
+                       // Case Timeline (owner decision 2026-11-16): Staff Admins too read
+                       // the entries of their own hospital's requests (not the full log).
+                       (isAdmin() && resource.data.requestId != null &&
+                        isHospitalAdmin(get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data)) ||
                        (isAgencyAdmin() && resource.data.actorAgencyId == userAgencyId()) ||
                        (isAgency() && resource.data.requestId != null &&
                         userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||

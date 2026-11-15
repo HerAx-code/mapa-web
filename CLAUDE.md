@@ -44,7 +44,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
   patients, access codes (own prefix), staff accounts, audit log, Hospital
   Settings (branding), announcements, messages, reports, export.
 - `staff_admin` → "Staff Admin" — the hospital's day-to-day gateway work; no staff
-  accounts, audit log, Hospital Settings, access-code reset/delete or user deletion. Staff Admins DO issue access codes at the desk (owner decision 2026-11-15).
+  accounts, audit log, Hospital Settings, access-code reset/delete or user deletion. Staff Admins DO issue access codes at the desk (owner decision 2026-11-15). Staff Admins see each case's Case Timeline (that request's audit entries; owner decision 2026-11-16) but not the full Audit Log.
 - `agency_admin` → "Agency Admin" — agency portal + budget allocation, own team,
   promotions, agency audit log; partner hospitals read-only.
 - `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
@@ -52,10 +52,12 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
   its agency doc are limited (rules, 2026-11-15) to budget usage, today's
   remaining slots and one named hospital's remaining slots (`slotRestoredFor`);
   capacity, per-hospital totals, manual slot adjustments, allocation, cap,
-  assistance types, name and `enabled` are the Agency Admin's / Super Admin's.
-  `enabled` is the Super Admin's alone.
+  assistance types, name, the Agency Profile text and `enabled` are the Agency
+  Admin's / Super Admin's (owner decision 2026-11-16: only the Agency Admin
+  edits the profile). `enabled` is the Super Admin's alone.
 - **Messaging is reply-only for patients:** only staff and agencies start a
-  conversation; patient copy must never tell them to start one.
+  conversation; patient copy must never tell them to start one. **No one deletes
+  a conversation or message** (case record; owner decision 2026-11-16, rules deny it).
 - `patient` — patient portal, own data only. **The access code is OPTIONAL at
   registration** (owner decision 2026-11-15, reversing 2026-11-14; see
   reports/Access code at registration.md). With a code, its hospital is their

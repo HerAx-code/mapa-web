@@ -189,6 +189,9 @@ function PatientPreview({ agency }) {
 
 export default function AgencyProfile() {
   const { user }                    = useAuth()
+  // Owner decision 2026-11-16: only the Agency Admin edits the profile
+  // (firestore.rules pins it for coordinators).
+  const canEdit = user?.role === 'agency_admin'
   const navigate                    = useNavigate()
   const [agency, setAgency]         = useState(null)
   const [coordinators, setCoords]   = useState([])
@@ -316,7 +319,7 @@ export default function AgencyProfile() {
             <div className="flex items-center gap-2">
               <MdEdit size={16} className="text-brand-500" />
               <p className="text-sm font-semibold text-gray-800">Public information</p>
-              <span className="text-xs text-gray-500">— you can edit this</span>
+              <span className="text-xs text-gray-500">{canEdit ? '— you can edit this' : '— your Agency Admin can edit this'}</span>
             </div>
             {agency.profileUpdatedAt && (
               <span className="text-xs text-gray-500">
@@ -326,37 +329,37 @@ export default function AgencyProfile() {
           </div>
 
           <div className="space-y-2">
-            <EditableField
+            <EditableField disabled={!canEdit}
               icon={MdDescription} label="Description" multiline
               value={agency.description}
               placeholder="Brief description of what your agency does (max 300 chars)"
               onSave={handleSaveField('description', 'Description')}
             />
-            <EditableField
+            <EditableField disabled={!canEdit}
               icon={MdLocationOn} label="Location"
               value={agency.location}
               placeholder="e.g. Hospital Ground Floor, Cotabato City"
               onSave={handleSaveField('location', 'Location')}
             />
-            <EditableField
+            <EditableField disabled={!canEdit}
               icon={MdPhone} label="Phone"
               value={agency.phone}
               placeholder="e.g. 064-421-2500"
               onSave={handleSaveField('phone', 'Phone')}
             />
-            <EditableField
+            <EditableField disabled={!canEdit}
               icon={MdEmail} label="Public contact email"
               value={agency.publicEmail}
               placeholder="e.g. program@example.org"
               onSave={handleSaveField('publicEmail', 'Public email')}
             />
-            <EditableField
+            <EditableField disabled={!canEdit}
               icon={MdSchedule} label="Processing time"
               value={agency.processingTime}
               placeholder="e.g. Same Day, 3–5 Days"
               onSave={handleSaveField('processingTime', 'Processing time')}
             />
-            <EditableField
+            <EditableField disabled={!canEdit}
               icon={MdAccessTime} label="Office hours"
               value={agency.officeHours}
               placeholder="e.g. Mon–Fri, 8:00 AM – 5:00 PM"
@@ -374,7 +377,7 @@ export default function AgencyProfile() {
           <p className="text-xs text-gray-500 mb-3 leading-relaxed">
             Pre-fills the "Conducting Social Worker" field when scheduling interviews. This name also appears as the signatory on printed Guarantee Letters when no other interviewer is recorded.
           </p>
-          <EditableField
+          <EditableField disabled={!canEdit}
             icon={MdPerson} label="Default signatory"
             value={agency.defaultSignatory}
             placeholder={`Leave blank to use the current logged-in coordinator (${user.name})`}
