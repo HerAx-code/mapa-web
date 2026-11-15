@@ -36,6 +36,7 @@ import IdentityStep from '../../components/patient/IdentityStep'
 import { PHILID_QR_ENABLED } from '../../utils/philIdQr'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
+import { DECLARATION_VERSION } from '../../utils/verificationPolicy'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
@@ -843,6 +844,12 @@ export default function RequestAssistance() {
         status:            'submitted',
         attachedDocuments,
         filedBy,
+        // The signed declaration: which text (version + language), when, and
+        // whether a representative signed it. The account is the signer.
+        declaration: {
+          version: DECLARATION_VERSION, lang: isFil ? 'fil' : 'en',
+          byRep: !!filedByRep, at: serverTimestamp(),
+        },
         submittedAt:       serverTimestamp(),
         updatedAt:         serverTimestamp(),
       })
@@ -1405,12 +1412,26 @@ export default function RequestAssistance() {
             )}
           </div>
 
-          {/* Declaration */}
-          <label className="flex items-start gap-3 cursor-pointer select-none">
-            <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500 flex-shrink-0"
-              checked={declared} onChange={e => setDeclared(e.target.checked)} />
-            <span className="text-sm text-gray-600 leading-snug">{t('patient.request.declaration')}</span>
-          </label>
+          {/* Declaration (input verification Phase 3): names what is being
+              declared and the actual penalties; recorded on the request with
+              its version and time as an electronic signature (RA 8792). */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p className="text-sm font-semibold text-gray-800">{t('patient.request.declarationTitle')}</p>
+            <p className="mt-1 text-sm text-gray-700">{t('patient.request.declarationIntro')}</p>
+            <ul className="mt-1 list-disc pl-5 space-y-0.5 text-sm text-gray-700">
+              <li>{t('patient.request.declarationTrue')}</li>
+              <li>{t('patient.request.declarationCoverage')}</li>
+              <li>{t('patient.request.declarationChecks')}</li>
+            </ul>
+            <p className="mt-2 text-xs text-gray-600 leading-relaxed">{t('patient.request.declarationPenalty')}</p>
+            <label className="mt-3 flex items-start gap-3 cursor-pointer select-none min-h-[44px]">
+              <input type="checkbox" className="mt-0.5 w-5 h-5 accent-brand-500 flex-shrink-0"
+                checked={declared} onChange={e => setDeclared(e.target.checked)} />
+              <span className="text-sm font-medium text-gray-800 leading-snug">
+                {t(filedByRep ? 'patient.request.declarationConfirmRep' : 'patient.request.declarationConfirm')}
+              </span>
+            </label>
+          </div>
           </>)}
         </div>
 

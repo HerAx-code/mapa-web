@@ -84,6 +84,12 @@ users, requests, applications, documents, documentContents, documentTypes, assis
 - A request needs a recorded verification call (`intakeSheet.verificationCall`) before endorsing when `interviewReasons()` (src/utils/verificationPolicy.js) says so: an amount at or above the hospital's threshold, a strong duplicate-account flag, or a reused bill number.
 - The policy lives in `hospitalSettings/{tenantId}`, which is staff-only so patients can't see the threshold. The Hospital Admin edits it in Hospital Settings.
 
+**Input verification Phase 3:**
+- The patient signs a declaration at submission (`patient.request.declaration*`, EN/FIL, naming the RA 11463 Sec. 11 penalties). It is stored on the request as `declaration { version, lang, byRep, at }`.
+- **Bump `DECLARATION_VERSION`** (src/utils/verificationPolicy.js) whenever that text changes. The wording should be reviewed by the team's adviser.
+- Optional second-person approval (`hospitalSettings.secondPersonAboveAmount`, off by default): above that amount, whoever confirmed the bill, recorded the call or completed the assessment can't also endorse (`secondPersonHold()`).
+- The endorse gates are client-side, like the rest of the endorse gate; the rules don't enforce them.
+
 ## Tenancy (multi-hospital network — all phases built, not yet deployed)
 MAPA is moving from one host facility per deployment to **one deployment serving many
 hospitals** (docs/multi-hospital-network-plan.md — read it before touching rules,

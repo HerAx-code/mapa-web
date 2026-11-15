@@ -18,7 +18,7 @@ import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
 import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
-import { interviewReasons } from '../../utils/verificationPolicy'
+import { interviewReasons, secondPersonHold } from '../../utils/verificationPolicy'
 import { useIdentityFlag, useHospitalSettings } from '../../hooks/useVerification'
 import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
 import { overdueCount, isOverdue, slaState, slaLabel, SLA_HOURS } from '../../utils/sla'
@@ -794,7 +794,8 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   const identityFlag  = useIdentityFlag(request.patientId)
   const hospitalPolicy = useHospitalSettings()
   const callReasons   = interviewReasons({ request, settings: hospitalPolicy, identityFlag })
-  const stage = deriveRequestStage(request, reqDocs, { callReasons })
+  const secondPerson  = secondPersonHold({ request, settings: hospitalPolicy, user })
+  const stage = deriveRequestStage(request, reqDocs, { callReasons, holds: secondPerson ? [secondPerson] : [] })
   const allVerified    = stage.docsVerified
   const intakeComplete = stage.intakeComplete
   const canEndorse     = stage.canEndorse
@@ -1148,6 +1149,13 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
               <p className="text-amber-700/80 mt-0.5">Verify the representative's ID and selfie in the documents below.</p>
             </div>
           )}
+          {/* Input verification Phase 3: the signed declaration on record. */}
+          <p className="text-xs text-gray-500 flex items-center gap-1.5">
+            <MdCheckCircle size={13} className={request.declaration?.at ? 'text-green-600' : 'text-gray-400'} />
+            {request.declaration?.at
+              ? `Declaration signed${request.declaration.byRep ? ' by the representative' : ''} · ${fmtDate(request.declaration.at)} · version ${request.declaration.version} (${request.declaration.lang === 'fil' ? 'Filipino' : 'English'})`
+              : 'Filed before the signed declaration was added'}
+          </p>
 
           {/* ① Verify documents — extracted to VerifyDocsPanel (Phase 0). */}
           <VerifyDocsPanel
@@ -1315,7 +1323,12 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                     Before endorsing, finish {stage.blockers.length} step{stage.blockers.length > 1 ? 's' : ''}:
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {stage.blockers.map(b => b.call ? (
+                    {stage.blockers.map(b => b.hold ? (
+                      <span key={b.key}
+                        className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs text-blue-800">
+                        {b.label} <span className="text-blue-700/80">· {b.detail}</span>
+                      </span>
+                    ) : b.call ? (
                       <Link key="call" to={`/admin/requests/${request.id}/intake#call`}
                         className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800 hover:bg-amber-100">
                         {b.label} <span className="text-amber-600/80">· {b.detail}</span>

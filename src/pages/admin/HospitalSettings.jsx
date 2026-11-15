@@ -44,20 +44,27 @@ function VerificationPolicyCard({ user, tenantId }) {
   const dupValue = onDuplicate ?? policy.interviewOnDuplicate
   const amountNum = String(amountValue).trim() === '' ? null : Number(amountValue)
   const amountBad = amountNum != null && (!Number.isFinite(amountNum) || amountNum <= 0)
+  // Phase 3: second-person approval above an amount (blank = off).
+  const [second, setSecond] = useState(null)
+  const secondValue = second ?? (policy.secondPersonAboveAmount ?? '')
+  const secondNum = String(secondValue).trim() === '' ? null : Number(secondValue)
+  const secondBad = secondNum != null && (!Number.isFinite(secondNum) || secondNum <= 0)
 
   const save = async () => {
-    if (amountBad) return
+    if (amountBad || secondBad) return
     setSaving(true)
     try {
       await setDoc(doc(db, 'hospitalSettings', tenantId), {
         tenantId, interviewAboveAmount: amountNum, interviewOnDuplicate: !!dupValue,
+        secondPersonAboveAmount: secondNum,
         updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
       })
       logAudit(user, {
         action: 'verification_policy_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
-        details: `Verification call: ${amountNum ? `amount ₱${amountNum.toLocaleString()} or more` : 'no amount rule'}; ${dupValue ? 'on' : 'off'} for duplicate-account flags`,
+        details: `Verification call: ${amountNum ? `amount ₱${amountNum.toLocaleString()} or more` : 'no amount rule'}; ${dupValue ? 'on' : 'off'} for duplicate-account flags. `
+          + `Second-person approval: ${secondNum ? `₱${secondNum.toLocaleString()} or more` : 'off'}`,
       })
-      setAmount(null); setOnDuplicate(null)
+      setAmount(null); setOnDuplicate(null); setSecond(null)
       toast.success('Verification settings saved.')
     } catch (e) {
       console.error(e)
@@ -83,8 +90,20 @@ function VerificationPolicyCard({ user, tenantId }) {
         <input type="checkbox" className="mt-0.5" checked={!!dupValue} onChange={(e) => setOnDuplicate(e.target.checked)} />
         <span>When another account looks like the same patient (same national ID card, or same name and phone)</span>
       </label>
+      <div className="pt-3 border-t border-gray-100">
+        <p className="text-sm font-semibold text-gray-800">Second-person approval</p>
+        <p className="text-xs text-gray-500 mt-1">
+          At or above this amount, the staff member who confirmed the bill, recorded the call or completed the assessment
+          can’t also endorse — another staff member must. Leave blank if your office has only one social worker.
+        </p>
+      </div>
+      <Field label="Amount needed at or above (₱)" error={secondBad ? 'Enter an amount above zero, or leave it blank.' : undefined}
+        hint="Leave blank to turn this off.">
+        <input className="input sm:w-56" inputMode="numeric" value={secondValue}
+          onChange={(e) => setSecond(e.target.value.replace(/[^\d.]/g, ''))} />
+      </Field>
       <div className="flex justify-end">
-        <button className="btn-primary text-sm" onClick={save} disabled={saving || amountBad}>
+        <button className="btn-primary text-sm" onClick={save} disabled={saving || amountBad || secondBad}>
           {saving ? 'Saving…' : 'Save verification settings'}
         </button>
       </div>
