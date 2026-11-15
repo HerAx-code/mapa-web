@@ -307,7 +307,11 @@ service cloud.firestore {
           ((request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
             request.resource.data.get('tenantId', null)   == resource.data.get('tenantId', null) &&
             request.resource.data.get('tenantIds', null)  == resource.data.get('tenantIds', null)) ||
-           patientSwitchesHospital()) &&
+           // A patient on a holding period stays with the hospital that set it
+           // (only the CURRENT hospital may lift it).
+           (resource.data.get('cooldown', 0) == 0 && patientSwitchesHospital())) &&
+          // Holding period: set by the patient's current hospital, never by them.
+          request.resource.data.get('cooldown', 0) == resource.data.get('cooldown', 0) &&
           (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null)) &&
           // Patient-bound codes check last name + birthdate, so a patient may
           // fill these in once (accounts made before 2026-11-15 lack them)
@@ -346,7 +350,8 @@ service cloud.firestore {
           (resource.data.get('role', '') != 'patient' ||
            resource.data.get('tenantId', '') == userTenantId() ||
            (request.resource.data.get('active', null)   == resource.data.get('active', null) &&
-            request.resource.data.get('deletion', null) == resource.data.get('deletion', null))) &&
+            request.resource.data.get('deletion', null) == resource.data.get('deletion', null) &&
+            request.resource.data.get('cooldown', 0)    == resource.data.get('cooldown', 0))) &&
           request.resource.data.get('tenantIds', null) == resource.data.get('tenantIds', null) &&
           request.resource.data.get('hospitalId', null) == resource.data.get('hospitalId', null) &&
           (request.resource.data.role == resource.data.role ||
@@ -454,11 +459,55 @@ service cloud.firestore {
           resource.data.get('status', '') != 'closed' &&
           (!(request.resource.data.get('status', '') in ['approved', 'certificate']) ||
            resource.data.get('status', '') in ['approved', 'certificate'] ||
-           parentRequestOpen(resource.data))) ||
+           parentRequestOpen(resource.data)) &&
+          approvalCooldownOk(resource.data, request.resource.data)) ||
         hospitalAdminWrite()
       );
       // A slice exists only once a request is endorsed: it is part of the
       // funding record and is never deleted (2026-11-15 review).
+      allow delete: if false;
+    }
+
+    // ── 30-day approval cooldown (per agency) ───────────────────────────────
+    // approvalMarks/{agencyId}__{patientId} records the agency's latest approval
+    // for a patient: { agencyId, patientId, requestId, sliceId, lastApprovedAt }.
+    // A slice becomes 'approved' only in the same write that stamps the mark
+    // (getAfter), and only if the mark before it is missing, belongs to the
+    // SAME request (co-funding re-approval after a reversal), or is 30+ days
+    // old. A reversal leaves the mark alone, so the clock keeps running from
+    // the original approval. Other agencies have their own marks: each program
+    // keeps its own frequency rule.
+    function approvalMark(agencyId, patientId) {
+      return /databases/$(database)/documents/approvalMarks/$(agencyId + '__' + patientId);
+    }
+    function approvalCooldownOk(before, after) {
+      let path = approvalMark(before.agencyId, before.patientId);
+      return after.get('status', '') != 'approved' ||
+        before.get('status', '') in ['approved', 'certificate'] ||
+        (before.get('requestId', null) is string &&
+         getAfter(path).data.get('requestId', '') == before.requestId &&
+         getAfter(path).data.get('lastApprovedAt', null) == request.time &&
+         (!exists(path) ||
+          get(path).data.get('requestId', '') == before.requestId ||
+          get(path).data.lastApprovedAt <= request.time - duration.value(30, 'd')));
+    }
+
+    match /approvalMarks/{markId} {
+      allow read: if isAgency() && markId.split('__')[0] == userAgencyId();
+      // Written only with a real approval of this agency's slice for that
+      // patient and request (the slice rule above checks the other direction).
+      allow create, update: if isAgency() &&
+        request.resource.data.keys().hasOnly(['agencyId', 'patientId', 'requestId', 'sliceId', 'lastApprovedAt']) &&
+        request.resource.data.agencyId == userAgencyId() &&
+        request.resource.data.patientId is string &&
+        markId == userAgencyId() + '__' + request.resource.data.patientId &&
+        request.resource.data.requestId is string &&
+        request.resource.data.sliceId is string &&
+        request.resource.data.lastApprovedAt == request.time &&
+        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('status', '') == 'approved' &&
+        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('agencyId', '') == userAgencyId() &&
+        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('patientId', '') == request.resource.data.patientId &&
+        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('requestId', '') == request.resource.data.requestId;
       allow delete: if false;
     }
 
@@ -513,6 +562,9 @@ service cloud.firestore {
                        request.resource.data.amountCommitted == 0 &&
                        get(/databases/$(database)/documents/users/$(uid()))
                          .data.get('activeRequestId', null) == null &&
+                       // Holding period (Patients page): no new request while it is on.
+                       get(/databases/$(database)/documents/users/$(uid()))
+                         .data.get('cooldown', 0) == 0 &&
                        request.resource.data.get('patientHospitalId', '') is string &&
                        request.resource.data.get('patientHospitalId', '') != '' &&
                        request.resource.data.patientHospitalId ==

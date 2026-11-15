@@ -69,3 +69,19 @@ describe('journeyState', () => {
     expect(journeyState(undefined).outcome).toBeNull()
   })
 })
+
+describe('Assessment step (derived, nothing writes status assessment)', () => {
+  const docs = (...st) => st.map((status, i) => ({ documentId: 'd' + i, status }))
+  it('is current once every attached document is verified', () => {
+    expect(currentKey({ status: 'under_review', attachedDocuments: docs('verified', 'verified') })).toBe('assessment')
+    expect(currentKey({ status: 'submitted', attachedDocuments: docs('verified') })).toBe('assessment')
+  })
+  it('stays on review while any document is pending or rejected, or none are attached', () => {
+    expect(currentKey({ status: 'under_review', attachedDocuments: docs('verified', 'pending') })).toBe('under_review')
+    expect(currentKey({ status: 'under_review', attachedDocuments: docs('rejected') })).toBe('under_review')
+    expect(currentKey({ status: 'under_review', attachedDocuments: [] })).toBe('under_review')
+  })
+  it('does not hold back a request that moved on', () => {
+    expect(currentKey({ status: 'endorsed', attachedDocuments: docs('verified') })).toBe('endorsed')
+  })
+})

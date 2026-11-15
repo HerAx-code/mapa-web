@@ -15,6 +15,7 @@ import { getOrCreateConversation } from '../../utils/messages'
 import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { tsToDate, fmtDate } from '../../utils/dates'
 import { computeFunding, deriveRequestFinancials, syncedRequestStatus, isRequestClosedByGateway } from '../../utils/requests'
+import { APPROVAL_COOLDOWN_DAYS, approvalMarkId, approvalCooldownBlock } from '../../utils/approvalCooldown'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
@@ -357,108 +358,25 @@ export default function ApplicationDetail() {
   const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid }) => {
     setUpdating(true)
     try {
-      // ── Pre-transaction cooldown gate (same-agency only).
-      // Transactions can only read by doc-ref, not run collection queries,
-      // so we check cooldown here. A second approval landing between this
-      // check and the transaction is theoretically possible but extremely
-      // narrow; the ApproveModal already shows a hard block when it loads.
-      //
-      // SCOPE: this query intentionally filters by agencyId so it only
-      // returns applications from the SAME agency as the approver. A
-      // patient-only query (no agencyId clause) returns every app the
-      // patient has ever filed — including cross-agency ones — which
-      // Firestore's rule engine then denies wholesale with
-      // permission-denied because the read rule on /applications
-      // requires resource.data.agencyId == userAgencyId() and the query
-      // can't statically guarantee that for unconstrained patientId
-      // queries. Cross-agency cooldown is already caught by the
-      // hospitalIds check below (every approval stamps lastApprovedAt
-      // on the patient's gateway Hospital ID, so any agency's recent
-      // approval is visible there).
-      const COOLDOWN_DAYS = 30
-      const now = Date.now()
-      const recentSnap = await getDocs(query(
-        collection(db, 'applications'),
-        where('patientId', '==', app.patientId),
-        where('agencyId',  '==', user.agencyId),
-      ))
-      const blocking = recentSnap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        // Co-funding: sibling slices of the SAME request are meant to be
-        // approved by several agencies, so they never block each other. Only
-        // approvals tied to a DIFFERENT (or no) request trip the cooldown.
-        .filter(a => a.id !== app.id && !(app.requestId && a.requestId === app.requestId))
-        .filter(a => {
-          // Signal 1: live approval within window
-          if (['approved', 'certificate'].includes(a.status)) {
-            const d = tsToDate(a.approvedAt)
-            if (d) {
-              const days = Math.floor((now - d.getTime()) / 86400000)
-              if (days <= COOLDOWN_DAYS) return true
-            }
-          }
-          // Signal 2: reversed approval whose cooldown hasn't elapsed yet
-          const until = tsToDate(a.cooldownUntilAt)
-          if (until && until.getTime() > now) return true
-          return false
-        })
-      if (blocking.length > 0) {
-        const b = blocking[0]
-        const reversed = !!b.cooldownUntilAt && !b.approvedAt
-        toast.error(
-          reversed
-            ? `This patient has an active cooldown from a reversed approval at ${b.agencyName}. ` +
-              `The ${COOLDOWN_DAYS}-day window has not elapsed yet. Contact an administrator if a second approval is genuinely needed.`
-            : `This patient was already approved by ${b.agencyName} less than ${COOLDOWN_DAYS} days ago ` +
-              `(₱${Number(b.approvedAmount ?? 0).toLocaleString()}). Approval blocked. ` +
-              `Contact an administrator if a second approval is genuinely needed.`,
-          { duration: 8000 }
-        )
+      // ── 30-day cooldown, per agency. The rules refuse the approval unless it
+      // writes this agency's approval mark for the patient and the previous
+      // mark is missing, for this same request, or 30+ days old
+      // (src/utils/approvalCooldown.js). It is re-checked inside the
+      // transaction; this early read only gives a clear message.
+      if (!app.requestId) {
+        toast.error('This slice is not linked to a request and cannot be approved.')
         return
       }
-
-      // #9 — Second cooldown gate: read the patient's hospitalIds doc.
-      // This catches the abuse case where a patient deleted their account
-      // and re-registered with a new email to bypass per-UID cooldown
-      // tracking. The cooldownUntilAt on hospitalIds persists across
-      // account churn because it's keyed by the gateway-issued ID, not by uid.
-      // (Fall back to user doc if the app pre-dates the patientHospitalId
-      // snapshot field added in MedicalPrograms.handleSubmit.)
-      let patientHospitalId = app.patientHospitalId ?? null
-      if (!patientHospitalId) {
-        const userSnap = await getDoc(doc(db, 'users', app.patientId)).catch(() => null)
-        patientHospitalId = userSnap?.data?.()?.hospitalId ?? null
-      }
-      // Skip the per-patient (hospital-ID) cooldown for co-funding slices —
-      // one request is intentionally funded by several agencies in the same
-      // window. The cross-request cooldown is enforced at request submission
-      // (one active request at a time).
-      if (patientHospitalId && !app.requestId) {
-        const hidSnap = await getDoc(doc(db, 'hospitalIds', patientHospitalId)).catch(() => null)
-        const hid = hidSnap?.exists?.() ? hidSnap.data() : null
-        if (hid?.cooldownUntilAt) {
-          const until = tsToDate(hid.cooldownUntilAt)
-          if (until && until.getTime() > now) {
-            toast.error(
-              `This patient (Hospital ID ${patientHospitalId}) has an active cooldown until ${fmtDate(until)}. ` +
-              `Approval blocked. Contact an administrator if a second approval is genuinely needed.`,
-              { duration: 8000 }
-            )
-            return
-          }
-        }
-        if (hid?.lastApprovedAt) {
-          const lastAp = tsToDate(hid.lastApprovedAt)
-          const days = lastAp ? Math.floor((now - lastAp.getTime()) / 86400000) : Infinity
-          if (days <= COOLDOWN_DAYS) {
-            toast.error(
-              `This patient (Hospital ID ${patientHospitalId}) was approved less than ${COOLDOWN_DAYS} days ago ` +
-              `(possibly under a different account). Approval blocked.`,
-              { duration: 8000 }
-            )
-            return
-          }
-        }
+      const markRef = doc(db, 'approvalMarks', approvalMarkId(user.agencyId, app.patientId))
+      const COOLDOWN_MSG = (b) =>
+        `Your agency approved assistance for this patient ${b.daysAgo} day${b.daysAgo === 1 ? '' : 's'} ago, ` +
+        `on another request. Agencies can approve once every ${APPROVAL_COOLDOWN_DAYS} days per patient; ` +
+        `this one can be approved from ${fmtDate(b.until)}.`
+      const earlyMark = await getDoc(markRef)
+      const earlyBlock = approvalCooldownBlock(earlyMark.exists() ? earlyMark.data() : null, app.requestId)
+      if (earlyBlock) {
+        toast.error(COOLDOWN_MSG(earlyBlock), { duration: 8000 })
+        return
       }
 
       // ── Transactional approve + budget commit.
@@ -478,8 +396,11 @@ export default function ApplicationDetail() {
       await runTransaction(db, async (tx) => {
         const agencySnap = await tx.get(agencyRef)
         const reqSnap    = reqRef ? await tx.get(reqRef) : null
+        const markSnap   = await tx.get(markRef)
         // Logic review: no commitment on a request the hospital rejected/closed.
         if (reqSnap?.exists() && isRequestClosedByGateway(reqSnap.data().status)) throw new Error('REQUEST_CLOSED')
+        const block = approvalCooldownBlock(markSnap.exists() ? markSnap.data() : null, app.requestId)
+        if (block) throw new Error(`COOLDOWN:${COOLDOWN_MSG(block)}`)
         const data       = agencySnap.exists() ? agencySnap.data() : {}
         const allocated  = data.budget?.allocated ?? 0
         const committed  = data.budget?.committed ?? 0
@@ -519,17 +440,14 @@ export default function ApplicationDetail() {
           })
         }
 
-        // #9 — Stamp the patient's gateway Hospital ID with the approval
-        // timestamp so cooldown follows the human, not the account. If
-        // the patient deletes their account and re-registers, the new
-        // account inherits this cooldown automatically. Best-effort:
-        // skipped if the hospital ID wasn't resolved earlier.
-        if (patientHospitalId && !app.requestId) {
-          tx.update(doc(db, 'hospitalIds', patientHospitalId), {
-            lastApprovedAt: serverTimestamp(),
-            cooldownUntilAt: null,  // clear any prior reversed-cooldown
-          })
-        }
+        // Cooldown mark (required by the rules in this same write).
+        tx.set(markRef, {
+          agencyId:       user.agencyId,
+          patientId:      app.patientId,
+          requestId:      app.requestId,
+          sliceId:        app.id,
+          lastApprovedAt: serverTimestamp(),
+        })
 
         // Co-funding: advance the parent request. amountCommitted grows by the
         // approved amount; the request becomes fully_funded once the secured
@@ -609,12 +527,14 @@ export default function ApplicationDetail() {
       // from inside runTransaction in err.message.
       if (String(err?.message).includes('REQUEST_CLOSED')) {
         toast.error('The hospital has closed this request — it can no longer be approved.', { duration: 8000 })
+      } else if (typeof err?.message === 'string' && err.message.startsWith('COOLDOWN:')) {
+        toast.error(err.message.replace('COOLDOWN:', ''), { duration: 8000 })
       } else if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
         toast.error(err.message.replace('BUDGET_INSUFFICIENT:', ''), { duration: 8000 })
       } else if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
         // Most common cause: agency user is trying to approve an application
         // that belongs to a different agency (agencyId mismatch). Could also
-        // be a hospitalIds rule mismatch on the cooldown stamp.
+        // be the 30-day cooldown (approvalMarks) refusing the approval.
         toast.error(
           `Permission denied. ${app.agencyId !== user?.agencyId
             ? `This application belongs to a different agency (${app.agencyName}). You're signed in as ${user?.name}.`
@@ -872,15 +792,12 @@ export default function ApplicationDetail() {
     try {
       const amount = Number(app.approvedAmount) || 0
 
-      // Preserve cooldown: the patient was approved once, so the 30-day clock
-      // keeps running from the original approvedAt. We stash an explicit
-      // cooldownUntilAt so future approval checks still see the lock even
-      // after approvedAt is cleared. Without this, reverse-then-reapprove
-      // (here or at another agency) would silently bypass the cooldown.
-      const COOLDOWN_DAYS = 30
+      // The 30-day cooldown keeps running from the original approval: the
+      // agency's approval mark (approvalMarks) is left untouched. cooldownUntilAt
+      // stays on the slice as a record (Funds reads it).
       const original = app.approvedAt?.toDate ? app.approvedAt.toDate() : (app.approvedAt ? new Date(app.approvedAt) : null)
       const cooldownUntil = original
-        ? Timestamp.fromDate(new Date(original.getTime() + COOLDOWN_DAYS * 86400000))
+        ? Timestamp.fromDate(new Date(original.getTime() + APPROVAL_COOLDOWN_DAYS * 86400000))
         : null
 
       // R3 fix (companion to performExpireGL): re-sync the parent
@@ -890,15 +807,6 @@ export default function ApplicationDetail() {
       // this, the parent stays at 'fully_funded' with the old
       // committed total long after the reversed slice has stopped
       // counting.
-      //
-      // hospitalId resolution moved BEFORE the transaction because
-      // it does an extra read that's tangential to the parent re-sync.
-
-      let reversalHospitalId = app.patientHospitalId ?? null
-      if (!reversalHospitalId) {
-        const userSnap = await getDoc(doc(db, 'users', app.patientId)).catch(() => null)
-        reversalHospitalId = userSnap?.data?.()?.hospitalId ?? null
-      }
 
       await runTransaction(db, async (tx) => {
         const appRef = doc(db, 'applications', app.id)
@@ -947,14 +855,6 @@ export default function ApplicationDetail() {
         if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
           tx.update(doc(db, 'agencies', user.agencyId), {
             'budget.committed': increment(-amount),
-          })
-        }
-
-        // Cooldown mirror on the patient's hospital ID (#9 — survives
-        // account delete + re-register)
-        if (reversalHospitalId && cooldownUntil) {
-          tx.update(doc(db, 'hospitalIds', reversalHospitalId), {
-            cooldownUntilAt: cooldownUntil,
           })
         }
 
@@ -1433,9 +1333,11 @@ export default function ApplicationDetail() {
                   </div>
                 </div>
 
-                {/* the gateway-conducted assessment interview — read-only context for
-                    the funding decision. Surfaces date/conductor/Meet link and
-                    the recorded outcome + any free-text notes. */}
+                {/* LEGACY record: requests assessed before interview booking was
+                    removed (docs/remove-interview-scheduling-plan.md) carry the
+                    interview date/conductor/Meet link/outcome. Nothing writes
+                    these any more; the panel only shows old cases (1 in
+                    production, 2026-11-15). */}
                 {request && (request.interviewDate || request.interviewOutcome) && (
                   <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">

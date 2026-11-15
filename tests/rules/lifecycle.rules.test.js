@@ -2,6 +2,7 @@ import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc } from 'firebase/firestore'
+import { approveWithMark } from './helpers/approval.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -46,8 +47,8 @@ const ref = (uid, p) => doc(as(uid), ...p.split('/'))
 
 describe('no commitment on a request the hospital ended', () => {
   it('an agency approves on an open request, not on a rejected one', async () => {
-    await assertSucceeds(updateDoc(ref('coord', 'applications/sOpen'), { status: 'approved', amountApproved: 20000 }))
-    await assertFails(updateDoc(ref('coord', 'applications/sRej'), { status: 'approved', amountApproved: 20000 }))
+    await assertSucceeds(approveWithMark(as('coord'), 'sOpen', slice('open'), { status: 'approved', amountApproved: 20000 }))
+    await assertFails(approveWithMark(as('coord'), 'sRej', slice('rej'), { status: 'approved', amountApproved: 20000 }))
   })
 
   it('a slice closed by the hospital is final for the agency', async () => {

@@ -771,6 +771,9 @@
       "requestAssistance": "Humiling ng Tulong"
     },
     "request": {
+      "holdMessage": "Pumunta sa Mga Mensahe",
+      "holdDesc": "Naglagay ang {{gateway}} ng holding period sa inyong account, kaya hindi muna kayo makakapagsumite ng bagong kahilingan o makakalipat sa ibang ospital. Mag-message sa social-services office upang malaman ang dahilan o kung kailan ito aalisin.",
+      "holdTitle": "Naka-hold ang inyong account",
       "declarationConfirmRep": "Kinukumpirma ko ang deklarasyong ito para sa pasyente.",
       "declarationConfirm": "Kinukumpirma ko ang deklarasyong ito.",
       "declarationPenalty": "May parusa ang pagbibigay ng maling impormasyon o binagong dokumento para makakuha ng tulong. Sa ilalim ng Malasakit Centers Act (RA 11463), kakanselahin ang tulong, kailangang ibalik ang doble ng halaga, at maaaring makulong nang 6 na buwan hanggang 2 taon. Maaari ring kasuhan ang pamemeke ng dokumento sa ilalim ng Revised Penal Code at Cybercrime Prevention Act.",
@@ -1250,7 +1253,7 @@
       "reasonForRejection": "Dahilan ng pagtanggi:",
       "certNotReady": "Hindi pa available ang Guarantee Letter. Subukan muli mamaya.",
       "downloadFailed": "Nabigong i-download ang Guarantee Letter.",
-      "withdrawSuccess": "Na-withdraw ang kahilingan. Maaari kayong magsumite ng bagong kahilingan anumang oras.",
+      "withdrawSuccess": "Na-withdraw ang kahilingan. Upang magsumite ng bago, kumuha ng bagong access code sa ospital.",
       "withdrawFailed": "Nabigong i-withdraw. Pakisubukan muli.",
       "reviewCoverage": "Tingnan ang coverage at magpatuloy",
       "reqStages": {
@@ -1385,7 +1388,7 @@
       "sections": {
         "whatIsMapa": {
           "title": "Ano ang MAPA?",
-          "content": "Ang MAPA (Medical Assistance Portal Access) ay ang opisyal na online system ng {{facility}} para sa pagproseso ng mga aplikasyon ng tulong medikal. Pinapahintulutan nito ang mga pasyente na mag-apply para sa tulong pinansiyal o materyal mula sa mga kasosyong ahensya ng pamahalaan tulad ng DSWD, PCSO, at DOH — sa isang lugar lamang, nang hindi na pumipila sa maraming opisina."
+          "content": "Ang MAPA (Medical Assistance Portal Access) ay isang online system na pinagsasaluhan ng mga kalahok na ospital para sa tulong pinansiyal na medikal. Isang kahilingan lamang ang inyong isusumite sa ospital na inyong pipiliin. Susuriin ng social-services office nito ang inyong mga dokumento, gagawa ng assessment ng inyong kaso nang malayuan, at ie-endorso ito sa mga kasosyong ahensya tulad ng DSWD, PCSO at DOH, na maaaring sumagot sa bahagi ng inyong bayarin. Hindi na kailangang pumila sa opisina ng bawat ahensya."
         },
         "whoCanUse": {
           "title": "Sino ang maaaring gumamit ng MAPA?",
@@ -1411,23 +1414,23 @@
         },
         "apply": {
           "title": "Paano ako humihiling ng tulong?",
-          "s1": "Pumunta sa Humiling ng Tulong sa sidebar o sa bottom tab.",
-          "s2": "Piliin ang uri ng tulong na kailangan ninyo at ilagay ang halagang kailangan ninyo, batay sa inyong billing statement.",
-          "s3": "Ilakip ang inyong billing statement (Statement of Account), kumpirmahin ang deklarasyon, at isumite ang inyong kahilingan.",
-          "s4": "Susuriin ng {{gateway}} ang inyong kahilingan at ie-endorso ito sa isa o higit pang ahensyang makakatulong sa inyong bayarin.",
+          "s1": "Piliin ang ospital kung saan kayo naka-admit (o kung saan kayo may bayarin) at kumuha ng Patient Access Code sa social-services office nito. Nakapangalan ito sa pasyente at para sa isang kahilingan lamang. Kung naglagay kayo ng code noong nagparehistro, iyon ang gagamitin sa inyong unang kahilingan.",
+          "s2": "Buksan ang Humiling ng Tulong sa sidebar o sa bottom tab, at ilagay ang code kung hihingin ito.",
+          "s3": "Piliin ang uri ng tulong, ilagay ang halagang kailangan ninyo batay sa inyong billing statement, ilakip ang mga kinakailangang dokumento at kumuha ng live selfie.",
+          "s4": "Kumpirmahin ang deklarasyon at isumite. Susuriin ng {{gateway}} ang inyong mga dokumento, gagawa ng assessment ng inyong kaso, at ie-endorso ito sa isa o higit pang ahensyang makakatulong sa inyong bayarin.",
           "s5": "Buksan ang Humiling ng Tulong upang makita ang coverage plan, pagkatapos ay i-tap ang Magpatuloy upang ipadala ito sa mga ahensyang iyon.",
           "s6": "Kumpletuhin ang mga kinakailangan ng bawat ahensya at tumugon sa anumang mensahe mula sa inyong social worker.",
           "s7": "Kapag inaprubahan ng isang ahensya, makakatanggap kayo ng Guarantee Letter upang makuha ang inyong tulong.",
           "note": "Mahalaga: Isang aktibong kahilingan lamang ang pinapayagan sa isang pagkakataon. Subaybayan ang progreso nito anumang oras sa Aking Aplikasyon."
         },
         "withdraw": {
-          "title": "Maaari ko bang kanselahin o i-withdraw ang aking aplikasyon?",
-          "s1": "Pumunta sa Aking Aplikasyon sa sidebar.",
-          "s2": "Hanapin ang inyong aktibong aplikasyon sa ilalim ng In Progress tab.",
-          "s3": "Mag-scroll sa ibaba ng application card.",
-          "s4": "I-tap ang I-withdraw ang Aplikasyon — may lalabas na confirmation.",
-          "s5": "I-tap ang Oo, I-withdraw upang kumpirmahin. Ibabalik ang slot at maaari kayong mag-apply muli.",
-          "note": "Maaari lamang ninyong i-withdraw habang ang aplikasyon ninyo ay nasa Pending Review status. Kapag sinimulan na ng ahensya ang pagsusuri, hindi na maaaring i-withdraw."
+          "title": "Maaari ko bang kanselahin o i-withdraw ang aking kahilingan?",
+          "s1": "Buksan ang Humiling ng Tulong sa sidebar o sa bottom tab. Makikita roon ang inyong aktibong kahilingan.",
+          "s2": "Mag-scroll sa ibaba ng kahilingan.",
+          "s3": "I-tap ang I-withdraw ang Aplikasyon. May lalabas na confirmation.",
+          "s4": "I-tap ang Oo, I-withdraw. Isasara ang kahilingan at hindi na ito mabubuksan muli.",
+          "s5": "Nagamit na ang access code nito. Upang magsumite muli, kumuha ng bagong code sa social-services office ng ospital.",
+          "note": "Maaari kayong mag-withdraw hangga't hindi pa ie-endorso ng {{gateway}} ang inyong kahilingan sa isang ahensya. Pagkatapos nito, mag-message na lamang sa inyong social worker."
         },
         "cofunding": {
           "title": "Ano ang co-funding? Bakit may maraming ahensya?",

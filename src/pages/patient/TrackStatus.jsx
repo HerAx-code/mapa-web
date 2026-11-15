@@ -10,7 +10,7 @@ import JourneyStrip from '../../components/patient/JourneyStrip'
 import JourneyStepper from '../../components/patient/JourneyStepper'
 import PatientPage from '../../components/patient/PatientPage'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLiveData } from '../../contexts/LiveDataContext'
@@ -172,8 +172,6 @@ export default function TrackStatus() {
   const [tab,          setTab]          = useState('active')
   const [downloading,      setDownloading]      = useState(null)
   const [expandedApps,     setExpandedApps]     = useState(new Set())
-  const [confirmWithdrawId, setConfirmWithdrawId] = useState(null)
-  const [withdrawing,      setWithdrawing]      = useState(null)
   const [proceedingId,     setProceedingId]     = useState(null)
 
   // R16: previously the "Confirm & Proceed" banner navigated to
@@ -232,65 +230,6 @@ export default function TrackStatus() {
       toast.error(t('patient.track.proceedErr'))
     } finally {
       setProceedingId(null)
-    }
-  }
-
-  const handleWithdraw = async (app) => {
-    setWithdrawing(app.id)
-    try {
-      // Mark as rejected with withdrawal reason
-      await updateDoc(doc(db, 'applications', app.id), {
-        status:          'rejected',
-        rejectionReason: 'Withdrawn by applicant.',
-        updatedAt:       serverTimestamp(),
-        stages: (app.stages ?? []).map(s => ({
-          ...s,
-          done:   s.key === 'submitted',
-          active: false,
-        })),
-      })
-
-      // Restore slot if submitted today — wrapped in a transaction so a
-      // simultaneous return (e.g., agency reject) on the same agency can't
-      // silently lose one increment via lost-update.
-      const submittedDate = app.submittedAt?.toDate?.()
-      const isToday = submittedDate &&
-        submittedDate.toDateString() === new Date().toDateString()
-      if (isToday) {
-        try {
-          const agencyRef = doc(db, 'agencies', app.agencyId)
-          await runTransaction(db, async (tx) => {
-            const snap = await tx.get(agencyRef)
-            if (!snap.exists()) return
-            const current = snap.data()?.slots?.remaining ?? 0
-            const total   = snap.data()?.slots?.total    ?? 0
-            tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
-          })
-        } catch (err) {
-          // Slot restore is best-effort — the withdrawal already committed.
-          console.error('[TrackStatus] slot restore failed:', err)
-        }
-      }
-
-      // Notify agency users
-      const agencyUsers = await getDocs(query(
-        collection(db, 'users'),
-        where('agencyId', '==', app.agencyId),
-        where('role', '==', 'agency')
-      ))
-      await Promise.all(agencyUsers.docs.map(d => notify(d.id, {
-        type:  'app_withdrawn',
-        title: 'Application withdrawn',
-        body:  `${app.patientName} has withdrawn their application (${app.appId}).`,
-      }))).catch(() => {})
-
-      setConfirmWithdrawId(null)
-      toast.success(t('patient.track.withdrawSuccess'))
-    } catch (err) {
-      console.error('Withdraw error:', err)
-      toast.error(t('patient.track.withdrawFailed'))
-    } finally {
-      setWithdrawing(null)
     }
   }
 
@@ -519,7 +458,7 @@ export default function TrackStatus() {
                   with, so tapping through to Status keeps the "where am I"
                   anchor in view before the money + detailed stepper below. */}
               <div className="card px-3 py-3.5">
-                <JourneyStrip status={activeRequest.status} />
+                <JourneyStrip request={activeRequest} />
               </div>
 
               {/* Shared balance hero — same signature centrepiece as the
@@ -844,37 +783,6 @@ export default function TrackStatus() {
                         </button>
                       )}
 
-                      {/* Withdraw — only when pending and agency hasn't started reviewing */}
-                      {app.status === 'pending' && (
-                        <div className="mt-4 pt-3 border-t border-gray-50">
-                          {confirmWithdrawId === app.id ? (
-                            <div className="space-y-2.5">
-                              <p className="text-sm text-gray-600">
-                                {t('patient.track.withdrawConfirm')}
-                              </p>
-                              <div className="flex gap-2">
-                                <button
-                                  className="flex-1 min-h-[44px] text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-medium transition-colors"
-                                  onClick={() => setConfirmWithdrawId(null)}>
-                                  {t('patient.track.cancel')}
-                                </button>
-                                <button
-                                  className="flex-1 min-h-[44px] text-sm bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-60"
-                                  onClick={() => handleWithdraw(app)}
-                                  disabled={withdrawing === app.id}>
-                                  {withdrawing === app.id ? t('patient.track.withdrawing') : t('patient.track.withdrawYes')}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              className="min-h-[44px] py-2 text-sm text-gray-500 hover:text-red-500 transition-colors"
-                              onClick={() => setConfirmWithdrawId(app.id)}>
-                              {t('patient.track.withdraw')}
-                            </button>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )
                 })}

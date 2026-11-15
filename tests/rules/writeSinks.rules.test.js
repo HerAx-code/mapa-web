@@ -2,6 +2,7 @@ import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, addDoc, updateDoc, deleteDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { approveWithMark } from './helpers/approval.js'
 import { fileRequest } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -99,7 +100,8 @@ describe('applications.update — Phase 1.6 identity lock', () => {
     await seedUser('agency-1', 'agency', 'malasakit')
     await seedSlice('app-1')
     const ctx = testEnv.authenticatedContext('agency-1')
-    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+    await assertSucceeds(approveWithMark(ctx.firestore(), 'app-1',
+      { requestId: 'req-1', patientId: 'patient-1', agencyId: 'malasakit' }, {
       status: 'approved', amountApproved: 20000, glStatus: 'issued',
       approvedBy: 'Dr. X', approvedAt: serverTimestamp(),
     }))

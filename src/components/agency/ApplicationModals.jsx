@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
 import toast from 'react-hot-toast'
-import { tsToDate } from '../../utils/dates'
+import { fmtDate } from '../../utils/dates'
+import { APPROVAL_COOLDOWN_DAYS, approvalMarkId, approvalCooldownBlock } from '../../utils/approvalCooldown'
 import { ORG } from '../../config/org'
 
 // This file keeps only the agency-specific modals (Reject / Approve /
@@ -19,13 +20,6 @@ const REQUEST_INFO_TEMPLATES = [
   'Please upload a valid government-issued ID (front and back).',
   'Your uploaded document is unclear — please re-upload a clearer scan or photo.',
 ]
-
-const COOLDOWN_DAYS = 30
-
-const daysSince = (ts) => {
-  const d = tsToDate(ts)
-  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null
-}
 
 export const REJECT_TEMPLATES = [
   'Incomplete documents — please resubmit with all required documents.',
@@ -117,40 +111,13 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   useFocusTrap(panelRef, true)
 
   useEffect(() => {
-    if (!app?.patientId) return
-    // Match handleApprove's check: a live approval within the window OR a
-    // reversed approval with a still-running cooldownUntilAt counts as a
-    // prior approval that blocks the button.
-    getDocs(query(
-      collection(db, 'applications'),
-      where('patientId', '==', app.patientId),
-    )).then(snap => {
-      const now = Date.now()
-      const candidates = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        // Co-funding: sibling slices of the SAME request are expected to be
-        // approved by multiple agencies — they must not count as a blocking
-        // prior approval. Only approvals from OTHER requests trip the cooldown.
-        .filter(a => a.id !== app.id && !(app.requestId && a.requestId === app.requestId))
-        .map(a => {
-          if (a.approvedAt && ['approved', 'certificate'].includes(a.status)) {
-            const days = daysSince(a.approvedAt)
-            if (days != null && days <= COOLDOWN_DAYS) {
-              return { ...a, _daysAgo: days, _reversed: false }
-            }
-          }
-          const until = tsToDate(a.cooldownUntilAt)
-          if (until && until.getTime() > now) {
-            const daysRemaining = Math.ceil((until.getTime() - now) / 86400000)
-            return { ...a, _daysAgo: COOLDOWN_DAYS - daysRemaining, _reversed: true, _daysRemaining: daysRemaining }
-          }
-          return null
-        })
-        .filter(Boolean)
-        .sort((a, b) => a._daysAgo - b._daysAgo)
-      if (candidates[0]) setPriorApproval(candidates[0])
-    }).catch(() => {})
-  }, [app?.patientId])
+    if (!app?.patientId || !currentUser?.agencyId) return
+    // Same check as the rules (approvalCooldownOk): this agency's last
+    // approval for the patient, unless it was for this same request.
+    getDoc(doc(db, 'approvalMarks', approvalMarkId(currentUser.agencyId, app.patientId)))
+      .then(snap => setPriorApproval(approvalCooldownBlock(snap.exists() ? snap.data() : null, app.requestId)))
+      .catch(() => {})
+  }, [app?.patientId, app?.requestId, currentUser?.agencyId])
 
   const allocated = agency?.budget?.allocated ?? 0
   const committed = agency?.budget?.committed ?? 0
@@ -246,21 +213,13 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           {priorApproval && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <p className="text-xs font-semibold text-red-800 mb-1">Approval will be blocked — cooldown active</p>
-              {priorApproval._reversed ? (
-                <p className="text-xs text-red-700 leading-relaxed">
-                  This patient has an <strong>active cooldown from a reversed approval</strong> at <strong>{priorApproval.agencyName}</strong>
-                  {priorApproval.approvedAmount > 0 && <> (originally <strong>₱{Number(priorApproval.approvedAmount).toLocaleString()}</strong>)</>}.
-                  About <strong>{priorApproval._daysRemaining} day{priorApproval._daysRemaining === 1 ? '' : 's'}</strong> remaining on the {COOLDOWN_DAYS}-day window.
-                </p>
-              ) : (
-                <p className="text-xs text-red-700 leading-relaxed">
-                  This patient was already approved by <strong>{priorApproval.agencyName}</strong> {priorApproval._daysAgo} day{priorApproval._daysAgo === 1 ? '' : 's'} ago for <strong>₱{Number(priorApproval.approvedAmount ?? 0).toLocaleString()}</strong>
-                  {priorApproval.purposeOfAssistance?.length > 0 && <> ({priorApproval.purposeOfAssistance.join(', ')})</>}.
-                </p>
-              )}
+              <p className="text-xs font-semibold text-red-800 mb-1">Can't approve yet: {APPROVAL_COOLDOWN_DAYS}-day limit</p>
+              <p className="text-xs text-red-700 leading-relaxed">
+                Your agency approved assistance for this patient <strong>{priorApproval.daysAgo} day{priorApproval.daysAgo === 1 ? '' : 's'} ago</strong>, on another request.
+                An agency can approve once every {APPROVAL_COOLDOWN_DAYS} days per patient, so this request can be approved from <strong>{fmtDate(priorApproval.until)}</strong>.
+              </p>
               <p className="text-xs text-red-700 mt-1">
-                The {COOLDOWN_DAYS}-day cooldown is enforced at write time. Submitting will fail until the cooldown elapses. Contact an administrator if a second approval is genuinely needed.
+                The system will refuse the approval until then. Other agencies are not affected.
               </p>
             </div>
           )}
@@ -436,7 +395,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
           <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
           <button className="btn-primary text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             disabled={saving || exceedsBudget || exceedsRequested || exceedsPerCap || !!priorApproval}
-            title={priorApproval ? `Blocked: prior approval within ${COOLDOWN_DAYS} days` : ''}
+            title={priorApproval ? `Blocked: approved within the last ${APPROVAL_COOLDOWN_DAYS} days` : ''}
             onClick={handleSubmit}>
             <MdCheckCircle size={14} className="inline -mt-0.5 mr-1" />
             {saving ? 'Approving…' : 'Approve & Issue GL'}
