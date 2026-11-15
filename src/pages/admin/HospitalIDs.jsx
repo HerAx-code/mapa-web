@@ -45,6 +45,9 @@ export default function HospitalIDs() {
   const [confirmRevoke,  setConfirmRevoke]  = useState(null)
   const { user }      = useAuth()
   const isSuperAdmin  = user?.role === 'super_admin'
+  // Issuing is desk work: Hospital Admin and Staff Admins (2026-11-15).
+  // Revoking and deleting stay with the Hospital Admin (firestore.rules).
+  const canIssue      = ['super_admin', 'staff_admin'].includes(user?.role)
 
   useEffect(() => {
     // Phase 0.3: patient name (`usedBy`) moved off the parent hospitalIds
@@ -280,7 +283,7 @@ export default function HospitalIDs() {
             <p className="text-sm text-gray-500 mt-1">Issue a code to a patient at the desk. It works only for that patient (last name + birthdate). Blank codes printed before Nov 15, 2026 stop working on Dec 15, 2026.</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {isSuperAdmin && (
+            {canIssue && (
               <>
                 <button className="btn-primary flex items-center gap-1.5" onClick={() => setShowIssue(true)}>
                   <MdAdd size={16} /> Issue code
@@ -335,7 +338,7 @@ export default function HospitalIDs() {
               </ul>
             </div>
 
-            {isSuperAdmin && (
+            {canIssue && (
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
                 <p className="text-xs uppercase tracking-wide text-gray-500 mb-0.5">Next code</p>
                 <p className="font-mono text-sm font-semibold text-gray-800">{accessCodePrefixFor(new Date().getFullYear())}{String(nextNum).padStart(5, '0')}</p>
@@ -389,17 +392,19 @@ export default function HospitalIDs() {
                                 : <span className="text-amber-600 text-xs">Blank slip · stops working Dec 15, 2026</span>}
                             </div>
                             <span className="text-xs text-gray-500 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
-                            {isSuperAdmin && isBound ? (
+                            {canIssue && isBound ? (
                               <span className="text-xs text-gray-400 flex-shrink-0" title="This code backs a request, so it stays on that case's record.">Filed</span>
-                            ) : isSuperAdmin ? (
+                            ) : canIssue ? (
                               <div className="flex items-center gap-0.5 flex-shrink-0">
                                 {!isUsed && h.issued && (
                                   <button title="Print the slip again" className="p-1.5 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" onClick={() => handlePrint([{ id: h.id, issuedName: h.issued.name }])}><MdPrint size={15} /></button>
                                 )}
-                                {isUsed && (
+                                {isSuperAdmin && isUsed && (
                                   <button title="Reset to Available (revoke from current patient)" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setConfirmRevoke(h)}><MdRefresh size={15} /></button>
                                 )}
-                                <button title="Delete code" className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(h)}><MdDelete size={15} /></button>
+                                {isSuperAdmin && (
+                                  <button title="Delete code" className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" onClick={() => setConfirmDelete(h)}><MdDelete size={15} /></button>
+                                )}
                               </div>
                             ) : <span className="text-xs text-gray-300 flex-shrink-0">View only</span>}
                           </div>
@@ -432,7 +437,7 @@ export default function HospitalIDs() {
                   <p className="text-sm text-gray-500">{search || statusFilter !== 'all' ? 'No codes match your filter.' : 'No access codes yet.'}</p>
                   {(search || statusFilter !== 'all') ? (
                     <button onClick={() => { setSearch(''); setStatusFilter('all') }} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
-                  ) : isSuperAdmin && (
+                  ) : canIssue && (
                     <button onClick={() => setShowIssue(true)} className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5"><MdAdd size={15} /> Issue a code</button>
                   )}
                 </div>

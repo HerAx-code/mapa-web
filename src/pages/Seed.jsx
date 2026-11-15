@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { doc, setDoc, collection, getDocs, writeBatch, arrayUnion, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
-import { fmtDate } from '../utils/dates'
-import { accessCodePrefixFor } from '../config/org'
 // Single source of truth for the catalogs (shared with the app + bootstrap).
 import { DOCUMENT_TYPES, ASSISTANCE_TYPES, CORE_DOC_IDS } from '../data/referenceData'
 import { AGENCIES, INITIAL_BUDGET } from '../data/agencies.seed'
+// Hospitals only — this file has no passwords (the Seed chunk ships in every build).
+import { DEMO_HOSPITAL_IDS } from '../../scripts/demo-hospitals.js'
 
 // Document + assistance catalogs are imported from src/data/referenceData.js
 // (single source of truth). The legacy flat checklist still needs a `required`
@@ -27,12 +27,6 @@ import { AGENCIES, INITIAL_BUDGET } from '../data/agencies.seed'
 // a hospital admin, so under the Phase 5/6 rules no single login can run every
 // step below. Prefer the Admin SDK scripts (bootstrap-reference-data.js,
 // seed-default-hospital.mjs) against a rules-enforcing project.
-
-// 20 demo access codes under the active issuing prefix, e.g. MAPA-2026-00001.
-const SEED_ID_PREFIX = accessCodePrefixFor(new Date().getFullYear())
-const SEED_IDS = Array.from({ length: 20 }, (_, i) =>
-  `${SEED_ID_PREFIX}${String(i + 1).padStart(5, '0')}`
-)
 
 export default function Seed() {
   if (import.meta.env.VITE_ENABLE_SEED !== 'true') {
@@ -131,18 +125,10 @@ export default function Seed() {
     }
     push(`✅ Signed in as ${auth.currentUser.email}`)
 
-    // 2. Seed Hospital IDs
-    for (const id of SEED_IDS) {
-      try {
-        await setDoc(doc(db, 'hospitalIds', id), {
-          status: 'available', usedBy: null, patId: null,
-          date: fmtDate(new Date()), time: '',
-        }, { merge: true })
-      } catch (err) {
-        push(`❌ Failed ID ${id}: ${err.message}`)
-      }
-    }
-    push(`✅ Seeded ${SEED_IDS.length} Hospital IDs`)
+    // 2. Access codes are issued to a NAMED patient now (2026-11-15) — blank
+    //    codes are refused by the rules. scripts/bootstrap-users.js seeds the
+    //    demo hospitals and sample patient-bound codes (scripts/demo-hospitals.js).
+    push('ℹ️ Access codes: seeded by scripts/bootstrap-users.js (patient-bound)')
 
     // 2b. Patch existing users missing active field
     try {
@@ -165,6 +151,8 @@ export default function Seed() {
       try {
         await setDoc(doc(db, 'agencies', id), {
           ...data, budget: { ...INITIAL_BUDGET }, createdAt: new Date(),
+          // Fund requests from the two demo hospitals (multi-hospital Phase 7).
+          partnerHospitalIds: DEMO_HOSPITAL_IDS,
         }, { merge: true })
       } catch (err) {
         push(`❌ Failed agency ${data.name}: ${err.message}`)

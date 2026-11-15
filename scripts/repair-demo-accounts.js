@@ -49,6 +49,17 @@ import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { USERS } from './demo-accounts.js'
+import { readFileSync } from 'node:fs'
+
+// Never reset accounts to published demo passwords in production.
+{
+  let project = process.env.GOOGLE_CLOUD_PROJECT
+  if (!project) { try { project = JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8')).project_id } catch { /* unknown */ } }
+  if (!process.env.FIRESTORE_EMULATOR_HOST && project === 'mapa-crmc') {
+    console.error('[repair-demo-accounts] Refusing to run against mapa-crmc: these demo passwords are published. Use the emulator or a dev project.')
+    process.exit(1)
+  }
+}
 
 const DRY_RUN = process.argv.includes('--dry-run')
 

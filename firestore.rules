@@ -1166,7 +1166,9 @@ service cloud.firestore {
       // Patient-bound codes (2026-11-15): a new code is always issued to a
       // named patient — `bound: true` plus privateInfo/issued in the same batch.
       // Blank slips are no longer created.
-      allow create: if isSuperAdmin() && createsInOwnHospital() &&
+      // Issuing is desk work: the Hospital Admin AND Staff Admins (owner
+      // decision 2026-11-15). Revoking / deleting stay Hospital Admin only.
+      allow create: if isAdmin() && createsInOwnHospital() &&
                        hospitalId.matches(hospitalDoc(tenantOf(request.resource.data)).get('accessCodePrefix', '') +
                                           '-[0-9]{4}-[0-9]{5}') &&
                        request.resource.data.get('bound', false) == true &&
@@ -1247,9 +1249,9 @@ service cloud.firestore {
         // limitation), so isAuth() + self-attribution via usedById carries the
         // security; the claim's `proof` is checked by the parent's
         // codeClaimProofOk.
-        allow create: if (infoId == 'issued' && isSuperAdmin() &&
+        allow create: if (infoId == 'issued' && isAdmin() &&
                           getAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.get('tenantId', '') == userTenantId() &&
-                          issuedOk()) ||
+                          issuedOk() && request.resource.data.issuedByUid == uid()) ||
                          (infoId == 'details' && isAuth() &&
                           request.resource.data.usedById == uid() &&
                           request.resource.data.usedBy is string &&
