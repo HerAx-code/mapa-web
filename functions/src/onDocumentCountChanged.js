@@ -1,6 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
 /**
  * onDocumentCountChanged — maintains users/{patientId}.documentCount so the
@@ -47,8 +47,8 @@ exports.onDocumentCountChanged = onDocumentWritten({
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
   try {
     const result = await handleDocumentCountChanged({
-      db: admin.firestore(), before, after,
-      FieldValue: admin.firestore.FieldValue,
+      db: getFirestore(), before, after,
+      FieldValue: FieldValue,
     })
     if (result.delta) logger.info('[onDocumentCountChanged]', result)
     return result

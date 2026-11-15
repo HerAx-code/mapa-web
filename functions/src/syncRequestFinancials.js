@@ -1,6 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
 /**
  * syncRequestFinancials — keeps a request's derived funding fields
@@ -168,9 +168,9 @@ exports.syncRequestFinancials = onDocumentWritten({
 
   try {
     const result = await handleSyncRequestFinancials({
-      db: admin.firestore(),
+      db: getFirestore(),
       requestId,
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+      serverTimestamp: () => FieldValue.serverTimestamp(),
     })
     if (result.updated) {
       logger.info('[syncRequestFinancials] re-synced parent request', result)

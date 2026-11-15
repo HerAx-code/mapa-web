@@ -1,6 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 
 /**
@@ -150,10 +150,10 @@ exports.onRequestWritten = onDocumentWritten({
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
   try {
     const result = await handleRequestWritten({
-      db: admin.firestore(), before, after,
+      db: getFirestore(), before, after,
       requestId: event.params?.requestId,
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
-      FieldValue: admin.firestore.FieldValue,
+      serverTimestamp: () => FieldValue.serverTimestamp(),
+      FieldValue: FieldValue,
     })
     if (result.notified || result.activeSync?.active === 'set' || result.activeSync?.active === 'cleared') {
       logger.info('[onRequestWritten]', result)

@@ -1,6 +1,6 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore } = require('firebase-admin/firestore')
 const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 
 /**
@@ -52,7 +52,7 @@ exports.onAuditLogCreated = onDocumentCreated({
   const snap = event.data
   if (!snap) return
   try {
-    const result = await handleAuditLogCreated({ db: admin.firestore(), entry: snap.data(), ref: snap.ref })
+    const result = await handleAuditLogCreated({ db: getFirestore(), entry: snap.data(), ref: snap.ref })
     if (result.stamped) logger.info('[onAuditLogCreated] stamped case hospital', { logId: event.params.logId, ...result })
   } catch (err) {
     logger.error('[onAuditLogCreated] failed', { logId: event.params.logId, err: err.message })

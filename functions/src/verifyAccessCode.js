@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const crypto = require('node:crypto')
 const { accessCodeRe, accessCodeFormatHint, DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 const { codeProof, blankCodeExpired } = require('./codeIssue')
@@ -92,7 +92,7 @@ async function checkAndBumpThrottle({ db, ref, max, label, now }) {
     tx.set(ref, {
       count: count + 1,
       windowStart,
-      lastAttemptAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastAttemptAt: FieldValue.serverTimestamp(),
     })
   })
 }
@@ -206,6 +206,6 @@ exports.verifyAccessCode = onCall({
   // proxy can rotate it. That's fine -- IP-throttling is one layer of
   // defense, not the only one.
   ip:   request.rawRequest?.ip,
-  db:   admin.firestore(),
-  serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+  db:   getFirestore(),
+  serverTimestamp: () => FieldValue.serverTimestamp(),
 }))

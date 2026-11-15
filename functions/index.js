@@ -4,11 +4,13 @@
  * named at the top level of this file.
  */
 
-const admin = require('firebase-admin')
+const { initializeApp } = require('firebase-admin/app')
 
-// Initialise the default Firebase app exactly once. Every src/ module
-// imports admin and reads admin.firestore() / .auth() off the singleton.
-admin.initializeApp()
+// Initialise the default Firebase app exactly once. Every src/ module uses the
+// modular entry points (getFirestore() / getAuth() from firebase-admin/*),
+// which read this default app. firebase-admin 14 removed the namespaced
+// admin.firestore() / admin.auth() API.
+initializeApp()
 
 const { resetAgencySlots }       = require('./src/resetAgencySlots')
 const { glExpirySweep }          = require('./src/glExpirySweep')

@@ -1,6 +1,6 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
 /**
  * onOnboardingRequestCreated — tells the network operators (platform_admin,
@@ -44,9 +44,9 @@ exports.onOnboardingRequestCreated = onDocumentCreated({
 }, async (event) => {
   try {
     const result = await handleOnboardingRequestCreated({
-      db: admin.firestore(),
+      db: getFirestore(),
       request: event.data?.data(),
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+      serverTimestamp: () => FieldValue.serverTimestamp(),
     })
     if (result.notified) logger.info('[onOnboardingRequestCreated] notified operators', { reqId: event.params.reqId, ...result })
   } catch (err) {

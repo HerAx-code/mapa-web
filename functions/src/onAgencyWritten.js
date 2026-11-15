@@ -1,6 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
 /**
  * onAgencyWritten — projects the PUBLIC subset of an agency doc into a
@@ -98,11 +98,11 @@ exports.onAgencyWritten = onDocumentWritten({
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
   try {
     const result = await handleAgencyWritten({
-      db: admin.firestore(),
+      db: getFirestore(),
       agencyId: event.params.agencyId,
       before,
       after,
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+      serverTimestamp: () => FieldValue.serverTimestamp(),
     })
     return result
   } catch (err) {

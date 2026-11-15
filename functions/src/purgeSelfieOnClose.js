@@ -1,6 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
 /**
  * purgeSelfieOnClose — RA-10173 retention. When a request reaches a terminal
@@ -75,9 +75,9 @@ exports.purgeSelfieOnClose = onDocumentWritten({
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
   try {
     const result = await handlePurgeSelfieOnClose({
-      db: admin.firestore(),
+      db: getFirestore(),
       before, after,
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+      serverTimestamp: () => FieldValue.serverTimestamp(),
     })
     if (result.purged) logger.info('[purgeSelfieOnClose] purged selfie content', { requestId: event.params?.requestId, ...result })
     return result
