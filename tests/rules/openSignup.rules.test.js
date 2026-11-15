@@ -2,7 +2,7 @@ import { loadRules } from './helpers/rules.js'
 import { issuedRecord } from './helpers/codes.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
 import { codeProof } from '../../src/utils/codeIssue.js'
 
 // Open sign-up (owner decision 2026-11-15, reports/Access code at
@@ -65,5 +65,24 @@ describe('joining a hospital later, by claiming its code', () => {
   it('is refused without it', async () => {
     await assertFails(claim(null))
     await assertFails(claim(codeProof('Santos', '1990-05-01')))
+  })
+})
+
+// Plan step 3 (lite): last name + birthdate back the patient-bound code proof,
+// so a patient may fill them in once but never change them.
+describe('last name and birthdate are set once', () => {
+  it('an older account without them may add them', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) =>
+      setDoc(doc(ctx.firestore(), 'users', 'old'), { role: 'patient', agencyId: null, name: 'Ana Cruz', hospitalId: null }))
+    await assertSucceeds(updateDoc(doc(as('old'), 'users', 'old'), { birthdate: '1990-05-01', lastName: 'Cruz' }))
+  })
+  it('once set, the patient cannot change them', async () => {
+    await setDoc(doc(as('p2'), 'users', 'p2'), { ...profile, lastName: 'Cruz' })
+    await assertFails(updateDoc(doc(as('p2'), 'users', 'p2'), { birthdate: '1991-01-01' }))
+    await assertFails(updateDoc(doc(as('p2'), 'users', 'p2'), { lastName: 'Santos' }))
+  })
+  it('other profile edits still work, and a family manager can be recorded', async () => {
+    await setDoc(doc(as('p3'), 'users', 'p3'), { ...profile, lastName: 'Cruz', managedBy: { name: 'Maria Cruz', relationship: 'child' } })
+    await assertSucceeds(updateDoc(doc(as('p3'), 'users', 'p3'), { contact: '09171234567' }))
   })
 })

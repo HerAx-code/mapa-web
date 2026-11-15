@@ -309,6 +309,14 @@ service cloud.firestore {
             request.resource.data.get('tenantIds', null)  == resource.data.get('tenantIds', null)) ||
            patientSwitchesHospital()) &&
           (!isPatient() || request.resource.data.get('name', null) == resource.data.get('name', null)) &&
+          // Patient-bound codes check last name + birthdate, so a patient may
+          // fill these in once (accounts made before 2026-11-15 lack them)
+          // but never change them afterwards.
+          (!isPatient() ||
+           ((resource.data.get('birthdate', null) == null ||
+             request.resource.data.get('birthdate', null) == resource.data.get('birthdate', null)) &&
+            (resource.data.get('lastName', null) == null ||
+             request.resource.data.get('lastName', null) == resource.data.get('lastName', null)))) &&
           // Server-owned counters (abuse hardening #3 + #5): only the Admin SDK
           // triggers (onRequestWritten / onDocumentCountChanged, rules-bypassing)
           // write these. Pin them on self-update so a patient can't null their

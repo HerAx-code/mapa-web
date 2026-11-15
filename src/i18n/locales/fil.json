@@ -1540,6 +1540,10 @@
     "stepCode": "Access Code (opsyonal)",
     "stepProgress": "Hakbang {{current}} ng {{total}} · {{label}}",
     "step1": {
+      "selectRelationship": "Pumili…",
+      "managerRelationship": "Kayo ay … ng pasyente",
+      "managerName": "Inyong buong pangalan",
+      "managedByFamily": "Nagpaparehistro ako para sa isang kapamilya — siya ang pasyente. Ilagay sa ibaba ang detalye ng PASYENTE.",
       "birthdate": "Petsa ng kapanganakan",
       "sectionTitle": "Personal na Impormasyon",
       "sectionDesc": "Ipasok ang inyong pangalan at impormasyon sa pakikipag-ugnayan ayon sa nakasaad sa inyong opisyal na ID.",
@@ -1600,6 +1604,8 @@
     "haveAccount": "Mayroon nang account?",
     "signIn": "Mag-sign in",
     "errors": {
+      "managerRelationshipRequired": "Piliin ang inyong kaugnayan sa pasyente.",
+      "managerNameRequired": "Ilagay ang inyong buong pangalan (mga titik lamang).",
       "codeExpired": "Hindi na balido ang code na ito. Humingi ng bagong code sa social service office ng ospital.",
       "codeMismatch": "Ang code na ito ay ibinigay sa ibang pangalan o petsa ng kapanganakan. Suriin ang inyong apelyido at petsa ng kapanganakan sa hakbang 1 — dapat tugma ang mga ito sa talaan ng ospital — o magtanong sa opisinang nagbigay ng code.",
       "birthdateRequired": "Ilagay ang inyong petsa ng kapanganakan.",

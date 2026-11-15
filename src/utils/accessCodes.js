@@ -98,7 +98,14 @@ export const nextTenantIds = (user, tenantId) =>
 export async function claimAccessCode({ user, code: rawCode, tenantId, lastName = '', birthdate = '' }) {
   const code = normalizeCode(rawCode)
   const uid = user.uid
-  const fields = { tenantId, tenantIds: nextTenantIds(user, tenantId), hospitalId: code }
+  const fields = {
+    tenantId, tenantIds: nextTenantIds(user, tenantId), hospitalId: code,
+    // An account made before patient-bound codes has no stored last name /
+    // birthdate: keep the ones just proven, so the next claim is pre-filled.
+    // (The rules let a patient set these once, never change them.)
+    ...(!user.lastName && lastName ? { lastName: lastName.trim() } : {}),
+    ...(!user.birthdate && birthdate ? { birthdate } : {}),
+  }
   await runTransaction(db, async (tx) => {
     const codeRef = doc(db, 'hospitalIds', code)
     const snap = await tx.get(codeRef)
