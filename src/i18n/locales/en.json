@@ -285,10 +285,11 @@
       "warning": "If anyone asks you to pay to speed up your approval, they are not from {{gateway}}. Report it to {{gateway}} right away."
     },
     "eligibility": {
+      "notCovered": "Not covered yet: outpatient care without an admission, such as dialysis or chemotherapy sessions, or medicines bought outside the hospital. Ask the hospital's social-services office about other assistance.",
       "title": "Who can apply",
       "intro": "MAPA is for hospital patients who cannot pay their hospital bill. You do not need to be good with computers — the form is short, and staff can sit with you and help.",
       "qualifyHeading": "You may apply if…",
-      "q1": "You are admitted at, or were treated in, a participating hospital.",
+      "q1": "You are admitted at a participating hospital, or were discharged with an unpaid hospital bill.",
       "q2": "You have an unpaid hospital bill or billing statement.",
       "q3": "A social worker has classified you as an indigent patient.",
       "q4": "You are the patient, or an immediate family member filing for them.",
