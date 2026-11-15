@@ -4,6 +4,7 @@ import { isIdType, isSelfieType } from '../../utils/idOcr'
 import { tsToDate } from '../../utils/dates'
 import { ORG } from '../../config/org'
 import StatusBadge from '../ui/StatusBadge'
+import DuplicateAccountCheck from './DuplicateAccountCheck'
 
 // Advisory verdict → text colour, reusing the OCR line's green/amber/gray
 // pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
@@ -322,9 +323,7 @@ function IdentityReview({ idDoc, selfieDoc, accountName, busy, onView, onCompare
             <CheckRow label="Name vs account" value={nameCheck.value} tone={nameCheck.tone} />
             <CheckRow label="Face match" value={faceCheck.value} tone={faceCheck.tone} />
             <CheckRow label="Liveness" value={liveCheck.value} tone={liveCheck.tone} />
-            {idDoc?.pcnFingerprint && (
-              <CheckRow label="Card used by another account" value="No automatic cross-check — verify at counter" tone="text-gray-500" />
-            )}
+            <DuplicateAccountCheck patientId={idDoc?.patientId ?? selfieDoc?.patientId} />
             <CheckRow label="Access code" value="Issued in person · ID seen at counter" last />
           </div>
         </div>

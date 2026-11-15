@@ -37,3 +37,7 @@ exports.onDocumentCountChanged  = onDocumentCountChanged
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated
+
+const { onPatientIdentityWritten, onIdDocumentIdentityWritten } = require('./src/identityIndex')
+exports.onPatientIdentityWritten    = onPatientIdentityWritten
+exports.onIdDocumentIdentityWritten = onIdDocumentIdentityWritten

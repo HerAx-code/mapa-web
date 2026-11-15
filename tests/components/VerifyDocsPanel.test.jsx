@@ -9,6 +9,19 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import VerifyDocsPanel from '../../src/components/admin/VerifyDocsPanel'
 
+// The duplicate-account row reads identityFlags/{tenant}__{uid}
+// (input verification Phase 1): one match at this hospital, one elsewhere.
+vi.mock('../../src/firebase', () => ({ db: {} }))
+vi.mock('../../src/utils/hospitals', () => ({ currentTenantId: () => 'h1' }))
+vi.mock('firebase/firestore', () => ({
+  doc: (_db, col, id) => ({ col, id }),
+  onSnapshot: (ref, cb) => {
+    cb({ exists: () => true, data: () => ({ matches: [{ kind: 'pcn', sameHospitalUids: ['u2'], otherHospitalCount: 1 }] }) })
+    return () => {}
+  },
+  getDoc: async () => ({ exists: () => true, data: () => ({ name: 'Ana Cruz', patientId: 'PAT-1' }) }),
+}))
+
 const noop = () => {}
 const baseProps = {
   busy: false, allVerified: false, ocrExpanded: new Set(),
@@ -80,19 +93,21 @@ describe('VerifyDocsPanel — advisory verification chips', () => {
 describe('VerifyDocsPanel — Identity review card', () => {
   const idProps = { ...baseProps, onConfirmIdentity: vi.fn(), onRequestRedo: vi.fn(), accountName: 'Juan Dela Cruz' }
 
-  it('surfaces the PhilSys ID-source + face/liveness checks from stored signals', () => {
+  it('surfaces the PhilSys ID-source + face/liveness checks from stored signals', async () => {
     const reqDocs = [
       { id: 'id-1', documentTypeName: 'National ID', status: 'pending',
         idVerifyMethod: 'philid_qr', philIdSigValid: true, ocrMatch: true,
-        pcnLast4: '•••• •••• •••• 3456', pcnFingerprint: 'a'.repeat(64) },
+        pcnLast4: '•••• •••• •••• 3456', pcnFingerprint: 'a'.repeat(64), patientId: 'u1' },
       { id: 'sf-1', documentTypeName: 'Live Selfie', status: 'pending', faceMatch: 'pass', liveness: 'pass' },
     ]
     render(<VerifyDocsPanel {...idProps} reqDocs={reqDocs} />)
     expect(screen.getByText(/National ID · PSA signature valid/)).toBeInTheDocument()
     expect(screen.getByText('Matches account')).toBeInTheDocument()
     expect(screen.getByText('Likely same person')).toBeInTheDocument()
-    // pcnFingerprint present → the cross-check row appears, honestly "not checked".
-    expect(screen.getByText(/No automatic cross-check/)).toBeInTheDocument()
+    // Duplicate-account flag: same-hospital match by name, elsewhere a count only.
+    expect(screen.getByText(/Possible duplicate — ask the patient/)).toBeInTheDocument()
+    expect(await screen.findByText(/Ana Cruz \(PAT-1\)/)).toBeInTheDocument()
+    expect(screen.getByText(/1 account at another hospital/)).toBeInTheDocument()
     expect(screen.getByText(/Signals are advisory/)).toBeInTheDocument()
   })
 
