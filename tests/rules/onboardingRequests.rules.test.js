@@ -138,3 +138,42 @@ describe('hospitals — onboarding status is the Super Admin\'s', () => {
     await assertSucceeds(updateDoc(at, { facilityName: 'A Hospital' }))
   })
 })
+
+// Form 2 (2026-11-15): the formal request to join the network.
+describe('onboardingRequests — formal request (form 2)', () => {
+  const formal = (over = {}) => ({
+    formVersion: 2, referenceNo: 'MAPA-HR-261115-ANON',
+    hospitalName: 'Davao Regional Medical Center', hospitalType: 'DOH-retained', nhfrCode: 'DOH000000012345',
+    province: 'Davao del Norte', city: 'Tagum City', region: 'Region XI',
+    officialPhone: '084 123 4567', officialEmail: 'mss@drmc.example',
+    requestingOffice: 'Medical Social Service', contactName: 'Ana Reyes', contactPosition: 'Head, MSS',
+    email: 'ana.reyes@drmc.example', contactPhone: '',
+    signatoryName: 'Dr. Jose Cruz', signatoryPosition: 'Medical Center Chief',
+    funders: ['PCSO', 'DSWD AICS'], malasakitOnSite: true, message: '',
+    certifiedAuthority: true, privacyConsent: true, privacyNoticeVersion: '2026-11-15',
+    status: 'new', createdAt: serverTimestamp(), ...over,
+  })
+  const file = (uid, data) => setDoc(doc(as(uid), 'onboardingRequests', uid), data)
+
+  it('accepts a complete request', async () => {
+    await assertSucceeds(file('f1', formal()))
+  })
+  it('requires the NHFR code, address, official contacts, office, officer position and signatory', async () => {
+    await assertFails(file('f2', formal({ nhfrCode: '' })))
+    await assertFails(file('f3', formal({ city: '' })))
+    await assertFails(file('f4', formal({ officialPhone: '12' })))
+    await assertFails(file('f5', formal({ officialEmail: 'not-an-email' })))
+    await assertFails(file('f6', formal({ requestingOffice: 'Marketing' })))
+    await assertFails(file('f7', formal({ contactPosition: '' })))
+    await assertFails(file('f8', formal({ signatoryName: '' })))
+  })
+  it('requires both declarations and a well-formed reference', async () => {
+    await assertFails(file('f9', formal({ certifiedAuthority: false })))
+    await assertFails(file('fa', formal({ privacyConsent: false })))
+    await assertFails(file('fb', formal({ referenceNo: 'anything' })))
+  })
+  it('rejects unknown fields (e.g. documents a visitor tries to attach)', async () => {
+    await assertFails(file('fc', formal({ ltoNumber: 'LTO-1' })))
+    await assertFails(file('fd', formal({ funders: 'PCSO' })))
+  })
+})

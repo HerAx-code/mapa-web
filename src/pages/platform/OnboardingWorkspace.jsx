@@ -178,7 +178,7 @@ export default function OnboardingWorkspace() {
   }
 
   const createHospital = () => navigate('/platform/hospitals', {
-    state: { prefill: { facilityName: r.hospitalName, region: r.region || '', contactEmail: r.email || '' }, fromRequest: id },
+    state: { prefill: { facilityName: r.hospitalName, region: r.region || '', contactEmail: r.officialEmail || r.email || '' }, fromRequest: id },
   })
 
   const goLive = async () => {
@@ -293,8 +293,13 @@ export default function OnboardingWorkspace() {
 
             {view === 'interest' && (<>
               <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2 text-sm">
-                {[['Ownership', owner.label], ['Region', r.region], ['NHFR code (as sent)', r.nhfrCode], ['Official phone (as sent)', r.officialPhone],
-                  ['Sent', fmt(tsToDate(r.createdAt))], ['Signatory (as sent)', [r.signatoryName, r.signatoryPosition].filter(Boolean).join(', ')]].map(([k, val]) => (
+                {[['Reference', r.referenceNo], ['Ownership', owner.label],
+                  ['Address', [r.city, r.province, r.region].filter(Boolean).join(', ')], ['NHFR code (as sent)', r.nhfrCode],
+                  ['Official phone (as sent)', r.officialPhone], ['Official email (as sent)', r.officialEmail],
+                  ['Requesting office', r.requestingOffice], ['Signatory (as sent)', [r.signatoryName, r.signatoryPosition].filter(Boolean).join(', ')],
+                  ['Current funders', (r.funders ?? []).join(', ')], ['Malasakit Center on site', r.formVersion === 2 ? (r.malasakitOnSite ? 'Yes' : 'No') : ''],
+                  ['Declarations', r.formVersion === 2 ? `Authority ${r.certifiedAuthority ? 'certified' : 'missing'} · privacy notice ${r.privacyNoticeVersion ?? ''} accepted` : ''],
+                  ['Sent', fmt(tsToDate(r.createdAt))]].map(([k, val]) => (
                   <div key={k}><dt className="text-xs text-gray-500">{k}</dt><dd className="text-gray-800">{val || '—'}</dd></div>
                 ))}
               </dl>
@@ -428,7 +433,9 @@ export default function OnboardingWorkspace() {
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contacts</p>
               <p className="text-gray-800">{r.contactName}{r.contactPosition ? `, ${r.contactPosition}` : ''}</p>
               <a className="text-brand-600 font-medium break-all" href={`mailto:${r.email}?subject=${encodeURIComponent('MAPA onboarding — ' + r.hospitalName)}`}>{r.email}</a>
-              {r.officialPhone && <p className="text-gray-600">{r.officialPhone} <span className="text-gray-400">(as sent — confirm via the registry)</span></p>}
+              {r.contactPhone && <p className="text-gray-600">{r.contactPhone} <span className="text-gray-400">(officer)</span></p>}
+              {r.officialPhone && <p className="text-gray-600">{r.officialPhone} <span className="text-gray-400">(hospital, as sent — call back on the registry number)</span></p>}
+              {r.officialEmail && <a className="block text-brand-600 break-all" href={`mailto:${r.officialEmail}`}>{r.officialEmail} <span className="text-gray-400">(hospital)</span></a>}
               <p className="text-xs text-gray-500 pt-1">Signs the MOA: {owner.signer}</p>
               {a.dpoName && <p className="text-xs text-gray-500">DPO: {a.dpoName}</p>}
             </div>

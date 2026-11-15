@@ -78,7 +78,7 @@ export default function OnboardingRequests() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900">{r.hospitalName}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {[ownershipOf(r.verification?.ownershipType || r.hospitalType).label, r.region, d !== null && `${d} day${d === 1 ? '' : 's'} in stage`].filter(Boolean).join(' · ')}
+                        {[r.referenceNo, ownershipOf(r.verification?.ownershipType || r.hospitalType).label, [r.city, r.province].filter(Boolean).join(', ') || r.region, d !== null && `${d} day${d === 1 ? '' : 's'} in stage`].filter(Boolean).join(' · ')}
                       </p>
                       {step && <p className="text-sm text-gray-700 mt-1.5">Next: {step}</p>}
                       {attention && <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1 mt-1.5 inline-block">Compliance date due or overdue</p>}
