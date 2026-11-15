@@ -63,6 +63,13 @@ async function handleAgencyWritten({ db, agencyId, before, after, serverTimestam
     return { deleted: agencyId }
   }
 
+  // A training agency (the Training Hospital's practice funder) is never
+  // public — it must not show on Landing. Drop any mirror it has.
+  if (after.training === true) {
+    if (before) await pubRef.delete()
+    return { skipped: 'training', agencyId }
+  }
+
   const next = projectPublicAgency(after)
 
   // Skip a write when the projected fields are unchanged, so unrelated agency
