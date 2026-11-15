@@ -57,7 +57,7 @@ describe('OnboardingWorkspace', () => {
   it('the go-live review lists the gate and keeps go-live disabled', async () => {
     await renderAt()
     screen.getByRole('button', { name: 'Live' }).click()
-    const btn = await screen.findByRole('button', { name: /Approve go-live and open registration/ })
+    const btn = await screen.findByRole('button', { name: /Approve go-live and open patient requests/ })
     expect(btn.disabled).toBe(true)
   })
 })

@@ -643,7 +643,7 @@ const AGENCY_FAQS = [
 
 const ADMIN_FAQS = [
   { q: 'How do I verify a patient document?',         a: 'Go to Doc Review under Operations. Click Verify or Reject on each pending document.' },
-  { q: 'How do I issue a Patient Access Code?',       a: 'Navigate to Patient Access Codes and click "Add One" or "Bulk Add". The system auto-generates the next sequential code to issue to the patient.' },
+  { q: 'How do I issue a Patient Access Code?',       a: 'Open Patient Access Codes and click "Issue code". Type the patient\'s name, birthdate, mobile number, visit date and the ID you saw, then print the slip. The code works only for that patient (last name + birthdate) and for one request. Only the Hospital Admin can issue, reset or delete codes.' },
   { q: 'How do I disable an agency?',                 a: 'Go to Agencies and click "Disable" on the agency card. This hides them from patients temporarily without deleting their data.' },
   { q: 'Where can I see all patient applications?',   a: 'Go to App Logs under Operations to view all submissions across agencies, with filters by status, agency, and date range.' },
   { q: 'How do I add a new admin account?',           a: 'Contact your hospital administrator to provision new admin accounts. Account creation is restricted to authorized personnel only.' },

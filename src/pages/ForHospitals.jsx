@@ -34,7 +34,7 @@ const STEPS = [
   { icon: MdVerified,     title: 'Verification',           body: 'We check your facility against the DOH registry (NHFR code, License to Operate, PhilHealth) and call your official number.' },
   { icon: MdHandshake,    title: 'Agreement',              body: 'A no-cost MOA signed by both sides, a data processing agreement, your Data Protection Officer and a privacy impact assessment.' },
   { icon: MdSchool,       title: 'Setup & training',       body: 'We set up your hospital, your staff practice in a training hospital with sample patients, and you sign a go-live acceptance.' },
-  { icon: MdRocketLaunch, title: 'Go-live',                body: 'Patients can register with your access codes. We stay close during the first weeks.' },
+  { icon: MdRocketLaunch, title: 'Go-live',                body: 'Patients file requests with the access codes your office issues. We stay close during the first weeks.' },
 ]
 
 const NEEDS = [

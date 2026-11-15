@@ -373,8 +373,8 @@ export default function Hospitals() {
     try {
       await updateDoc(doc(db, 'hospitals', h.id), { enabled: next, updatedAt: serverTimestamp() })
       await syncHospitalPublic(h.id, { ...h, enabled: next })
-      logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: h.id, targetName: h.facilityName || h.id, details: next ? 'Registrations resumed' : 'Registrations paused' })
-      toast.success(next ? 'Registrations resumed.' : 'Registrations paused.')
+      logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: h.id, targetName: h.facilityName || h.id, details: next ? 'New requests resumed' : 'New requests paused' })
+      toast.success(next ? 'New requests resumed.' : 'New requests paused.')
       setToggling(null)
     } catch (e) {
       console.error(e)
@@ -432,7 +432,7 @@ export default function Hospitals() {
   const statusOf = (h) => {
     if (h.onboarding?.training) return { label: 'Training', cls: 'bg-gray-100 text-gray-700' }
     if (h.onboarding?.stage && h.onboarding.stage !== 'live') return { label: 'Onboarding', cls: 'bg-blue-50 text-blue-800' }
-    if (h.enabled === false) return { label: 'Sign-ups paused', cls: 'bg-amber-50 text-amber-800' }
+    if (h.enabled === false) return { label: 'New requests paused', cls: 'bg-amber-50 text-amber-800' }
     if (!(staffByHospital[h.id]?.super > 0) || partnerCountOf(h) === 0) return { label: 'Provisioning', cls: 'bg-amber-50 text-amber-800' }
     return { label: 'Live', cls: 'bg-green-50 text-green-800' }
   }
@@ -589,8 +589,8 @@ export default function Hospitals() {
                             </Link>
                           ) : (
                           <button className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-700 hover:bg-amber-50"
-                            aria-label={h.enabled === false ? `Resume sign-ups at ${h.facilityName || h.id}` : `Pause sign-ups at ${h.facilityName || h.id}`}
-                            title={h.enabled === false ? 'Resume sign-ups' : 'Pause sign-ups'} onClick={() => setToggling(h)}>
+                            aria-label={h.enabled === false ? `Resume new requests at ${h.facilityName || h.id}` : `Pause new requests at ${h.facilityName || h.id}`}
+                            title={h.enabled === false ? 'Resume new requests' : 'Pause new requests'} onClick={() => setToggling(h)}>
                             {h.enabled === false ? <MdCheckCircle size={18} /> : <MdBlock size={18} />}
                           </button>
                           )}
@@ -629,13 +629,13 @@ export default function Hospitals() {
         onClose={() => !busy && setToggling(null)}
         onConfirm={handleToggle}
         title={toggling?.enabled === false
-          ? `Resume sign-ups at ${toggling?.facilityName || toggling?.id}?`
-          : `Pause sign-ups at ${toggling?.facilityName || toggling?.id}?`}
+          ? `Resume new requests at ${toggling?.facilityName || toggling?.id}?`
+          : `Pause new requests at ${toggling?.facilityName || toggling?.id}?`}
         body={toggling?.enabled === false
-          ? 'Patients can register with this hospital\'s access codes again.'
-          : 'New patients can no longer register with this hospital\'s access codes. Its staff and existing patients are not affected.'}
+          ? 'Patients can use this hospital\'s access codes again, to sign up or to file a request.'
+          : 'Patients can no longer use this hospital\'s access codes to sign up or file a new request. Requests already filed, its staff and existing patients are not affected.'}
         tone={toggling?.enabled === false ? 'primary' : 'danger'}
-        confirmLabel={toggling?.enabled === false ? 'Resume' : 'Pause sign-ups'}
+        confirmLabel={toggling?.enabled === false ? 'Resume' : 'Pause new requests'}
         confirmLabelBusy="Saving…"
       />
     </Layout>
