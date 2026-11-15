@@ -1126,7 +1126,7 @@ service cloud.firestore {
     function issuedOk() {
       let d = request.resource.data;
       return d.keys().hasOnly(['name', 'nameParts', 'birthdate', 'proof', 'contact', 'visitDate', 'caseNumber',
-                               'idType', 'idLast4', 'issuedBy', 'issuedByUid', 'issuedAt', 'updatedAt', 'updatedBy']) &&
+                               'idType', 'idLast4', 'issuedBy', 'issuedByUid', 'issuedAt', 'updatedAt', 'updatedBy', 'updatedByUid']) &&
         d.name is string && d.name.size() > 0 && d.name.size() <= 160 &&
         d.birthdate is string && d.birthdate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') &&
         d.proof is string && d.proof.matches('[A-Z]+[|]' + d.birthdate) &&
@@ -1151,9 +1151,18 @@ service cloud.firestore {
                        existsAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)/privateInfo/issued);
       // A code that backs a request (requestId, marketplace) is part of that
       // case's record: the gateway can't reset, re-bind or delete it.
-      allow update: if (hospitalAdminWrite() &&
+      // Gateway staff may only REVOKE an unfiled code (the Hospital Admin's
+      // "Reset to Available", HospitalIDs.jsx): back to available, no holder.
+      // Nothing else — in particular not `bound` (unbinding would let anyone
+      // claim a patient-bound code without the name/birthdate proof) and not
+      // patId/status=used (pre-assigning a code to an account skips the proof).
+      // Found by the 2026-11-15 access-code review.
+      allow update: if (isHospitalSuperAdmin(resource.data) &&
                         resource.data.get('requestId', null) == null &&
-                        request.resource.data.get('requestId', null) == null) ||
+                        request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['status', 'patId', 'date', 'time', 'revokedAt']) &&
+                        request.resource.data.status == 'available' &&
+                        request.resource.data.patId == null) ||
                        // Phase 1.5: the claim branch pinned status and patId
                        // but left every OTHER field on the doc writable in
                        // the same operation -- a registering user could
@@ -1224,11 +1233,19 @@ service cloud.firestore {
                           request.resource.data.usedBy is string &&
                           request.resource.data.usedBy.size() <= 120 &&
                           request.resource.data.keys().hasOnly(['usedBy', 'usedById', 'createdAt', 'proof']));
-        // Staff may correct `issued` (a typo) only while the code is unclaimed.
-        allow update: if isHospitalAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) &&
-                         (infoId != 'issued' ||
-                          (get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.status == 'available' && issuedOk()));
-        allow delete: if isHospitalAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data);
+        // Only the Hospital Admin may correct `issued` (a typo), only while the
+        // code is unclaimed, and the correction names who made it. `details`
+        // (who claimed it) is never edited.
+        allow update: if infoId == 'issued' &&
+                         isHospitalSuperAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) &&
+                         get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.status == 'available' &&
+                         issuedOk() &&
+                         request.resource.data.get('updatedByUid', '') == uid();
+        // `details` goes when the Hospital Admin revokes or deletes the code;
+        // `issued` only together with the code itself (never left dangling).
+        allow delete: if isHospitalSuperAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) &&
+                         (infoId == 'details' ||
+                          !existsAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)));
       }
     }
 

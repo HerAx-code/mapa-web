@@ -2,7 +2,7 @@ import { loadRules } from './helpers/rules.js'
 import { issueCode, issuedRecord } from './helpers/codes.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, getDoc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
 import { codeProof } from '../../src/utils/codeIssue.js'
 
 // Patient-bound access codes (2026-11-15): a code is issued to one named
@@ -117,9 +117,9 @@ describe('filing at another hospital (marketplace claim)', () => {
 describe('correcting the record', () => {
   it('staff fix a typo while the code is unclaimed, not after', async () => {
     const ref = doc(as('superA'), 'hospitalIds', CODE, 'privateInfo', 'issued')
-    await assertSucceeds(updateDoc(ref, { contact: '09171234567' }))
+    await assertSucceeds(updateDoc(ref, { contact: '09171234567', updatedByUid: 'superA' }))
     await register('newPat')
-    await assertFails(updateDoc(ref, { contact: '09998887777' }))
+    await assertFails(updateDoc(ref, { contact: '09998887777', updatedByUid: 'superA' }))
   })
 })
 
@@ -152,5 +152,45 @@ describe('blank codes printed before patient-bound issuing', () => {
       await seedBlank(past)
       await assertFails(claimBlank(past))
     } finally { await past.cleanup() }
+  })
+})
+
+// 2026-11-15 access-code review: staff could unbind, re-assign or rewrite a
+// patient-bound code. Only revoke / delete by the Hospital Admin remain.
+describe('staff cannot tamper with an issued code', () => {
+  const codeRef = (u) => doc(as(u), 'hospitalIds', CODE)
+  const issuedRef = (u) => doc(as(u), 'hospitalIds', CODE, 'privateInfo', 'issued')
+
+  it('nobody on staff can unbind it or hand it to an account', async () => {
+    for (const u of ['adminA', 'superA']) {
+      await assertFails(updateDoc(codeRef(u), { bound: false }))
+      await assertFails(updateDoc(codeRef(u), { status: 'used', patId: 'someUid' }))
+      await assertFails(updateDoc(codeRef(u), { tenantId: B }))
+    }
+  })
+  it('a Staff Admin cannot rewrite or delete who it was issued to', async () => {
+    await assertFails(updateDoc(issuedRef('adminA'), { name: 'Other Person', updatedByUid: 'adminA' }))
+    await assertFails(deleteDoc(issuedRef('adminA')))
+  })
+  it('the Hospital Admin may correct it only with their name on the change, and cannot leave it dangling', async () => {
+    await assertFails(updateDoc(issuedRef('superA'), { contact: '09171234567' }))
+    await assertSucceeds(updateDoc(issuedRef('superA'), { contact: '09171234567', updatedByUid: 'superA', updatedBy: 'Super A' }))
+    await assertFails(deleteDoc(issuedRef('superA')))
+  })
+  it('the Hospital Admin can still revoke a claimed code and delete an unused one', async () => {
+    await register('newPat')
+    const db = as('superA')
+    const b = writeBatch(db)
+    b.update(doc(db, 'hospitalIds', CODE), { status: 'available', patId: null, date: '', time: '', revokedAt: serverTimestamp() })
+    b.delete(doc(db, 'hospitalIds', CODE, 'privateInfo', 'details'))
+    await assertSucceeds(b.commit())
+    const d = writeBatch(db)
+    d.delete(doc(db, 'hospitalIds', CODE, 'privateInfo', 'issued'))
+    d.delete(doc(db, 'hospitalIds', CODE))
+    await assertSucceeds(d.commit())
+  })
+  it('a Staff Admin cannot revoke', async () => {
+    await register('newPat')
+    await assertFails(updateDoc(codeRef('adminA'), { status: 'available', patId: null, date: '', time: '', revokedAt: serverTimestamp() }))
   })
 })
