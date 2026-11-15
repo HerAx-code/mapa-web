@@ -24,6 +24,7 @@ import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 import { codeProof, isBirthdate, blankCodeExpired } from '../../utils/codeIssue'
+import { RELATIONSHIPS } from '../../data/relationships'
 
 const CURRENT_YEAR        = new Date().getFullYear()
 const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
@@ -151,7 +152,7 @@ function StepIndicator({ current, steps, onJump }) {
 // ── Main component ────────────────────────────────────────────────────────
 
 export default function Register() {
-  const { t }                 = useTranslation()
+  const { t, i18n }           = useTranslation()
   const navigate              = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { updateUser }        = useAuth()
@@ -210,6 +211,9 @@ export default function Register() {
   const [form, setForm] = useState({
     firstName: '', middleName: '', lastName: '', suffix: '',
     birthdate: '',
+    // A family member signing up for the patient (the account is the
+    // patient's; this records who manages it — plan step 4).
+    managedByFamily: false, managerName: '', managerRelationship: '',
     email: '',
     contactNumber: '',
     barangay: '', city: '', province: '',
@@ -310,6 +314,10 @@ export default function Register() {
     if (form.middleName && !NAME_RE.test(form.middleName)) e.middleName = t('register.errors.nameLettersOnly')
     else if (form.middleName && hasReservedToken(form.middleName)) e.middleName = t('register.errors.nameReserved')
     if (!isBirthdate(form.birthdate) || form.birthdate > new Date().toISOString().slice(0, 10)) e.birthdate = t('register.errors.birthdateRequired')
+    if (form.managedByFamily) {
+      if (!form.managerName.trim() || !NAME_RE.test(form.managerName)) e.managerName = t('register.errors.managerNameRequired')
+      if (!RELATIONSHIPS.some(r => r.value === form.managerRelationship)) e.managerRelationship = t('register.errors.managerRelationshipRequired')
+    }
 
     if (!form.contactNumber) {
       e.contactNumber = t('register.errors.contactRequired')
@@ -571,6 +579,7 @@ export default function Register() {
         suffix:   (officialName?.nameParts ? officialName.nameParts.suffix : form.suffix) || null,
         birthdate: form.birthdate,
         lastName:  officialName?.nameParts?.lastName ?? form.lastName.trim(),
+        ...(form.managedByFamily ? { managedBy: { name: form.managerName.trim(), relationship: form.managerRelationship } } : {}),
         hospitalId: codeTyped() ? form.hospitalId : null, patientId,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
@@ -792,6 +801,38 @@ export default function Register() {
               <div className="mb-2">
                 <p className="text-sm font-semibold text-gray-800">{t('register.step1.sectionTitle')}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{t('register.step1.sectionDesc')}</p>
+              </div>
+
+              {/* Signing up for a family member: the account stays the patient's
+                  (their details below); this records who manages it. */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer min-h-[44px]">
+                  <input type="checkbox" className="mt-0.5 w-5 h-5 accent-brand-500 flex-shrink-0"
+                    checked={form.managedByFamily}
+                    onChange={e => setForm(p => ({ ...p, managedByFamily: e.target.checked }))} />
+                  <span className="text-sm text-gray-700">{t('register.step1.managedByFamily')}</span>
+                </label>
+                {form.managedByFamily && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="reg-managerName" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.managerName')} <span className="text-red-400">*</span></label>
+                      <input id="reg-managerName" data-field="managerName" className={inputCls('managerName')}
+                        value={form.managerName} onChange={setName('managerName')} autoComplete="name" />
+                      <FieldError msg={errors.managerName} />
+                    </div>
+                    <div>
+                      <label htmlFor="reg-managerRelationship" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.managerRelationship')} <span className="text-red-400">*</span></label>
+                      <select id="reg-managerRelationship" data-field="managerRelationship" className={inputCls('managerRelationship')}
+                        value={form.managerRelationship} onChange={set('managerRelationship')}>
+                        <option value="">{t('register.step1.selectRelationship')}</option>
+                        {RELATIONSHIPS.filter(r => r.value !== 'non_relative').map(r => (
+                          <option key={r.value} value={r.value}>{(i18n.language ?? '').startsWith('fil') ? r.fil : r.en}</option>
+                        ))}
+                      </select>
+                      <FieldError msg={errors.managerRelationship} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Name */}

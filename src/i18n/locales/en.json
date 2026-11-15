@@ -1540,6 +1540,10 @@
     "stepCode": "Access Code (optional)",
     "stepProgress": "Step {{current}} of {{total}} · {{label}}",
     "step1": {
+      "selectRelationship": "Select…",
+      "managerRelationship": "You are the patient's…",
+      "managerName": "Your full name",
+      "managedByFamily": "I'm signing up for a family member — they are the patient. Enter the PATIENT's details below.",
       "birthdate": "Birthdate",
       "sectionTitle": "Personal Information",
       "sectionDesc": "Enter your name and contact details as they appear on your official ID.",
@@ -1600,6 +1604,8 @@
     "haveAccount": "Already have an account?",
     "signIn": "Sign in",
     "errors": {
+      "managerRelationshipRequired": "Choose how you are related to the patient.",
+      "managerNameRequired": "Enter your full name (letters only).",
       "codeExpired": "This code is no longer valid. Ask the hospital's social service office for a new code.",
       "codeMismatch": "This code was issued to a different name or birthdate. Check your last name and birthdate in step 1 — they must match what the hospital recorded — or ask the office that gave you the code.",
       "birthdateRequired": "Enter your birthdate.",

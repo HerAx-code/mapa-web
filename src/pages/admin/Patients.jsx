@@ -19,6 +19,7 @@ import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
 import { deleteDocumentStorage } from '../../utils/uploadDocument'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
+import { relationshipLabel } from '../../utils/intakeSheet'
 import toast from 'react-hot-toast'
 
 // ── Profile Modal ─────────────────────────────────────────────────────────
@@ -65,6 +66,8 @@ function ProfileModal({ patient, onClose, onMessage }) {
     { icon: MdCalendarToday, label: 'Registered',     value: fmt(patient.createdAt) },
     { icon: MdSchedule,      label: 'Holding Period', value: patient.cooldown > 0 ? 'Active' : 'None' },
     { icon: MdBadge,         label: 'Patient ID',     value: patient.patientId  || '—' },
+    { icon: MdCalendarToday, label: 'Birthdate',      value: patient.birthdate  || '—' },
+    ...(patient.managedBy ? [{ icon: MdPhone, label: 'Account managed by', value: `${patient.managedBy.name} (${relationshipLabel(patient.managedBy.relationship)})` }] : []),
   ]
 
   return (
