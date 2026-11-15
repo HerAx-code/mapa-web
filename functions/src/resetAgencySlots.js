@@ -15,7 +15,7 @@
 
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore } = require('firebase-admin/firestore')
 
 async function handleResetAgencySlots({ db, today }) {
   const snap = await db.collection('agencies').where('enabled', '==', true).get()
@@ -71,7 +71,7 @@ exports.resetAgencySlots = onSchedule(
   async () => {
     // YYYY-MM-DD in Manila local. en-CA conveniently formats as ISO date.
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
-    const result = await handleResetAgencySlots({ db: admin.firestore(), today })
+    const result = await handleResetAgencySlots({ db: getFirestore(), today })
     logger.info('[resetAgencySlots] daily reset complete', result)
   }
 )

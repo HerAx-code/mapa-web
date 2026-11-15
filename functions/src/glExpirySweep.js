@@ -1,6 +1,6 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore')
 
 /**
  * glExpirySweep — hourly sweep that marks past-validity GLs as
@@ -105,13 +105,13 @@ exports.glExpirySweep = onSchedule(
   },
   async () => {
     const cutoffMs = Date.now() - GL_VALIDITY_DAYS * 86400000
-    const cutoff = admin.firestore.Timestamp.fromMillis(cutoffMs)
+    const cutoff = Timestamp.fromMillis(cutoffMs)
     const result = await handleGLExpirySweep({
-      db: admin.firestore(),
+      db: getFirestore(),
       cutoff,
       cutoffMs,
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
-      increment: (n) => admin.firestore.FieldValue.increment(n),
+      serverTimestamp: () => FieldValue.serverTimestamp(),
+      increment: (n) => FieldValue.increment(n),
     })
     logger.info('[glExpirySweep] hourly sweep complete', result)
   }

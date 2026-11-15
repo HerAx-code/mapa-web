@@ -1,7 +1,7 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const crypto = require('node:crypto')
 
 /**
@@ -165,8 +165,8 @@ exports.onPatientIdentityWritten = onDocumentWritten({ ...OPTS, document: 'users
   if (!profileChanged(before, after)) return { skipped: 'unchanged' }
   try {
     const result = await handleIdentityIndex({
-      db: admin.firestore(), uid: event.params.uid, values: profileValues(after),
-      hmac: makeHmac(IDENTITY_KEY.value()), FieldValue: admin.firestore.FieldValue,
+      db: getFirestore(), uid: event.params.uid, values: profileValues(after),
+      hmac: makeHmac(IDENTITY_KEY.value()), FieldValue: FieldValue,
     })
     logger.info('[onPatientIdentityWritten]', result)
     return result
@@ -184,8 +184,8 @@ exports.onIdDocumentIdentityWritten = onDocumentWritten({ ...OPTS, document: 'do
   if (!after?.patientId || !fp || fp === (before?.pcnFingerprint ?? null)) return { skipped: 'no-pcn-change' }
   try {
     const result = await handleIdentityIndex({
-      db: admin.firestore(), uid: after.patientId, values: { pcn: fp },
-      hmac: makeHmac(IDENTITY_KEY.value()), FieldValue: admin.firestore.FieldValue,
+      db: getFirestore(), uid: after.patientId, values: { pcn: fp },
+      hmac: makeHmac(IDENTITY_KEY.value()), FieldValue: FieldValue,
     })
     logger.info('[onIdDocumentIdentityWritten]', result)
     return result

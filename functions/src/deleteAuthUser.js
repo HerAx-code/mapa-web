@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore } = require('firebase-admin/firestore')
+const { getAuth } = require('firebase-admin/auth')
 
 /**
  * deleteAuthUser — deletes one Firebase Auth account on behalf of a
@@ -83,6 +84,6 @@ exports.deleteAuthUser = onCall({
 }, async (request) => handleDeleteAuthUser({
   callerUid: request.auth?.uid,
   targetUid: request.data?.uid,
-  db: admin.firestore(),
-  auth: admin.auth(),
+  db: getFirestore(),
+  auth: getAuth(),
 }))

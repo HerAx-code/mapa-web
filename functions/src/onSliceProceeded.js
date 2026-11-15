@@ -1,6 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
 /**
  * onSliceProceeded — notifies an agency's coordinators when the patient accepts
@@ -54,8 +54,8 @@ exports.onSliceProceeded = onDocumentWritten({
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
   try {
     const result = await handleSliceProceeded({
-      db: admin.firestore(), before, after,
-      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+      db: getFirestore(), before, after,
+      serverTimestamp: () => FieldValue.serverTimestamp(),
     })
     if (result.notified) logger.info('[onSliceProceeded] notified agency', result)
     return result

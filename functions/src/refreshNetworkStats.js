@@ -1,6 +1,6 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
-const admin = require('firebase-admin')
+const { getFirestore, FieldValue, AggregateField } = require('firebase-admin/firestore')
 const { writeNetworkStats } = require('./networkStats')
 
 /**
@@ -19,9 +19,9 @@ exports.refreshNetworkStats = onSchedule(
   async () => {
     try {
       const stats = await writeNetworkStats({
-        db: admin.firestore(),
-        AggregateField: admin.firestore.AggregateField,
-        serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+        db: getFirestore(),
+        AggregateField: AggregateField,
+        serverTimestamp: () => FieldValue.serverTimestamp(),
       })
       logger.info('[refreshNetworkStats] updated', { hospitals: Object.keys(stats.hospitals).length })
     } catch (err) {
