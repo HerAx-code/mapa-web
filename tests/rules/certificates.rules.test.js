@@ -133,7 +133,8 @@ describe('agencies.update — coordinator budget guard', () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
-      name: 'Malasakit Center (updated description)',
+      name: 'Malasakit Center',
+      description: 'Updated description',  // profile text; the name is the Super Admin's
       budget: { allocated: 100_000, committed: 0, disbursed: 0 },  // unchanged
     }))
   })

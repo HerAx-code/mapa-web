@@ -390,7 +390,7 @@
     "messages": {
       "heading": "Mga Mensahe",
       "empty": "Wala pang mensahe",
-      "patientHint": "Pindutin ang <b>Bagong Mensahe</b> sa ibaba upang makipag-ugnayan sa hospital staff o sa inyong ahensya.",
+      "patientHint": "Kapag nag-message ang inyong social worker o isang ahensya, lalabas ito rito at maaari kayong tumugon.",
       "noMessages": "Wala pang mensahe",
       "seeAll": "Tingnan lahat",
       "newMessage": "Bagong Mensahe"
@@ -772,7 +772,7 @@
     },
     "request": {
       "holdMessage": "Pumunta sa Mga Mensahe",
-      "holdDesc": "Naglagay ang {{gateway}} ng holding period sa inyong account, kaya hindi muna kayo makakapagsumite ng bagong kahilingan o makakalipat sa ibang ospital. Mag-message sa social-services office upang malaman ang dahilan o kung kailan ito aalisin.",
+      "holdDesc": "Naglagay ang {{gateway}} ng holding period sa inyong account, kaya hindi muna kayo makakapagsumite ng bagong kahilingan o makakalipat sa ibang ospital. Nasa inyong Messages ang dahilan, kung saan maaari kayong tumugon. Maaari rin kayong pumunta o tumawag sa social-services office.",
       "holdTitle": "Naka-hold ang inyong account",
       "declarationConfirmRep": "Kinukumpirma ko ang deklarasyong ito para sa pasyente.",
       "declarationConfirm": "Kinukumpirma ko ang deklarasyong ito.",
@@ -1381,7 +1381,7 @@
       "tapHint": "I-tap ang anumang tanong sa ibaba para basahin ang sagot.",
       "searchPlaceholder": "Maghanap sa gabay (hal. panayam, withdraw, ahensya)…",
       "noResults": "Walang seksyong tumutugma sa \"{{query}}\". Subukan ang ibang keyword.",
-      "footer": "May iba pang katanungan? Pumunta sa {{gateway}} office o magpadala ng mensahe sa pamamagitan ng portal gamit ang envelope icon sa itaas.",
+      "footer": "May iba pang katanungan? Pumunta o tumawag sa {{gateway}} office, o tumugon sa anumang mensahe nila sa Messages.",
       "linkGoToDocuments": "Pumunta sa Aking mga Dokumento",
       "linkGoToStatus": "Pumunta sa Aking Aplikasyon",
       "linkGoToMessages": "Pumunta sa mga Mensahe",
@@ -1430,7 +1430,7 @@
           "s3": "I-tap ang I-withdraw ang Aplikasyon. May lalabas na confirmation.",
           "s4": "I-tap ang Oo, I-withdraw. Isasara ang kahilingan at hindi na ito mabubuksan muli.",
           "s5": "Nagamit na ang access code nito. Upang magsumite muli, kumuha ng bagong code sa social-services office ng ospital.",
-          "note": "Maaari kayong mag-withdraw hangga't hindi pa ie-endorso ng {{gateway}} ang inyong kahilingan sa isang ahensya. Pagkatapos nito, mag-message na lamang sa inyong social worker."
+          "note": "Maaari kayong mag-withdraw hangga't hindi pa ie-endorso ng {{gateway}} ang inyong kahilingan sa isang ahensya. Pagkatapos nito, tumugon sa inyong social worker sa Messages o makipag-ugnayan sa social-services office."
         },
         "cofunding": {
           "title": "Ano ang co-funding? Bakit may maraming ahensya?",
@@ -1489,8 +1489,8 @@
           "note": "Ang Guarantee Letter ay may bisa nang 30 araw mula sa petsa ng pagbibigay. Maaaring direktang singilin ng pinangalanang provider ang ahensya para sa garantisadong halaga — hindi ninyo pananagutan ang garantisadong porsyon."
         },
         "contact": {
-          "title": "Paano ako makikipag-ugnayan sa admin o ahensya?",
-          "content": "Pumunta sa Messages sa sidebar upang tingnan ang lahat ng inyong mga usapan. I-tap ang New Message button sa kanang itaas upang magsimula ng bagong usapan sa hospital staff o sa inyong itinalagang ahensya. Maaari ninyong direktang i-message ang mga ito kung may mga tanong tungkol sa aplikasyon o dokumento, o upang tumugon sa pagsusuri ng inyong social worker."
+          "title": "Paano ako makikipag-ugnayan sa ospital o sa isang ahensya?",
+          "content": "Magpapadala ng mensahe sa MAPA ang inyong social worker o ang isang ahensya kapag may kailangan sila, at maaari kayong tumugon sa Messages (sidebar o bottom tab). Hindi kayo makakapagsimula ng bagong usapan. Kung kailangan ninyong makipag-ugnayan muna sa ospital, pumunta o tumawag sa social-services office nito; kapag nag-message na sila, maaari kayong tumugon doon anumang oras."
         },
         "forgotPw": {
           "title": "Nakalimutan ko ang aking password. Ano ang gagawin ko?",

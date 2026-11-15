@@ -48,7 +48,14 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 - `agency_admin` → "Agency Admin" — agency portal + budget allocation, own team,
   promotions, agency audit log; partner hospitals read-only.
 - `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
-  any partner hospital; reads only patients endorsed to the agency.
+  any partner hospital; reads only patients endorsed to the agency. Writes to
+  its agency doc are limited (rules, 2026-11-15) to budget usage, today's
+  remaining slots and one named hospital's remaining slots (`slotRestoredFor`);
+  capacity, per-hospital totals, manual slot adjustments, allocation, cap,
+  assistance types, name and `enabled` are the Agency Admin's / Super Admin's.
+  `enabled` is the Super Admin's alone.
+- **Messaging is reply-only for patients:** only staff and agencies start a
+  conversation; patient copy must never tell them to start one.
 - `patient` — patient portal, own data only. **The access code is OPTIONAL at
   registration** (owner decision 2026-11-15, reversing 2026-11-14; see
   reports/Access code at registration.md). With a code, its hospital is their

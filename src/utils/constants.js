@@ -43,10 +43,12 @@ export const PERIOD_ADJECTIVE = {
 //   - AGENCY_ADMIN — senior officer at the agency (e.g., PCSO branch head).
 //     Controls allocation, manages coordinators, sees own audit log.
 //   - AGENCY — coordinator/social worker. Approves cases within allocation.
-//   - SUPER_ADMIN — the gateway platform operator. Onboards agencies, doc review,
-//     issues Patient Access Codes. Has zero fund authority.
-//   - STAFF_ADMIN — the gateway operations staff. Same as super_admin minus
-//     destructive actions.
+//   - SUPER_ADMIN ("Hospital Admin") — runs ONE hospital's gateway: request
+//     queue, patients, access codes (issue/reset/delete), staff accounts,
+//     audit log, Hospital Settings. Has zero fund authority.
+//   - STAFF_ADMIN — the hospital's day-to-day gateway staff: same queue work
+//     and issues access codes; no accounts, audit log, settings, code
+//     reset/delete or user deletion.
 //   - PATIENT — applicant.
 //   - PLATFORM_ADMIN — the network operator (multi-hospital Phase 6): onboards
 //     hospitals + their first admins, owns agencies and reference data. No

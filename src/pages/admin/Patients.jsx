@@ -16,7 +16,7 @@ import { tsToDate, fmtDate } from '../../utils/dates'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { getOrCreateConversation } from '../../utils/messages'
+import { getOrCreateConversation, sendMessage } from '../../utils/messages'
 import { deleteDocumentStorage } from '../../utils/uploadDocument'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import { relationshipLabel } from '../../utils/intakeSheet'
@@ -195,6 +195,7 @@ export default function Patients() {
   const [viewProfile,          setViewProfile]          = useState(null)
   const [activeApplicantIds,   setActiveApplicantIds]   = useState(new Set())
   const [confirmHolding,       setConfirmHolding]       = useState(null)
+  const [holdReason,           setHoldReason]           = useState('')
   const [confirmDeletion,      setConfirmDeletion]      = useState(null)
 
   useEffect(() => {
@@ -264,18 +265,33 @@ export default function Patients() {
     } catch (err) { console.error(err); toast.error('Failed to open conversation.') }
   }
 
-  const handleToggleHolding = async (patient) => {
+  const handleToggleHolding = async (patient, reason = '') => {
     try {
       const newCooldown = patient.cooldown > 0 ? 0 : 1
       await updateDoc(doc(db, 'users', patient.uid), { cooldown: newCooldown })
+      // Patients can't start a conversation (reply-only messaging), so the
+      // reason for a hold goes to them as a message they can answer.
+      if (newCooldown > 0) {
+        try {
+          const convId = await getOrCreateConversation(adminUser.uid, patient.uid, {
+            names: { [adminUser.uid]: adminUser.name, [patient.uid]: patient.name },
+            roles: { [adminUser.uid]: adminUser.role, [patient.uid]: 'patient' },
+            subject: 'Holding period on your account',
+          })
+          await sendMessage(convId, {
+            from: adminUser.uid, fromName: adminUser.name, toUid: patient.uid,
+            text: `A holding period has been placed on your account: ${reason.trim()}\n\nYou can't file a new request until it is lifted. Reply here if you have questions.`,
+          })
+        } catch (msgErr) { console.error('[holding] reason message failed:', msgErr) }
+      }
       await notify(patient.uid, {
         type:  'app_advanced',
         title: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed',
         body:  newCooldown > 0
-          ? 'A holding period has been placed on your account. You can\'t file a new assistance request until it is lifted. Message the social-services office if you have questions.'
+          ? 'A holding period has been placed on your account. You can\'t file a new assistance request until it is lifted. The reason is in your Messages, where you can reply.'
           : 'The holding period on your account has been lifted. You can file a new assistance request again.',
       })
-      logAudit(adminUser, { action: newCooldown > 0 ? 'holding_applied' : 'holding_removed', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newCooldown > 0 ? 'Holding period applied' : 'Holding period removed' })
+      logAudit(adminUser, { action: newCooldown > 0 ? 'holding_applied' : 'holding_removed', targetType: 'patient', targetId: patient.uid, targetName: patient.name, details: newCooldown > 0 ? `Holding period applied: ${reason.trim()}` : 'Holding period removed' })
       toast.success(`Holding period ${newCooldown > 0 ? 'applied to' : 'removed from'} ${patient.name}.`)
     } catch (err) { console.error(err); toast.error('Failed to update holding period. Please try again.') }
   }
@@ -620,10 +636,20 @@ export default function Patients() {
                             : <>Apply a holding period to <strong>{p.name}</strong>? They won't be able to file a new request or move to another hospital until you lift it.</>
                           }
                         </p>
+                        {!(p.cooldown > 0) && (
+                          <input
+                            className="input text-xs py-1.5 w-56 flex-shrink-0"
+                            placeholder="Reason (sent to the patient)"
+                            maxLength={300}
+                            value={holdReason}
+                            onChange={e => setHoldReason(e.target.value)}
+                          />
+                        )}
                         <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
-                          onClick={() => setConfirmHolding(null)}>Cancel</button>
-                        <button className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600 flex-shrink-0"
-                          onClick={() => { handleToggleHolding(p); setConfirmHolding(null) }}>Confirm</button>
+                          onClick={() => { setConfirmHolding(null); setHoldReason('') }}>Cancel</button>
+                        <button className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600 flex-shrink-0 disabled:opacity-50"
+                          disabled={!(p.cooldown > 0) && holdReason.trim().length < 5}
+                          onClick={() => { handleToggleHolding(p, holdReason); setConfirmHolding(null); setHoldReason('') }}>Confirm</button>
                       </div>
                     </td>
                   </tr>

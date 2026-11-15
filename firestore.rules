@@ -217,17 +217,10 @@ service cloud.firestore {
     // which uses the Admin SDK and bypasses Firestore rules entirely; the /seed
     // web page no longer self-creates users.
     match /users/{userId} {
-      // Read rule additions for the patient compose-message flow:
-      //   - Patients can read the gateway admin (super_admin / staff_admin) user
-      //     docs so the New Message picker can list them. Without this
-      //     the picker silently fails (the original rule treated patients
-      //     the same as unauthenticated for cross-user reads, but the
-      //     messaging feature has always required the patient to know
-      //     who's on the other side).
-      //   - Patients can read agency staff (agency / agency_admin) user
-      //     docs. Their names + roles are operational, not sensitive --
-      //     the patient already sees the agency on their slice and on
-      //     /agency catalog pages.
+      // Staff user docs (gateway + agency roles) are readable by any signed-in
+      // user: patients see who messaged them (messaging is reply-only — they
+      // never start a thread) and which agency holds their slice. Names and
+      // roles are operational, not sensitive.
       // Field exposure is still limited to operational fields (name,
       // role, agencyId, email, contact). No password, no PII beyond
       // contact email/phone. Sensitive patient data lives in
@@ -849,8 +842,8 @@ service cloud.firestore {
       // anything else.
       allow create: if isPlatformAdmin();
       // Update authority split:
-      //   - the gateway admin: anything (operational fields + emergency budget
-      //     overrides during incident response).
+      //   - platform admin (Super Admin): anything.
+      //   - hospital staff: only their own hospital's slot counters (below).
       //   - agency_admin: own agency. Allowed to write budget.* because
       //     they are the allocation authority for their own fund source.
       //   - agency coordinator (role=='agency'): own agency, but the
@@ -887,18 +880,45 @@ service cloud.firestore {
                           resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0)) ||
                        // Phase 7: agency staff can't change their own partner
                        // hospitals (D4 — the platform admin sets them).
+                       // Role review 2026-11-15: enabling/disabling an agency is
+                       // the Super Admin's (platform) decision, not the agency's.
                        (isAgencyAdmin() && userAgencyId() == agencyId &&
-                        request.resource.data.get('partnerHospitalIds', null) == resource.data.get('partnerHospitalIds', null)) ||
-                       (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
                         request.resource.data.get('partnerHospitalIds', null) == resource.data.get('partnerHospitalIds', null) &&
-                        request.resource.data.budget.allocated == resource.data.budget.allocated &&
-                        // .get(field, default) lets the rule tolerate
-                        // budgets where fundSource hasn't been set yet
-                        // (default null on both sides means equality holds);
-                        // without it, the rule errors on the undefined-property
-                        // access and denies the write.
-                        request.resource.data.budget.get('fundSource', null) == resource.data.budget.get('fundSource', null));
+                        request.resource.data.get('enabled', null) == resource.data.get('enabled', null)) ||
+                       // A coordinator writes only what its own work changes:
+                       // budget usage (approve / redeem / expire / reverse),
+                       // today's remaining slots + reset date, and one
+                       // hospital's remaining slots (reject restores it). The
+                       // settings the Agency Admin owns are pinned: slot
+                       // capacity, per-hospital totals, manual slot
+                       // adjustments, budget allocation/period/fund source,
+                       // per-applicant cap, assistance types, name, enabled.
+                       (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                          'partnerHospitalIds', 'enabled', 'name', 'maxPerApplicant',
+                          'assistanceTypes', 'slotAdjustments']) &&
+                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
+                        coordinatorBudgetOk() && coordinatorHospitalSlotsOk());
       allow delete: if isPlatformAdmin();
+
+      // Coordinator budget writes: usage counters only.
+      function coordinatorBudgetOk() {
+        return request.resource.data.get('budget', {}).diff(resource.data.get('budget', {})).affectedKeys()
+          .hasOnly(['committed', 'disbursed', 'totalSpent', 'lowBalanceNotifiedAt']);
+      }
+      // Coordinator per-hospital slot writes: only the hospital named in
+      // slotRestoredFor (written with it, ApplicationDetail's reject restore),
+      // and only its remaining count / reset date. (Rules can't index a set,
+      // so the write names the hospital it touches.)
+      function coordinatorHospitalSlotsOk() {
+        let before = resource.data.get('hospitalSlots', {});
+        let after  = request.resource.data.get('hospitalSlots', {});
+        let h = request.resource.data.get('slotRestoredFor', '');
+        return after.diff(before).affectedKeys().size() == 0 ||
+          (h is string && h != '' &&
+           after.diff(before).affectedKeys().hasOnly([h]) &&
+           after.get(h, {}).diff(before.get(h, {})).affectedKeys().hasOnly(['remaining', 'lastResetDate']));
+      }
     }
 
     // ── agenciesPublic ──────────────────────────────────────────────────────────
@@ -917,7 +937,16 @@ service cloud.firestore {
     // so this can never become a budget/contact leak even from a hostile client.
     match /agenciesPublic/{agencyId} {
       allow read:  if true;
-      allow write: if (isPlatformAdmin() || isAdmin() || (isAgency() && userAgencyId() == agencyId))
+      // Role review 2026-11-15: hospital staff and agency users may refresh the
+      // projection but not change what it says the agency is called or whether
+      // it is open: name and enabled must match the source agency doc.
+      allow write: if (isPlatformAdmin() ||
+                       ((isAdmin() || (isAgency() && userAgencyId() == agencyId)) &&
+                        // Same defaults as projectPublicAgency() (src/utils/agenciesPublic.js).
+                        request.resource.data.get('name', '') ==
+                          getAfter(/databases/$(database)/documents/agencies/$(agencyId)).data.get('name', '') &&
+                        request.resource.data.get('enabled', true) ==
+                          (getAfter(/databases/$(database)/documents/agencies/$(agencyId)).data.get('enabled', true) != false)))
                       && request.resource.data.keys().hasOnly(['name', 'initials', 'color', 'location', 'enabled', 'slots', 'updatedAt'])
                       && request.resource.data.slots.keys().hasOnly(['total', 'remaining']);
       allow delete: if isPlatformAdmin();

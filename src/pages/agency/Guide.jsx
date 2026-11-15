@@ -61,9 +61,9 @@ const SECTIONS = [
     Icon: MdImportContacts,
     title: 'Glossary — key terms',
     items: [
-      { label: 'Patient Access Code',   desc: `${CODE}-YYYY-NNNNN code issued by ${G}. Patients must enter it to register.` },
+      { label: 'Patient Access Code',   desc: `${CODE}-YYYY-NNNNN code issued in person by ${G} to one named patient. Optional at sign-up; every request needs its own code.` },
       { label: 'Request',               desc: `The patient's top-level ask — one bill, one amount needed. Owned by ${G} after submission. The parent of one or more agency slices.` },
-      { label: 'Application slice',     desc: `Your agency's portion of a patient request. Created when ${G} endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or needs_info / rejected).` },
+      { label: 'Application slice',     desc: `Your agency's portion of a patient request. Created when ${G} endorses the request to you. Has its own lifecycle: endorsed → For Funding → approved (or Needs Info / rejected).` },
       { label: 'Endorsement',           desc: `${G}'s decision to route part of a verified request to your agency. Endorsement carries ${G}'s assessment + verified documents — you do not re-do that work.` },
       { label: 'Intake Assessment',     desc: `The Unified Intake Sheet that ${G} fills during its one remote assessment. You see it read-only on each slice. Replaces the agency-side Case Assessment that existed before the redesign.` },
       { label: 'Means-Test Category',   desc: `Manual classification recorded by ${G}: Indigent / Marginalized / Low Income / Above Threshold.` },
@@ -210,10 +210,10 @@ const SECTIONS = [
       `for tomorrow.`,
     steps: [
       'Open Slot Management from the sidebar.',
-      'Default Slot Capacity is your daily cap (max 100). Edit to change it — the new default takes effect from the next reset.',
+      'Default Slot Capacity is your daily cap (max 100). Your Agency Admin can edit it (and each partner hospital\'s daily slots); the new default takes effect from the next reset.',
       'Today\'s Slots shows current remaining/total. The Usage chip turns amber/red as you near the cap.',
       'Slots reset to default at the start of each new day. The reset fires when the first coordinator opens the workspace.',
-      'For walk-ins or corrections that bypassed the endorsement flow, use Manual Adjustment. Add a reason — every change is logged in the audit trail.',
+      'For walk-ins or corrections that bypassed the endorsement flow, your Agency Admin uses Manual Adjustment with a reason — every change is logged in the audit trail.',
       'Recent Adjustments shows the last 10 changes with author and time.',
     ],
     note: 'Reject-today restores the slot automatically. Manual deduct is for walk-ins handled in person outside the MAPA endorsement flow.',
@@ -233,7 +233,7 @@ const SECTIONS = [
       { label: 'Disbursed',    desc: 'Sum of all redeemed GL amounts. Final spend. Over a period this can exceed Committed once most GLs have been redeemed — that is expected, not an error.' },
       { label: 'Remaining',    desc: 'Allocated − Committed. This is what your next approval can draw from.' },
       { label: 'Period reset', desc: 'Your Agency Administrator starts a new period via /agency/allocation → Reset Period. Committed and disbursed reset to ₱0; allocation remains.' },
-      { label: 'Cooldown',     desc: 'Hard 30-day check: if the patient was already approved (by any agency) in the past 30 days, the Approve button is disabled. Reversed approvals also keep the cooldown clock running.' },
+      { label: 'Cooldown',     desc: 'Your agency can approve the same patient once every 30 days (other agencies have their own clock). Parts of the same request are exempt. The Approve button shows the date it opens again, and the system refuses earlier approvals. Reversing an approval keeps the clock running from the original approval.' },
     ],
   },
   {
