@@ -219,7 +219,7 @@ export default function HospitalSettings() {
                   <dd className="font-mono text-gray-800">{hospital.accessCodePrefix ? `${normalizePrefix(hospital.accessCodePrefix)}-YYYY-NNNNN` : '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">New patient sign-ups</dt>
+                  <dt className="text-xs text-gray-500">New patient requests</dt>
                   <dd className={hospital.enabled === false ? 'text-red-600 font-medium' : 'text-gray-800'}>
                     {hospital.enabled === false ? 'Paused' : 'Open'}
                   </dd>

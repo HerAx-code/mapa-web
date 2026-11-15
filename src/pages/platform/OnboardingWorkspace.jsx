@@ -361,7 +361,7 @@ export default function OnboardingWorkspace() {
 
             {view === 'setup' && (<>
               {r.hospitalId ? (
-                <p className="text-sm text-gray-700">Hospital <span className="font-mono text-xs">{r.hospitalId}</span> is set up{hospital?.enabled === false ? ' with patient registration closed until go-live' : ''}.
+                <p className="text-sm text-gray-700">Hospital <span className="font-mono text-xs">{r.hospitalId}</span> is set up{hospital?.enabled === false ? ' with new patient requests closed until go-live' : ''}.
                   {' '}<Link className="text-brand-600 font-medium" to="/platform/hospitals">Manage admins and partner funders</Link></p>
               ) : (
                 <button type="button" className="btn-primary text-sm inline-flex items-center gap-1.5" disabled={!isCurrent} onClick={createHospital}>
@@ -378,7 +378,7 @@ export default function OnboardingWorkspace() {
             {view === 'live' && (<>
               {current === 'live' ? (
                 <>
-                  <p className="text-sm text-green-800 bg-green-50 rounded-lg px-3 py-2">Live since {fmt(tsToDate(r.liveAt))}. Patients can register with this hospital’s access codes.</p>
+                  <p className="text-sm text-green-800 bg-green-50 rounded-lg px-3 py-2">Live since {fmt(tsToDate(r.liveAt))}. Patients can file requests with this hospital’s access codes.</p>
                   <Input label="NPC registration of the system done on" type="date" value={a.npcRegisteredAt ?? ''} onChange={setSection('agreement', 'npcRegisteredAt')} hint="NPC Circular 2022-04: within 20 days of go-live." />
                   <ul className="space-y-1.5">
                     {reminders.map(x => (
@@ -394,7 +394,7 @@ export default function OnboardingWorkspace() {
                   <p className="text-sm text-gray-600">Go-live opens patient registration. Everything below must be done.</p>
                   <ul className="space-y-1.5">{goLiveGate(merged, ctx).map(i => <Check key={`${i.stage}-${i.key}`} item={i} />)}</ul>
                   <button type="button" className="btn-primary text-sm inline-flex items-center gap-1.5" disabled={busy || current !== 'setup' || !canGoLive(merged, ctx) || !hospital} onClick={goLive}>
-                    <MdLockOpen size={16} /> Approve go-live and open registration
+                    <MdLockOpen size={16} /> Approve go-live and open patient requests
                   </button>
                 </>
               )}

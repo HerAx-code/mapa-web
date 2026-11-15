@@ -24,6 +24,7 @@ import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 import { codeProof, isBirthdate, blankCodeExpired } from '../../utils/codeIssue'
+import { PENDING_CODE_KEY } from '../../utils/accessCodes'
 import { RELATIONSHIPS } from '../../data/relationships'
 
 const CURRENT_YEAR        = new Date().getFullYear()
@@ -155,7 +156,7 @@ export default function Register() {
   const { t, i18n }           = useTranslation()
   const navigate              = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { updateUser }        = useAuth()
+  const { user, updateUser }  = useAuth()
 
   // Hide the 'Back to Home' link when running in the installed PWA —
   // Landing.jsx redirects '/' away in standalone mode, so the link
@@ -534,6 +535,13 @@ export default function Register() {
   useEffect(() => {
     const qrCode = searchParams.get('code')
     if (!qrCode || !ACCESS_CODE_RE.test(qrCode)) return
+    // Keep the scanned code for the request flow (HospitalGate pre-fills it).
+    try { sessionStorage.setItem(PENDING_CODE_KEY, qrCode) } catch { /* private mode */ }
+    // Already signed in: this is a code for a NEW request, not a new account.
+    if (user?.role === 'patient') {
+      navigate('/patient/hospitals', { replace: true })
+      return
+    }
     setForm(prev => ({ ...prev, hospitalId: qrCode }))
     searchParams.delete('code')
     setSearchParams(searchParams, { replace: true })
@@ -589,10 +597,10 @@ export default function Register() {
         createdAt: serverTimestamp(),
       }
 
-      // Owner decision 2026-11-14: the access code is REQUIRED at registration.
-      // It decides the patient's hospital and is the code for their FIRST
-      // request (claimed here, bound to the request when they file). Later
-      // requests need a new code — from any hospital (patient marketplace).
+      // The access code is OPTIONAL at registration (2026-11-15). When one is
+      // given, it decides the patient's first hospital and is the code for
+      // their FIRST request (claimed here, bound to the request when they
+      // file). Later requests need a new code — from any hospital.
       let joinedTenant = null
       if (!codeTyped()) {
         // No code: a network account with no hospital yet (open sign-up).
@@ -673,6 +681,8 @@ export default function Register() {
       // Successful registration — discard the draft so a future visit to
       // /register doesn't pre-fill someone else's data.
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
+      // The code (if any) was claimed here — don't offer it again when filing.
+      if (codeTyped()) { try { sessionStorage.removeItem(PENDING_CODE_KEY) } catch {} }
 
       toast.success(t('register.toast.welcome', { name: form.firstName }))
       // No hospital yet: start by comparing hospitals; with a code, file there.

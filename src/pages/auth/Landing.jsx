@@ -422,8 +422,8 @@ export default function Landing() {
           <SectionHead center title={t('landing.steps.heading')} sub={t('landing.steps.subtitle')} />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { step: 1, Icon: MdBadge,         title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
-              { step: 2, Icon: MdHowToReg,      title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
+              { step: 1, Icon: MdHowToReg,      title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
+              { step: 2, Icon: MdBadge,         title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
               { step: 3, Icon: MdUploadFile,    title: t('landing.steps.s3Title'), desc: t('landing.steps.s3Desc') },
               { step: 4, Icon: MdLocalHospital, title: t('landing.steps.s4Title'), desc: t('landing.steps.s4Desc') },
               { step: 5, Icon: MdVideocam,      title: t('landing.steps.s5Title'), desc: t('landing.steps.s5Desc') },

@@ -179,9 +179,9 @@ export default function HospitalIDs() {
         <div class="label">Patient Access Code</div>
         <div class="code">${escape(c.id)}</div>
         ${c.issuedName ? `<div class="for">For: ${escape(c.issuedName)}</div>` : ''}
-        ${qr ? `<div class="qr">${qr}</div><div class="scan">Scan to register · I-scan para magparehistro</div>` : ''}
+        ${qr ? `<div class="qr">${qr}</div><div class="scan">Scan to file a request · I-scan para mag-file ng kahilingan</div>` : ''}
         <div class="instructions">
-          <p>Or register online at:</p>
+          <p>New to MAPA? Sign up at the link below. Already have an account? Log in and enter this code when you file.</p>
           <p class="url">${escape(registerUrl)}</p>
           <p class="note">Works only for the patient named above (last name + birthdate).<br/>Use it once. Keep it private — do not share.</p>
         </div>
