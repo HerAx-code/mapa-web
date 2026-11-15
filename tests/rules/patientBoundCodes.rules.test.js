@@ -61,6 +61,10 @@ describe('issuing', () => {
   it('the Hospital Admin issues a code with the patient record in one batch', async () => {
     await assertSucceeds(issueCode(as('superA'), 'AAA-2026-00002', { tenantId: A, issued: ANA }))
   })
+  it('a Staff Admin may issue too (desk work, 2026-11-15), and the record must name who issued it', async () => {
+    await assertSucceeds(issueCode(as('adminA'), 'AAA-2026-00007', { tenantId: A, issued: { ...ANA, issuedByUid: 'adminA' } }))
+    await assertFails(issueCode(as('adminA'), 'AAA-2026-00008', { tenantId: A, issued: { ...ANA, issuedByUid: 'superA' } }))
+  })
   it('a blank code, or one for another hospital, is refused', async () => {
     await assertFails(setDoc(doc(as('superA'), 'hospitalIds', 'AAA-2026-00003'), { status: 'available', patId: null, tenantId: A }))
     await assertFails(issueCode(as('superB'), 'AAA-2026-00004', { tenantId: A, issued: ANA }))

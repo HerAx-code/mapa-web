@@ -7,9 +7,11 @@
  * the credentials shown on the login page's "DEV ONLY -- DEMO ACCOUNTS"
  * panel always match what's actually in Firebase Auth + Firestore.
  *
- * The 16 accounts cover every role in the system:
+ * The accounts cover every role in the system, on the two-hospital demo
+ * network in scripts/demo-hospitals.js (seeded dev/emulator DB only — never
+ * production; bootstrap-users.js refuses to run against mapa-crmc):
  *   - 1 network operator (platform_admin, multi-hospital Phase 6)
- *   - 2 gateway admins (super_admin + staff_admin)
+ *   - 2 gateway admins per demo hospital (super_admin + staff_admin)
  *   - 6 agency_admins (one per agency)
  *   - 6 agency coordinators (one per agency)
  *   - 1 demo patient
@@ -42,11 +44,19 @@ export const USERS = [
   // gateway admins
   {
     email: 'admin@mapa.gov.ph', password: 'admin123',
-    profile: { name: 'Hospital Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false },
+    profile: { name: 'Hospital Admin', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false, tenantId: 'demo-hospital-a' },
   },
   {
     email: 'staff@mapa.gov.ph', password: 'staff123',
-    profile: { name: 'Staff Admin', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false },
+    profile: { name: 'Staff Admin', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false, tenantId: 'demo-hospital-a' },
+  },
+  {
+    email: 'admin-b@mapa.gov.ph', password: 'admin123',
+    profile: { name: 'Hospital Admin (DPH)', role: 'super_admin', rank: 'high', agencyId: null, contact: null, cooldown: 0, deletion: false, tenantId: 'demo-hospital-b' },
+  },
+  {
+    email: 'staff-b@mapa.gov.ph', password: 'staff123',
+    profile: { name: 'Staff Admin (DPH)', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false, tenantId: 'demo-hospital-b' },
   },
 
   // Agency admins (one per funding agency; malasakit deactivated -- see header)
@@ -107,12 +117,13 @@ export const USERS = [
     profile: { name: 'Fatima Macalawi', role: 'agency', agencyId: 'dswd',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
 
-  // Demo patient (kept in the bootstrap for symmetry with the legacy
-  // /seed flow -- patients CAN self-register through /register, but
-  // having a demo patient pre-seeded makes the login-page Demo Accounts
-  // panel work on a fresh DB without a manual register run)
+  // Demo patient: a network account with no hospital yet (open sign-up,
+  // 2026-11-15). The first demo code at each hospital is issued to this
+  // patient (scripts/demo-hospitals.js), so a tester files a request by
+  // choosing a hospital and entering DEMOA-2026-00001 / DEMOB-2026-00001 with
+  // last name "Dela Paz" and birthdate 1990-05-01.
   {
     email: 'patient@gmail.com', password: 'patient123',
-    profile: { name: 'Baher Blah', role: 'patient', agencyId: null, rank: null, contact: '09324324344', hospitalId: 'MAPA-2026-00014', patientId: 'PAT-013', cooldown: 0, deletion: false },
+    profile: { name: 'Juan Dela Paz', lastName: 'Dela Paz', birthdate: '1990-05-01', role: 'patient', agencyId: null, rank: null, contact: '09171234567', hospitalId: null, patientId: 'PAT-000001', cooldown: 0, deletion: false },
   },
 ]

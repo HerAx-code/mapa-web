@@ -110,4 +110,14 @@ describe('handleAgencyWritten', () => {
     expect(calls.delete).toHaveLength(1)
     expect(result.deleted).toBe('ag-1')
   })
+
+  // The Training Hospital's practice funder is never public (never on Landing).
+  it('never publishes a training agency, and drops any mirror it had', async () => {
+    const training = { ...RICH_AGENCY, training: true }
+    const created = await run(null, training)
+    expect(created.calls.set).toHaveLength(0)
+    expect(created.result.skipped).toBe('training')
+    const updated = await run(RICH_AGENCY, training)
+    expect(updated.calls.delete).toHaveLength(1)
+  })
 })

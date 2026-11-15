@@ -59,6 +59,11 @@ export function projectPublicAgency(data = {}) {
  */
 export async function syncAgencyPublic(agencyId, agencyData) {
   if (!agencyId) return
+  // The Training Hospital's practice funder is never public (never on Landing).
+  if (agencyData?.training === true) {
+    try { await deleteDoc(doc(db, 'agenciesPublic', agencyId)) } catch { /* nothing to drop */ }
+    return
+  }
   try {
     await setDoc(
       doc(db, 'agenciesPublic', agencyId),
@@ -82,6 +87,7 @@ export async function syncAllAgenciesPublic(agencies = []) {
   let ok = 0
   let failed = 0
   for (const a of agencies) {
+    if (a.training === true) continue // never public
     try {
       await setDoc(
         doc(db, 'agenciesPublic', a.id),
@@ -110,7 +116,8 @@ export async function reconcileAgenciesPublic(agencies = []) {
   let pruned = 0
   let pruneFailed = 0
   try {
-    const liveIds = new Set(agencies.map(a => a.id))
+    // Training agencies count as absent, so any public copy is pruned.
+    const liveIds = new Set(agencies.filter(a => a.training !== true).map(a => a.id))
     const snap = await getDocs(collection(db, 'agenciesPublic'))
     for (const d of snap.docs) {
       if (liveIds.has(d.id)) continue
