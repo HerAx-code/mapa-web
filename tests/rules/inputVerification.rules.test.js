@@ -67,6 +67,8 @@ describe('hospitalSettings (verification-call policy)', () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
     await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), policy()))
     await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ interviewAboveAmount: null })))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ secondPersonAboveAmount: 100000 })))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ secondPersonAboveAmount: null })))
     await assertSucceeds(getDoc(doc(as('adminA'), 'hospitalSettings', A)))
   })
   it('patients, agencies and other hospitals cannot read it', async () => {
@@ -81,6 +83,7 @@ describe('hospitalSettings (verification-call policy)', () => {
     await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ interviewAboveAmount: 0 })))
     await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ interviewAboveAmount: '5000' })))
     await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ extra: 1 })))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ secondPersonAboveAmount: -5 })))
   })
 })
 

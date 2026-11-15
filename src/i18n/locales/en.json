@@ -764,6 +764,14 @@
       "requestAssistance": "Request Assistance"
     },
     "request": {
+      "declarationConfirmRep": "I confirm this declaration on behalf of the patient.",
+      "declarationConfirm": "I confirm this declaration.",
+      "declarationPenalty": "Giving false information or altered documents to get assistance is punishable. Under the Malasakit Centers Act (RA 11463), the assistance is cancelled, twice the amount must be paid back, and the person may be jailed for 6 months to 2 years. Falsified documents can also be charged under the Revised Penal Code and the Cybercrime Prevention Act.",
+      "declarationChecks": "I understand that {{gateway}} will check this information with the hospital's billing and records offices.",
+      "declarationCoverage": "I have declared all other coverage of this bill (PhilHealth and others);",
+      "declarationTrue": "the information and documents I submitted are true, complete and not altered;",
+      "declarationIntro": "I declare that, to the best of my knowledge:",
+      "declarationTitle": "Declaration",
       "navLabel": "Request Assistance",
       "eyebrow": "New request",
       "title": "Request Medical Assistance",

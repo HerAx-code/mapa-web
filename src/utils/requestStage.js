@@ -29,14 +29,16 @@ export const GATEWAY_STAGE_KEYS = ['verify', 'assess', 'endorse']
 // why this request needs a recorded verification call before endorsing. The
 // caller works them out (they need the hospital policy + duplicate flag);
 // [] = no call needed, which keeps every older caller's behaviour.
-export function deriveRequestStage(request = {}, docs = [], { callReasons = [] } = {}) {
+// `holds` (Phase 3): other blockers the caller already worked out, e.g. the
+// second-person rule ({ key, label, detail }); each one blocks endorsing.
+export function deriveRequestStage(request = {}, docs = [], { callReasons = [], holds = [] } = {}) {
   const terminal      = TERMINAL_REQUEST_STATUSES.includes(request?.status)
   const totalDocs     = docs.length
   const verifiedDocs  = docs.filter(d => d?.status === 'verified').length
   const docsVerified  = totalDocs > 0 && verifiedDocs === totalDocs
   const intakeComplete = isIntakeComplete(request?.intakeSheet, request?.totalBill)
   const callNeeded    = callReasons.length > 0 && !callRecorded(request)
-  const canEndorse    = docsVerified && intakeComplete && !callNeeded
+  const canEndorse    = docsVerified && intakeComplete && !callNeeded && holds.length === 0
 
   const done = { verify: docsVerified, assess: intakeComplete, endorse: false }
   const detail = {
@@ -73,6 +75,7 @@ export function deriveRequestStage(request = {}, docs = [], { callReasons = [] }
     .map(k => ({ key: k, label: label[k], detail: detail[k] }))
   // The call is recorded on the intake sheet, so it jumps to 'assess'.
   if (callNeeded) blockers.push({ key: 'assess', label: 'Verification call', detail: callReasons.map(r => r.label).join(' · '), call: true })
+  for (const h of holds) blockers.push({ ...h, hold: true })
 
   return {
     terminal, current, canEndorse, stages, blockers, callNeeded,

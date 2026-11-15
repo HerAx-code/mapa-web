@@ -1004,10 +1004,13 @@ service cloud.firestore {
     match /hospitalSettings/{tenantId} {
       allow read:  if isAdmin() && tenantId == userTenantId();
       allow write: if isSuperAdmin() && tenantId == userTenantId() &&
-                      request.resource.data.keys().hasOnly(['tenantId', 'interviewAboveAmount', 'interviewOnDuplicate', 'updatedAt', 'updatedBy']) &&
+                      request.resource.data.keys().hasOnly(['tenantId', 'interviewAboveAmount', 'interviewOnDuplicate',
+                                                            'secondPersonAboveAmount', 'updatedAt', 'updatedBy']) &&
                       request.resource.data.tenantId == tenantId &&
                       (request.resource.data.interviewAboveAmount == null ||
                        (request.resource.data.interviewAboveAmount is number && request.resource.data.interviewAboveAmount > 0)) &&
+                      (request.resource.data.get('secondPersonAboveAmount', null) == null ||
+                       (request.resource.data.secondPersonAboveAmount is number && request.resource.data.secondPersonAboveAmount > 0)) &&
                       request.resource.data.interviewOnDuplicate is bool;
     }
 

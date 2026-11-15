@@ -764,6 +764,14 @@
       "requestAssistance": "Humiling ng Tulong"
     },
     "request": {
+      "declarationConfirmRep": "Kinukumpirma ko ang deklarasyong ito para sa pasyente.",
+      "declarationConfirm": "Kinukumpirma ko ang deklarasyong ito.",
+      "declarationPenalty": "May parusa ang pagbibigay ng maling impormasyon o binagong dokumento para makakuha ng tulong. Sa ilalim ng Malasakit Centers Act (RA 11463), kakanselahin ang tulong, kailangang ibalik ang doble ng halaga, at maaaring makulong nang 6 na buwan hanggang 2 taon. Maaari ring kasuhan ang pamemeke ng dokumento sa ilalim ng Revised Penal Code at Cybercrime Prevention Act.",
+      "declarationChecks": "nauunawaan ko na susuriin ng {{gateway}} ang impormasyong ito sa billing at records office ng ospital.",
+      "declarationCoverage": "naideklara ko ang lahat ng iba pang saklaw ng bayaring ito (PhilHealth at iba pa);",
+      "declarationTrue": "totoo, kumpleto, at hindi binago ang impormasyon at mga dokumentong isinumite ko;",
+      "declarationIntro": "Pinatutunayan ko na, sa abot ng aking kaalaman:",
+      "declarationTitle": "Deklarasyon",
       "navLabel": "Humiling ng Tulong",
       "eyebrow": "Bagong kahilingan",
       "title": "Humiling ng Tulong Medikal",

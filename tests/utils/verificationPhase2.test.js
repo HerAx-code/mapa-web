@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { docChecksFor, checksComplete } from '../../src/utils/docChecks.js'
-import { interviewReasons, policyOf, callRecorded } from '../../src/utils/verificationPolicy.js'
+import { interviewReasons, policyOf, callRecorded, secondPersonHold, DECLARATION_VERSION } from '../../src/utils/verificationPolicy.js'
 import { deriveRequestStage } from '../../src/utils/requestStage.js'
 
 // Input verification Phase 2 (reports/Patient input verification.md).
@@ -30,7 +30,7 @@ describe('verification call policy', () => {
   const phoneOnly = { matches: [{ kind: 'phone', sameHospitalUids: ['x'], otherHospitalCount: 0 }] }
 
   it('defaults: no amount rule, duplicate flags on', () => {
-    expect(policyOf(null)).toEqual({ interviewAboveAmount: null, interviewOnDuplicate: true })
+    expect(policyOf(null)).toEqual({ interviewAboveAmount: null, interviewOnDuplicate: true, secondPersonAboveAmount: null })
     expect(interviewReasons({ request: req(900000) })).toEqual([])
   })
   it('amount at or above the hospital threshold', () => {
@@ -68,5 +68,42 @@ describe('endorse gate with a verification call', () => {
     const called = { ...ready, intakeSheet: { ...ready.intakeSheet, verificationCall: { at: 'TS', method: 'phone', notes: 'confirmed' } } }
     expect(callRecorded(called)).toBe(true)
     expect(deriveRequestStage(called, docs, { callReasons: reasons }).canEndorse).toBe(true)
+  })
+})
+
+// ── Phase 3 ──────────────────────────────────────────────────────────────────
+describe('second-person approval', () => {
+  const me = { uid: 'sw1', name: 'Social Worker' }
+  const prepared = (amountNeeded, sheet = {}) => ({ amountNeeded, intakeSheet: { completedBy: 'Other', ...sheet } })
+
+  it('off by default, and below the amount', () => {
+    expect(secondPersonHold({ request: prepared(900000, { billVerification: { byUid: 'sw1' } }), user: me })).toBeNull()
+    expect(secondPersonHold({ request: prepared(9999, { billVerification: { byUid: 'sw1' } }), settings: { secondPersonAboveAmount: 10000 }, user: me })).toBeNull()
+  })
+  it('holds whoever confirmed the bill, recorded the call or completed the assessment', () => {
+    const settings = { secondPersonAboveAmount: 10000 }
+    expect(secondPersonHold({ request: prepared(10000, { billVerification: { byUid: 'sw1' } }), settings, user: me })?.key).toBe('second_person')
+    expect(secondPersonHold({ request: prepared(10000, { verificationCall: { byUid: 'sw1' } }), settings, user: me })?.key).toBe('second_person')
+    expect(secondPersonHold({ request: prepared(10000, { completedBy: 'Social Worker' }), settings, user: me })?.key).toBe('second_person')
+  })
+  it('another staff member may endorse', () => {
+    const settings = { secondPersonAboveAmount: 10000 }
+    const r = prepared(50000, { billVerification: { byUid: 'sw1' }, verificationCall: { byUid: 'sw1' } })
+    expect(secondPersonHold({ request: r, settings, user: { uid: 'sw2', name: 'Second' } })).toBeNull()
+  })
+  it('a hold blocks the endorse gate', () => {
+    const ready = {
+      status: 'under_review', totalBill: 10000,
+      intakeSheet: { householdSize: 3, monthlyIncome: 5000, diagnosis: 'x', recommendation: 'y', meansTestCategory: 'indigent', completedBy: 'SW' },
+    }
+    const s = deriveRequestStage(ready, [{ status: 'verified' }], { holds: [{ key: 'second_person', label: 'Another staff member must endorse', detail: 'x' }] })
+    expect(s.canEndorse).toBe(false)
+    expect(s.blockers.find(b => b.hold).key).toBe('second_person')
+  })
+})
+
+describe('declaration', () => {
+  it('has a version so each request records which wording was signed', () => {
+    expect(DECLARATION_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 })
