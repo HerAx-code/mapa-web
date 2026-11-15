@@ -69,9 +69,9 @@ describe('public pages (signed out)', () => {
   it('For hospitals renders the onboarding form', async () => {
     const { default: ForHospitals } = await import('../../src/pages/ForHospitals')
     wrap(<ForHospitals />)
-    expect(screen.getByRole('heading', { name: 'Bring MAPA to your hospital' })).toBeTruthy()
-    expect(screen.getByLabelText('Hospital name (as licensed)')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Request to join the MAPA network' })).toBeTruthy()
+    expect(screen.getByLabelText(/Hospital name \(as on the DOH License to Operate\)/)).toBeTruthy()
     expect(screen.getByText('How joining works')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Send expression of interest' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Submit request' })).toBeTruthy()
   })
 })

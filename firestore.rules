@@ -958,29 +958,56 @@ service cloud.firestore {
     // once and never overwritten by its sender. Shape and sizes are pinned,
     // status starts 'new', the time is the server's. Only the platform admin
     // reads them and moves them through the pipeline.
+    // A request to join the network from the public For Hospitals page.
+    // Formal request (form 2, 2026-11-15): the facility as on its DOH
+    // license (NHFR code, ownership, address, official phone + email), the
+    // requesting office and officer, the head of facility who signs, optional
+    // current funders, the officer's declaration of authority, privacy-notice
+    // consent and a reference number. The signed letter of intent follows
+    // through official channels, quoting the reference. Form 1 (the earlier
+    // expression of interest) stays accepted for browsers still showing it.
+    function onboardingCommonOk(d) {
+      return d.status == 'new' &&
+        d.createdAt == request.time &&
+        d.hospitalName is string && d.hospitalName.size() >= 3 && d.hospitalName.size() <= 150 &&
+        d.hospitalType in ['DOH-retained', 'BARMM MOH', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
+        d.get('region', '') is string && d.get('region', '').size() <= 40 &&
+        d.contactName is string && d.contactName.size() >= 2 && d.contactName.size() <= 120 &&
+        d.email is string && d.email.size() <= 200 && d.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+') &&
+        d.get('message', '') is string && d.get('message', '').size() <= 2000;
+    }
+    function strLen(d, k, lo, hi) {
+      return d.get(k, '') is string && d.get(k, '').size() >= lo && d.get(k, '').size() <= hi;
+    }
+    function onboardingForm1Ok(d) {
+      return d.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt',
+                               'nhfrCode', 'officialPhone', 'contactPosition', 'signatoryName', 'signatoryPosition']) &&
+        strLen(d, 'nhfrCode', 0, 30) && strLen(d, 'officialPhone', 0, 40) && strLen(d, 'contactPosition', 0, 120) &&
+        strLen(d, 'signatoryName', 0, 120) && strLen(d, 'signatoryPosition', 0, 120);
+    }
+    function onboardingForm2Ok(d) {
+      return d.keys().hasOnly(['formVersion', 'referenceNo', 'hospitalName', 'hospitalType', 'nhfrCode', 'province', 'city', 'region',
+                               'officialPhone', 'officialEmail', 'requestingOffice', 'contactName', 'contactPosition', 'email',
+                               'contactPhone', 'signatoryName', 'signatoryPosition', 'funders', 'malasakitOnSite', 'message',
+                               'certifiedAuthority', 'privacyConsent', 'privacyNoticeVersion', 'status', 'createdAt']) &&
+        d.formVersion == 2 &&
+        d.referenceNo is string && d.referenceNo.matches('MAPA-HR-[0-9]{6}-[A-Z0-9]{4}') &&
+        strLen(d, 'nhfrCode', 3, 30) && strLen(d, 'province', 2, 80) && strLen(d, 'city', 2, 80) &&
+        strLen(d, 'officialPhone', 7, 40) &&
+        d.officialEmail is string && d.officialEmail.size() <= 200 && d.officialEmail.matches('[^@ ]+@[^@ ]+[.][^@ ]+') &&
+        d.requestingOffice in ['Medical Social Service', 'Malasakit Center', 'Hospital Administration', 'Other'] &&
+        strLen(d, 'contactPosition', 2, 120) && strLen(d, 'contactPhone', 0, 40) &&
+        strLen(d, 'signatoryName', 2, 120) && strLen(d, 'signatoryPosition', 2, 120) &&
+        d.get('funders', []) is list && d.get('funders', []).size() <= 10 &&
+        d.get('malasakitOnSite', false) is bool &&
+        d.certifiedAuthority == true && d.privacyConsent == true &&
+        strLen(d, 'privacyNoticeVersion', 1, 20);
+    }
+
     match /onboardingRequests/{reqId} {
-      // Expression of interest (hospital onboarding, 2026-11-15): also the
-      // NHFR facility code, the official phone, the requester's position and
-      // the authorized signatory — all optional strings except the original.
       allow create: if isAuth() && reqId == uid() &&
-                       request.resource.data.keys().hasOnly(['hospitalName', 'hospitalType', 'region', 'contactName', 'email', 'message', 'status', 'createdAt',
-                                                             'nhfrCode', 'officialPhone', 'contactPosition', 'signatoryName', 'signatoryPosition']) &&
-                       request.resource.data.get('nhfrCode', '') is string && request.resource.data.get('nhfrCode', '').size() <= 30 &&
-                       request.resource.data.get('officialPhone', '') is string && request.resource.data.get('officialPhone', '').size() <= 40 &&
-                       request.resource.data.get('contactPosition', '') is string && request.resource.data.get('contactPosition', '').size() <= 120 &&
-                       request.resource.data.get('signatoryName', '') is string && request.resource.data.get('signatoryName', '').size() <= 120 &&
-                       request.resource.data.get('signatoryPosition', '') is string && request.resource.data.get('signatoryPosition', '').size() <= 120 &&
-                       request.resource.data.status == 'new' &&
-                       request.resource.data.createdAt == request.time &&
-                       request.resource.data.hospitalName is string &&
-                       request.resource.data.hospitalName.size() >= 3 && request.resource.data.hospitalName.size() <= 150 &&
-                       request.resource.data.hospitalType in ['DOH-retained', 'BARMM MOH', 'LGU', 'SUC', 'DND', 'Private', 'Other'] &&
-                       request.resource.data.region is string && request.resource.data.region.size() <= 40 &&
-                       request.resource.data.contactName is string &&
-                       request.resource.data.contactName.size() >= 2 && request.resource.data.contactName.size() <= 120 &&
-                       request.resource.data.email is string && request.resource.data.email.size() <= 200 &&
-                       request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+') &&
-                       request.resource.data.message is string && request.resource.data.message.size() <= 2000;
+                       onboardingCommonOk(request.resource.data) &&
+                       (onboardingForm2Ok(request.resource.data) || onboardingForm1Ok(request.resource.data));
       allow read, delete: if isPlatformAdmin();
       // The Super Admin works the onboarding here: stage, verification,
       // agreement, training, filed documents, go-live. The hospital's own
