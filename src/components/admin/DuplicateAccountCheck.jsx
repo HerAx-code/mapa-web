@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { doc, getDoc, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { currentTenantId } from '../../utils/hospitals'
+import { useIdentityFlag } from '../../hooks/useVerification'
 
 // Input verification Phase 1: other patient accounts that look like the same
 // person, from identityFlags/{tenant}__{uid} (functions/src/identityIndex.js).
@@ -15,16 +15,8 @@ const KIND_LABEL = {
 }
 
 export default function DuplicateAccountCheck({ patientId }) {
-  const tenant = currentTenantId()
-  const [flag, setFlag] = useState(undefined) // undefined loading · null not checked yet
+  const flag = useIdentityFlag(patientId) // undefined loading · null not checked yet
   const [names, setNames] = useState({})
-
-  useEffect(() => {
-    if (!patientId || !tenant) return undefined
-    return onSnapshot(doc(db, 'identityFlags', `${tenant}__${patientId}`),
-      snap => setFlag(snap.exists() ? snap.data() : null),
-      () => setFlag(null))
-  }, [patientId, tenant])
 
   const sameUids = [...new Set((flag?.matches ?? []).flatMap(m => m.sameHospitalUids ?? []))]
   const sameKey = sameUids.join(',')

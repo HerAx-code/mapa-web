@@ -997,6 +997,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Input verification Phase 2: the hospital's verification-call policy.
+    // Staff-only (unlike hospitals/{id}, which every signed-in user reads) so
+    // patients can't see the amount threshold and file just under it. Its own
+    // Hospital Admin edits it; keys and types pinned.
+    match /hospitalSettings/{tenantId} {
+      allow read:  if isAdmin() && tenantId == userTenantId();
+      allow write: if isSuperAdmin() && tenantId == userTenantId() &&
+                      request.resource.data.keys().hasOnly(['tenantId', 'interviewAboveAmount', 'interviewOnDuplicate', 'updatedAt', 'updatedBy']) &&
+                      request.resource.data.tenantId == tenantId &&
+                      (request.resource.data.interviewAboveAmount == null ||
+                       (request.resource.data.interviewAboveAmount is number && request.resource.data.interviewAboveAmount > 0)) &&
+                      request.resource.data.interviewOnDuplicate is bool;
+    }
+
     // One doc per confirmed bill number at a hospital: {tenantId}__{BILLNO}.
     // Written when staff confirm a request's bill, so the same bill confirmed
     // on another request shows up ("already used on request X"). Moving a key

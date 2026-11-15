@@ -17,6 +17,7 @@
 // requirement holds — without the appointment/booking friction.
 
 import { isIntakeComplete } from './intakeSheet'
+import { callRecorded } from './verificationPolicy'
 
 export const TERMINAL_REQUEST_STATUSES = ['fully_funded', 'closed', 'rejected']
 
@@ -24,19 +25,24 @@ export const TERMINAL_REQUEST_STATUSES = ['fully_funded', 'closed', 'rejected']
 // its prerequisites.
 export const GATEWAY_STAGE_KEYS = ['verify', 'assess', 'endorse']
 
-export function deriveRequestStage(request = {}, docs = []) {
+// `callReasons` (input verification Phase 2, src/utils/verificationPolicy.js):
+// why this request needs a recorded verification call before endorsing. The
+// caller works them out (they need the hospital policy + duplicate flag);
+// [] = no call needed, which keeps every older caller's behaviour.
+export function deriveRequestStage(request = {}, docs = [], { callReasons = [] } = {}) {
   const terminal      = TERMINAL_REQUEST_STATUSES.includes(request?.status)
   const totalDocs     = docs.length
   const verifiedDocs  = docs.filter(d => d?.status === 'verified').length
   const docsVerified  = totalDocs > 0 && verifiedDocs === totalDocs
   const intakeComplete = isIntakeComplete(request?.intakeSheet, request?.totalBill)
-  const canEndorse    = docsVerified && intakeComplete
+  const callNeeded    = callReasons.length > 0 && !callRecorded(request)
+  const canEndorse    = docsVerified && intakeComplete && !callNeeded
 
   const done = { verify: docsVerified, assess: intakeComplete, endorse: false }
   const detail = {
     verify:  totalDocs ? `${verifiedDocs}/${totalDocs} verified` : 'No documents',
     assess:  intakeComplete ? 'Intake complete' : 'Intake incomplete',
-    endorse: canEndorse ? 'Ready to endorse' : 'Prerequisites pending',
+    endorse: canEndorse ? 'Ready to endorse' : callNeeded && docsVerified && intakeComplete ? 'Verification call needed' : 'Prerequisites pending',
   }
   const label = { verify: 'Verify documents', assess: 'Assess', endorse: 'Endorse' }
 
@@ -65,9 +71,11 @@ export function deriveRequestStage(request = {}, docs = []) {
   const blockers = ['verify', 'assess']
     .filter(k => !done[k])
     .map(k => ({ key: k, label: label[k], detail: detail[k] }))
+  // The call is recorded on the intake sheet, so it jumps to 'assess'.
+  if (callNeeded) blockers.push({ key: 'assess', label: 'Verification call', detail: callReasons.map(r => r.label).join(' · '), call: true })
 
   return {
-    terminal, current, canEndorse, stages, blockers,
+    terminal, current, canEndorse, stages, blockers, callNeeded,
     docsVerified, intakeComplete, verifiedDocs, totalDocs,
   }
 }

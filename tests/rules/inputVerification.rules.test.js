@@ -61,6 +61,29 @@ describe('identityFlags', () => {
   })
 })
 
+describe('hospitalSettings (verification-call policy)', () => {
+  const policy = (extra = {}) => ({ tenantId: A, interviewAboveAmount: 50000, interviewOnDuplicate: true, updatedBy: 'S', ...extra })
+  it('the Hospital Admin sets it; its own staff read it', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), policy()))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ interviewAboveAmount: null })))
+    await assertSucceeds(getDoc(doc(as('adminA'), 'hospitalSettings', A)))
+  })
+  it('patients, agencies and other hospitals cannot read it', async () => {
+    await assertFails(getDoc(doc(as('pat'), 'hospitalSettings', A)))
+    await assertFails(getDoc(doc(as('coord'), 'hospitalSettings', A)))
+    await assertFails(getDoc(doc(as('adminB'), 'hospitalSettings', A)))
+  })
+  it('staff admins, other hospitals and bad values cannot write it', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
+    await assertFails(setDoc(doc(as('adminA'), 'hospitalSettings', A), policy()))
+    await assertFails(setDoc(doc(as('adminB'), 'hospitalSettings', A), policy()))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ interviewAboveAmount: 0 })))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ interviewAboveAmount: '5000' })))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), policy({ extra: 1 })))
+  })
+})
+
 describe('billKeys', () => {
   it('staff claim a new bill number in their own hospital', async () => {
     await assertSucceeds(setDoc(doc(as('adminA'), 'billKeys', `${A}__SOA2`), key('SOA2', 'r2')))

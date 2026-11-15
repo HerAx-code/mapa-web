@@ -76,8 +76,10 @@ describe('VerifyDocsPanel — advisory verification chips', () => {
   it('"Verify all pending" confirms before bulk-verifying', () => {
     const onBulkVerify = vi.fn()
     const reqDocs = [
-      { id: 'a', documentTypeName: 'Billing Statement', status: 'pending' },
-      { id: 'b', documentTypeName: 'Medical Abstract', status: 'pending' },
+      // Documents with a checklist (bill, medical) are verified one by one, so
+      // bulk-verify uses two without one.
+      { id: 'a', documentTypeName: 'Laboratory Results', status: 'pending' },
+      { id: 'b', documentTypeName: 'PhilHealth ID', status: 'pending' },
     ]
     render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} onBulkVerify={onBulkVerify} />)
     fireEvent.click(screen.getByText(/Verify all pending/))
@@ -143,5 +145,39 @@ describe('VerifyDocsPanel — Identity review card', () => {
     render(<VerifyDocsPanel {...idProps} reqDocs={reqDocs} />)
     expect(screen.getByText('Identity confirmed')).toBeInTheDocument()
     expect(screen.queryByText('Confirm identity')).toBeNull()
+  })
+})
+
+describe('VerifyDocsPanel — document checklist (input verification Phase 2)', () => {
+  it('a medical abstract verifies only after every check is ticked, and passes the ticks', () => {
+    const onReviewDoc = vi.fn()
+    const reqDocs = [{ id: 'm-1', documentTypeName: 'Medical Abstract', status: 'pending' }]
+    render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} onReviewDoc={onReviewDoc} />)
+    fireEvent.click(screen.getByRole('button', { name: /Verify/ }))
+    expect(onReviewDoc).not.toHaveBeenCalled()
+    const go = screen.getByRole('button', { name: 'Verify document' })
+    expect(go).toBeDisabled()
+    for (const box of screen.getAllByRole('checkbox')) fireEvent.click(box)
+    expect(go).not.toBeDisabled()
+    fireEvent.click(go)
+    expect(onReviewDoc).toHaveBeenCalledWith(reqDocs[0], 'verified', null, { physician: true, recent: true, patient: true })
+  })
+
+  it('a document without a checklist still verifies in one tap; "Verify all" skips checklist documents', () => {
+    const onReviewDoc = vi.fn()
+    const reqDocs = [
+      { id: 'l-1', documentTypeName: 'Laboratory Results', status: 'pending' },
+      { id: 'b-1', documentTypeName: 'Hospital Billing Statement', status: 'pending' },
+    ]
+    render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} onReviewDoc={onReviewDoc} />)
+    expect(screen.queryByText(/Verify all pending/)).toBeNull()
+    fireEvent.click(screen.getAllByRole('button', { name: /^Verify$/ })[0])
+    expect(onReviewDoc).toHaveBeenCalledWith(reqDocs[0], 'verified')
+  })
+
+  it('a verified document lists what was checked', () => {
+    const reqDocs = [{ id: 'i-1', documentTypeName: 'Barangay Certificate of Indigency', status: 'verified', checks: { items: { barangay: true, signed: true } } }]
+    render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} />)
+    expect(screen.getByText(/Signed by a barangay official and dated/)).toBeInTheDocument()
   })
 })
