@@ -331,6 +331,18 @@ export default function Patients() {
         getDocs(query(collection(db, 'conversations'),    where('participants', 'array-contains', uid))),
       ])
 
+      // A case that was endorsed or funded is a financial record (slices,
+      // Guarantee Letters, agency budgets) that funders and auditors rely on.
+      // It is never erased — the account can be deactivated instead. Checked
+      // BEFORE anything is deleted, so a refusal leaves everything intact.
+      // The rules enforce the same (requests/applications/certificates delete).
+      const funded = requestsSnap.docs.some(d => (d.data().agencyIds?.length ?? 0) > 0 || Number(d.data().amountCommitted) > 0)
+      if (funded || !appsSnap.empty) {
+        toast.error(`${patient.name} has an endorsed or funded case, which must be kept as a record. Deactivate the account instead.`)
+        setConfirmDeletion(null)
+        return
+      }
+
       // Certificates: keyed by appId, no patientId field to query on.
       // Resolve via the application snapshots we just fetched.
       const certSnaps = await Promise.all(

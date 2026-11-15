@@ -5,6 +5,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
 import { normalizeBillNumber, billKeyId, BILL_CHECK_SOURCES, billCheckSourceLabel } from '../../utils/billKeys'
 import { interviewReasons, CALL_METHODS } from '../../utils/verificationPolicy'
+import { encodedIntakeProblem } from '../../utils/requestStage'
 import { useIdentityFlag, useHospitalSettings } from '../../hooks/useVerification'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -1023,6 +1024,14 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <p className="text-xs text-blue-900 leading-relaxed">
                     <strong>Answers encoded by {remoteIntake.encodedOnBehalf.by} for the patient</strong> — reason: {remoteIntake.encodedOnBehalf.reason}
                     {remoteIntake.patientFilledAt && ' The patient has since filled in their own answers.'}
+                    {(() => {
+                      // Same checks as the patient's own form; the request
+                      // can't be endorsed until they pass (requestStage).
+                      const problem = encodedIntakeProblem({ ...sheet, encodedOnBehalf: remoteIntake.encodedOnBehalf })
+                      return problem
+                        ? <span className="block mt-1 font-semibold text-amber-800">Before this can be endorsed: {problem.en}</span>
+                        : null
+                    })()}
                   </p>
                 ) : !remoteIntake.patientFilledAt ? (
                   <div className="flex flex-wrap items-center justify-between gap-2">

@@ -457,7 +457,9 @@ service cloud.firestore {
            parentRequestOpen(resource.data))) ||
         hospitalAdminWrite()
       );
-      allow delete: if isHospitalAdmin(resource.data);
+      // A slice exists only once a request is endorsed: it is part of the
+      // funding record and is never deleted (2026-11-15 review).
+      allow delete: if false;
     }
 
     // The slice's parent request isn't rejected/closed (legacy slices without
@@ -607,7 +609,14 @@ service cloud.firestore {
           !(resource.data.get('status', '') in ['closed', 'rejected']) &&
           request.resource.data.status in
             ['under_review', 'endorsed', 'partially_funded', 'fully_funded']);
-      allow delete: if isHospitalAdmin(resource.data);
+      // A request that was endorsed or funded is a financial record (slices,
+      // Guarantee Letters, budgets) and is never deleted. Only the Hospital
+      // Admin may delete a request that never reached an agency — the
+      // "permanently delete patient" erasure (Patients.jsx), which refuses
+      // funded patients up front.
+      allow delete: if isHospitalSuperAdmin(resource.data) &&
+                       resource.data.get('agencyIds', []).size() == 0 &&
+                       resource.data.get('amountCommitted', 0) == 0;
     }
 
     // ── documents ─────────────────────────────────────────────────────────────
@@ -1499,7 +1508,8 @@ service cloud.firestore {
                         request.resource.data.agencyId == userAgencyId() &&
                         resource.data.agencyId == userAgencyId() &&
                         tenantOf(request.resource.data) == tenantOf(resource.data));
-      allow delete: if isHospitalAdmin(resource.data);
+      // A Guarantee Letter is never deleted (2026-11-15 review).
+      allow delete: if false;
     }
 
     // ── docReviewPresence ─────────────────────────────────────────────────────
