@@ -54,8 +54,13 @@ const titleFor = (a) => {
   return ROLE_LABEL_SHORT[a.role] ?? a.role
 }
 
+// One dropdown option's text: "Hospital Admin · CRMC Hospital Admin — admin@crmc.gov.ph".
+const optionText = (a) =>
+  `${titleFor(a)}${a.label ? ` · ${a.label}` : ''} — ${a.email}${a.password ? '' : ' (no saved password)'}`
+
 export default function DemoAccountsPanel({ onPick, busy = false, load = loadDemoAccounts }) {
   const [state, setState] = useState(null)
+  const [email, setEmail] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -71,43 +76,42 @@ export default function DemoAccountsPanel({ onPick, busy = false, load = loadDem
   }, [load])
 
   if (!state) return null
+  // One compact dropdown (grouped by role) + one button, so a long account list
+  // doesn't stretch the sign-in page.
+  const picked = state.accounts.find((a) => a.email === email) ?? null
   return (
-    <div className="mt-8 card p-4 border border-amber-200 bg-amber-50">
-      <p className="text-xs font-medium text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
-        <MdWarning size={13} aria-hidden="true" /> Demo accounts — dev only
-      </p>
-      <p className="text-xs text-amber-800/80 mt-1 mb-3">
-        {state.source === 'local'
+    <div className="mt-8 card p-3 border border-amber-200 bg-amber-50">
+      <label htmlFor="demo-account" className="text-xs font-medium text-amber-800 uppercase tracking-wide flex items-center gap-1.5"
+        title={state.source === 'local'
           ? 'Your private list (demo-accounts.local.json). Accounts without a saved password just fill in the email.'
-          : 'Seeded demo list — works only on a database seeded by scripts/bootstrap-users.js. For a real project, create demo-accounts.local.json.'}
-      </p>
-      {state.accounts.length === 0 && <p className="text-xs text-amber-900">No accounts to show.</p>}
-      <div className="space-y-3">
-        {GROUPS.map((g) => {
-          const list = state.accounts.filter((a) => g.roles.includes(a.role))
-          if (!list.length) return null
-          return (
-            <div key={g.key}>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70 mb-1.5">{g.label}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {list.map((a) => (
-                  <button
-                    key={a.email}
-                    type="button"
-                    disabled={busy}
-                    className="text-left px-3 py-2 min-h-[44px] rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 transition-colors text-xs border border-amber-100 disabled:opacity-60"
-                    onClick={() => onPick(a.email, a.password || '')}>
-                    <p className="font-medium truncate">
-                      {titleFor(a)}{a.label ? <span className="font-normal text-gray-500"> · {a.label}</span> : null}
-                    </p>
-                    <p className="text-gray-500 truncate">{a.email}{a.password ? '' : ' · enter password'}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+          : 'Seeded demo list — works only on a database seeded by scripts/bootstrap-users.js. For a real project, create demo-accounts.local.json.'}>
+        <MdWarning size={13} aria-hidden="true" /> Demo accounts — dev only
+        <span className="normal-case font-normal text-amber-800/70">({state.source === 'local' ? 'your private list' : 'seeded list'})</span>
+      </label>
+      {state.accounts.length === 0 ? (
+        <p className="text-xs text-amber-900 mt-2">No accounts to show.</p>
+      ) : (
+        <div className="mt-2 flex gap-2">
+          <select id="demo-account" className="input text-sm min-h-[44px] flex-1 min-w-0" value={email}
+            onChange={(e) => setEmail(e.target.value)} disabled={busy}>
+            <option value="">Choose an account…</option>
+            {GROUPS.map((g) => {
+              const list = state.accounts.filter((a) => g.roles.includes(a.role))
+              if (!list.length) return null
+              return (
+                <optgroup key={g.key} label={g.label}>
+                  {list.map((a) => <option key={a.email} value={a.email}>{optionText(a)}</option>)}
+                </optgroup>
+              )
+            })}
+          </select>
+          <button type="button" disabled={busy || !picked}
+            className="btn-primary text-sm min-h-[44px] px-4 flex-shrink-0 disabled:opacity-60"
+            onClick={() => picked && onPick(picked.email, picked.password || '')}>
+            {picked && !picked.password ? 'Fill in email' : 'Sign in'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
