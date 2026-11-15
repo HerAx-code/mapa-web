@@ -49,11 +49,14 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
   promotions, agency audit log; partner hospitals read-only.
 - `agency` → "Agency Coordinator" — inbox of slices endorsed to their agency from
   any partner hospital; reads only patients endorsed to the agency.
-- `patient` — patient portal, own data only. **Registers WITH an access code**
-  (owner decision 2026-11-14): the code's hospital is their first hospital and
-  the same code backs their first request. One account works network-wide:
-  for any later request they compare hospitals at `/patient/hospitals` and
-  claim a NEW code from the hospital they choose (one code = one request).
+- `patient` — patient portal, own data only. **The access code is OPTIONAL at
+  registration** (owner decision 2026-11-15, reversing 2026-11-14; see
+  reports/Access code at registration.md). With a code, its hospital is their
+  first and the same code backs their first request. Without one, they get a
+  network account with no hospital and enter a code when they file. One
+  account works network-wide: for each request they compare hospitals at
+  `/patient/hospitals` and claim a code from the hospital they choose (one
+  code = one request).
 
 ## Design Principles
 - Government-adjacent system. Tone: civic, professional, trustworthy. Not flashy.
@@ -62,7 +65,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 - Mobile-first thinking for patient screens, even on web. Many patients use phones on slow connections.
 - Match the gateway's actual workflow (Client's Information Sheet + Unified Intake Sheet). Don't invent fields they don't use.
 - ID verification is **OCR-assisted, social-worker-confirmed**: on-device OCR (tesseract.js) reads the ID name as an advisory cross-check, and a camera-only **live selfie** is compared to the ID by the gateway social worker. No PhilSys, no automated biometrics — the social worker always makes the final call.
-- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is **required at registration and for every request** (2026-11-14): the registration code backs the first request; each later request needs a new code. A rejected/closed request consumes its code — staff use document Redo for fixable problems. Issued in person by a hospital's gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique). Claiming a code (`src/utils/accessCodes.js` `claimAccessCode`, one transaction) makes the code's hospital the patient's current one (`users.tenantId`), adds it to `users.tenantIds`, and sets `users.hospitalId`; the request is then written in ONE batch with `hospitalIds/{code}.requestId`, so **a code backs exactly one request**. A hospital with `enabled: false` takes no new claims. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
+- Patient Access Code (`<PREFIX>-YYYY-NNNNN`) is **required for every request and optional at registration** (2026-11-15; it was required at registration 2026-11-14): a code given at registration backs the first request; each later request needs a new code. A rejected/closed request consumes its code — staff use document Redo for fixable problems. Issued in person by a hospital's gateway office. **Each hospital has its own prefix** (multi-hospital Phase 8: `hospitals/{id}.accessCodePrefix`, claimed once in `accessCodePrefixes/{PREFIX}` so it stays unique). Claiming a code (`src/utils/accessCodes.js` `claimAccessCode`, one transaction) makes the code's hospital the patient's current one (`users.tenantId`), adds it to `users.tenantIds`, and sets `users.hospitalId`; the request is then written in ONE batch with `hospitalIds/{code}.requestId`, so **a code backs exactly one request**. A hospital with `enabled: false` takes no new claims. Printed documents use the CASE hospital's branding (`fetchHospitalBranding`), not the viewer's `ORG`.
 - **Patient-bound codes (owner decision 2026-11-15).** The Hospital Admin issues each code to ONE named patient at the desk (IssueCodeModal): name, birthdate, mobile number, visit date, case number and the ID seen. These go in the staff-only `hospitalIds/{code}/privateInfo/issued`; the code doc carries only `bound: true`.
 - **Claiming one:** the claimant must give the same last name + birthdate (`codeProof()` in src/utils/codeIssue.js, letters-only last name). That is checked by verifyAccessCode and enforced by the rules (`codeClaimProofOk`). At registration the account takes the recorded name and birthdate (`codeNameOk`).
 - **No blank batches:** blank codes are no longer created. Blank codes issued earlier keep working until `BLANK_CODE_CUTOFF` (2026-12-15, Manila time; the same date is in the rules and in functions/src/codeIssue.js).

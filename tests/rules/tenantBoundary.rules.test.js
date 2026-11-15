@@ -214,7 +214,8 @@ describe('writes stay inside the writer\'s hospital', () => {
 
   // Registration requires a code, and joins exactly the code's hospital.
   it("registration joins the access code's hospital, nothing else", async () => {
-    await assertFails(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', name: 'Pat' }))
+    // Open sign-up (2026-11-15): no code, no hospital — allowed.
+    await assertSucceeds(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', name: 'Pat' }))
     await assertFails(registerWithCode(as('newPat1'), { uid: 'newPat1', code: 'CODE-B2', tenantId: A }))
     await assertSucceeds(registerWithCode(as('newPat2'), { uid: 'newPat2', code: 'CODE-B2', tenantId: B }))
   })
