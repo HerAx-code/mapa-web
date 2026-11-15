@@ -682,6 +682,9 @@
   },
   "patient": {
     "gate": {
+      "birthdate": "Petsa ng kapanganakan ng pasyente",
+      "lastName": "Apelyido ng pasyente",
+      "identityHint": "Gagana lamang ang code para sa pasyenteng pinagbigyan nito. Ilagay ang apelyido at petsa ng kapanganakan ng pasyente ayon sa ibinigay sa ospital.",
       "heading": "Piliin ang inyong ospital",
       "title": "Saan ninyo ifa-file ang request na ito?",
       "subtitle": "Piliin ang ospital, saka ilagay ang access code na ibinigay ng social-services office nito. Isang request lang bawat code.",
@@ -702,6 +705,9 @@
       "errNoCode": "Piliin muna ang ospital at ilagay ang access code nito.",
       "switchTo": "Piliin ang {{hospital}}",
       "err": {
+        "needDetails": "Ilagay ang apelyido at petsa ng kapanganakan ng pasyente.",
+        "expired": "Hindi na balido ang code na ito. Humingi ng bagong code sa social service office ng ospital.",
+        "mismatch": "Ang code na ito ay ibinigay sa ibang pangalan o petsa ng kapanganakan. Suriin ang mga ito, o magtanong sa opisinang nagbigay ng code.",
         "format": "Ilagay ang buong code, hal. PREFIX-{{year}}-00001.",
         "rateLimit": "Masyadong maraming subok. Maghintay muna bago subukang muli.",
         "notFound": "Hindi namin makita ang code na iyan. Suriin at subukang muli.",
@@ -1534,6 +1540,7 @@
     "stepCode": "Access Code",
     "stepProgress": "Hakbang {{current}} ng {{total}} · {{label}}",
     "step1": {
+      "birthdate": "Petsa ng kapanganakan",
       "sectionTitle": "Personal na Impormasyon",
       "sectionDesc": "Ipasok ang inyong pangalan at impormasyon sa pakikipag-ugnayan ayon sa nakasaad sa inyong opisyal na ID.",
       "firstName": "Pangalan",
@@ -1567,6 +1574,8 @@
       "hidePassword": "Itago ang password"
     },
     "step3": {
+      "boundHint": "Gagana lamang ang code para sa pasyenteng pinagbigyan nito: dapat tugma ang inyong apelyido at petsa ng kapanganakan sa talaan ng ospital.",
+      "officialName": "Gagamitin ng inyong account ang pangalang itinala ng ospital: {{name}}",
       "nextBody": "Gumagana ang inyong MAPA account sa lahat ng kalahok na ospital. Tuwing hihingi kayo ng tulong, pipiliin ninyo ang ospital at ilalagay ang access code na ibinigay ng social-services office nito.",
       "nextTitle": "Susunod: piliin ang ospital",
       "sectionTitle": "Patient Access Code",
@@ -1591,6 +1600,9 @@
     "haveAccount": "Mayroon nang account?",
     "signIn": "Mag-sign in",
     "errors": {
+      "codeExpired": "Hindi na balido ang code na ito. Humingi ng bagong code sa social service office ng ospital.",
+      "codeMismatch": "Ang code na ito ay ibinigay sa ibang pangalan o petsa ng kapanganakan. Suriin ang inyong apelyido at petsa ng kapanganakan sa hakbang 1 — dapat tugma ang mga ito sa talaan ng ospital — o magtanong sa opisinang nagbigay ng code.",
+      "birthdateRequired": "Ilagay ang inyong petsa ng kapanganakan.",
       "firstNameRequired": "Kinakailangan ang pangalan.",
       "nameLettersOnly": "Mga titik lamang.",
       "nameReserved": "Pakipasok ang totoo mong pangalan (mukhang tungkulin o salita ng sistema ito).",

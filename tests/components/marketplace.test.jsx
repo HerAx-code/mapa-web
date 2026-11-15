@@ -91,10 +91,13 @@ describe('HospitalGate (request flow)', () => {
     const input = screen.getByLabelText(/Access code from BGH/)
     expect(input.value).toMatch(/^BGH-\d{4}-$/)
     fireEvent.change(input, { target: { value: 'bgh-2026-00001' } })
+    // Patient-bound codes: the patient's last name + birthdate as given to the hospital.
+    fireEvent.change(screen.getByLabelText(/Patient's last name/), { target: { value: 'Cruz' } })
+    fireEvent.change(screen.getByLabelText(/Patient's birthdate/), { target: { value: '1990-05-01' } })
     fireEvent.click(screen.getByRole('button', { name: /Use this code/ }))
     await waitFor(() => expect(onClaimed).toHaveBeenCalled())
-    expect(checkAccessCode).toHaveBeenCalledWith('BGH-2026-00001', { hospitalId: 'bgh', uid: 'p1' })
-    expect(claimAccessCode).toHaveBeenCalledWith({ user, code: 'BGH-2026-00001', tenantId: 'bgh' })
+    expect(checkAccessCode).toHaveBeenCalledWith('BGH-2026-00001', { hospitalId: 'bgh', uid: 'p1', lastName: 'Cruz', birthdate: '1990-05-01' })
+    expect(claimAccessCode).toHaveBeenCalledWith({ user, code: 'BGH-2026-00001', tenantId: 'bgh', lastName: 'Cruz', birthdate: '1990-05-01' })
   })
 
   it("offers to switch when the code belongs to another hospital, and claims nothing", async () => {
@@ -102,6 +105,8 @@ describe('HospitalGate (request flow)', () => {
     checkAccessCode.mockResolvedValue({ ok: false, reason: 'otherHospital', tenantId: 'hospital-1' })
     wrap(<HospitalGate user={user} hospitals={hospitals} initialId="bgh" onClaimed={vi.fn()} />)
     fireEvent.change(screen.getByLabelText(/Access code from BGH/), { target: { value: 'CRMC-2026-00001' } })
+    fireEvent.change(screen.getByLabelText(/Patient's last name/), { target: { value: 'Cruz' } })
+    fireEvent.change(screen.getByLabelText(/Patient's birthdate/), { target: { value: '1990-05-01' } })
     fireEvent.click(screen.getByRole('button', { name: /Use this code/ }))
     await screen.findByText(/This code is from Cotabato Regional Medical Center/)
     expect(claimAccessCode).not.toHaveBeenCalled()

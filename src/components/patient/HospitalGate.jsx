@@ -4,6 +4,7 @@ import { MdLocalHospital, MdCheckCircle, MdPlace, MdEventSeat, MdCompareArrows }
 import { useTranslation } from 'react-i18next'
 import { checkAccessCode, claimAccessCode, normalizeCode, PENDING_CODE_KEY } from '../../utils/accessCodes'
 import { hospitalForCode } from '../../hooks/useMarketplace'
+import { isBirthdate } from '../../utils/codeIssue'
 
 const YEAR = new Date().getFullYear()
 const sanitize = (v) => String(v ?? '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 20)
@@ -25,6 +26,9 @@ export default function HospitalGate({ user, hospitals, initialId, onClaimed, on
   const pending = (() => { try { return sessionStorage.getItem(PENDING_CODE_KEY) } catch { return null } })()
   const [selected, setSelected] = useState(initialId || hospitalForCode(hospitals, pending)?.id || '')
   const [code, setCode]   = useState('')
+  // Patient-bound codes: the last name + birthdate the hospital recorded.
+  const [lastName, setLastName]   = useState(user?.lastName ?? '')
+  const [birthdate, setBirthdate] = useState(user?.birthdate ?? '')
   const [error, setError] = useState(null)   // { reason, tenantId? }
   const [busy, setBusy]   = useState(false)
 
@@ -52,9 +56,10 @@ export default function HospitalGate({ user, hospitals, initialId, onClaimed, on
     if (busy || !hospital) return
     setBusy(true); setError(null)
     try {
-      const res = await checkAccessCode(code, { hospitalId: hospital.id, uid: user.uid })
+      if (!lastName.trim() || !isBirthdate(birthdate)) { setError({ reason: 'needDetails' }); return }
+      const res = await checkAccessCode(code, { hospitalId: hospital.id, uid: user.uid, lastName, birthdate })
       if (!res.ok) { setError(res); return }
-      const fields = await claimAccessCode({ user, code: normalizeCode(code), tenantId: hospital.id })
+      const fields = await claimAccessCode({ user, code: normalizeCode(code), tenantId: hospital.id, lastName, birthdate })
       await onClaimed(fields, hospital)
     } catch (err) {
       const m = String(err?.message ?? '')
@@ -128,6 +133,23 @@ export default function HospitalGate({ user, hospitals, initialId, onClaimed, on
               </div>
             )
             : <p className="mt-1 text-xs text-gray-500">{t('patient.gate.codeHint', { office: hospital.gatewayName || t('patient.gate.officeFallback') })}</p>}
+        </div>
+      )}
+
+      {/* Patient-bound codes: the code works only for the patient it was issued to. */}
+      {hospital && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <p className="sm:col-span-2 text-xs text-gray-600">{t('patient.gate.identityHint')}</p>
+          <div>
+            <label htmlFor="gate-last" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.gate.lastName')} <span className="text-red-400">*</span></label>
+            <input id="gate-last" className="input min-h-[44px]" value={lastName} autoComplete="family-name"
+              onChange={(e) => { setLastName(e.target.value.slice(0, 80)); setError(null) }} />
+          </div>
+          <div>
+            <label htmlFor="gate-birth" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.gate.birthdate')} <span className="text-red-400">*</span></label>
+            <input id="gate-birth" type="date" className="input min-h-[44px]" value={birthdate} max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => { setBirthdate(e.target.value); setError(null) }} />
+          </div>
         </div>
       )}
 

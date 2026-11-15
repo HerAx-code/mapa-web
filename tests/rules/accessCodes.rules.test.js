@@ -1,7 +1,9 @@
+import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import { doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore'
 import { claimCode } from './helpers/marketplace.js'
+import { issueCode, issuedRecord } from './helpers/codes.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -17,7 +19,7 @@ beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'mapa-rules-test-access-codes',
     firestore: {
-      rules: fs.readFileSync(path.resolve('firestore.rules'), 'utf8'),
+      rules: loadRules(),
       host: 'localhost',
       port: 8080,
     },
@@ -106,8 +108,10 @@ describe('each hospital issues codes under its own prefix', () => {
   const code = (tenantId) => ({ status: 'available', patId: null, tenantId })
 
   it('own prefix, well-formed: allowed', async () => {
-    await assertSucceeds(setDoc(ref('superA', 'hospitalIds/MAPA-2026-00002'), code(A)))
-    await assertSucceeds(setDoc(ref('superB', 'hospitalIds/BGH-2026-00001'), code(B)))
+    await assertSucceeds(issueCode(as('superA'), 'MAPA-2026-00002', { tenantId: A, issued: issuedRecord({ issuedByUid: 'superA' }) }))
+    await assertSucceeds(issueCode(as('superB'), 'BGH-2026-00001', { tenantId: B, issued: issuedRecord({ issuedByUid: 'superB' }) }))
+    // Blank codes are no longer created (patient-bound codes, 2026-11-15).
+    await assertFails(setDoc(ref('superA', 'hospitalIds/MAPA-2026-00003'), code(A)))
   })
 
   it("another hospital's prefix: denied", async () => {

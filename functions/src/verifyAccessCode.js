@@ -3,6 +3,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const crypto = require('node:crypto')
 const { accessCodeRe, accessCodeFormatHint, DEFAULT_HOSPITAL_ID } = require('./orgConfig')
+const { codeProof, blankCodeExpired } = require('./codeIssue')
 
 /**
  * verifyAccessCode — Phase 3.5 server-side rate-limited access-code check.
@@ -96,7 +97,7 @@ async function checkAndBumpThrottle({ db, ref, max, label, now }) {
   })
 }
 
-async function handleVerifyAccessCode({ uid, code, ip, db, now = () => Date.now(), serverTimestamp }) {
+async function handleVerifyAccessCode({ uid, code, lastName = '', birthdate = '', ip, db, now = () => Date.now(), serverTimestamp }) {
   // 1. Auth gate (anonymous is acceptable, but unauth is not).
   if (!uid) {
     throw new HttpsError(
@@ -152,13 +153,29 @@ async function handleVerifyAccessCode({ uid, code, ip, db, now = () => Date.now(
     if (!codeSnap.exists) {
       return { available: false, exists: false }
     }
-    const { status, tenantId } = codeSnap.data()
+    const { status, tenantId, bound } = codeSnap.data()
     // Multi-hospital Phase 8: a code from a hospital that has paused
     // registrations is not claimable (the rules refuse the sign-up too). A
     // missing hospital doc (pre-rollout) counts as open.
     const hospitalSnap = await db.doc(`hospitals/${tenantId || DEFAULT_HOSPITAL_ID}`).get()
     if (hospitalSnap.exists && hospitalSnap.data().enabled === false) {
       return { available: false, exists: true, hospitalClosed: true }
+    }
+    // Patient-bound codes (2026-11-15): issued to a named patient. Usable only
+    // with that patient's last name + birthdate; on a match the official name
+    // parts come back so the account carries the hospital's record. Nothing
+    // about the patient is returned on a mismatch.
+    if (bound === true) {
+      const issued = (await db.doc(`hospitalIds/${normalizedCode}/privateInfo/issued`).get()).data() ?? {}
+      const match = !!lastName && !!birthdate && issued.proof === codeProof(lastName, birthdate)
+      return {
+        available: status === 'available', exists: true, bound: true, match,
+        ...(match ? { name: issued.name, nameParts: issued.nameParts ?? null } : {}),
+      }
+    }
+    // Blank codes printed before patient-bound issuing expire at the cutoff.
+    if (blankCodeExpired(new Date(now()))) {
+      return { available: false, exists: true, expired: true }
     }
     return {
       available: status === 'available',
@@ -180,6 +197,8 @@ exports.verifyAccessCode = onCall({
 }, async (request) => handleVerifyAccessCode({
   uid:  request.auth?.uid,
   code: request.data?.code,
+  lastName:  String(request.data?.lastName ?? '').slice(0, 80),
+  birthdate: String(request.data?.birthdate ?? '').slice(0, 10),
   // Cloud Functions v2 onCall passes the underlying Express request as
   // rawRequest. ip parses x-forwarded-for and falls back to the
   // connection IP. Behind the Cloud Run gateway this is usually the

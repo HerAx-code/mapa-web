@@ -6,6 +6,7 @@ import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore
 import { auth, db, functions, signInAnonymously, httpsCallable } from '../firebase'
 import { accessCodeRe, DEFAULT_HOSPITAL_ID } from '../config/org'
 import { fmtDate } from './dates'
+import { codeProof, blankCodeExpired } from './codeIssue'
 
 // A scanned code slip (/register?code=…) is kept here until the patient picks
 // that hospital in the request flow.
@@ -36,17 +37,24 @@ export const normalizeCode = (s) => String(s ?? '').trim().toUpperCase()
  *   { ok: false, reason }               — 'format' | 'rateLimit' | 'notFound' |
  *                                         'used' | 'otherHospital' | 'closed' | 'error'
  */
-export async function checkAccessCode(rawCode, { hospitalId, uid }) {
+// Patient-bound codes (2026-11-15) also take the patient's last name and
+// birthdate as recorded by the hospital; extra reasons 'mismatch' (they don't
+// match), 'expired' (a blank pre-2026-11-15 slip past the cutoff) and
+// 'needDetails' (a bound code checked without them).
+export async function checkAccessCode(rawCode, { hospitalId, uid, lastName = '', birthdate = '' }) {
   const code = normalizeCode(rawCode)
   if (!accessCodeRe().test(code)) return { ok: false, reason: 'format' }
   if (overLimit()) return { ok: false, reason: 'rateLimit' }
   try {
     // Rate-limited server check when deployed; it never reveals who holds a code.
+    let serverMatch = null
     try {
       if (!auth.currentUser) await signInAnonymously(auth)
-      const res = await httpsCallable(functions, 'verifyAccessCode')({ code })
+      const res = await httpsCallable(functions, 'verifyAccessCode')({ code, lastName, birthdate })
       if (res.data.hospitalClosed) return { ok: false, reason: 'closed' }
       if (!res.data.exists) return { ok: false, reason: 'notFound' }
+      if (res.data.expired) return { ok: false, reason: 'expired' }
+      if (res.data.bound) serverMatch = !!res.data.match
     } catch (err) {
       if (err?.code === 'functions/resource-exhausted') return { ok: false, reason: 'rateLimit' }
       // Function unreachable (not deployed / network): fall through to the read.
@@ -54,6 +62,15 @@ export async function checkAccessCode(rawCode, { hospitalId, uid }) {
     const snap = await getDoc(doc(db, 'hospitalIds', code))
     if (!snap.exists()) return { ok: false, reason: 'notFound' }
     const c = snap.data()
+    if (c.bound === true) {
+      if (!lastName || !birthdate) return { ok: false, reason: 'needDetails' }
+      // Without the server check we can't compare (the issued record is
+      // staff-only); the rules still refuse a wrong claim.
+      if (serverMatch === false) return { ok: false, reason: 'mismatch' }
+      if (serverMatch === null) return { ok: false, reason: 'error' }
+    } else if (blankCodeExpired()) {
+      return { ok: false, reason: 'expired' }
+    }
     const tenantId = c.tenantId || DEFAULT_HOSPITAL_ID
     if (hospitalId && tenantId !== hospitalId) return { ok: false, reason: 'otherHospital', tenantId }
     const reuse = c.status === 'used' && c.patId === uid && !c.requestId
@@ -78,7 +95,7 @@ export const nextTenantIds = (user, tenantId) =>
  * hospital their current one — one transaction, as the rules require.
  * Resolves to the profile fields that changed (to merge into AuthContext).
  */
-export async function claimAccessCode({ user, code: rawCode, tenantId }) {
+export async function claimAccessCode({ user, code: rawCode, tenantId, lastName = '', birthdate = '' }) {
   const code = normalizeCode(rawCode)
   const uid = user.uid
   const fields = { tenantId, tenantIds: nextTenantIds(user, tenantId), hospitalId: code }
@@ -94,6 +111,8 @@ export async function claimAccessCode({ user, code: rawCode, tenantId }) {
       tx.update(codeRef, { status: 'used', patId: uid, date: fmtDate(new Date()), time: new Date().toLocaleTimeString() })
       tx.set(doc(db, 'hospitalIds', code, 'privateInfo', 'details'), {
         usedBy: user.name ?? '', usedById: uid, createdAt: serverTimestamp(),
+        // Patient-bound codes: the rules compare this with the issued record.
+        ...(c.bound === true ? { proof: codeProof(lastName, birthdate) } : {}),
       })
     }
     tx.update(doc(db, 'users', uid), fields)

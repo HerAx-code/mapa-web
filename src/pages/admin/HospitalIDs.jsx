@@ -1,17 +1,16 @@
 import Layout from '../../components/Layout'
-import { useState, useEffect, useRef } from 'react'
-import { useEscapeKey } from '../../hooks/useEscapeKey'
-import { useFocusTrap } from '../../hooks/useFocusTrap'
-import { MdSearch, MdAdd, MdDelete, MdRefresh, MdClose, MdWarning, MdPrint } from 'react-icons/md'
+import { useState, useEffect } from 'react'
+import { MdSearch, MdAdd, MdDelete, MdRefresh, MdWarning, MdPrint } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant, tenantWhere, inMyTenant } from '../../utils/hospitals'
-import { collection, query, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { tenantWhere, inMyTenant } from '../../utils/hospitals'
+import { collection, query, onSnapshot, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { fmtDate } from '../../utils/dates'
 import { accessCodePrefixFor, ORG } from '../../config/org'
 import QRCode from 'qrcode'
 import toast from 'react-hot-toast'
+import IssueCodeModal from '../../components/admin/IssueCodeModal'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -26,122 +25,6 @@ const getNextNum = (ids, prefix = accessCodePrefixFor(new Date().getFullYear()))
   return nums.length ? Math.max(...nums) + 1 : 1
 }
 
-// The first `n` code ids from `start` up that don't exist ANYWHERE. Codes are
-// one network-wide namespace and a hospital lists only its own, so a number
-// can already be taken by another hospital's code under the same prefix (a
-// prefix handed over from a hospital that used it before — e.g. hospital #1's
-// legacy CRMC-* codes). A plain get is allowed for any signed-in user.
-async function freeCodeIds(prefix, start, n) {
-  const ids = []
-  for (let num = start; ids.length < n && num < start + n + 500; num++) {
-    const id = `${prefix}${String(num).padStart(5, '0')}`
-    if (!(await getDoc(doc(db, 'hospitalIds', id))).exists()) ids.push(id)
-  }
-  if (ids.length < n) throw new Error('NO_FREE_IDS')
-  return ids
-}
-
-// ── Bulk Add Modal ────────────────────────────────────────────────────────
-
-function BulkAddModal({ nextNum, onClose }) {
-  const [count, setCount]   = useState(10)
-  const [adding, setAdding] = useState(false)
-  const panelRef = useRef(null)
-  useEscapeKey(onClose, !adding)
-  useFocusTrap(panelRef, true)
-  const { user }            = useAuth()
-  const year     = new Date().getFullYear()
-  const prefix   = accessCodePrefixFor(year)   // e.g. "MAPA-2026-"
-  const startNum = nextNum
-  const endNum   = nextNum + Math.max(count, 1) - 1
-  const preview  = `${prefix}${String(startNum).padStart(5, '0')} → ${prefix}${String(endNum).padStart(5, '0')}`
-
-  const handleAdd = async () => {
-    const n = Number(count)
-    if (!n || n < 1)   { toast.error('Count must be at least 1.'); return }
-    if (n > 100)        { toast.error('Maximum 100 IDs per batch.'); return }
-    setAdding(true)
-    try {
-      const batch = writeBatch(db)
-      const ids = await freeCodeIds(prefix, startNum, n)
-      for (const newId of ids) {
-        // An access code belongs to the issuing hospital; Register copies its
-        // tenantId onto the patient (multi-hospital Phase 2).
-        batch.set(doc(db, 'hospitalIds', newId), withTenant({
-          // Phase 0.3: parent doc no longer carries usedBy (PII moved
-          // to /privateInfo/details on claim).
-          status:    'available',
-          patId:     null,
-          date:      fmtDate(new Date()),
-          time:      '',
-          createdAt: serverTimestamp(),
-        }))
-      }
-      await batch.commit()
-      const first = ids[0]
-      const last  = ids[ids.length - 1]
-      logAudit(user, { action: 'hospitalid_bulk', targetType: 'hospitalId', targetName: `${first} → ${last}`, details: `Bulk added ${n} hospital ID${n !== 1 ? 's' : ''}` })
-      toast.success(`${n} Hospital ID${n !== 1 ? 's' : ''} added.`)
-      onClose()
-    } catch (err) { console.error(err); toast.error('Failed to add IDs.') }
-    finally { setAdding(false) }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4"
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bulkadd-modal-title"
-        tabIndex={-1}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden outline-none">
-
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 id="bulkadd-modal-title" className="text-base font-semibold text-gray-900">Bulk Add Patient Access Codes</h2>
-          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Number of codes to add <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="number" min={1} max={100}
-              className="input"
-              value={count}
-              onChange={e => setCount(e.target.value)}
-            />
-            <p className="text-xs text-gray-500 mt-1">Maximum 100 per batch.</p>
-          </div>
-
-          {/* Preview */}
-          <div className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs font-medium text-gray-500 mb-1">Preview</p>
-            <p className="text-sm font-mono text-gray-800">{preview}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {Number(count) || 0} ID{Number(count) !== 1 ? 's' : ''} will be created as <span className="font-medium text-green-600">Available</span>
-            </p>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
-            IDs are generated sequentially from the highest existing number, preventing duplicates even if previous IDs were deleted.
-          </div>
-        </div>
-
-        <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50">
-          <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
-          <button className="btn-primary text-sm" onClick={handleAdd} disabled={adding}>
-            {adding ? 'Adding...' : `Add ${Number(count) || 0} IDs`}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────
 
 // fmtDate (en-PH / Asia/Manila) is imported from utils/dates — one canonical
@@ -152,7 +35,7 @@ export default function HospitalIDs() {
   const [loading,        setLoading]        = useState(true)
   const [statusFilter,   setStatusFilter]   = useState('all')
   const [search,         setSearch]         = useState('')
-  const [showBulkAdd,    setShowBulkAdd]    = useState(false)
+  const [showIssue,      setShowIssue]      = useState(false)
   const [confirmDelete,  setConfirmDelete]  = useState(null)
   // Phase 4.8: confirmation gate for revoke. Previously the icon click
   // committed immediately -- too easy to misclick on a destructive,
@@ -180,15 +63,19 @@ export default function HospitalIDs() {
         .sort((a, b) => b.id.localeCompare(a.id))
       try {
         const usedIds = docs.filter(d => d.status === 'used').map(d => d.id)
-        const infoSnaps = await Promise.all(
-          usedIds.map(id => getDoc(doc(db, 'hospitalIds', id, 'privateInfo', 'details')))
-        )
+        const boundIds = docs.filter(d => d.bound === true).map(d => d.id)
+        const [infoSnaps, issuedSnaps] = await Promise.all([
+          Promise.all(usedIds.map(id => getDoc(doc(db, 'hospitalIds', id, 'privateInfo', 'details')))),
+          Promise.all(boundIds.map(id => getDoc(doc(db, 'hospitalIds', id, 'privateInfo', 'issued')))),
+        ])
         const infoMap = {}
         infoSnaps.forEach((s, i) => { if (s.exists()) infoMap[usedIds[i]] = s.data() })
+        const issuedMap = {}
+        issuedSnaps.forEach((s, i) => { if (s.exists()) issuedMap[boundIds[i]] = s.data() })
         // Merge so the rest of the component keeps reading `h.usedBy` as
         // before. Falls back to the row's own value for any legacy doc
-        // still pre-migration.
-        setHospitalIds(docs.map(d => ({ ...d, usedBy: infoMap[d.id]?.usedBy ?? d.usedBy ?? null })))
+        // still pre-migration. `issued` = who a patient-bound code is for.
+        setHospitalIds(docs.map(d => ({ ...d, usedBy: infoMap[d.id]?.usedBy ?? d.usedBy ?? null, issued: issuedMap[d.id] ?? null })))
       } catch (err) {
         console.error('[HospitalIDs] privateInfo fetch failed:', err)
         setHospitalIds(docs)
@@ -209,7 +96,8 @@ export default function HospitalIDs() {
     if (statusFilter !== 'all' && h.status !== statusFilter) return false
     const q = search.toLowerCase()
     return h.id.toLowerCase().includes(q) ||
-      (h.usedBy && h.usedBy.toLowerCase().includes(q))
+      (h.usedBy && h.usedBy.toLowerCase().includes(q)) ||
+      (h.issued?.name && h.issued.name.toLowerCase().includes(q))
   })
 
   const isFiltered = search || statusFilter !== 'all'
@@ -219,24 +107,6 @@ export default function HospitalIDs() {
   ].map(g => ({ ...g, entries: filtered.filter(h => h.status === g.key) })).filter(g => g.entries.length > 0)
 
   // ── Actions ──────────────────────────────────────────────────────────
-
-  const handleAddOne = async () => {
-    try {
-      const [newId] = await freeCodeIds(accessCodePrefixFor(new Date().getFullYear()), nextNum, 1)
-      await setDoc(doc(db, 'hospitalIds', newId), withTenant({
-        // Phase 0.3: usedBy no longer lives on the parent doc; it's
-        // created in /privateInfo/details by the claim transaction in
-        // Register.jsx. Available codes have no sub-doc.
-        status:    'available',
-        patId:     null,
-        date:      fmtDate(new Date()),
-        time:      '',
-        createdAt: serverTimestamp(),
-      }))
-      logAudit(user, { action: 'hospitalid_added', targetType: 'hospitalId', targetId: newId, targetName: newId, details: 'Single ID added' })
-      toast.success(`${newId} added.`)
-    } catch (err) { console.error(err); toast.error('Failed to add Hospital ID. Please try again.') }
-  }
 
   const handleRevoke = async (h) => {
     try {
@@ -270,12 +140,9 @@ export default function HospitalIDs() {
   // view they'd have to hand-copy each code, which doesn't scale past a
   // handful. 4-up on A4 keeps each card large enough to read at arm's
   // length and gives a clean dashed border for scissors.
-  const handlePrintAvailable = async () => {
-    const codes = filtered.filter(h => h.status === 'available')
-    if (codes.length === 0) {
-      toast.error('No available codes in the current view. Filter to "Available" or generate codes first.')
-      return
-    }
+  // Patient-bound codes: one slip per issued code, naming the patient.
+  const handlePrint = async (codes) => {
+    if (!codes?.length) return
     const win = window.open('', '_blank', 'width=900,height=900')
     if (!win) {
       toast.error('Could not open the print window. Check your browser pop-up settings.')
@@ -311,11 +178,12 @@ export default function HospitalIDs() {
         </div>
         <div class="label">Patient Access Code</div>
         <div class="code">${escape(c.id)}</div>
+        ${c.issuedName ? `<div class="for">For: ${escape(c.issuedName)}</div>` : ''}
         ${qr ? `<div class="qr">${qr}</div><div class="scan">Scan to register · I-scan para magparehistro</div>` : ''}
         <div class="instructions">
           <p>Or register online at:</p>
           <p class="url">${escape(registerUrl)}</p>
-          <p class="note">Use this code once during sign-up.<br/>Keep it private — do not share.</p>
+          <p class="note">Works only for the patient named above (last name + birthdate).<br/>Use it once. Keep it private — do not share.</p>
         </div>
         <div class="issued">Issued ${escape(today)} · Medical Social Services</div>
       </div>
@@ -344,6 +212,7 @@ export default function HospitalIDs() {
     .header .sub { font-size: 9pt; color: #6b7280; margin-top: 2px; }
     .label { font-size: 9pt; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px; }
     .code { font-family: 'Courier New', monospace; font-size: 20pt; font-weight: 700; letter-spacing: 0.08em; color: #111827; margin: 6px 0 10px; }
+    .for { font-size: 10pt; font-weight: 600; color: #374151; margin-bottom: 6px; }
     .qr { width: 3.4cm; height: 3.4cm; margin: 4px auto; }
     .qr svg { width: 100%; height: 100%; display: block; }
     .scan { font-size: 8pt; color: #374151; margin-bottom: 8px; }
@@ -375,7 +244,7 @@ export default function HospitalIDs() {
       action: 'hospitalid_printed',
       targetType: 'hospitalId',
       targetName: `${codes.length} code${codes.length === 1 ? '' : 's'}`,
-      details: `Printed available codes (filter: ${statusFilter})`,
+      details: `Printed slip${codes.length === 1 ? '' : 's'}: ${codes.map(c => c.id).join(', ')}`,
     })
   }
 
@@ -390,6 +259,7 @@ export default function HospitalIDs() {
       // the privateInfo/details doc would orphan as an unreachable record.
       const batch = writeBatch(db)
       batch.delete(doc(db, 'hospitalIds', h.id, 'privateInfo', 'details'))
+      if (h.bound) batch.delete(doc(db, 'hospitalIds', h.id, 'privateInfo', 'issued'))
       batch.delete(doc(db, 'hospitalIds', h.id))
       await batch.commit()
       logAudit(user, { action: 'hospitalid_deleted', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: h.usedBy ? `Was used by ${h.usedBy}` : 'Was available' })
@@ -407,32 +277,13 @@ export default function HospitalIDs() {
           <div>
             <p className="eyebrow">Access</p>
             <h1 className="text-[26px] font-bold tracking-tight text-gray-900 mt-1">Patient Access Codes</h1>
-            <p className="text-sm text-gray-500 mt-1">Generate and issue access codes for patients to register on the portal.</p>
+            <p className="text-sm text-gray-500 mt-1">Issue a code to a patient at the desk. It works only for that patient (last name + birthdate). Blank codes printed before Nov 15, 2026 stop working on Dec 15, 2026.</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             {isSuperAdmin && (
               <>
-                {/* Print is staff_admin + super_admin friendly (it doesn't
-                    write anything destructive). Show count of what'll print
-                    based on the current filter so the operator knows
-                    they're about to hand out exactly that batch. */}
-                {(() => {
-                  const printable = filtered.filter(h => h.status === 'available').length
-                  if (printable === 0) return null
-                  return (
-                    <button
-                      className="btn-secondary flex items-center gap-1.5"
-                      onClick={handlePrintAvailable}
-                      title="Open a print-friendly view of the available codes in the current filter">
-                      <MdPrint size={16} /> Print ({printable})
-                    </button>
-                  )
-                })()}
-                <button className="btn-secondary flex items-center gap-1.5" onClick={handleAddOne}>
-                  <MdAdd size={16} /> Add One
-                </button>
-                <button className="btn-primary flex items-center gap-1.5" onClick={() => setShowBulkAdd(true)}>
-                  <MdAdd size={16} /> Bulk Add
+                <button className="btn-primary flex items-center gap-1.5" onClick={() => setShowIssue(true)}>
+                  <MdAdd size={16} /> Issue code
                 </button>
               </>
             )}
@@ -533,13 +384,18 @@ export default function HospitalIDs() {
                             <span className="font-mono text-sm text-gray-700 flex-shrink-0">{h.id}</span>
                             <span className={`badge text-xs flex-shrink-0 ${isUsed ? 'badge-blue' : 'badge-green'}`}>{isUsed ? 'Used' : 'Available'}</span>
                             <div className="flex-1 min-w-0 text-sm text-gray-600 truncate">
-                              {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-500">{h.patId}</span>}</> : <span className="text-gray-300">Unclaimed</span>}
+                              {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-500">{h.patId}</span>}</>
+                                : h.issued ? <span>For {h.issued.name} <span className="text-xs text-gray-500">· visit {h.issued.visitDate}</span></span>
+                                : <span className="text-amber-600 text-xs">Blank slip · stops working Dec 15, 2026</span>}
                             </div>
                             <span className="text-xs text-gray-500 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
                             {isSuperAdmin && isBound ? (
                               <span className="text-xs text-gray-400 flex-shrink-0" title="This code backs a request, so it stays on that case's record.">Filed</span>
                             ) : isSuperAdmin ? (
                               <div className="flex items-center gap-0.5 flex-shrink-0">
+                                {!isUsed && h.issued && (
+                                  <button title="Print the slip again" className="p-1.5 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" onClick={() => handlePrint([{ id: h.id, issuedName: h.issued.name }])}><MdPrint size={15} /></button>
+                                )}
                                 {isUsed && (
                                   <button title="Reset to Available (revoke from current patient)" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setConfirmRevoke(h)}><MdRefresh size={15} /></button>
                                 )}
@@ -577,7 +433,7 @@ export default function HospitalIDs() {
                   {(search || statusFilter !== 'all') ? (
                     <button onClick={() => { setSearch(''); setStatusFilter('all') }} className="mt-3 inline-flex items-center text-sm font-medium text-brand-500 hover:text-brand-600">Clear filters</button>
                   ) : isSuperAdmin && (
-                    <button onClick={() => setShowBulkAdd(true)} className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5"><MdAdd size={15} /> Generate codes</button>
+                    <button onClick={() => setShowIssue(true)} className="mt-3 btn-primary text-sm inline-flex items-center gap-1.5"><MdAdd size={15} /> Issue a code</button>
                   )}
                 </div>
               )}
@@ -585,9 +441,8 @@ export default function HospitalIDs() {
           </div>{/* /code stream */}
         </div>{/* /two-pane grid */}
 
-        {/* Bulk add modal */}
-        {showBulkAdd && (
-          <BulkAddModal nextNum={nextNum} onClose={() => setShowBulkAdd(false)} />
+        {showIssue && (
+          <IssueCodeModal nextNum={nextNum} onClose={() => setShowIssue(false)} onPrint={handlePrint} />
         )}
       </div>
     </Layout>

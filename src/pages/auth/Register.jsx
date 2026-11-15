@@ -23,6 +23,7 @@ import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEF
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
+import { codeProof, isBirthdate, blankCodeExpired } from '../../utils/codeIssue'
 
 const CURRENT_YEAR        = new Date().getFullYear()
 const HOSPITAL_PREFIX     = accessCodePrefixFor(CURRENT_YEAR)
@@ -188,6 +189,9 @@ export default function Register() {
   // Which hospital the verified code belongs to (Phase 8) — shown so the
   // patient can confirm before creating the account.
   const [codeHospitalName, setCodeHospitalName] = useState('')
+  // Patient-bound code: the name the hospital recorded (the account uses it).
+  const [officialName, setOfficialName] = useState(null) // { name, nameParts } | null
+  const [codeBound, setCodeBound] = useState(false)
   // A real hospital prefix for the examples (multi-hospital): the first
   // participating hospital's, else this deployment's own.
   const publicHospitals = usePublicHospitals()
@@ -205,6 +209,7 @@ export default function Register() {
 
   const [form, setForm] = useState({
     firstName: '', middleName: '', lastName: '', suffix: '',
+    birthdate: '',
     email: '',
     contactNumber: '',
     barangay: '', city: '', province: '',
@@ -213,6 +218,13 @@ export default function Register() {
     // Always start with empty passwords regardless of any persisted state
     password: '', confirmPassword: '',
   })
+
+  // A patient-bound code was matched against the last name + birthdate; if
+  // either changes afterwards, verify the code again.
+  useEffect(() => {
+    if (codeBound) { setHospitalVerified(false); setOfficialName(null) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.lastName, form.birthdate])
 
   // Persist non-sensitive form fields + current step on every change.
   useEffect(() => {
@@ -276,6 +288,7 @@ export default function Register() {
     setForm(prev => ({ ...prev, hospitalId: next }))
     setCodeHospitalName('')
     setHospitalVerified(false)
+    setOfficialName(null); setCodeBound(false)
     if (errors.hospitalId) setErrors(prev => ({ ...prev, hospitalId: '' }))
   }
 
@@ -296,6 +309,7 @@ export default function Register() {
     else if (hasReservedToken(form.lastName)) e.lastName = t('register.errors.nameReserved')
     if (form.middleName && !NAME_RE.test(form.middleName)) e.middleName = t('register.errors.nameLettersOnly')
     else if (form.middleName && hasReservedToken(form.middleName)) e.middleName = t('register.errors.nameReserved')
+    if (!isBirthdate(form.birthdate) || form.birthdate > new Date().toISOString().slice(0, 10)) e.birthdate = t('register.errors.birthdateRequired')
 
     if (!form.contactNumber) {
       e.contactNumber = t('register.errors.contactRequired')
@@ -417,12 +431,25 @@ export default function Register() {
       try {
         if (!auth.currentUser) await signInAnonymously(auth)
         const call = httpsCallable(functions, 'verifyAccessCode')
-        const result = await call({ code })
+        const result = await call({ code, lastName: form.lastName, birthdate: form.birthdate })
         // Phase 8: the code's hospital has paused registrations.
         if (result.data.hospitalClosed) {
           setErrors(prev => ({ ...prev, hospitalId: t('register.errors.hospitalClosed') }))
           return
         }
+        if (result.data.expired) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeExpired') }))
+          return
+        }
+        // Patient-bound code: it works only for the patient it was issued to.
+        if (result.data.bound && result.data.available && !result.data.match) {
+          // A scanned slip is checked before the patient has typed their
+          // details — just keep the code; they verify again on this step.
+          if (!opts.fromQR) setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeMismatch') }))
+          return
+        }
+        setCodeBound(!!result.data.bound)
+        setOfficialName(result.data.bound && result.data.match ? { name: result.data.name, nameParts: result.data.nameParts } : null)
         available = result.data.available
         exists    = result.data.exists
       } catch (err) {
@@ -436,6 +463,16 @@ export default function Register() {
         const snap = await getDoc(doc(db, 'hospitalIds', code))
         exists    = snap.exists()
         available = exists && snap.data().status === 'available'
+        // A patient-bound code needs the server check (the issued record is
+        // staff-only), so there's no offline fallback for it.
+        if (exists && snap.data().bound === true) {
+          toast.error(t('register.errors.verifyFailed'))
+          return
+        }
+        if (exists && blankCodeExpired()) {
+          setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeExpired') }))
+          return
+        }
       }
 
       if (!exists) {
@@ -507,7 +544,9 @@ export default function Register() {
       const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, form.password)
       createdAuthUser = cred.user
       const uid  = cred.user.uid
-      const name = [form.firstName, form.middleName, form.lastName, form.suffix]
+      // Patient-bound code: the account carries the name the hospital
+      // recorded (the rules require users.name == the issued name).
+      const name = officialName?.name ?? [form.firstName, form.middleName, form.lastName, form.suffix]
         .map(s => s.trim()).filter(Boolean).join(' ')
       const address = [form.barangay, form.city, form.province]
         .map(s => s.trim()).filter(Boolean).join(', ')
@@ -519,7 +558,9 @@ export default function Register() {
         barangay: form.barangay.trim(),
         city:     form.city.trim(),
         province: form.province.trim(),
-        suffix:   form.suffix || null,
+        suffix:   (officialName?.nameParts ? officialName.nameParts.suffix : form.suffix) || null,
+        birthdate: form.birthdate,
+        lastName:  officialName?.nameParts?.lastName ?? form.lastName.trim(),
         hospitalId: form.hospitalId, patientId,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
@@ -567,6 +608,8 @@ export default function Register() {
             usedBy:    name,
             usedById:  uid,
             createdAt: serverTimestamp(),
+            // Patient-bound code: compared by the rules with the issued record.
+            ...(hidSnap.data().bound === true ? { proof: codeProof(form.lastName, form.birthdate) } : {}),
           })
         })
       } catch (txErr) {
@@ -764,6 +807,16 @@ export default function Register() {
                 </div>
               </div>
 
+              {/* Birthdate — with the last name, it proves the access code was
+                  issued to this patient (patient-bound codes, 2026-11-15). */}
+              <div>
+                <label htmlFor="reg-birthdate" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.birthdate')} <span className="text-red-400">*</span></label>
+                <input id="reg-birthdate" data-field="birthdate" type="date" className={inputCls('birthdate')}
+                  max={new Date().toISOString().slice(0, 10)} autoComplete="bday"
+                  value={form.birthdate} onChange={set('birthdate')} />
+                <FieldError msg={errors.birthdate} />
+              </div>
+
               {/* Contact */}
               <div>
                 <label htmlFor="reg-contactNumber" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.contactNumber')} <span className="text-red-400">*</span></label>
@@ -936,6 +989,12 @@ export default function Register() {
                 )}
                 {hospitalVerified && codeHospitalName && (
                   <p className="text-sm text-green-700 mt-1">{t('register.step3.joiningHospital', { hospital: codeHospitalName })}</p>
+                )}
+                {hospitalVerified && officialName?.name && (
+                  <p className="text-sm text-gray-700 mt-1">{t('register.step3.officialName', { name: officialName.name })}</p>
+                )}
+                {!hospitalVerified && (
+                  <p className="text-xs text-gray-500 mt-1">{t('register.step3.boundHint')}</p>
                 )}
                 {/* If the code shows as already used, give the patient an
                     actionable recovery path — they may be a real holder
