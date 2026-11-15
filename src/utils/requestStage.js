@@ -18,6 +18,21 @@
 
 import { isIntakeComplete } from './intakeSheet'
 import { callRecorded } from './verificationPolicy'
+import { validateIntakeAll, memberHasData } from './intakeValidation'
+
+// Answers staff typed for a patient who never filled the sheet
+// (intakeSheet.encodedOnBehalf) must pass the same checks as the patient's
+// own form: household members = household size, all six expenses, etc.
+// (2026-11-15 intake review). Empty member rows are ignored, as the patient
+// form drops them on save; the "amounts look mistyped" double-check is the
+// patient's prompt, not a staff blocker. Returns the first problem or null.
+export function encodedIntakeProblem(sheet) {
+  if (!sheet?.encodedOnBehalf) return null
+  return validateIntakeAll(
+    { ...sheet, familyMembers: (sheet.familyMembers ?? []).filter(memberHasData), _amountsConfirmed: true },
+    ['family', 'income', 'expenses', 'medical'],
+  )
+}
 
 export const TERMINAL_REQUEST_STATUSES = ['fully_funded', 'closed', 'rejected']
 
@@ -36,14 +51,15 @@ export function deriveRequestStage(request = {}, docs = [], { callReasons = [], 
   const totalDocs     = docs.length
   const verifiedDocs  = docs.filter(d => d?.status === 'verified').length
   const docsVerified  = totalDocs > 0 && verifiedDocs === totalDocs
-  const intakeComplete = isIntakeComplete(request?.intakeSheet, request?.totalBill)
+  const encodedProblem = encodedIntakeProblem(request?.intakeSheet)
+  const intakeComplete = isIntakeComplete(request?.intakeSheet, request?.totalBill) && !encodedProblem
   const callNeeded    = callReasons.length > 0 && !callRecorded(request)
   const canEndorse    = docsVerified && intakeComplete && !callNeeded && holds.length === 0
 
   const done = { verify: docsVerified, assess: intakeComplete, endorse: false }
   const detail = {
     verify:  totalDocs ? `${verifiedDocs}/${totalDocs} verified` : 'No documents',
-    assess:  intakeComplete ? 'Intake complete' : 'Intake incomplete',
+    assess:  intakeComplete ? 'Intake complete' : encodedProblem ? `Encoded answers: ${encodedProblem.en}` : 'Intake incomplete',
     endorse: canEndorse ? 'Ready to endorse' : callNeeded && docsVerified && intakeComplete ? 'Verification call needed' : 'Prerequisites pending',
   }
   const label = { verify: 'Verify documents', assess: 'Assess', endorse: 'Endorse' }
