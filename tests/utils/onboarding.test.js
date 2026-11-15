@@ -81,3 +81,25 @@ describe('ownershipOf', () => {
     expect(ownershipOf('unknown').value).toBe('Other')
   })
 })
+
+// The reply promised to hospitals (For Hospitals acknowledgement).
+import { workingDaysBetween, replyOverdue, REPLY_WORKING_DAYS } from '../../src/utils/onboarding.js'
+describe('reply deadline', () => {
+  // Mon 2026-11-16 … weekdays only.
+  const mon = new Date(2026, 10, 16, 9)
+  it('counts weekdays only', () => {
+    expect(workingDaysBetween(mon, new Date(2026, 10, 20, 9))).toBe(4)   // Mon -> Fri
+    expect(workingDaysBetween(mon, new Date(2026, 10, 23, 9))).toBe(5)   // -> next Mon (weekend skipped)
+  })
+  it('flags a request past the promised working days until the call-back is recorded', () => {
+    const r = { stage: 'interest', createdAt: mon }
+    expect(REPLY_WORKING_DAYS).toBe(5)
+    expect(replyOverdue(r, new Date(2026, 10, 23, 9))).toBe(false)       // day 5: still on time
+    expect(replyOverdue(r, new Date(2026, 10, 24, 9))).toBe(true)        // day 6
+    expect(replyOverdue({ ...r, stage: 'verification', verification: { callbackAt: '2026-11-20' } }, new Date(2026, 10, 30))).toBe(false)
+  })
+  it('never flags later stages or declined requests', () => {
+    expect(replyOverdue({ stage: 'agreement', createdAt: mon }, new Date(2026, 11, 30))).toBe(false)
+    expect(replyOverdue({ status: 'declined', createdAt: mon }, new Date(2026, 11, 30))).toBe(false)
+  })
+})

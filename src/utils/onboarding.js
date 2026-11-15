@@ -129,3 +129,29 @@ export function complianceReminders(r = {}, now = new Date()) {
   return out
 }
 export const needsAttention = (r, now) => complianceReminders(r, now).some(x => !x.done && x.state !== 'ok')
+
+// The For Hospitals acknowledgement promises a registry check and call-back
+// within REPLY_WORKING_DAYS working days (src/pages/ForHospitals.jsx). Counts
+// weekdays only — there is no holiday calendar, so it may flag a day or two
+// early around public holidays. A reminder, never a block.
+export const REPLY_WORKING_DAYS = 5
+export function workingDaysBetween(from, to = new Date()) {
+  const a = toDate(from)
+  if (!a || isNaN(a)) return null
+  let n = 0
+  const d = new Date(a.getFullYear(), a.getMonth(), a.getDate())
+  const end = new Date(to.getFullYear(), to.getMonth(), to.getDate())
+  while (d < end) {
+    d.setDate(d.getDate() + 1)
+    const wd = d.getDay()
+    if (wd !== 0 && wd !== 6) n++
+  }
+  return n
+}
+// Still waiting for the promised call-back, past the deadline.
+export function replyOverdue(r = {}, now = new Date()) {
+  const stage = stageOf(r)
+  if (!['interest', 'verification'].includes(stage) || r.verification?.callbackAt) return false
+  const days = workingDaysBetween(r.createdAt, now)
+  return days != null && days > REPLY_WORKING_DAYS
+}
