@@ -54,11 +54,12 @@ describe('users.create — patient self-create only with role=patient', () => {
       profile: { name: 'Juan Dela Cruz', email: 'juan@example.com' } }))
   })
 
-  it('rejects registration without a code, with a wrong hospital, or with agency links', async () => {
+  it('rejects registration with an unclaimed code, a wrong hospital, or agency links', async () => {
     await seedCode()
     const db = testEnv.authenticatedContext('new-user-2').firestore()
     const base = { role: 'patient', agencyId: null, name: 'Ana' }
-    await assertFails(setDoc(doc(db, 'users', 'new-user-2'), base))
+    // Open sign-up (2026-11-15): no code at all is allowed — see the open sign-up test.
+    await assertSucceeds(setDoc(doc(testEnv.authenticatedContext('new-user-open').firestore(), 'users', 'new-user-open'), base))
     // naming a code it did not claim in the same write
     await assertFails(setDoc(doc(db, 'users', 'new-user-2'), { ...base, hospitalId: 'MAPA-2026-00001', tenantId: 'hospital-1', tenantIds: ['hospital-1'] }))
     await assertFails(registerWithCode(db, { uid: 'new-user-2', code: 'MAPA-2026-00001', tenantId: 'other' }))
