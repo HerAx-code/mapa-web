@@ -390,7 +390,7 @@
     "messages": {
       "heading": "Messages",
       "empty": "No messages yet",
-      "patientHint": "Tap <b>New Message</b> below to contact hospital staff or your agency.",
+      "patientHint": "When your social worker or an agency messages you, it appears here and you can reply.",
       "noMessages": "No messages yet",
       "seeAll": "See all",
       "newMessage": "New Message"
@@ -772,7 +772,7 @@
     },
     "request": {
       "holdMessage": "Go to Messages",
-      "holdDesc": "{{gateway}} has put a holding period on your account, so you can't file a new request or move to another hospital for now. Message the social-services office to ask why or when it will be lifted.",
+      "holdDesc": "{{gateway}} has put a holding period on your account, so you can't file a new request or move to another hospital for now. The reason is in your Messages, where you can reply. You can also visit or call the social-services office.",
       "holdTitle": "Your account is on hold",
       "declarationConfirmRep": "I confirm this declaration on behalf of the patient.",
       "declarationConfirm": "I confirm this declaration.",
@@ -1381,7 +1381,7 @@
       "tapHint": "Tap any question below to read the answer.",
       "searchPlaceholder": "Search the guide (e.g., interview, withdraw, agency)…",
       "noResults": "No sections match \"{{query}}\". Try a different keyword.",
-      "footer": "Need further assistance? Visit the {{gateway}} office or send a message through the portal using the envelope icon in the top bar.",
+      "footer": "Need further assistance? Visit or call the {{gateway}} office, or reply to any message from them in Messages.",
       "linkGoToDocuments": "Go to My Documents",
       "linkGoToStatus": "Go to My Application",
       "linkGoToMessages": "Go to Messages",
@@ -1430,7 +1430,7 @@
           "s3": "Tap Withdraw Application. A confirmation appears.",
           "s4": "Tap Yes, Withdraw. The request is closed and can't be reopened.",
           "s5": "The access code used for it is spent. To file again, get a new code from the hospital's social-services office.",
-          "note": "You can withdraw until {{gateway}} endorses your request to an agency. After that, message your social worker instead."
+          "note": "You can withdraw until {{gateway}} endorses your request to an agency. After that, reply to your social worker in Messages or contact the social-services office."
         },
         "cofunding": {
           "title": "What is co-funding? Why do I see multiple agencies?",
@@ -1489,8 +1489,8 @@
           "note": "The Guarantee Letter is valid for 30 days from the date of issuance. The named provider may bill the agency directly for the guaranteed amount — you are not responsible for the guaranteed portion."
         },
         "contact": {
-          "title": "How do I contact the admin or agency?",
-          "content": "Go to Messages from the sidebar to view all your conversations. Tap the New Message button at the top right to start a new conversation with hospital staff or your assigned agency. You can message them directly if you have questions about your application or documents, or to respond to your social worker's assessment."
+          "title": "How do I contact the hospital or an agency?",
+          "content": "Your social worker or an agency will message you in MAPA when they need something, and you can reply in Messages (sidebar or bottom tab). You can't start a new conversation yourself. If you need to reach the hospital first, visit or call its social-services office; once they message you, you can reply there any time."
         },
         "forgotPw": {
           "title": "I forgot my password. What do I do?",

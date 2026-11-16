@@ -63,6 +63,8 @@ describe('agenciesPublic — public read, field-pinned privileged write', () => 
   const VALID = { name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC', enabled: true, slots: { total: 10, remaining: 9 } }
 
   beforeEach(async () => {
+    // The source doc the projection must match (name / enabled).
+    await seed('agencies', 'pcso', { name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 } })
     await seed('agenciesPublic', 'pcso', {
       name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 },
     })

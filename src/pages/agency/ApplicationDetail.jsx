@@ -607,8 +607,11 @@ export default function ApplicationDetail() {
           // slots), else to the agency-wide default.
           const own = app.tenantId ? snap.data()?.hospitalSlots?.[app.tenantId] : null
           if (own) {
+            // slotRestoredFor names the hospital for the rules (a coordinator
+            // may touch only that hospital's remaining count).
             tx.update(agencyRef, new FieldPath('hospitalSlots', app.tenantId, 'remaining'),
-              Math.min((Number(own.remaining) || 0) + 1, Number(own.total) || 0))
+              Math.min((Number(own.remaining) || 0) + 1, Number(own.total) || 0),
+              'slotRestoredFor', app.tenantId)
           } else {
             const current = snap.data()?.slots?.remaining ?? 0
             const total   = snap.data()?.slots?.total    ?? 0

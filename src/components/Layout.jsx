@@ -553,19 +553,15 @@ function MsgPanel({ conversations, user, onCompose, onClose }) {
         <button className="text-xs text-brand-500 hover:text-brand-600 font-medium" onClick={goToAll}>
           {t('shell.messages.seeAll')} →
         </button>
+        {/* Reply-only messaging: patients answer threads staff start, so
+            they get no New Message button. */}
+        {user?.role !== 'patient' && (
         <button
           className="flex items-center gap-1 text-xs bg-brand-500 text-white px-2.5 py-1.5 rounded-lg hover:bg-brand-600 transition-colors"
-          onClick={() => {
-            if (user?.role === 'patient') {
-              navigate('/patient/messages')
-              onClose()
-            } else {
-              onCompose()
-              onClose()
-            }
-          }}>
+          onClick={() => { onCompose(); onClose() }}>
           + {t('shell.messages.newMessage')}
         </button>
+        )}
       </div>
     </div>
   )

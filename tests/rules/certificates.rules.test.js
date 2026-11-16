@@ -129,12 +129,17 @@ describe('agencies.update — coordinator budget guard', () => {
     }))
   })
 
-  it('allows coordinator to update non-budget fields as long as budget round-trips byte-identical', async () => {
+  it('lets a coordinator record budget usage but not edit the profile (Agency Admin only, 2026-11-16)', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
     await assertSucceeds(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
-      name: 'Malasakit Center (updated description)',
-      budget: { allocated: 100_000, committed: 0, disbursed: 0 },  // unchanged
+      name: 'Malasakit Center',
+      budget: { allocated: 100_000, committed: 5_000, disbursed: 0 },  // usage only
+    }))
+    await assertFails(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
+      name: 'Malasakit Center',
+      description: 'Updated description',
+      budget: { allocated: 100_000, committed: 5_000, disbursed: 0 },
     }))
   })
 

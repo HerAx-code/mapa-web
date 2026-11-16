@@ -748,12 +748,12 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   }, [request.patientId])
 
   // Activity timeline — auditLog entries scoped to this request (reuses the
-  // agency-side CaseTimeline + subscription pattern). Super-admin only:
-  // staff_admin has no audit access by design (CLAUDE.md), and the auditLog
-  // rule only grants request-scoped reads to super_admin, so the subscription
-  // is skipped for other roles rather than firing a denied query.
+  // agency-side CaseTimeline + subscription pattern). Hospital Admins and
+  // Staff Admins both see it (owner decision 2026-11-16); the auditLog rule
+  // grants request-scoped reads for their own hospital's requests only — the
+  // full Audit Log page stays Hospital Admin only.
   useEffect(() => {
-    if (user?.role !== 'super_admin') { setTimeline([]); setTimelineLoading(false); return }
+    if (!['super_admin', 'staff_admin'].includes(user?.role)) { setTimeline([]); setTimelineLoading(false); return }
     setTimelineLoading(true)
     const unsub = onSnapshot(
       query(collection(db, 'auditLog'), where('requestId', '==', request.id), orderBy('createdAt', 'asc')),
@@ -1370,9 +1370,9 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
             </div>
           )}
 
-          {/* Activity timeline — audit-logged case history (super-admin only;
-              staff_admin has no audit access by design). */}
-          {user?.role === 'super_admin' && (
+          {/* Activity timeline — this case's audit-logged history (Hospital
+              Admin and Staff Admin; owner decision 2026-11-16). */}
+          {['super_admin', 'staff_admin'].includes(user?.role) && (
             <CaseTimeline events={timeline} loading={timelineLoading} />
           )}
           </div>{/* /work column */}

@@ -1,14 +1,10 @@
 rules_version = '2';
 
-// Cloud Storage rules for MAPA. Currently scoped to the signed Guarantee
-// Letter scans — the only files we host outside of Firestore. Path layout:
-//
-//   /certificates/{appId}/{filename}
-//
-// One file per application. The {filename} segment is intentionally not
-// pegged so a re-upload (Replace Signed Scan) can use a fresh stem and the
-// old object can be cleaned up server-side later, but right now the client
-// overwrites with a stable name.
+// Cloud Storage rules for MAPA. Files hosted in Storage today:
+//   /onboarding/{reqId}/{file}     hospital onboarding papers (Super Admin only)
+//   /profilePhotos/{uid}/{file}    profile photos
+// Patient documents and signed GL scans live in Firestore; their old Storage
+// paths are closed below.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -16,20 +12,8 @@ service firebase.storage {
     function userDoc() {
       return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
     }
-    function appDoc(appId) {
-      return firestore.get(/databases/(default)/documents/applications/$(appId));
-    }
     function isAuth() {
       return request.auth != null;
-    }
-    function isAdmin() {
-      return isAuth() && userDoc().data.role in ['super_admin', 'staff_admin'];
-    }
-    function isAgency() {
-      return isAuth() && userDoc().data.role in ['agency', 'agency_admin'];
-    }
-    function isPatient() {
-      return isAuth() && userDoc().data.role == 'patient';
     }
     function isPlatformAdmin() {
       return isAuth() && userDoc().data.role == 'platform_admin';
@@ -46,60 +30,24 @@ service firebase.storage {
         && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
     }
 
-    // ── Signed GL scans ────────────────────────────────────────────────
-    match /certificates/{appId}/{file} {
-      // Read:
-      //  - the patient who owns this application
-      //  - the agency that owns this application (slice)
-      //  - any the gateway admin
-      allow read: if
-        (isPatient() && appDoc(appId).data.patientId == request.auth.uid)
-        || (isAgency() && appDoc(appId).data.agencyId == userDoc().data.agencyId)
-        || isAdmin();
-
-      // Write: only the owning agency, on supported content types, up to
-      // 10 MiB raw. This is the slack that Firestore couldn't give us —
-      // office scanner PDFs at 300 DPI typically land 1–3 MiB so the cap
-      // is comfortably above real-world inputs without inviting abuse.
-      allow write: if
-        isAgency()
-        && appDoc(appId).data.agencyId == userDoc().data.agencyId
-        && request.resource.size < 10 * 1024 * 1024
-        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
-    }
-
-    // ── Patient documents ───────────────────────────────────────────────
-    // Tier-2 item 8: documentContents migrated from a Firestore base64
-    // string (capped at 1 MiB by Firestore's doc size limit) to proper
-    // Cloud Storage. Same security model as the documents collection:
-    //   - patients read their own
-    //   - admins read any
-    //   - agencies read only docs whose corresponding documents/{docId}
-    //     has the agency stamped on agencyIds[] (admin endorse path)
+    // ── Signed GL scans and patient documents: CLOSED ──────────────────
+    // Both moved back into Firestore (certificates/{appId}.base64 and
+    // documentContents/{docId}) while the project was on the Spark plan; no
+    // production record points at a Storage object (checked 2026-11-15:
+    // 0 documents and 0 certificates with a storagePath).
     //
-    // Path layout: /documents/{patientId}/{docId}/{file}. patientId is
-    // pinned to the request.auth.uid for writes; docId mirrors the
-    // documents collection so the Storage object and the metadata doc
-    // are colocated by identifier.
-    function docMeta(docId) {
-      return firestore.get(/databases/(default)/documents/documents/$(docId));
+    // The old rules here let ANY hospital's staff read or delete these files
+    // (isAdmin() had no hospital check), which the Firestore rules don't
+    // allow. Role review 2026-11-15: closed until files move back to Storage;
+    // re-open them then with the same hospital scoping as Firestore (the
+    // file's documents/{docId} or applications/{appId} tenantId must equal
+    // the staff member's tenantId).
+    match /certificates/{appId}/{file} {
+      allow read, write: if false;
     }
     match /documents/{patientId}/{docId}/{file} {
-      allow read: if
-        (isPatient() && request.auth.uid == patientId)
-        || isAdmin()
-        || (isAgency() && docMeta(docId).data.agencyIds is list
-            && userDoc().data.agencyId in docMeta(docId).data.agencyIds);
-
-      allow write: if
-        isPatient()
-        && request.auth.uid == patientId
-        && request.resource.size < 10 * 1024 * 1024
-        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png|image/webp');
-
-      allow delete: if isAdmin() || (isPatient() && request.auth.uid == patientId);
+      allow read, write: if false;
     }
-
     // ── Profile photos (Phase 2.4) ─────────────────────────────────────
     // Used to live as base64 strings in users/{uid}.photoURL -- a 200x200
     // JPEG (~10-25KB) inflated 33% by base64 ate up to 13% of the user

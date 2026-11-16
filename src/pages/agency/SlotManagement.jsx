@@ -22,6 +22,10 @@ const fmtISOTime = (iso) => {
 
 export default function SlotManagement() {
   const { user }            = useAuth()
+  // Capacity and manual adjustments are the Agency Admin's (role review
+  // 2026-11-15; firestore.rules pins them for coordinators). Coordinators see
+  // today's usage only.
+  const canManage = user?.role === 'agency_admin'
   const navigate            = useNavigate()
   const [agency, setAgency] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -210,7 +214,7 @@ export default function SlotManagement() {
           <div className="space-y-4 min-w-0">
 
           {/* Per-hospital daily slots (2026-11-14) — the agency admin sets them. */}
-          <HospitalSlotsCard agency={agency} user={user} canEdit={user?.role === 'agency_admin'} />
+          <HospitalSlotsCard agency={agency} user={user} canEdit={canManage} />
 
           {/* Default capacity — used by partner hospitals without their own count */}
           <div className="card p-5 border-l-4 border-brand-500">
@@ -242,10 +246,12 @@ export default function SlotManagement() {
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <span className="text-2xl font-bold text-brand-600">{slots.total}</span>
                   <span className="text-xs text-gray-500">slots/day</span>
+                  {canManage && (
                   <button className="btn-secondary text-xs flex items-center gap-1"
                     onClick={() => setEditing(true)}>
                     <MdEdit size={13} /> Edit
                   </button>
+                  )}
                 </div>
               )}
             </div>
@@ -318,11 +324,17 @@ export default function SlotManagement() {
             </div>
           ) : (
             <div className="card p-3 bg-amber-50/50 border-amber-100 text-xs text-amber-700">
-              No budget allocated yet — slots control daily volume, but approval amounts won't be tracked against a budget. Ask the system admin to set an allocation on the Agency Detail page.
+              No budget allocated yet — slots control daily volume, but approval amounts won't be tracked against a budget. Your Agency Admin sets the allocation on Budget Allocation.
             </div>
           )}
 
-          {/* Manual adjustment */}
+          {/* Manual adjustment (Agency Admin) */}
+          {!canManage && (
+            <div className="card p-3 text-xs text-gray-600">
+              Only your Agency Admin can change the daily capacity or add/deduct slots.
+            </div>
+          )}
+          {canManage && (
           <div className="card p-5">
             <p className="text-sm font-medium text-gray-800 mb-1">Manual Adjustment</p>
             <p className="text-xs text-gray-500 mb-4">
@@ -361,11 +373,12 @@ export default function SlotManagement() {
             <div className="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-2">
               <MdInfo size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-blue-700">
-                <strong>Auto-deduction:</strong> Slots are automatically deducted when patients submit
-                applications. Use manual adjustment for walk-ins, corrections, or special cases.
+                <strong>Auto-deduction:</strong> A slot is used when the hospital endorses a case to
+                your agency. Use manual adjustment for walk-ins, corrections, or special cases.
               </p>
             </div>
           </div>
+          )}
           </div>{/* /controls column */}
 
           {/* Adjustment history */}

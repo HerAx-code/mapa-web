@@ -638,7 +638,14 @@ const AGENCY_FAQS = [
   { q: 'How do I mark a Guarantee Letter as redeemed?', a: 'Open the application and click "Mark GL Redeemed" once the provider has claimed it. This moves the amount from committed to disbursed. If it was a mistake, you can undo it from the same page.' },
   { q: 'Why can\'t I approve this application?', a: 'Your agency approved assistance for this patient on another request less than 30 days ago (each agency can approve once every 30 days per patient; other agencies are not affected). Or the amount is above your remaining budget, the amount the hospital endorsed, or your per-applicant cap, or the hospital has closed the request. The approval window shows which.' },
   { q: 'Where do I see my agency\'s budget?', a: 'Your Dashboard and the Funds page show the budget, the committed amount (approved Guarantee Letters) and the disbursed amount (redeemed ones). Your Agency Admin sets the budget on Budget Allocation.' },
-  { q: 'How do patients message me?', a: 'Open Messages. Patients and hospital staff can message your agency about cases endorsed to it; they are notified in the app and by email when you reply.' },
+  { q: 'How do I message a patient?', a: 'Open the application and click Message Patient, or start one from Messages. Patients can\'t start a conversation; they reply to yours. Hospital staff can message your agency at any time. Both are notified in the app and by email.' },
+]
+
+const PLATFORM_FAQS = [
+  { q: 'What does the Super Admin manage?', a: 'The network: hospitals (onboarding, access-code prefix, sign-ups open or paused, first Hospital Admins), agencies (details, partner hospitals, teams, slots) and reference data. You see network counts only, never patient records.' },
+  { q: 'How do I onboard a hospital?', a: 'Open Onboarding. Work each request through Interest, Verification, Agreement, Setup & training and Live. A hospital set up from onboarding starts with patient sign-ups closed; only the go-live step opens them.' },
+  { q: 'How do I add or pause an agency?', a: 'Open Agencies. Add an agency, set its partner hospitals and team, or disable it; when disabling you choose whether open cases wait or are closed so the hospital can endorse elsewhere.' },
+  { q: 'Can I see patient cases?', a: 'No. Patient data stays with each hospital and the agencies a case is endorsed to. The Super Admin sees aggregate counts per hospital.' },
 ]
 
 const ADMIN_FAQS = [
@@ -662,9 +669,11 @@ function HelpModal({ onClose, onOpenReport }) {
   const patientFaqs = i18n.t('profile.help.patientFaqs', { returnObjects: true }) || []
   const FAQS = role === 'patient' ? patientFaqs
              : (role === 'agency' || role === 'agency_admin') ? AGENCY_FAQS
+             : role === 'platform_admin' ? PLATFORM_FAQS
              : ADMIN_FAQS
   const portalLabel = role === 'patient' ? t('profile.help.portalPatient')
                     : (role === 'agency' || role === 'agency_admin') ? t('profile.help.portalAgency')
+                    : role === 'platform_admin' ? 'network console'
                     : t('profile.help.portalAdmin')
 
   const handleEmailSupport = () => {
