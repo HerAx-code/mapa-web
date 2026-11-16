@@ -693,6 +693,13 @@
     }
   },
   "patient": {
+    "coe": {
+      "title": "Certificate of Eligibility",
+      "number": "Blg. {{no}} · nilagdaan ng Medical Social Service",
+      "bringOriginal": "Dalhin ang orihinal na kopyang may lagda at tatak kapag hiningi ito ng ahensya.",
+      "view": "Tingnan",
+      "openFailed": "Hindi mabuksan ang sertipiko. Pakisubukang muli."
+    },
     "profileGaps": {
       "failed": "Hindi na-save. Pakisubukan muli.",
       "saved": "Na-update ang profile.",

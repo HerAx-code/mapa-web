@@ -693,6 +693,13 @@
     }
   },
   "patient": {
+    "coe": {
+      "title": "Certificate of Eligibility",
+      "number": "No. {{no}} · signed by the Medical Social Service",
+      "bringOriginal": "Bring the original signed and stamped copy when an agency asks for it.",
+      "view": "View",
+      "openFailed": "Could not open the certificate. Please try again."
+    },
     "profileGaps": {
       "failed": "Could not save. Please try again.",
       "saved": "Profile updated.",

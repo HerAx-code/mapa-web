@@ -28,6 +28,7 @@ import {
 import toast from 'react-hot-toast'
 import { isIntakeComplete, requiredFieldsStatus } from '../../utils/intakeSheet'
 import { classificationSummary } from '../../utils/classificationReuse'
+import { openSignedScan } from '../../utils/signedScan'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import DocViewerModal from '../../components/DocViewerModal'
@@ -1423,6 +1424,21 @@ export default function ApplicationDetail() {
                     <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-500">Diagnosis</p><p className="font-medium text-gray-800">{effectiveIntake.diagnosis || '—'}</p></div>
                     {effectiveIntake.recommendation && (
                       <div className="bg-gray-50 rounded-lg p-2 sm:col-span-2"><p className="text-gray-500">Recommendation</p><p className="text-gray-800 italic">"{effectiveIntake.recommendation}"</p></div>
+                    )}
+                    {/* The hospital's signed Certificate of Eligibility (2026-11-16). */}
+                    {request?.eligibilityCert?.status === 'signed' && (
+                      <div className="bg-green-50 rounded-lg p-2 sm:col-span-2 flex items-center justify-between gap-2">
+                        <p className="text-green-800">Certificate of Eligibility <span className="font-medium">{request.eligibilityCert.controlNo}</span> · signed copy on file</p>
+                        <button className="text-xs font-semibold text-brand-700 hover:underline flex-shrink-0"
+                          onClick={async () => {
+                            try {
+                              const snap = await getDoc(doc(db, 'eligibilityCertificates', request.eligibilityCert.id))
+                              if (!snap.exists() || !openSignedScan(snap.data().signed)) toast.error('Could not open the certificate.')
+                            } catch { toast.error('Could not open the certificate.') }
+                          }}>
+                          View
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

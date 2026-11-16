@@ -434,7 +434,9 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
       const basis = povertyBasis(null, hospitalPolicyRef.current)
       return {
         ...p, meansTestCategory: cat,
-        classificationBasis: basis ? { povertyLine: basis.povertyLine, year: basis.year, region: basis.region } : (p.classificationBasis ?? null),
+        classificationBasis: basis
+          ? { povertyLine: basis.povertyLine, year: basis.year, region: basis.region, citationShort: basis.citationShort, status: basis.status }
+          : (p.classificationBasis ?? null),
         ...extra,
       }
     })

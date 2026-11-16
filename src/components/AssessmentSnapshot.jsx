@@ -83,6 +83,10 @@ export default function AssessmentSnapshot({ sheet, bill, settings = null, showM
               <p className="mt-2 text-xs text-gray-500 tabular-nums">
                 {Math.round(ratio * 100)}% of the poverty line ({peso(basis.povertyLine)}/person{basis.region || basis.year ? ` · ${[basis.region, basis.year].filter(Boolean).join(' ')}` : ''})
               </p>
+              {basis.citationShort && <p className="mt-1 text-[11px] text-gray-500">Source: {basis.citationShort}</p>}
+              {basis.status === 'interim' && (
+                <p className="mt-1 text-[11px] text-amber-700">Interim figure — a newer PSA release exists.</p>
+              )}
             </>
           ) : (
             <p className="mt-2 text-xs text-amber-700">Poverty line not set — ask your Hospital Admin (Hospital Settings).</p>

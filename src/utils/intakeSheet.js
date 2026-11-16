@@ -124,9 +124,14 @@ export function expensesLookMistyped(s) {
 // neither is set — no suggestion is offered then; nothing is hard-coded.
 export function povertyBasis(sheet, settings) {
   const b = sheet?.classificationBasis
-  if (b && Number(b.povertyLine) > 0) return { povertyLine: Number(b.povertyLine), year: b.year ?? null, region: b.region ?? '' }
+  if (b && Number(b.povertyLine) > 0) {
+    return { povertyLine: Number(b.povertyLine), year: b.year ?? null, region: b.region ?? '', citationShort: b.citationShort ?? '', status: b.status ?? '' }
+  }
   const line = Number(settings?.povertyLinePerCapita)
-  if (line > 0) return { povertyLine: line, year: settings.povertyLineYear ?? null, region: settings.region ?? '' }
+  if (line > 0) {
+    return { povertyLine: line, year: settings.povertyLineYear ?? null, region: settings.region ?? '',
+      citationShort: settings.povertyLineCitationShort ?? '', status: settings.povertyLineStatus ?? '' }
+  }
   return null
 }
 
