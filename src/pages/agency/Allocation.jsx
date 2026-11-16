@@ -1,6 +1,7 @@
 import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import ConfirmModal from '../../components/ConfirmModal'
+import RepeatLimitCard from '../../components/agency/RepeatLimitCard'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -561,6 +562,9 @@ export default function AgencyAllocation() {
             </div>
           )}
         </div>
+
+        {/* Repeat limit (Phase 1): how often the agency approves the same patient. */}
+        {agency && <RepeatLimitCard agency={agency} user={user} />}
 
         {/* Reset period */}
         {allocated > 0 && (

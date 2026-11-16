@@ -1,7 +1,7 @@
 import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore'
 import { approveWithMark } from './helpers/approval.js'
 import { fileRequest, claimCode } from './helpers/marketplace.js'
 
@@ -45,6 +45,9 @@ async function seed(extra = []) {
       put('hospitalIds/BGH-2026-00001', { status: 'available', patId: null, tenantId: B }),
       put('requests/r1', { patientId: 'pat', tenantId: A, status: 'endorsed', agencyIds: ['dswd', 'pcso'], amountNeeded: 20000, amountCommitted: 0 }),
       put('requests/r2', { patientId: 'pat', tenantId: A, status: 'endorsed', agencyIds: ['dswd'], amountNeeded: 20000, amountCommitted: 0 }),
+      // Repeat limit lives on the agency (Phase 1); no repeatLimit = 30 days.
+      put('agencies/dswd', { name: 'DSWD', enabled: true }),
+      put('agencies/pcso', { name: 'PCSO', enabled: true }),
       put('applications/s1', slice('r1')),
       put('applications/s2', slice('r2')),
       put('applications/sX', slice('r1', { agencyId: 'pcso' })),
@@ -144,5 +147,71 @@ describe('holding period', () => {
     await assertFails(updateDoc(doc(as('adminB'), 'users', 'pat'), { cooldown: 1 }))
     await assertSucceeds(updateDoc(doc(as('adminA'), 'users', 'pat'), { cooldown: 1 }))
     await assertSucceeds(updateDoc(doc(as('adminA'), 'users', 'pat'), { cooldown: 0 }))
+  })
+})
+
+describe('Phase 1: repeat limit per agency, override with a reason', () => {
+  const override = (reason, byUid = 'coord') => ({ ...approve, repeatOverride: { reason, byUid, at: serverTimestamp() } })
+  const setAgency = (id, data) => testEnv.withSecurityRulesDisabled(async (ctx) =>
+    updateDoc(doc(ctx.firestore(), 'agencies', id), data))
+  const setType = (reqId, assistanceType) => testEnv.withSecurityRulesDisabled(async (ctx) =>
+    updateDoc(doc(ctx.firestore(), 'requests', reqId), { assistanceType }))
+
+  it('inside the limit, an approval with a written reason goes through', async () => {
+    await seed([mark('r1', daysAgo(10))])
+    await assertSucceeds(approveWithMark(as('coord'), 's2', slice('r2'), override('Second admission, new bill')))
+  })
+
+  it('the reason must be real, recent and the approver\'s own', async () => {
+    await seed([mark('r1', daysAgo(10))])
+    await assertFails(approveWithMark(as('coord'), 's2', slice('r2'), override('short')))
+    await assertFails(approveWithMark(as('coord'), 's2', slice('r2'), override('Someone else approved this', 'other')))
+    await assertFails(approveWithMark(as('coord'), 's2', slice('r2'),
+      { ...approve, repeatOverride: { reason: 'Old reason reused here', byUid: 'coord', at: daysAgo(1) } }))
+  })
+
+  it('the agency sets its own number of days (0 = no limit)', async () => {
+    await seed([mark('r1', daysAgo(40))])
+    await setAgency('dswd', { repeatLimit: { days: 90, perType: false } })
+    await assertFails(approveWithMark(as('coord'), 's2', slice('r2'), approve))
+    await setAgency('dswd', { repeatLimit: { days: 0, perType: false } })
+    await assertSucceeds(approveWithMark(as('coord'), 's2', slice('r2'), approve))
+  })
+
+  it('per assistance type: another type is free, the same type is limited', async () => {
+    const medAt = daysAgo(10)
+    await seed([['approvalMarks/dswd__pat', { agencyId: 'dswd', patientId: 'pat', requestId: 'r1', sliceId: 's1',
+      lastApprovedAt: daysAgo(10), byType: { Medicines: { at: medAt, requestId: 'r1' } } }]])
+    await setAgency('dswd', { repeatLimit: { days: 90, perType: true } })
+    await setType('r2', 'Laboratory Tests')
+    await assertSucceeds(approveWithMark(as('coord'), 's2', slice('r2'), approve,
+      { byType: { Medicines: { at: medAt, requestId: 'r1' }, 'Laboratory Tests': { at: serverTimestamp(), requestId: 'r2' } } }))
+  })
+
+  it('per assistance type: the same type inside the limit is refused', async () => {
+    await seed([['approvalMarks/dswd__pat', { agencyId: 'dswd', patientId: 'pat', requestId: 'r1', sliceId: 's1',
+      lastApprovedAt: daysAgo(10), byType: { Medicines: { at: daysAgo(10), requestId: 'r1' } } }]])
+    await setAgency('dswd', { repeatLimit: { days: 90, perType: true } })
+    await setType('r2', 'Medicines')
+    await assertFails(approveWithMark(as('coord'), 's2', slice('r2'), approve,
+      { byType: { Medicines: { at: serverTimestamp(), requestId: 'r2' } } }))
+  })
+
+  it("byType can't be back-dated or written for another type", async () => {
+    await seed([['approvalMarks/dswd__pat', { agencyId: 'dswd', patientId: 'pat', requestId: 'r1', sliceId: 's1',
+      lastApprovedAt: daysAgo(100), byType: { Medicines: { at: daysAgo(10), requestId: 'r1' } } }]])
+    await setType('r2', 'Laboratory Tests')
+    await assertFails(approveWithMark(as('coord'), 's2', slice('r2'), approve,
+      { byType: { Medicines: { at: daysAgo(200), requestId: 'r1' }, 'Laboratory Tests': { at: serverTimestamp(), requestId: 'r2' } } }))
+  })
+})
+
+describe('Phase 1: redeemed amount', () => {
+  it('an agency records what was actually billed, never more than approved', async () => {
+    await seed([['applications/sA', slice('r1', { status: 'certificate', amountApproved: 10000, glStatus: 'issued' })]])
+    const ref = doc(as('coord'), 'applications', 'sA')
+    await assertFails(updateDoc(ref, { glStatus: 'redeemed', redeemedAmount: 12000 }))
+    await assertFails(updateDoc(ref, { glStatus: 'redeemed', redeemedAmount: -1 }))
+    await assertSucceeds(updateDoc(ref, { glStatus: 'redeemed', redeemedAmount: 8500 }))
   })
 })

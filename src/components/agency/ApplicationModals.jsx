@@ -7,7 +7,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdCheckCircle, MdHourglassEmpty } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { fmtDate } from '../../utils/dates'
-import { APPROVAL_COOLDOWN_DAYS, approvalMarkId, approvalCooldownBlock } from '../../utils/approvalCooldown'
+import { approvalMarkId, approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../../utils/approvalCooldown'
 import { ORG } from '../../config/org'
 
 // This file keeps only the agency-specific modals (Reject / Approve /
@@ -106,18 +106,22 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   const [purposes, setPurposes]           = useState(new Set())
   const [saving, setSaving]               = useState(false)
   const [priorApproval, setPriorApproval] = useState(null)
+  const [overrideReason, setOverrideReason] = useState('')
   const panelRef = useRef(null)
   useEscapeKey(onClose, !saving)
   useFocusTrap(panelRef, true)
 
   useEffect(() => {
     if (!app?.patientId || !currentUser?.agencyId) return
-    // Same check as the rules (approvalCooldownOk): this agency's last
-    // approval for the patient, unless it was for this same request.
+    // Same check as the rules (outsideRepeatLimit): this agency's last
+    // approval for the patient (per assistance type when the agency counts
+    // per type), unless it was for this same request.
     getDoc(doc(db, 'approvalMarks', approvalMarkId(currentUser.agencyId, app.patientId)))
-      .then(snap => setPriorApproval(approvalCooldownBlock(snap.exists() ? snap.data() : null, app.requestId)))
+      .then(snap => setPriorApproval(approvalCooldownBlock(
+        snap.exists() ? snap.data() : null, app.requestId, Date.now(),
+        repeatLimitOf(agency), request?.assistanceType ?? '')))
       .catch(() => {})
-  }, [app?.patientId, app?.requestId, currentUser?.agencyId])
+  }, [app?.patientId, app?.requestId, currentUser?.agencyId, agency?.repeatLimit?.days, agency?.repeatLimit?.perType, request?.assistanceType])
 
   const allocated = agency?.budget?.allocated ?? 0
   const committed = agency?.budget?.committed ?? 0
@@ -181,6 +185,9 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
     if (exceedsBudget)       { toast.error(`Amount exceeds remaining budget of ₱${remaining.toLocaleString()}.`); return }
     if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} ${ORG.gatewayName} endorsed for this slice.`); return }
     if (exceedsPerCap)       { toast.error(`Amount exceeds this agency's per-applicant cap of ₱${perApplicantCap.toLocaleString()}.`); return }
+    if (priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN) {
+      toast.error(`Give a reason (at least ${OVERRIDE_REASON_MIN} characters) for approving inside your repeat limit.`); return
+    }
 
     setSaving(true)
     onConfirm({
@@ -189,6 +196,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
       payableTo:           payableTo.trim(),
       approvedBy:          currentUser.name,
       approvedByUid:       currentUser.uid,
+      repeatOverrideReason: priorApproval ? overrideReason.trim() : '',
     }).finally(() => setSaving(false))
   }
 
@@ -212,15 +220,18 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           {priorApproval && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <p className="text-xs font-semibold text-red-800 mb-1">Can't approve yet: {APPROVAL_COOLDOWN_DAYS}-day limit</p>
-              <p className="text-xs text-red-700 leading-relaxed">
-                Your agency approved assistance for this patient <strong>{priorApproval.daysAgo} day{priorApproval.daysAgo === 1 ? '' : 's'} ago</strong>, on another request.
-                An agency can approve once every {APPROVAL_COOLDOWN_DAYS} days per patient, so this request can be approved from <strong>{fmtDate(priorApproval.until)}</strong>.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-800">Inside your repeat limit ({priorApproval.days} days{priorApproval.type ? `, ${priorApproval.type}` : ''})</p>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Your agency approved {priorApproval.type ? <strong>{priorApproval.type}</strong> : null}{priorApproval.type ? ' ' : ''}assistance for this patient <strong>{priorApproval.daysAgo} day{priorApproval.daysAgo === 1 ? '' : 's'} ago</strong>, on another request.
+                The limit ends on <strong>{fmtDate(priorApproval.until)}</strong>. To approve now, record why; the reason is saved with the approval and in the audit log.
               </p>
-              <p className="text-xs text-red-700 mt-1">
-                The system will refuse the approval until then. Other agencies are not affected.
-              </p>
+              <textarea
+                className="input text-xs w-full resize-none" rows={2} maxLength={300}
+                placeholder="Reason for approving inside the limit (e.g. new admission, different bill)"
+                value={overrideReason}
+                onChange={e => setOverrideReason(e.target.value)}
+              />
             </div>
           )}
 
@@ -394,8 +405,8 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
         <div className="px-5 py-3 border-t border-gray-100 flex gap-2 justify-end flex-shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
           <button className="btn-primary text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            disabled={saving || exceedsBudget || exceedsRequested || exceedsPerCap || !!priorApproval}
-            title={priorApproval ? `Blocked: approved within the last ${APPROVAL_COOLDOWN_DAYS} days` : ''}
+            disabled={saving || exceedsBudget || exceedsRequested || exceedsPerCap || (!!priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN)}
+            title={priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN ? 'Give a reason for approving inside your repeat limit' : ''}
             onClick={handleSubmit}>
             <MdCheckCircle size={14} className="inline -mt-0.5 mr-1" />
             {saving ? 'Approving…' : 'Approve & Issue GL'}

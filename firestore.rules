@@ -453,7 +453,15 @@ service cloud.firestore {
           (!(request.resource.data.get('status', '') in ['approved', 'certificate']) ||
            resource.data.get('status', '') in ['approved', 'certificate'] ||
            parentRequestOpen(resource.data)) &&
-          approvalCooldownOk(resource.data, request.resource.data)) ||
+          approvalCooldownOk(resource.data, request.resource.data) &&
+          // Phase 1: the amount the provider actually billed, recorded at
+          // redemption — never more than this agency approved.
+          (!('redeemedAmount' in request.resource.data) ||
+           request.resource.data.redeemedAmount == null ||
+           (request.resource.data.redeemedAmount is number &&
+            request.resource.data.redeemedAmount >= 0 &&
+            request.resource.data.redeemedAmount <=
+              request.resource.data.get('amountApproved', request.resource.data.get('approvedAmount', 0))))) ||
         hospitalAdminWrite()
       );
       // A slice exists only once a request is endorsed: it is part of the
@@ -461,7 +469,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── 30-day approval cooldown (per agency) ───────────────────────────────
+    // ── Repeat limit per agency (was a fixed 30-day cooldown) ───────────────────────────────
     // approvalMarks/{agencyId}__{patientId} records the agency's latest approval
     // for a patient: { agencyId, patientId, requestId, sliceId, lastApprovedAt }.
     // A slice becomes 'approved' only in the same write that stamps the mark
@@ -473,6 +481,32 @@ service cloud.firestore {
     function approvalMark(agencyId, patientId) {
       return /databases/$(database)/documents/approvalMarks/$(agencyId + '__' + patientId);
     }
+    // Phase 1 (2026-11-16): the limit is a per-agency setting, set by its
+    // Agency Admin: agencies.repeatLimit = { days, perType } (default 30 days,
+    // not per type — the old fixed rule). days 0 = no limit. perType counts
+    // separately per assistance type (the request's assistanceType), from
+    // the mark's byType map. Inside the limit the approval is still allowed
+    // WITH a written reason (repeatOverride on the slice, stamped now by the
+    // approver), so it is a recorded exception, never a silent one.
+    function outsideRepeatLimit(before) {
+      let path = approvalMark(before.agencyId, before.patientId);
+      let lim = get(/databases/$(database)/documents/agencies/$(before.agencyId)).data.get('repeatLimit', {});
+      let days = lim.get('days', 30);
+      let perType = lim.get('perType', false);
+      let type = get(/databases/$(database)/documents/requests/$(before.requestId)).data.get('assistanceType', '');
+      let prev = !exists(path) ? {} :
+        (perType ? get(path).data.get('byType', {}).get(type, {})
+                 : { 'at': get(path).data.get('lastApprovedAt', null), 'requestId': get(path).data.get('requestId', '') });
+      return days == 0 ||
+        prev.get('at', null) == null ||
+        prev.get('requestId', '') == before.requestId ||
+        prev.at <= request.time - duration.value(days, 'd');
+    }
+    function repeatOverrideOk(after) {
+      let o = after.get('repeatOverride', {});
+      return o.get('reason', '') is string && o.get('reason', '').size() >= 10 &&
+        o.get('byUid', '') == uid() && o.get('at', null) == request.time;
+    }
     function approvalCooldownOk(before, after) {
       let path = approvalMark(before.agencyId, before.patientId);
       return after.get('status', '') != 'approved' ||
@@ -480,17 +514,28 @@ service cloud.firestore {
         (before.get('requestId', null) is string &&
          getAfter(path).data.get('requestId', '') == before.requestId &&
          getAfter(path).data.get('lastApprovedAt', null) == request.time &&
-         (!exists(path) ||
-          get(path).data.get('requestId', '') == before.requestId ||
-          get(path).data.lastApprovedAt <= request.time - duration.value(30, 'd')));
+         (outsideRepeatLimit(before) || repeatOverrideOk(after)));
     }
 
+    // byType on a mark may change only for the approved request's own
+    // assistance type, stamped now (so other types can't be back-dated).
+    function markByTypeOk() {
+      let before = resource == null ? {} : resource.data.get('byType', {});
+      let after = request.resource.data.get('byType', {});
+      let type = get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.get('assistanceType', '');
+      return after.diff(before).affectedKeys().size() == 0 ||
+        (after.diff(before).affectedKeys().hasOnly([type]) &&
+         after.get(type, {}).keys().hasOnly(['at', 'requestId']) &&
+         after.get(type, {}).get('at', null) == request.time &&
+         after.get(type, {}).get('requestId', '') == request.resource.data.requestId);
+    }
     match /approvalMarks/{markId} {
       allow read: if isAgency() && markId.split('__')[0] == userAgencyId();
       // Written only with a real approval of this agency's slice for that
       // patient and request (the slice rule above checks the other direction).
       allow create, update: if isAgency() &&
-        request.resource.data.keys().hasOnly(['agencyId', 'patientId', 'requestId', 'sliceId', 'lastApprovedAt']) &&
+        request.resource.data.keys().hasOnly(['agencyId', 'patientId', 'requestId', 'sliceId', 'lastApprovedAt', 'byType']) &&
+        markByTypeOk() &&
         request.resource.data.agencyId == userAgencyId() &&
         request.resource.data.patientId is string &&
         markId == userAgencyId() + '__' + request.resource.data.patientId &&

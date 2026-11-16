@@ -35,3 +35,22 @@ describe('approvalCooldownBlock', () => {
     expect(approvalMarkId('dswd', 'u1')).toBe('dswd__u1')
   })
 })
+
+describe('repeat limit per agency (Phase 1)', () => {
+  it('reads the agency setting with the rule defaults', async () => {
+    const { repeatLimitOf } = await import('../../src/utils/approvalCooldown.js')
+    expect(repeatLimitOf({})).toEqual({ days: 30, perType: false })
+    expect(repeatLimitOf({ repeatLimit: { days: 90, perType: true } })).toEqual({ days: 90, perType: true })
+    expect(repeatLimitOf({ repeatLimit: { days: 0 } })).toEqual({ days: 0, perType: false })
+  })
+  it('days 0 never blocks; custom days are used', () => {
+    expect(approvalCooldownBlock(mark(10), 'r2', NOW, { days: 0 })).toBeNull()
+    expect(approvalCooldownBlock(mark(40), 'r2', NOW, { days: 90 })).toMatchObject({ days: 90, daysAgo: 40 })
+    expect(approvalCooldownBlock(mark(40), 'r2', NOW, { days: 30 })).toBeNull()
+  })
+  it('per type: only the same assistance type counts', () => {
+    const m = { requestId: 'r1', lastApprovedAt: new Date(NOW - 5 * DAY), byType: { Medicines: { at: new Date(NOW - 5 * DAY), requestId: 'r1' } } }
+    expect(approvalCooldownBlock(m, 'r2', NOW, { days: 90, perType: true }, 'Laboratory Tests')).toBeNull()
+    expect(approvalCooldownBlock(m, 'r2', NOW, { days: 90, perType: true }, 'Medicines')).toMatchObject({ type: 'Medicines', daysAgo: 5 })
+  })
+})

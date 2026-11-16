@@ -15,7 +15,7 @@ import { getOrCreateConversation } from '../../utils/messages'
 import { isGLExpired, isGLExpiringSoon, glDaysRemaining, glExpiresAtFor } from '../../utils/constants'
 import { tsToDate, fmtDate } from '../../utils/dates'
 import { computeFunding, deriveRequestFinancials, syncedRequestStatus, isRequestClosedByGateway } from '../../utils/requests'
-import { APPROVAL_COOLDOWN_DAYS, approvalMarkId, approvalCooldownBlock } from '../../utils/approvalCooldown'
+import { approvalMarkId, approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../../utils/approvalCooldown'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
@@ -89,6 +89,8 @@ export default function ApplicationDetail() {
   // Confirm-modal flags for the four GL-lifecycle actions that used to
   // fire window.confirm. The actual action runs from the modal's onConfirm.
   const [showConfirmRedeem, setShowConfirmRedeem]       = useState(false)
+  // Phase 1: the amount the provider actually billed (≤ approved).
+  const [redeemAmount, setRedeemAmount]                 = useState('')
   const [showConfirmUnmark, setShowConfirmUnmark]       = useState(false)
   const [showConfirmExpire, setShowConfirmExpire]       = useState(false)
   const [showConfirmReverse, setShowConfirmReverse]     = useState(false)
@@ -355,29 +357,23 @@ export default function ApplicationDetail() {
   // agency interviewed its applicants. Removed: the single assessment
   // interview is now on the parent request and conducted by the gateway.
 
-  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid }) => {
+  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid, repeatOverrideReason = '' }) => {
     setUpdating(true)
     try {
-      // ── 30-day cooldown, per agency. The rules refuse the approval unless it
-      // writes this agency's approval mark for the patient and the previous
-      // mark is missing, for this same request, or 30+ days old
-      // (src/utils/approvalCooldown.js). It is re-checked inside the
-      // transaction; this early read only gives a clear message.
+      // ── Repeat limit per agency (Phase 1). The rules require this agency's
+      // approval mark in the same write; inside the agency's limit
+      // (agencies.repeatLimit, default 30 days) the approval needs a written
+      // reason, saved on the slice as repeatOverride. Checked again inside
+      // the transaction with fresh data (src/utils/approvalCooldown.js).
       if (!app.requestId) {
         toast.error('This slice is not linked to a request and cannot be approved.')
         return
       }
       const markRef = doc(db, 'approvalMarks', approvalMarkId(user.agencyId, app.patientId))
+      const overrideReason = String(repeatOverrideReason ?? '').trim()
       const COOLDOWN_MSG = (b) =>
-        `Your agency approved assistance for this patient ${b.daysAgo} day${b.daysAgo === 1 ? '' : 's'} ago, ` +
-        `on another request. Agencies can approve once every ${APPROVAL_COOLDOWN_DAYS} days per patient; ` +
-        `this one can be approved from ${fmtDate(b.until)}.`
-      const earlyMark = await getDoc(markRef)
-      const earlyBlock = approvalCooldownBlock(earlyMark.exists() ? earlyMark.data() : null, app.requestId)
-      if (earlyBlock) {
-        toast.error(COOLDOWN_MSG(earlyBlock), { duration: 8000 })
-        return
-      }
+        `Your agency approved ${b.type ? `${b.type} ` : ''}assistance for this patient ${b.daysAgo} day${b.daysAgo === 1 ? '' : 's'} ago, ` +
+        `on another request (your limit is ${b.days} days). Give a reason of at least ${OVERRIDE_REASON_MIN} characters to approve anyway.`
 
       // ── Transactional approve + budget commit.
       // Closes the read-then-write race where two parallel approvals could
@@ -399,9 +395,11 @@ export default function ApplicationDetail() {
         const markSnap   = await tx.get(markRef)
         // Logic review: no commitment on a request the hospital rejected/closed.
         if (reqSnap?.exists() && isRequestClosedByGateway(reqSnap.data().status)) throw new Error('REQUEST_CLOSED')
-        const block = approvalCooldownBlock(markSnap.exists() ? markSnap.data() : null, app.requestId)
-        if (block) throw new Error(`COOLDOWN:${COOLDOWN_MSG(block)}`)
         const data       = agencySnap.exists() ? agencySnap.data() : {}
+        const markData   = markSnap.exists() ? markSnap.data() : null
+        const assistanceType = reqSnap?.exists() ? (reqSnap.data().assistanceType ?? '') : ''
+        const block = approvalCooldownBlock(markData, app.requestId, Date.now(), repeatLimitOf(data), assistanceType)
+        if (block && overrideReason.length < OVERRIDE_REASON_MIN) throw new Error(`COOLDOWN:${COOLDOWN_MSG(block)}`)
         const allocated  = data.budget?.allocated ?? 0
         const committed  = data.budget?.committed ?? 0
         const remaining  = Math.max(0, allocated - committed)
@@ -435,6 +433,11 @@ export default function ApplicationDetail() {
           // per letter so older letters keep the 30 days printed on them.
           glExpiresAt:         Timestamp.fromMillis(glExpiresAtFor(Date.now())),
           glRedeemedAt:        null,
+          redeemedAmount:      null,
+          // Inside the agency's repeat limit: the recorded exception.
+          repeatOverride:      block
+            ? { reason: overrideReason, byUid: user.uid, byName: user.name ?? '', at: serverTimestamp() }
+            : null,
           updatedAt:           serverTimestamp(),
         })
         if (allocated > 0) {
@@ -443,13 +446,21 @@ export default function ApplicationDetail() {
           })
         }
 
-        // Cooldown mark (required by the rules in this same write).
+        // Approval mark (required by the rules in this same write). byType
+        // keeps the last approval per assistance type for per-type limits;
+        // other types' entries are carried over unchanged.
         tx.set(markRef, {
           agencyId:       user.agencyId,
           patientId:      app.patientId,
           requestId:      app.requestId,
           sliceId:        app.id,
           lastApprovedAt: serverTimestamp(),
+          ...(assistanceType || markData?.byType ? {
+            byType: {
+              ...(markData?.byType ?? {}),
+              ...(assistanceType ? { [assistanceType]: { at: serverTimestamp(), requestId: app.requestId } } : {}),
+            },
+          } : {}),
         })
 
         // Co-funding: advance the parent request. amountCommitted grows by the
@@ -482,7 +493,7 @@ export default function ApplicationDetail() {
         targetType: 'application',
         targetId:   app.id,
         targetName: app.patientName,
-        details:    `${app.agencyName ?? 'Agency'} approved ₱${approvedAmount.toLocaleString()}${purposeOfAssistance?.length ? ` (${purposeOfAssistance.join(', ')})` : ''}`,
+        details:    `${app.agencyName ?? 'Agency'} approved ₱${approvedAmount.toLocaleString()}${purposeOfAssistance?.length ? ` (${purposeOfAssistance.join(', ')})` : ''}${String(repeatOverrideReason ?? '').trim() ? ` · inside the repeat limit: ${String(repeatOverrideReason).trim()}` : ''}`,
         requestId:  app.requestId ?? null,
         patientId:  app.patientId,
       })
@@ -670,25 +681,34 @@ export default function ApplicationDetail() {
   // Each of the GL lifecycle actions below now opens an in-app ConfirmModal
   // (see render at the end of the page). The actual mutation lives in a
   // performX function that the modal's onConfirm invokes.
-  const handleRedeemGL = () => setShowConfirmRedeem(true)
+  const handleRedeemGL = () => { setRedeemAmount(String(Number(app.approvedAmount) || '')); setShowConfirmRedeem(true) }
   const performRedeemGL = async () => {
+    // Phase 1 (2026-11-16): settle on what the provider actually billed. The
+    // whole approved amount leaves "committed"; only the actual amount counts
+    // as disbursed, so the unused part returns to the agency's budget.
+    const amount = Number(app.approvedAmount) || 0
+    const actual = Number(redeemAmount)
+    if (redeemAmount === '' || !Number.isFinite(actual) || actual < 0 || actual > amount) {
+      toast.error(`Enter the amount billed, from ₱0 up to the approved ₱${amount.toLocaleString()}.`)
+      return
+    }
     setUpdating(true)
     try {
-      const amount = Number(app.approvedAmount) || 0
       const batch = writeBatch(db)
       batch.update(doc(db, 'applications', app.id), {
-        glStatus:     'redeemed',
-        glRedeemedAt: serverTimestamp(),
-        updatedAt:    serverTimestamp(),
+        glStatus:       'redeemed',
+        glRedeemedAt:   serverTimestamp(),
+        redeemedAmount: actual,
+        updatedAt:      serverTimestamp(),
       })
       if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
         batch.update(doc(db, 'agencies', user.agencyId), {
           'budget.committed': increment(-amount),
-          'budget.disbursed': increment(amount),
+          'budget.disbursed': increment(actual),
         })
       }
       await batch.commit()
-      logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} redeemed by ${app.payableTo}`, requestId: app.requestId ?? null, patientId: app.patientId })
+      logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${actual.toLocaleString()} of ₱${amount.toLocaleString()} billed by ${app.payableTo}${actual < amount ? ` · ₱${(amount - actual).toLocaleString()} returned to budget` : ''}`, requestId: app.requestId ?? null, patientId: app.patientId })
       toast.success('GL marked as redeemed.')
       setShowConfirmRedeem(false)
     } catch (err) { console.error(err); toast.error('Failed to mark GL redeemed.') }
@@ -703,16 +723,20 @@ export default function ApplicationDetail() {
     setUpdating(true)
     try {
       const amount = Number(app.approvedAmount) || 0
+      // Letters redeemed before Phase 1 have no redeemedAmount: they were
+      // settled at the full approved amount.
+      const actual = app.redeemedAmount != null ? Number(app.redeemedAmount) : amount
       const batch = writeBatch(db)
       batch.update(doc(db, 'applications', app.id), {
-        glStatus:     'issued',
-        glRedeemedAt: null,
-        updatedAt:    serverTimestamp(),
+        glStatus:       'issued',
+        glRedeemedAt:   null,
+        redeemedAmount: null,
+        updatedAt:      serverTimestamp(),
       })
       if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
         batch.update(doc(db, 'agencies', user.agencyId), {
           'budget.committed': increment(amount),
-          'budget.disbursed': increment(-amount),
+          'budget.disbursed': increment(-actual),
         })
       }
       await batch.commit()
@@ -1499,7 +1523,7 @@ export default function ApplicationDetail() {
                   )}
                   {app.glStatus === 'redeemed' && (
                     <>
-                      <p className="text-sm text-green-700 italic flex-1">✓ GL redeemed on {formatDate(app.glRedeemedAt)}. Case complete.</p>
+                      <p className="text-sm text-green-700 italic flex-1">✓ GL redeemed on {formatDate(app.glRedeemedAt)}{app.redeemedAmount != null && Number(app.redeemedAmount) < Number(app.approvedAmount ?? 0) ? ` for ₱${Number(app.redeemedAmount).toLocaleString()} of ₱${Number(app.approvedAmount).toLocaleString()}` : ''}. Case complete.</p>
                       <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['secondary']}`}
                         disabled={updating}
                         title="Reverse the redemption — for correcting mistakes only"
@@ -1609,7 +1633,17 @@ export default function ApplicationDetail() {
           onClose={() => setShowConfirmRedeem(false)}
           onConfirm={performRedeemGL}
           title="Mark Guarantee Letter as Redeemed?"
-          body={`This records that ${app?.payableTo ?? 'the provider'} has billed back for ₱${Number(app?.approvedAmount ?? 0).toLocaleString()}. The agency's committed budget will move to disbursed.`}
+          body={(
+            <div className="space-y-2">
+              <p>Record the amount {app?.payableTo ?? 'the provider'} actually billed against this letter (approved: ₱{Number(app?.approvedAmount ?? 0).toLocaleString()}).</p>
+              <input type="number" min={0} max={Number(app?.approvedAmount ?? 0)} step="0.01"
+                className="input w-full" aria-label="Amount billed"
+                value={redeemAmount} onChange={e => setRedeemAmount(e.target.value)} />
+              {Number(redeemAmount) >= 0 && Number(redeemAmount) < Number(app?.approvedAmount ?? 0) && redeemAmount !== '' && (
+                <p className="text-xs text-gray-500">₱{(Number(app?.approvedAmount ?? 0) - Number(redeemAmount)).toLocaleString()} unused goes back to your budget.</p>
+              )}
+            </div>
+          )}
           tone="success"
           confirmLabel="Mark Redeemed"
           confirmLabelBusy="Marking…"
@@ -1620,7 +1654,7 @@ export default function ApplicationDetail() {
           onClose={() => setShowConfirmUnmark(false)}
           onConfirm={performUnmarkRedeemed}
           title="Reverse the redemption?"
-          body={`This moves ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} back from disbursed to committed and sets the Guarantee Letter back to "Issued". Use only to correct a mistaken Mark Redeemed.`}
+          body={`This moves the letter back to "Issued": ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} is committed again and the ₱${Number(app?.redeemedAmount ?? app?.approvedAmount ?? 0).toLocaleString()} recorded as billed is removed from disbursed. Use only to correct a mistaken Mark Redeemed.`}
           tone="warning"
           confirmLabel="Reverse Redemption"
           confirmLabelBusy="Reversing…"
