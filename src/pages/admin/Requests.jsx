@@ -37,7 +37,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import CompareFacesModal from '../../components/admin/CompareFacesModal'
 import ConfirmModal from '../../components/ConfirmModal'
-import { MEANS_CATEGORIES, billVerified, relationshipLabel } from '../../utils/intakeSheet'
+import { billVerified, relationshipLabel } from '../../utils/intakeSheet'
+import { classificationSummary } from '../../utils/classificationReuse'
 import StatusBadge from '../../components/ui/StatusBadge'
 import CaseTimeline from '../../components/CaseTimeline'
 import {
@@ -168,7 +169,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   // case-assessment summary before anything is written.
   const [confirming, setConfirming] = useState(false)
   const intake = request.intakeSheet ?? {}
-  const meansLabel = MEANS_CATEGORIES.find(c => c.value === intake.meansTestCategory)?.label?.split('—')[0]?.trim() || '—'
+  const meansLabel = classificationSummary(intake) || '—'
   const chosenNames = agencies.filter(a => selected.has(a.id)).map(a => a.name)
   const summaryRows = [
     ['Patient', request.patientName || '—'],
@@ -177,7 +178,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
     ['Assistance type', request.assistanceType || '—'],
     ['Total bill', `${peso(request.totalBill ?? 0)}${billVerified(intake, request.totalBill) ? ' · verified' : ''}`],
     ['Amount needed', peso(request.amountNeeded ?? 0)],
-    ['Means-test category', meansLabel],
+    ['Classification', meansLabel],
     ['Household', intake.householdSize ? `${intake.householdSize} ${Number(intake.householdSize) === 1 ? 'person' : 'people'}` : '—'],
     ['Monthly household income', intake.monthlyIncome !== undefined && intake.monthlyIncome !== '' && intake.monthlyIncome !== null ? peso(intake.monthlyIncome) : '—'],
     ['Diagnosis', intake.diagnosis || '—'],

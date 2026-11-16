@@ -27,6 +27,7 @@ import {
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { isIntakeComplete, requiredFieldsStatus } from '../../utils/intakeSheet'
+import { classificationSummary } from '../../utils/classificationReuse'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import DocViewerModal from '../../components/DocViewerModal'
@@ -1415,7 +1416,7 @@ export default function ApplicationDetail() {
 
                 {intakeReady && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
-                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Means-Test Category</p><p className="font-medium text-gray-800 capitalize">{effectiveIntake.meansTestCategory?.replace('_', ' ')}</p></div>
+                    <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Classification</p><p className="font-medium text-gray-800">{classificationSummary(effectiveIntake) || '—'}</p></div>
                     <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Household Size</p><p className="font-medium text-gray-800">{effectiveIntake.householdSize ?? '—'}</p></div>
                     <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Monthly Income</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.monthlyIncome ?? 0).toLocaleString()}</p></div>
                     <div className="bg-gray-50 rounded-lg p-2"><p className="text-gray-500">Estimated Cost</p><p className="font-medium text-gray-800">₱{Number(effectiveIntake.estimatedTotalCost ?? 0).toLocaleString()}</p></div>

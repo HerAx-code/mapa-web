@@ -1,67 +1,110 @@
 import { describe, it, expect } from 'vitest'
-import { meansTestSuggestion, POVERTY_LINE_PER_CAPITA, isIntakeComplete, needsMeansTestReason, billIncomeMonths, relationshipLabel, requiredFieldsStatus, factChanges, sameFact, mergeRemoteFacts, factsOf, sectionVerification, allSectionsVerified, sectionFacts } from '../../src/utils/intakeSheet.js'
+import {
+  meansTestSuggestion, sheetSuggestion, povertyBasis, classCutoffs, maifipCatastrophic, meansCategoryLabel, isLegacyCategory,
+  isIntakeComplete, needsMeansTestReason, billIncomeMonths, relationshipLabel, requiredFieldsStatus, factChanges, sameFact,
+  mergeRemoteFacts, factsOf, sectionVerification, allSectionsVerified, sectionFacts,
+} from '../../src/utils/intakeSheet.js'
 
-describe('meansTestSuggestion', () => {
-  const L = POVERTY_LINE_PER_CAPITA // 2600 per capita
+// DOH AO 2021-0044 bands against a ₱2,500 line: C3 < 3,500 · C2 ≤ 4,500 · C1 ≤ 5,500 · capable above.
+const L = 2500
 
-  it('classifies by income-per-capita vs the poverty line', () => {
-    // per capita < 1× → indigent (5000 / 4 = 1250)
-    expect(meansTestSuggestion({ monthlyIncome: 5000, householdSize: 4 }).category).toBe('indigent')
-    // 1×–1.5× → marginalized (per capita ~3000)
-    expect(meansTestSuggestion({ monthlyIncome: 3000 * 2, householdSize: 2 }).category).toBe('marginalized')
-    // 1.5×–2× → low_income (per capita ~4500)
-    expect(meansTestSuggestion({ monthlyIncome: 4500, householdSize: 1 }).category).toBe('low_income')
-    // ≥2× → above_threshold (per capita ~6000)
-    expect(meansTestSuggestion({ monthlyIncome: 6000, householdSize: 1 }).category).toBe('above_threshold')
+describe('meansTestSuggestion (DOH AO 2021-0044)', () => {
+  const cat = (income, size = 1) => meansTestSuggestion({ monthlyIncome: income, householdSize: size, povertyLine: L }).category
+
+  it('classifies income per person against 140 / 180 / 220% of the poverty line', () => {
+    expect(cat(13000, 4)).toBe('indigent_c3')      // 3,250 = 130%
+    expect(cat(4000)).toBe('incapacitated_c2')      // 160%
+    expect(cat(5000)).toBe('incapacitated_c1')      // 200%
+    expect(cat(6000)).toBe('capable')               // 240%
   })
 
-  it('returns per-capita and ratio', () => {
-    const s = meansTestSuggestion({ monthlyIncome: 5200, householdSize: 2 })
-    expect(s.perCapita).toBe(2600)
-    expect(s.ratio).toBe(1) // 2600 / 2600
+  it('puts the band edges where the AO body text does', () => {
+    expect(cat(3499)).toBe('indigent_c3')
+    expect(cat(3500)).toBe('incapacitated_c2')      // exactly 140% → C2
+    expect(cat(4500)).toBe('incapacitated_c2')      // exactly 180%
+    expect(cat(5500)).toBe('incapacitated_c1')      // exactly 220%
+    expect(cat(5501)).toBe('capable')
   })
 
-  it('boundary exactly at 1× is not indigent (marginalized)', () => {
-    expect(meansTestSuggestion({ monthlyIncome: L, householdSize: 1 }).category).toBe('marginalized')
+  it('suggests C3 for a 4Ps member even without figures', () => {
+    expect(meansTestSuggestion({ is4Ps: true })).toMatchObject({ category: 'indigent_c3', via4Ps: true })
+    expect(meansTestSuggestion({ monthlyIncome: 20000, householdSize: 1, povertyLine: L, is4Ps: true }).category).toBe('indigent_c3')
   })
 
-  it('returns null when inputs are missing or invalid', () => {
-    expect(meansTestSuggestion({ monthlyIncome: '', householdSize: 4 })).toBeNull()
-    expect(meansTestSuggestion({ monthlyIncome: 5000, householdSize: 0 })).toBeNull()
-    expect(meansTestSuggestion({ monthlyIncome: -100, householdSize: 4 })).toBeNull()
-    expect(meansTestSuggestion({})).toBeNull()
+  it('suggests nothing without a poverty line or with blank figures', () => {
+    expect(meansTestSuggestion({ monthlyIncome: 5000, householdSize: 2 })).toBeNull()
+    expect(meansTestSuggestion({ monthlyIncome: '', householdSize: 4, povertyLine: L })).toBeNull()
+    expect(meansTestSuggestion({ monthlyIncome: 5000, householdSize: 0, povertyLine: L })).toBeNull()
+    expect(meansTestSuggestion({ monthlyIncome: -100, householdSize: 4, povertyLine: L })).toBeNull()
     expect(meansTestSuggestion()).toBeNull()
+  })
+})
+
+describe('poverty basis', () => {
+  it('prefers the line stored on the sheet over the hospital setting', () => {
+    const settings = { povertyLinePerCapita: 3000, povertyLineYear: 2025, region: 'BARMM' }
+    expect(povertyBasis({ classificationBasis: { povertyLine: 2577, year: 2023, region: 'BARMM' } }, settings).povertyLine).toBe(2577)
+    expect(povertyBasis({}, settings)).toEqual({ povertyLine: 3000, year: 2025, region: 'BARMM' })
+    expect(povertyBasis({}, null)).toBeNull()
+    expect(sheetSuggestion({ monthlyIncome: 4000, householdSize: 1 }, { povertyLinePerCapita: L }).category).toBe('incapacitated_c2')
+  })
+  it('computes the cut-offs', () => {
+    expect(classCutoffs(2500)).toEqual({ c3Below: 3500, c2UpTo: 4500, c1UpTo: 5500 })
+  })
+})
+
+describe('maifipCatastrophic (DOH AO 2026-0031)', () => {
+  it('flags a bill above 10% of a year of household income', () => {
+    expect(maifipCatastrophic({ bill: 13000, monthlyIncome: 10000 })).toBe(true)   // > 12,000
+    expect(maifipCatastrophic({ bill: 12000, monthlyIncome: 10000 })).toBe(false)
+    expect(maifipCatastrophic({ bill: 500, monthlyIncome: 0 })).toBe(true)
+    expect(maifipCatastrophic({ bill: '', monthlyIncome: 1000 })).toBeNull()
+  })
+})
+
+describe('old-scale categories', () => {
+  it('are labelled and recognised', () => {
+    expect(isLegacyCategory('low_income')).toBe(true)
+    expect(isLegacyCategory('incapacitated_c2')).toBe(false)
+    expect(meansCategoryLabel('low_income')).toBe('Low income (old scale)')
+    expect(meansCategoryLabel('indigent_c3')).toBe('Indigent (C3)')
   })
 })
 
 // Guard the completeness helper the snapshot/rail lean on.
 describe('isIntakeComplete', () => {
   it('true only when all six required fields are present', () => {
-    const full = { householdSize: 4, monthlyIncome: 8000, diagnosis: 'CKD', recommendation: 'Endorse', meansTestCategory: 'indigent', completedBy: 'SW' }
+    const full = { householdSize: 4, monthlyIncome: 8000, diagnosis: 'CKD', recommendation: 'Endorse', meansTestCategory: 'indigent_c3', completedBy: 'SW' }
     expect(isIntakeComplete(full)).toBe(true)
     expect(isIntakeComplete({ ...full, recommendation: '' })).toBe(false)
   })
+  it('keeps an old-scale sheet complete (no reason asked)', () => {
+    const old = { householdSize: 1, monthlyIncome: 50000, diagnosis: 'CKD', recommendation: 'Endorse', meansTestCategory: 'above_threshold', completedBy: 'SW',
+      classificationBasis: { povertyLine: L } }
+    expect(isIntakeComplete(old)).toBe(true)
+  })
 })
 
-describe('needsMeansTestReason (revision 7e)', () => {
-  // 8000 / 4 = 2000 per person -> suggests indigent
-  const base = { householdSize: 4, monthlyIncome: 8000 }
+describe('needsMeansTestReason', () => {
+  // 8000 / 4 = 2000 per person = 80% of the stored line -> suggests C3
+  const base = { householdSize: 4, monthlyIncome: 8000, classificationBasis: { povertyLine: L } }
 
-  it('is not needed when the category matches the suggestion', () => {
-    expect(needsMeansTestReason({ ...base, meansTestCategory: 'indigent' })).toBe(false)
+  it('is not needed when the class matches the suggestion', () => {
+    expect(needsMeansTestReason({ ...base, meansTestCategory: 'indigent_c3' })).toBe(false)
   })
-  it('is needed when the category departs from the suggestion', () => {
-    expect(needsMeansTestReason({ ...base, meansTestCategory: 'low_income' })).toBe(true)
+  it('is needed when the class departs from the suggestion', () => {
+    expect(needsMeansTestReason({ ...base, meansTestCategory: 'incapacitated_c1' })).toBe(true)
   })
-  it('is always needed for Above Threshold', () => {
-    expect(needsMeansTestReason({ householdSize: 1, monthlyIncome: 50000, meansTestCategory: 'above_threshold' })).toBe(true)
+  it('is always needed for Financially capable', () => {
+    expect(needsMeansTestReason({ householdSize: 1, monthlyIncome: 50000, meansTestCategory: 'capable' })).toBe(true)
   })
-  it('is not needed before a category is chosen, or without figures to compare', () => {
+  it('is not needed before a class is chosen, without figures, or on the old scale', () => {
     expect(needsMeansTestReason({ ...base, meansTestCategory: '' })).toBe(false)
-    expect(needsMeansTestReason({ meansTestCategory: 'indigent' })).toBe(false)
+    expect(needsMeansTestReason({ meansTestCategory: 'incapacitated_c2' })).toBe(false)
+    expect(needsMeansTestReason({ ...base, meansTestCategory: 'low_income' })).toBe(false)
   })
   it('makes the intake incomplete until the reason is written', () => {
-    const full = { ...base, diagnosis: 'CKD', recommendation: 'Endorse', meansTestCategory: 'low_income', completedBy: 'SW' }
+    const full = { ...base, diagnosis: 'CKD', recommendation: 'Endorse', meansTestCategory: 'incapacitated_c1', completedBy: 'SW' }
     expect(isIntakeComplete(full)).toBe(false)
     expect(isIntakeComplete({ ...full, meansTestOverrideReason: 'Spouse lost job last week' })).toBe(true)
     expect(requiredFieldsStatus(full).find(f => f.key === 'meansTestOverrideReason')?.done).toBe(false)

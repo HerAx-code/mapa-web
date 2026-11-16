@@ -88,6 +88,26 @@ describe('hospitalSettings (verification-call policy)', () => {
   })
 })
 
+// 2026-11-16: the DOH AO 2021-0044 poverty line, saved by its own card (merge).
+describe('hospitalSettings (poverty line)', () => {
+  const line = (extra = {}) => ({ tenantId: A, povertyLinePerCapita: 2577, povertyLineYear: 2023, region: 'BARMM', updatedBy: 'S', ...extra })
+  const setSuper = () => testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
+  it('the Hospital Admin saves it alone or beside the call policy', async () => {
+    await setSuper()
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), line()))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), { interviewAboveAmount: 50000, interviewOnDuplicate: true }, { merge: true }))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), line({ povertyLinePerCapita: null, povertyLineYear: null }), { merge: true }))
+  })
+  it('refuses bad values, a line without its year, and staff admins', async () => {
+    await setSuper()
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), line({ povertyLinePerCapita: 0 })))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), line({ povertyLinePerCapita: '2577' })))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), line({ povertyLineYear: null })))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), line({ povertyLineYear: 1999 })))
+    await assertFails(setDoc(doc(as('adminA'), 'hospitalSettings', A), line()))
+  })
+})
+
 describe('billKeys', () => {
   it('staff claim a new bill number in their own hospital', async () => {
     await assertSucceeds(setDoc(doc(as('adminA'), 'billKeys', `${A}__SOA2`), key('SOA2', 'r2')))

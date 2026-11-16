@@ -2,7 +2,7 @@ import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction, collection, query, where, getDocs, getDoc } from 'firebase/firestore'
 import { normalizeBillNumber, billKeyId, BILL_CHECK_SOURCES, billCheckSourceLabel } from '../../utils/billKeys'
 import { interviewReasons, CALL_METHODS } from '../../utils/verificationPolicy'
 import { encodedIntakeProblem } from '../../utils/requestStage'
@@ -19,7 +19,9 @@ import {
 import toast from 'react-hot-toast'
 import {
   MEANS_CATEGORIES, EMPLOYMENT_TYPES, EMPTY_FAMILY_MEMBER, RELATIONSHIPS, EXPENSE_FIELDS,
-  blankSheet, isIntakeComplete, requiredFieldsStatus, meansTestSuggestion, needsMeansTestReason, billVerified,
+  blankSheet, isIntakeComplete, requiredFieldsStatus, needsMeansTestReason, billVerified,
+  meansCategoryLabel, isLegacyCategory, sheetSuggestion, povertyBasis, classCutoffs,
+  SUPPORTING_CIRCUMSTANCES, CLASSIFICATION_VALIDITY_MONTHS,
   PATIENT_FACT_KEYS, factsOf, sameFact, factChanges, mergeRemoteFacts,
   SHORTFALL_SOURCES, monthlyShortfall,
   FACT_SECTIONS, sectionFacts, sectionVerification, allSectionsVerified, sectionsNeedingCorrection,
@@ -29,7 +31,8 @@ import { notify } from '../../utils/notifications'
 import { tsToDate } from '../../utils/dates'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
 import { fetchHospitalBranding, tenantWhere } from '../../utils/hospitals'
-import { reusableClassification } from '../../utils/classificationReuse'
+import { reusableClassification, classificationValidUntil } from '../../utils/classificationReuse'
+import { ageOn } from '../../utils/dohReport'
 import { useHospitalBranding } from '../../hooks/useHospitals'
 import { isGatewayAdminRole } from '../../utils/constants'
 import { peso } from '../../utils/format'
@@ -76,7 +79,7 @@ const STAFF_CONTROL_KEYS = [
   'encodedOnBehalf', 'correctionRequestedAt', 'correctionRequestedBy',
 ]
 
-const meansShortLabel = (cat) => (MEANS_CATEGORIES.find(c => c.value === cat)?.label ?? cat).split('—')[0].trim()
+const meansShortLabel = meansCategoryLabel
 
 const fmtRelative = (date) => {
   if (!date) return ''
@@ -113,6 +116,14 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const [sheet, setSheet]       = useState(() => blankSheet())
   // Phase 2B: this patient's last classification at this hospital (6 months).
   const [prevClass, setPrevClass] = useState(null)
+  // The hospital's settings (poverty line for the AO 2021-0044 classes; the
+  // verification-call policy). null for agency viewers, who use the sheet's
+  // stored basis. Ref mirror for the debounced save.
+  const hospitalPolicy = useHospitalSettings()
+  const hospitalPolicyRef = useRef(null)
+  useEffect(() => { hospitalPolicyRef.current = hospitalPolicy }, [hospitalPolicy])
+  // The patient's age (from their profile birthdate), to suggest "Senior citizen".
+  const [patientAge, setPatientAge] = useState(null)
   const [hydrated, setHydrated] = useState(false)
   const [saveState, setSaveState] = useState({ status: 'idle', lastSavedAt: null })
   const [activeSection, setActiveSection] = useState('family')
@@ -326,7 +337,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
       // from it — so every exception is traceable.
       const savedCategory = lastAuditedCategoryRef.current
       if (s.meansTestCategory && s.meansTestCategory !== savedCategory) {
-        const suggestion = meansTestSuggestion({ monthlyIncome: s.monthlyIncome, householdSize: s.householdSize })
+        const suggestion = sheetSuggestion(s, hospitalPolicyRef.current)
         logAudit(user, {
           action: 'means_test_set', targetType: collectionName === 'requests' ? 'request' : 'application',
           targetId: app.id, targetName: app.requestId ?? app.appId ?? '',
@@ -411,7 +422,33 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
       .then(snap => setPrevClass(reusableClassification(
         snap.docs.filter(d => d.id !== app.id).map(d => ({ id: d.id, ...d.data() })))))
       .catch(() => {})
+    getDoc(doc(db, 'users', app.patientId))
+      .then(snap => { const age = ageOn(snap.data()?.birthdate, new Date()); setPatientAge(age === '' ? null : age) })
+      .catch(() => {})
   }, [patientFacts, collectionName, app?.patientId, app?.id])
+
+  // Choose a class: stamps the poverty line it was judged against (the
+  // hospital's current setting) so every later view uses the same basis.
+  const pickCategory = (cat, extra = {}) => {
+    setSheet(p => {
+      const basis = povertyBasis(null, hospitalPolicyRef.current)
+      return {
+        ...p, meansTestCategory: cat,
+        classificationBasis: basis ? { povertyLine: basis.povertyLine, year: basis.year, region: basis.region } : (p.classificationBasis ?? null),
+        ...extra,
+      }
+    })
+    scheduleAutosave()
+  }
+  const toggleCircumstance = (v) => {
+    setSheet(p => {
+      const cur = p.circumstances ?? []
+      const next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v]
+      return { ...p, circumstances: next, circumstancesOther: next.includes('other') ? (p.circumstancesOther ?? '') : '' }
+    })
+    scheduleAutosave()
+  }
+  const setField = (field, value) => { setSheet(p => ({ ...p, [field]: value })); scheduleAutosave() }
 
   const set = (field) => (e) => {
     setSheet(p => ({ ...p, [field]: e.target.value }))
@@ -785,8 +822,12 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const totalExpenses = Object.values(sheet.expenses ?? {})
     .reduce((sum, v) => sum + (Number(v) || 0), 0)
 
-  const suggestion   = meansTestSuggestion({ monthlyIncome: sheet.monthlyIncome, householdSize: sheet.householdSize })
-  const reasonNeeded = needsMeansTestReason(sheet)
+  const suggestion   = sheetSuggestion(sheet, hospitalPolicy)
+  const reasonNeeded = needsMeansTestReason(sheet, hospitalPolicy)
+  const basis        = povertyBasis(sheet, hospitalPolicy)
+  const cutoffs      = basis ? classCutoffs(basis.povertyLine) : null
+  const legacyClass  = isLegacyCategory(sheet.meansTestCategory)
+  const validUntil   = classificationValidUntil(sheet)
   // The amount the patient still needs — gateway mode loads the request
   // itself; agency mode reads it off the parent request.
   const billSource = isRequestMode ? app : parentRequest
@@ -795,7 +836,6 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // Section completion (rough — used for nav indicators)
   const billOk = billVerified(remoteIntake, app?.totalBill)
   const identityFlag = useIdentityFlag(isRequestMode && !patientFacts ? app?.patientId : null)
-  const hospitalPolicy = useHospitalSettings()
   const callReasons = isRequestMode && app ? interviewReasons({ request: app, settings: hospitalPolicy, identityFlag }) : []
   const verificationCall = remoteIntake.verificationCall
   const sectionDone = {
@@ -971,12 +1011,10 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <AssessmentSnapshot
                   sheet={sheet}
                   bill={billAmount}
+                  settings={hospitalPolicy}
                   showMeansTest
                   canEdit={canEdit}
-                  onApplyMeansTest={(cat) => {
-                    setSheet(p => ({ ...p, meansTestCategory: cat }))
-                    scheduleAutosave()
-                  }}
+                  onApplyMeansTest={(cat) => pickCategory(cat)}
                 />
               )}
 
@@ -1482,21 +1520,32 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               <div className="space-y-3">
                 {/* Revision 14: pick the category with a button (the suggested one
                     is marked); choosing another requires a reason below. */}
-                <Field label="Means-Test Category" required
-                  hint="Choose a category. The suggestion comes from income ÷ household size; a different choice needs a written reason.">
-                  <div role="radiogroup" aria-label="Means-Test Category" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="Classification (DOH AO 2021-0044)" required
+                  hint="Income per person vs the PSA poverty line of your region. The suggestion is advisory; a different class, or Financially capable, needs a written reason.">
+                  {legacyClass && (
+                    <p className="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-xs text-gray-700">
+                      Classified <strong>{meansShortLabel(sheet.meansTestCategory)}</strong> before the DOH AO 2021-0044 classes were used.
+                      {canEdit && ' Choose a class below to classify again.'}
+                    </p>
+                  )}
+                  <div role="radiogroup" aria-label="Classification" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {MEANS_CATEGORIES.filter(c => c.value).map(c => {
                       const on = sheet.meansTestCategory === c.value
                       const [name, desc] = c.label.split('—').map(x => x.trim())
+                      const amount = !cutoffs ? null
+                        : c.value === 'indigent_c3' ? `below ${peso(cutoffs.c3Below)}`
+                        : c.value === 'incapacitated_c2' ? `${peso(cutoffs.c3Below)} – ${peso(cutoffs.c2UpTo)}`
+                        : c.value === 'incapacitated_c1' ? `${peso(cutoffs.c2UpTo)} – ${peso(cutoffs.c1UpTo)}`
+                        : `above ${peso(cutoffs.c1UpTo)}`
                       return (
                         <button key={c.value} type="button" role="radio" aria-checked={on} disabled={!canEdit}
-                          onClick={() => set('meansTestCategory')({ target: { value: c.value } })}
+                          onClick={() => pickCategory(c.value)}
                           className={`text-left rounded-lg border px-3 py-2 min-h-[44px] transition-colors disabled:opacity-60 ${on ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
                           <span className={`flex items-center gap-1.5 text-xs font-semibold ${on ? 'text-brand-800' : 'text-gray-800'}`}>
                             {on && <MdCheckCircle size={14} className="text-brand-600" />}{name}
                             {suggestion?.category === c.value && <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">Suggested</span>}
                           </span>
-                          {desc && <span className="block text-[11px] text-gray-500 mt-0.5">{desc}</span>}
+                          {desc && <span className="block text-[11px] text-gray-500 mt-0.5">{desc}{amount ? ` · ${amount} per person` : ''}</span>}
                         </button>
                       )
                     })}
@@ -1511,9 +1560,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                       {Number(sheet.householdSize) === Number(prevClass.householdSize) && Number(sheet.monthlyIncome) === Number(prevClass.monthlyIncome) ? (
                         sheet.meansTestCategory !== prevClass.category && canEdit && (
                           <button type="button" className="ml-2 font-semibold text-brand-600 hover:text-brand-700 underline"
-                            onClick={() => setSheet(p => ({ ...p, meansTestCategory: prevClass.category,
+                            onClick={() => { setSheet(p => ({ ...p, meansTestCategory: prevClass.category,
                               meansTestOverrideReason: prevClass.reason ?? p.meansTestOverrideReason,
-                              classificationReusedFrom: { requestId: prevClass.requestId, at: prevClass.at?.toISOString?.() ?? null } }))}>
+                              is4Ps: prevClass.is4Ps, circumstances: prevClass.circumstances, circumstancesOther: prevClass.circumstancesOther,
+                              classificationValidMonths: prevClass.validMonths, classificationBasis: prevClass.basis ?? p.classificationBasis,
+                              classificationReusedFrom: { requestId: prevClass.requestId, at: prevClass.at?.toISOString?.() ?? null } })); scheduleAutosave() }}>
                             Use this classification
                           </button>
                         )
@@ -1522,18 +1573,76 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                       )}
                     </div>
                   )}
-                  {suggestion && (
-                    <p className="text-xs text-gray-600 mt-1.5">
-                      Suggested from income ÷ household size: <strong>{meansShortLabel(suggestion.category)}</strong>
-                      {' '}({(Math.floor(suggestion.ratio * 10) / 10).toFixed(1)}× the poverty line)
+                  {/* Basis line: what the suggestion was computed from. */}
+                  {!basis ? (
+                    <p className="text-xs text-amber-700 mt-1.5">
+                      Poverty line not set — ask your Hospital Admin (Hospital Settings). You can still classify.
                     </p>
+                  ) : suggestion?.ratio != null ? (
+                    <p className="text-xs text-gray-600 mt-1.5 tabular-nums">
+                      {peso(Math.round(suggestion.perCapita))} per person ={Math.floor(suggestion.ratio * 100)}% of the poverty line
+                      {' '}({peso(basis.povertyLine)}{basis.region || basis.year ? `, ${[basis.region, basis.year].filter(Boolean).join(' ')}` : ''}).
+                      {' '}Suggested: <strong>{meansShortLabel(suggestion.category)}</strong>{suggestion.via4Ps ? ' (4Ps member)' : ''}
+                    </p>
+                  ) : suggestion?.via4Ps ? (
+                    <p className="text-xs text-gray-600 mt-1.5">Suggested: <strong>{meansShortLabel(suggestion.category)}</strong> (4Ps member)</p>
+                  ) : null}
+                </Field>
+
+                {/* 4Ps: Malasakit issues the Certificate of Eligibility on the Pantawid ID (JAO 2020-0001). */}
+                <label className={`flex items-start gap-2 text-sm text-gray-700 ${canEdit ? 'cursor-pointer' : ''}`}>
+                  <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500" checked={!!sheet.is4Ps} disabled={!canEdit}
+                    onChange={(e) => setField('is4Ps', e.target.checked)} />
+                  <span>4Ps member — Pantawid ID seen <span className="text-xs text-gray-500">(suggests Indigent C3)</span></span>
+                </label>
+
+                <Field label="Supporting circumstances"
+                  hint="AO 2021-0044: a class below Financially capable is supported by a circumstance like these or by the severity of the case. Select all that apply.">
+                  <div className="flex flex-wrap gap-1.5">
+                    {SUPPORTING_CIRCUMSTANCES.map(c => {
+                      const on = (sheet.circumstances ?? []).includes(c.value)
+                      return (
+                        <button key={c.value} type="button" role="checkbox" aria-checked={on} disabled={!canEdit}
+                          onClick={() => toggleCircumstance(c.value)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium min-h-[36px] transition-colors disabled:opacity-60 ${on ? 'border-brand-500 bg-brand-50 text-brand-800' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}>
+                          {on && '✓ '}{c.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {patientAge != null && patientAge >= 60 && !(sheet.circumstances ?? []).includes('elderly') && canEdit && (
+                    <button type="button" className="mt-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 underline"
+                      onClick={() => toggleCircumstance('elderly')}>
+                      Patient is {patientAge} (from their profile) — add Senior citizen
+                    </button>
+                  )}
+                  {(sheet.circumstances ?? []).includes('other') && (
+                    <input className="input mt-2" maxLength={120} placeholder="Describe the circumstance"
+                      value={sheet.circumstancesOther ?? ''} onChange={set('circumstancesOther')} disabled={!canEdit} />
                   )}
                 </Field>
+
+                <Field label="Classification valid for"
+                  hint={validUntil ? `Valid until ${validUntil.toLocaleDateString()} (from when the assessment was completed).` : 'AO 2021-0044: 6 months to a year, by length of treatment.'}>
+                  <div role="radiogroup" aria-label="Classification valid for" className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+                    {CLASSIFICATION_VALIDITY_MONTHS.map(m => {
+                      const on = Number(sheet.classificationValidMonths ?? 6) === m
+                      return (
+                        <button key={m} type="button" role="radio" aria-checked={on} disabled={!canEdit}
+                          onClick={() => setField('classificationValidMonths', m)}
+                          className={`px-4 py-2 text-xs font-semibold min-h-[40px] transition-colors disabled:opacity-60 ${on ? 'bg-brand-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                          {m} months
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Field>
+
                 {reasonNeeded && (
-                  <Field label="Reason for this category" required
-                    hint={sheet.meansTestCategory === 'above_threshold'
-                      ? 'Explain why an Above Threshold patient is still being assessed for assistance (e.g. catastrophic bill vs income). Saved to the audit log.'
-                      : `Your category differs from the suggestion (${suggestion ? meansShortLabel(suggestion.category) : '—'}). Explain what the figures don't show. Saved to the audit log.`}>
+                  <Field label="Reason for this class" required
+                    hint={sheet.meansTestCategory === 'capable'
+                      ? 'Explain why a Financially capable patient is still being assessed for assistance (e.g. the bill is over 10% of a year’s income — MAIFIP). Saved to the audit log.'
+                      : `Your class differs from the suggestion (${suggestion ? meansShortLabel(suggestion.category) : '—'}). Explain what the figures don't show. Saved to the audit log.`}>
                     <textarea className="input resize-none" rows={2} maxLength={500}
                       value={sheet.meansTestOverrideReason ?? ''}
                       onChange={set('meansTestOverrideReason')} onBlur={auditReason} disabled={!canEdit} />

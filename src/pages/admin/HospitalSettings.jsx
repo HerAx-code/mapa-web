@@ -54,11 +54,12 @@ function VerificationPolicyCard({ user, tenantId }) {
     if (amountBad || secondBad) return
     setSaving(true)
     try {
+      // merge: the means-test card saves its own fields in the same doc.
       await setDoc(doc(db, 'hospitalSettings', tenantId), {
         tenantId, interviewAboveAmount: amountNum, interviewOnDuplicate: !!dupValue,
         secondPersonAboveAmount: secondNum,
         updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
-      })
+      }, { merge: true })
       logAudit(user, {
         action: 'verification_policy_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
         details: `Verification call: ${amountNum ? `amount ₱${amountNum.toLocaleString()} or more` : 'no amount rule'}; ${dupValue ? 'on' : 'off'} for duplicate-account flags. `
@@ -105,6 +106,88 @@ function VerificationPolicyCard({ user, tenantId }) {
       <div className="flex justify-end">
         <button className="btn-primary text-sm" onClick={save} disabled={saving || amountBad || secondBad}>
           {saving ? 'Saving…' : 'Save verification settings'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// DOH AO 2021-0044 (2026-11-16): the PSA poverty line of the hospital's region,
+// per person per month, that the intake sheet's suggested class compares
+// income per person to (140 / 180 / 220%). Typed from the PSA release — no
+// figure is built in. Staff-only like the rest of hospitalSettings.
+const firstPsaYear = 2015
+const psaYears = () => Array.from({ length: new Date().getFullYear() - firstPsaYear + 1 }, (_, i) => new Date().getFullYear() - i)
+
+function MeansTestCard({ user, tenantId, region }) {
+  const saved = useHospitalSettings()
+  const [line, setLine] = useState(null)   // null = not edited yet
+  const [year, setYear] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const lineValue = line ?? (saved?.povertyLinePerCapita ?? '')
+  const yearValue = year ?? (saved?.povertyLineYear ?? '')
+  const lineNum = String(lineValue).trim() === '' ? null : Number(lineValue)
+  const lineBad = lineNum != null && (!Number.isFinite(lineNum) || lineNum <= 0 || lineNum >= 100000)
+  const yearBad = lineNum != null && !yearValue
+  const fmt = (n) => `₱${Math.round(n).toLocaleString('en-PH')}`
+
+  const save = async () => {
+    if (lineBad || yearBad) return
+    setSaving(true)
+    try {
+      await setDoc(doc(db, 'hospitalSettings', tenantId), {
+        tenantId,
+        povertyLinePerCapita: lineNum,
+        povertyLineYear: lineNum == null ? null : Number(yearValue),
+        region: region ?? '',
+        updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
+      }, { merge: true })
+      logAudit(user, {
+        action: 'means_test_line_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
+        details: lineNum == null ? 'Poverty line cleared' : `Poverty line ₱${lineNum.toLocaleString()} per person per month (PSA ${yearValue}${region ? `, ${region}` : ''})`,
+      })
+      setLine(null); setYear(null)
+      toast.success('Means-test setting saved.')
+    } catch (e) {
+      console.error(e)
+      toast.error('Could not save. Please try again.')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="card p-5 mt-4 space-y-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">Means test (DOH AO 2021-0044)</p>
+        <p className="text-xs text-gray-500 mt-1">
+          The PSA poverty line of your region, per person per month. The intake sheet suggests a class by comparing the
+          household&apos;s income per person to it. Patients don&apos;t see this setting.
+        </p>
+      </div>
+      <p className="text-sm text-gray-700">Region: <strong>{region || 'not set'}</strong> <span className="text-xs text-gray-500">(set by the network)</span></p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="PSA poverty line, per person (₱ / month)" error={lineBad ? 'Enter an amount above zero, or leave it blank.' : undefined}
+          hint="Annual per-capita threshold ÷ 12. Leave blank to turn suggestions off.">
+          <input className="input" inputMode="decimal" value={lineValue}
+            onChange={(e) => setLine(e.target.value.replace(/[^\d.]/g, ''))} />
+        </Field>
+        <Field label="PSA reference year" error={yearBad ? 'Choose the year of the PSA figure.' : undefined}>
+          <select className="input" value={yearValue} onChange={(e) => setYear(e.target.value)}>
+            <option value="">Select year…</option>
+            {psaYears().map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </Field>
+      </div>
+      {lineNum != null && !lineBad && (
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 rounded-lg bg-gray-50 p-3 tabular-nums">
+          <div className="flex justify-between gap-2"><dt>Indigent (C3)</dt><dd>below {fmt(lineNum * 1.4)}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Financially incapacitated (C2)</dt><dd>{fmt(lineNum * 1.4)} – {fmt(lineNum * 1.8)}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Financially incapacitated (C1)</dt><dd>{fmt(lineNum * 1.8)} – {fmt(lineNum * 2.2)}</dd></div>
+          <div className="flex justify-between gap-2"><dt>Financially capable</dt><dd>above {fmt(lineNum * 2.2)}</dd></div>
+        </dl>
+      )}
+      <div className="flex justify-end">
+        <button className="btn-primary text-sm" onClick={save} disabled={saving || lineBad || yearBad}>
+          {saving ? 'Saving…' : 'Save means-test setting'}
         </button>
       </div>
     </div>
@@ -210,6 +293,8 @@ export default function HospitalSettings() {
             </div>
 
             <VerificationPolicyCard user={user} tenantId={tenantId} />
+
+            <MeansTestCard user={user} tenantId={tenantId} region={hospital?.region ?? ''} />
 
             <div className="card p-5 mt-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Set by the network</p>
