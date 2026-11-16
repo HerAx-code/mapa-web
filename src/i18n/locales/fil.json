@@ -1313,7 +1313,7 @@
         "fundedLabel": "Naaprubahan at Napondohan",
         "fundedNote": "Inaaprubahan ng mga ahensya ang kani-kanilang bahagi at inilalabas ang inyong Guarantee Letters.",
         "completedLabel": "Tapos na",
-        "completedNote": "Lubos nang nasaklaw ang inyong bayarin. Kunin ang inyong Guarantee Letters sa opisina ng ahensya."
+        "completedNote": "Lubos nang nasaklaw ang inyong bayarin. I-download ang bawat Guarantee Letter at ipakita ito sa nakasaad na provider bago ang petsang nakasulat dito."
       },
       "stages": {
         "submittedLabel": "Naisumite ang Aplikasyon",
@@ -1383,7 +1383,9 @@
       "interview": "Naka-iskedyul ang Panayam",
       "approved": "Aprubado",
       "rejected": "Hindi Aprubado",
-      "certificate": "Naibigay na ang Guarantee Letter"
+      "certificate": "Naibigay na ang Guarantee Letter",
+      "glUsed": "Nagamit na ang Guarantee Letter",
+      "glExpired": "Paso na ang Guarantee Letter"
     },
     "programs": {
       "breadcrumb": "Maghanap ng Programa",

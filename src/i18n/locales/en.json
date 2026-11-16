@@ -1313,7 +1313,7 @@
         "fundedLabel": "Approved & Funded",
         "fundedNote": "Agencies approve their share and issue your Guarantee Letters.",
         "completedLabel": "Completed",
-        "completedNote": "Your bill is fully covered. Claim your Guarantee Letters at the agency office."
+        "completedNote": "Your bill is fully covered. Download each Guarantee Letter and present it at the named provider before the date printed on it."
       },
       "stages": {
         "submittedLabel": "Application Submitted",
@@ -1383,7 +1383,9 @@
       "interview": "Interview Scheduled",
       "approved": "Approved",
       "rejected": "Rejected",
-      "certificate": "Guarantee Letter Issued"
+      "certificate": "Guarantee Letter Issued",
+      "glUsed": "Guarantee Letter Used",
+      "glExpired": "Guarantee Letter Expired"
     },
     "programs": {
       "breadcrumb": "Find Programs",

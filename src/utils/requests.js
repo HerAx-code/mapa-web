@@ -87,9 +87,12 @@ export const reqRank = (status) => REQ_RANK[status] ?? 0
 // (performExpireGL fires `budget.committed -= amount`), so they MUST
 // NOT continue to count as committed on the parent request.
 // Discovered during the 2026-06-03 end-to-end review (R2).
+// 2026-11-16: by the letter's own glStatus, whatever the slice status — the
+// letter's 10 days start at approval, and both expiry paths (glExpirySweep,
+// agency Dashboard) expire an 'approved' slice that was never marked Issued.
 function isCommittedSlice(s) {
   if (!COMMITTED_SLICE_STATUSES.includes(s.status)) return false
-  if (s.status === 'certificate' && s.glStatus === 'expired') return false
+  if (s.glStatus === 'expired') return false
   return true
 }
 
@@ -202,9 +205,11 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 
 // Is this slice DONE from the patient's perspective? Returns true when:
 //   - rejected (agency turned it down — terminal)
-//   - certificate + glStatus 'redeemed' (patient claimed at agency office)
-//   - certificate + glStatus 'expired' (lapsed past validity window)
-//   - certificate + past its validity (isGLExpired; sweep hasn't flipped glStatus yet)
+//   - glStatus 'redeemed' (the provider used the letter)
+//   - glStatus 'expired' (lapsed past validity window)
+//   - past its validity (isGLExpired; sweep hasn't flipped glStatus yet)
+// The letter checks apply to 'approved' slices too (2026-11-16): the letter
+// exists from approval, before the agency marks it Issued.
 //
 // Use this to decide whether a slice belongs in the patient's "In Progress"
 // view (active, still has a downloadable GL / pending action) or the "Past
@@ -222,7 +227,7 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 export function isSliceTerminal(app, { isGLExpired } = {}) {
   if (!app) return false
   if (app.status === 'rejected' || app.status === 'closed') return true
-  if (app.status === 'certificate') {
+  if (app.status === 'certificate' || app.status === 'approved') {
     if (app.glStatus === 'redeemed') return true
     if (app.glStatus === 'expired')  return true
     if (typeof isGLExpired === 'function' && isGLExpired(app)) return true

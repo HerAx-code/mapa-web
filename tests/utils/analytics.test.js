@@ -28,6 +28,7 @@ describe('isFacilitatedSlice', () => {
   })
   it('excludes expired GLs, endorsed, and rejected', () => {
     expect(isFacilitatedSlice({ status: 'certificate', glStatus: 'expired' })).toBe(false)
+    expect(isFacilitatedSlice({ status: 'approved', glStatus: 'expired' })).toBe(false)
     expect(isFacilitatedSlice({ status: 'endorsed' })).toBe(false)
     expect(isFacilitatedSlice({ status: 'rejected' })).toBe(false)
   })

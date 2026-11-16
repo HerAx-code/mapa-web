@@ -169,6 +169,15 @@ describe('computeFunding', () => {
     expect(f.fullyFunded).toBe(false)
   })
 
+  // 2026-11-16: the sweep also expires letters never marked Issued.
+  it('EXCLUDES an expired letter that was still at approved', () => {
+    const slices = [
+      { status: 'approved', glStatus: 'expired', amountApproved: 15_000 },  // NOT counted
+      { status: 'approved', glStatus: 'issued',  amountApproved: 5_000 },   // counted
+    ]
+    expect(computeFunding(20_000, slices).committed).toBe(5_000)
+  })
+
   it('still counts plain approved slices as committed', () => {
     const slices = [
       { status: 'approved',    amountApproved: 25_000 },                       // no glStatus yet

@@ -706,6 +706,8 @@ export default function ApplicationDetail() {
         glStatus:       'redeemed',
         glRedeemedAt:   serverTimestamp(),
         redeemedAmount: actual,
+        // A letter used before the agency clicked Mark as Issued was issued.
+        ...(app.status === 'approved' ? { status: 'certificate' } : {}),
         updatedAt:      serverTimestamp(),
       })
       if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
@@ -1499,13 +1501,15 @@ export default function ApplicationDetail() {
                 />
                 {/* Section-specific actions */}
                 <div className="card p-4 flex gap-2 flex-wrap">
-                  {app.status === 'certificate' && app.glStatus === 'issued' && !expired && (
+                  {/* 2026-11-16: from approval, not only after Mark as Issued — the
+                      signed letter can be uploaded (and used) before that step. */}
+                  {['approved', 'certificate'].includes(app.status) && app.glStatus === 'issued' && !expired && (
                     <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['primary-green']}`}
                       disabled={updating} onClick={handleRedeemGL}>
                       <MdCheckCircle size={14} /> Mark GL Redeemed
                     </button>
                   )}
-                  {app.status === 'certificate' && app.glStatus === 'issued' && expired && (
+                  {['approved', 'certificate'].includes(app.status) && app.glStatus === 'issued' && expired && (
                     <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['primary-orange']}`}
                       disabled={updating} onClick={handleExpireGL}>
                       <MdWarning size={14} /> Mark GL Expired
@@ -1517,7 +1521,7 @@ export default function ApplicationDetail() {
                       <MdCancel size={14} /> Reverse Approval
                     </button>
                   )}
-                  {app.status === 'approved' && (
+                  {app.status === 'approved' && app.glStatus !== 'redeemed' && app.glStatus !== 'expired' && (
                     <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['primary']}`}
                       disabled={updating} onClick={handlePrintGL}>
                       <MdPrint size={14} /> Print Guarantee Letter
