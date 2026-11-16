@@ -12,7 +12,7 @@ import {
   // reads as amateur with emoji — matches CLAUDE.md "civic, professional").
   MdBadge, MdMailOutline, MdSmartphone, MdLocationOn,
   MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
-  MdPhone, MdSchedule,
+  MdSchedule,
   MdCheck, MdWarningAmber, MdChevronRight, MdConfirmationNumber,
   MdExpandMore, MdGroups, MdMoneyOff, MdFavorite, MdCheckCircle,
 } from 'react-icons/md'
@@ -43,13 +43,15 @@ const DASHBOARD = {
 // heading with a short amber accent bar. Repeating this exact motif (not a
 // tracked all-caps eyebrow) is what makes the sections read as chapters of
 // one page instead of unrelated bands.
-function SectionHead({ title, sub, center = false }) {
+// Landing review (2026-11-16): every section uses the same left-aligned head
+// and the same content width (max-w-5xl).
+function SectionHead({ title, sub }) {
   return (
-    <div className={center ? 'text-center max-w-2xl mx-auto mb-10' : 'max-w-2xl mb-8'}>
+    <div className="max-w-2xl mb-8">
       <h2 className="font-display text-[26px] sm:text-[32px] font-bold tracking-tight text-brand-900 leading-tight">
         {title}
       </h2>
-      <div className={`mt-3 h-1 w-12 rounded-full bg-amber-400 ${center ? 'mx-auto' : ''}`} />
+      <div className="mt-3 h-1 w-12 rounded-full bg-amber-400" />
       {sub && <p className="mt-4 text-[15px] text-gray-500 leading-relaxed">{sub}</p>}
     </div>
   )
@@ -65,6 +67,10 @@ export default function Landing() {
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [agencies, setAgencies]       = useState([])
+  // Programs list scales to many agencies: the first PROGRAMS_SHOWN, then
+  // "Show all"; a search box appears past PROGRAMS_SEARCH_FROM.
+  const [showAllPrograms, setShowAllPrograms] = useState(false)
+  const [programQuery, setProgramQuery]       = useState('')
   // Participating hospitals (public projection, multi-hospital).
   const hospitals = usePublicHospitals()
   // Program-slot bars fill from empty the first time the Programs section
@@ -122,6 +128,19 @@ export default function Landing() {
     io.observe(el)
     return () => io.disconnect()
   }, [programsIn])
+
+  // A signed-in user's ORG is their hospital; a visitor sees the network.
+  const scoped = !!user?.tenantId
+  const PROGRAMS_SHOWN = 6
+  const PROGRAMS_SEARCH_FROM = 12
+  const q = programQuery.trim().toLowerCase()
+  const matchingPrograms = q
+    ? agencies.filter(a => `${a.name ?? ''} ${a.location ?? ''}`.toLowerCase().includes(q))
+    : agencies
+  const visiblePrograms = (showAllPrograms || q) ? matchingPrograms : matchingPrograms.slice(0, PROGRAMS_SHOWN)
+  const scrollToPrograms = () => programsRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // An example access code from a real participating hospital.
+  const exampleCode = `${hospitals[0]?.accessCodePrefix ?? accessCodePrefixFor(new Date().getFullYear()).split('-')[0]}-${new Date().getFullYear()}-00042`
 
   const handleMainCTA = () => {
     if (user) navigate(DASHBOARD[user.role] ?? '/patient/dashboard')
@@ -192,20 +211,24 @@ export default function Landing() {
       <section className="relative overflow-hidden">
         <div className="hero-aurora" aria-hidden="true" />
         <div aria-hidden="true" className="pointer-events-none absolute -top-20 right-[-4rem] h-80 w-80 rounded-full bg-amber-200/25 blur-3xl" />
-        <div className="relative max-w-6xl mx-auto grid gap-12 px-5 sm:px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-24">
+        <div className="relative max-w-5xl mx-auto grid gap-12 px-5 sm:px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-12 lg:py-24">
           {/* Left: copy + CTAs + proof points. Rises in on load as one
               continuous staggered sequence. */}
           <div>
             <div className="hero-rise inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-700 font-semibold mb-6 shadow-sm">
               <MdShield size={14} className="text-brand-500" />
-              {t('landing.hero.badge')}
+              {scoped ? t('landing.hero.badge') : t('landing.hero.badgeNetwork')}
             </div>
-            <h1 className="hero-rise font-display text-[38px] leading-[1.08] sm:text-5xl lg:text-[56px] font-extrabold tracking-tight text-brand-900 mb-5 max-w-xl" style={{ animationDelay: '90ms' }}>
-              {t('landing.hero.headline')}
+            <h1 className="hero-rise font-display text-[38px] leading-[1.08] sm:text-5xl lg:text-[50px] font-extrabold tracking-tight text-brand-900 mb-5 max-w-xl" style={{ animationDelay: '90ms' }}>
+              {scoped ? t('landing.hero.headline') : t('landing.hero.headlineNetwork')}
             </h1>
-            <p className="hero-rise text-gray-500 text-sm mb-3 flex items-center gap-1.5" style={{ animationDelay: '170ms' }}>
-              <MdLocationOn size={16} className="text-brand-500" /> {t('landing.hero.location')}
-            </p>
+            {/* A signed-in patient sees their hospital's address (if set);
+                a visitor sees the network, so no single hospital's address. */}
+            {scoped && ORG.address && (
+              <p className="hero-rise text-gray-500 text-sm mb-3 flex items-center gap-1.5" style={{ animationDelay: '170ms' }}>
+                <MdLocationOn size={16} className="text-brand-500" /> {ORG.address}
+              </p>
+            )}
             <p className="hero-rise text-gray-600 text-lg mb-8 max-w-xl leading-relaxed" style={{ animationDelay: '230ms' }}>
               {t('landing.hero.tagline')}
             </p>
@@ -213,7 +236,7 @@ export default function Landing() {
               <button
                 className="btn-primary flex items-center justify-center gap-2 px-6 py-3 text-base w-full sm:w-auto shadow-lg shadow-brand-900/15"
                 onClick={handleMainCTA}>
-                {user ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaPatient')}
+                {user ? t('landing.hero.ctaDashboard') : t('landing.cta.createAccount')}
                 <MdArrowForward size={18} />
               </button>
               <button
@@ -222,12 +245,13 @@ export default function Landing() {
                 {t('landing.hero.learnMore')}
               </button>
             </div>
-            {/* Proof points — honest value props, no fabricated stats */}
-            <dl className="hero-rise mt-12 grid grid-cols-3 gap-x-6 gap-y-6 border-t border-brand-900/10 pt-8 max-w-xl" style={{ animationDelay: '390ms' }}>
+            {/* Live network figures (the "free" and "one application" promises
+                have their own sections below, so they aren't repeated here). */}
+            <dl className="hero-rise mt-12 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-6 border-t border-brand-900/10 pt-8 max-w-xl" style={{ animationDelay: '390ms' }}>
               {[
-                { value: t('landing.hero.proof1Value'), label: t('landing.hero.proof1Label') },
-                { value: t('landing.hero.proof2Value'), label: t('landing.hero.proof2Label') },
-                { value: t('landing.hero.proof3Value'), label: t('landing.hero.proof3Label') },
+                { value: hospitals.length || '—', label: t('landing.hero.statHospitals') },
+                { value: agencies.length || '—',  label: t('landing.hero.statPrograms') },
+                { value: '2',                     label: t('landing.hero.statLanguages') },
               ].map((p, i) => (
                 <div key={i}>
                   <dd className="font-display text-2xl font-bold tracking-tight text-brand-900">{p.value}</dd>
@@ -274,15 +298,24 @@ export default function Landing() {
 
       {/* Partner agencies — live names from the public projection (no
           hardcoded funder list). Hidden until agencies are synced. */}
+      {/* One line however many agencies join: a count, up to six badges and
+          "+N", linking to the full (searchable) programs list below. */}
       {agencies.length > 0 && (
         <section className="border-y border-brand-900/5 bg-white px-5 sm:px-6">
-          <div className="max-w-5xl mx-auto py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <p className="text-sm font-semibold text-gray-700">{t('landing.trust.heading')}</p>
-            <ul className="flex flex-wrap gap-2">
-              {agencies.map(a => (
-                <li key={a.id} className="rounded-full border border-brand-900/10 bg-white px-3.5 py-1.5 text-[13px] font-semibold text-gray-700">{a.name}</li>
+          <div className="max-w-5xl mx-auto py-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            <p className="text-sm font-semibold text-gray-700">{t('landing.trust.fundedBy', { count: agencies.length })}</p>
+            <div className="flex items-center gap-1.5">
+              {agencies.slice(0, 6).map(a => (
+                <span key={a.id} title={a.name}><AgencyAvatar agency={a} className="w-9 h-9 rounded-xl text-[11px]" /></span>
               ))}
-            </ul>
+              {agencies.length > 6 && (
+                <span className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-gray-100 px-2 text-xs font-semibold text-gray-600">+{agencies.length - 6}</span>
+              )}
+            </div>
+            <button type="button" onClick={scrollToPrograms}
+              className="sm:ml-auto inline-flex min-h-[44px] items-center gap-1 self-start sm:self-auto text-sm font-semibold text-brand-700 hover:text-brand-800">
+              {t('landing.trust.seeAll')} <MdChevronRight size={16} />
+            </button>
           </div>
         </section>
       )}
@@ -300,7 +333,7 @@ export default function Landing() {
                   <li key={k} className="flex gap-2.5 text-[14.5px] text-gray-800"><MdCheckCircle size={18} className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden="true" />{t(`landing.doors.${k}`)}</li>
                 ))}
               </ul>
-              <button type="button" className="btn-primary mt-6 self-start min-h-[44px]" onClick={() => navigate('/register')}>{t('landing.doors.patientsCta')}</button>
+              <button type="button" className="btn-primary mt-6 self-start min-h-[44px]" onClick={() => navigate('/register')}>{t('landing.cta.createAccount')}</button>
             </div>
             <div className="lp-card p-7 sm:p-8 flex flex-col bg-gradient-to-br from-white to-brand-50">
               <span className="lp-chip bg-white text-brand-600 border border-brand-100"><MdLocalHospital size={22} /></span>
@@ -322,10 +355,10 @@ export default function Landing() {
       {!user && <section id="eligibility" className="px-5 sm:px-6 py-16 sm:py-20">
         <div className="max-w-5xl mx-auto">
           <SectionHead title={t('landing.eligibility.title')} sub={t('landing.eligibility.intro')} />
-          <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+          <div className="grid gap-6 lg:grid-cols-12 lg:gap-8 lg:items-start">
             {/* Qualify checklist */}
             <div className="lg:col-span-7">
-              <div className="lp-card p-6 sm:p-7 h-full">
+              <div className="lp-card p-6 sm:p-7">
                 <h3 className="text-base font-semibold text-gray-900 mb-4">{t('landing.eligibility.qualifyHeading')}</h3>
                 <ul className="space-y-3.5">
                   {['q1', 'q2', 'q3', 'q4'].map(k => (
@@ -345,7 +378,7 @@ export default function Landing() {
             {/* Access-code card — amber, because it's the one thing they must
                 have before registering (and the anti-scam warning). */}
             <div className="lg:col-span-5">
-              <div className="lp-card border-amber-200/70 bg-gradient-to-b from-amber-50 to-white p-6 sm:p-7 h-full">
+              <div className="lp-card border-amber-200/70 bg-gradient-to-b from-amber-50 to-white p-6 sm:p-7">
                 <span className="lp-chip bg-white text-amber-600 shadow-sm">
                   <MdConfirmationNumber size={24} />
                 </span>
@@ -354,9 +387,7 @@ export default function Landing() {
                 <div className="mt-5 rounded-xl border border-dashed border-amber-400 bg-white px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.codeSample')}</p>
                   <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">
-                    {hospitals.length
-                      ? `${hospitals[0].accessCodePrefix}-${new Date().getFullYear()}-`
-                      : accessCodePrefixFor(new Date().getFullYear())}00042
+                    {exampleCode}
                   </p>
                 </div>
                 {/* Multi-hospital: each hospital issues its own prefix. */}
@@ -389,7 +420,7 @@ export default function Landing() {
           <SectionHead title={t('landing.prepare.heading')} />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { Icon: MdBadge,        title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc')    },
+              { Icon: MdBadge,        title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc', { example: exampleCode }) },
               { Icon: MdMailOutline,  title: t('landing.prepare.emailTitle'),   desc: t('landing.prepare.emailDesc')   },
               { Icon: MdSmartphone,   title: t('landing.prepare.mobileTitle'),  desc: t('landing.prepare.mobileDesc')  },
               { Icon: MdLocationOn,   title: t('landing.prepare.addressTitle'), desc: t('landing.prepare.addressDesc') },
@@ -410,7 +441,7 @@ export default function Landing() {
               {t('landing.prepare.ready')}{' '}
               <button onClick={() => navigate('/register')}
                 className="text-brand-700 font-semibold underline underline-offset-2 hover:text-brand-800">
-                {t('landing.prepare.registerNow')}
+                {t('landing.cta.createAccount')} →
               </button>
             </p>
           )}
@@ -422,7 +453,7 @@ export default function Landing() {
           place). New visitors only. */}
       {!user && <section ref={featuresRef} className="px-5 sm:px-6 py-16 sm:py-20">
         <div className="max-w-5xl mx-auto">
-          <SectionHead center title={t('landing.steps.heading')} sub={t('landing.steps.subtitle')} />
+          <SectionHead title={t('landing.steps.heading')} sub={t('landing.steps.subtitle')} />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               { step: 1, Icon: MdHowToReg,      title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
@@ -445,11 +476,11 @@ export default function Landing() {
             ))}
           </div>
           {!user && (
-            <div className="text-center mt-10">
+            <div className="mt-10">
               <button
                 onClick={() => navigate('/register')}
-                className="btn-primary px-8 py-3 text-base flex items-center gap-2 mx-auto shadow-lg shadow-brand-900/15">
-                {t('landing.steps.startBtn')} <MdArrowForward size={18} />
+                className="btn-primary px-8 py-3 text-base flex items-center gap-2 shadow-lg shadow-brand-900/15">
+                {t('landing.cta.createAccount')} <MdArrowForward size={18} />
               </button>
               <p className="text-xs text-gray-500 mt-3">{t('landing.steps.footer')}</p>
             </div>
@@ -497,14 +528,24 @@ export default function Landing() {
       {/* Available Programs */}
       <section ref={programsRef} className="px-5 sm:px-6 py-16 sm:py-20">
         <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <SectionHead title={t('landing.programs.heading')} sub={t('landing.programs.subtitle')} />
             <button
-              className="btn-primary text-sm w-full sm:w-auto flex-shrink-0 mb-8"
+              className="btn-primary text-sm w-full sm:w-auto flex-shrink-0 sm:mt-2 mb-6 sm:mb-0"
               onClick={handleMainCTA}>
-              {user ? t('landing.programs.goToDashboard') : t('landing.programs.applyNow')}
+              {user ? t('landing.programs.goToDashboard') : t('landing.cta.createAccount')}
             </button>
           </div>
+          {agencies.length > PROGRAMS_SEARCH_FROM && (
+            <div className="mb-4">
+              <label htmlFor="program-search" className="sr-only">{t('landing.programs.search')}</label>
+              <input id="program-search" type="search" className="input max-w-sm" placeholder={t('landing.programs.search')}
+                value={programQuery} onChange={e => setProgramQuery(e.target.value)} />
+            </div>
+          )}
+          {q && matchingPrograms.length === 0 && (
+            <p className="mb-4 text-sm text-gray-500">{t('landing.programs.noMatch', { q: programQuery.trim() })}</p>
+          )}
           {agencies.length === 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -522,7 +563,7 @@ export default function Landing() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {agencies.map((agency, i) => {
+              {visiblePrograms.map((agency, i) => {
                 const total     = agency.slots?.total ?? 0
                 const remaining = agency.slots?.remaining ?? 0
                 const pct       = total > 0 ? Math.round(((total - remaining) / total) * 100) : 0
@@ -533,7 +574,7 @@ export default function Landing() {
                     <div className="flex items-center gap-3 mb-3">
                       <AgencyAvatar agency={agency} className="w-11 h-11 rounded-2xl text-sm" />
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-gray-900">{agency.name}</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2" title={agency.name}>{agency.name}</h3>
                         <p className="text-xs text-gray-500 truncate">{agency.location}</p>
                       </div>
                       <span className={`badge text-xs ${isFull ? 'badge-red' : isLow ? 'badge-amber' : 'badge-green'}`}>
@@ -552,6 +593,12 @@ export default function Landing() {
               })}
             </div>
           )}
+          {!q && matchingPrograms.length > PROGRAMS_SHOWN && (
+            <button type="button" className="btn-secondary mt-5 min-h-[44px] text-sm"
+              onClick={() => setShowAllPrograms(v => !v)}>
+              {showAllPrograms ? t('landing.programs.showFewer') : t('landing.programs.showAll', { count: matchingPrograms.length })}
+            </button>
+          )}
         </div>
       </section>
 
@@ -559,35 +606,21 @@ export default function Landing() {
           figures): participating hospitals + partner agencies from the public
           projections; the other two are the product's promise, not stats. */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900 px-5 sm:px-6 text-white">
-        <div className="relative max-w-5xl mx-auto py-16 sm:py-20 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] items-center">
+        <div className="relative max-w-5xl mx-auto py-16 sm:py-20">
           <div>
             <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold">{t('landing.network.eyebrow')}</span>
             <h2 className="mt-4 font-display text-[28px] sm:text-[36px] font-bold leading-tight">{t('landing.network.heading')}</h2>
             <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-brand-100">{t('landing.network.body')}</p>
           </div>
-          <dl className="grid grid-cols-2 gap-3 sm:gap-4">
-            {[
-              [hospitals.length || '—', t('landing.network.hospitals')],
-              [agencies.length || '—', t('landing.network.agencies')],
-              ['1', t('landing.network.perPatient')],
-              ['0', t('landing.network.balance')],
-            ].map(([n, label]) => (
-              <div key={label} className="rounded-2xl border border-white/15 bg-white/[0.07] p-5">
-                <dt className="sr-only">{label}</dt>
-                <dd className="font-display text-[32px] font-bold leading-none">{n}</dd>
-                <dd className="mt-2 text-[13px] text-brand-100">{label}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </section>
 
       {/* FAQ — the real questions a worried first-time applicant asks. Native
           <details> (zero JS, accessible) inside one soft card. Everyone. */}
       <section id="faq" className="px-5 sm:px-6 py-16 sm:py-20">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <SectionHead title={t('landing.faq.heading')} sub={t('landing.faq.intro')} />
-          <div className="lp-card divide-y divide-gray-100 px-5 sm:px-6">
+          <div className="lp-card divide-y divide-gray-100 px-5 sm:px-6 max-w-3xl">
             {['1', '2', '3', '4', '5', '6'].map(n => (
               <details key={n} className="group">
                 <summary className="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden py-4 min-h-[44px] text-[15px] font-semibold text-gray-900">
@@ -617,29 +650,35 @@ export default function Landing() {
             {!user && (
               <button onClick={() => navigate('/register')}
                 className="btn-primary mt-5 px-6 py-3 text-base flex items-center gap-2 shadow-lg shadow-brand-900/15">
-                {t('landing.help.startBtn')} <MdArrowForward size={18} />
+                {t('landing.cta.createAccount')} <MdArrowForward size={18} />
               </button>
             )}
           </div>
           <div className="lg:col-span-7">
-            <dl className="lp-card divide-y divide-gray-100 px-5 sm:px-6">
-              {[
-                { Icon: MdLocationOn,  label: t('landing.help.addressLabel'), value: t('landing.help.address') },
-                { Icon: MdPhone,       label: t('landing.help.phoneLabel'),   value: '(064) 421-2500' },
-                { Icon: MdMailOutline, label: t('landing.help.emailLabel'),   value: ORG.contactEmail },
-                { Icon: MdSchedule,    label: t('landing.help.hoursLabel'),   value: t('landing.help.hours') },
-              ].map((row, i) => (
-                <div key={i} className="flex gap-4 py-4">
+            {/* Each participating hospital's own office (hospitalsPublic) —
+                no single hospital's address or phone is written into the page. */}
+            <ul className="lp-card divide-y divide-gray-100 px-5 sm:px-6">
+              {hospitals.map(h => (
+                <li key={h.id} className="flex gap-4 py-4">
                   <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600">
-                    <row.Icon size={18} />
+                    <MdLocalHospital size={18} />
                   </span>
-                  <div className="min-w-0">
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">{row.label}</dt>
-                    <dd className="mt-1 text-sm leading-relaxed text-gray-900 break-words">{row.value}</dd>
+                  <div className="min-w-0 text-sm leading-relaxed">
+                    <p className="font-semibold text-gray-900">{h.facilityName}</p>
+                    {h.gatewayName && <p className="text-gray-600">{h.gatewayName}</p>}
+                    {h.address && <p className="mt-1 flex gap-1.5 text-gray-600"><MdLocationOn size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{h.address}</p>}
+                    {h.contactEmail && <p className="flex gap-1.5 text-gray-600 break-all"><MdMailOutline size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{h.contactEmail}</p>}
                   </div>
-                </div>
+                </li>
               ))}
-            </dl>
+              <li className="flex gap-4 py-4">
+                <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600"><MdSchedule size={18} /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('landing.help.hoursLabel')}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-900">{t('landing.help.hours')}</p>
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
       </section>
@@ -715,21 +754,12 @@ export default function Landing() {
             <div>
               <p className="text-xs font-semibold text-brand-100 uppercase tracking-widest mb-3">{t('landing.footer.contact')}</p>
               <ul className="space-y-2 text-xs text-brand-100/70">
-                <li className="flex items-start gap-2">
-                  <MdLocationOn size={15} className="mt-0.5 flex-shrink-0 text-brand-300" />
-                  <span>{t('landing.footer.addressLine1')}<br />{t('landing.footer.addressLine2')}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <MdPhone size={15} className="flex-shrink-0 text-brand-300" />
-                  <span>(064) 421-2500</span>
-                </li>
                 <li className="flex items-center gap-2">
                   <MdMailOutline size={15} className="flex-shrink-0 text-brand-300" />
                   <span>{ORG.contactEmail}</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <MdSchedule size={15} className="flex-shrink-0 text-brand-300" />
-                  <span>{t('landing.footer.hours')}</span>
+                <li>
+                  <a href="#help" className="hover:text-white transition-colors">{t('landing.footer.officesLink')}</a>
                 </li>
               </ul>
             </div>
