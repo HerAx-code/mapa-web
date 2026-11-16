@@ -71,7 +71,7 @@ const SECTIONS = [
       { label: 'GL Status',             desc: 'Issued (just approved), Redeemed (provider billed back), or Expired (its validity date passed — 10 days from issuance for new GLs).' },
       { label: 'Committed Budget',      desc: 'Total money approved but not yet redeemed. Subtracted from your allocation.' },
       { label: 'Disbursed Budget',      desc: 'Total money where the provider has billed back. Final spend.' },
-      { label: 'Cooldown',              desc: 'Your agency can approve the same patient once every 30 days (other agencies have their own clock); the approval window shows the date it opens again.' },
+      { label: 'Repeat limit',              desc: 'Repeat limit: your agency approves the same patient once per its repeat limit (set by your Agency Admin on Budget Allocation; 30 days unless changed, optionally per assistance type). Parts of the same request never count, and other agencies have their own limit. Approving inside the limit is allowed with a written reason, saved with the approval and in the audit log.' },
     ],
   },
 
@@ -190,7 +190,7 @@ const SECTIONS = [
     title: 'GL lifecycle: redemption, expiry, reversal',
     content: `A Guarantee Letter is "Issued" when approved and is valid for 10 days from issuance (the printed letter shows the exact date; letters issued before 16 November 2026 keep 30 days). Three things can happen next:`,
     items: [
-      { label: 'Redeemed', desc: 'The named provider billed back for the amount. In the slice detail, click Mark GL Redeemed. Budget moves from committed → disbursed.' },
+      { label: 'Redeemed', desc: 'The named provider billed back. In the slice detail, click Mark GL Redeemed and enter the amount actually billed (up to the approved amount). That amount counts as disbursed; any unused part returns to your budget.' },
       { label: 'Expired',  desc: 'The validity date passed without redemption. The Inbox row and slice detail show "Expired (action needed)". Click Mark GL Expired to release the committed budget back to your allocation.' },
       { label: 'Reversed', desc: 'You made a mistake (wrong amount, wrong provider). Click Reverse Approval. The slice returns to For Funding, the committed budget is released, the patient is notified.' },
     ],
@@ -233,7 +233,7 @@ const SECTIONS = [
       { label: 'Disbursed',    desc: 'Sum of all redeemed GL amounts. Final spend. Over a period this can exceed Committed once most GLs have been redeemed — that is expected, not an error.' },
       { label: 'Remaining',    desc: 'Allocated − Committed. This is what your next approval can draw from.' },
       { label: 'Period reset', desc: 'Your Agency Administrator starts a new period via /agency/allocation → Reset Period. Committed and disbursed reset to ₱0; allocation remains.' },
-      { label: 'Cooldown',     desc: 'Your agency can approve the same patient once every 30 days (other agencies have their own clock). Parts of the same request are exempt. The Approve button shows the date it opens again, and the system refuses earlier approvals. Reversing an approval keeps the clock running from the original approval.' },
+      { label: 'Repeat limit',     desc: 'Repeat limit: your agency approves the same patient once per its repeat limit (set by your Agency Admin on Budget Allocation; 30 days unless changed, optionally per assistance type). Parts of the same request never count, and other agencies have their own limit. Approving inside the limit is allowed with a written reason, saved with the approval and in the audit log.' },
     ],
   },
   {
