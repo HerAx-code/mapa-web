@@ -37,7 +37,7 @@ import { PHILID_QR_ENABLED } from '../../utils/philIdQr'
 import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import { DECLARATION_VERSION } from '../../utils/verificationPolicy'
-import { canReuseDocument } from '../../utils/documentReuse'
+import { canReuseDocument, reuseRuleOf } from '../../utils/documentReuse'
 import { docTypeRequired, OUTPATIENT_UNITS, PHILHEALTH_DIALYSIS_SESSIONS, isDialysis } from '../../utils/outpatient'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
@@ -589,7 +589,7 @@ export default function RequestAssistance() {
     const ctx = { careSetting: form.careSetting || 'inpatient', assistanceType: form.assistanceType }
     setReqDocTypes(allDocTypes
       .filter(t => docTypeRequired(t, ctx))
-      .map(t => ({ id: t.id, name: t.name, description: t.description, reusable: t.reusable, order: t.order })))
+      .map(t => ({ id: t.id, name: t.name, description: t.description, reusable: t.reusable, reuseMonths: t.reuseMonths, reuseFrom: t.reuseFrom, order: t.order })))
   }, [allDocTypes, form.careSetting, form.assistanceType])
 
   // Active-request guard + billing-statement presence check
@@ -669,13 +669,16 @@ export default function RequestAssistance() {
   // Verified docs on file, by type name — reusable types (Valid ID, PhilHealth
   // ID) satisfy the checklist without re-upload while the verification is under
   // 12 months old (utils/documentReuse.js); others must be supplied fresh.
+  // Each document type's own reuse window (Phase 2B): ID 12 months from
+  // verification; doctor's order / indigency 3 months from the date on them.
+  const ruleForName = (name) => reuseRuleOf(allDocTypes.find(t => (t.name ?? '').toLowerCase() === String(name ?? '').toLowerCase()))
   const verifiedTypeNames = new Set(
-    myDocs.filter(d => canReuseDocument(d)).map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase())
+    myDocs.filter(d => canReuseDocument(d, Date.now(), ruleForName(d.documentTypeName ?? d.name))).map(d => (d.documentTypeName ?? d.name ?? '').toLowerCase())
   )
   const docForType = (name) => myDocs.find(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase())
   // The newest document of this type that may be reused (verified < 12 months).
   const reusableDocFor = (name) => myDocs
-    .filter(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase() && canReuseDocument(d))
+    .filter(d => (d.documentTypeName ?? d.name ?? '').toLowerCase() === name.toLowerCase() && canReuseDocument(d, Date.now(), ruleForName(name)))
     .sort((a, b) => (b.reviewedAt?.toMillis?.() ?? 0) - (a.reviewedAt?.toMillis?.() ?? 0))[0] ?? null
   // When a representative files for a patient who can't take their own live
   // selfie (bedridden, hospitalised, face/hands bandaged), the patient's own

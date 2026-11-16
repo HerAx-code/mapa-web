@@ -24,3 +24,22 @@ describe('canReuseDocument', () => {
     expect(canReuseDocument({ status: 'verified' }, NOW)).toBe(false)
   })
 })
+
+describe('reuse rules per document type (Phase 2B)', () => {
+  it('reads the type rule with defaults', async () => {
+    const { reuseRuleOf } = await import('../../src/utils/documentReuse.js')
+    expect(reuseRuleOf({})).toEqual({ months: 12, from: 'verified' })
+    expect(reuseRuleOf({ reuseMonths: 3, reuseFrom: 'issued' })).toEqual({ months: 3, from: 'issued' })
+  })
+  it('counts from the date on the document when the type says so', () => {
+    const rule = { months: 3, from: 'issued' }
+    // NOW = 15 Nov 2026
+    expect(canReuseDocument({ status: 'verified', issuedOn: '2026-09-01' }, NOW, rule)).toBe(true)
+    expect(canReuseDocument({ status: 'verified', issuedOn: '2026-08-01' }, NOW, rule)).toBe(false)
+    // verified recently but issued long ago: not reused
+    expect(canReuseDocument({ status: 'verified', issuedOn: '2026-07-01', reviewedAt: monthsAgo(0) }, NOW, rule)).toBe(false)
+  })
+  it('without the recorded date, an issued-date type is never reused', () => {
+    expect(canReuseDocument({ status: 'verified', reviewedAt: monthsAgo(1) }, NOW, { months: 3, from: 'issued' })).toBe(false)
+  })
+})

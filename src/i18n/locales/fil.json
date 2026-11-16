@@ -933,7 +933,7 @@
         "pcnUnverified": "Ang na-type na numero ay hindi awtomatikong masusuri, kaya kukuha kayo ng litrato ng ID at kukumpirmahin ito ng {{gateway}}."
       },
       "documentsTitle": "Mga kinakailangang dokumento",
-      "documentsHint": "Ilakip ang mga dokumento sa ibaba. Sinusuri ng {{gateway}} ang mga ito bago i-endorso ang inyong kahilingan. Ang na-verify na Valid ID ay magagamit muli sa loob ng 12 buwan sa ospital na ito; ang inyong Billing Statement ay kailangan sa bawat kahilingan.",
+      "documentsHint": "Ilakip ang mga dokumento sa ibaba. Sinusuri ng {{gateway}} ang mga ito bago i-endorso ang inyong kahilingan. May mga na-verify na dokumento na magagamit muli sa ospital na ito (Valid ID sa loob ng 12 buwan; indigency certificate at doctor's order sa loob ng 3 buwan mula sa petsa nito). Kailangan sa bawat kahilingan ang selfie, billing statement at charge slip.",
       "identitySection": "I-verify ang iyong pagkakakilanlan",
       "identitySectionHint": "Ang iyong ID at isang live na selfie, para makumpirma ng {{gateway}} na ikaw nga.",
       "docsSection": "Mga karagdagang dokumento",
@@ -1432,7 +1432,7 @@
           "s4": "Kumuha ng live selfie kapag hiniling; ikinukumpara ito ng {{gateway}} sa inyong ID upang kumpirmahin ang inyong pagkakakilanlan.",
           "s5": "Isumite. Sinusuri at bini-verify ng {{gateway}} ang inyong mga dokumento bago i-endorso ang inyong kahilingan sa mga ahensya.",
           "s6": "Kung may dokumentong markahan ng {{gateway}} para itama, aabisuhan kayo — i-upload itong muli mula sa inyong kahilingan.",
-          "note": "Tip: kapag na-verify na, magagamit muli ang inyong Valid ID (at PhilHealth ID) sa inyong susunod na mga kahilingan sa parehong ospital sa loob ng 12 buwan. Ang iba pa, kasama ang Billing Statement, ay kailangang bago sa bawat kahilingan."
+          "note": "Tip: may mga na-verify na dokumento na magagamit muli sa inyong susunod na mga kahilingan sa parehong ospital: ang Valid ID at PhilHealth ID sa loob ng 12 buwan, at ang barangay indigency certificate at doctor's order sa loob ng 3 buwan mula sa petsang nakasulat dito. Kailangang bago sa bawat kahilingan ang live selfie, billing statement at charge slip."
         },
         "apply": {
           "title": "Paano ako humihiling ng tulong?",

@@ -36,12 +36,12 @@ export const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_'
 // `reusable: true` carries the verified doc across the patient's future
 // requests (e.g. Valid ID); everything else is per-request.
 export const DOCUMENT_TYPES = [
-  { id: 'valid_id',                          name: 'Valid ID',                          description: 'Any government-issued ID',                      reusable: true  },
-  { id: 'barangay_certificate_of_indigency', name: 'Barangay Certificate of Indigency', description: 'Issued by the barangay',                        reusable: false },
+  { id: 'valid_id',                          name: 'Valid ID',                          description: 'Any government-issued ID',                      reusable: true, reuseMonths: 12, reuseFrom: 'verified' },
+  { id: 'barangay_certificate_of_indigency', name: 'Barangay Certificate of Indigency', description: 'Issued by the barangay',                        reusable: true, reuseMonths: 3, reuseFrom: 'issued' },
   { id: 'hospital_billing_statement',        name: 'Hospital Billing Statement',        description: 'Statement of Account (SOA) from the hospital',  reusable: false, careSetting: 'inpatient' },
   { id: 'medical_certificate',               name: 'Medical Certificate',               description: 'Certified by a licensed physician',             reusable: false },
   { id: 'medical_abstract',                  name: 'Medical Abstract',                  description: 'Summary of medical condition and treatment',    reusable: false },
-  { id: 'philhealth_id',                     name: 'PhilHealth ID',                     description: 'PhilHealth membership card (optional coverage)', reusable: true  },
+  { id: 'philhealth_id',                     name: 'PhilHealth ID',                     description: 'PhilHealth membership card (optional coverage)', reusable: true, reuseMonths: 12, reuseFrom: 'verified' },
   { id: 'laboratory_results',                name: 'Laboratory Results',                description: 'Latest diagnostic or lab results',              reusable: false },
   { id: 'surgical_cost_estimate',            name: 'Surgical Cost Estimate',            description: 'Estimated cost of the planned operation',       reusable: false },
   { id: 'treatment_protocol',                name: 'Treatment Protocol',                description: 'Physician treatment plan (e.g. chemotherapy cycles)', reusable: false },
@@ -51,7 +51,7 @@ export const DOCUMENT_TYPES = [
   { id: 'death_certificate',                 name: 'Death Certificate',                 description: 'Registered death certificate of the deceased',  reusable: false },
   // Phase 2A outpatient documents (src/utils/outpatient.js docTypeRequired):
   { id: 'charge_slip_from_the_hospital_unit',                  name: 'Charge Slip from the Hospital Unit', description: 'Itemised charge slip or order of payment from the dialysis, chemotherapy, pharmacy, laboratory or clinic unit', reusable: false, requiredWhen: { careSetting: 'outpatient' } },
-  { id: 'doctor_s_order',                     name: "Doctor's Order",                    description: 'Prescription, treatment protocol, laboratory request or dialysis prescription, signed by the doctor with PRC license number', reusable: false, requiredWhen: { careSetting: 'outpatient' } },
+  { id: 'doctor_s_order',                     name: "Doctor's Order",                    description: 'Prescription, treatment protocol, laboratory request or dialysis prescription, signed by the doctor with PRC license number', reusable: true, reuseMonths: 3, reuseFrom: 'issued', requiredWhen: { careSetting: 'outpatient' } },
   { id: 'philhealth_dialysis_sessions_certificate',   name: 'PhilHealth Dialysis Sessions Certificate', description: 'From the dialysis unit: PhilHealth dialysis sessions used this year', reusable: false, requiredWhen: { careSetting: 'outpatient', assistanceTypes: ['Dialysis'] } },
   { id: 'social_case_study_report',          name: 'Social Case Study Report',          description: 'Prepared by a social worker for high-cost cases', reusable: false },
 ]
