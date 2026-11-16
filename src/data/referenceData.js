@@ -38,7 +38,7 @@ export const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_'
 export const DOCUMENT_TYPES = [
   { id: 'valid_id',                          name: 'Valid ID',                          description: 'Any government-issued ID',                      reusable: true  },
   { id: 'barangay_certificate_of_indigency', name: 'Barangay Certificate of Indigency', description: 'Issued by the barangay',                        reusable: false },
-  { id: 'hospital_billing_statement',        name: 'Hospital Billing Statement',        description: 'Statement of Account (SOA) from the hospital',  reusable: false },
+  { id: 'hospital_billing_statement',        name: 'Hospital Billing Statement',        description: 'Statement of Account (SOA) from the hospital',  reusable: false, careSetting: 'inpatient' },
   { id: 'medical_certificate',               name: 'Medical Certificate',               description: 'Certified by a licensed physician',             reusable: false },
   { id: 'medical_abstract',                  name: 'Medical Abstract',                  description: 'Summary of medical condition and treatment',    reusable: false },
   { id: 'philhealth_id',                     name: 'PhilHealth ID',                     description: 'PhilHealth membership card (optional coverage)', reusable: true  },
@@ -49,6 +49,10 @@ export const DOCUMENT_TYPES = [
   { id: 'dialysis_treatment_record',         name: 'Dialysis Treatment Record',         description: 'Record of dialysis sessions / schedule',        reusable: false },
   { id: 'promissory_note',                   name: 'Promissory Note',                   description: 'Signed when the patient is already discharged', reusable: false },
   { id: 'death_certificate',                 name: 'Death Certificate',                 description: 'Registered death certificate of the deceased',  reusable: false },
+  // Phase 2A outpatient documents (src/utils/outpatient.js docTypeRequired):
+  { id: 'charge_slip_from_the_hospital_unit',                  name: 'Charge Slip from the Hospital Unit', description: 'Itemised charge slip or order of payment from the dialysis, chemotherapy, pharmacy, laboratory or clinic unit', reusable: false, requiredWhen: { careSetting: 'outpatient' } },
+  { id: 'doctor_s_order',                     name: "Doctor's Order",                    description: 'Prescription, treatment protocol, laboratory request or dialysis prescription, signed by the doctor with PRC license number', reusable: false, requiredWhen: { careSetting: 'outpatient' } },
+  { id: 'philhealth_dialysis_sessions_certificate',   name: 'PhilHealth Dialysis Sessions Certificate', description: 'From the dialysis unit: PhilHealth dialysis sessions used this year', reusable: false, requiredWhen: { careSetting: 'outpatient', assistanceTypes: ['Dialysis'] } },
   { id: 'social_case_study_report',          name: 'Social Case Study Report',          description: 'Prepared by a social worker for high-cost cases', reusable: false },
 ]
 

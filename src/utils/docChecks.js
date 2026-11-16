@@ -24,6 +24,22 @@ const INDIGENCY = [
   { key: 'barangay',  label: "Issued by the patient's own barangay (matches the address on the account)" },
   { key: 'signed',    label: 'Signed by a barangay official and dated' },
 ]
+// Phase 2A outpatient documents (reports/Outpatient medical assistance rules.md):
+// every program requires a signed doctor's order; the price comes from the
+// hospital unit's own charge slip; dialysis needs PhilHealth's session count.
+const DOCTORS_ORDER = [
+  { key: 'physician', label: "Doctor's full name, PRC license number and signature are on it" },
+  { key: 'recent',    label: 'Issued within the last 3 months' },
+  { key: 'matches',   label: 'What it orders (medicine, sessions, test or procedure) matches the charge slip' },
+]
+const CHARGE_SLIP = [
+  { key: 'unit',      label: "Issued by this hospital's unit (not an outside pharmacy or lab), with the patient's name" },
+  { key: 'itemised',  label: 'Itemised and dated, and the total matches the amount in the request' },
+]
+const DIALYSIS_CERT = [
+  { key: 'sessions',  label: 'Sessions used this year match the number in the request' },
+  { key: 'signed',    label: 'Signed by the dialysis unit and dated' },
+]
 const CASE_STUDY = [
   { key: 'rsw',       label: 'Prepared and signed by a registered social worker, with license number' },
 ]
@@ -34,6 +50,9 @@ export function docChecksFor(docItem) {
   if (n.includes('billing statement') || n.includes('statement of account')) return BILL
   if (n.includes('indigency')) return INDIGENCY
   if (n.includes('social case study')) return CASE_STUDY
+  if (n.includes("doctor's order") || n.includes('doctors order')) return DOCTORS_ORDER
+  if (n.includes('charge slip')) return CHARGE_SLIP
+  if (n.includes('dialysis sessions certificate')) return DIALYSIS_CERT
   return []
 }
 

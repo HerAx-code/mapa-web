@@ -167,6 +167,9 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
     .reduce((sum, s) => sum + (Number(s.amountApproved) || 0), 0)
   const projectedTotal = siblingsCommitted + amountNum
   const overCommit     = needAmount > 0 && projectedTotal > needAmount
+  // Phase 2A: an outpatient request is one charge slip — agencies together
+  // may fund only up to it (rules-enforced). Inpatient keeps the soft warning.
+  const outpatientOver = request?.careSetting === 'outpatient' && overCommit
   const fullFunded     = needAmount > 0 && projectedTotal === needAmount
   const pctOfBill      = needAmount > 0 ? Math.min(100, Math.round((projectedTotal / needAmount) * 100)) : 0
 
@@ -184,6 +187,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
     if (!payableTo.trim())   { toast.error('Specify the provider (Payable To).'); return }
     if (exceedsBudget)       { toast.error(`Amount exceeds remaining budget of ₱${remaining.toLocaleString()}.`); return }
     if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} ${ORG.gatewayName} endorsed for this slice.`); return }
+    if (outpatientOver)      { toast.error(`This outpatient charge is ₱${needAmount.toLocaleString()}; other agencies already cover ₱${siblingsCommitted.toLocaleString()}. Approve at most ₱${Math.max(0, needAmount - siblingsCommitted).toLocaleString()}.`); return }
     if (exceedsPerCap)       { toast.error(`Amount exceeds this agency's per-applicant cap of ₱${perApplicantCap.toLocaleString()}.`); return }
     if (priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN) {
       toast.error(`Give a reason (at least ${OVERRIDE_REASON_MIN} characters) for approving inside your repeat limit.`); return
@@ -310,7 +314,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
                 the total to <strong>₱{projectedTotal.toLocaleString()}</strong> of
                 ₱{needAmount.toLocaleString()} needed.
                 {overCommit && (
-                  <> That's <strong>₱{(projectedTotal - needAmount).toLocaleString()} over</strong> the bill — another agency may have already covered this. Coordinate via {ORG.gatewayName}, or lower your amount.</>
+                  <> That's <strong>₱{(projectedTotal - needAmount).toLocaleString()} over</strong> the bill — another agency may have already covered this. {outpatientOver ? <>For an outpatient charge this is not allowed: lower your amount.</> : <>Coordinate via {ORG.gatewayName}, or lower your amount.</>}</>
                 )}
               </p>
             </div>
@@ -405,7 +409,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
         <div className="px-5 py-3 border-t border-gray-100 flex gap-2 justify-end flex-shrink-0">
           <button className="btn-secondary text-sm" onClick={onClose}>Cancel</button>
           <button className="btn-primary text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            disabled={saving || exceedsBudget || exceedsRequested || exceedsPerCap || (!!priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN)}
+            disabled={saving || exceedsBudget || exceedsRequested || exceedsPerCap || outpatientOver || (!!priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN)}
             title={priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN ? 'Give a reason for approving inside your repeat limit' : ''}
             onClick={handleSubmit}>
             <MdCheckCircle size={14} className="inline -mt-0.5 mr-1" />

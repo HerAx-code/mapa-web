@@ -1,6 +1,6 @@
 # Outpatient support plan (revised 2026-11-15)
 
-**Status:** planned, **not built**. On 2026-11-16 the owner chose working answers for all 14 questions (§7A), to be confirmed at the CRMC meeting. Building can start from them; anything CRMC answers differently is adjusted then.
+**Status:** Phase 1 (repeat limit per agency, settlement on actual amount) shipped 2026-11-16 (#387); **Phase 2A (outpatient requests) built 2026-11-16**; 2B (recurring patients) and 2C (agency settings) not built yet. On 2026-11-16 the owner chose working answers for all 14 questions (§7A), to be confirmed at the CRMC meeting. Building can start from them; anything CRMC answers differently is adjusted then.
 **Evidence:** `reports/Outpatient medical assistance rules.md` (research on DSWD AICS, PCSO MAP, DOH MAIFIP / Malasakit and PhilHealth, November 2026). Facts below cite that report; anything marked *(inference)* is our design judgement.
 **Replaces:** "option 2" from 2026-11-15, which this revision corrects.
 

@@ -596,6 +596,15 @@ service cloud.firestore {
                        request.resource.data.patientId == uid() &&
                        createsInOwnHospital() &&
                        request.resource.data.status == 'submitted' &&
+                       // Phase 2A: care setting (absent on requests from the older site
+                       // = admitted); an outpatient names one of the hospital's units.
+                       request.resource.data.get('careSetting', 'inpatient') in ['inpatient', 'outpatient'] &&
+                       (request.resource.data.get('careSetting', 'inpatient') != 'outpatient' ||
+                        request.resource.data.get('careUnit', '') in ['dialysis', 'chemotherapy', 'pharmacy', 'laboratory', 'clinic']) &&
+                       (!('philhealthSessionsUsed' in request.resource.data) ||
+                        (request.resource.data.philhealthSessionsUsed is int &&
+                         request.resource.data.philhealthSessionsUsed >= 0 &&
+                         request.resource.data.philhealthSessionsUsed <= 366)) &&
                        request.resource.data.agencyIds == [] &&
                        request.resource.data.amountCommitted == 0 &&
                        get(/databases/$(database)/documents/users/$(uid()))
@@ -696,6 +705,12 @@ service cloud.firestore {
             .hasOnly(['amountCommitted', 'status', 'updatedAt']) &&
           request.resource.data.amountCommitted is number &&
           request.resource.data.amountCommitted >= 0 &&
+          // Phase 2A: an outpatient request is one priced charge slip, so agencies
+          // together fund it only up to its amount (no over-endorsing buffer —
+          // that stays for inpatient bills). Lowering the total is always fine.
+          (resource.data.get('careSetting', 'inpatient') != 'outpatient' ||
+           request.resource.data.amountCommitted <= resource.data.get('amountNeeded', 0) ||
+           request.resource.data.amountCommitted <= resource.data.get('amountCommitted', 0)) &&
           !(resource.data.get('status', '') in ['closed', 'rejected']) &&
           request.resource.data.status in
             ['under_review', 'endorsed', 'partially_funded', 'fully_funded']);

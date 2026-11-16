@@ -38,6 +38,7 @@ import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import { DECLARATION_VERSION } from '../../utils/verificationPolicy'
 import { canReuseDocument } from '../../utils/documentReuse'
+import { docTypeRequired, OUTPATIENT_UNITS, PHILHEALTH_DIALYSIS_SESSIONS, isDialysis } from '../../utils/outpatient'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
   MdHourglassTop, MdUploadFile, MdClose, MdCameraAlt, MdAssignment, MdChevronRight,
@@ -133,9 +134,14 @@ export default function RequestAssistance() {
   const [confirmWithdraw, setConfirmWithdraw] = useState(false)
   const [withdrawing,     setWithdrawing]     = useState(false)
 
+  // careSetting: 'inpatient' (admitted / discharged with an unpaid bill) or
+  // 'outpatient' (treated at one of this hospital's units) — Phase 2A.
   const [form, setForm] = useState({
+    careSetting: '', careUnit: '', philhealthSessionsUsed: '',
     assistanceType: '', totalBill: '', description: '',
   })
+  const outpatient = form.careSetting === 'outpatient'
+  const dialysisOutpatient = outpatient && isDialysis(form)
   const [declared, setDeclared] = useState(false)
   const set = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }))
 
@@ -362,7 +368,7 @@ export default function RequestAssistance() {
   // files); selfieLiveness + ocrResults can't be recomputed from a File, so they
   // ride along. See utils/requestDraft.js.
   const draftHasContent = () => !!(
-    form.assistanceType || Number(form.totalBill) > 0 || form.description?.trim() ||
+    form.careSetting || form.assistanceType || Number(form.totalBill) > 0 || form.description?.trim() ||
     Object.keys(pendingFiles).length > 0 || step > 0
   )
   const snapshotDraft = () => ({
@@ -374,7 +380,7 @@ export default function RequestAssistance() {
   })
   const discardDraft = () => {
     clearRequestDraft(user?.uid)
-    setForm({ assistanceType: '', totalBill: '', description: '' })
+    setForm({ careSetting: '', careUnit: '', philhealthSessionsUsed: '', assistanceType: '', totalBill: '', description: '' })
     setStep(0); setDeclared(false); setFiledByRep(false)
     setRepForm({ name: '', relationship: '' }); setRepAuthorized(false)
     setPendingFiles({}); setIdBackFiles({})
@@ -562,18 +568,29 @@ export default function RequestAssistance() {
     setReqDocTypes(requiredDocsFor(form.assistanceType, { amountNeeded: Number(form.totalBill) || 0 }))
   }, [form.assistanceType, form.totalBill])
 
-  // Legacy flat path: loaded once, unaffected by the type selection.
+  // Legacy flat path: every document type is loaded once; the checklist is
+  // the types required for this request's care setting and assistance type
+  // (docTypeRequired, src/utils/outpatient.js — e.g. the billing statement for
+  // admitted patients, the unit's charge slip + doctor's order for outpatients).
+  const [allDocTypes, setAllDocTypes] = useState([])
   useEffect(() => {
     if (PER_TYPE_DOCS) return
-    getDocs(query(collection(db, 'documentTypes'), where('required', '==', true)))
-      .then(snap => setReqDocTypes(
+    getDocs(collection(db, 'documentTypes'))
+      .then(snap => setAllDocTypes(
         snap.docs
-          .map(d => ({ id: d.id, name: d.data().name, description: d.data().description, reusable: !!d.data().reusable, order: d.data().order ?? 0 }))
+          .map(d => ({ id: d.id, ...d.data(), reusable: !!d.data().reusable, order: d.data().order ?? 0 }))
           .filter(t => t.name)
           .sort((a, b) => a.order - b.order)
       ))
       .catch(() => {})
   }, [])
+  useEffect(() => {
+    if (PER_TYPE_DOCS) return
+    const ctx = { careSetting: form.careSetting || 'inpatient', assistanceType: form.assistanceType }
+    setReqDocTypes(allDocTypes
+      .filter(t => docTypeRequired(t, ctx))
+      .map(t => ({ id: t.id, name: t.name, description: t.description, reusable: t.reusable, order: t.order })))
+  }, [allDocTypes, form.careSetting, form.assistanceType])
 
   // Active-request guard + billing-statement presence check
   useEffect(() => {
@@ -693,11 +710,17 @@ export default function RequestAssistance() {
   // bill and is reduced later. See docs/philhealth-first-plan.md.
   const totalBill    = Number(form.totalBill) || 0
   const amountNeeded = totalBill
+  const sessionsUsed = Number(form.philhealthSessionsUsed)
+  const sessionsValid = form.philhealthSessionsUsed !== '' && Number.isInteger(sessionsUsed) &&
+    sessionsUsed >= 0 && sessionsUsed <= 366
 
   const handleSubmit = async () => {
     if (submitting) return
     if (activeRequest)            { toast.error(t('patient.request.errActive')); return }
     if (!user.hospitalId || !codeReady) { toast.error(t('patient.gate.errNoCode')); setChanging(true); return }
+    if (!form.careSetting)        { toast.error(t('patient.request.errCare')); return }
+    if (outpatient && !form.careUnit) { toast.error(t('patient.request.errUnit')); return }
+    if (dialysisOutpatient && !sessionsValid) { toast.error(t('patient.request.errSessions')); return }
     if (!form.assistanceType)     { toast.error(t('patient.request.errType')); return }
     if (amountNeeded <= 0)        { toast.error(t('patient.request.errNeeded')); return }
     if (missingDocs.length)       { toast.error(t('patient.request.errDocs')); return }
@@ -837,6 +860,11 @@ export default function RequestAssistance() {
         patientHospitalId: user.hospitalId ?? null,
         tenantId:          tenantIdFor(user),   // multi-hospital Phase 2
         assistanceType:    form.assistanceType,
+        // Phase 2A: where the patient is treated. Outpatient = one of this
+        // hospital's units; the price document is the unit's charge slip.
+        careSetting:       form.careSetting,
+        ...(outpatient ? { careUnit: form.careUnit } : {}),
+        ...(dialysisOutpatient ? { philhealthSessionsUsed: sessionsUsed } : {}),
         description:       form.description.trim(),
         // PhilHealth-first bill model: the patient declares the full bill;
         // the gateway fills the coverage fields at assessment, which reduces
@@ -1197,6 +1225,9 @@ export default function RequestAssistance() {
   const lastStep = STEP_LABELS.length - 1
   const handleNext = () => {
     if (step === 0) {
+      if (!form.careSetting)    { toast.error(t('patient.request.errCare')); return }
+      if (outpatient && !form.careUnit) { toast.error(t('patient.request.errUnit')); return }
+      if (dialysisOutpatient && !sessionsValid) { toast.error(t('patient.request.errSessions')); return }
       if (!form.assistanceType) { toast.error(t('patient.request.errType')); return }
       if (amountNeeded <= 0)    { toast.error(t('patient.request.errNeeded')); return }
     }
@@ -1253,6 +1284,34 @@ export default function RequestAssistance() {
 
         <div className="card p-5 space-y-4">
           {step === 0 && (<>
+          {/* Care setting (Phase 2A): admitted or outpatient at this hospital. */}
+          <fieldset>
+            <legend className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.careLabel')} <span className="text-red-400">*</span></legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[['inpatient', 'careInpatient', 'careInpatientHint'], ['outpatient', 'careOutpatient', 'careOutpatientHint']].map(([v, label, hint]) => (
+                <label key={v} className={`flex items-start gap-2 rounded-xl border p-3 min-h-[44px] cursor-pointer ${form.careSetting === v ? 'border-brand-500 bg-brand-50' : 'border-gray-200 bg-white'}`}>
+                  <input type="radio" name="req-care" className="mt-0.5 w-4 h-4 accent-brand-500" value={v}
+                    checked={form.careSetting === v} onChange={set('careSetting')} />
+                  <span>
+                    <span className="block text-sm font-semibold text-gray-800">{t(`patient.request.${label}`)}</span>
+                    <span className="block text-xs text-gray-500">{t(`patient.request.${hint}`)}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {outpatient && (
+            <div>
+              <label htmlFor="req-unit" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.unitLabel')} <span className="text-red-400">*</span></label>
+              <select id="req-unit" className="input" value={form.careUnit} onChange={set('careUnit')}>
+                <option value="">{t('patient.request.unitPlaceholder')}</option>
+                {OUTPATIENT_UNITS.map(u => <option key={u} value={u}>{t(`patient.request.unit.${u}`)}</option>)}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">{t('patient.request.outsideNote')}</p>
+            </div>
+          )}
+
           {/* Assistance type */}
           <div>
             <label htmlFor="req-type" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.typeLabel')} <span className="text-red-400">*</span></label>
@@ -1265,14 +1324,25 @@ export default function RequestAssistance() {
               options={types.map(tp => ({ value: tp, label: tp }))} />
           </div>
 
+          {/* Dialysis: PhilHealth pays a set number of sessions a year; the
+              social worker checks this against the unit's certificate. */}
+          {dialysisOutpatient && (
+            <div>
+              <label htmlFor="req-sessions" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.sessionsLabel')} <span className="text-red-400">*</span></label>
+              <input id="req-sessions" type="number" min="0" max="366" step="1" inputMode="numeric" className="input" placeholder="0"
+                value={form.philhealthSessionsUsed} onChange={set('philhealthSessionsUsed')} />
+              <p className="text-xs text-gray-500 mt-1">{t('patient.request.sessionsHint', { n: PHILHEALTH_DIALYSIS_SESSIONS })}</p>
+            </div>
+          )}
+
           {/* Total hospital bill — the full amount on the patient's Statement
               of Account. the gateway applies PhilHealth (and any other coverage) first
               at assessment, then endorses the remaining balance to agencies. */}
           <div>
-            <label htmlFor="req-bill" className="block text-xs font-medium text-gray-700 mb-1">{t('patient.request.billLabel')} <span className="text-red-400">*</span></label>
+            <label htmlFor="req-bill" className="block text-xs font-medium text-gray-700 mb-1">{t(outpatient ? 'patient.request.billLabelOutpatient' : 'patient.request.billLabel')} <span className="text-red-400">*</span></label>
             <input id="req-bill" type="number" min="0" inputMode="numeric" className="input" placeholder="0"
               value={form.totalBill} onChange={set('totalBill')} />
-            <p className="text-xs text-gray-500 mt-1">{t('patient.request.billHint')}</p>
+            <p className="text-xs text-gray-500 mt-1">{t(outpatient ? 'patient.request.billHintOutpatient' : 'patient.request.billHint')}</p>
           </div>
 
           {/* Description */}
@@ -1420,11 +1490,19 @@ export default function RequestAssistance() {
           {/* Review summary */}
           <div className="space-y-2">
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
+              <span className="text-gray-500">{t('patient.request.careLabel')}</span>
+              <span className="font-medium text-gray-800 text-right">
+                {form.careSetting === 'outpatient'
+                  ? `${t('patient.request.careOutpatient')}${form.careUnit ? ` · ${t(`patient.request.unit.${form.careUnit}`)}` : ''}`
+                  : form.careSetting === 'inpatient' ? t('patient.request.careInpatient') : '—'}
+              </span>
+            </div>
+            <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
               <span className="text-gray-500">{t('patient.request.typeLabel')}</span>
               <span className="font-medium text-gray-800 text-right">{form.assistanceType || '—'}</span>
             </div>
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
-              <span className="text-gray-500">{t('patient.request.billLabel')}</span>
+              <span className="text-gray-500">{t(outpatient ? 'patient.request.billLabelOutpatient' : 'patient.request.billLabel')}</span>
               <span className="font-medium text-gray-800 text-right">{peso(totalBill)}</span>
             </div>
             <div className="flex justify-between gap-3 text-sm border-b border-gray-50 pb-2">
