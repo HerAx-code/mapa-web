@@ -692,7 +692,7 @@ export default function IntakeWizard() {
                   value={sheet.attendingPhysician ?? ''} onChange={set('attendingPhysician')} />
               </div>
               <div>
-                <Q en="When were you admitted? (optional)" fil="Kailan kayo na-admit? (opsyonal)" htmlFor={fieldId('dateOfAdmission')} />
+                <Q en="When were you admitted, or when was the outpatient visit? (optional)" fil="Kailan kayo na-admit, o kailan ang pagbisita bilang outpatient? (opsyonal)" htmlFor={fieldId('dateOfAdmission')} />
                 <input id={fieldId('dateOfAdmission')} type="date" max={todayIso()}
                   className={`${inputCls} ${errorField === 'dateOfAdmission' ? inputErrCls : ''}`}
                   value={sheet.dateOfAdmission} onChange={set('dateOfAdmission')} />

@@ -15,6 +15,7 @@ import { getOrCreateConversation } from '../../utils/messages'
 import { isGLExpired, isGLExpiringSoon, glDaysRemaining, glExpiresAtFor } from '../../utils/constants'
 import { tsToDate, fmtDate } from '../../utils/dates'
 import { computeFunding, deriveRequestFinancials, syncedRequestStatus, isRequestClosedByGateway } from '../../utils/requests'
+import { careSettingLabel } from '../../utils/outpatient'
 import { approvalMarkId, approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../../utils/approvalCooldown'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
@@ -471,6 +472,10 @@ export default function ApplicationDetail() {
           const r            = reqSnap.data()
           const need         = r.amountNeeded ?? 0
           const newCommitted = (r.amountCommitted ?? 0) + approvedAmount
+          // Phase 2A: outpatient = one charge slip, funded only up to its amount.
+          if (r.careSetting === 'outpatient' && newCommitted > need) {
+            throw new Error(`OUTPATIENT_CAP:This outpatient charge is ₱${need.toLocaleString()} and other agencies already cover ₱${(r.amountCommitted ?? 0).toLocaleString()}. Approve at most ₱${Math.max(0, need - (r.amountCommitted ?? 0)).toLocaleString()}.`)
+          }
           // approvedAmount is always > 0 here (ApproveModal validates), so
           // newCommitted > 0 is guaranteed -- the request can only move into
           // 'fully_funded' or 'partially_funded'. The previous 'endorsing'
@@ -541,6 +546,8 @@ export default function ApplicationDetail() {
       // from inside runTransaction in err.message.
       if (String(err?.message).includes('REQUEST_CLOSED')) {
         toast.error('The hospital has closed this request — it can no longer be approved.', { duration: 8000 })
+      } else if (typeof err?.message === 'string' && err.message.startsWith('OUTPATIENT_CAP:')) {
+        toast.error(err.message.replace('OUTPATIENT_CAP:', ''), { duration: 8000 })
       } else if (typeof err?.message === 'string' && err.message.startsWith('COOLDOWN:')) {
         toast.error(err.message.replace('COOLDOWN:', ''), { duration: 8000 })
       } else if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
@@ -1302,6 +1309,7 @@ export default function ApplicationDetail() {
                       { label: 'Contact',     value: app.patientContact || '—' },
                       { label: 'Address',     value: patientProfile?.address || '—' },
                       { label: 'Access Code', value: app?.patientHospitalId || patientProfile?.hospitalId || '—' },
+        { label: 'Care setting', value: careSettingLabel(request ?? app) },
                     ].map((r, i) => (
                       <div key={i} className="bg-gray-50 rounded-lg p-3">
                         <p className="text-xs text-gray-500 mb-0.5">{r.label}</p>

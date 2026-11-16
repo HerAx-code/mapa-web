@@ -43,7 +43,7 @@ export const callRecorded = (request) => !!request?.intakeSheet?.verificationCal
 // The patient's declaration at submission (patient.request.declaration* in the
 // locales). Bump the version whenever that text changes, so each request
 // records which wording was signed.
-export const DECLARATION_VERSION = '2026-11-15'
+export const DECLARATION_VERSION = '2026-11-16'  // 2026-11-16: wording covers outpatient charges (Phase 2A)
 
 // Second-person approval: above the hospital's amount, the staff member who
 // confirmed the bill, recorded the call or completed the assessment cannot

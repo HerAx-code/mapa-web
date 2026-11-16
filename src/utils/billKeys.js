@@ -13,5 +13,7 @@ export const billKeyId = (tenantId, billNumber) => `${tenantId}__${normalizeBill
 export const BILL_CHECK_SOURCES = [
   { value: 'billing_system', label: 'Hospital billing system (checked with the billing office)' },
   { value: 'signed_soa',     label: 'Printed bill signed by the billing clerk' },
+  // Phase 2A: outpatient charge slips are confirmed with the unit that issued them.
+  { value: 'unit_confirmed', label: 'Charge slip confirmed with the hospital unit that issued it' },
 ]
 export const billCheckSourceLabel = (v) => BILL_CHECK_SOURCES.find(s => s.value === v)?.label ?? ''

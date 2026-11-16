@@ -15,6 +15,7 @@ import { logAudit } from '../../utils/auditLog'
 import { withTenant, currentTenantId, tenantWhere, agencyPartnersWith } from '../../utils/hospitals'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
+import { careSettingLabel } from '../../utils/outpatient'
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
 import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
@@ -166,6 +167,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   const summaryRows = [
     ['Patient', request.patientName || '—'],
     ['Request', request.requestId || request.id],
+    ['Care setting', careSettingLabel(request)],
     ['Assistance type', request.assistanceType || '—'],
     ['Total bill', `${peso(request.totalBill ?? 0)}${billVerified(intake, request.totalBill) ? ' · verified' : ''}`],
     ['Amount needed', peso(request.amountNeeded ?? 0)],
@@ -282,6 +284,9 @@ function EndorseModal({ request, slices, agencies, onClose }) {
             agencyColor:       aData.color ?? 'bg-gray-500',
             agencyInitials:    aData.initials ?? aData.name?.slice(0, 2).toUpperCase(),
             assistanceType:    r.assistanceType ?? '',
+            // Phase 2A: agencies see whether this is an outpatient charge.
+            careSetting:       r.careSetting ?? 'inpatient',
+            ...(r.careUnit ? { careUnit: r.careUnit } : {}),
             // 'endorsed' = awaiting the patient to review the coverage
             // plan and Proceed. The agency only sees / acts on it once the
             // patient proceeds (slice -> reviewing).
@@ -1059,7 +1064,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
           <span className="text-gray-300">/</span>
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-gray-900 truncate">{request.patientName}</h2>
-            <p className="text-xs text-gray-500">{request.requestId} · {request.assistanceType}</p>
+            <p className="text-xs text-gray-500">{request.requestId} · {request.assistanceType}{request.careSetting === 'outpatient' ? ' · Outpatient' : ''}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

@@ -1138,7 +1138,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <p className="mt-4 flex items-center gap-1.5 text-sm text-green-700">
                   <MdVerified size={16} />
                   {remoteIntake.billVerification.source
-                    ? `Bill no. ${remoteIntake.billVerification.billNumber} verified against the ${remoteIntake.billVerification.source === 'billing_system' ? 'hospital billing system' : 'signed printed bill'} by ${remoteIntake.billVerification.by}`
+                    ? `${app.careSetting === 'outpatient' ? 'Charge slip' : 'Bill'} no. ${remoteIntake.billVerification.billNumber} verified against the ${remoteIntake.billVerification.source === 'billing_system' ? 'hospital billing system' : remoteIntake.billVerification.source === 'unit_confirmed' ? 'issuing hospital unit' : 'signed printed bill'} by ${remoteIntake.billVerification.by}`
                     : `Verified against the billing statement by ${remoteIntake.billVerification.by}`}
                   {tsToDate(remoteIntake.billVerification.at) ? ` · ${tsToDate(remoteIntake.billVerification.at).toLocaleDateString()}` : ''}
                 </p>
@@ -1147,12 +1147,14 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <p className="text-xs text-amber-800 leading-relaxed">
                     {remoteIntake.billVerification
                       ? `The bill changed after it was verified (${peso(remoteIntake.billVerification.amount)} → ${peso(app.totalBill)}). Check it again.`
-                      : 'Check the total and the PhilHealth / other deductions above against the hospital’s own record of this bill — the billing system or a bill signed by the billing clerk — not only the patient’s upload.'}
+                      : app.careSetting === 'outpatient'
+                        ? 'Outpatient request: check the total and the PhilHealth / other deductions above against the charge slip with the unit that issued it (or the billing system) — not only the patient’s upload.'
+                        : 'Check the total and the PhilHealth / other deductions above against the hospital’s own record of this bill — the billing system or a bill signed by the billing clerk — not only the patient’s upload.'}
                   </p>
                   {canEdit && app.totalBill != null && (
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label htmlFor="bill-number" className="block text-xs font-medium text-gray-700 mb-1">Bill / SOA number</label>
+                        <label htmlFor="bill-number" className="block text-xs font-medium text-gray-700 mb-1">{app.careSetting === 'outpatient' ? 'Charge slip number' : 'Bill / SOA number'}</label>
                         <input id="bill-number" className="input text-sm" placeholder="As printed on the bill"
                           value={billForm.billNumber}
                           onChange={e => { setBillForm(f => ({ ...f, billNumber: e.target.value })); setBillConflict(null); setBillOverride('') }} />
@@ -1443,7 +1445,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                     <input className="input" value={sheet.hospitalCaseNumber}
                       onChange={set('hospitalCaseNumber')} disabled={!canEdit} />
                   </Field>
-                  <Field label="Date of Admission">
+                  <Field label={app.careSetting === 'outpatient' ? 'Date of Visit' : 'Date of Admission'}>
                     <input type="date" className="input" value={sheet.dateOfAdmission}
                       onChange={set('dateOfAdmission')} disabled={!canEditFacts} />
                   </Field>
