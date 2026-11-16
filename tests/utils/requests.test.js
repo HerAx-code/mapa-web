@@ -34,6 +34,13 @@ describe('computeAmountNeeded', () => {
     expect(computeAmountNeeded({ totalBill: NaN })).toBe(0)
     expect(computeAmountNeeded({ totalBill: 'abc' })).toBe(0)
   })
+
+  // 2026-11-16: the senior / PWD discount and VAT exemption come off first.
+  it('subtracts the mandatory discounts too', () => {
+    expect(computeAmountNeeded({ totalBill: 100_000, discountsApplied: 16_000, philhealthCovered: 20_000, otherCovered: 4_000 })).toBe(60_000)
+    expect(computeAmountNeeded({ totalBill: 10_000, discountsApplied: null })).toBe(10_000)
+    expect(deriveAmountNeeded({ totalBill: 10_000, discountsApplied: 2_000, philhealthCovered: 3_000 })).toBe(5_000)
+  })
 })
 
 // deriveAmountNeeded is the legacy-safe entry point: it derives the residual

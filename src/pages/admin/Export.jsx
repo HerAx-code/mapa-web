@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { MdChevronRight, MdDescription, MdAssignment, MdFlag, MdGroup, MdBadge, MdListAlt } from 'react-icons/md'
+import { MdChevronRight, MdDescription, MdAssignment, MdFlag, MdGroup, MdBadge, MdListAlt, MdReceiptLong } from 'react-icons/md'
 
 // ── Export row component ──────────────────────────────────────────────────
 
@@ -70,6 +70,15 @@ export default function ExportPage() {
       title:       'DOH Monthly Assistance Report',
       description: 'Per patient assisted this month: age, sex, city/municipality, diagnosis, amount and fund source. Defaults to last month.',
       slug:        'doh-monthly',
+    },
+    {
+      // 2026-11-16: every guarantee letter issued for this hospital's patients,
+      // with totals per agency, for matching against the billing office's records.
+      icon:        MdReceiptLong,
+      iconBg:      'bg-indigo-500',
+      title:       'Guarantee Letters',
+      description: 'Every letter agencies issued for your patients: valid, expiring soon, used (amount billed) or expired, with totals per agency.',
+      slug:        'guarantee-letters',
     },
     {
       icon:        MdBadge,

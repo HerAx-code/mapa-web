@@ -1102,6 +1102,7 @@
       "coverage": {
         "title": "Coverage & balance",
         "bill": "Total hospital bill",
+        "discounts": "Senior citizen / PWD discount",
         "philhealth": "Prior coverage (e.g. PhilHealth)",
         "other": "Other coverage",
         "needed": "Amount needed",

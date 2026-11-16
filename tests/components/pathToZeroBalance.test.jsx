@@ -32,6 +32,14 @@ describe('PathToZeroBalance', () => {
     expect(screen.getByText(/80% of ₱10,000 covered/)).toBeInTheDocument()
   })
 
+  it('shows the senior / PWD discount line and counts it as covered', () => {
+    const request = { totalBill: 10000, discountsApplied: 2000, philhealthCovered: 3000, amountNeeded: 5000 }
+    const funding = { committed: 0, outstanding: 0, balance: 5000, pct: 0 }
+    render(<PathToZeroBalance request={request} slices={[]} agencies={agencies} funding={funding} />)
+    expect(screen.getByText('Senior / PWD discount and VAT exemption')).toBeInTheDocument()
+    expect(screen.getByText(/50% of ₱10,000 covered/)).toBeInTheDocument()
+  })
+
   it('shows an empty note when no agency is endorsed', () => {
     const request = { totalBill: 5000, amountNeeded: 5000 }
     const funding = { committed: 0, outstanding: 0, balance: 5000, pct: 0 }
