@@ -56,7 +56,14 @@ const resizeImage = (file) => new Promise((resolve, reject) => {
 
 const isPdfDataUrl = (s) => typeof s === 'string' && s.startsWith('data:application/pdf')
 
-export default function SignedGLUploadModal({ app, existing, onClose }) {
+// onSave (optional): save the file somewhere else — the Certificate of
+// Eligibility reuses this modal (2026-11-16). It receives
+// { base64, contentType, fileName } and the modal closes when it resolves.
+// docLabel / short / title / subtitle name the document in the copy.
+export default function SignedGLUploadModal({
+  app, existing, onClose, onSave = null,
+  docLabel = 'Guarantee Letter', short = 'GL', title = null, subtitle = null,
+}) {
   const fileRef             = useRef()
   const panelRef            = useRef(null)
   const [uploading, setUploading] = useState(false)
@@ -139,6 +146,16 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
   const handleSave = async () => {
     if (!pendingPayload) { toast.error('Please select a file first.'); return }
     setUploading(true)
+    if (onSave) {
+      try {
+        await onSave({ base64: pendingPayload, contentType: pendingType, fileName: pendingName ?? (pendingType === 'application/pdf' ? 'signed.pdf' : 'signed.jpg') })
+        onClose()
+      } catch (err) {
+        console.error('[SignedUpload]', err?.code, err?.message, err)
+        toast.error('Upload failed. Please try again.')
+      } finally { setUploading(false) }
+      return
+    }
     try {
       // The GL belongs to the slice's hospital (multi-hospital Phase 2).
       await setDoc(doc(db, 'certificates', app.id), withTenant({
@@ -186,8 +203,8 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
-            <h2 id="signedgl-modal-title" className="text-base font-semibold text-gray-900">Upload Signed Guarantee Letter</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{app.patientName} · {app.appId}</p>
+            <h2 id="signedgl-modal-title" className="text-base font-semibold text-gray-900">{title ?? `Upload Signed ${docLabel}`}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{subtitle ?? `${app.patientName} · ${app.appId}`}</p>
           </div>
           <button onClick={onClose} disabled={uploading} aria-label="Close"
             className="text-gray-500 hover:text-gray-600 disabled:opacity-50"><MdClose size={20} /></button>
@@ -224,7 +241,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
               </div>
             ) : (
               <div className="relative">
-                <img src={previewUrl} alt="Guarantee Letter preview"
+                <img src={previewUrl} alt={`${docLabel} preview`}
                   className="w-full rounded-xl border border-gray-100 object-contain max-h-64" />
                 {showingPending && (
                   <button
@@ -258,7 +275,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
 
           {!previewUrl && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
-              Upload a scanned image or PDF of the signed Guarantee Letter. PDFs from office
+              Upload a scanned image or PDF of the signed {docLabel}. PDFs from office
               scanners should be at 150 DPI to stay under 700 KB. The patient will be able to
               download it from their Track Status page.
             </div>
@@ -278,7 +295,7 @@ export default function SignedGLUploadModal({ app, existing, onClose }) {
           )}
           {pendingPayload && (
             <button className="btn-primary text-sm" onClick={handleSave} disabled={uploading}>
-              {uploading ? 'Uploading…' : existing ? 'Replace Signed GL' : 'Upload Signed GL'}
+              {uploading ? 'Uploading…' : existing ? `Replace Signed ${short}` : `Upload Signed ${short}`}
             </button>
           )}
         </div>

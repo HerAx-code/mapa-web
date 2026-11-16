@@ -8,6 +8,7 @@ import Layout from '../../components/Layout'
 import BalanceHero from '../../components/patient/BalanceHero'
 import JourneyStrip from '../../components/patient/JourneyStrip'
 import JourneyStepper from '../../components/patient/JourneyStepper'
+import EligibilityCertNotice from '../../components/patient/EligibilityCertNotice'
 import PatientPage from '../../components/patient/PatientPage'
 import { useNavigate } from 'react-router-dom'
 import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore'
@@ -469,6 +470,8 @@ export default function TrackStatus() {
               {/* Shared balance hero — same signature centrepiece as the
                   Dashboard, so the two surfaces read as one flow. */}
               <BalanceHero request={activeRequest} funding={funding} t={t} navigate={navigate} />
+
+              <EligibilityCertNotice request={activeRequest} />
 
               <div className="card p-5">
               <p className="eyebrow mb-1">{t('patient.track.assistanceType')} · {activeRequest.assistanceType}</p>

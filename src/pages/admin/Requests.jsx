@@ -28,6 +28,7 @@ import QueueTabs from '../../components/admin/requests/QueueTabs'
 import RequestsTable from '../../components/admin/requests/RequestsTable'
 import BulkActionBar from '../../components/admin/requests/BulkActionBar'
 import PathToZeroBalance from '../../components/admin/requests/PathToZeroBalance'
+import EligibilityCertCard from '../../components/admin/requests/EligibilityCertCard'
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -1247,6 +1248,8 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                 Open
               </Link>
             </div>
+            {/* Certificate of Eligibility — from the completed intake sheet. */}
+            <EligibilityCertCard request={request} user={user} />
             {/* Optional prior coverage already applied to the bill (insurance /
                 PhilHealth / discount), recorded by the social worker at
                 assessment; the remainder is what gets endorsed to agencies. */}

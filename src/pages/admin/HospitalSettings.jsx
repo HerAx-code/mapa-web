@@ -123,9 +123,15 @@ function MeansTestCard({ user, tenantId, region }) {
   const saved = useHospitalSettings()
   const [line, setLine] = useState(null)   // null = not edited yet
   const [year, setYear] = useState(null)
+  const [cite, setCite] = useState(null)
+  const [citeShort, setCiteShort] = useState(null)
+  const [status, setStatus] = useState(null)
   const [saving, setSaving] = useState(false)
   const lineValue = line ?? (saved?.povertyLinePerCapita ?? '')
   const yearValue = year ?? (saved?.povertyLineYear ?? '')
+  const citeValue = cite ?? (saved?.povertyLineCitation ?? '')
+  const citeShortValue = citeShort ?? (saved?.povertyLineCitationShort ?? '')
+  const statusValue = status ?? (saved?.povertyLineStatus ?? 'current')
   const lineNum = String(lineValue).trim() === '' ? null : Number(lineValue)
   const lineBad = lineNum != null && (!Number.isFinite(lineNum) || lineNum <= 0 || lineNum >= 100000)
   const yearBad = lineNum != null && !yearValue
@@ -140,13 +146,18 @@ function MeansTestCard({ user, tenantId, region }) {
         povertyLinePerCapita: lineNum,
         povertyLineYear: lineNum == null ? null : Number(yearValue),
         region: region ?? '',
+        povertyLineCitation: String(citeValue).trim().slice(0, 1000),
+        povertyLineCitationShort: String(citeShortValue).trim().slice(0, 200),
+        povertyLineStatus: statusValue === 'interim' ? 'interim' : 'current',
         updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
       }, { merge: true })
       logAudit(user, {
         action: 'means_test_line_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
-        details: lineNum == null ? 'Poverty line cleared' : `Poverty line ₱${lineNum.toLocaleString()} per person per month (PSA ${yearValue}${region ? `, ${region}` : ''})`,
+        details: lineNum == null ? 'Poverty line cleared'
+          : `Poverty line ₱${lineNum.toLocaleString()} per person per month (PSA ${yearValue}${region ? `, ${region}` : ''}; ${statusValue})`
+            + (String(citeShortValue).trim() ? ` · source: ${String(citeShortValue).trim()}` : ''),
       })
-      setLine(null); setYear(null)
+      setLine(null); setYear(null); setCite(null); setCiteShort(null); setStatus(null)
       toast.success('Means-test setting saved.')
     } catch (e) {
       console.error(e)
@@ -177,6 +188,28 @@ function MeansTestCard({ user, tenantId, region }) {
           </select>
         </Field>
       </div>
+      <Field label="Source (citation)" hint="The PSA release, table and figure this line comes from. Kept with every classification.">
+        <textarea className="input resize-none" rows={3} maxLength={1000} value={citeValue}
+          onChange={(e) => setCite(e.target.value)} />
+      </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-start">
+        <Field label="Short citation" hint="Printed on the Certificate of Eligibility, e.g. “PSA 2023 Full Year Official Poverty Statistics, BARMM”.">
+          <input className="input" maxLength={200} value={citeShortValue} onChange={(e) => setCiteShort(e.target.value)} />
+        </Field>
+        <Field label="Status">
+          <div role="radiogroup" aria-label="Status" className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+            {[['current', 'Current'], ['interim', 'Interim']].map(([v, l]) => (
+              <button key={v} type="button" role="radio" aria-checked={statusValue === v} onClick={() => setStatus(v)}
+                className={`px-4 py-2 text-xs font-semibold min-h-[40px] ${statusValue === v ? 'bg-brand-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>{l}</button>
+            ))}
+          </div>
+        </Field>
+      </div>
+      {statusValue === 'interim' && (
+        <p className="text-xs text-amber-700 rounded-lg bg-amber-50 border border-amber-100 p-2.5">
+          Interim — a newer PSA release exists. Replace this figure once the newer regional threshold is confirmed.
+        </p>
+      )}
       {lineNum != null && !lineBad && (
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 rounded-lg bg-gray-50 p-3 tabular-nums">
           <div className="flex justify-between gap-2"><dt>Indigent (C3)</dt><dd>below {fmt(lineNum * 1.4)}</dd></div>
@@ -189,6 +222,58 @@ function MeansTestCard({ user, tenantId, region }) {
         <button className="btn-primary text-sm" onClick={save} disabled={saving || lineBad || yearBad}>
           {saving ? 'Saving…' : 'Save means-test setting'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+// Certificate of Eligibility: the "Noted by" signatory printed under the MSW.
+function CertificateCard({ user, tenantId }) {
+  const saved = useHospitalSettings()
+  const [name, setName] = useState(null)
+  const [title, setTitle] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const nameValue = name ?? (saved?.coeNotedByName ?? '')
+  const titleValue = title ?? (saved?.coeNotedByTitle ?? '')
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await setDoc(doc(db, 'hospitalSettings', tenantId), {
+        tenantId, coeNotedByName: nameValue.trim().slice(0, 100), coeNotedByTitle: titleValue.trim().slice(0, 100),
+        updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
+      }, { merge: true })
+      logAudit(user, {
+        action: 'coe_settings_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
+        details: `Certificate of Eligibility noted by: ${nameValue.trim() || '(blank line)'}${titleValue.trim() ? `, ${titleValue.trim()}` : ''}`,
+      })
+      setName(null); setTitle(null)
+      toast.success('Certificate settings saved.')
+    } catch (e) {
+      console.error(e)
+      toast.error('Could not save. Please try again.')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="card p-5 mt-4 space-y-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">Certificate of Eligibility</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Who notes the certificate under the social worker&apos;s signature. Leave the name blank to print a line to write on.
+          Numbers use your access-code prefix (e.g. {'CRMC-COE-2026-00001'}).
+        </p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Noted by (name)" hint="e.g. the Head of Medical Social Service, with RSW">
+          <input className="input" maxLength={100} value={nameValue} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Title" hint="Default: Head, Medical Social Service">
+          <input className="input" maxLength={100} value={titleValue} onChange={(e) => setTitle(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex justify-end">
+        <button className="btn-primary text-sm" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save certificate settings'}</button>
       </div>
     </div>
   )
@@ -295,6 +380,8 @@ export default function HospitalSettings() {
             <VerificationPolicyCard user={user} tenantId={tenantId} />
 
             <MeansTestCard user={user} tenantId={tenantId} region={hospital?.region ?? ''} />
+
+            <CertificateCard user={user} tenantId={tenantId} />
 
             <div className="card p-5 mt-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Set by the network</p>

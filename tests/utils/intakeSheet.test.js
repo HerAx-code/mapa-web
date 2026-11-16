@@ -44,7 +44,9 @@ describe('poverty basis', () => {
   it('prefers the line stored on the sheet over the hospital setting', () => {
     const settings = { povertyLinePerCapita: 3000, povertyLineYear: 2025, region: 'BARMM' }
     expect(povertyBasis({ classificationBasis: { povertyLine: 2577, year: 2023, region: 'BARMM' } }, settings).povertyLine).toBe(2577)
-    expect(povertyBasis({}, settings)).toEqual({ povertyLine: 3000, year: 2025, region: 'BARMM' })
+    expect(povertyBasis({}, settings)).toEqual({ povertyLine: 3000, year: 2025, region: 'BARMM', citationShort: '', status: '' })
+    expect(povertyBasis({}, { ...settings, povertyLineCitationShort: 'PSA 2025', povertyLineStatus: 'interim' }))
+      .toMatchObject({ citationShort: 'PSA 2025', status: 'interim' })
     expect(povertyBasis({}, null)).toBeNull()
     expect(sheetSuggestion({ monthlyIncome: 4000, householdSize: 1 }, { povertyLinePerCapita: L }).category).toBe('incapacitated_c2')
   })
