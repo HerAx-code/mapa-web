@@ -1,10 +1,12 @@
 import { MdInsights, MdAutoAwesome, MdCheckCircle, MdTrendingDown } from 'react-icons/md'
-import { MEANS_CATEGORIES, POVERTY_LINE_PER_CAPITA, meansTestSuggestion, billIncomeMonths, shortfallLabel } from '../utils/intakeSheet'
+import {
+  meansCategoryLabel, sheetSuggestion, povertyBasis, billIncomeMonths, maifipCatastrophic, shortfallLabel,
+} from '../utils/intakeSheet'
 
-// A bill this many months of household income or more is flagged as
-// catastrophic — the "financially incapacitated" case: a family above the
-// poverty line that still cannot pay. Advisory, like the rest of this panel.
-const CATASTROPHIC_MONTHS = 12
+// AO 2021-0044 band edges, as multiples of the poverty line, drawn as ticks
+// on the income bar (the bar spans 0 to 2.5× the line).
+const BAND_TICKS = [1.4, 1.8, 2.2]
+const BAR_MAX = 2.5
 
 // Decision-support panel for the Unified Intake Sheet's side rail: turns the
 // raw income / household / expenses the social worker enters into an
@@ -20,21 +22,21 @@ const CATASTROPHIC_MONTHS = 12
 // useful facts are how far under the line they sit and the peso shortfall.
 
 const peso = (n) => `₱${Math.round(Number(n) || 0).toLocaleString()}`
-const shortLabel = (cat) => (MEANS_CATEGORIES.find(c => c.value === cat)?.label ?? cat).split('—')[0].trim()
+const shortLabel = meansCategoryLabel
 
-export default function AssessmentSnapshot({ sheet, bill, showMeansTest = true, canEdit = false, onApplyMeansTest }) {
+// settings: the hospital's hospitalSettings (poverty line), used when the
+// sheet has no stored basis yet.
+export default function AssessmentSnapshot({ sheet, bill, settings = null, showMeansTest = true, canEdit = false, onApplyMeansTest }) {
   const billMonths = billIncomeMonths({ bill, monthlyIncome: sheet?.monthlyIncome })
+  const maifip = maifipCatastrophic({ bill, monthlyIncome: sheet?.monthlyIncome })
   const income = Number(sheet?.monthlyIncome) || 0
   const totalExpenses = Object.values(sheet?.expenses ?? {}).reduce((s, v) => s + (Number(v) || 0), 0)
-  const suggestion = meansTestSuggestion({ monthlyIncome: sheet?.monthlyIncome, householdSize: sheet?.householdSize })
-  // Reuse the suggestion's per-capita (single source of truth; null when income
-  // or household size is blank, so an unfilled income isn't shown as ₱0).
-  const perCapita = suggestion?.perCapita ?? null
-
-  // Income vs poverty line.
-  const povertyRatio = perCapita != null ? Math.min(perCapita / POVERTY_LINE_PER_CAPITA, 1) : null
-  const belowLine    = suggestion != null && suggestion.ratio < 1
-  const gapPct       = belowLine ? Math.round((1 - suggestion.ratio) * 100) : 0
+  const basis = povertyBasis(sheet, settings)
+  const suggestion = sheetSuggestion(sheet, settings)
+  const size = Number(sheet?.householdSize)
+  const perCapita = sheet?.monthlyIncome !== '' && sheet?.monthlyIncome != null && size > 0
+    ? (Number(sheet.monthlyIncome) || 0) / size : null
+  const ratio = perCapita != null && basis ? perCapita / basis.povertyLine : null
 
   // Expenses vs income — both bars share a scale so the income marker sits in
   // the right place even when expenses dwarf income.
@@ -63,15 +65,27 @@ export default function AssessmentSnapshot({ sheet, bill, showMeansTest = true, 
             <p className="text-2xl font-semibold leading-none text-gray-900 tabular-nums">{peso(perCapita)}</p>
             <p className="pb-0.5 text-xs text-gray-500">/ month</p>
           </div>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-            <div className={`h-full rounded-full ${belowLine ? 'bg-red-500' : 'bg-brand-500'}`}
-              style={{ width: `${Math.max(povertyRatio * 100, 4)}%` }} />
-          </div>
-          <p className="mt-2 text-xs text-gray-500 tabular-nums">Poverty line {peso(POVERTY_LINE_PER_CAPITA)} per person</p>
-          {belowLine && (
-            <p className="mt-3 inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-100 tabular-nums">
-              Below poverty line — {gapPct}% under
-            </p>
+          {ratio != null ? (
+            <>
+              {/* Ticks at 140 / 180 / 220% of the line: the AO 2021-0044 bands. */}
+              <div className="relative mt-3 h-1.5 w-full rounded-full bg-gray-100">
+                <div className={`h-full rounded-full ${ratio < 1.4 ? 'bg-red-500' : 'bg-brand-500'}`}
+                  style={{ width: `${Math.max(Math.min(ratio / BAR_MAX, 1) * 100, 4)}%` }} />
+                {BAND_TICKS.map(t => (
+                  <div key={t} className="absolute -top-1 h-3.5 w-px bg-gray-400" style={{ left: `${(t / BAR_MAX) * 100}%` }} aria-hidden="true" />
+                ))}
+              </div>
+              <div className="relative mt-1 h-3 text-[10px] text-gray-500 tabular-nums" aria-hidden="true">
+                {BAND_TICKS.map(t => (
+                  <span key={t} className="absolute -translate-x-1/2" style={{ left: `${(t / BAR_MAX) * 100}%` }}>{Math.round(t * 100)}%</span>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-500 tabular-nums">
+                {Math.round(ratio * 100)}% of the poverty line ({peso(basis.povertyLine)}/person{basis.region || basis.year ? ` · ${[basis.region, basis.year].filter(Boolean).join(' ')}` : ''})
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-amber-700">Poverty line not set — ask your Hospital Admin (Hospital Settings).</p>
           )}
         </div>
       )}
@@ -134,9 +148,9 @@ export default function AssessmentSnapshot({ sheet, bill, showMeansTest = true, 
             </p>
           </div>
           <p className="mt-2 text-xs text-gray-500 tabular-nums">Amount needed {peso(bill)}</p>
-          {billMonths.months >= CATASTROPHIC_MONTHS && (
-            <p className="mt-3 inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-100">
-              Catastrophic — {CATASTROPHIC_MONTHS}+ months of income
+          {maifip && (
+            <p className="mt-3 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-100 leading-snug">
+              Over 10% of a year&apos;s household income — may qualify for MAIFIP as financially incapacitated (catastrophic spending, DOH AO 2026-0031).
             </p>
           )}
         </div>
@@ -148,11 +162,16 @@ export default function AssessmentSnapshot({ sheet, bill, showMeansTest = true, 
           <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Suggested means-test</p>
           <div className="mt-1.5 flex items-baseline justify-between gap-2">
             <span className="text-sm font-semibold text-gray-900">{shortLabel(suggestion.category)}</span>
-            {/* Floor to a tenth so the displayed multiple never rounds up across
-                a band boundary (e.g. 0.96 shows 0.9×, not 1.0×, beside Indigent). */}
-            <span className="tabular-nums text-xs text-gray-500">{(Math.floor(suggestion.ratio * 10) / 10).toFixed(1)}× line</span>
+            {/* Floor to a whole percent so the figure never rounds across a band edge. */}
+            {suggestion.ratio != null && (
+              <span className="tabular-nums text-xs text-gray-500">{Math.floor(suggestion.ratio * 100)}% of line</span>
+            )}
           </div>
-          <p className="mt-1.5 text-[11px] leading-4 text-gray-500">Advisory only — from income ÷ household size. You confirm the category.</p>
+          <p className="mt-1.5 text-[11px] leading-4 text-gray-500">
+            {suggestion.via4Ps
+              ? 'Advisory only — 4Ps member (Pantawid ID seen). You confirm the category.'
+              : 'Advisory only — from income ÷ household size (DOH AO 2021-0044). You confirm the category.'}
+          </p>
           {canEdit && current !== suggestion.category && (
             <button type="button" onClick={() => onApplyMeansTest?.(suggestion.category)}
               className="mt-3 inline-flex h-9 items-center gap-1 rounded-md border border-brand-200 bg-white px-3 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50">

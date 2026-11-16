@@ -79,16 +79,22 @@ intakeSheet: {
 
 All other fields are optional. Empty fields on paper forms are normal, so MAPA mirrors that.
 
-## Means-test categories
+## Classification (DOH AO 2021-0044, from 2026-11-16)
 
-| Category | Typical threshold (Philippine poverty line, 2024) | Notes |
+Household monthly income per person (total ÷ household size; expenses are not deducted) compared with the PSA poverty line of the hospital's region, per person per month. See reports/DOH patient classification and CoE.md.
+
+| Value | Class | Income per person vs poverty line |
 |---|---|---|
-| `indigent` | Below poverty threshold (~₱13,000 / month for a family of 5) | Eligible for full assistance |
-| `marginalized` | Within 1.5× poverty threshold | Eligible for partial assistance |
-| `low_income` | Within 2× poverty threshold | Case-by-case |
-| `above_threshold` | Above 2× poverty threshold | Generally not eligible — documented for transparency |
+| `indigent_c3` | Indigent (C3) | below 140% |
+| `incapacitated_c2` | Financially incapacitated (C2) | 140% to 180% (exactly 140% is C2) |
+| `incapacitated_c1` | Financially incapacitated (C1) | above 180% up to 220% |
+| `capable` | Financially capable | above 220% |
 
-Classification is **manual** by the social worker. The sheet shows an **advisory** suggestion (income ÷ household size vs `VITE_POVERTY_LINE_PER_CAPITA`, default ₱2,600) and a **bill vs income** figure (months of household income the amount needed equals; flagged at 12+ months as catastrophic, the "financially incapacitated" case). Choosing a category other than the suggestion, or Above Threshold, requires a written reason, which is saved to the audit log.
+- **The poverty line** is set per hospital by its Hospital Admin (Hospital Settings → Means test: amount and PSA year; the region comes from the hospital record). Nothing is built in; without a line there is no suggestion. The line used is stored on the sheet (`classificationBasis`) when the social worker picks a class.
+- **Classification is manual**; the suggestion is advisory. A 4Ps member (`is4Ps`, Pantawid ID seen) is suggested C3. A class other than the suggestion, or Financially capable, needs a written reason (audit-logged).
+- **Also recorded:** supporting circumstances (`circumstances`, AO VI.A.4–5) and validity (`classificationValidMonths`, 6 or 12).
+- **MAIFIP (AO 2026-0031):** the panel flags a bill over 10% of a year's household income ("financially incapacitated" by catastrophic spending).
+- **Old scale:** `indigent`, `marginalized`, `low_income`, `above_threshold` (1× / 1.5× / 2× a national ₱2,600 line) remain on records classified before 2026-11-16, shown as "old scale" and never reused.
 
 **Locking and change tracking (staff-only fields):**
 - `factsLocked` / `factsLockedAt` / `factsLockedBy`: set to locked automatically the first time the assessment is complete. While locked, Firestore rejects every patient write to the intake. A social worker can unlock it so the patient can correct an answer, and it does not re-lock by itself. Lock and unlock are audit-logged, and unlocking notifies the patient.

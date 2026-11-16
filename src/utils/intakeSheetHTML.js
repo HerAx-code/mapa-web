@@ -4,7 +4,8 @@
 
 import { tsToDate } from './dates'
 import { ORG } from '../config/org'
-import { relationshipLabel, shortfallLabel } from './intakeSheet'
+import { relationshipLabel, shortfallLabel, SUPPORTING_CIRCUMSTANCES } from './intakeSheet'
+import { classificationSummary } from './classificationReuse'
 
 // HTML-escape every stored value before it goes into the markup. Most of the
 // sheet is typed by the patient (names, occupation, diagnosis, employer, …) and
@@ -43,12 +44,10 @@ const fmtIsoDate = (iso) => {
   return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-const meansLabel = (key) => ({
-  indigent:        'Indigent',
-  marginalized:    'Marginalized',
-  low_income:      'Low Income',
-  above_threshold: 'Above Threshold',
-}[key] ?? '—')
+// AO 2021-0044 circumstances, with "Other" as typed.
+const circumstancesText = (s) => (s.circumstances ?? [])
+  .map(v => v === 'other' ? (s.circumstancesOther?.trim() || 'Other') : (SUPPORTING_CIRCUMSTANCES.find(c => c.value === v)?.label ?? v))
+  .join(', ')
 
 const empLabel = (key) => ({
   employed:        'Employed',
@@ -304,13 +303,18 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser, org = OR
   <!-- F. Social Worker Assessment -->
   <div class="section-header">F. Social Worker Assessment</div>
   <div class="field" style="margin: 4px 0 8px; border-bottom: none;">
-    <span class="field-label">Means-Test Category:</span>
+    <span class="field-label">Classification (DOH AO 2021-0044):</span>
     <span class="field-value">${s.meansTestCategory
-      ? `<span class="means">${meansLabel(s.meansTestCategory)}</span>`
+      ? `<span class="means">${esc(classificationSummary(s))}</span>`
       : '<span class="empty">— not yet classified —</span>'}</span>
   </div>
+  ${(s.circumstances ?? []).length ? `
+  <div class="field" style="margin: 0 0 8px; border-bottom: none;">
+    <span class="field-label">Supporting circumstances:</span>
+    <span class="field-value">${esc(circumstancesText(s))}</span>
+  </div>` : ''}
   ${s.meansTestOverrideReason?.trim() ? `
-  <p style="font-size: 11px; font-weight: bold; color: #555; margin: 10px 0 2px;">Reason for Category</p>
+  <p style="font-size: 11px; font-weight: bold; color: #555; margin: 10px 0 2px;">Reason for Classification</p>
   <div class="narrative">${esc(s.meansTestOverrideReason.trim())}</div>` : ''}
 
   <p style="font-size: 11px; font-weight: bold; color: #555; margin: 10px 0 2px;">Social Case Study Narrative</p>

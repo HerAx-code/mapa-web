@@ -1,12 +1,54 @@
 // Shared helpers for the Unified Intake Sheet.
 
+// Patient classification per DOH AO 2021-0044 (2026-11-16; reports/DOH
+// patient classification and CoE.md): household monthly income per person vs
+// the PSA poverty line of the hospital's region. Below 140% Indigent (C3);
+// 140–180% Financially incapacitated (C2); above 180% up to 220% (C1); above
+// 220% Financially capable. Exactly 140% is C2 (the AO's body text and Annex A;
+// its p.5 table differs). Labels read "Name — band".
 export const MEANS_CATEGORIES = [
   { value: '',                 label: 'Select category...' },
-  { value: 'indigent',         label: 'Indigent — below poverty threshold' },
-  { value: 'marginalized',     label: 'Marginalized — within 1.5× poverty threshold' },
-  { value: 'low_income',       label: 'Low Income — within 2× poverty threshold' },
-  { value: 'above_threshold',  label: 'Above Threshold — generally not eligible' },
+  { value: 'indigent_c3',      label: 'Indigent (C3) — below 140% of the poverty line' },
+  { value: 'incapacitated_c2', label: 'Financially incapacitated (C2) — 140% to 180%' },
+  { value: 'incapacitated_c1', label: 'Financially incapacitated (C1) — above 180% up to 220%' },
+  { value: 'capable',          label: 'Financially capable — above 220%' },
 ]
+
+// The scale used before 2026-11-16. Stored records keep their value (a
+// decision made on that scale); they are shown as "old scale" and never reused.
+export const LEGACY_MEANS_CATEGORIES = {
+  indigent:        'Indigent',
+  marginalized:    'Marginalized',
+  low_income:      'Low income',
+  above_threshold: 'Above threshold',
+}
+export const isLegacyCategory = (v) => !!v && v in LEGACY_MEANS_CATEGORIES
+
+// Short display name for a stored category, new or old scale.
+export const meansCategoryLabel = (v) => {
+  if (!v) return ''
+  if (isLegacyCategory(v)) return `${LEGACY_MEANS_CATEGORIES[v]} (old scale)`
+  return (MEANS_CATEGORIES.find(c => c.value === v)?.label ?? v).split('—')[0].trim()
+}
+
+// AO 2021-0044 modifiers that support a class below Capable (VI.A.4–5).
+export const SUPPORTING_CIRCUMSTANCES = [
+  { value: 'elderly',           label: 'Senior citizen' },
+  { value: 'pwd',               label: 'Person with disability' },
+  { value: 'solo_parent',       label: 'Solo parent' },
+  { value: 'indigenous',        label: 'Indigenous people' },
+  { value: 'crisis',            label: 'Crisis situation' },
+  { value: 'no_support',        label: 'No support system' },
+  { value: 'orphan',            label: 'Orphan' },
+  { value: 'informal_settler',  label: 'Informal settler' },
+  { value: 'displaced',         label: 'Displaced person' },
+  { value: 'complex_condition', label: 'Complex medical condition' },
+  { value: 'other',             label: 'Other' },
+]
+
+// How long a classification stays valid (AO 2021-0044: 6 months to a year,
+// by length of treatment). The social worker picks one.
+export const CLASSIFICATION_VALIDITY_MONTHS = [6, 12]
 
 export const EMPLOYMENT_TYPES = [
   { value: '',              label: 'Select...' },
@@ -75,16 +117,35 @@ export function expensesLookMistyped(s) {
   return Number.isFinite(income) && income > 0 && expenseTotal(s) > EXPENSE_DOUBLE_CHECK_RATIO * income
 }
 
-const env = (typeof import.meta !== 'undefined' && import.meta.env) || {}
+// The poverty line a classification uses: the one stored on the sheet when it
+// was classified (so agencies, prints and later views see the same basis),
+// else the hospital's current setting (hospitalSettings.povertyLinePerCapita,
+// entered by its Hospital Admin from the PSA figure for its region). null when
+// neither is set — no suggestion is offered then; nothing is hard-coded.
+export function povertyBasis(sheet, settings) {
+  const b = sheet?.classificationBasis
+  if (b && Number(b.povertyLine) > 0) return { povertyLine: Number(b.povertyLine), year: b.year ?? null, region: b.region ?? '' }
+  const line = Number(settings?.povertyLinePerCapita)
+  if (line > 0) return { povertyLine: line, year: settings.povertyLineYear ?? null, region: settings.region ?? '' }
+  return null
+}
 
-// Per-capita monthly poverty threshold the advisory means-test compares to.
-// Default ₱2,600 (the ~₱13,000/month family-of-5 line ÷ 5, 2024 national basis;
-// see docs/intake-sheet-fields.md). Set VITE_POVERTY_LINE_PER_CAPITA to the
-// current official PSA figure for the region at build time. It only drives an
-// ADVISORY suggestion — classification stays the social worker's judgment.
-export const POVERTY_LINE_PER_CAPITA = Number(env.VITE_POVERTY_LINE_PER_CAPITA) > 0
-  ? Number(env.VITE_POVERTY_LINE_PER_CAPITA)
-  : 2600
+// Per-person monthly income cut-offs for a poverty line.
+export const classCutoffs = (povertyLine) => ({
+  c3Below: povertyLine * 1.4,
+  c2UpTo:  povertyLine * 1.8,
+  c1UpTo:  povertyLine * 2.2,
+})
+
+// MAIFIP (DOH AO 2026-0031): a household not classed indigent is "financially
+// incapacitated" when out-of-pocket costs exceed 10% of household income
+// (read here as a year's income). Advisory. null when inputs are blank.
+export function maifipCatastrophic({ bill, monthlyIncome } = {}) {
+  if (bill === '' || bill == null || monthlyIncome === '' || monthlyIncome == null) return null
+  const b = Number(bill), inc = Number(monthlyIncome)
+  if (!Number.isFinite(b) || b <= 0 || !Number.isFinite(inc) || inc < 0) return null
+  return b > 0.1 * 12 * inc
+}
 
 // How many months of the household's whole income the bill equals — the
 // "financially incapacitated" signal: a family above the poverty line can
@@ -98,36 +159,52 @@ export function billIncomeMonths({ bill, monthlyIncome } = {}) {
   return { months: inc === 0 ? Infinity : b / inc }
 }
 
-// Advisory means-test suggestion from income-per-capita vs the poverty line.
-// Returns { perCapita, ratio, category } or null when inputs are insufficient.
-// Bands mirror MEANS_CATEGORIES: <1× indigent · <1.5× marginalized ·
-// <2× low_income · ≥2× above_threshold.
-export function meansTestSuggestion({ monthlyIncome, householdSize } = {}) {
-  // Blank ('' / null / undefined) means "not entered yet" — no suggestion. A
-  // real 0 income still classifies (Number('') would otherwise read as 0).
+// Per-person income for blank-safe inputs, or null.
+function perCapitaOf(monthlyIncome, householdSize) {
+  // Blank ('' / null / undefined) means "not entered yet". A real 0 income
+  // still counts (Number('') would otherwise read as 0).
   if (monthlyIncome === '' || monthlyIncome == null) return null
   if (householdSize === '' || householdSize == null) return null
   const income = Number(monthlyIncome)
   const size   = Number(householdSize)
   if (!Number.isFinite(income) || income < 0) return null
   if (!Number.isFinite(size) || size <= 0) return null
-  const perCapita = income / size
-  const ratio = perCapita / POVERTY_LINE_PER_CAPITA
-  const category = ratio < 1 ? 'indigent'
-    : ratio < 1.5 ? 'marginalized'
-    : ratio < 2 ? 'low_income'
-    : 'above_threshold'
-  return { perCapita, ratio, category }
+  return income / size
 }
 
+// Advisory classification (AO 2021-0044 bands) from income per person vs the
+// poverty line. A 4Ps member (Pantawid ID seen) is suggested Indigent (C3),
+// as Malasakit issues their Certificate of Eligibility on the ID (JAO
+// 2020-0001). Returns { perCapita, ratio, category, via4Ps } or null when
+// there is nothing to suggest from (no poverty line, or blank income/size).
+export function meansTestSuggestion({ monthlyIncome, householdSize, povertyLine, is4Ps = false } = {}) {
+  const perCapita = perCapitaOf(monthlyIncome, householdSize)
+  const line = Number(povertyLine)
+  const ratio = perCapita != null && line > 0 ? perCapita / line : null
+  if (is4Ps) return { perCapita, ratio, category: 'indigent_c3', via4Ps: true }
+  if (ratio == null) return null
+  const category = ratio < 1.4 ? 'indigent_c3'
+    : ratio <= 1.8 ? 'incapacitated_c2'
+    : ratio <= 2.2 ? 'incapacitated_c1'
+    : 'capable'
+  return { perCapita, ratio, category, via4Ps: false }
+}
+
+// The suggestion for a sheet, using its own stored basis (or `settings`).
+export const sheetSuggestion = (s, settings) => meansTestSuggestion({
+  monthlyIncome: s?.monthlyIncome, householdSize: s?.householdSize,
+  povertyLine: povertyBasis(s, settings)?.povertyLine, is4Ps: !!s?.is4Ps,
+})
+
 // A written reason is required when the social worker's category departs from
-// the advisory suggestion, or when they classify a patient Above Threshold —
-// the decision stays theirs, but every exception is explained and audited.
-export function needsMeansTestReason(s) {
+// the advisory suggestion, or when they classify a patient Financially capable
+// — the decision stays theirs, but every exception is explained and audited.
+// Old-scale categories never ask for one (they were decided on that scale).
+export function needsMeansTestReason(s, settings) {
   const category = s?.meansTestCategory
-  if (!category) return false
-  if (category === 'above_threshold') return true
-  const suggestion = meansTestSuggestion({ monthlyIncome: s.monthlyIncome, householdSize: s.householdSize })
+  if (!category || isLegacyCategory(category)) return false
+  if (category === 'capable') return true
+  const suggestion = sheetSuggestion(s, settings)
   return !!suggestion && suggestion.category !== category
 }
 
@@ -172,6 +249,12 @@ export const blankSheet = () => ({
   recommendation:    '',
   meansTestCategory: '',
   meansTestOverrideReason: '',
+  // AO 2021-0044 classification details (2026-11-16).
+  is4Ps:             false,     // 4Ps member, Pantawid ID seen
+  circumstances:     [],        // SUPPORTING_CIRCUMSTANCES values
+  circumstancesOther:'',
+  classificationValidMonths: 6, // CLASSIFICATION_VALIDITY_MONTHS
+  classificationBasis: null,    // { povertyLine, year, region } stamped when classified
 })
 
 // Revision 11: the bill amount is confirmed by staff against the uploaded
