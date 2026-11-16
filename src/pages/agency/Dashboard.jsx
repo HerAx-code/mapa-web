@@ -13,7 +13,7 @@ import {
   MdCheckCircleOutline,
 } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
-import { PERIOD_NOUN, PERIOD_ADJECTIVE, GL_VALIDITY_DAYS } from '../../utils/constants'
+import { PERIOD_NOUN, PERIOD_ADJECTIVE, isGLExpired } from '../../utils/constants'
 import {
   collection, query, where, onSnapshot, doc, getDoc, getDocs,
   updateDoc, writeBatch, increment, serverTimestamp, addDoc,
@@ -38,7 +38,7 @@ const LOW_BALANCE_FRAC = 0.10
 // Stale-period detection: monthly periods older than this trigger a banner.
 const STALE_PERIOD_DAYS = 31
 
-// GL_VALIDITY_DAYS imported from utils/constants (single source of truth).
+// GL expiry rule: isGLExpired() in utils/constants (single source of truth).
 // Application status badge + label rendering is delegated to <StatusBadge />
 // which reads APP_STATUS_CONFIG from constants.js.
 
@@ -108,7 +108,9 @@ export default function AgencyDashboard() {
   }, [user?.agencyId])
 
   // Sweep expired GLs on Dashboard load. A GL is expired when:
-  //   glStatus === 'issued' AND approvedAt is older than GL_VALIDITY_DAYS.
+  //   glStatus === 'issued' AND it is past its validity (isGLExpired: the
+  //   letter's own glExpiresAt, else 30 days for letters approved before
+  //   2026-11-16).
   // For each such application: flip glStatus → 'expired', release the
   // committed budget back to the agency. Atomically per application.
   // Audit-logged so super_admin can see automated sweeps.
@@ -125,12 +127,7 @@ export default function AgencyDashboard() {
         const now = Date.now()
         const expired = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .filter(a => {
-            const d = tsToDate(a.approvedAt)
-            if (!d) return false
-            const days = Math.floor((now - d.getTime()) / 86400000)
-            return days > GL_VALIDITY_DAYS
-          })
+          .filter(a => isGLExpired(a, now))
         if (cancelled || expired.length === 0) return
 
         // R3 fix: each expiry is now a runTransaction that re-syncs

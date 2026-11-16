@@ -194,31 +194,53 @@ export const SLOT_STATUS = (remaining, total) => {
 // since-removed Navbar/NotificationPanel components. Real notifications
 // come from Firestore via the Layout's onSnapshot subscription.
 
-// Guarantee Letter validity window — counted from approvedAt. After this
-// many days a GL whose glStatus is still 'issued' is considered expired
-// at the provider and the committed budget should be released.
-// Surfaced on both patient (TrackStatus expiry banner) and agency
-// (Inbox / ApplicationDetail / Dashboard expiry handlers).
-export const GL_VALIDITY_DAYS = 30
+// Guarantee Letter validity (owner decision 2026-11-16: "usually 10 days upon
+// issuance"). Each GL approved from that date stores its own expiry,
+// `glExpiresAt` = the start (Manila time) of the 11th day after issue, so a
+// GL issued 16 Nov is valid until the end of 26 Nov. GLs approved before
+// carry no glExpiresAt and keep the 30 days they were printed with
+// (LEGACY_GL_VALIDITY_DAYS). Mirrored in functions/src/glExpirySweep.js.
+export const GL_VALIDITY_DAYS = 10
+export const LEGACY_GL_VALIDITY_DAYS = 30
+const DAY_MS = 86400000
+const MANILA_OFFSET_MS = 8 * 3600000   // PH has no daylight saving
 
-// "Is this GL past its validity window even though glStatus still says
-// 'issued'?" The post-window state machine flip to glStatus='expired'
-// happens via the lazy expiry sweep on agency/Dashboard (or a future
-// Cloud Function). Until that flip lands, the UI uses isGLExpired() to
-// show "Expired (action needed)" so the coordinator knows to release
-// committed budget. Duplicated in agency/Inbox + agency/ApplicationDetail
-// before extraction; now sourced from here so the threshold and the
-// answer match across surfaces.
-export const isGLExpired = (app) => {
-  if (app?.glStatus !== 'issued') return false
-  const issued = app.approvedAt?.toDate
-    ? app.approvedAt.toDate()
-    : (app.approvedAt ? new Date(app.approvedAt) : null)
-  if (!issued) return false
-  const days = Math.floor((Date.now() - issued.getTime()) / 86400000)
-  return days > GL_VALIDITY_DAYS
+const tsMillis = (ts) => ts?.toMillis ? ts.toMillis()
+  : ts?.toDate ? ts.toDate().getTime()
+  : typeof ts?.seconds === 'number' ? ts.seconds * 1000
+  : ts ? new Date(ts).getTime() : null
+
+// The instant a GL issued at `issuedMs` stops being valid (new rule).
+export const glExpiresAtFor = (issuedMs, days = GL_VALIDITY_DAYS) => {
+  const local = new Date(issuedMs + MANILA_OFFSET_MS)
+  return Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + days + 1) - MANILA_OFFSET_MS
 }
 
+// When this GL stops being valid (ms), or null without an issue date:
+// its stored glExpiresAt, else the legacy 30 days from approvedAt.
+export const glExpiryMs = (app) => {
+  const stored = tsMillis(app?.glExpiresAt)
+  if (stored != null && !Number.isNaN(stored)) return stored
+  const issued = tsMillis(app?.approvedAt)
+  if (issued == null || Number.isNaN(issued)) return null
+  return issued + (LEGACY_GL_VALIDITY_DAYS + 1) * DAY_MS
+}
+
+// The last day the GL is valid, for "valid until …" copy.
+export const glValidUntil = (app) => {
+  const ms = glExpiryMs(app)
+  return ms == null ? null : new Date(ms - 1)
+}
+
+// "Is this GL past its validity window even though glStatus still says
+// 'issued'?" The flip to glStatus='expired' happens via the expiry sweep
+// (agency/Dashboard and the glExpirySweep Cloud Function). Until then the UI
+// shows "Expired (action needed)" so the coordinator releases the budget.
+export const isGLExpired = (app, now = Date.now()) => {
+  if (app?.glStatus !== 'issued') return false
+  const ms = glExpiryMs(app)
+  return ms != null && now >= ms
+}
 // Default window for the pre-expiry "act now" warning. 3 days is the
 // triage signal: still time for the patient to redeem, but tight enough
 // that the agency coordinator should nudge them today rather than later.
@@ -231,15 +253,13 @@ export const GL_EXPIRING_SOON_DAYS = 3
 // null when GL is not in 'issued' state or the issued-at date is missing.
 // For the simple "is it past?" answer use isGLExpired() — this helper
 // exists for "expires in N days" copy.
-export const glDaysRemaining = (app) => {
+export const glDaysRemaining = (app, now = Date.now()) => {
   if (app?.glStatus !== 'issued') return null
-  const issued = app.approvedAt?.toDate
-    ? app.approvedAt.toDate()
-    : (app.approvedAt ? new Date(app.approvedAt) : null)
-  if (!issued) return null
-  const daysSinceIssue = Math.floor((Date.now() - issued.getTime()) / 86400000)
-  return GL_VALIDITY_DAYS - daysSinceIssue
+  const ms = glExpiryMs(app)
+  if (ms == null) return null
+  return Math.ceil((ms - now) / DAY_MS) - 1
 }
+
 
 // Pre-expiry triage signal: GL is issued, still valid, but its validity
 // window closes within the next `withinDays` days. Use this to surface

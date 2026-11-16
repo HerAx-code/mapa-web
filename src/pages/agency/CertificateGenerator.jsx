@@ -9,9 +9,19 @@ import toast from 'react-hot-toast'
 import { notify } from '../../utils/notifications'
 import { tsToDate } from '../../utils/dates'
 import { ORG } from '../../config/org'
+import { glValidUntil, GL_VALIDITY_DAYS } from '../../utils/constants'
 import SignedGLUploadModal from '../../components/SignedGLUploadModal'
 
 // ── Certificate HTML builder ──────────────────────────────────────────────
+
+// Validity printed on the letter: its own expiry date (10 days from issuance
+// since 2026-11-16; older letters keep their 30 days). See utils/constants.
+const glValidityLine = (app) => {
+  const until = glValidUntil(app)
+  if (!until) return `This Guarantee Letter is valid for <strong>${GL_VALIDITY_DAYS} days</strong> from date of issuance.`
+  const date = until.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })
+  return `This Guarantee Letter is valid until <strong>${date}</strong>.`
+}
 
 export const buildCertificateHTML = ({ app, patient, approvalDate, issueDate, signatory, preview = false }) => `
 <!DOCTYPE html>
@@ -235,7 +245,7 @@ export const buildCertificateHTML = ({ app, patient, approvalDate, issueDate, si
 
   <div class="validity-wrap">
     <span class="validity">
-      This Guarantee Letter is valid for <strong>30 days</strong> from date of issuance.<br/>
+      ${glValidityLine(app)}<br/>
       The named provider may bill ${app.agencyName} directly up to the guaranteed amount. The patient shall not be liable for the guaranteed portion.
     </span>
   </div>

@@ -12,7 +12,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
-import { GL_VALIDITY_DAYS, isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
+import { isGLExpired, isGLExpiringSoon, glDaysRemaining, glExpiresAtFor } from '../../utils/constants'
 import { tsToDate, fmtDate } from '../../utils/dates'
 import { computeFunding, deriveRequestFinancials, syncedRequestStatus, isRequestClosedByGateway } from '../../utils/requests'
 import { APPROVAL_COOLDOWN_DAYS, approvalMarkId, approvalCooldownBlock } from '../../utils/approvalCooldown'
@@ -431,6 +431,9 @@ export default function ApplicationDetail() {
           approvedByUid:       approvedByUid ?? null,
           approvedAt:          serverTimestamp(),
           glStatus:            'issued',
+          // Valid 10 days from issuance (owner decision 2026-11-16); stored
+          // per letter so older letters keep the 30 days printed on them.
+          glExpiresAt:         Timestamp.fromMillis(glExpiresAtFor(Date.now())),
           glRedeemedAt:        null,
           updatedAt:           serverTimestamp(),
         })
@@ -845,6 +848,7 @@ export default function ApplicationDetail() {
           status:              'reviewing',
           approvedAt:          null,
           glStatus:            null,
+          glExpiresAt:         null,
           glRedeemedAt:        null,
           cooldownUntilAt:     cooldownUntil,
           reversedAt:          serverTimestamp(),
@@ -1627,7 +1631,7 @@ export default function ApplicationDetail() {
           onClose={() => setShowConfirmExpire(false)}
           onConfirm={performExpireGL}
           title="Mark Guarantee Letter as Expired?"
-          body={`The 30-day validity window has passed. The committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} will be released back to the agency.`}
+          body={`The GL is past its validity date. The committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} will be released back to the agency.`}
           tone="warning"
           confirmLabel="Mark Expired"
           confirmLabelBusy="Marking…"

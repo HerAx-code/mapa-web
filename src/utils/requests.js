@@ -200,7 +200,7 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 //   - rejected (agency turned it down — terminal)
 //   - certificate + glStatus 'redeemed' (patient claimed at agency office)
 //   - certificate + glStatus 'expired' (lapsed past validity window)
-//   - certificate + past GL_VALIDITY_DAYS (sweep hasn't flipped glStatus yet)
+//   - certificate + past its validity (isGLExpired; sweep hasn't flipped glStatus yet)
 //
 // Use this to decide whether a slice belongs in the patient's "In Progress"
 // view (active, still has a downloadable GL / pending action) or the "Past

@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLiveData } from '../../contexts/LiveDataContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { GL_VALIDITY_DAYS, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
+import { glExpiryMs, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { computeFunding, isSliceTerminal } from '../../utils/requests'
 import { peso } from '../../utils/format'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
@@ -49,15 +49,15 @@ const formatDate = (ts) => {
   return d ? d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : null
 }
 
-// GL_VALIDITY_DAYS imported from utils/constants so the patient view
-// shares the single source of truth that the agency-side enforces.
+// Expiry from utils/constants (glExpiryMs): the letter's own glExpiresAt
+// (10 days, from 2026-11-16), else the 30 days older letters were printed with.
+// expiresAt is the last valid moment, for "valid until" copy.
 const glExpiryInfo = (app) => {
   if (app?.status !== 'certificate') return null
-  const issued = app.approvedAt?.toDate?.() ?? null
-  if (!issued) return null
-  const expiresAt = new Date(issued.getTime() + GL_VALIDITY_DAYS * 86_400_000)
-  const daysLeft  = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000)
-  return { expiresAt, daysLeft, expired: daysLeft < 0 }
+  const ms = glExpiryMs(app)
+  if (ms == null) return null
+  const now = Date.now()
+  return { expiresAt: new Date(ms - 1), daysLeft: Math.ceil((ms - now) / 86_400_000) - 1, expired: now >= ms }
 }
 
 // Build stages from application status. Takes `t` so the stage labels/notes

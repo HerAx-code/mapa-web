@@ -594,7 +594,7 @@
         },
         {
           "q": "Ano ang Guarantee Letter?",
-          "a": "Ang Guarantee Letter (GL) ay opisyal na dokumentong inisyu ng ahensya kapag inaprubahan nito ang bahagi ng inyong bayarin. Ipakita ito sa provider upang ma-claim ang tulong. May 30 araw na bisa mula sa pag-isyu. Maaaring makatanggap ng higit sa isang GL kapag maraming ahensya ang tumulong."
+          "a": "Ang Guarantee Letter (GL) ay opisyal na dokumentong inisyu ng ahensya kapag inaprubahan nito ang bahagi ng inyong bayarin. Ipakita ito sa provider upang ma-claim ang tulong. Nakasulat sa bawat GL kung hanggang kailan ito may bisa, karaniwang 10 araw mula sa pag-isyu. Maaaring makatanggap ng higit sa isang GL kapag maraming ahensya ang tumulong."
         },
         {
           "q": "Paano ko malalaman ang status ng aking kahilingan?",
@@ -1486,7 +1486,7 @@
           "s3": "Hintayin na ma-upload ng ahensya ang nilagdaang kopya. Makakatanggap kayo ng abiso sa portal kapag handa na.",
           "s4": "I-click ang thumbnail upang tingnan ang nilagdaang Guarantee Letter, o i-click ang Download upang mag-save ng kopya sa inyong device.",
           "s5": "Iharap ang nilagdaang Guarantee Letter (naka-print o ipinakita sa inyong telepono) sa pinangalanang provider (hospital billing, pharmacy, atbp.).",
-          "note": "Ang Guarantee Letter ay may bisa nang 30 araw mula sa petsa ng pagbibigay. Maaaring direktang singilin ng pinangalanang provider ang ahensya para sa garantisadong halaga — hindi ninyo pananagutan ang garantisadong porsyon."
+          "note": "May bisa ang Guarantee Letter hanggang sa petsang nakasulat dito, karaniwang 10 araw mula sa pagbibigay. Gamitin ito bago ang petsang iyon. Maaaring direktang singilin ng pinangalanang provider ang ahensya para sa garantisadong halaga — hindi ninyo pananagutan ang garantisadong porsyon."
         },
         "contact": {
           "title": "Paano ako makikipag-ugnayan sa ospital o sa isang ahensya?",

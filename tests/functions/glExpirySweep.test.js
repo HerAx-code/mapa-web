@@ -173,3 +173,23 @@ describe('handleGLExpirySweep', () => {
     expect(result.cutoffISO).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
   })
 })
+
+// 2026-11-16: each GL stores glExpiresAt (10 days); older GLs keep 30 days.
+// With nowMs the sweep expires only candidates past their own validity.
+describe('per-letter validity (nowMs)', () => {
+  const DAY = 86400000
+  const ts = (ms) => ({ toMillis: () => ms })
+  const now = Date.UTC(2026, 11, 1)
+  it('expires a new GL past glExpiresAt and a legacy GL past 30 days, not the rest', async () => {
+    const db = makeDb([
+      { id: 'newDue',    glStatus: 'issued', agencyId: 'a', approvedAmount: 100, approvedAt: ts(now - 12 * DAY), glExpiresAt: ts(now - DAY) },
+      { id: 'newValid',  glStatus: 'issued', agencyId: 'a', approvedAmount: 100, approvedAt: ts(now - 11 * DAY), glExpiresAt: ts(now + DAY) },
+      { id: 'legacyOld', glStatus: 'issued', agencyId: 'a', approvedAmount: 100, approvedAt: ts(now - 40 * DAY) },
+      { id: 'legacyNew', glStatus: 'issued', agencyId: 'a', approvedAmount: 100, approvedAt: ts(now - 15 * DAY) },
+    ])
+    const r = await handleGLExpirySweep({ db, cutoff: 'C', serverTimestamp, increment, nowMs: now })
+    expect(r.expired).toBe(2)
+    expect(r.skippedNotDue).toBe(2)
+    expect(r.releasedTotal).toBe(200)
+  })
+})
