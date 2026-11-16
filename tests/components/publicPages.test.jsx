@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
-import i18n from '../../src/i18n'
+import i18n, { setLanguage } from '../../src/i18n'
 
 const DATA = {
   agenciesPublic: [
@@ -60,7 +60,8 @@ describe('public pages (signed out)', () => {
 
   it('Landing renders in Filipino too', async () => {
     const { default: Landing } = await import('../../src/pages/auth/Landing')
-    await i18n.changeLanguage('fil')
+    // Filipino is loaded on demand (perf: lazy Filipino) — switch the way the app does.
+    await setLanguage('fil')
     wrap(<Landing />)
     expect(screen.getByText('Para sa mga pasyente')).toBeTruthy()
     await i18n.changeLanguage('en')

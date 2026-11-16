@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { setLanguage } from '../../i18n'
 import {
   MdSearch, MdMenuBook, MdLocalHospital,
   MdPerson, MdShield, MdHelp, MdFlag, MdCloudDownload, MdWarning,
@@ -39,7 +40,7 @@ export default function PatientMore() {
 
   const toggleLang = () => {
     const next = i18nHook.language === 'fil' ? 'en' : 'fil'
-    i18n.changeLanguage(next)
+    setLanguage(next)
   }
 
   // R25: await Firebase signOut before navigating. The old fire-and-forget

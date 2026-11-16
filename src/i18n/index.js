@@ -5,7 +5,10 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from './locales/en.json'
-import fil from './locales/fil.json'
+// Filipino is loaded on demand (its own chunk): English is the default, the
+// fallback and the staff language, so it stays in the main bundle; Filipino
+// (~30 KB gzipped) is fetched only for patients who choose it — see
+// ensureLanguage / setLanguage / i18nReady below.
 import { ORG, accessCodeFormatHint, accessCodePrefixFor, onOrgChange } from '../config/org'
 
 const STORAGE_KEY = 'mapa.lang'
@@ -48,7 +51,7 @@ ORG_VARS.facility = facilityFor(savedLang ?? 'en')
 i18n
   .use(initReactI18next)
   .init({
-    resources: { en: { translation: en }, fil: { translation: fil } },
+    resources: { en: { translation: en } },
     lng:           savedLang ?? 'en',
     fallbackLng:  'en',
     interpolation: {
@@ -77,5 +80,30 @@ i18n.on('languageChanged', (lng) => {
     }
   } catch { /* storage unavailable — language just won't persist across reloads */ }
 })
+
+// Load a language's strings if they aren't in the bundle yet (Filipino).
+// Never throws: on failure the app keeps working in English.
+export async function ensureLanguage(lng) {
+  if (lng !== 'fil' || i18n.hasResourceBundle('fil', 'translation')) return true
+  try {
+    const mod = await import('./locales/fil.json')
+    i18n.addResourceBundle('fil', 'translation', mod.default ?? mod, true, true)
+    return true
+  } catch (err) {
+    console.warn('[i18n] could not load Filipino; staying in English', err)
+    return false
+  }
+}
+
+// Switch language, loading its strings first. Use this instead of
+// i18n.changeLanguage() so Filipino is never shown half-loaded.
+export async function setLanguage(lng) {
+  const ok = await ensureLanguage(lng)
+  return i18n.changeLanguage(ok ? lng : 'en')
+}
+
+// Resolves once the starting language is ready. main.jsx waits for it before
+// the first render, so a patient who chose Filipino never sees English flash.
+export const i18nReady = savedLang === 'fil' ? setLanguage('fil') : Promise.resolve()
 
 export default i18n

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { MdLanguage } from 'react-icons/md'
+import { setLanguage } from '../i18n'
 
 // Compact bilingual toggle: EN ↔ FIL. Persists via localStorage.
 export default function LanguageToggle({ className = '' }) {
@@ -7,7 +8,7 @@ export default function LanguageToggle({ className = '' }) {
   const current  = i18n.language?.startsWith('fil') ? 'fil' : 'en'
 
   const toggle = () => {
-    i18n.changeLanguage(current === 'en' ? 'fil' : 'en')
+    setLanguage(current === 'en' ? 'fil' : 'en')
   }
 
   return (

@@ -7,7 +7,7 @@ import AppToaster from './components/AppToaster.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initSentry } from './sentry'
 import './index.css'
-import './i18n'   // initialize i18next
+import { i18nReady } from './i18n'   // initialize i18next
 
 // Error tracking — no-op unless VITE_SENTRY_DSN is configured. Fire-and-
 // forget: it lazy-loads the SDK and installs global error handlers.
@@ -19,7 +19,9 @@ initSentry()
 // not technical users and confirming a reload would just confuse them.
 registerSW({ immediate: true })
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+// Wait for the starting language (only Filipino needs a download; English is
+// in the bundle) so the first screen is already in the patient's language.
+i18nReady.finally(() => ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter future={{
@@ -37,4 +39,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>,
-)
+))
