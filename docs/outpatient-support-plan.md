@@ -157,7 +157,7 @@ To confirm at the CRMC meeting. Each is a setting or a small change if CRMC diff
 | 7 | One protocol or dialysis prescription can support **several requests** while valid; medical certificate, prescription and protocol are valid **3 months** from issue. |
 | 8 | MSS classification is valid **6 months**; reassessed when income or household changes. |
 | 9 | Medical certificate required **only when DSWD or PCSO is endorsed**. |
-| 10 | Unused GL amounts **lapse** back to the agency; GLs expire after **30 days**. |
+| 10 | Unused GL amounts **lapse** back to the agency. GLs are **valid for 10 days from issuance** (owner, 2026-11-16: "usually its 10 days upon issuance"). MAPA used 30 days until this change. |
 | 11 | MSS checks double payment by hand today, so MAPA's **expense record helps**. |
 | 12 | The **dialysis unit** issues the PhilHealth sessions certificate, fresh for each request. |
 | 13 | **One access code per course of treatment** (e.g. a month of dialysis), not per request. |
