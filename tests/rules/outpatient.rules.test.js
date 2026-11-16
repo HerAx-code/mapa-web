@@ -28,6 +28,7 @@ beforeEach(async () => {
       put('users/coord', { role: 'agency', agencyId: 'dswd' }),
       put('requests/out', { patientId: 'pat', tenantId: A, status: 'partially_funded', agencyIds: ['dswd'],
         careSetting: 'outpatient', careUnit: 'dialysis', amountNeeded: 5000, amountCommitted: 3000 }),
+      put('requests/theirs', { patientId: 'someoneElse', tenantId: A, status: 'endorsed', agencyIds: ['dswd'], amountNeeded: 1000, amountCommitted: 0 }),
       put('requests/inp', { patientId: 'pat', tenantId: A, status: 'partially_funded', agencyIds: ['dswd'],
         amountNeeded: 5000, amountCommitted: 3000 }),
     ])
@@ -62,5 +63,14 @@ describe('outpatient funding cap', () => {
   })
   it('inpatient bills keep the over-endorsing buffer', async () => {
     await assertSucceeds(updateDoc(doc(as('coord'), 'requests', 'inp'), { amountCommitted: 6000, status: 'fully_funded' }))
+  })
+})
+
+describe('documents added after filing (Phase 2C)', () => {
+  const upload = (requestId) => setDoc(doc(as('pat'), 'documents', 'late-' + requestId),
+    { patientId: 'pat', tenantId: A, status: 'pending', name: 'Medical Certificate', requestId, addedAfterFiling: true })
+  it('a patient links an upload to their own request only', async () => {
+    await assertSucceeds(upload('out'))
+    await assertFails(upload('theirs'))
   })
 })

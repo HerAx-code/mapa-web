@@ -1,6 +1,6 @@
 # Outpatient support plan (revised 2026-11-15)
 
-**Status:** Phase 1 (repeat limit per agency, settlement on actual amount) shipped 2026-11-16 (#387); Phase 2A (outpatient requests) shipped 2026-11-16 (#388); **Phase 2B (recurring patients) built 2026-11-16**; 2C (agency settings) not built yet. On 2026-11-16 the owner chose working answers for all 14 questions (§7A), to be confirmed at the CRMC meeting. Building can start from them; anything CRMC answers differently is adjusted then.
+**Status:** Phase 1 (repeat limit per agency, settlement on actual amount) shipped 2026-11-16 (#387); Phase 2A (outpatient requests) shipped 2026-11-16 (#388); Phase 2B (recurring patients) shipped 2026-11-16 (#389); **Phase 2C (agency documents) built 2026-11-16**. The "applied to the patient's account" mode was dropped on revalidation: MOH-MAIFIP issues guarantee letters in production (2 issued with signed scans); revisit only if CRMC says otherwise. On 2026-11-16 the owner chose working answers for all 14 questions (§7A), to be confirmed at the CRMC meeting. Building can start from them; anything CRMC answers differently is adjusted then.
 **Evidence:** `reports/Outpatient medical assistance rules.md` (research on DSWD AICS, PCSO MAP, DOH MAIFIP / Malasakit and PhilHealth, November 2026). Facts below cite that report; anything marked *(inference)* is our design judgement.
 **Replaces:** "option 2" from 2026-11-15, which this revision corrects.
 

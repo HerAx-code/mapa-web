@@ -73,7 +73,9 @@ const readContent = (file) => file.type?.startsWith('image/')
 // Writes metadata to documents/{docId} and the base64 content to
 // documentContents/{docId} (same id, kept separate so list queries
 // stay light).
-export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, idMeta = null, user }) {
+// requestId (Phase 2C): set for a document added to an ACTIVE request (an
+// agency's list in the coverage plan), so the hospital sees and verifies it.
+export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, idMeta = null, user, requestId = null }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
 
@@ -91,6 +93,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     date:                fmtDate(new Date()),
     status:              'pending',
     agreedToAttestation: true,
+    ...(requestId ? { requestId, addedAfterFiling: true } : {}),
     attestedAt:          new Date().toISOString(),
     ...(idType ? { idType } : {}),
     // Advisory on-device OCR result (ID docs only): extracted text + a

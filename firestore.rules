@@ -815,6 +815,11 @@ service cloud.firestore {
                        request.resource.data.status == 'pending' &&
                        !('agencyIds' in request.resource.data) &&
                        !('storagePath' in request.resource.data) &&
+                       // Phase 2C: a document added to an active request names that
+                       // request, which must be the uploading patient's own.
+                       (!('requestId' in request.resource.data) ||
+                        (request.resource.data.requestId is string &&
+                         get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientId == uid())) &&
                        (!('ocrText' in request.resource.data) ||
                         (request.resource.data.ocrText is string &&
                          request.resource.data.ocrText.size() <= 4000)) &&
