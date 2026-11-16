@@ -126,6 +126,15 @@ describe('syncRequestFinancials — derived figure is authoritative', () => {
     expect(updates[0].status).toBe('under_review')
   })
 
+  it('does NOT count an expired letter that was still at approved (2026-11-16)', async () => {
+    // The sweep expires a letter never marked Issued and releases its budget.
+    const { updates } = await run(
+      { amountNeeded: 25000, amountCommitted: 5000, status: 'partially_funded' },
+      [{ status: 'approved', glStatus: 'expired', amountApproved: 5000 }],
+    )
+    expect(updates[0].amountCommitted).toBe(0)
+  })
+
   it('falls back to endorsed while slices are still outstanding', async () => {
     const { updates } = await run(
       { amountNeeded: 25000, amountCommitted: 5000, status: 'partially_funded' },

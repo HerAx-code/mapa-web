@@ -42,3 +42,13 @@ describe('a slice closed by the hospital is terminal', () => {
     expect(isSliceTerminal({ status: 'closed' })).toBe(true)
   })
 })
+
+// 2026-11-16: a letter used or expired before the agency marked it Issued.
+describe('a used or expired letter is terminal at approved too', () => {
+  it('reads the letter, not the slice status', () => {
+    expect(isSliceTerminal({ status: 'approved', glStatus: 'redeemed' })).toBe(true)
+    expect(isSliceTerminal({ status: 'approved', glStatus: 'expired' })).toBe(true)
+    expect(isSliceTerminal({ status: 'approved', glStatus: 'issued' }, { isGLExpired: () => true })).toBe(true)
+    expect(isSliceTerminal({ status: 'approved', glStatus: 'issued' }, { isGLExpired: () => false })).toBe(false)
+  })
+})

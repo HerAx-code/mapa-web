@@ -52,8 +52,13 @@ const formatDate = (ts) => {
 // Expiry from utils/constants (glExpiryMs): the letter's own glExpiresAt
 // (10 days, from 2026-11-16), else the 30 days older letters were printed with.
 // expiresAt is the last valid moment, for "valid until" copy.
+// From approval, not only once the agency marks the letter Issued
+// (2026-11-16): the 10 days start at approval, and the signed letter can be
+// uploaded before that step.
 const glExpiryInfo = (app) => {
-  if (app?.status !== 'certificate') return null
+  if (!['approved', 'certificate'].includes(app?.status)) return null
+  if (app.glStatus === 'redeemed') return null
+  if (app.status === 'approved' && !['issued', 'expired'].includes(app.glStatus)) return null
   const ms = glExpiryMs(app)
   if (ms == null) return null
   const now = Date.now()
@@ -676,7 +681,7 @@ export default function TrackStatus() {
                         return (
                         <div className={`mb-4 rounded-xl p-3 border ${expiry?.expired ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                           <p className={`text-sm font-medium mb-2 flex items-start gap-2 ${expiry?.expired ? 'text-red-700' : 'text-green-700'}`}>
-                            {app.status === 'certificate' && app.certificateUploaded
+                            {app.certificateUploaded
                               ? <><MdCelebration size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certReady')}</span></>
                               : app.status === 'certificate'
                                 ? <><MdAssignment size={16} className="flex-shrink-0 mt-0.5" /><span>{t('patient.track.banner.certPreparing')}</span></>
@@ -813,8 +818,11 @@ export default function TrackStatus() {
                       <p className="text-sm font-medium text-gray-800 truncate">{app.agencyName}</p>
                       <p className="text-sm text-gray-500 truncate">{app.appId} · {t('patient.track.submittedOn', { date: formatDate(app.submittedAt) })}</p>
                     </div>
-                    <span className={`badge ${badgeFor(app.status)}`}>
-                      {t(`patient.status.${app.status}`, { defaultValue: app.status })}
+                    {/* A used or expired letter says so (2026-11-16), whatever the slice status. */}
+                    <span className={`badge ${app.glStatus === 'redeemed' ? 'badge-green' : app.glStatus === 'expired' ? 'badge-gray' : badgeFor(app.status)}`}>
+                      {app.glStatus === 'redeemed' ? t('patient.status.glUsed')
+                        : app.glStatus === 'expired' ? t('patient.status.glExpired')
+                        : t(`patient.status.${app.status}`, { defaultValue: app.status })}
                     </span>
                     {app.certificateUploaded ? (
                       <button

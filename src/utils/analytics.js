@@ -13,7 +13,7 @@ const FACILITATED_STATUSES = ['approved', 'certificate']
 
 export function isFacilitatedSlice(s) {
   if (!s || !FACILITATED_STATUSES.includes(s.status)) return false
-  if (s.status === 'certificate' && s.glStatus === 'expired') return false
+  if (s.glStatus === 'expired') return false   // any slice status (2026-11-16)
   return true
 }
 

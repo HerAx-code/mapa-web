@@ -40,6 +40,19 @@ describe('PathToZeroBalance', () => {
     expect(screen.getByText(/50% of ₱10,000 covered/)).toBeInTheDocument()
   })
 
+  it('shows used and expired letters by their own state', () => {
+    const request = { totalBill: 10000, amountNeeded: 10000 }
+    const slices = [
+      { id: 's1', agencyId: 'a1', status: 'approved',    glStatus: 'expired',  amountApproved: 4000 },
+      { id: 's2', agencyId: 'a2', status: 'certificate', glStatus: 'redeemed', amountApproved: 3000 },
+    ]
+    const funding = { committed: 3000, outstanding: 0, balance: 7000, pct: 30 }
+    render(<PathToZeroBalance request={request} slices={slices} agencies={agencies} funding={funding} />)
+    expect(screen.getByText('letter expired')).toBeInTheDocument()
+    expect(screen.getByText('letter used')).toBeInTheDocument()
+    expect(screen.queryByText('approved')).toBeNull()
+  })
+
   it('shows an empty note when no agency is endorsed', () => {
     const request = { totalBill: 5000, amountNeeded: 5000 }
     const funding = { committed: 0, outstanding: 0, balance: 5000, pct: 0 }

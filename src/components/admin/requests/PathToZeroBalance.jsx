@@ -62,20 +62,24 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
           <li className="py-2 text-sm text-gray-500 border-t border-gray-100">No agency endorsed yet.</li>
         )}
         {sliceRows.map(s => {
-          const st = SLICE_STATE[s.status] ?? { label: s.status, cls: 'text-gray-500' }
+          // The letter's own state wins (2026-11-16): an expired letter no longer
+          // counts toward the balance; a used one says so.
+          const st = s.glStatus === 'expired' ? { label: 'letter expired', cls: 'text-gray-500' }
+            : s.glStatus === 'redeemed' ? { label: 'letter used', cls: 'text-green-700' }
+            : SLICE_STATE[s.status] ?? { label: s.status, cls: 'text-gray-500' }
           const amount = s.amountApproved ?? s.amountRequested ?? 0
           // Only APPROVED funding actually reduces the balance (balance =
           // needed − committed). Pending is a reserved cap, declined is nothing
           // — so neither carries the "−" sign, and the visible "−" rows sum to
           // the stated Remaining balance.
-          const isApproved = st.label === 'approved'
+          const isApproved = st.label === 'approved' || st.label === 'letter used'
           return (
             <Row key={s.id}
               label={agencyName(s.agencyId)}
               sub={<span className={st.cls}>{st.label}</span>}
               amount={amount}
               sign={isApproved ? '− ' : ''}
-              muted={st.label === 'declined'} />
+              muted={st.label === 'declined' || st.label === 'letter expired'} />
           )
         })}
 

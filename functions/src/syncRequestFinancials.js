@@ -64,11 +64,13 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
 const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info', 'interview']
 
-// A `certificate` slice whose GL has expired released its committed
-// budget back to the agency, so it must stop counting as committed.
+// A slice whose GL has expired released its committed budget back to the
+// agency, so it must stop counting as committed. By glStatus whatever the
+// slice status (2026-11-16): the sweep also expires 'approved' slices that
+// were never marked Issued. Mirror of src/utils/requests.js.
 function isCommittedSlice(s) {
   if (!COMMITTED_SLICE_STATUSES.includes(s.status)) return false
-  if (s.status === 'certificate' && s.glStatus === 'expired') return false
+  if (s.glStatus === 'expired') return false
   return true
 }
 

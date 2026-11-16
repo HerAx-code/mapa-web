@@ -62,24 +62,34 @@ export function getPrimaryActions(ctx) {
   // request (the gateway-conducted), not per-slice. Legacy interview branches
   // removed.
 
-  if (app.status === 'approved') {
-    return {
-      hint: 'Print the Guarantee Letter to issue it.',
-      tone: 'brand',
-      actions: [
-        { label: 'Print Guarantee Letter', icon: MdPrint,  variant: 'primary',   onClick: handlers.handlePrintGL },
-        { label: 'Reverse Approval',       icon: MdCancel, variant: 'secondary', onClick: handlers.handleReverseApproval },
-      ],
-    }
-  }
+  // 2026-11-16: the letter (glStatus) exists from approval, so a used or
+  // expired letter is final even if it was never marked Issued, and an
+  // overdue one can be released from 'approved' too.
+  const open = app.glStatus === 'issued' && ['approved', 'certificate'].includes(app.status)
 
-  if (app.status === 'certificate' && app.glStatus === 'issued' && expired) {
+  if (open && expired) {
     return {
       hint: 'GL passed its validity date — release the committed budget.',
       tone: 'red',
       actions: [
         { label: 'Mark GL Expired',  icon: MdWarning, variant: 'primary-orange', onClick: handlers.handleExpireGL },
         { label: 'Reverse Approval', icon: MdCancel,  variant: 'secondary',      onClick: handlers.handleReverseApproval },
+      ],
+    }
+  }
+
+  if (app.status === 'approved' && app.glStatus !== 'redeemed' && app.glStatus !== 'expired') {
+    return {
+      hint: signedScan
+        ? 'The signed letter is uploaded. Mark it as issued, or record its use when the provider bills back.'
+        : 'Print the Guarantee Letter to issue it.',
+      tone: 'brand',
+      actions: [
+        { label: 'Print Guarantee Letter', icon: MdPrint,  variant: 'primary',   onClick: handlers.handlePrintGL },
+        ...(app.glStatus === 'issued' && signedScan
+          ? [{ label: 'Mark GL Redeemed', icon: MdCheckCircle, variant: 'secondary', onClick: handlers.handleRedeemGL }]
+          : []),
+        { label: 'Reverse Approval',       icon: MdCancel, variant: 'secondary', onClick: handlers.handleReverseApproval },
       ],
     }
   }
