@@ -9,6 +9,7 @@ import {
 import Layout from '../../components/Layout'
 import JourneyStrip from '../../components/patient/JourneyStrip'
 import PatientHero from '../../components/patient/PatientHero'
+import ProfileGapsCard from '../../components/patient/ProfileGapsCard'
 import CoverageBar from '../../components/patient/CoverageBar'
 import PatientPage from '../../components/patient/PatientPage'
 import InstallPrompt from '../../components/InstallPrompt'
@@ -460,6 +461,8 @@ export default function PatientDashboard() {
             column on phone, where the aside stacks after the main column. */}
         <div className="grid gap-5 items-start lg:grid-cols-12">
           <div className="space-y-4 min-w-0 lg:col-span-8">
+          {/* Phase 3B: once, for accounts made before sign-up asked for birthdate + sex. */}
+          <ProfileGapsCard />
 
         {/* Main status card — wrapped so the tour can spotlight whichever
             of the conditional branches is currently rendered (welcome

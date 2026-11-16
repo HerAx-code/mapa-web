@@ -4,7 +4,7 @@ import { MdSearch, MdAdd, MdDelete, MdRefresh, MdWarning, MdPrint } from 'react-
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { tenantWhere, inMyTenant } from '../../utils/hospitals'
-import { collection, query, onSnapshot, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { collection, query, onSnapshot, doc, getDoc, serverTimestamp, writeBatch, updateDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { fmtDate } from '../../utils/dates'
 import { accessCodePrefixFor, ORG } from '../../config/org'
@@ -110,6 +110,18 @@ export default function HospitalIDs() {
   ].map(g => ({ ...g, entries: filtered.filter(h => h.status === g.key) })).filter(g => g.entries.length > 0)
 
   // ── Actions ──────────────────────────────────────────────────────────
+
+  // Phase 3A: end a course of treatment early — the code stops backing new
+  // requests (rules: courseUntil may only move to now or earlier).
+  const handleEndCourse = async (h) => {
+    try {
+      await updateDoc(doc(db, 'hospitalIds', h.id), {
+        courseUntil: serverTimestamp(), courseEndedAt: serverTimestamp(), courseEndedBy: user?.name ?? '',
+      })
+      logAudit(user, { action: 'hospitalid_course_ended', targetType: 'hospitalId', targetId: h.id, targetName: h.id, details: `Course of treatment ended early for ${h.id}` })
+      toast.success(`Course ended: ${h.id} no longer backs new requests.`)
+    } catch (err) { console.error(err); toast.error('Could not end the course.') }
+  }
 
   const handleRevoke = async (h) => {
     try {
@@ -381,17 +393,26 @@ export default function HospitalIDs() {
                       // Marketplace: a code that backs a request is part of
                       // that case's record — never reset or deleted.
                       const isBound    = !!h.requestId
+                      // Phase 3A: a code covering a course of treatment backs the
+                      // patient's requests in turn until courseUntil.
+                      const courseEnd  = h.courseUntil?.toDate?.() ?? null
+                      const courseOn   = !!courseEnd && courseEnd.getTime() > Date.now()
                       return (
                         <li key={h.id}>
                           <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                             <span className="font-mono text-sm text-gray-700 flex-shrink-0">{h.id}</span>
                             <span className={`badge text-xs flex-shrink-0 ${isUsed ? 'badge-blue' : 'badge-green'}`}>{isUsed ? 'Used' : 'Available'}</span>
+                            {courseOn && <span className="badge badge-amber text-xs flex-shrink-0" title="Backs the patient's requests one after another until this date">Course until {courseEnd.toLocaleDateString()}</span>}
                             <div className="flex-1 min-w-0 text-sm text-gray-600 truncate">
                               {isUsed ? <>{h.usedBy || '—'}{h.patId && <span className="ml-1.5 font-mono text-xs text-gray-500">{h.patId}</span>}</>
                                 : h.issued ? <span>For {h.issued.name} <span className="text-xs text-gray-500">· visit {h.issued.visitDate}</span></span>
                                 : <span className="text-amber-600 text-xs">Blank slip · stops working Dec 15, 2026</span>}
                             </div>
                             <span className="text-xs text-gray-500 flex-shrink-0 hidden sm:block">{fmtDate(h.createdAt)}</span>
+                            {canIssue && courseOn && (
+                              <button className="text-xs font-medium text-amber-700 hover:text-amber-800 flex-shrink-0" title="Stop this code backing further requests"
+                                onClick={() => handleEndCourse(h)}>End course</button>
+                            )}
                             {canIssue && isBound ? (
                               <span className="text-xs text-gray-400 flex-shrink-0" title="This code backs a request, so it stays on that case's record.">Filed</span>
                             ) : canIssue ? (

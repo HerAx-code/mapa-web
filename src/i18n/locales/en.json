@@ -682,7 +682,17 @@
     }
   },
   "patient": {
+    "profileGaps": {
+      "failed": "Could not save. Please try again.",
+      "saved": "Profile updated.",
+      "saving": "Saving…",
+      "save": "Save",
+      "once": "You can fill these in once. To correct them later, ask the hospital's social-services office.",
+      "desc": "The hospital reports assistance to the DOH by age and sex. Add the patient's birthdate and sex once.",
+      "title": "Please complete your profile"
+    },
     "gate": {
+      "courseUntil": "This code covers your requests until {{date}}.",
       "birthdate": "Patient's birthdate",
       "lastName": "Patient's last name",
       "identityHint": "The code works only for the patient it was issued to. Enter the patient's last name and birthdate as given to the hospital.",
@@ -1566,6 +1576,9 @@
     "stepCode": "Access Code (optional)",
     "stepProgress": "Step {{current}} of {{total}} · {{label}}",
     "step1": {
+      "sex_male": "Male",
+      "sex_female": "Female",
+      "sex": "Sex",
       "selectRelationship": "Select…",
       "managerRelationship": "You are the patient's…",
       "managerName": "Your full name",
@@ -1630,6 +1643,7 @@
     "haveAccount": "Already have an account?",
     "signIn": "Sign in",
     "errors": {
+      "sexRequired": "Choose the patient's sex.",
       "managerRelationshipRequired": "Choose how you are related to the patient.",
       "managerNameRequired": "Enter your full name (letters only).",
       "codeExpired": "This code is no longer valid. Ask the hospital's social service office for a new code.",

@@ -247,6 +247,8 @@ service cloud.firestore {
         // agencyIds and the hospital fields stay server/claim-owned.
         (uid() == userId && request.resource.data.role == 'patient' &&
           !('agencyIds' in request.resource.data) &&
+          // Phase 3B: sex for the DOH monthly report.
+          (!('sex' in request.resource.data) || request.resource.data.sex in ['female', 'male']) &&
           (patientRegistersWithCode() ||
            (!('tenantId' in request.resource.data) &&
             !('tenantIds' in request.resource.data) &&
@@ -313,7 +315,11 @@ service cloud.firestore {
            ((resource.data.get('birthdate', null) == null ||
              request.resource.data.get('birthdate', null) == resource.data.get('birthdate', null)) &&
             (resource.data.get('lastName', null) == null ||
-             request.resource.data.get('lastName', null) == resource.data.get('lastName', null)))) &&
+             request.resource.data.get('lastName', null) == resource.data.get('lastName', null)) &&
+            // Phase 3B: sex, filled once (older accounts lack it), then fixed.
+            (resource.data.get('sex', null) == null ?
+              request.resource.data.get('sex', null) in [null, 'female', 'male'] :
+              request.resource.data.get('sex', null) == resource.data.get('sex', null)))) &&
           // Server-owned counters (abuse hardening #3 + #5): only the Admin SDK
           // triggers (onRequestWritten / onDocumentCountChanged, rules-bypassing)
           // write these. Pin them on self-update so a patient can't null their
@@ -616,8 +622,9 @@ service cloud.firestore {
                        request.resource.data.get('patientHospitalId', '') != '' &&
                        request.resource.data.patientHospitalId ==
                          get(/databases/$(database)/documents/users/$(uid())).data.get('hospitalId', '') &&
-                       get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.patientHospitalId))
-                         .data.get('requestId', null) == null &&
+                       (get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.patientHospitalId))
+                          .data.get('requestId', null) == null ||
+                        courseActive(get(/databases/$(database)/documents/hospitalIds/$(request.resource.data.patientHospitalId)).data)) &&
                        getAfter(/databases/$(database)/documents/hospitalIds/$(request.resource.data.patientHospitalId))
                          .data.get('requestId', '') == requestId;
 
@@ -1329,6 +1336,12 @@ service cloud.firestore {
         d.issuedByUid is string;
     }
 
+    // Phase 3A: a code issued for a course of treatment backs requests in
+    // turn until courseUntil (one active request at a time still applies).
+    function courseActive(code) {
+      return code.get('courseUntil', null) is timestamp && code.courseUntil > request.time;
+    }
+
     match /hospitalIds/{hospitalId} {
       // get stays open to any signed-in user: registration verifies a code
       // (anonymous auth) before the patient has a hospital. Listing the codes
@@ -1346,6 +1359,13 @@ service cloud.firestore {
                        hospitalId.matches(hospitalDoc(tenantOf(request.resource.data)).get('accessCodePrefix', '') +
                                           '-[0-9]{4}-[0-9]{5}') &&
                        request.resource.data.get('bound', false) == true &&
+                       // Phase 3A: a code may cover a course of treatment (several requests
+                       // in turn) until courseUntil — at most ~3 months, like the reuse of
+                       // the doctor's order and indigency certificate.
+                       (!('courseUntil' in request.resource.data) ||
+                        (request.resource.data.courseUntil is timestamp &&
+                         request.resource.data.courseUntil > request.time &&
+                         request.resource.data.courseUntil <= request.time + duration.value(93, 'd'))) &&
                        existsAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)/privateInfo/issued);
       // A code that backs a request (requestId, marketplace) is part of that
       // case's record: the gateway can't reset, re-bind or delete it.
@@ -1361,6 +1381,14 @@ service cloud.firestore {
                           .hasOnly(['status', 'patId', 'date', 'time', 'revokedAt']) &&
                         request.resource.data.status == 'available' &&
                         request.resource.data.patId == null) ||
+                       // Phase 3A: hospital staff may END a course early (courseUntil
+                       // moved to now or earlier), never extend or start one here.
+                       (isHospitalAdmin(resource.data) &&
+                        resource.data.get('courseUntil', null) != null &&
+                        request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['courseUntil', 'courseEndedAt', 'courseEndedBy']) &&
+                        request.resource.data.courseUntil is timestamp &&
+                        request.resource.data.courseUntil <= request.time) ||
                        // Phase 1.5: the claim branch pinned status and patId
                        // but left every OTHER field on the doc writable in
                        // the same operation -- a registering user could
@@ -1385,10 +1413,12 @@ service cloud.firestore {
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt'])) ||
                        // Marketplace: the code's patient binds it to the request
                        // they're filing, once (a code backs one request).
+                       // Phase 3A: a course code binds to each new request in turn while
+                       // its course runs (requestId holds the latest).
                        (isAuth() &&
                         resource.data.status == 'used' &&
                         resource.data.patId == uid() &&
-                        resource.data.get('requestId', null) == null &&
+                        (resource.data.get('requestId', null) == null || courseActive(resource.data)) &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['requestId']) &&
                         getAfter(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientId == uid() &&
                         getAfter(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.patientHospitalId == hospitalId);
