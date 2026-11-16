@@ -63,6 +63,15 @@ export default function ExportPage() {
       slug:        'patients',
     },
     {
+      // Phase 3B: DOH AO 2026-0031 monthly report — age, sex, city, diagnosis,
+      // amount and fund source per patient assisted.
+      icon:        MdAssignment,
+      iconBg:      'bg-green-600',
+      title:       'DOH Monthly Assistance Report',
+      description: 'Per patient assisted this month: age, sex, city/municipality, diagnosis, amount and fund source. Defaults to last month.',
+      slug:        'doh-monthly',
+    },
+    {
       icon:        MdBadge,
       iconBg:      'bg-amber-500',
       title:       'Patient Access Codes',

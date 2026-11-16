@@ -128,11 +128,20 @@ export async function claimAccessCode({ user, code: rawCode, tenantId, lastName 
   return fields
 }
 
-// Can the patient file with their CURRENT code (claimed, not yet backing a request)?
-export async function currentCodeIsUnused(user) {
-  if (!user?.hospitalId || !user?.tenantId) return false
+// Can the patient file with their CURRENT code? Yes if it's claimed by them
+// and not yet backing a request — or (Phase 3A) it covers a course of
+// treatment that hasn't ended (it then backs each new request in turn).
+export async function currentCodeInfo(user) {
+  if (!user?.hospitalId || !user?.tenantId) return { usable: false, courseUntil: null }
   try {
     const snap = await getDoc(doc(db, 'hospitalIds', user.hospitalId))
-    return snap.exists() && snap.data().patId === user.uid && !snap.data().requestId
-  } catch { return false }
+    if (!snap.exists() || snap.data().patId !== user.uid) return { usable: false, courseUntil: null }
+    const until = snap.data().courseUntil?.toDate?.() ?? null
+    const courseActive = !!until && until.getTime() > Date.now()
+    return { usable: !snap.data().requestId || courseActive, courseUntil: courseActive ? until : null }
+  } catch { return { usable: false, courseUntil: null } }
+}
+
+export async function currentCodeIsUnused(user) {
+  return (await currentCodeInfo(user)).usable
 }

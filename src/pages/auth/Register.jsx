@@ -212,6 +212,8 @@ export default function Register() {
   const [form, setForm] = useState({
     firstName: '', middleName: '', lastName: '', suffix: '',
     birthdate: '',
+    // Phase 3B: sex, for the DOH monthly assistance report (AO 2026-0031).
+    sex: '',
     // A family member signing up for the patient (the account is the
     // patient's; this records who manages it — plan step 4).
     managedByFamily: false, managerName: '', managerRelationship: '',
@@ -315,6 +317,7 @@ export default function Register() {
     if (form.middleName && !NAME_RE.test(form.middleName)) e.middleName = t('register.errors.nameLettersOnly')
     else if (form.middleName && hasReservedToken(form.middleName)) e.middleName = t('register.errors.nameReserved')
     if (!isBirthdate(form.birthdate) || form.birthdate > new Date().toISOString().slice(0, 10)) e.birthdate = t('register.errors.birthdateRequired')
+    if (!['female', 'male'].includes(form.sex)) e.sex = t('register.errors.sexRequired')
     if (form.managedByFamily) {
       if (!form.managerName.trim() || !NAME_RE.test(form.managerName)) e.managerName = t('register.errors.managerNameRequired')
       if (!RELATIONSHIPS.some(r => r.value === form.managerRelationship)) e.managerRelationship = t('register.errors.managerRelationshipRequired')
@@ -586,6 +589,7 @@ export default function Register() {
         province: form.province.trim(),
         suffix:   (officialName?.nameParts ? officialName.nameParts.suffix : form.suffix) || null,
         birthdate: form.birthdate,
+        sex:       form.sex,
         lastName:  officialName?.nameParts?.lastName ?? form.lastName.trim(),
         ...(form.managedByFamily ? { managedBy: { name: form.managerName.trim(), relationship: form.managerRelationship } } : {}),
         hospitalId: codeTyped() ? form.hospitalId : null, patientId,
@@ -889,6 +893,21 @@ export default function Register() {
                   value={form.birthdate} onChange={set('birthdate')} />
                 <FieldError msg={errors.birthdate} />
               </div>
+
+              {/* Sex — for the DOH monthly assistance report (Phase 3B). */}
+              <fieldset data-field="sex">
+                <legend className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.sex')} <span className="text-red-400">*</span></legend>
+                <div className="flex gap-2">
+                  {['female', 'male'].map(v => (
+                    <label key={v} className={`flex-1 flex items-center gap-2 rounded-xl border px-3 min-h-[44px] cursor-pointer ${form.sex === v ? 'border-brand-500 bg-brand-50' : 'border-gray-200 bg-white'}`}>
+                      <input type="radio" name="reg-sex" className="w-4 h-4 accent-brand-500" value={v}
+                        checked={form.sex === v} onChange={set('sex')} />
+                      <span className="text-sm text-gray-800">{t(`register.step1.sex_${v}`)}</span>
+                    </label>
+                  ))}
+                </div>
+                <FieldError msg={errors.sex} />
+              </fieldset>
 
               {/* Contact */}
               <div>

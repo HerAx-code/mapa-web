@@ -3,13 +3,15 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
-  collection, query, where, getDocs, getDoc, doc, Timestamp,
+  collection, query, where, getDocs, getDoc, doc,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { exportToCSV, dateStamp, readableFileType, openPrintTab } from '../../utils/export'
 import { logAudit } from '../../utils/auditLog'
 import { fmtDate } from '../../utils/dates'
+import { tenantWhere, patientWhere } from '../../utils/hospitals'
+import { dohReportRows } from '../../utils/dohReport'
 import {
   MdArrowBack, MdSearch, MdRefresh, MdDownload, MdClose,
 } from 'react-icons/md'
@@ -27,7 +29,58 @@ const LARGE_EXPORT_THRESHOLD = 10000
 // formatter app-wide; the local copy was removed.
 
 
+// Phase 3B: the DOH monthly assistance report (AO 2026-0031 VI.I) — one row
+// per approved agency slice at this hospital, joined with the request, the
+// patient and the agency. Loaded by its own function (several collections).
+async function loadDohReport({ startDate, endDate }) {
+  const slices = (await getDocs(query(collection(db, 'applications'), ...tenantWhere())))
+    .docs.map(d => ({ id: d.id, ...d.data() }))
+    .filter(s => ['approved', 'certificate'].includes(s.status))
+  const ids = (k) => [...new Set(slices.map(s => s[k]).filter(Boolean))]
+  const fetchAll = async (col, list) => Object.fromEntries((await Promise.all(list.map(id =>
+    getDoc(doc(db, col, id)).then(snap => [id, snap.exists() ? snap.data() : {}]).catch(() => [id, {}])))))
+  const [requests, users, agencies] = await Promise.all([
+    fetchAll('requests', ids('requestId')), fetchAll('users', ids('patientId')), fetchAll('agencies', ids('agencyId')),
+  ])
+  return dohReportRows(slices, { requests, users, agencies }, {
+    from: startDate ? new Date(`${startDate}T00:00:00`) : null,
+    to:   endDate ? new Date(`${endDate}T23:59:59`) : null,
+  })
+}
+
+// The previous calendar month, as YYYY-MM-DD (the DOH report's default).
+const lastMonthRange = () => {
+  const now = new Date()
+  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const last  = new Date(now.getFullYear(), now.getMonth(), 0)
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return [iso(first), iso(last)]
+}
+
 const SECTION_CONFIG = {
+  'doh-monthly': {
+    title:       'DOH Monthly Assistance Report',
+    load:        loadDohReport,
+    statusField: null,
+    extraConstraints: [],
+    searchFields: ['requestRef', 'city', 'diagnosis', 'fundSource'],
+    statuses: [{ key: 'all', label: 'All' }],
+    cols: [
+      { label: '#',                      getValue: (d, i) => i + 1 },
+      { label: 'Request',                getValue: d => d.requestRef || '—' },
+      { label: 'Date approved',          getValue: d => fmtDate(d.approvedOn) },
+      { label: 'Age',                    getValue: d => d.age === '' ? '—' : d.age },
+      { label: 'Sex',                    getValue: d => d.sex || '—' },
+      { label: 'City / Municipality',    getValue: d => d.city || '—' },
+      { label: 'Province',               getValue: d => d.province || '—' },
+      { label: 'Diagnosis',              getValue: d => d.diagnosis || '—' },
+      { label: 'Care setting',           getValue: d => d.careSetting },
+      { label: 'Assistance type',        getValue: d => d.assistanceType || '—' },
+      { label: 'Fund source',            getValue: d => d.fundSource || '—' },
+      { label: 'Amount approved (PHP)',  getValue: d => d.amountApproved },
+      { label: 'Amount billed (PHP)',    getValue: d => d.amountBilled === '' ? '—' : d.amountBilled },
+    ],
+  },
   documents: {
     title:       'Document Review',
     collection:  'documents',
@@ -197,23 +250,29 @@ export default function ExportPreview() {
     setLoading(true)
     setCheckedIds(new Set())
     try {
+      // Phase 3B: report types with their own loader (several collections).
+      if (config.load) {
+        setDocs(await config.load({ startDate, endDate }))
+        return
+      }
       const hasStatusFilter = selected !== 'all' && !!config.statusField
-      // When a date range is active, skip extraConstraints in the Firestore query —
-      // combining them with createdAt range filters requires composite indexes.
-      // Apply extraClientFilter client-side instead.
+      // Always scoped to the staff member's hospital (the rules refuse an
+      // unscoped query); the date range is applied on the device so no extra
+      // composite indexes are needed.
       const constraints = [
-        ...(!hasDateRange ? config.extraConstraints : []),
-        ...(!hasDateRange && hasStatusFilter ? [where(config.statusField, '==', selected)] : []),
-        ...(startDate ? [where('createdAt', '>=', Timestamp.fromDate(new Date(startDate)))] : []),
-        ...(endDate   ? [where('createdAt', '<=', Timestamp.fromDate(new Date(`${endDate}T23:59:59`)))] : []),
+        ...(config.collection === 'users' ? patientWhere() : tenantWhere()),
+        ...(hasStatusFilter ? [where(config.statusField, '==', selected)] : []),
       ]
       const snap = await getDocs(query(collection(db, config.collection), ...constraints))
       let data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      if (hasDateRange && config.extraClientFilter) {
-        data = data.filter(config.extraClientFilter)
-      }
-      if (hasDateRange && hasStatusFilter) {
-        data = data.filter(d => d[config.statusField] === selected)
+      if (config.extraClientFilter) data = data.filter(config.extraClientFilter)
+      if (hasDateRange) {
+        const from = startDate ? new Date(`${startDate}T00:00:00`).getTime() : -Infinity
+        const to   = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity
+        data = data.filter(d => {
+          const ms = d.createdAt?.toMillis?.() ?? (typeof d.createdAt?.seconds === 'number' ? d.createdAt.seconds * 1000 : null)
+          return ms != null && ms >= from && ms <= to
+        })
       }
       // Phase 0.3: the `usedBy` patient-name field moved off the parent
       // hospitalIds doc into /privateInfo/details. For the hospitalids
@@ -237,6 +296,13 @@ export default function ExportPreview() {
 
   useEffect(() => { if (config) loadData() }, [type, selected, startDate, endDate])
   useEffect(() => { setClientFilterVals({}) }, [type])
+  // The DOH report defaults to last month.
+  useEffect(() => {
+    if (type === 'doh-monthly' && !startDate && !endDate) {
+      const [a, b] = lastMonthRange(); setStartDate(a); setEndDate(b); setShowDateFilter(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type])
 
   // ── Filtered (client-side search + client filters) ───────────────────
   const filtered = useMemo(() => {

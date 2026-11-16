@@ -682,7 +682,17 @@
     }
   },
   "patient": {
+    "profileGaps": {
+      "failed": "Hindi na-save. Pakisubukan muli.",
+      "saved": "Na-update ang profile.",
+      "saving": "Sine-save…",
+      "save": "I-save",
+      "once": "Isang beses lamang ito maaaring ilagay. Upang itama ito sa ibang pagkakataon, makipag-ugnayan sa social-services office ng ospital.",
+      "desc": "Iniuulat ng ospital sa DOH ang tulong ayon sa edad at kasarian. Ilagay nang isang beses ang kaarawan at kasarian ng pasyente.",
+      "title": "Pakikumpleto ang inyong profile"
+    },
     "gate": {
+      "courseUntil": "Sakop ng code na ito ang inyong mga kahilingan hanggang {{date}}.",
       "birthdate": "Petsa ng kapanganakan ng pasyente",
       "lastName": "Apelyido ng pasyente",
       "identityHint": "Gagana lamang ang code para sa pasyenteng pinagbigyan nito. Ilagay ang apelyido at petsa ng kapanganakan ng pasyente ayon sa ibinigay sa ospital.",
@@ -1566,6 +1576,9 @@
     "stepCode": "Access Code (opsyonal)",
     "stepProgress": "Hakbang {{current}} ng {{total}} · {{label}}",
     "step1": {
+      "sex_male": "Lalaki",
+      "sex_female": "Babae",
+      "sex": "Kasarian",
       "selectRelationship": "Pumili…",
       "managerRelationship": "Kayo ay … ng pasyente",
       "managerName": "Inyong buong pangalan",
@@ -1630,6 +1643,7 @@
     "haveAccount": "Mayroon nang account?",
     "signIn": "Mag-sign in",
     "errors": {
+      "sexRequired": "Piliin ang kasarian ng pasyente.",
       "managerRelationshipRequired": "Piliin ang inyong kaugnayan sa pasyente.",
       "managerNameRequired": "Ilagay ang inyong buong pangalan (mga titik lamang).",
       "codeExpired": "Hindi na balido ang code na ito. Humingi ng bagong code sa social service office ng ospital.",

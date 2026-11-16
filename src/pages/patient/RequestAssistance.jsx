@@ -14,7 +14,7 @@ import {
 import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { tenantIdFor, loadHospital } from '../../utils/hospitals'
-import { currentCodeIsUnused } from '../../utils/accessCodes'
+import { currentCodeInfo } from '../../utils/accessCodes'
 import { useMarketplace } from '../../hooks/useMarketplace'
 import HospitalGate from '../../components/patient/HospitalGate'
 import { ORG, DEFAULT_HOSPITAL_ID } from '../../config/org'
@@ -78,13 +78,15 @@ export default function RequestAssistance() {
   // file somewhere else, which means claiming that hospital's code first.
   const { hospitals } = useMarketplace()
   const [codeReady, setCodeReady]       = useState(null)
+  // Phase 3A: when the current code covers a course of treatment, its end date.
+  const [courseUntil, setCourseUntil]   = useState(null)
   const [changingHospital, setChanging] = useState(false)
   const wantedHospital = searchParams.get('hospital')
   useEffect(() => {
     if (!user?.uid) return
     let alive = true
     setCodeReady(null)
-    currentCodeIsUnused(user).then(ok => { if (alive) setCodeReady(ok) })
+    currentCodeInfo(user).then(info => { if (alive) { setCodeReady(info.usable); setCourseUntil(info.courseUntil) } })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, user?.hospitalId, user?.tenantId])
@@ -1259,6 +1261,7 @@ export default function RequestAssistance() {
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('patient.gate.filingAt')}</p>
             <p className="truncate text-sm font-semibold text-gray-900">{currentHospital?.facilityName || ORG.facilityName}</p>
             {user?.hospitalId && <p className="font-mono text-[11px] text-gray-500">{user.hospitalId}</p>}
+            {courseUntil && <p className="text-[11px] text-brand-700">{t('patient.gate.courseUntil', { date: courseUntil.toLocaleDateString(isFil ? 'fil-PH' : 'en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) })}</p>}
           </div>
           <button type="button" onClick={() => setChanging(true)}
             className="flex-shrink-0 min-h-[44px] px-2 text-xs font-semibold text-brand-600 hover:text-brand-700 underline">

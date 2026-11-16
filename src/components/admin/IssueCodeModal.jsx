@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore'
 import { MdClose, MdPrint, MdCheckCircle } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { db } from '../../firebase'
@@ -20,9 +20,16 @@ import { codeProof, fullNameOf, isBirthdate, ID_TYPES } from '../../utils/codeIs
 // code doc itself (readable during sign-up) carries no personal data.
 
 const today = () => new Date().toISOString().slice(0, 10)
+// Phase 3A: a code may cover a course of treatment (several requests in turn)
+// up to ~3 months ahead — the rules allow at most 93 days.
+export const COURSE_MAX_DAYS = 90
+const plusDays = (iso, n) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
+// End of that day, Manila time.
+export const courseEndMs = (iso) => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d + 1) - 8 * 3600000 - 1 }
 const EMPTY = {
   lastName: '', firstName: '', middleName: '', suffix: '', birthdate: '', contact: '',
   visitDate: today(), caseNumber: '', idType: '', idLast4: '',
+  course: false, courseUntil: '',
 }
 const NAME_OK = /^[A-Za-zÀ-ÿÑñ .'-]+$/
 
@@ -36,6 +43,8 @@ export function validateIssue(f) {
   if (!isBirthdate(f.visitDate) || f.visitDate > today()) e.visitDate = 'Enter the date of the visit or admission.'
   if (!f.idType) e.idType = 'Select the ID you saw.'
   if (f.idLast4 && !/^[A-Za-z0-9]{4}$/.test(f.idLast4)) e.idLast4 = 'Last 4 characters of the ID number.'
+  if (f.course && (!isBirthdate(f.courseUntil) || f.courseUntil <= today() || f.courseUntil > plusDays(today(), COURSE_MAX_DAYS)))
+    e.courseUntil = `Choose an end date within the next ${COURSE_MAX_DAYS} days.`
   return e
 }
 
@@ -86,6 +95,7 @@ export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
       batch.set(doc(db, 'hospitalIds', id), withTenant({
         status: 'available', patId: null, bound: true,
         date: fmtDate(new Date()), time: '', createdAt: serverTimestamp(),
+        ...(f.course ? { courseUntil: Timestamp.fromMillis(courseEndMs(f.courseUntil)) } : {}),
       }))
       batch.set(doc(db, 'hospitalIds', id, 'privateInfo', 'issued'), {
         name, nameParts, birthdate: f.birthdate, proof: codeProof(nameParts.lastName, f.birthdate),
@@ -96,9 +106,9 @@ export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
       await batch.commit()
       logAudit(user, {
         action: 'hospitalid_issued', targetType: 'hospitalId', targetId: id, targetName: id,
-        details: `Issued to ${name} (visit ${f.visitDate}; ID seen: ${f.idType}${f.idLast4 ? ` …${f.idLast4.toUpperCase()}` : ''})`,
+        details: `Issued to ${name} (visit ${f.visitDate}; ID seen: ${f.idType}${f.idLast4 ? ` …${f.idLast4.toUpperCase()}` : ''})${f.course ? `; course of treatment until ${f.courseUntil}` : ''}`,
       })
-      setIssued({ id, name })
+      setIssued({ id, name, courseUntil: f.course ? f.courseUntil : null })
       toast.success(`${id} issued to ${name}.`)
     } catch (e) {
       console.error(e)
@@ -121,8 +131,9 @@ export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
             <MdCheckCircle size={36} className="mx-auto text-green-600" />
             <p className="font-mono text-xl font-bold text-gray-900">{issued.id}</p>
             <p className="text-sm text-gray-600">Issued to <strong>{issued.name}</strong>. It works only with this patient’s last name and birthdate.</p>
+            {issued.courseUntil && <p className="text-sm text-gray-600">It covers the patient’s requests until <strong>{issued.courseUntil}</strong>.</p>}
             <div className="flex justify-center gap-2 pt-2">
-              <button className="btn-secondary text-sm" onClick={() => { setIssued(null); setF({ ...EMPTY, visitDate: today() }); setShowErrors(false) }}>Issue another</button>
+              <button className="btn-secondary text-sm" onClick={() => { setIssued(null); setF({ ...EMPTY, visitDate: today(), course: false, courseUntil: '' }); setShowErrors(false) }}>Issue another</button>
               <button className="btn-primary text-sm flex items-center gap-1.5" onClick={() => onPrint([{ id: issued.id, issuedName: issued.name }])}>
                 <MdPrint size={16} /> Print slip
               </button>
@@ -170,6 +181,21 @@ export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
                   <input id="ic-last4" className="input font-mono" maxLength={4} value={f.idLast4}
                     onChange={e => setF(p => ({ ...p, idLast4: e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 4) }))} />
                 </Field>
+              </div>
+              {/* Phase 3A: one code for a course of treatment (e.g. a month of
+                  dialysis): it backs the patient's requests one after another. */}
+              <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+                <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="checkbox" className="mt-0.5 w-4 h-4 accent-brand-500" checked={f.course}
+                    onChange={e => setF(p => ({ ...p, course: e.target.checked, courseUntil: e.target.checked ? (p.courseUntil || plusDays(today(), 30)) : '' }))} />
+                  <span>Covers a course of treatment<span className="block text-xs text-gray-500">For recurring care (dialysis, chemotherapy): the code backs the patient’s requests one after another until the end date, instead of one request.</span></span>
+                </label>
+                {f.course && (
+                  <Field id="ic-course" label="Course ends on" required error={err('courseUntil')} hint={`Up to ${COURSE_MAX_DAYS} days from today.`}>
+                    <input id="ic-course" type="date" className="input" min={plusDays(today(), 1)} max={plusDays(today(), COURSE_MAX_DAYS)}
+                      value={f.courseUntil} onChange={set('courseUntil')} />
+                  </Field>
+                )}
               </div>
             </div>
             <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50 pt-3">
