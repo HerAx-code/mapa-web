@@ -95,6 +95,11 @@ export default function OnboardingWorkspace() {
     return unsub
   }, [r?.hospitalId])
 
+  // Retention (2026-11-16): a closed request is either declined by MAPA or
+  // withdrawn by the hospital; both stay in the Declined stage and are deleted
+  // one year after the last action (functions/src/purgeDeclinedOnboarding.js).
+  const [closing, setClosing] = useState(null) // { closedAs, note } while the choice is open
+
   if (missing) return (
     <Layout breadcrumb="Onboarding">
       <div className="p-6 max-w-3xl mx-auto"><div className="card p-8 text-center text-sm text-gray-600">This onboarding record was not found. <Link className="text-brand-600 font-semibold" to="/platform/onboarding">Back to onboarding</Link></div></div>
@@ -251,18 +256,41 @@ export default function OnboardingWorkspace() {
             <p className="eyebrow">{owner.label}{r.region ? ` · ${r.region}` : ''}</p>
             <h1 className="font-display text-[26px] font-bold tracking-tight text-brand-900 mt-1">{r.hospitalName}</h1>
             <p className="text-sm text-gray-500 mt-1">
-              {declined ? 'Declined' : `${stageLabel(current)}${days !== null ? ` · day ${days + 1} in this stage` : ''}`}
+              {declined ? (r.closedAs === 'withdrawn' ? 'Withdrawn by the hospital' : 'Declined') : `${stageLabel(current)}${days !== null ? ` · day ${days + 1} in this stage` : ''}`}
+              {declined && r.closedNote ? ` · ${r.closedNote}` : ''}
               {hospital && <> · <span className="font-mono text-xs">{hospital.id}</span></>}
             </p>
           </div>
-          {!declined && current !== 'live' && (
+          {!declined && current !== 'live' && !closing && (
             <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1 text-red-600" disabled={busy}
-              onClick={() => moveTo(DECLINED)}>
+              onClick={() => setClosing({ closedAs: 'declined', note: '' })}>
               <MdBlock size={14} /> Decline
             </button>
           )}
+          {closing && (
+            <div className="w-full sm:w-auto rounded-xl border border-red-200 bg-red-50 p-3 space-y-2">
+              <div className="flex flex-wrap gap-3 text-sm text-gray-800">
+                {[['declined', 'Declined by MAPA'], ['withdrawn', 'Withdrawn by the hospital']].map(([v, label]) => (
+                  <label key={v} className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="close-as" className="accent-red-600" checked={closing.closedAs === v}
+                      onChange={() => setClosing(c => ({ ...c, closedAs: v }))} /> {label}
+                  </label>
+                ))}
+              </div>
+              <input className="input text-sm" maxLength={200} placeholder="Note (optional), e.g. reason"
+                value={closing.note} onChange={e => setClosing(c => ({ ...c, note: e.target.value }))} />
+              <p className="text-[11px] text-gray-600">The request's details are deleted one year after the last action, as the privacy notice promises.</p>
+              <div className="flex gap-2 justify-end">
+                <button type="button" className="btn-secondary text-xs" onClick={() => setClosing(null)}>Cancel</button>
+                <button type="button" className="text-xs font-semibold text-white bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-50" disabled={busy}
+                  onClick={async () => { await moveTo(DECLINED, { closedAs: closing.closedAs, closedNote: closing.note.trim() || null }); setClosing(null) }}>
+                  Confirm
+                </button>
+              </div>
+            </div>
+          )}
           {declined && (
-            <button type="button" className="btn-secondary text-xs" disabled={busy} onClick={() => moveTo('interest')}>Reopen</button>
+            <button type="button" className="btn-secondary text-xs" disabled={busy} onClick={() => moveTo('interest', { closedAs: null, closedNote: null })}>Reopen</button>
           )}
         </div>
 

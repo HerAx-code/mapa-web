@@ -25,7 +25,7 @@ async function handleOnboardingRequestCreated({ db, request, serverTimestamp }) 
     db.collection('notifications').doc(d.id).collection('items').add({
       type:      'onboarding_request',
       title:     'New hospital onboarding request',
-      body:      `${name}${where} asked to join MAPA. Review it in Onboarding requests.`,
+      body:      `${name}${where} asked to join MAPA. Review it in Onboarding.`,
       read:      false,
       createdAt: serverTimestamp(),
       fromUid:   null,

@@ -14,6 +14,7 @@ initializeApp()
 
 const { resetAgencySlots }       = require('./src/resetAgencySlots')
 const { glExpirySweep }          = require('./src/glExpirySweep')
+const { purgeDeclinedOnboarding } = require('./src/purgeDeclinedOnboarding')
 const { verifyAccessCode }       = require('./src/verifyAccessCode')
 const { syncRequestFinancials }  = require('./src/syncRequestFinancials')
 const { deleteAuthUser }         = require('./src/deleteAuthUser')
@@ -28,6 +29,7 @@ const { onOnboardingRequestCreated } = require('./src/onOnboardingRequestCreated
 
 exports.resetAgencySlots        = resetAgencySlots
 exports.glExpirySweep           = glExpirySweep
+exports.purgeDeclinedOnboarding = purgeDeclinedOnboarding
 exports.verifyAccessCode        = verifyAccessCode
 exports.syncRequestFinancials   = syncRequestFinancials
 exports.deleteAuthUser          = deleteAuthUser
