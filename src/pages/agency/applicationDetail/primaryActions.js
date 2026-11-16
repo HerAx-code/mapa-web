@@ -17,7 +17,7 @@ import {
   MdCheckCircle, MdCancel, MdHourglassEmpty, MdPlayArrow,
   MdPrint, MdUpload, MdWarning,
 } from 'react-icons/md'
-import { GL_VALIDITY_DAYS, glDaysRemaining } from '../../../utils/constants'
+import { glDaysRemaining } from '../../../utils/constants'
 
 export function getPrimaryActions(ctx) {
   const { app, expired, expiringSoon, handlers, signedScan } = ctx
@@ -75,7 +75,7 @@ export function getPrimaryActions(ctx) {
 
   if (app.status === 'certificate' && app.glStatus === 'issued' && expired) {
     return {
-      hint: `GL passed its ${GL_VALIDITY_DAYS}-day validity window — release the committed budget.`,
+      hint: 'GL passed its validity date — release the committed budget.',
       tone: 'red',
       actions: [
         { label: 'Mark GL Expired',  icon: MdWarning, variant: 'primary-orange', onClick: handlers.handleExpireGL },

@@ -594,7 +594,7 @@
         },
         {
           "q": "What is a Guarantee Letter?",
-          "a": "A Guarantee Letter (GL) is the official document an agency issues when it approves its share of your bill. Present it at the provider to claim the assistance. GLs are valid for 30 days from issue. A request may receive more than one GL when several agencies co-fund it."
+          "a": "A Guarantee Letter (GL) is the official document an agency issues when it approves its share of your bill. Present it at the provider to claim the assistance. Each GL shows the date it is valid until, usually 10 days from issue. A request may receive more than one GL when several agencies co-fund it."
         },
         {
           "q": "How will I know the status of my request?",
@@ -1486,7 +1486,7 @@
           "s3": "Wait until the agency uploads the wet-signed copy. You will receive an in-portal notification when it is ready.",
           "s4": "Click the thumbnail to view the signed Guarantee Letter, or click Download to save a copy to your device.",
           "s5": "Present the signed Guarantee Letter (printed or shown on your phone) at the provider named on it (hospital billing, pharmacy, etc.).",
-          "note": "The Guarantee Letter is valid for 30 days from the date of issuance. The named provider may bill the agency directly for the guaranteed amount — you are not responsible for the guaranteed portion."
+          "note": "The Guarantee Letter is valid until the date printed on it, usually 10 days from issuance. Use it before then. The named provider may bill the agency directly for the guaranteed amount — you are not responsible for the guaranteed portion."
         },
         "contact": {
           "title": "How do I contact the hospital or an agency?",

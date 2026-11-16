@@ -7,6 +7,7 @@
 import { tsToDate } from '../utils/dates'
 import { formatUserAddress } from '../utils/address'
 import { ORG } from '../config/org'
+import { glValidUntil, GL_VALIDITY_DAYS } from '../utils/constants'
 
 const fmtDate = (ts) => {
   const d = tsToDate(ts)
@@ -269,7 +270,9 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
 
       <div className="validity-wrap">
         <span className="validity">
-          This Guarantee Letter is valid for <strong>30 days</strong> from date of issuance.<br/>
+          {glValidUntil(app)
+            ? <>This Guarantee Letter is valid until <strong>{glValidUntil(app).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })}</strong>.</>
+            : <>This Guarantee Letter is valid for <strong>{GL_VALIDITY_DAYS} days</strong> from date of issuance.</>}<br/>
           The named provider ({app.payableTo || '—'}) may bill {app.agencyName} directly up to
           the guaranteed amount. The patient shall not be liable for the guaranteed portion.
         </span>

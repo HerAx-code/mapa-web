@@ -22,14 +22,24 @@ const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestor
  * cutoff timestamp + dependency bag and calls handleGLExpirySweep().
  */
 
-// Mirror of src/utils/constants.js GL_VALIDITY_DAYS. Kept in sync by
-// hand because the web bundle and the functions bundle are built
-// separately and don't share a module surface; this constant rarely
-// changes and a mismatch would only postpone an expiry by at most
-// one sweep interval.
-const GL_VALIDITY_DAYS = 30
+// Mirror of src/utils/constants.js (glExpiryMs). Kept in sync by hand: the
+// web and functions bundles don't share modules. Since 2026-11-16 each GL
+// stores its own glExpiresAt (10 days from issuance); older GLs carry none
+// and keep the 30 days they were printed with.
+const GL_VALIDITY_DAYS = 10
+const LEGACY_GL_VALIDITY_DAYS = 30
+const DAY_MS = 86400000
 
-async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cutoffMs }) {
+function glExpiryMs(app) {
+  const stored = app?.glExpiresAt?.toMillis?.()
+  if (typeof stored === 'number') return stored
+  const issued = app?.approvedAt?.toMillis?.()
+  return typeof issued === 'number' ? issued + (LEGACY_GL_VALIDITY_DAYS + 1) * DAY_MS : null
+}
+
+// nowMs (optional): when given, a candidate is expired only once it is past
+// its own validity (glExpiryMs); the query cutoff is the shortest window.
+async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cutoffMs, nowMs = null }) {
   const snap = await db
     .collection('applications')
     .where('glStatus', '==', 'issued')
@@ -41,9 +51,14 @@ async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cut
   let skippedRaced = 0
   let failedCount = 0
   let releasedTotal = 0
+  let skippedNotDue = 0
 
   for (const docSnap of snap.docs) {
     const app = docSnap.data()
+    if (nowMs != null) {
+      const expiry = glExpiryMs(app)
+      if (expiry == null || nowMs < expiry) { skippedNotDue++; continue }
+    }
     const amount = Number(app.approvedAmount) || 0
     const agencyId = app.agencyId
 
@@ -89,12 +104,14 @@ async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cut
     releasedTotal,
     skippedRaced,
     skippedNoAgency,
+    skippedNotDue,
     failed: failedCount,
   }
 }
 
 exports.handleGLExpirySweep = handleGLExpirySweep
 exports.GL_VALIDITY_DAYS = GL_VALIDITY_DAYS
+exports.glExpiryMs = glExpiryMs
 
 exports.glExpirySweep = onSchedule(
   {
@@ -104,7 +121,8 @@ exports.glExpirySweep = onSchedule(
     retryCount: 3,
   },
   async () => {
-    const cutoffMs = Date.now() - GL_VALIDITY_DAYS * 86400000
+    const nowMs = Date.now()
+    const cutoffMs = nowMs - GL_VALIDITY_DAYS * DAY_MS
     const cutoff = Timestamp.fromMillis(cutoffMs)
     const result = await handleGLExpirySweep({
       db: getFirestore(),
@@ -112,6 +130,7 @@ exports.glExpirySweep = onSchedule(
       cutoffMs,
       serverTimestamp: () => FieldValue.serverTimestamp(),
       increment: (n) => FieldValue.increment(n),
+      nowMs,
     })
     logger.info('[glExpirySweep] hourly sweep complete', result)
   }
