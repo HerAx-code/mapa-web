@@ -19,10 +19,13 @@ export function generateRequestId() {
   return `${REQUEST_ID_PREFIX}-${year}-${String(Date.now()).slice(-6)}${rand}`
 }
 
-// Net amount the agencies must co-fund, after PhilHealth + any prior coverage
-// is applied first (sequential charging). Never negative.
-export function computeAmountNeeded({ totalBill = 0, philhealthCovered = 0, otherCovered = 0 } = {}) {
-  const net = Number(totalBill) - Number(philhealthCovered) - Number(otherCovered)
+// Net amount the agencies must co-fund, after the mandatory discounts,
+// PhilHealth and any prior coverage are applied first (sequential charging).
+// Never negative. `discountsApplied` (2026-11-16) is the senior citizen / PWD
+// discount + VAT exemption from the bill's own discount column, applied before
+// PhilHealth (PhilHealth Circular 2017-0014 Annex A); absent on older requests.
+export function computeAmountNeeded({ totalBill = 0, discountsApplied = 0, philhealthCovered = 0, otherCovered = 0 } = {}) {
+  const net = Number(totalBill) - (Number(discountsApplied) || 0) - Number(philhealthCovered) - Number(otherCovered)
   return Number.isFinite(net) ? Math.max(0, net) : 0
 }
 
@@ -37,6 +40,7 @@ export function deriveAmountNeeded(req = {}) {
   }
   return computeAmountNeeded({
     totalBill:         req.totalBill,
+    discountsApplied:  req.discountsApplied,
     philhealthCovered: req.philhealthCovered,
     otherCovered:      req.otherCovered,
   })

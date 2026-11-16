@@ -12,6 +12,7 @@ import { logAudit } from '../../utils/auditLog'
 import { fmtDate } from '../../utils/dates'
 import { tenantWhere, patientWhere } from '../../utils/hospitals'
 import { dohReportRows } from '../../utils/dohReport'
+import { glLedgerRows, glTotalsByAgency, GL_STATES } from '../../utils/glLedger'
 import {
   MdArrowBack, MdSearch, MdRefresh, MdDownload, MdClose,
 } from 'react-icons/md'
@@ -48,6 +49,24 @@ async function loadDohReport({ startDate, endDate }) {
   })
 }
 
+// Guarantee letters issued for this hospital's patients (2026-11-16): every
+// slice with a letter, joined with its request. Read-only; the date range is
+// on the issue date.
+async function loadGuaranteeLetters({ startDate, endDate }) {
+  const slices = (await getDocs(query(collection(db, 'applications'), ...tenantWhere())))
+    .docs.map(d => ({ id: d.id, ...d.data() }))
+    .filter(s => s.glStatus)
+  const requestIds = [...new Set(slices.map(s => s.requestId).filter(Boolean))]
+  const requests = Object.fromEntries(await Promise.all(requestIds.map(id =>
+    getDoc(doc(db, 'requests', id)).then(snap => [id, snap.exists() ? snap.data() : {}]).catch(() => [id, {}]))))
+  return glLedgerRows(slices, { requests }, {
+    from: startDate ? new Date(`${startDate}T00:00:00`) : null,
+    to:   endDate ? new Date(`${endDate}T23:59:59`) : null,
+  })
+}
+
+const pesoCell = (n) => n == null ? '—' : n
+
 // The previous calendar month, as YYYY-MM-DD (the DOH report's default).
 const lastMonthRange = () => {
   const now = new Date()
@@ -79,6 +98,35 @@ const SECTION_CONFIG = {
       { label: 'Fund source',            getValue: d => d.fundSource || '—' },
       { label: 'Amount approved (PHP)',  getValue: d => d.amountApproved },
       { label: 'Amount billed (PHP)',    getValue: d => d.amountBilled === '' ? '—' : d.amountBilled },
+    ],
+  },
+  'guarantee-letters': {
+    title:       'Guarantee Letters',
+    load:        loadGuaranteeLetters,
+    statusField: null,
+    extraConstraints: [],
+    searchFields: ['letterRef', 'requestRef', 'patientName', 'agency'],
+    statuses: [{ key: 'all', label: 'All' }],
+    clientFilters: [{
+      key: 'state', label: 'Letter',
+      options: [{ key: 'all', label: 'All' }, ...Object.entries(GL_STATES).map(([key, label]) => ({ key, label }))],
+      test: (d, v) => v === 'all' || d.state === v,
+    }],
+    summary: glTotalsByAgency,
+    cols: [
+      { label: '#',                     getValue: (d, i) => i + 1 },
+      { label: 'Letter',                getValue: d => d.letterRef || '—' },
+      { label: 'Request',               getValue: d => d.requestRef || '—' },
+      { label: 'Patient',               getValue: d => d.patientName || '—' },
+      { label: 'Agency',                getValue: d => d.agency || '—' },
+      { label: 'Care setting',          getValue: d => d.careSetting },
+      { label: 'Issued',                getValue: d => fmtDate(d.issuedOn) },
+      { label: 'Valid until',           getValue: d => fmtDate(d.validUntil) },
+      { label: 'Status',                getValue: d => d.daysLeft != null ? `${GL_STATES[d.state]} (${d.daysLeft === 0 ? 'last day' : `${d.daysLeft} day${d.daysLeft === 1 ? '' : 's'} left`})` : GL_STATES[d.state] },
+      { label: 'Amount approved (PHP)', getValue: d => d.approved },
+      { label: 'Used on',               getValue: d => d.usedOn ? fmtDate(d.usedOn) : '—' },
+      { label: 'Amount billed (PHP)',   getValue: d => pesoCell(d.billed) },
+      { label: 'Unused (PHP)',          getValue: d => pesoCell(d.unused) },
     ],
   },
   documents: {
@@ -518,6 +566,39 @@ export default function ExportPreview() {
             )}
           </div>
         </div>
+
+        {/* ── Per-agency totals (guarantee letters) ── */}
+        {config.summary && !loading && docs.length > 0 && (
+          <div className="bg-white border-b border-gray-100 px-5 py-3 flex-shrink-0 overflow-x-auto">
+            <table className="text-xs min-w-full">
+              <thead>
+                <tr className="text-left text-gray-500">
+                  <th className="font-medium pr-4 py-1">Agency</th>
+                  <th className="font-medium pr-4 py-1 text-right">Open letters</th>
+                  <th className="font-medium pr-4 py-1 text-right">Open amount</th>
+                  <th className="font-medium pr-4 py-1 text-right">Used</th>
+                  <th className="font-medium pr-4 py-1 text-right">Amount billed</th>
+                  <th className="font-medium py-1 text-right">Expired</th>
+                </tr>
+              </thead>
+              <tbody>
+                {config.summary(docs).map(t => (
+                  <tr key={t.agency} className="text-gray-700">
+                    <td className="pr-4 py-1">{t.agency}</td>
+                    <td className="pr-4 py-1 text-right tabular-nums">{t.openCount}</td>
+                    <td className="pr-4 py-1 text-right tabular-nums">₱{t.openAmount.toLocaleString()}</td>
+                    <td className="pr-4 py-1 text-right tabular-nums">{t.usedCount}</td>
+                    <td className="pr-4 py-1 text-right tabular-nums">₱{t.billedAmount.toLocaleString()}</td>
+                    <td className="py-1 text-right tabular-nums">{t.expiredCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-[11px] text-gray-500 mt-1.5">
+              Open = valid or expiring soon. Agencies record when a letter is used and the amount billed; this list is for matching against the hospital's own billing records.
+            </p>
+          </div>
+        )}
 
         {/* ── Table ── */}
         <div className="flex-1 overflow-auto">

@@ -19,6 +19,7 @@ const SLICE_STATE = {
 
 export default function PathToZeroBalance({ request, slices = [], agencies = [], funding }) {
   const totalBill = Number(request.totalBill ?? request.amountNeeded) || 0
+  const disc      = Number(request.discountsApplied) || 0
   const ph        = Number(request.philhealthCovered) || 0
   const other     = Number(request.otherCovered) || 0
   const needed    = Number(request.amountNeeded) || 0
@@ -26,7 +27,7 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
 
   // % of the FULL bill covered by every source (coverage-first + committed slices).
   const coveredPct = totalBill > 0
-    ? Math.min(100, Math.round(((ph + other + funding.committed) / totalBill) * 100))
+    ? Math.min(100, Math.round(((disc + ph + other + funding.committed) / totalBill) * 100))
     : 0
 
   const sliceRows = [...slices].sort((a, b) => (b.amountApproved ?? b.amountRequested ?? 0) - (a.amountApproved ?? a.amountRequested ?? 0))
@@ -52,6 +53,7 @@ export default function PathToZeroBalance({ request, slices = [], agencies = [],
 
       <ul className="text-sm divide-y-0">
         <Row label="Total bill" amount={totalBill} />
+        {disc > 0  && <Row label="Senior / PWD discount and VAT exemption" sub={<span className="text-green-700">applied</span>} amount={disc} sign="− " />}
         {ph > 0    && <Row label="PhilHealth" sub={<span className="text-green-700">applied</span>} amount={ph} sign="− " />}
         {other > 0 && <Row label="Other prior aid" sub={<span className="text-green-700">applied</span>} amount={other} sign="− " />}
         <Row label="Needed from agencies" amount={needed} top strong={false} muted />

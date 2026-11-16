@@ -703,7 +703,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // Optional prior-coverage inputs (PhilHealth/insurance + other aid) the social
   // worker records at assessment. Seeded from the request and re-seeded when a
   // different request is opened; local edits stay until saved.
-  const [coverage, setCoverage] = useState({ ph: '', other: '', bill: '', billReason: '' })
+  const [coverage, setCoverage] = useState({ disc: '', ph: '', other: '', bill: '', billReason: '' })
   const [busy, setBusy] = useState(false)
   const [timeline, setTimeline] = useState([])
   const [timelineLoading, setTimelineLoading] = useState(true)
@@ -751,6 +751,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // Re-seed the coverage inputs whenever a different request is opened.
   useEffect(() => {
     setCoverage({
+      disc:  request.discountsApplied  != null ? String(request.discountsApplied)  : '',
       ph:    request.philhealthCovered != null ? String(request.philhealthCovered) : '',
       other: request.otherCovered      != null ? String(request.otherCovered)      : '',
       bill:  String(request.totalBill ?? request.amountNeeded ?? ''),
@@ -796,6 +797,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   const billEdited     = coverage.bill !== '' && Number(coverage.bill) !== billBase
   const previewNeeded  = computeAmountNeeded({
     totalBill:         billEdited ? Number(coverage.bill) || 0 : billBase,
+    discountsApplied:  Number(coverage.disc)  || 0,
     philhealthCovered: Number(coverage.ph)    || 0,
     otherCovered:      Number(coverage.other) || 0,
   })
@@ -996,16 +998,21 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   const saveCoverage = async () => {
     setBusy(true)
     try {
+      const discountsApplied  = Number(coverage.disc)  || 0
       const philhealthCovered = Number(coverage.ph)    || 0
       const otherCovered      = Number(coverage.other) || 0
       const oldBill           = Number(request.totalBill ?? request.amountNeeded) || 0
       const totalBill         = coverage.bill !== '' ? Number(coverage.bill) : oldBill
       if (!(totalBill > 0)) { toast.error('Enter the total bill.'); return }
+      if ([discountsApplied, philhealthCovered, otherCovered].some(n => n < 0)) { toast.error('Amounts cannot be negative.'); return }
+      if (discountsApplied + philhealthCovered + otherCovered > totalBill) {
+        toast.error('Discounts and coverage add up to more than the total bill. Check the figures against the billing statement.'); return
+      }
       const billChanged       = totalBill !== oldBill
       if (billChanged && coverage.billReason.trim().length < 5) { toast.error('Give a reason for correcting the bill.'); return }
-      const amountNeeded      = computeAmountNeeded({ totalBill, philhealthCovered, otherCovered })
+      const amountNeeded      = computeAmountNeeded({ totalBill, discountsApplied, philhealthCovered, otherCovered })
       await updateDoc(doc(db, 'requests', request.id), {
-        totalBill, philhealthCovered, otherCovered, amountNeeded,
+        totalBill, discountsApplied, philhealthCovered, otherCovered, amountNeeded,
         ...(billChanged ? { billCorrection: {
           from: oldBill, to: totalBill, reason: coverage.billReason.trim(), by: user.name ?? '', byUid: user.uid, at: serverTimestamp(),
         } } : {}),
@@ -1022,7 +1029,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
       logAudit(user, {
         action: 'coverage_updated', targetType: 'request', targetId: request.id,
         targetName: request.requestId,
-        details: `PhilHealth ${peso(philhealthCovered)} + other ${peso(otherCovered)} on bill ${peso(totalBill)} → needed ${peso(amountNeeded)}`,
+        details: `${discountsApplied > 0 ? `Discounts ${peso(discountsApplied)} + ` : ''}PhilHealth ${peso(philhealthCovered)} + other ${peso(otherCovered)} on bill ${peso(totalBill)} → needed ${peso(amountNeeded)}`,
         requestId: request.id, patientId: request.patientId,
       })
       toast.success('Coverage saved.')
@@ -1260,6 +1267,12 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
                     value={coverage.billReason} onChange={e => setCoverage(c => ({ ...c, billReason: e.target.value }))} />
                 </label>
               )}
+              <label className="block">
+                <span className="text-xs text-gray-500">Senior citizen / PWD discount and VAT exemption (₱) — from the bill's discount column; 0 if none</span>
+                <input type="number" min="0" inputMode="numeric" className="input" placeholder="0"
+                  disabled={!coverageEditable || busy}
+                  value={coverage.disc} onChange={e => setCoverage(c => ({ ...c, disc: e.target.value }))} />
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
                   <span className="text-xs text-gray-500">PhilHealth / insurance (₱)</span>

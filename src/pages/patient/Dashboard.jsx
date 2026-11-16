@@ -52,6 +52,7 @@ const formatWhen = (ts) => {
 // remaining. Legacy requests with no totalBill fall back to amountNeeded.
 function CoverageCard({ request, t }) {
   const bill     = Number(request.totalBill ?? request.amountNeeded) || 0
+  const disc     = Number(request.discountsApplied) || 0
   const ph       = Number(request.philhealthCovered) || 0
   const other    = Number(request.otherCovered) || 0
   const needed   = Number(request.amountNeeded) || 0
@@ -62,6 +63,7 @@ function CoverageCard({ request, t }) {
 
   const rows = [
     { label: t('patient.dashboard.coverage.bill'), value: peso(bill) },
+    ...(disc > 0  ? [{ label: t('patient.dashboard.coverage.discounts'),  value: `− ${peso(disc)}`,  muted: true }] : []),
     ...(ph > 0    ? [{ label: t('patient.dashboard.coverage.philhealth'), value: `− ${peso(ph)}`,    muted: true }] : []),
     ...(other > 0 ? [{ label: t('patient.dashboard.coverage.other'),      value: `− ${peso(other)}`, muted: true }] : []),
     { label: t('patient.dashboard.coverage.needed'), value: peso(needed), strong: true },

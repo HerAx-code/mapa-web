@@ -543,6 +543,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     const updates = {
       'intakeSheet.billVerification': {
         amount: Number(app.totalBill),
+        discounts: Number(app.discountsApplied) || 0,
         philhealth: Number(app.philhealthCovered) || 0,
         otherCovered: Number(app.otherCovered) || 0,
         billNumber, source: billForm.source,
@@ -1137,8 +1138,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <p className="text-lg font-bold text-gray-900 tabular-nums">{app.totalBill != null ? peso(app.totalBill) : '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">PhilHealth + other coverage</p>
-                  <p className="text-lg font-bold text-gray-900 tabular-nums">{peso((Number(app.philhealthCovered) || 0) + (Number(app.otherCovered) || 0))}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Discounts + PhilHealth + other coverage</p>
+                  <p className="text-lg font-bold text-gray-900 tabular-nums">{peso((Number(app.discountsApplied) || 0) + (Number(app.philhealthCovered) || 0) + (Number(app.otherCovered) || 0))}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Amount needed</p>
