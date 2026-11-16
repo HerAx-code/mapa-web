@@ -6,7 +6,7 @@
  * CI e2e smoke caught once on the Landing "two doors" cards.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
 import i18n, { setLanguage } from '../../src/i18n'
@@ -50,12 +50,34 @@ describe('public pages (signed out)', () => {
     // Two doors
     expect(screen.getByText('For patients')).toBeTruthy()
     expect(screen.getByText('Request onboarding')).toBeTruthy()
-    // Live partner-agency strip
-    expect(screen.getByText('One application reaches every partner agency')).toBeTruthy()
-    // Participating hospitals with their prefixes, and the network band counts
-    expect(screen.getByText('Bangsamoro General Hospital')).toBeTruthy()
-    // The band label appears twice by design: screen-reader <dt> + visible <dd>.
+    // Compact partner-agency strip (landing review 2026-11-16)
+    expect(screen.getByText('Funded by 2 partner programs')).toBeTruthy()
+    // Participating hospitals: the access-code list and the offices in "Need help"
+    expect(screen.getAllByText('Bangsamoro General Hospital').length).toBeGreaterThan(1)
     expect(screen.getAllByText('participating hospitals').length).toBeGreaterThan(0)
+    // No single hospital's address or phone is written into the page
+    expect(document.body.textContent).not.toMatch(/Sinsuat|421-2500/)
+  })
+
+  it('Landing scales to many agencies: 6 badges + "+N", 6 cards + show all, search', async () => {
+    const { default: Landing } = await import('../../src/pages/auth/Landing')
+    await i18n.changeLanguage('en')
+    const saved = DATA.agenciesPublic
+    DATA.agenciesPublic = Array.from({ length: 20 }, (_, i) => ({
+      id: `a${i}`, name: `Agency ${String(i + 1).padStart(2, '0')}`, enabled: true, slots: { total: 10, remaining: 10 },
+    }))
+    try {
+      wrap(<Landing />)
+      expect(screen.getByText('Funded by 20 partner programs')).toBeTruthy()
+      expect(screen.getByText('+14')).toBeTruthy()
+      expect(screen.getAllByRole('heading', { level: 3, name: /^Agency \d+$/ })).toHaveLength(6)
+      fireEvent.click(screen.getByRole('button', { name: 'Show all 20 programs' }))
+      expect(screen.getAllByRole('heading', { level: 3, name: /^Agency \d+$/ })).toHaveLength(20)
+      fireEvent.change(screen.getByPlaceholderText('Search programs'), { target: { value: 'Agency 07' } })
+      expect(screen.getAllByRole('heading', { level: 3, name: /^Agency \d+$/ })).toHaveLength(1)
+    } finally {
+      DATA.agenciesPublic = saved
+    }
   })
 
   it('Landing renders in Filipino too', async () => {

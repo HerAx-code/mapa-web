@@ -173,12 +173,17 @@
     "devOnly": "Dev only — Demo accounts"
   },
   "landing": {
+    "cta": {
+      "createAccount": "Create your account"
+    },
     "nav": {
       "how": "How it works",
       "programs": "Programs",
       "forHospitals": "For hospitals"
     },
     "trust": {
+      "seeAll": "See all programs",
+      "fundedBy": "Funded by {{count}} partner programs",
       "heading": "One application reaches every partner agency"
     },
     "doors": {
@@ -212,12 +217,16 @@
       "dashboard": "Dashboard →"
     },
     "hero": {
+      "statLanguages": "languages: Filipino and English",
+      "statPrograms": "partner programs",
+      "statHospitals": "participating hospitals",
+      "headlineNetwork": "Medical assistance at your hospital — one application, from your phone.",
+      "badgeNetwork": "Medical assistance network of participating hospitals",
       "badge": "Official portal of {{facility}}",
-      "location": "Sinsuat Avenue, Cotabato City",
-      "tagline": "Simplifying access to medical financial assistance programs at {{facility}} for patients, agencies, and administrators.",
+      "tagline": "Apply once for medical financial assistance. The hospital's social-services office checks your request and sends it to the agencies that can help pay your bill.",
       "ctaPatient": "Apply for Patient Account",
       "ctaDashboard": "Go to Dashboard",
-      "learnMore": "Learn More ↓",
+      "learnMore": "Learn more ↓",
       "headline": "Medical assistance at {{facility}} — one application, from your phone.",
       "proof1Value": "One",
       "proof1Label": "application for every partner agency",
@@ -238,8 +247,8 @@
     },
     "prepare": {
       "heading": "Before you register, prepare the following",
-      "codeTitle": "Patient Access Code",
-      "codeDesc": "Your Patient Access Code ({{codeFormat}}) from the social-services office of a participating hospital.",
+      "codeTitle": "Patient Access Code (when you file)",
+      "codeDesc": "Optional at sign-up. You need one to file a request: the social-services office of the hospital you choose issues it in the patient's name (for example {{example}}).",
       "emailTitle": "Email Address",
       "emailDesc": "A working email address for account login, notifications, and password recovery.",
       "mobileTitle": "Mobile Number",
@@ -250,7 +259,7 @@
       "registerNow": "Register now →"
     },
     "steps": {
-      "heading": "How to Get Medical Assistance",
+      "heading": "How to get medical assistance",
       "subtitle": "Create your account, choose a hospital, get a code from its social-services office, and file your request. One account works at every participating hospital.",
       "s1Title": "Create Your MAPA Account",
       "s1Desc": "Sign up online for free with your name, birthdate, email, contact number and address. If the patient is a family member, you can sign up for them. Already have a code? You can enter it now.",
@@ -262,14 +271,18 @@
       "s4Desc": "A social worker verifies your documents and assesses your case remotely, and may message you if anything is needed — no interview to attend.",
       "s5Title": "Get Endorsed & Receive Your Guarantee Letter",
       "s5Desc": "The hospital endorses your request to agencies that can fund it. Get your Guarantee Letter to present at the named provider.",
-      "s6Title": "Next Time: One Code per Request",
-      "s6Desc": "Each code is good for one request, and only for the patient it was issued to. For another request — at the same or a different hospital — get a new code from that hospital.",
+      "s6Title": "Your next requests",
+      "s6Desc": "Each code is for one request, in the patient's name. For recurring care such as dialysis or chemotherapy, the hospital can issue one code that covers a course of treatment. For a request at another hospital, get a code there.",
       "startBtn": "Start with Step 1",
       "footer": "Free · No fees required · Powered by {{gateway}}"
     },
     "programs": {
-      "heading": "Available Programs",
-      "subtitle": "Browse active medical assistance programs at {{facility}}. Slots reset daily at midnight.",
+      "showFewer": "Show fewer",
+      "showAll": "Show all {{count}} programs",
+      "noMatch": "No program matches “{{q}}”.",
+      "search": "Search programs",
+      "heading": "Available programs",
+      "subtitle": "Browse the programs that fund patients at participating hospitals. Slots reset daily at midnight.",
       "applyNow": "Apply Now →",
       "goToDashboard": "Go to Dashboard →",
       "full": "Full",
@@ -302,7 +315,7 @@
     },
     "faq": {
       "heading": "Questions people ask us",
-      "intro": "If your question isn't here, call or visit us — we would rather explain it than have you guess.",
+      "intro": "If your question isn't here, visit a social-services office — we would rather explain it than have you guess.",
       "q1": "Do I need to pay anything?",
       "a1": "No. Applying through MAPA is free, from registration to the release of your Guarantee Letter. {{gateway}} staff and MAPA will never ask for a fee, a deposit, or a 'processing charge'. If anyone asks you for money in exchange for approval, report it to the Medical Social Services office right away.",
       "q2": "What is a Patient Access Code and how do I get one?",
@@ -317,30 +330,28 @@
       "a6": "Yes. MAPA is operated by {{gateway}} and handles your data under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the funding agency your request is endorsed to. You may ask for a copy of your data or ask that it be corrected at any time."
     },
     "help": {
-      "title": "Need help? Visit us.",
-      "intro": "Staff at the {{gateway}} can register you, take your selfie, and upload your documents for you. Bring your papers and someone will sit with you.",
+      "title": "Need help? Visit the hospital.",
+      "intro": "Staff at the social-services office of any participating hospital can register you, take your selfie and upload your documents for you. Bring your papers and someone will sit with you.",
       "onsite": "Walk-in assistance available — no appointment needed.",
       "startBtn": "Start my application",
       "addressLabel": "Address",
-      "address": "{{gateway}}, Sinsuat Avenue, Cotabato City, Maguindanao del Norte 9600",
       "phoneLabel": "Phone",
       "emailLabel": "Email",
       "hoursLabel": "Office hours",
       "hours": "Monday to Friday, 8:00 AM – 5:00 PM. Closed on holidays."
     },
     "footer": {
+      "officesLink": "Social-services offices",
       "forHospitals": "For hospitals",
-      "brandDesc": "The official online system of {{facility}} for processing medical assistance applications.",
-      "quickLinks": "Quick Links",
-      "registerPatient": "Register as Patient",
-      "login": "Log In",
-      "dashboard": "Go to Dashboard",
-      "howItWorks": "How It Works",
-      "contact": "Contact Us",
-      "addressLine1": "Sinsuat Avenue, Cotabato City,",
-      "addressLine2": "Maguindanao del Norte 9600",
+      "brandDesc": "The online system of participating hospitals for medical financial assistance.",
+      "quickLinks": "Quick links",
+      "registerPatient": "Create your account",
+      "login": "Log in",
+      "dashboard": "Go to dashboard",
+      "howItWorks": "How it works",
+      "contact": "Contact us",
       "hours": "Mon – Fri, 8:00 AM – 5:00 PM",
-      "copyright": "© {{year}} MAPA · {{facility}} · All rights reserved",
+      "copyright": "© {{year}} MAPA · All rights reserved",
       "privacy": "Privacy Notice",
       "officialPortal": "{{org}} Official Portal"
     },
@@ -364,7 +375,7 @@
       "access2": "Agency Coordinators — applications submitted to their agency",
       "access3": "Staff Administrators — documents and applications for review",
       "access4": "System Administrators — full access for management and audit",
-      "contactNote": "For data concerns, contact the <b>{{gateway}}</b> at {{contactEmail}} or call (064) 421-2500.",
+      "contactNote": "For data concerns, contact the <b>{{gateway}}</b> at {{contactEmail}}.",
       "close": "Close"
     }
   },

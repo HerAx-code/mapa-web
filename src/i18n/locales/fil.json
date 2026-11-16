@@ -173,12 +173,17 @@
     "devOnly": "Dev lamang — Demo accounts"
   },
   "landing": {
+    "cta": {
+      "createAccount": "Gumawa ng account"
+    },
     "nav": {
       "how": "Paano ito gumagana",
       "programs": "Mga programa",
       "forHospitals": "Para sa mga ospital"
     },
     "trust": {
+      "seeAll": "Tingnan ang lahat ng programa",
+      "fundedBy": "Pinopondohan ng {{count}} katuwang na programa",
       "heading": "Isang aplikasyon, abot ang bawat katuwang na ahensya"
     },
     "doors": {
@@ -212,12 +217,16 @@
       "dashboard": "Dashboard →"
     },
     "hero": {
+      "statLanguages": "wika: Filipino at Ingles",
+      "statPrograms": "katuwang na programa",
+      "statHospitals": "kalahok na ospital",
+      "headlineNetwork": "Tulong medikal sa inyong ospital — isang aplikasyon, mula sa inyong telepono.",
+      "badgeNetwork": "Network ng tulong medikal ng mga kalahok na ospital",
       "badge": "Opisyal na portal ng {{facility}}",
-      "location": "Sinsuat Avenue, Cotabato City",
-      "tagline": "Pinapasimple ang pag-access sa mga medical financial assistance program sa {{facility}} para sa mga pasyente, ahensya, at administrator.",
+      "tagline": "Mag-apply nang isang beses para sa tulong pinansiyal na medikal. Susuriin ng social-services office ng ospital ang inyong kahilingan at ipapadala ito sa mga ahensyang makakatulong sa inyong bayarin.",
       "ctaPatient": "Mag-apply para sa Patient Account",
       "ctaDashboard": "Pumunta sa Dashboard",
-      "learnMore": "Alamin Pa ↓",
+      "learnMore": "Alamin pa ↓",
       "headline": "Tulong medikal sa {{facility}} — isang aplikasyon, mula sa inyong telepono.",
       "proof1Value": "Isa",
       "proof1Label": "aplikasyon para sa lahat ng kasosyong ahensya",
@@ -238,8 +247,8 @@
     },
     "prepare": {
       "heading": "Bago mag-register, ihanda ang sumusunod",
-      "codeTitle": "Patient Access Code",
-      "codeDesc": "Ang inyong Patient Access Code ({{codeFormat}}) mula sa social-services office ng kalahok na ospital.",
+      "codeTitle": "Patient Access Code (sa paghahain)",
+      "codeDesc": "Opsyonal sa pagpaparehistro. Kailangan ito sa paghahain ng kahilingan: ibinibigay ito ng social-services office ng ospital na inyong pipiliin, nakapangalan sa pasyente (halimbawa {{example}}).",
       "emailTitle": "Email Address",
       "emailDesc": "Isang gumaganang email address para sa account login, abiso, at password recovery.",
       "mobileTitle": "Mobile Number",
@@ -250,7 +259,7 @@
       "registerNow": "Mag-register na →"
     },
     "steps": {
-      "heading": "Paano Kumuha ng Tulong Medikal",
+      "heading": "Paano kumuha ng tulong medikal",
       "subtitle": "Gumawa ng account, pumili ng ospital, kumuha ng code sa social-services office nito, at isumite ang inyong kahilingan. Isang account para sa lahat ng kalahok na ospital.",
       "s1Title": "Gumawa ng MAPA Account",
       "s1Desc": "Magparehistro online nang libre gamit ang pangalan, petsa ng kapanganakan, email, numero ng telepono at address. Kung kapamilya ang pasyente, maaari kayong magparehistro para sa kanya. May code na? Maaari ninyo itong ilagay ngayon.",
@@ -262,14 +271,18 @@
       "s4Desc": "Bine-verify ng social worker ang inyong mga dokumento at sinusuri ang kaso nang malayuan, at maaaring mag-message kung may kailangan — walang interview na pupuntahan.",
       "s5Title": "Ma-endorse at Tanggapin ang Guarantee Letter",
       "s5Desc": "Ine-endorse ng ospital ang inyong request sa mga ahensyang makapagpopondo. Kunin ang Guarantee Letter para ipakita sa nakasaad na provider.",
-      "s6Title": "Sa Susunod: Isang Code bawat Request",
-      "s6Desc": "Ang bawat code ay para sa isang kahilingan lamang, at para lamang sa pasyenteng pinagbigyan nito. Para sa isa pang kahilingan — sa parehong ospital o sa iba — kumuha ng bagong code sa ospital na iyon.",
+      "s6Title": "Ang inyong susunod na kahilingan",
+      "s6Desc": "Ang bawat code ay para sa isang kahilingan, nakapangalan sa pasyente. Para sa paulit-ulit na pagpapagamot gaya ng dialysis o chemotherapy, maaaring magbigay ang ospital ng isang code para sa isang kurso ng paggamot. Para sa kahilingan sa ibang ospital, kumuha ng code doon.",
       "startBtn": "Magsimula sa Hakbang 1",
       "footer": "Libre · Walang babayaran · Pinapatakbo ng {{gateway}}"
     },
     "programs": {
-      "heading": "Mga Available na Programa",
-      "subtitle": "Tingnan ang mga aktibong medical assistance program sa {{facility}}. Nire-reset araw-araw sa hatinggabi ang mga slot.",
+      "showFewer": "Ipakita nang mas kaunti",
+      "showAll": "Ipakita ang lahat ng {{count}} programa",
+      "noMatch": "Walang programang tugma sa “{{q}}”.",
+      "search": "Maghanap ng programa",
+      "heading": "Mga available na programa",
+      "subtitle": "Tingnan ang mga programang tumutulong sa mga pasyente ng mga kalahok na ospital. Nire-reset araw-araw sa hatinggabi ang mga slot.",
       "applyNow": "Mag-apply Na →",
       "goToDashboard": "Pumunta sa Dashboard →",
       "full": "Puno",
@@ -302,7 +315,7 @@
     },
     "faq": {
       "heading": "Mga tanong na madalas itanong",
-      "intro": "Kung wala rito ang tanong ninyo, tumawag o dumalaw — mas mabuting ipaliwanag namin kaysa manghula kayo.",
+      "intro": "Kung wala rito ang tanong ninyo, pumunta sa social-services office — mas mabuting ipaliwanag namin kaysa manghula kayo.",
       "q1": "May kailangan ba akong bayaran?",
       "a1": "Wala. Libre ang buong proseso sa MAPA, mula sa pagre-register hanggang sa paglabas ng Guarantee Letter. Hindi kayo hihingan ng bayad, deposito, o 'processing fee' ng {{gateway}} o ng MAPA. Kung may humingi ng pera kapalit ng approval, ipagbigay-alam agad sa Medical Social Services.",
       "q2": "Ano ang Patient Access Code at paano ito makukuha?",
@@ -317,30 +330,28 @@
       "a6": "Oo. Pinapatakbo ang MAPA ng {{gateway}} at pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ahensyang pinagsumite ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras."
     },
     "help": {
-      "title": "Kailangan ng tulong? Dumalaw.",
-      "intro": "Ang staff sa {{gateway}} ay maaaring magrehistro para sa inyo, kunan ng selfie, at mag-upload ng dokumento. Dalhin ang papeles at may tutulong sa inyo.",
+      "title": "Kailangan ng tulong? Pumunta sa ospital.",
+      "intro": "Ang mga kawani ng social-services office ng alinmang kalahok na ospital ay makakatulong sa pagpaparehistro, pagkuha ng selfie at pag-upload ng inyong mga dokumento. Dalhin ang inyong mga papeles at may tutulong sa inyo.",
       "onsite": "May tulong para sa walk-in — hindi kailangan ng appointment.",
       "startBtn": "Simulan ang aplikasyon",
       "addressLabel": "Address",
-      "address": "{{gateway}}, Sinsuat Avenue, Lungsod ng Cotabato, Maguindanao del Norte 9600",
       "phoneLabel": "Telepono",
       "emailLabel": "Email",
       "hoursLabel": "Oras ng opisina",
       "hours": "Lunes hanggang Biyernes, 8:00 AM – 5:00 PM. Sarado sa holiday."
     },
     "footer": {
+      "officesLink": "Mga social-services office",
       "forHospitals": "Para sa mga ospital",
-      "brandDesc": "Ang opisyal na online system ng {{facility}} para sa pagproseso ng medical assistance applications.",
-      "quickLinks": "Mabilisang Links",
-      "registerPatient": "Mag-register bilang Pasyente",
+      "brandDesc": "Ang online system ng mga kalahok na ospital para sa tulong pinansiyal na medikal.",
+      "quickLinks": "Mabilisang links",
+      "registerPatient": "Gumawa ng account",
       "login": "Mag-login",
-      "dashboard": "Pumunta sa Dashboard",
-      "howItWorks": "Paano Ito Gumagana",
+      "dashboard": "Pumunta sa dashboard",
+      "howItWorks": "Paano ito gumagana",
       "contact": "Makipag-ugnayan",
-      "addressLine1": "Sinsuat Avenue, Cotabato City,",
-      "addressLine2": "Maguindanao del Norte 9600",
       "hours": "Lun – Biy, 8:00 AM – 5:00 PM",
-      "copyright": "© {{year}} MAPA · {{facility}} · Lahat ng karapatan ay nakalaan",
+      "copyright": "© {{year}} MAPA · Lahat ng karapatan ay nakalaan",
       "privacy": "Privacy Notice",
       "officialPortal": "Opisyal na Portal ng {{org}}"
     },
@@ -364,7 +375,7 @@
       "access2": "Agency Coordinators — mga aplikasyong ipinasa sa kanilang ahensya",
       "access3": "Staff Administrators — mga dokumento at aplikasyon para sa pagrepaso",
       "access4": "System Administrators — buong access para sa management at audit",
-      "contactNote": "Para sa mga alalahanin sa datos, makipag-ugnayan sa <b>{{gateway}}</b> sa {{contactEmail}} o tumawag sa (064) 421-2500.",
+      "contactNote": "Para sa mga alalahanin sa datos, makipag-ugnayan sa <b>{{gateway}}</b> sa {{contactEmail}}.",
       "close": "Isara"
     }
   },
