@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
 import SearchableSelect from '../../components/ui/SearchableSelect'
@@ -119,6 +119,12 @@ function hydrateSheet(stored) {
   return base
 }
 
+// Phase 2B: the household answers a recurring patient can copy from their
+// last request (family, income, employment, expenses — not the medical part,
+// which changes with each request). The patient still reviews every step.
+const COPY_KEYS = ['familyMembers', 'householdSize', 'monthlyIncome', 'employmentType', 'employmentTypeOther',
+  'employer', 'lengthOfEmployment', 'incomeSource', 'expenses', 'shortfallCoverage', 'shortfallCoverageOther']
+
 export default function IntakeWizard() {
   const { id }   = useParams()
   const navigate = useNavigate()
@@ -156,6 +162,9 @@ export default function IntakeWizard() {
   // from Firestore once -- otherwise the patient's in-progress edits would
   // be clobbered on every keystroke-save.
   const hydrated = useRef(false)
+  // Phase 2B: the patient's most recent other request with a filled sheet.
+  const [prevSheet, setPrevSheet] = useState(null)
+  const [copied, setCopied] = useState(false)
   // Debounce timer for auto-save; refreshed on every field change.
   const autoSaveTimer = useRef(null)
 
@@ -175,6 +184,28 @@ export default function IntakeWizard() {
     }, () => { setLoading(false); toast.error(L('Failed to load your request.', 'Hindi na-load ang inyong kahilingan.')) })
     return unsub
   }, [id, navigate])
+
+  useEffect(() => {
+    if (!id || !user?.uid) return
+    getDocs(query(collection(db, 'requests'), where('patientId', '==', user.uid)))
+      .then(snap => {
+        const prev = snap.docs
+          .filter(d => d.id !== id && d.data().intakeSheet?.patientFilledAt)
+          .map(d => ({ sheet: d.data().intakeSheet, at: d.data().intakeSheet.patientFilledAt?.toDate?.() ?? null }))
+          .sort((a, b) => (b.at?.getTime() ?? 0) - (a.at?.getTime() ?? 0))[0]
+        setPrevSheet(prev ?? null)
+      })
+      .catch(() => {})
+  }, [id, user?.uid])
+  const copyPrevious = () => {
+    if (!prevSheet) return
+    const picked = Object.fromEntries(COPY_KEYS.filter(k => prevSheet.sheet[k] !== undefined).map(k => [k, prevSheet.sheet[k]]))
+    const next = hydrateSheet({ ...sheet, ...picked })
+    setSheet({ ...next, _amountsConfirmed: false })
+    setOthersDraft(String(othersFromHouseholdSize(next.householdSize)))
+    setCopied(true)
+    toast.success(L('Copied. Check each step and update anything that changed.', 'Nakopya na. Suriin ang bawat hakbang at baguhin ang anumang nagbago.'))
+  }
 
   const clearError = (f) => { if (errorField === f) setErrorField(null) }
   const set = (f) => (e) => {
@@ -407,6 +438,20 @@ export default function IntakeWizard() {
             </p>
           ) : null}
         </div>
+
+        {/* Phase 2B: recurring patients copy last time's household answers. */}
+        {!locked && !copied && prevSheet && !request?.intakeSheet?.patientFilledAt && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+            <p className="flex-1 min-w-0 text-sm text-brand-900">
+              {L('You answered these questions on an earlier request. Copy your family, income and expenses, then check that nothing changed.',
+                 'Nasagot na ninyo ang mga tanong na ito sa naunang kahilingan. Kopyahin ang inyong pamilya, kita at gastusin, at tiyaking walang nagbago.')}
+            </p>
+            <button type="button" onClick={copyPrevious}
+              className="btn-primary min-h-[44px] text-sm flex-shrink-0">
+              {L('Copy from my last request', 'Kopyahin mula sa huling kahilingan')}
+            </button>
+          </div>
+        )}
 
         {locked && (
           <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-base text-brand-900" role="status">

@@ -933,7 +933,7 @@
         "pcnUnverified": "A typed number can't be checked automatically, so you'll take a photo of your ID next and {{gateway}} will confirm it."
       },
       "documentsTitle": "Required documents",
-      "documentsHint": "Attach the documents below. {{gateway}} verifies them before endorsing your request. A verified Valid ID carries over for 12 months at this hospital; your Billing Statement is needed each time.",
+      "documentsHint": "Attach the documents below. {{gateway}} verifies them before endorsing your request. Some verified documents carry over at this hospital (Valid ID for 12 months; indigency certificate and doctor's order for 3 months from their date). The selfie, billing statement and charge slip are needed each time.",
       "identitySection": "Verify your identity",
       "identitySectionHint": "Your ID and a live selfie, so {{gateway}} can confirm it's really you.",
       "docsSection": "Supporting documents",
@@ -1432,7 +1432,7 @@
           "s4": "Take a live selfie when prompted; {{gateway}} compares it to your ID to confirm your identity.",
           "s5": "Submit. {{gateway}} reviews and verifies your documents before endorsing your request to agencies.",
           "s6": "If {{gateway}} marks a document for correction, you'll be notified — re-upload it from your request.",
-          "note": "Tip: once verified, your Valid ID (and PhilHealth ID) carries over to your next requests at the same hospital for 12 months. Everything else, including the Billing Statement, is needed fresh for each request."
+          "note": "Tip: some verified documents carry over to your next requests at the same hospital: your Valid ID and PhilHealth ID for 12 months, and your barangay indigency certificate and doctor's order for 3 months from the date on them. The live selfie, billing statement and charge slip are needed fresh for each request."
         },
         "apply": {
           "title": "How do I request assistance?",

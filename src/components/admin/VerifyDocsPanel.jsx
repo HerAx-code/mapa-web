@@ -5,7 +5,7 @@ import { tsToDate } from '../../utils/dates'
 import { ORG } from '../../config/org'
 import StatusBadge from '../ui/StatusBadge'
 import DuplicateAccountCheck from './DuplicateAccountCheck'
-import { docChecksFor, checksComplete } from '../../utils/docChecks'
+import { docChecksFor, checksComplete, needsIssuedDate } from '../../utils/docChecks'
 
 // Advisory verdict → text colour, reusing the OCR line's green/amber/gray
 // pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
@@ -37,7 +37,10 @@ export default function VerifyDocsPanel({
   const pendingDocs = reqDocs.filter(d => d.status === 'pending' && !d._missing && docChecksFor(d).length === 0)
   const [checking, setChecking] = useState(null) // doc id whose checklist is open
   const [ticks, setTicks] = useState({})
-  const openChecklist = (d) => { setChecking(d.id); setTicks({}) }
+  // Phase 2B: the date printed on a doctor's order / indigency certificate.
+  const [issuedOn, setIssuedOn] = useState('')
+  const todayIso = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+  const openChecklist = (d) => { setChecking(d.id); setTicks({}); setIssuedOn('') }
   return (
     <div className="space-y-4">
     {/* ⓘ Identity review (ID-verification Phase 5) — the social-worker identity
@@ -181,6 +184,9 @@ export default function VerifyDocsPanel({
                     </div>
                   </div>
                 )}
+                {d.status === 'verified' && d.issuedOn && (
+                  <p className="mt-1 pl-6 text-xs text-gray-600">Dated {d.issuedOn} on the document</p>
+                )}
                 {d.status === 'verified' && d.checks?.items && (
                   <ul className="mt-1 pl-6 space-y-0.5">
                     {docChecksFor(d).filter(i => d.checks.items[i.key]).map(i => (
@@ -198,11 +204,19 @@ export default function VerifyDocsPanel({
                         <span>{i.label}</span>
                       </label>
                     ))}
+                    {needsIssuedDate(d) && (
+                      <label className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-700">
+                        Date on the document
+                        <input type="date" className="input text-xs py-1 w-auto" max={todayIso}
+                          value={issuedOn} onChange={e => setIssuedOn(e.target.value)} />
+                        <span className="text-[11px] text-gray-500">It can back the patient's next requests for 3 months from this date.</span>
+                      </label>
+                    )}
                     <p className="mt-1 text-[11px] text-gray-500">If something is missing, reject the document so the patient can upload a proper copy.</p>
                     <div className="mt-2 flex gap-2">
                       <button type="button" className="text-xs font-semibold text-white bg-green-600 px-2.5 py-1 rounded-lg hover:bg-green-700 disabled:opacity-50"
-                        disabled={busy || !checksComplete(docChecksFor(d), ticks)}
-                        onClick={() => { onReviewDoc(d, 'verified', null, ticks); setChecking(null) }}>
+                        disabled={busy || !checksComplete(docChecksFor(d), ticks) || (needsIssuedDate(d) && (!issuedOn || issuedOn > todayIso))}
+                        onClick={() => { onReviewDoc(d, 'verified', null, ticks, needsIssuedDate(d) ? issuedOn : null); setChecking(null) }}>
                         Verify document
                       </button>
                       <button type="button" className="text-xs text-gray-500 border border-gray-200 bg-white px-2 py-1 rounded-lg hover:bg-gray-50"

@@ -823,7 +823,9 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // patient notification (they were never told about the prior decision).
   // `checks` (input verification Phase 2): the ticked document checklist
   // (src/utils/docChecks.js), stored with the verification; cleared otherwise.
-  const reviewDoc = async (docItem, newStatus, reason = null, checks = null) => {
+  // `issuedOn` (Phase 2B): the date printed on a doctor's order / indigency
+  // certificate, from which it can be reused for 3 months (documentReuse.js).
+  const reviewDoc = async (docItem, newStatus, reason = null, checks = null, issuedOn = null) => {
     setBusy(true)
     try {
       const cleanReason = (reason ?? '').trim() || null
@@ -836,6 +838,7 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
         // can surface it. Clear it on re-verify or un-verify.
         rejectionReason: newStatus === 'rejected' ? cleanReason : null,
         checks: newStatus === 'verified' && checks ? { items: checks, by: user.name ?? '', byUid: user.uid } : null,
+        issuedOn: newStatus === 'verified' && issuedOn ? issuedOn : null,
       })
       const updatedAttached = (request.attachedDocuments ?? []).map(a =>
         a.documentId === docItem.id ? { ...a, status: newStatus } : a)

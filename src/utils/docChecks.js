@@ -35,6 +35,9 @@ const DOCTORS_ORDER = [
 const CHARGE_SLIP = [
   { key: 'unit',      label: "Issued by this hospital's unit (not an outside pharmacy or lab), with the patient's name" },
   { key: 'itemised',  label: 'Itemised and dated, and the total matches the amount in the request' },
+  // Phase 2B: a doctor's order can be reused for 3 months, so each new slip
+  // is checked against it here (the slip is never reused).
+  { key: 'perOrder',  label: "Covers only what the doctor's order prescribes" },
 ]
 const DIALYSIS_CERT = [
   { key: 'sessions',  label: 'Sessions used this year match the number in the request' },
@@ -57,3 +60,11 @@ export function docChecksFor(docItem) {
 }
 
 export const checksComplete = (items, ticks) => items.every(i => ticks?.[i.key] === true)
+
+// Phase 2B: documents reused from the date printed on them (doctor's order,
+// barangay indigency certificate) need that date recorded at verification
+// (documents.issuedOn) — see src/utils/documentReuse.js.
+export function needsIssuedDate(docItem) {
+  const n = norm(docItem?.documentTypeName ?? docItem?.name)
+  return n.includes("doctor's order") || n.includes('doctors order') || n.includes('indigency')
+}

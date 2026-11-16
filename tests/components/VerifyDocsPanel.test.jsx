@@ -160,9 +160,24 @@ describe('VerifyDocsPanel — document checklist (input verification Phase 2)', 
     for (const box of screen.getAllByRole('checkbox')) fireEvent.click(box)
     expect(go).not.toBeDisabled()
     fireEvent.click(go)
-    expect(onReviewDoc).toHaveBeenCalledWith(reqDocs[0], 'verified', null, { physician: true, recent: true, patient: true })
+    // 5th argument: the date on the document — only for doctor's orders and
+    // indigency certificates (Phase 2B), so null for a medical abstract.
+    expect(onReviewDoc).toHaveBeenCalledWith(reqDocs[0], 'verified', null, { physician: true, recent: true, patient: true }, null)
   })
 
+  it('an indigency certificate needs the date on it before it verifies (Phase 2B reuse)', () => {
+    const onReviewDoc = vi.fn()
+    const reqDocs = [{ id: 'i-1', documentTypeName: 'Barangay Certificate of Indigency', status: 'pending' }]
+    const { container } = render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} onReviewDoc={onReviewDoc} />)
+    fireEvent.click(screen.getByRole('button', { name: /Verify/ }))
+    for (const box of screen.getAllByRole('checkbox')) fireEvent.click(box)
+    const go = screen.getByRole('button', { name: 'Verify document' })
+    expect(go).toBeDisabled()
+    fireEvent.change(container.querySelector('input[type="date"]'), { target: { value: '2026-10-01' } })
+    expect(go).not.toBeDisabled()
+    fireEvent.click(go)
+    expect(onReviewDoc).toHaveBeenCalledWith(reqDocs[0], 'verified', null, { barangay: true, signed: true }, '2026-10-01')
+  })
   it('a document without a checklist still verifies in one tap; "Verify all" skips checklist documents', () => {
     const onReviewDoc = vi.fn()
     const reqDocs = [

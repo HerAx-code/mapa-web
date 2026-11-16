@@ -46,7 +46,7 @@ describe('outpatient document checklists', () => {
   it('the doctor\'s order, charge slip and dialysis certificate each have a checklist', async () => {
     const { docChecksFor } = await import('../../src/utils/docChecks.js')
     expect(docChecksFor({ documentTypeName: "Doctor's Order" }).map(i => i.key)).toEqual(['physician', 'recent', 'matches'])
-    expect(docChecksFor({ name: 'Charge Slip from the Hospital Unit' }).map(i => i.key)).toEqual(['unit', 'itemised'])
+    expect(docChecksFor({ name: 'Charge Slip from the Hospital Unit' }).map(i => i.key)).toEqual(['unit', 'itemised', 'perOrder'])
     expect(docChecksFor({ name: 'PhilHealth Dialysis Sessions Certificate' }).map(i => i.key)).toEqual(['sessions', 'signed'])
   })
 })

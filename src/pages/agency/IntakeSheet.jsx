@@ -2,7 +2,7 @@ import Layout from '../../components/Layout'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, serverTimestamp, runTransaction, collection, query, where, getDocs } from 'firebase/firestore'
 import { normalizeBillNumber, billKeyId, BILL_CHECK_SOURCES, billCheckSourceLabel } from '../../utils/billKeys'
 import { interviewReasons, CALL_METHODS } from '../../utils/verificationPolicy'
 import { encodedIntakeProblem } from '../../utils/requestStage'
@@ -28,7 +28,8 @@ import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
 import { tsToDate } from '../../utils/dates'
 import { buildIntakeSheetHTML } from '../../utils/intakeSheetHTML'
-import { fetchHospitalBranding } from '../../utils/hospitals'
+import { fetchHospitalBranding, tenantWhere } from '../../utils/hospitals'
+import { reusableClassification } from '../../utils/classificationReuse'
 import { useHospitalBranding } from '../../hooks/useHospitals'
 import { isGatewayAdminRole } from '../../utils/constants'
 import { peso } from '../../utils/format'
@@ -110,6 +111,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const caseOrg                 = useHospitalBranding(app?.tenantId)
   const [loading, setLoading]   = useState(true)
   const [sheet, setSheet]       = useState(() => blankSheet())
+  // Phase 2B: this patient's last classification at this hospital (6 months).
+  const [prevClass, setPrevClass] = useState(null)
   const [hydrated, setHydrated] = useState(false)
   const [saveState, setSaveState] = useState({ status: 'idle', lastSavedAt: null })
   const [activeSection, setActiveSection] = useState('family')
@@ -401,6 +404,14 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   }, [hydrated])
 
   // ── Setters ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (patientFacts || collectionName !== 'requests' || !app?.patientId) return
+    getDocs(query(collection(db, 'requests'), ...tenantWhere(), where('patientId', '==', app.patientId)))
+      .then(snap => setPrevClass(reusableClassification(
+        snap.docs.filter(d => d.id !== app.id).map(d => ({ id: d.id, ...d.data() })))))
+      .catch(() => {})
+  }, [patientFacts, collectionName, app?.patientId, app?.id])
 
   const set = (field) => (e) => {
     setSheet(p => ({ ...p, [field]: e.target.value }))
@@ -1489,6 +1500,27 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                       )
                     })}
                   </div>
+                  {/* Phase 2B: a classification is valid 6 months (DOH AO 2021-0044);
+                      reuse it only while income and household size are unchanged. */}
+                  {prevClass && (
+                    <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-xs text-gray-700">
+                      Last classified <strong>{meansShortLabel(prevClass.category)}</strong>
+                      {prevClass.by ? ` by ${prevClass.by}` : ''}{prevClass.at ? ` on ${prevClass.at.toLocaleDateString()}` : ''}
+                      {' '}(request {prevClass.requestRef}; valid until {prevClass.validUntil.toLocaleDateString()}).
+                      {Number(sheet.householdSize) === Number(prevClass.householdSize) && Number(sheet.monthlyIncome) === Number(prevClass.monthlyIncome) ? (
+                        sheet.meansTestCategory !== prevClass.category && canEdit && (
+                          <button type="button" className="ml-2 font-semibold text-brand-600 hover:text-brand-700 underline"
+                            onClick={() => setSheet(p => ({ ...p, meansTestCategory: prevClass.category,
+                              meansTestOverrideReason: prevClass.reason ?? p.meansTestOverrideReason,
+                              classificationReusedFrom: { requestId: prevClass.requestId, at: prevClass.at?.toISOString?.() ?? null } }))}>
+                            Use this classification
+                          </button>
+                        )
+                      ) : (
+                        <span className="block mt-1 text-amber-700">Income or household size changed since then, so classify again.</span>
+                      )}
+                    </div>
+                  )}
                   {suggestion && (
                     <p className="text-xs text-gray-600 mt-1.5">
                       Suggested from income ÷ household size: <strong>{meansShortLabel(suggestion.category)}</strong>
