@@ -1169,7 +1169,12 @@ service cloud.firestore {
       allow update: if isPlatformAdmin() &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                          'status', 'statusUpdatedAt', 'hospitalId', 'stage', 'stageHistory', 'verification',
-                         'agreement', 'training', 'documents', 'liveAt', 'notes', 'updatedAt']) &&
+                         'agreement', 'training', 'documents', 'liveAt', 'notes', 'updatedAt',
+                         // Retention (2026-11-16): how a request was closed.
+                         'closedAs', 'closedNote']) &&
+                       request.resource.data.get('closedAs', null) in [null, 'declined', 'withdrawn'] &&
+                       (request.resource.data.get('closedNote', null) == null ||
+                        (request.resource.data.closedNote is string && request.resource.data.closedNote.size() <= 200)) &&
                        request.resource.data.status in ['new', 'contacted', 'onboarded', 'declined'] &&
                        request.resource.data.get('stage', 'interest') in ['interest', 'verification', 'agreement', 'setup', 'live', 'declined'];
     }

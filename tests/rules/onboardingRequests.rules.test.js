@@ -177,3 +177,12 @@ describe('onboardingRequests — formal request (form 2)', () => {
     await assertFails(file('fd', formal({ funders: 'PCSO' })))
   })
 })
+
+describe('onboarding — declined or withdrawn (retention, 2026-11-16)', () => {
+  it('the platform admin records how a request was closed', async () => {
+    const ref = doc(as('plat'), 'onboardingRequests', 'old')
+    await assertSucceeds(updateDoc(ref, { stage: 'declined', status: 'declined', closedAs: 'withdrawn', closedNote: 'Hospital chose another system', updatedAt: serverTimestamp() }))
+    await assertFails(updateDoc(ref, { closedAs: 'lost' }))
+    await assertFails(updateDoc(ref, { closedNote: 'x'.repeat(201) }))
+  })
+})
