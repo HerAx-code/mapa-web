@@ -1,6 +1,6 @@
 # Outpatient support plan (revised 2026-11-15)
 
-**Status:** planned, **not built**. Building waits for the CRMC meeting (questions at the end).
+**Status:** planned, **not built**. On 2026-11-16 the owner chose working answers for all 14 questions (§7A), to be confirmed at the CRMC meeting. Building can start from them; anything CRMC answers differently is adjusted then.
 **Evidence:** `reports/Outpatient medical assistance rules.md` (research on DSWD AICS, PCSO MAP, DOH MAIFIP / Malasakit and PhilHealth, November 2026). Facts below cite that report; anything marked *(inference)* is our design judgement.
 **Replaces:** "option 2" from 2026-11-15, which this revision corrects.
 
@@ -142,6 +142,26 @@ Since #381 the rules enforce "each agency approves a patient once every 30 days"
 13. Is a new in-person access code per request acceptable for patients on site two or three times a week, or should one code cover a course of treatment?
 14. Should the 30-day per-agency rule be replaced by the expense record + per-program intervals (§5)? Is over-commitment across agencies still wanted?
 
+## 7A. Working answers (owner, 2026-11-16: "go with the defaults")
+
+To confirm at the CRMC meeting. Each is a setting or a small change if CRMC differs.
+
+| # | Working answer |
+|---|---|
+| 1 | MSS helps outpatients at all five units (dialysis, chemotherapy, pharmacy, laboratory/imaging, clinic/procedures) from MAIFIP, the PCSO desk, the DSWD desk, PhilHealth, the Cancer Assistance Fund and the hospital's free service. |
+| 2 | MAIFIP is applied directly to the patient's account (no guarantee letter); zero balance billing covers indigent outpatients and dialysis patients. |
+| 3 | Price document: a **charge slip** signed by the unit, valid for this request only. |
+| 4 | CRMC's PCSO desk accepts **one hospital quotation**; the case is endorsed by MSS. |
+| 5 | AICS medical help comes from a **DSWD desk at the hospital**, with DSWD's **3-month** repeat rule. |
+| 6 | Recurring patients get help **monthly**; no hospital-internal limit. |
+| 7 | One protocol or dialysis prescription can support **several requests** while valid; medical certificate, prescription and protocol are valid **3 months** from issue. |
+| 8 | MSS classification is valid **6 months**; reassessed when income or household changes. |
+| 9 | Medical certificate required **only when DSWD or PCSO is endorsed**. |
+| 10 | Unused GL amounts **lapse** back to the agency; GLs expire after **30 days**. |
+| 11 | MSS checks double payment by hand today, so MAPA's **expense record helps**. |
+| 12 | The **dialysis unit** issues the PhilHealth sessions certificate, fresh for each request. |
+| 13 | **One access code per course of treatment** (e.g. a month of dialysis), not per request. |
+| 14 | **Replace** the 30-day per-agency rule with the expense record + per-program repeat intervals (warn, override with reason). Over-endorsing beyond the bill as a buffer stays for **inpatient bills only**. |
 ## 8. Still unconfirmed (do not build on these)
 
 - The text of the current DSWD AICS circular and its 2025 amendments; the ₱150,000 AICS ceiling (news only).
