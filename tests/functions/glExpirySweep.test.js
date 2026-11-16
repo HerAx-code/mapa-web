@@ -62,6 +62,8 @@ function makeDb(apps, opts = {}) {
       const tx = {
         get: async (ref) => {
           const id = ref._id
+          // Agencies exist unless listed in opts.missingAgencies (2026-11-16).
+          if (String(ref._path).startsWith('agencies/')) return { exists: !(opts.missingAgencies ?? []).includes(id) }
           if (opts[id] && opts[id].fresh) return opts[id].fresh
           // Default: app still exists with the same data
           const doc = docs.find(d => d.id === id)
@@ -191,5 +193,16 @@ describe('per-letter validity (nowMs)', () => {
     expect(r.expired).toBe(2)
     expect(r.skippedNotDue).toBe(2)
     expect(r.releasedTotal).toBe(200)
+  })
+})
+
+describe('deleted agencies (2026-11-16)', () => {
+  it('expires a letter whose agency no longer exists, without touching a budget', async () => {
+    const db = makeDb([{ id: 'orphan', glStatus: 'issued', agencyId: 'ambag', approvedAmount: 1000 }], { missingAgencies: ['ambag'] })
+    const r = await handleGLExpirySweep({ db, cutoff: 'C', serverTimestamp, increment })
+    expect(r.expired).toBe(1)
+    expect(r.failed).toBe(0)
+    expect(r.releasedTotal).toBe(0)
+    expect(r.skippedNoAgency).toBe(1)
   })
 })

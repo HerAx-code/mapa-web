@@ -70,6 +70,12 @@ async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cut
         const fresh = await tx.get(docSnap.ref)
         if (!fresh.exists)                                { skippedRaced++; return }
         if (fresh.data().glStatus !== 'issued')           { skippedRaced++; return }
+        // 2026-11-16: an agency deleted since approval (e.g. the hospital-1
+        // merge) has no budget to release; updating it would fail the whole
+        // transaction and leave the letter open forever. Read first (all reads
+        // before writes), then expire the letter either way.
+        const agencySnap = agencyId ? await tx.get(db.doc(`agencies/${agencyId}`)) : null
+        const agencyExists = !!agencySnap?.exists
 
         tx.update(docSnap.ref, {
           glStatus:    'expired',
@@ -78,12 +84,12 @@ async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cut
           updatedAt:   serverTimestamp(),
         })
 
-        if (agencyId && amount > 0) {
+        if (agencyId && agencyExists && amount > 0) {
           tx.update(db.doc(`agencies/${agencyId}`), {
             'budget.committed': increment(-amount),
           })
           releasedTotal += amount
-        } else if (!agencyId) {
+        } else if (!agencyId || !agencyExists) {
           skippedNoAgency++
         }
       })

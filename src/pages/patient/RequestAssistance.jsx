@@ -38,6 +38,7 @@ import ConfirmModal from '../../components/ConfirmModal'
 import { useTranslation } from 'react-i18next'
 import { DECLARATION_VERSION } from '../../utils/verificationPolicy'
 import { canReuseDocument, reuseRuleOf } from '../../utils/documentReuse'
+import { missingAgencyDocs } from '../../utils/agencyDocs'
 import { docTypeRequired, OUTPATIENT_UNITS, PHILHEALTH_DIALYSIS_SESSIONS, isDialysis } from '../../utils/outpatient'
 import {
   MdFavorite, MdCheckCircle, MdWarning, MdDescription,
@@ -520,7 +521,7 @@ export default function RequestAssistance() {
     const err = validateDocFile(file)
     if (err) { toast.error(err); return }
     try {
-      await uploadPatientDocument({ file, typeName, user })
+      await uploadPatientDocument({ file, typeName, user, requestId: activeRequest?.id ?? null })
       toast.success(t('patient.request.reuploadOk'))
     } catch {
       toast.error(t('patient.request.reuploadErr'))
@@ -1093,7 +1094,8 @@ export default function RequestAssistance() {
                             <p className="text-xs font-medium text-gray-500 mb-1">{t('patient.request.agencyRequirements')}</p>
                             <div className="space-y-1">
                               {reqs.map(r => {
-                                const ok = existingTypeNames.has(r.toLowerCase())
+                                // Outpatients: the unit's charge slip stands in for the billing statement.
+                                const ok = missingAgencyDocs([r], existingTypeNames, activeRequest).length === 0
                                 return (
                                   <div key={r} className="flex items-center gap-2 text-xs">
                                     {ok

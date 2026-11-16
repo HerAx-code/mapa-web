@@ -16,6 +16,7 @@ import { withTenant, currentTenantId, tenantWhere, agencyPartnersWith } from '..
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { careSettingLabel } from '../../utils/outpatient'
+import { missingAgencyDocs } from '../../utils/agencyDocs'
 import { residencyEligibility, hasResidencyScope } from '../../utils/eligibility'
 import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
@@ -142,6 +143,10 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   // Phase 7: only agencies partnered with this request's hospital (the rules
   // deny a slice to any other agency).
   const caseTenant = request.tenantId ?? currentTenantId()
+  // Phase 2C: each agency's own document list (agencies.requirements) against
+  // what this request has. A warning, not a block — the patient uploads the
+  // rest from their coverage plan after endorsement.
+  const haveDocNames = (request.attachedDocuments ?? []).map(a => a?.documentTypeName ?? a?.name).filter(Boolean)
   const eligible = agencies
     .filter(a => !usedIds.has(a.id) && effectiveSlots(a, phTodayKey(), caseTenant).remaining > 0 && agencyPartnersWith(a, caseTenant))
     .map(a => ({
@@ -149,6 +154,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       matches:   (a.assistanceTypes ?? []).includes(request.assistanceType),
       residency: residencyEligibility(patientProvince, a), // 'eligible'|'out_of_area'|'unknown'
       coverage:  agencyCoverage(a, headroom),              // { ceiling, status }
+      missingDocs: missingAgencyDocs(a.requirements, haveDocNames, request),
     }))
     .sort((a, b) =>
       (a.residency === 'out_of_area' ? 1 : 0) - (b.residency === 'out_of_area' ? 1 : 0) ||
@@ -390,10 +396,15 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         patientId: request.patientId,
       })
 
+      // Phase 2C: name the documents each agency still needs, so the patient
+      // can upload them from the coverage plan.
+      const toAdd = eligible.filter(a => selected.has(a.id) && a.missingDocs.length > 0)
+        .map(a => `${a.name}: ${a.missingDocs.join(', ')}`)
       notify(request.patientId, {
         type:  'app_advanced',
         title: 'Your request was endorsed',
-        body:  `${ORG.gatewayName} referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.`,
+        body:  `${ORG.gatewayName} referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.` +
+               (toAdd.length ? ` Please also upload in your coverage plan: ${toAdd.join('; ')}.` : ''),
       }).catch(() => {})
 
       toast.success(`Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}.`)
@@ -528,6 +539,12 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                           <div className="flex items-baseline gap-1.5 flex-wrap">
                             <p className="text-sm font-medium text-gray-800 truncate">{a.name}</p>
                             {a.matches && <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">Best fit</span>}
+                            {a.missingDocs.length > 0 && (
+                              <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium"
+                                title={`Not on this request yet: ${a.missingDocs.join(', ')}`}>
+                                {a.missingDocs.length} document{a.missingDocs.length === 1 ? '' : 's'} to add
+                              </span>
+                            )}
                             {!a.matches && (
                               <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium" title={`Does not list "${request.assistanceType}"`}>
                                 Type mismatch
@@ -787,9 +804,18 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
   // The documents attached to this request, with their live status/OCR merged
   // in (falls back to the request snapshot if a live doc isn't found).
   const docById = Object.fromEntries(patientDocs.map(d => [d.id, d]))
-  const reqDocs = (request.attachedDocuments ?? []).map(a => ({
-    ...a, ...(docById[a.documentId] ?? {}), id: a.documentId,
-  }))
+  const attachedSet = new Set((request.attachedDocuments ?? []).map(a => a.documentId))
+  const reqDocs = [
+    ...(request.attachedDocuments ?? []).map(a => ({
+      ...a, ...(docById[a.documentId] ?? {}), id: a.documentId,
+    })),
+    // Phase 2C: documents the patient added after filing (an agency's list, from
+    // the coverage plan). Verifying one attaches it to the request and gives the
+    // endorsed agencies access.
+    ...patientDocs
+      .filter(d => d.requestId === request.id && !attachedSet.has(d.id))
+      .map(d => ({ ...d, documentId: d.id, name: d.name, documentTypeName: d.documentTypeName ?? d.name, _late: true })),
+  ]
   // Phase 0: the verify → assess → interview → endorse gate now comes from the
   // shared requestStage model (unit-tested to mirror the old inline logic
   // exactly), so the queue chips, the coming stage rail, and this endorse gate
@@ -840,8 +866,20 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
         checks: newStatus === 'verified' && checks ? { items: checks, by: user.name ?? '', byUid: user.uid } : null,
         issuedOn: newStatus === 'verified' && issuedOn ? issuedOn : null,
       })
-      const updatedAttached = (request.attachedDocuments ?? []).map(a =>
-        a.documentId === docItem.id ? { ...a, status: newStatus } : a)
+      const isAttached = (request.attachedDocuments ?? []).some(a => a.documentId === docItem.id)
+      const updatedAttached = isAttached
+        ? (request.attachedDocuments ?? []).map(a => a.documentId === docItem.id ? { ...a, status: newStatus } : a)
+        // Phase 2C: a late upload joins the request once staff verify it.
+        : newStatus === 'verified'
+          ? [...(request.attachedDocuments ?? []), {
+              documentId: docItem.id, name: docItem.name, documentTypeName: docItem.documentTypeName ?? docItem.name,
+              status: newStatus, date: docItem.date ?? '',
+            }]
+          : (request.attachedDocuments ?? [])
+      // …and the agencies already endorsed may read it.
+      if (!isAttached && newStatus === 'verified' && (request.agencyIds ?? []).length > 0) {
+        await updateDoc(doc(db, 'documents', docItem.id), { agencyIds: arrayUnion(...request.agencyIds) })
+      }
       await updateDoc(doc(db, 'requests', request.id), {
         attachedDocuments: updatedAttached,
         ...(request.status === 'submitted' && !isPending ? { status: 'under_review' } : {}),

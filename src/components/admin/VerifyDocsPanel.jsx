@@ -114,6 +114,12 @@ export default function VerifyDocsPanel({
                       </p>
                     )}
                   </div>
+                  {d._late && (
+                    <span className="text-[11px] text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded flex-shrink-0"
+                      title="Added by the patient after filing (an agency's document list). Verifying it attaches it to this request.">
+                      Added after filing
+                    </span>
+                  )}
                   <StatusBadge status={d.status ?? 'pending'} kind="doc" className="flex-shrink-0" />
                   <button title="View" className="text-gray-500 hover:text-brand-600 flex-shrink-0"
                     onClick={() => !d._missing && onView(d)}>
