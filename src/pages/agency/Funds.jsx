@@ -5,6 +5,7 @@ import { collection, query, where, onSnapshot, doc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { PERIOD_ADJECTIVE } from '../../utils/constants'
 import { tsToDate } from '../../utils/dates'
+import { fundingTypeLabel, fundingTypeClass } from '../../utils/fundingType'
 import { HospitalFilterSelect } from '../../components/agency/HospitalBreakdown'
 import { filterByHospital } from '../../utils/hospitalBreakdown'
 import { useAuth } from '../../contexts/AuthContext'
@@ -277,6 +278,12 @@ export default function AgencyFunds() {
             <p className="text-xs text-gray-500">
               {utilization}% utilized · committed = sum of issued-but-not-redeemed GLs · disbursed = redeemed GLs · remaining = what new approvals can draw from
             </p>
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-500 mb-0.5">Funder type <span className="text-gray-400">(set by the Super Admin)</span></p>
+              <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium ${fundingTypeClass(agency?.fundingType)}`}>
+                {fundingTypeLabel(agency?.fundingType)}
+              </span>
+            </div>
             {budget.fundSource && (
               <div className="mt-3 pt-3 border-t border-gray-100">
                 <p className="text-xs text-gray-500 mb-0.5">Fund source</p>

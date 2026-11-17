@@ -29,6 +29,7 @@ import RequestsTable from '../../components/admin/requests/RequestsTable'
 import BulkActionBar from '../../components/admin/requests/BulkActionBar'
 import PathToZeroBalance from '../../components/admin/requests/PathToZeroBalance'
 import EligibilityCertCard from '../../components/admin/requests/EligibilityCertCard'
+import { fundingTypeShort, fundingTypeClass, fundingSummary } from '../../utils/fundingType'
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -540,6 +541,10 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-1.5 flex-wrap">
                             <p className="text-sm font-medium text-gray-800 truncate">{a.name}</p>
+                            {/* Funder type (2026-11-17): private funds aren't government aid. */}
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${fundingTypeClass(a.fundingType)}`} title={fundingSummary(a)}>
+                              {fundingTypeShort(a.fundingType)}
+                            </span>
                             {a.matches && <span className="text-xs text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium">Best fit</span>}
                             {a.missingDocs.length > 0 && (
                               <span className="text-xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium"
@@ -594,6 +599,7 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             {effectiveSlots(a, phTodayKey(), caseTenant).remaining} slots today for this hospital · {budgetTxt}
                             {perCap > 0 && <> · max {peso(perCap)}/applicant</>}
                           </p>
+                          <p className="text-xs text-gray-500 truncate">{fundingSummary(a)}</p>
                         </div>
                         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                           isSelected

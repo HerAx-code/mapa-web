@@ -16,6 +16,7 @@ import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { syncAgencyPublic } from '../../utils/agenciesPublic'
+import { FUNDING_TYPES } from '../../utils/fundingType'
 import { notify } from '../../utils/notifications'
 import { generateTempPassword } from '../../utils/password'
 import AddressPicker from '../../components/AddressPicker'
@@ -67,6 +68,7 @@ export default function AddAgency() {
     phone:          '',
     processingTime: 'Same Day',
     slotsTotal:     25,
+    fundingType:    '',   // 2026-11-17: src/utils/fundingType.js
   })
 
   // Derived location string -- "{officeName}, {city}" or just "{city}".
@@ -209,6 +211,7 @@ export default function AddAgency() {
           partnerHospitalIds: partners,
           slots:          { total: slots, remaining: slots },
           enabled:        true,
+          fundingType:    agency.fundingType || null,
           createdAt:      serverTimestamp(),
         })
         // Mirror into the public Landing projection (the onAgencyWritten Cloud
@@ -333,6 +336,15 @@ export default function AddAgency() {
               <input className="input" placeholder="MC" maxLength={3}
                 value={agency.initials} onChange={setA('initials')} />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Funder type</label>
+            <select className="input" value={agency.fundingType} onChange={setA('fundingType')}>
+              <option value="">Not set</option>
+              {FUNDING_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Where the money comes from. Hospital staff see it when endorsing; it doesn&apos;t change how the funder works.</p>
           </div>
 
           <div>
