@@ -191,7 +191,7 @@ export default function EligibilityCertCard({ request, user }) {
       )}
 
       {active?.status === 'generated' && (
-        <p className="text-xs text-gray-500">Print it, have the social worker sign, the head note it and the patient sign the conforme, stamp it, then upload the scan.</p>
+        <p className="text-xs text-gray-500">Print it, have the social worker sign, the department head sign as issuer and the patient sign the conforme, stamp it, then upload the scan.</p>
       )}
 
       {active && voiding && (
