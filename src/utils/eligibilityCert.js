@@ -12,7 +12,6 @@ import {
   isIntakeComplete, isLegacyCategory, SUPPORTING_CIRCUMSTANCES, LEGACY_MEANS_CATEGORIES,
 } from './intakeSheet.js'
 import { classificationValidUntil } from './classificationReuse.js'
-import { ageOn } from './dohReport.js'
 
 export const COE_CLASSES = [
   { value: 'indigent_c3',      label: 'Indigent (C3)' },
@@ -71,6 +70,7 @@ export function buildCoeSnapshot({ request, patient = {}, org = {}, settings = {
       sex:       patient.sex ?? '',
       address:   patient.address ?? request.patientAddress ?? '',
     },
+    assistanceType:     request.assistanceType ?? '',
     careSetting:        request.careSetting === 'outpatient' ? 'outpatient' : 'inpatient',
     careUnit:           request.careUnit ?? '',
     dateOfAdmission:    s.dateOfAdmission ?? '',
@@ -88,21 +88,21 @@ export function buildCoeSnapshot({ request, patient = {}, org = {}, settings = {
     validMonths: Number(s.classificationValidMonths) === 12 ? 12 : 6,
     validUntil:  until ? until.toISOString() : null,
     socialWorker: s.completedBy ?? '',
-    notedBy: { name: settings?.coeNotedByName ?? '', title: settings?.coeNotedByTitle || 'Head, Medical Social Service' },
+    // Annex A: "Issued by" the Head of the Medical Social Work Department
+    // (stored as coeNotedBy* in hospitalSettings).
+    notedBy: { name: settings?.coeNotedByName ?? '', title: settings?.coeNotedByTitle || 'Head, Medical Social Work Department' },
     representative: request.filedBy?.name
       ? { name: request.filedBy.name, relationship: request.filedBy.relationship ?? '' }
       : null,
   }
 }
 
-// What will print as a blank line for hand-filling.
+// What will print as a blank line for hand-filling (Annex A asks only for
+// name and address; the hospital case number is MAPA's reference line).
 export function coeMissing(snap) {
   const out = []
-  if (!snap.patient.birthdate) out.push('birthdate')
-  if (!snap.patient.sex) out.push('sex')
   if (!snap.patient.address) out.push('address')
-  if (!snap.dateOfAdmission) out.push(snap.careSetting === 'outpatient' ? 'visit date' : 'admission date')
-  if (!snap.diagnosis) out.push('diagnosis')
+  if (!snap.assistanceType) out.push('assistance / service')
   if (!snap.hospitalCaseNumber) out.push('hospital case number')
   return out
 }
@@ -114,19 +114,21 @@ const longDate = (iso) => {
 }
 // A filled value, or a blank line to write on.
 const fill = (v, width = 140) => (v ? `<strong>${esc(v)}</strong>` : `<span class="blank" style="width:${width}px"></span>`)
-const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`
+// Whole pesos as is; otherwise always two decimals (₱2,691.80, not ₱2,691.8).
+const peso = (n) => {
+  const v = Number(n)
+  return `₱${v.toLocaleString('en-PH', Number.isInteger(v) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 export function buildEligibilityCertificateHTML(snap) {
-  const issued = snap.issuedOn ? new Date(snap.issuedOn) : new Date()
-  const age = ageOn(snap.patient.birthdate, issued)
-  const sex = snap.patient.sex === 'female' ? 'female' : snap.patient.sex === 'male' ? 'male' : ''
+  // 2026-11-17: wording follows the Malasakit "Annex A — Certificate of
+  // Eligibility (Indigency)" (as transcribed from ZCMC's form; JAO 2020-0001
+  // "standard form"), plus MAPA's additions (number, AO 2021-0044 class and
+  // basis, validity, 4Ps, conforme, stamp box).
   const outpatient = snap.careSetting === 'outpatient'
   const eligible = snap.category && snap.category !== 'capable'
-  const box = (on) => (on ? '&#9746;' : '&#9744;')
-  const classes = COE_CLASSES.map(c => `<span class="cls">${box(snap.category === c.value)} ${esc(c.label)}</span>`).join('')
-  const where = outpatient
-    ? `seen at this hospital's ${fill(UNIT_LABEL[snap.careUnit] ?? 'outpatient service', 160)} on ${fill(longDate(snap.dateOfAdmission))}`
-    : `admitted to this hospital on ${fill(longDate(snap.dateOfAdmission))}`
+  const classLabel = COE_CLASSES.find(c => c.value === snap.category)?.label ?? ''
+  const service = [snap.assistanceType, outpatient ? UNIT_LABEL[snap.careUnit] : ''].filter(Boolean).join(' — ')
   const basisLine = snap.basis
     ? `Basis of classification: household monthly income per person compared with the PSA monthly per capita poverty threshold for ${esc(snap.basis.region || 'the region')} of ${esc(peso(snap.basis.povertyLine))}${snap.basis.citationShort ? ` (${esc(snap.basis.citationShort)})` : snap.basis.year ? ` (PSA ${esc(snap.basis.year)})` : ''}, per DOH AO 2021-0044, Annex A.`
     : 'Basis of classification: assessment by the Medical Social Worker per DOH AO 2021-0044.'
@@ -140,10 +142,11 @@ export function buildEligibilityCertificateHTML(snap) {
   .head .h2 { font-size: 12px; }
   .head .office { font-size: 13px; font-weight: bold; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
   h1 { text-align: center; font-size: 20px; letter-spacing: 2px; margin: 18px 0 6px; }
+  h1 .sub { display: block; font-size: 14px; letter-spacing: 1px; margin-top: 2px; }
+  .head .annex { position: absolute; right: 0; top: 0; font-size: 10px; color: #444; }
+  .head { position: relative; }
   .ref { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 14px; }
   p { margin: 0 0 10px; text-align: justify; }
-  .classes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin: 6px 0 10px 24px; font-size: 14px; }
-  .cls { white-space: nowrap; }
   .small { font-size: 11px; color: #333; }
   .blank { display: inline-block; border-bottom: 1px solid #111; height: 14px; vertical-align: bottom; }
   .sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 26px; }
@@ -160,46 +163,47 @@ export function buildEligibilityCertificateHTML(snap) {
     <div class="h1">${esc(snap.hospital.name)}</div>
     ${snap.hospital.address ? `<div class="h2">${esc(snap.hospital.address)}</div>` : ''}
     <div class="office">${esc(snap.hospital.office || 'Medical Social Service')}</div>
+    <div class="annex">Malasakit Center Form – Annex A</div>
   </div>
 
-  <h1>CERTIFICATE OF ELIGIBILITY</h1>
+  <h1>CERTIFICATE OF ELIGIBILITY${eligible ? '<span class="sub">(INDIGENCY)</span>' : ''}</h1>
   <div class="ref">
     <span>CoE No.: <strong>${esc(snap.controlNo)}</strong></span>
     <span>Date issued: <strong>${esc(longDate(snap.issuedOn))}</strong></span>
     <span>Hospital Case No.: ${fill(snap.hospitalCaseNumber, 110)}</span>
   </div>
 
-  <p>This is to certify that ${fill(snap.patient.name, 220)}, ${fill(age === '' ? '' : String(age), 40)} years old, ${fill(sex, 70)},
-  born on ${fill(longDate(snap.patient.birthdate))}, residing at ${fill(snap.patient.address, 260)},
-  ${where} with the diagnosis of ${fill(snap.diagnosis, 220)}, has been assessed by the undersigned Medical Social Worker
-  on ${fill(longDate(snap.assessedOn))} on the basis of the Unified Intake Sheet, and is hereby classified as:</p>
-
-  <div class="classes">${classes}</div>
-  <p>pursuant to Department of Health Administrative Order No. 2021-0044${eligible
-    ? ', and is therefore eligible to avail of medical and financial assistance from the Malasakit Center and participating government agencies, subject to their respective guidelines.'
-    : '.'}</p>
+  ${eligible
+    ? `<p>This is to certify that ${fill(snap.patient.name, 220)} of ${fill(snap.patient.address, 280)} is an indigent/needy patient
+  with classification of <strong>${esc(classLabel)}</strong> pursuant to Department of Health Administrative Order No. 2021-0044,
+  as assessed by the undersigned Medical Social Worker on ${fill(longDate(snap.assessedOn))} on the basis of the Unified Intake Sheet.</p>
+  <p>This certification is issued as a requirement for seeking financial and medical assistance from the Malasakit Center
+  especially for the following assistance/service: ${fill(service, 200)} from ${fill(snap.hospital.name, 200)}.</p>`
+    : `<p>This is to certify that ${fill(snap.patient.name, 220)} of ${fill(snap.patient.address, 280)} has been assessed by the
+  undersigned Medical Social Worker on ${fill(longDate(snap.assessedOn))} on the basis of the Unified Intake Sheet, and is classified as
+  <strong>${esc(classLabel || 'Financially Capable')}</strong> pursuant to Department of Health Administrative Order No. 2021-0044.</p>`}
 
   ${snap.is4Ps ? '<p>The patient is a member/beneficiary of the Pantawid Pamilyang Pilipino Program (4Ps).</p>' : ''}
   ${snap.circumstances.length ? `<p>Supporting circumstances: ${esc(snap.circumstances.join(', '))}.</p>` : ''}
 
   <p class="small">${basisLine}</p>
   <p>This classification is valid until ${fill(longDate(snap.validUntil))} (${esc(String(snap.validMonths))} months from the date of assessment), unless reassessed earlier.</p>
-  <p>This certification is issued for whatever legal purpose it may serve, particularly for medical and financial assistance.</p>
+  <p>This certificate is issued on <strong>${esc(longDate(snap.issuedOn))}</strong>.</p>
 
   <div class="sigs">
     <div class="sig">
-      <div class="label">Assessed and certified by:</div>
+      <div class="label">Assessed by:</div>
       <div class="line"></div>
       <div class="name">${snap.socialWorker ? `${esc(snap.socialWorker)}, RSW` : '<span class="blank" style="width:200px"></span>'}</div>
-      <div class="meta">Position: <span class="blank" style="width:150px"></span></div>
-      <div class="meta">PRC License No.: <span class="blank" style="width:120px"></span></div>
+      <div class="meta">Medical Social Worker</div>
+      <div class="meta">Licence No.: <span class="blank" style="width:120px"></span></div>
     </div>
     <div class="sig">
-      <div class="label">Noted by:</div>
+      <div class="label">Issued by:</div>
       <div class="line"></div>
       <div class="name">${snap.notedBy.name ? esc(snap.notedBy.name) : '<span class="blank" style="width:200px"></span>'}</div>
-      <div class="meta">${esc(snap.notedBy.title || 'Head, Medical Social Service')}</div>
-      <div class="meta">PRC License No.: <span class="blank" style="width:120px"></span></div>
+      <div class="meta">${esc(snap.notedBy.title || 'Head, Medical Social Work Department')}</div>
+      <div class="meta">Licence No.: <span class="blank" style="width:120px"></span></div>
     </div>
   </div>
 

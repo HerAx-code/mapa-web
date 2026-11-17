@@ -245,7 +245,7 @@ function CertificateCard({ user, tenantId }) {
       }, { merge: true })
       logAudit(user, {
         action: 'coe_settings_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
-        details: `Certificate of Eligibility noted by: ${nameValue.trim() || '(blank line)'}${titleValue.trim() ? `, ${titleValue.trim()}` : ''}`,
+        details: `Certificate of Eligibility issued by: ${nameValue.trim() || '(blank line)'}${titleValue.trim() ? `, ${titleValue.trim()}` : ''}`,
       })
       setName(null); setTitle(null)
       toast.success('Certificate settings saved.')
@@ -260,15 +260,16 @@ function CertificateCard({ user, tenantId }) {
       <div>
         <p className="text-sm font-semibold text-gray-800">Certificate of Eligibility</p>
         <p className="text-xs text-gray-500 mt-1">
-          Who notes the certificate under the social worker&apos;s signature. Leave the name blank to print a line to write on.
+          Who issues the certificate (Malasakit Annex A: the Head of the Medical Social Work Department), signing beside the
+          social worker who assessed. Leave the name blank to print a line to write on.
           Numbers use your access-code prefix (e.g. {'CRMC-COE-2026-00001'}).
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Noted by (name)" hint="e.g. the Head of Medical Social Service, with RSW">
+        <Field label="Issued by (name)" hint="e.g. the department head's name, with RSW">
           <input className="input" maxLength={100} value={nameValue} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Title" hint="Default: Head, Medical Social Service">
+        <Field label="Title" hint="Default: Head, Medical Social Work Department">
           <input className="input" maxLength={100} value={titleValue} onChange={(e) => setTitle(e.target.value)} />
         </Field>
       </div>
