@@ -912,7 +912,13 @@ service cloud.firestore {
       // their endorse transaction and the daily slot-reset fallback write
       // (admin/Requests.jsx); they can't change slots.total, enabled, or
       // anything else.
-      allow create: if isPlatformAdmin();
+      // Funder type (2026-11-17): Super Admin only, one of a fixed list or
+      // unset. Keep in sync with FUNDING_TYPE_VALUES in src/utils/fundingType.js.
+      function fundingTypeOk() {
+        return request.resource.data.get('fundingType', null) == null ||
+               request.resource.data.fundingType in ['national_program', 'regional_program', 'lgu_program', 'private'];
+      }
+      allow create: if isPlatformAdmin() && fundingTypeOk();
       // Update authority split:
       //   - platform admin (Super Admin): anything.
       //   - hospital staff: only their own hospital's slot counters (below).
@@ -939,7 +945,7 @@ service cloud.firestore {
       //     are allowed to change so automated transaction flows
       //     (GL expire, approval, redeem) work for non-admin agency
       //     coordinators.
-      allow update: if isPlatformAdmin() ||
+      allow update: if (isPlatformAdmin() && fundingTypeOk()) ||
                        (isAdmin() &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate', 'hospitalSlots']) &&
                         request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
@@ -956,7 +962,8 @@ service cloud.firestore {
                        // the Super Admin's (platform) decision, not the agency's.
                        (isAgencyAdmin() && userAgencyId() == agencyId &&
                         request.resource.data.get('partnerHospitalIds', null) == resource.data.get('partnerHospitalIds', null) &&
-                        request.resource.data.get('enabled', null) == resource.data.get('enabled', null)) ||
+                        request.resource.data.get('enabled', null) == resource.data.get('enabled', null) &&
+                        request.resource.data.get('fundingType', null) == resource.data.get('fundingType', null)) ||
                        // A coordinator writes only what its own work changes:
                        // budget usage (approve / redeem / expire / reverse),
                        // today's remaining slots + reset date, and one

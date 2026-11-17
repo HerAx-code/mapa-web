@@ -8,6 +8,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { MdClose, MdSend, MdGroups } from 'react-icons/md'
 import { ORG } from '../../config/org'
 import { withTenant, agencyPartnersWith } from '../../utils/hospitals'
+import { fundingTypeShort } from '../../utils/fundingType'
 import toast from 'react-hot-toast'
 
 /**
@@ -165,7 +166,7 @@ export default function SuggestEndorsementModal({ app, request, siblings = [], o
               disabled={loadingAgencies || agencies.length === 0}
               placeholder={loadingAgencies ? 'Loading…' : 'Pick an agency'}
               searchPlaceholder="Search agencies…"
-              options={agencies.map(a => ({ value: a.id, label: a.name }))} />
+              options={agencies.map(a => ({ value: a.id, label: a.fundingType ? `${a.name} (${fundingTypeShort(a.fundingType)})` : a.name }))} />
             {!loadingAgencies && agencies.length === 0 && (
               <p className="text-xs text-amber-600 mt-1">
                 All eligible agencies are already on this case. No siblings left to suggest.

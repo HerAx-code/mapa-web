@@ -12,6 +12,7 @@ import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesP
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
+import { FUNDING_TYPES, fundingTypeLabel, fundingTypeShort, fundingTypeClass } from '../../utils/fundingType'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation } from '../../utils/messages'
@@ -71,6 +72,10 @@ const EMPTY_FORM = {
 
 export function AgencyModal({ agency, onClose, onSave }) {
   const isEdit = !!agency
+  // Funder type (2026-11-17) is the Super Admin's to set (firestore.rules).
+  const { user: modalUser } = useAuth()
+  const canSetType = modalUser?.role === ROLES.PLATFORM_ADMIN
+  const [fundingType, setFundingType] = useState(agency?.fundingType ?? '')
   const [form, setForm] = useState(
     isEdit ? {
       name:           agency.name,
@@ -169,6 +174,7 @@ export function AgencyModal({ agency, onClose, onSave }) {
           remaining: isEdit ? agency.slots?.remaining ?? Number(form.slotsTotal) : Number(form.slotsTotal),
         },
         enabled: isEdit ? agency.enabled : true,
+        ...(canSetType ? { fundingType: fundingType || null } : {}),
       })
       toast.success(isEdit ? 'Agency updated.' : 'Agency added.')
       onClose()
@@ -219,6 +225,18 @@ export function AgencyModal({ agency, onClose, onSave }) {
               <label className="block text-xs font-medium text-gray-700 mb-1">Initials <span className="text-red-400">*</span></label>
               <input className="input" placeholder="MC" maxLength={3} value={form.initials} onChange={set('initials')} />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Funder type</label>
+            {canSetType ? (
+              <select className="input" value={fundingType} onChange={(e) => setFundingType(e.target.value)}>
+                <option value="">Not set</option>
+                {FUNDING_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            ) : (
+              <p className="text-sm text-gray-700">{fundingTypeLabel(agency?.fundingType)}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">Where the money comes from. Hospital staff see it when endorsing; it doesn&apos;t change how the funder works.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
@@ -722,6 +740,9 @@ export default function Agencies() {
                       <h3 className="text-sm font-semibold text-gray-800">{agency.name}</h3>
                       <span className={`badge text-xs ${agency.enabled ? 'badge-green' : 'badge-red'}`}>
                         {agency.enabled ? 'Active' : 'Disabled'}
+                      </span>
+                      <span className={`badge text-xs ${fundingTypeClass(agency.fundingType)}`} title={fundingTypeLabel(agency.fundingType)}>
+                        {fundingTypeShort(agency.fundingType)}
                       </span>
                       {(agency.budget?.allocated ?? 0) > 0 ? (
                         <span className="badge badge-blue text-xs" title={`₱${(agency.budget?.allocated ?? 0).toLocaleString()} allocated this ${agency.budget?.period ?? 'period'}`}>
