@@ -227,7 +227,9 @@ function MeansTestCard({ user, tenantId, region }) {
   )
 }
 
-// Certificate of Eligibility: the "Noted by" signatory printed under the MSW.
+// Certificate of Eligibility: the "Issued by" signatory (Malasakit Annex A:
+// Head of the Medical Social Work Department), printed beside the MSW.
+// Stored as coeNotedBy* (field names kept from the first version).
 function CertificateCard({ user, tenantId }) {
   const saved = useHospitalSettings()
   const [name, setName] = useState(null)
