@@ -583,7 +583,11 @@ export default function TrackStatus() {
                           Admin chose "hold" instead of "auto-reject", so
                           surface that to the patient — silence here would
                           leave them confused why their app sits forever. */}
-                      {agencyMap[app.agencyId]?.enabled === false && (
+                      {/* Only while the agency's decision is still pending
+                          (2026-11-17): an approved letter stays valid and
+                          usable when its agency is switched off, so "paused"
+                          would wrongly suggest the letter is void. */}
+                      {agencyMap[app.agencyId]?.enabled === false && !['approved', 'certificate'].includes(app.status) && (
                         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
                           <p className="text-sm text-amber-700 font-medium flex items-start gap-2">
                             <MdWarning size={16} className="flex-shrink-0 mt-0.5" />
