@@ -3,10 +3,10 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import Layout from '../../components/Layout'
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, updateDoc, setDoc, serverTimestamp, getDocs } from 'firebase/firestore'
 import { getAuth, createUserWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail, deleteUser } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app'
-import { db, auth, firebaseConfig } from '../../firebase'
+import { db, auth, firebaseConfig, functions, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
@@ -14,7 +14,7 @@ import { withTenant, tenantWhere } from '../../utils/hospitals'
 import {
   MdSearch, MdAdd, MdEdit, MdDelete, MdLock, MdLockOpen,
   MdKey, MdClose, MdVisibility, MdVisibilityOff, MdWarning,
-  MdSupervisedUserCircle,
+  MdSupervisedUserCircle, MdPhonelinkLock,
 } from 'react-icons/md'
 import toast from 'react-hot-toast'
 
@@ -296,37 +296,35 @@ export default function Accounts() {
 
   // ── Actions ──────────────────────────────────────────────────────────
 
+  // Phase 1 (T2): Deactivate blocks the sign-in itself on the server
+  // (disableAccount: Auth disabled + signed out + profile inactive), not just
+  // the profile flag that was checked only after sign-in. The function writes
+  // the audit entry and notifies the person.
   const handleToggleActive = async (account) => {
     const nowActive = account.active === false
     try {
-      await updateDoc(doc(db, 'users', account.uid), { active: nowActive })
-
-      if (nowActive) {
-        await notify(account.uid, {
-          type: 'account_activated', title: 'Account Reactivated',
-          body: 'Your account has been reactivated. You can now log in to the portal.',
-        })
-        await notifySuperAdmins({
-          type: 'account_activated', title: 'Account Reactivated',
-          body: `${account.name}'s account has been reactivated by ${currentUser?.name}.`,
-        })
-        logAudit(currentUser, { action: 'account_activated', targetType: 'account', targetId: account.uid, targetName: account.name, details: 'Account reactivated' })
-        toast.success(`${account.name}'s account reactivated.`)
-      } else {
-        await notify(account.uid, {
-          type: 'account_deactivated', title: 'Account Deactivated',
-          body: 'Your account has been deactivated by the administrator. Contact your supervisor for assistance.',
-        })
-        await notifySuperAdmins({
-          type: 'account_deactivated', title: 'Account Deactivated',
-          body: `${account.name}'s account has been deactivated by ${currentUser?.name}.`,
-        })
-        logAudit(currentUser, { action: 'account_deactivated', targetType: 'account', targetId: account.uid, targetName: account.name, details: 'Account deactivated' })
-        toast.success(`${account.name}'s account deactivated.`)
-      }
+      await httpsCallable(functions, 'disableAccount')({ uid: account.uid, enable: nowActive })
+      await notifySuperAdmins({
+        type: nowActive ? 'account_activated' : 'account_deactivated',
+        title: nowActive ? 'Account Reactivated' : 'Account Deactivated',
+        body: `${account.name}'s account has been ${nowActive ? 'reactivated' : 'deactivated'} by ${currentUser?.name}.`,
+      })
+      toast.success(`${account.name}'s account ${nowActive ? 'reactivated' : 'deactivated'}.`)
     } catch (err) {
       console.error(err)
-      toast.error(`Failed to ${nowActive ? 'reactivate' : 'deactivate'} account.`)
+      toast.error(err?.message || `Failed to ${nowActive ? 'reactivate' : 'deactivate'} account.`)
+    }
+  }
+
+  // For a lost phone: clears the person's two-factor so they can set it up
+  // again at their next sign-in (resetStaffMfa; audited on the server).
+  const handleResetMfa = async (account) => {
+    try {
+      await httpsCallable(functions, 'resetStaffMfa')({ uid: account.uid })
+      toast.success(`Two-factor reset for ${account.name}. They set it up again at their next sign-in.`)
+    } catch (err) {
+      console.error(err)
+      toast.error(err?.message || 'Could not reset two-factor.')
     }
   }
 
@@ -341,19 +339,20 @@ export default function Accounts() {
     } catch (err) { console.error(err); toast.error('Failed to send reset email.') }
   }
 
+  // Phase 1 (T2): deletes the sign-in and the profile on the server
+  // (eraseAccount: same hospital only, never its last Hospital Admin).
   const handleDelete = async (account) => {
     try {
-      await deleteDoc(doc(db, 'users', account.uid))
+      await httpsCallable(functions, 'eraseAccount')({ uid: account.uid })
       await notifySuperAdmins({
         type: 'account_deleted', title: 'Account Deleted',
         body: `${account.name}'s account (${ROLE_LABEL[account.role]}) was permanently deleted by ${currentUser?.name}.`,
       })
       setConfirmDelete(null)
-      logAudit(currentUser, { action: 'account_deleted', targetType: 'account', targetId: account.uid, targetName: account.name, details: `Role was: ${ROLE_LABEL[account.role] ?? account.role}` })
-      toast.success('Account deleted.')
+      toast.success('Account and sign-in deleted.')
     } catch (err) {
       console.error(err)
-      toast.error('Failed to delete account.')
+      toast.error(err?.message || 'Failed to delete account.')
     }
   }
 
@@ -485,6 +484,9 @@ export default function Accounts() {
                               <button title="Edit account" className="p-1.5 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" onClick={() => setModal(a)}><MdEdit size={15} /></button>
                               <button title="Send password reset email" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => handleResetPassword(a)}><MdKey size={15} /></button>
                               {!isSelf && (
+                                <button title="Reset two-factor (lost phone)" className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" onClick={() => handleResetMfa(a)}><MdPhonelinkLock size={15} /></button>
+                              )}
+                              {!isSelf && (
                                 <button title={isActive ? 'Deactivate account' : 'Reactivate account'}
                                   className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-500 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-500 hover:text-green-500 hover:bg-green-50'}`}
                                   onClick={() => handleToggleActive(a)}>
@@ -501,7 +503,7 @@ export default function Accounts() {
                               <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
                               <div className="flex-1">
                                 <p className="text-sm text-red-700">Delete <strong>{a.name}</strong>? This removes their portal access permanently.</p>
-                                <p className="text-xs text-red-600/80 mt-1 leading-relaxed">Note: The Firebase Auth account can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console → Authentication.</p>
+                                <p className="text-xs text-red-600/80 mt-1 leading-relaxed">Their sign-in is deleted too, so the email can be used again. Their past actions stay in the audit log.</p>
                               </div>
                               <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0" onClick={() => setConfirmDelete(null)}>Cancel</button>
                               <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0" onClick={() => handleDelete(a)}>Delete</button>
