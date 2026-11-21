@@ -9,6 +9,7 @@ import PatientPage from '../../components/patient/PatientPage'
 import AgencyAvatar from '../../components/AgencyAvatar'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { agencyFromPublic } from '../../utils/agenciesPublic'
 import { useAuth } from '../../contexts/AuthContext'
 import { agencyPartnersWith } from '../../utils/hospitals'
 import { useTranslation } from 'react-i18next'
@@ -35,10 +36,11 @@ export default function MedicalPrograms() {
   const [expandedId, setExpandedId]     = useState(null)
 
   useEffect(() => {
-    const q = query(collection(db, 'agencies'), where('enabled', '==', true))
+    // The public listing (Phase 1, N10): patients can't read full agency records.
+    const q = query(collection(db, 'agenciesPublic'), where('enabled', '==', true))
     const unsub = onSnapshot(q, snap => {
       setAgencies(
-        snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        snap.docs.map(d => agencyFromPublic({ id: d.id, ...d.data() }))
           .filter(a => !myTenant || agencyPartnersWith(a, myTenant))
           // Null-safe sort: a corrupt agency doc missing `name` would
           // throw on .localeCompare and wipe the whole catalog -- one

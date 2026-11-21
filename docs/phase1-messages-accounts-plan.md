@@ -1,6 +1,6 @@
 # Phase 1 plan — messages and accounts (T1, T2)
 
-Status: **PR 1 merged and deployed (HerAx-code/mapa-web#407, #408, 2026-11-21). PR 2 split in two: 2A (sections 1–3, account functions and pages) built on `feat/account-lifecycle`; 2B (sections 4–5, required two-factor and the public agency listing) not started.**
+Status: **PR 1 merged and deployed (HerAx-code/mapa-web#407, #408). PR 2A merged and deployed (#410, 2026-11-21). PR 2B (sections 4–5) built on `feat/mfa-and-agency-listing`, 2026-11-22. Two-factor stage 2 (rules + functions) is a later PR, about two weeks after 2B is live.**
 
 Phase 1 closes the gaps that are exposed today and don't depend on the money work in Phase 2:
 
@@ -151,15 +151,16 @@ Setup:
 - `admin/AgencyDetail.jsx`: the coordinator Delete button is replaced by **Reset two-factor** (nobody deletes agency accounts, P1-B); the active toggle (`handleDeleteCoord`, `handleToggleCoord`), and `agency/Team.jsx` `handleToggleActive` → `disableAccount`. Today these only flip `active` on the profile, which AuthContext checks after sign-in; the sign-in itself stays usable.
 - Delete `functions/src/deleteAuthUser.js` and its tests; remove its export from `functions/index.js`.
 
-### 4. Two-factor required for staff (M18, P1-C)
-- **Client:** the app reads `MFA_MODE`. When it is `'required'`, a staff member without a factor sees the enrolment screen, which can't be dismissed, right after sign-in (`Layout.jsx`, `MfaEnrollModal`).
+### 4. Two-factor required for staff (M18, P1-C) — stage 1 in PR 2B
+- **Client (2B):** `MFA_MODE = 'required'`. `components/MfaGate.jsx` (rendered by `Layout`) shows `MfaEnrollModal required` to a staff member without a factor: no close button, Escape ignored, removal not offered, **Sign out** as the exit. If the project itself doesn't offer TOTP (`auth/operation-not-allowed`), it offers **Continue for now** so a config gap never locks staff out. The email-verification step gains "I've verified my email".
 - **Rules, at stage 2:** a `staffMfaOk()` helper checks `request.auth.token.firebase.sign_in_second_factor != null` and is added to `isAdmin()`, `isAgency()` and `isPlatformAdmin()`.
 - **Functions, at stage 2:** callables check the same token claim.
 
-### 5. Patients read the public agency listing (N10)
+### 5. Patients read the public agency listing (N10) — PR 2B
 - **Extend `projectPublicAgency`** (`functions/src/onAgencyWritten.js`) with the fields patient screens use: `description`, `procedure`, `processingTime`, `requirements`, `assistanceTypes`, `partnerHospitalIds`, `hospitalSlots` (total and remaining only). Budget, allocation, caps, slot history and repeat limits stay out.
 - **Point patient screens at `agenciesPublic`:** `MedicalPrograms.jsx`, `RequestAssistance.jsx` (agency map), `useMarketplace.js`, and the patient branch of `LiveDataContext.jsx`.
 - **Remove the browser `syncAgencyPublic` calls** (16 places); the function is the only writer (part of R10). The rules' `agenciesPublic` write branch becomes `if false`.
+- Built in 2B: the projection keeps `slots` as the sum of all daily capacity (the Landing teaser) and adds `agencySlots` + `lastResetDate` + `hospitalSlots` for `effectiveSlots()`; `agencyFromPublic()` (src/utils/agenciesPublic.js) maps a listing doc back to the agency shape. The listing is written with a full set, not a merge. The Super Admin's **Resync public** button calls a new `resyncAgenciesPublic` function; `scripts/backfill-agencies-public.js` imports the function's projection. Staff keep reading full `agencies` records (the Training Hospital's practice agency is never published).
 - **Rules:** `agencies` read becomes `isAuth() && !isPatient()`.
 
 ### Tests

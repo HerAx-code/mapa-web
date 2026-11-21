@@ -16,6 +16,7 @@ import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '
 import { tenantIdFor, loadHospital } from '../../utils/hospitals'
 import { currentCodeInfo } from '../../utils/accessCodes'
 import { proceedSlices } from '../../utils/proceed'
+import { agencyFromPublic } from '../../utils/agenciesPublic'
 import { useMarketplace } from '../../hooks/useMarketplace'
 import HospitalGate from '../../components/patient/HospitalGate'
 import { ORG, DEFAULT_HOSPITAL_ID } from '../../config/org'
@@ -647,12 +648,12 @@ export default function RequestAssistance() {
   }, [user?.uid, myTenant])
 
   // Agency details (requirements / procedure / description) for the coverage
-  // plan. Agencies are publicly readable, so a one-shot fetch is enough.
+  // plan, from the public listing (Phase 1, N10). A one-shot fetch is enough.
   useEffect(() => {
-    getDocs(collection(db, 'agencies'))
+    getDocs(collection(db, 'agenciesPublic'))
       .then(snap => {
         const m = {}
-        snap.docs.forEach(d => { m[d.id] = d.data() })
+        snap.docs.forEach(d => { m[d.id] = agencyFromPublic(d.data()) })
         setAgencyMap(m)
       })
       .catch(() => {})

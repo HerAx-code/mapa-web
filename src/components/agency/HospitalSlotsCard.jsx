@@ -7,7 +7,6 @@ import { useHospitals, hospitalLabel } from '../../hooks/useHospitals'
 import { effectiveSlots } from '../../utils/requests'
 import { phTodayKey } from '../../utils/dates'
 import { logAudit } from '../../utils/auditLog'
-import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { partnerHospitalIdsOf } from '../../utils/hospitals'
 
 const MAX_PER_HOSPITAL = 100
@@ -48,7 +47,6 @@ export default function HospitalSlotsCard({ agency, user, canEdit = false, appli
         action: 'hospital_slots_set', targetType: 'agency', targetId: agency.id, targetName: agency.name,
         details: `${nameOf(hid)}: ${cur.perHospital ? cur.total : 'default'} → ${total} daily slots`,
       })
-      syncAgencyPublic(agency.id, { ...agency, hospitalSlots: { ...(agency.hospitalSlots ?? {}), [hid]: entry } })
       setDraft(d => { const n = { ...d }; delete n[hid]; return n })
       toast.success(`${nameOf(hid)}: ${total} slots a day.`)
     } catch (err) {

@@ -15,9 +15,10 @@ const DATA = {
       gatewayName: 'Medical Social Service', address: 'Sinsuat Ave, Cotabato City', region: 'BARMM', contactEmail: 'mss@crmc.ph' },
     { id: 'bgh', facilityName: 'Bangsamoro General Hospital', shortName: 'BGH', accessCodePrefix: 'BGH', enabled: true },
   ],
-  agencies: [
-    { id: 'dswd', name: 'DSWD', enabled: true, partnerHospitalIds: ['hospital-1', 'bgh'], assistanceTypes: ['Medical'], slots: { total: 10, remaining: 4 } },
-    { id: 'pcso', name: 'PCSO', enabled: true, partnerHospitalIds: ['hospital-1'], assistanceTypes: ['Dialysis'], slots: { total: 5, remaining: 5 } },
+  // Patients read the public listing (Phase 1, N10), in its projected shape.
+  agenciesPublic: [
+    { id: 'dswd', name: 'DSWD', enabled: true, partnerHospitalIds: ['hospital-1', 'bgh'], assistanceTypes: ['Medical'], slots: { total: 10, remaining: 4 }, agencySlots: { total: 10, remaining: 4 }, hospitalSlots: {} },
+    { id: 'pcso', name: 'PCSO', enabled: true, partnerHospitalIds: ['hospital-1'], assistanceTypes: ['Dialysis'], slots: { total: 5, remaining: 5 }, agencySlots: { total: 5, remaining: 5 }, hospitalSlots: {} },
   ],
   hospitalsPublicStats: [{ id: 'hospital-1', turnaroundDays: 3.4, basedOn: 12 }, { id: 'bgh', turnaroundDays: null, basedOn: 2 }],
   requests: [],
@@ -26,7 +27,7 @@ const snap = (name) => ({ docs: (DATA[name] ?? []).map((d) => ({ id: d.id, data:
 
 const user = { uid: 'p1', role: 'patient', name: 'Ana' }
 vi.mock('../../src/contexts/AuthContext', () => ({ useAuth: () => ({ user }) }))
-vi.mock('../../src/firebase', () => ({ db: {} }))
+vi.mock('../../src/firebase', () => ({ db: {}, functions: {}, httpsCallable: () => async () => ({ data: {} }) }))
 vi.mock('../../src/components/Layout', () => ({ default: ({ children }) => <div>{children}</div> }))
 vi.mock('firebase/firestore', () => ({
   collection: (_db, name) => ({ name }),

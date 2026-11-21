@@ -1,4 +1,5 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
+const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 
@@ -35,22 +36,50 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
  * contacts / signatories.
  */
 
-// The exact public projection. Keep this minimal — anything added here becomes
-// world-readable (so never budget / fundSource / contacts). Landing renders
-// name + initials + color + location + slots.{total,remaining}; `enabled` drives
-// the query filter.
+// The exact public projection. Anything added here becomes world-readable, so
+// NEVER budget / fundSource / contacts / signatories / caps / repeat limits /
+// slot history / fundingType.
+//
+// Phase 1 (N10, 2026-11-21): patients read this projection instead of the full
+// agency record, so it carries what patient screens use — the profile text
+// (Find Programs), assistance types and document requirements (filing), the
+// partner hospitals and both slot shapes (the hospital marketplace and
+// effectiveSlots()). `slots` stays the sum of all daily capacity, which is what
+// the Landing teaser shows; `agencySlots` + `lastResetDate` + `hospitalSlots`
+// are the raw counts effectiveSlots() needs (src/utils/agenciesPublic.js
+// agencyFromPublic). This function is the ONLY writer (the rules refuse
+// browsers); scripts/backfill-agencies-public.js imports it.
+const num = (v) => Number(v) || 0
+const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '')
+const names = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string').map((x) => x.slice(0, 200)).slice(0, 50) : [])
+
 function projectPublicAgency(data = {}) {
-  const slots = data.slots ?? {}
+  const raw = data.slots ?? {}
+  const per = data.hospitalSlots && typeof data.hospitalSlots === 'object' ? Object.entries(data.hospitalSlots) : []
+  const hospitalSlots = Object.fromEntries(per.map(([h, x]) => [h, {
+    total: num(x?.total), remaining: num(x?.remaining), lastResetDate: typeof x?.lastResetDate === 'string' ? x.lastResetDate : null,
+  }]))
+  const sum = per.length
+    ? per.reduce((a, [, x]) => ({ total: a.total + num(x?.total), remaining: a.remaining + num(x?.remaining) }), { total: 0, remaining: 0 })
+    : { total: num(raw.total), remaining: num(raw.remaining) }
   return {
     name:     data.name ?? '',
     initials: data.initials ?? '',
     color:    data.color ?? '',
     location: data.location ?? '',
     enabled:  data.enabled !== false, // default-enabled unless explicitly false
-    slots: {
-      total:     Number(slots.total) || 0,
-      remaining: Number(slots.remaining) || 0,
-    },
+    slots:    sum,
+    agencySlots: { total: num(raw.total), remaining: num(raw.remaining) },
+    lastResetDate: typeof data.lastResetDate === 'string' ? data.lastResetDate : null,
+    hospitalSlots,
+    // Absent stays absent: an agency with no list partners with hospital #1
+    // only (partnerHospitalIdsOf), which an empty list would change.
+    ...(Array.isArray(data.partnerHospitalIds) ? { partnerHospitalIds: names(data.partnerHospitalIds) } : {}),
+    assistanceTypes: names(data.assistanceTypes),
+    requirements:    names(data.requirements),
+    description:     str(data.description, 2000),
+    procedure:       str(data.procedure, 4000),
+    processingTime:  str(data.processingTime, 200),
   }
 }
 
@@ -81,12 +110,46 @@ async function handleAgencyWritten({ db, agencyId, before, after, serverTimestam
     }
   }
 
-  await pubRef.set({ ...next, updatedAt: serverTimestamp() }, { merge: true })
+  // A full set (not merge): the projection is the whole public doc, so a
+  // field the agency no longer has disappears from it too.
+  await pubRef.set({ ...next, updatedAt: serverTimestamp() })
   return { projected: next, agencyId }
+}
+
+// Rewrites the whole public listing from the agencies collection and removes
+// any public doc whose agency is gone or is a training agency. The Super
+// Admin's "Resync public" button (Phase 1: browsers no longer write the
+// listing) and the one-off backfill after this projection changes.
+async function handleResyncAgenciesPublic({ callerUid, db, serverTimestamp }) {
+  if (!callerUid) throw new HttpsError('unauthenticated', 'Sign in required.')
+  const caller = await db.doc(`users/${callerUid}`).get()
+  if (!caller.exists || caller.data().role !== 'platform_admin') {
+    throw new HttpsError('permission-denied', 'Only the Super Admin can resync the public listing.')
+  }
+  const [agencies, published] = await Promise.all([db.collection('agencies').get(), db.collection('agenciesPublic').get()])
+  const keep = new Set()
+  let written = 0
+  for (const a of agencies.docs) {
+    if (a.data().training === true) continue
+    keep.add(a.id)
+    await db.collection('agenciesPublic').doc(a.id).set({ ...projectPublicAgency(a.data()), updatedAt: serverTimestamp() })
+    written++
+  }
+  let pruned = 0
+  for (const p of published.docs) {
+    if (!keep.has(p.id)) { await p.ref.delete(); pruned++ }
+  }
+  return { written, pruned }
 }
 
 exports.handleAgencyWritten = handleAgencyWritten
 exports.projectPublicAgency = projectPublicAgency
+exports.handleResyncAgenciesPublic = handleResyncAgenciesPublic
+
+exports.resyncAgenciesPublic = onCall({ region: 'asia-southeast1', timeoutSeconds: 120, memory: '256MiB' },
+  async (request) => handleResyncAgenciesPublic({
+    callerUid: request.auth?.uid, db: getFirestore(), serverTimestamp: () => FieldValue.serverTimestamp(),
+  }))
 
 exports.onAgencyWritten = onDocumentWritten({
   document: 'agencies/{agencyId}',

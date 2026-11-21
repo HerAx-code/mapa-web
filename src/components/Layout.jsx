@@ -29,6 +29,7 @@ import { ROLES, ROLE_LABEL_SHORT } from '../utils/constants'
 import { roleNeedsMfa } from '../utils/mfa'
 import Logo from './ui/Logo'
 import ProfileModals from './ProfileModals'
+import MfaGate from './MfaGate'
 import LanguageToggle from './LanguageToggle'
 import OfflineBanner from './OfflineBanner'
 import AnnouncementBanner from './AnnouncementBanner'
@@ -1142,6 +1143,8 @@ export default function Layout({ children, breadcrumb }) {
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible print:bg-white">
       <ProfileModals activeModal={activeModal} onClose={() => setActiveModal(null)} onSetModal={setActiveModal} />
+      {/* Staff two-factor setup, required before using the app (P1-C stage 1). */}
+      <MfaGate />
       {showCompose && <ComposeModal user={user} onClose={() => setShowCompose(false)} />}
 
       {/* ── Mobile overlay ───────────────────────────────────────────── */}

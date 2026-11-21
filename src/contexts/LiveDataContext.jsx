@@ -5,6 +5,7 @@ import {
 import { db } from '../firebase'
 import { useAuth } from './AuthContext'
 import { ROLES } from '../utils/constants'
+import { agencyFromPublic } from '../utils/agenciesPublic'
 
 // LiveDataContext hoists the four onSnapshot subscriptions that Layout
 // used to own (notifications, conversations, agency inbox count, agency
@@ -142,25 +143,30 @@ export function LiveDataProvider({ children }) {
   // Single live snapshot on the agencies collection populates a
   // { id -> agency } map that any page can lookup synchronously.
   // Kills the N+1 pattern in patient/TrackStatus where each app row
-  // fired its own getDoc(agencies/{id}). Agencies are publicly
-  // readable per the parent collection rule, so this works for any
-  // signed-in role. Bounded set (~10 agencies even at scale).
+  // fired its own getDoc(agencies/{id}). Bounded set (~10 agencies even at
+  // scale). Patients read the public listing (Phase 1, N10: the rules no
+  // longer let them read full agency records); staff keep the full records,
+  // which also include the Training Hospital's unpublished practice agency.
+  const readsPublic = user?.role === ROLES.PATIENT
   useEffect(() => {
     if (!user?.uid) {
       setAgencyMap({})
       return
     }
     const unsub = onSnapshot(
-      collection(db, 'agencies'),
+      collection(db, readsPublic ? 'agenciesPublic' : 'agencies'),
       snap => {
         const m = {}
-        snap.docs.forEach(d => { m[d.id] = { id: d.id, ...d.data() } })
+        snap.docs.forEach(d => {
+          const a = { id: d.id, ...d.data() }
+          m[d.id] = readsPublic ? agencyFromPublic(a) : a
+        })
         setAgencyMap(m)
       },
       (err) => console.error('[LiveData] agencies snapshot error:', err),
     )
     return unsub
-  }, [user?.uid])
+  }, [user?.uid, readsPublic])
 
   const subscribeToNewNotifications = (callback) => {
     newNotifSubscribers.current.add(callback)

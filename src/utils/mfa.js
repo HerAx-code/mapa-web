@@ -20,11 +20,14 @@ import { ORG } from '../config/org'
 export const MFA_ROLES = ['platform_admin', 'super_admin', 'staff_admin', 'agency_admin', 'agency']
 export const roleNeedsMfa = (role) => MFA_ROLES.includes(role)
 
-// Enforcement mode. Start at 'prompt' (a dismissible nudge) so enabling MFA on
-// a live system can't lock working staff out before they've enrolled. Flip to
-// 'required' once staff are enrolled to hard-gate access; 'off' disables the
-// nudge entirely.
-export const MFA_MODE = 'prompt' // 'off' | 'prompt' | 'required'
+// Enforcement mode (Phase 1, decision P1-C, 2026-11-21).
+//   'required' — stage 1: a staff member without a second factor sees the
+//                setup screen right after sign-in and can't dismiss it
+//                (components/MfaGate.jsx). Lost phones are reset by an admin
+//                (resetStaffMfa). Stage 2, about two weeks later, makes the
+//                rules and functions refuse staff sessions without one.
+//   'prompt'   — the old optional menu item only. 'off' — nothing.
+export const MFA_MODE = 'required' // 'off' | 'prompt' | 'required'
 
 // Is this signed-in Firebase user already enrolled in a second factor?
 export function isMfaEnrolled(fbUser) {
@@ -34,6 +37,14 @@ export function isMfaEnrolled(fbUser) {
     return false
   }
 }
+
+// Must this staff member set up two-factor before using the app? (P1-C stage 1)
+export const mfaEnrolmentDue = (role, fbUser, mode = MFA_MODE) =>
+  mode === 'required' && roleNeedsMfa(role) && !!fbUser && !isMfaEnrolled(fbUser)
+
+// Errors meaning the project itself doesn't offer two-factor (TOTP not turned
+// on in Firebase). The gate must never lock staff out for that.
+export const MFA_UNAVAILABLE_CODES = ['auth/operation-not-allowed', 'auth/unsupported-first-factor']
 
 // Re-authenticate with the current password. Enrolling/unenrolling a factor
 // requires a recent login; doing this up front makes enrollment reliable

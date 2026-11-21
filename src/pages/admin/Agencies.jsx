@@ -8,7 +8,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useNavigate } from 'react-router-dom'
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, query, where, getDocs, orderBy } from 'firebase/firestore'
 import { tenantWhere, currentTenantId, agencyPartnersWith } from '../../utils/hospitals'
-import { syncAgencyPublic, reconcileAgenciesPublic } from '../../utils/agenciesPublic'
+import { resyncAgenciesPublic } from '../../utils/agenciesPublic'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
@@ -456,7 +456,6 @@ export default function Agencies() {
     try {
       const nowEnabled = !agency.enabled
       await updateDoc(doc(db, 'agencies', agency.id), { enabled: nowEnabled })
-      await syncAgencyPublic(agency.id, { ...agency, enabled: nowEnabled })
       await notifyAgencyUser(agency.id, {
         type:  nowEnabled ? 'agency_enabled' : 'agency_disabled',
         title: nowEnabled ? 'Agency Enabled' : 'Agency Disabled',
@@ -473,7 +472,6 @@ export default function Agencies() {
     if (newTotal < 1) { toast.error('Must be at least 1.'); return }
     try {
       await updateDoc(doc(db, 'agencies', agency.id), { 'slots.total': newTotal })
-      await syncAgencyPublic(agency.id, { ...agency, slots: { ...agency.slots, total: newTotal } })
       await notifyAgencyUser(agency.id, {
         type: 'agency_updated', title: 'Slot Capacity Updated',
         body: `Daily slot capacity updated from ${agency.slots?.total ?? '?'} to ${newTotal} by the administrator.`,
@@ -488,7 +486,6 @@ export default function Agencies() {
     try {
       const total = agency.slots?.total ?? 25
       await updateDoc(doc(db, 'agencies', agency.id), { 'slots.remaining': total })
-      await syncAgencyPublic(agency.id, { ...agency, slots: { ...agency.slots, remaining: total } })
       await notifyAgencyUser(agency.id, {
         type: 'agency_updated', title: 'Slots Manually Reset',
         body: `Slots for ${agency.name} were manually reset to ${total} outside the normal midnight cycle.`,
@@ -501,7 +498,6 @@ export default function Agencies() {
     try {
       const agency = agencies.find(a => a.id === id)
       await deleteDoc(doc(db, 'agencies', id))
-      await deleteDoc(doc(db, 'agenciesPublic', id)).catch(() => {})
       await notifyAllAdmins({
         type: 'agency_deleted', title: 'Agency Deleted',
         body: `"${agency?.name}" has been permanently deleted from the portal.`,
@@ -515,11 +511,9 @@ export default function Agencies() {
   const handleSaveAgency = async (data) => {
     if (typeof modal === 'object' && modal !== null) {
       await updateDoc(doc(db, 'agencies', modal.id), { ...data, updatedAt: serverTimestamp() })
-      await syncAgencyPublic(modal.id, { ...modal, ...data })
       logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: modal.id, targetName: data.name, details: 'Agency details updated' })
     } else {
       const ref = await addDoc(collection(db, 'agencies'), { ...data, createdAt: serverTimestamp() })
-      await syncAgencyPublic(ref.id, data)
       await notifyAllAdmins({
         type: 'new_agency', title: 'New Agency Added',
         body: `"${data.name}" has been registered as a new medical assistance agency.`,
@@ -528,19 +522,18 @@ export default function Agencies() {
     }
   }
 
-  // Reconcile the public Landing projection (agenciesPublic) with the live
-  // agency set in one pass: rewrite every current agency AND prune orphans left
-  // behind by deleted agencies (whose mirror delete may have been blocked by
-  // not-yet-deployed rules, so they keep showing on the Landing). Needed because
-  // the authoritative onAgencyWritten Cloud Function isn't deployed; no
-  // service-account creds required. Safe to run any time.
+  // Rewrites the public listing (agenciesPublic) from every agency and removes
+  // leftovers, on the server (resyncAgenciesPublic). The onAgencyWritten
+  // function keeps it current on every agency change; browsers no longer
+  // write it (Phase 1, N10).
   const handleResyncPublic = async () => {
     setResyncing(true)
     try {
-      const { ok, pruned, failed } = await reconcileAgenciesPublic(agencies)
-      logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: 'agenciesPublic', targetName: 'Public programs', details: `Resynced public projection (${ok} synced, ${pruned} pruned, ${failed} failed)` })
-      if (failed) toast.error(`Resynced ${ok}, pruned ${pruned}; ${failed} failed (see console).`)
-      else        toast.success(`Public programs resynced (${ok} synced${pruned ? `, ${pruned} removed` : ''}).`)
+      const { written, pruned } = await resyncAgenciesPublic()
+      logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: 'agenciesPublic', targetName: 'Public programs', details: `Resynced public listing (${written} written, ${pruned} removed)` })
+      toast.success(`Public programs resynced (${written} written${pruned ? `, ${pruned} removed` : ''}).`)
+    } catch (err) {
+      console.error(err); toast.error(err?.message || 'Could not resync the public programs.')
     } finally { setResyncing(false) }
   }
 

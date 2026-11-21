@@ -906,7 +906,13 @@ service cloud.firestore {
     // this collection is gated to authenticated principals. Every in-app reader
     // (admin/agency surfaces, LiveDataContext) is already authenticated.
     match /agencies/{agencyId} {
-      allow read:   if isAuth();
+      // Phase 1 (N10, 2026-11-21): patients read the public listing
+      // (agenciesPublic) instead — this record carries budgets, caps, fund
+      // source, contacts and slot history. Staff, agency users and the
+      // anonymous sign-up session still read it.
+      allow read:   if isAuth() &&
+                       (!exists(/databases/$(database)/documents/users/$(uid())) ||
+                        get(/databases/$(database)/documents/users/$(uid())).data.get('role', '') != 'patient');
       // Phase 6: agencies are network config — the platform admin onboards,
       // edits and removes them. Hospital admins keep only the slot counters
       // their endorse transaction and the daily slot-reset fallback write
@@ -1017,19 +1023,10 @@ service cloud.firestore {
     // so this can never become a budget/contact leak even from a hostile client.
     match /agenciesPublic/{agencyId} {
       allow read:  if true;
-      // Role review 2026-11-15: hospital staff and agency users may refresh the
-      // projection but not change what it says the agency is called or whether
-      // it is open: name and enabled must match the source agency doc.
-      allow write: if (isPlatformAdmin() ||
-                       ((isAdmin() || (isAgency() && userAgencyId() == agencyId)) &&
-                        // Same defaults as projectPublicAgency() (src/utils/agenciesPublic.js).
-                        request.resource.data.get('name', '') ==
-                          getAfter(/databases/$(database)/documents/agencies/$(agencyId)).data.get('name', '') &&
-                        request.resource.data.get('enabled', true) ==
-                          (getAfter(/databases/$(database)/documents/agencies/$(agencyId)).data.get('enabled', true) != false)))
-                      && request.resource.data.keys().hasOnly(['name', 'initials', 'color', 'location', 'enabled', 'slots', 'updatedAt'])
-                      && request.resource.data.slots.keys().hasOnly(['total', 'remaining']);
-      allow delete: if isPlatformAdmin();
+      // Phase 1 (N10, 2026-11-21): written ONLY by the onAgencyWritten /
+      // resyncAgenciesPublic Cloud Functions (Admin SDK). The browser mirrors
+      // were removed; two writers had drifted apart.
+      allow write: if false;
     }
 
     // ── documentTypes ─────────────────────────────────────────────────────────
