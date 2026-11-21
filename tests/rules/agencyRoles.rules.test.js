@@ -80,20 +80,11 @@ describe('agency admin and Super Admin', () => {
 })
 
 describe('agenciesPublic projection', () => {
-  const pub = (uid) => doc(as(uid), 'agenciesPublic', 'dswd')
-  it('agency users refresh it, but only with the real name and enabled', async () => {
-    await assertSucceeds(setDoc(pub('coord'), { name: 'DSWD', enabled: true, slots: { total: 10, remaining: 4 } }))
-    await assertFails(setDoc(pub('coord'), { name: 'DSWD', enabled: false, slots: { total: 10, remaining: 4 } }))
-    await assertFails(setDoc(pub('coord'), { name: 'Fake', enabled: true, slots: { total: 10, remaining: 4 } }))
-  })
-
-  it('a missing enabled field on the agency counts as enabled (projection default)', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) =>
-      setDoc(doc(ctx.firestore(), 'agencies', 'pcso'), { name: 'PCSO', slots: { total: 1, remaining: 1 } }))
-    await testEnv.withSecurityRulesDisabled(async (ctx) =>
-      setDoc(doc(ctx.firestore(), 'users', 'pcsoCoord'), { role: 'agency', agencyId: 'pcso' }))
-    await assertSucceeds(setDoc(doc(as('pcsoCoord'), 'agenciesPublic', 'pcso'),
-      { name: 'PCSO', enabled: true, slots: { total: 1, remaining: 1 } }))
+  // Phase 1 (N10): only the Cloud Functions write it; agency users no longer
+  // refresh it from the browser.
+  it('agency users cannot write it', async () => {
+    await assertFails(setDoc(doc(as('coord'), 'agenciesPublic', 'dswd'), { name: 'DSWD', enabled: true, slots: { total: 10, remaining: 4 } }))
+    await assertFails(setDoc(doc(as('aadmin'), 'agenciesPublic', 'dswd'), { name: 'DSWD', enabled: true, slots: { total: 10, remaining: 4 } }))
   })
 })
 

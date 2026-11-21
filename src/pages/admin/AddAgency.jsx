@@ -15,7 +15,6 @@ import { initializeApp, getApps } from 'firebase/app'
 import { db, auth, firebaseConfig } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
-import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { FUNDING_TYPES } from '../../utils/fundingType'
 import { notify } from '../../utils/notifications'
 import { generateTempPassword } from '../../utils/password'
@@ -216,7 +215,6 @@ export default function AddAgency() {
         })
         // Mirror into the public Landing projection (the onAgencyWritten Cloud
         // Function that normally does this isn't deployed). Best-effort.
-        await syncAgencyPublic(agencyRef.id, { name: agency.name.trim(), enabled: true, slots: { total: slots, remaining: slots } })
         // Now stamp the admin's profile with the agencyId.
         await setDoc(doc(db, 'users', adminUid), { agencyId: agencyRef.id }, { merge: true })
       } catch (agencyErr) {

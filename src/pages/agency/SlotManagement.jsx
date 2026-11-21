@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom'
 import { collection, query, where, onSnapshot, doc, updateDoc, increment } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
-import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { phTodayKey } from '../../utils/dates'
 import toast from 'react-hot-toast'
 import HospitalSlotsCard from '../../components/agency/HospitalSlotsCard'
@@ -153,7 +152,6 @@ export default function SlotManagement() {
       await recordAdjustment({ type: 'add', delta: adjust, reason: reason.trim() || null })
       // Best-effort mirror of the public Landing projection (authoritative sync
       // is the onAgencyWritten CF, not deployed; Resync / daily reset reconcile).
-      syncAgencyPublic(agency.id, { ...agency, slots: { total: slots.total, remaining: Math.min(slots.remaining + adjust, slots.total) } })
       setReason('')
       toast.success(`${adjust} slot${adjust !== 1 ? 's' : ''} added.`)
     } catch { toast.error('Failed to update slots.') }
@@ -167,7 +165,6 @@ export default function SlotManagement() {
     try {
       await updateDoc(doc(db, 'agencies', agency.id), { 'slots.remaining': increment(-adjust) })
       await recordAdjustment({ type: 'deduct', delta: adjust, reason: reason.trim() || null })
-      syncAgencyPublic(agency.id, { ...agency, slots: { total: slots.total, remaining: Math.max(0, slots.remaining - adjust) } })
       setReason('')
       toast.success(`${adjust} slot${adjust !== 1 ? 's' : ''} deducted.`)
     } catch { toast.error('Failed to update slots.') }
@@ -188,7 +185,6 @@ export default function SlotManagement() {
         'slots.remaining': nextRemaining,
       })
       await recordAdjustment({ type: 'capacity', delta: newTotal, oldDelta: oldTotal, reason: 'Capacity edit' })
-      syncAgencyPublic(agency.id, { ...agency, slots: { total: newTotal, remaining: nextRemaining } })
       setEditing(false)
       toast.success('Daily capacity updated.')
     } catch {

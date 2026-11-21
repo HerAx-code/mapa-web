@@ -63,16 +63,33 @@ const RICH_AGENCY = {
 }
 
 describe('projectPublicAgency', () => {
-  it('copies ONLY name/initials/color/location/enabled/slots — never budget/fundSource/contacts', () => {
-    const pub = projectPublicAgency(RICH_AGENCY)
-    expect(pub).toEqual({
-      name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC Social Services',
-      enabled: true, slots: { total: 10, remaining: 4 },
+  it('copies only the public fields patients use — never budget, caps, contacts, fund type or slot history', () => {
+    const pub = projectPublicAgency({
+      ...RICH_AGENCY,
+      maxPerApplicant: 20000, repeatLimit: { days: 30 }, fundingType: 'national_program',
+      slotAdjustments: [{ by: 'Staff Name', delta: 2 }],
+      partnerHospitalIds: ['hosp-a'], assistanceTypes: ['Medical'], requirements: ['Valid ID'],
+      description: 'Helps with hospital bills.', procedure: 'Bring the letter.', processingTime: '3 days',
+      lastResetDate: '2026-11-21',
+      hospitalSlots: { 'hosp-a': { total: 6, remaining: 2, lastResetDate: '2026-11-21', note: 'x' } },
     })
-    expect(pub).not.toHaveProperty('budget')
-    expect(pub).not.toHaveProperty('fundSource')
-    expect(pub).not.toHaveProperty('contact')
-    expect(pub).not.toHaveProperty('signatory')
+    expect(pub).toEqual({
+      name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC Social Services', enabled: true,
+      slots: { total: 6, remaining: 2 },                // sum of per-hospital capacity (Landing)
+      agencySlots: { total: 10, remaining: 4 },         // the agency-wide counts effectiveSlots() needs
+      lastResetDate: '2026-11-21',
+      hospitalSlots: { 'hosp-a': { total: 6, remaining: 2, lastResetDate: '2026-11-21' } },
+      partnerHospitalIds: ['hosp-a'], assistanceTypes: ['Medical'], requirements: ['Valid ID'],
+      description: 'Helps with hospital bills.', procedure: 'Bring the letter.', processingTime: '3 days',
+    })
+    for (const k of ['budget', 'fundSource', 'contact', 'signatory', 'maxPerApplicant', 'repeatLimit', 'fundingType', 'slotAdjustments']) {
+      expect(pub).not.toHaveProperty(k)
+    }
+  })
+
+  it('keeps an absent partner list absent (it means hospital #1, an empty list would not)', () => {
+    expect(projectPublicAgency({ name: 'X' })).not.toHaveProperty('partnerHospitalIds')
+    expect(projectPublicAgency({ name: 'X', partnerHospitalIds: [] }).partnerHospitalIds).toEqual([])
   })
 
   it('defaults enabled to true unless explicitly false, and coerces slot numbers', () => {
@@ -119,5 +136,26 @@ describe('handleAgencyWritten', () => {
     expect(created.result.skipped).toBe('training')
     const updated = await run(RICH_AGENCY, training)
     expect(updated.calls.delete).toHaveLength(1)
+  })
+})
+describe('handleResyncAgenciesPublic (Super Admin "Resync public")', () => {
+  it('rewrites every non-training agency and removes leftovers; Super Admin only', async () => {
+    const { memDb } = await import('./helpers/memDb.js')
+    const { handleResyncAgenciesPublic } = require('../../functions/src/onAgencyWritten')
+    const db = memDb({
+      'users/plat': { role: 'platform_admin' },
+      'users/ha': { role: 'super_admin', tenantId: 'h' },
+      'agencies/a1': { name: 'A1', budget: { allocated: 1 } },
+      'agencies/train': { name: 'Practice', training: true },
+      'agenciesPublic/gone': { name: 'Deleted agency' },
+      'agenciesPublic/train': { name: 'Practice' },
+    })
+    await expect(handleResyncAgenciesPublic({ callerUid: 'ha', db, serverTimestamp })).rejects.toMatchObject({ code: 'permission-denied' })
+    const r = await handleResyncAgenciesPublic({ callerUid: 'plat', db, serverTimestamp })
+    expect(r).toEqual({ written: 1, pruned: 2 })
+    expect(db.store.get('agenciesPublic/a1')).toMatchObject({ name: 'A1' })
+    expect(db.store.get('agenciesPublic/a1')).not.toHaveProperty('budget')
+    expect(db.store.has('agenciesPublic/gone')).toBe(false)
+    expect(db.store.has('agenciesPublic/train')).toBe(false)
   })
 })

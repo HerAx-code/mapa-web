@@ -13,7 +13,6 @@ import { db, auth, functions, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
-import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { getOrCreateConversation } from '../../utils/messages'
 import { AgencyModal } from './Agencies'
 import AgencyAvatar from '../../components/AgencyAvatar'
@@ -215,7 +214,6 @@ export default function AgencyDetail() {
   const handleReEnable = async () => {
     try {
       await updateDoc(doc(db, 'agencies', id), { enabled: true })
-      await syncAgencyPublic(id, { ...agency, enabled: true })
       try {
         const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency', 'agency_admin'])))
         await Promise.all(snap.docs.map(d => notify(d.id, {
@@ -245,7 +243,6 @@ export default function AgencyDetail() {
       // Always set the agency disabled first so no new applications can
       // be submitted while we're cascading the existing ones.
       await updateDoc(doc(db, 'agencies', id), { enabled: false })
-      await syncAgencyPublic(id, { ...agency, enabled: false })
 
       if (choice === 'reject' && pendingApps.length > 0) {
         // Batch update — Firestore supports up to 500 ops per batch.
@@ -305,7 +302,6 @@ export default function AgencyDetail() {
     if (newTotal < 1) { toast.error('Must be at least 1.'); return }
     try {
       await updateDoc(doc(db, 'agencies', id), { 'slots.total': newTotal })
-      await syncAgencyPublic(id, { ...agency, slots: { ...agency.slots, total: newTotal } })
       logAudit(user, { action: 'agency_updated', targetType: 'agency', targetId: id, targetName: agency.name, details: `Slot capacity changed to ${newTotal}` })
       setEditSlots(false)
       toast.success('Slot capacity updated.')
@@ -316,7 +312,6 @@ export default function AgencyDetail() {
     try {
       const total = agency.slots?.total ?? 25
       await updateDoc(doc(db, 'agencies', id), { 'slots.remaining': total })
-      await syncAgencyPublic(id, { ...agency, slots: { ...agency.slots, remaining: total } })
       toast.success(`Slots reset to ${total}.`)
     } catch (err) { console.error(err); toast.error('Failed to reset slots.') }
   }

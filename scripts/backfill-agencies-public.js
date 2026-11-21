@@ -29,22 +29,10 @@
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 
-// Mirror of projectPublicAgency() in functions/src/onAgencyWritten.js — keep in
-// sync. Only non-sensitive fields.
-function projectPublicAgency(data = {}) {
-  const slots = data.slots ?? {}
-  return {
-    name:     data.name ?? '',
-    initials: data.initials ?? '',
-    color:    data.color ?? '',
-    location: data.location ?? '',
-    enabled:  data.enabled !== false,
-    slots: {
-      total:     Number(slots.total) || 0,
-      remaining: Number(slots.remaining) || 0,
-    },
-  }
-}
+// The one projection, from the function that maintains the listing (Phase 1:
+// it is the only writer; no copies to keep in sync).
+import { createRequire } from 'node:module'
+const { projectPublicAgency } = createRequire(import.meta.url)('../functions/src/onAgencyWritten')
 
 async function main() {
   initializeApp({ credential: applicationDefault() })
@@ -61,7 +49,6 @@ async function main() {
     batch.set(
       db.collection('agenciesPublic').doc(d.id),
       { ...pub, updatedAt: FieldValue.serverTimestamp() },
-      { merge: true },
     )
     written++
     console.log(`  · ${d.id} → ${pub.name} (enabled=${pub.enabled}, slots ${pub.slots.remaining}/${pub.slots.total})`)

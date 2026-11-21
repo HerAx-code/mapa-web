@@ -4,6 +4,7 @@ import { db } from '../firebase'
 import { usePublicHospitals } from './usePublicHospitals'
 import { agencyPartnersWith } from '../utils/hospitals'
 import { effectiveSlots } from '../utils/requests'
+import { agencyFromPublic } from '../utils/agenciesPublic'
 import { phTodayKey } from '../utils/dates'
 
 // Fewer finished cases than this and a turnaround figure says more about luck
@@ -26,8 +27,9 @@ export function useMarketplace() {
   const [agenciesReady, setAgenciesReady] = useState(false)
 
   useEffect(() => onSnapshot(
-    query(collection(db, 'agencies'), where('enabled', '==', true)),
-    (snap) => { setAgencies(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); setAgenciesReady(true) },
+    // The public listing (Phase 1, N10): patients can't read full agency records.
+    query(collection(db, 'agenciesPublic'), where('enabled', '==', true)),
+    (snap) => { setAgencies(snap.docs.map((d) => agencyFromPublic({ id: d.id, ...d.data() }))); setAgenciesReady(true) },
     (err) => { console.error('[marketplace] agencies:', err); setAgenciesReady(true) },
   ), [])
 

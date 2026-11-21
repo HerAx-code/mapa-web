@@ -13,7 +13,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { withTenant, currentTenantId, tenantWhere, agencyPartnersWith } from '../../utils/hospitals'
-import { syncAgencyPublic } from '../../utils/agenciesPublic'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { careSettingLabel } from '../../utils/outpatient'
 import { missingAgencyDocs } from '../../utils/agencyDocs'
@@ -214,10 +213,6 @@ function EndorseModal({ request, slices, agencies, onClose }) {
       // best-effort per-doc updates. See R8 fix below for why this can't
       // live inside the runTransaction itself.
       const attachedDocsToStamp = []
-      // Public Landing projections to mirror AFTER the tx commits (best-effort,
-      // never inside the tx — a denied/stale mirror must not roll back the
-      // endorsement). See the drain loop below.
-      const pubProjectionsToMirror = []
 
       // R34 (§B.26 Item 1.2): watcher subscriptions. Look up every
       // agency_admin + coordinator of the agencies we're endorsing to,
@@ -322,10 +317,6 @@ function EndorseModal({ request, slices, agencies, onClose }) {
               ...(slotsStale ? { lastResetDate: phTodayKey() } : {}),
             })
           }
-          // Capture the projection; mirrored best-effort after the tx commits.
-          pubProjectionsToMirror.push({ id, data: perHospital
-            ? { ...aData, hospitalSlots: { ...aData.hospitalSlots, [caseTenant]: { ...aData.hospitalSlots[caseTenant], remaining: remaining - 1 } } }
-            : { ...aData, slots: { ...aData.slots, remaining: remaining - 1 } } })
         }
 
         // R8 fix (2026-06-03): the document agencyIds stamps used to live
@@ -373,14 +364,6 @@ function EndorseModal({ request, slices, agencies, onClose }) {
         } catch (err) {
           console.error('[endorse] patient agencyIds stamp failed:', request.patientId, err)
         }
-      }
-
-      // Best-effort mirror of the public Landing projection for each endorsed
-      // agency (syncAgencyPublic swallows its own errors). Runs after commit so
-      // it can never roll back the endorsement, and reconciles via Resync / the
-      // daily reset / the CF if it ever fails.
-      for (const p of pubProjectionsToMirror) {
-        await syncAgencyPublic(p.id, p.data)
       }
 
       // ── Post-transaction: audit + patient notification + UI ──
@@ -1667,7 +1650,6 @@ export default function Requests() {
         const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
         const snap  = await getDocs(query(collection(db, 'agencies'), where('enabled', '==', true)))
         const batch = writeBatch(db)
-        const toMirror = []
         let resetCount = 0
         snap.docs.forEach(d => {
           const data = d.data()
@@ -1676,16 +1658,11 @@ export default function Requests() {
               'slots.remaining': data.slots.total,
               lastResetDate:     today,
             })
-            toMirror.push({ id: d.id, data: { ...data, slots: { ...data.slots, remaining: data.slots.total } } })
             resetCount++
           }
         })
         if (resetCount > 0) {
           await batch.commit()
-          // Mirror the public Landing projection AFTER the reset commits —
-          // best-effort, never in the batch (a denied mirror would otherwise
-          // roll back the whole slot reset on the not-yet-updated rules).
-          for (const m of toMirror) await syncAgencyPublic(m.id, m.data)
         }
       } catch (err) {
         // Best-effort: if the batch fails (rule denial, network), the gateway will

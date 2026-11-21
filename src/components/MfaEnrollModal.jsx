@@ -8,17 +8,24 @@ import { sendEmailVerification } from 'firebase/auth'
 import { auth } from '../firebase'
 import {
   isMfaEnrolled, reauthWithPassword, startTotpEnrollment,
-  completeTotpEnrollment, unenrollTotp,
+  completeTotpEnrollment, unenrollTotp, MFA_UNAVAILABLE_CODES, MFA_MODE,
 } from '../utils/mfa'
 
 // Two-step verification (TOTP) setup for staff. Staff surface → English only.
 // Flow: re-authenticate with the password → scan the QR / enter the key in an
 // authenticator app → confirm a 6-digit code → enrolled. Also supports removal.
-export default function MfaEnrollModal({ onClose }) {
+//
+// `required` (Phase 1, P1-C stage 1 — components/MfaGate.jsx): staff must set
+// it up to continue, so the dialog can't be closed and removal isn't offered.
+// Two exits remain: sign out, or — only when the project itself doesn't offer
+// two-factor — `onUnavailable`, so staff are never locked out by a config gap.
+export default function MfaEnrollModal({ onClose, required = false, onUnavailable, onSignOut }) {
   const fbUser = auth.currentUser
   const alreadyEnrolled = isMfaEnrolled(fbUser)
+  // While two-factor is required for staff, nobody removes it themselves.
+  const removable = !required && MFA_MODE !== 'required'
   const panelRef = useRef(null)
-  useEscapeKey(onClose)
+  useEscapeKey(required ? () => {} : onClose)
   useFocusTrap(panelRef, true)
 
   // steps: 'reauth' → 'setup' → 'done'; or 'manage' when already enrolled.
@@ -33,6 +40,7 @@ export default function MfaEnrollModal({ onClose }) {
   const [error, setError]     = useState('')
   const [copied, setCopied]   = useState(false)
   const [verifySent, setVerifySent] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
 
   // Render the otpauth URL to a QR image once we have one.
   useEffect(() => {
@@ -47,6 +55,7 @@ export default function MfaEnrollModal({ onClose }) {
   const fail = (err, fallback) => {
     console.warn('[mfa]', err?.code || err?.message)
     const code = err?.code || ''
+    if (required && MFA_UNAVAILABLE_CODES.includes(code)) setUnavailable(true)
     if (code === 'auth/wrong-password' || code === 'auth/invalid-credential')
       setError('Incorrect password.')
     else if (code === 'auth/invalid-verification-code' || code === 'auth/invalid-payload')
@@ -69,6 +78,18 @@ export default function MfaEnrollModal({ onClose }) {
       toast.success('Verification email sent.')
     } catch (err) {
       fail(err, 'Could not send the verification email.')
+    } finally { setBusy(false) }
+  }
+
+  // After clicking the link in the verification email.
+  const doRecheckEmail = async () => {
+    setError(''); setBusy(true)
+    try {
+      await fbUser.reload()
+      if (auth.currentUser?.emailVerified) setStep('reauth')
+      else setError('Your email is not verified yet. Open the link in the email, then try again.')
+    } catch (err) {
+      fail(err, 'Could not check your email.')
     } finally { setBusy(false) }
   }
 
@@ -119,7 +140,7 @@ export default function MfaEnrollModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      onClick={(e) => !required && e.target === e.currentTarget && onClose()}>
       <div
         ref={panelRef}
         role="dialog"
@@ -132,11 +153,19 @@ export default function MfaEnrollModal({ onClose }) {
             <MdShield size={18} className="text-brand-500" />
             <h2 id="mfa-modal-title" className="text-base font-semibold text-gray-900">Two-step verification</h2>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>
+          {!required && <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-gray-600"><MdClose size={20} /></button>}
         </div>
 
         <div className="overflow-y-auto px-5 py-5">
+          {required && step !== 'done' && (
+            <p className="mb-4 text-sm text-gray-700 bg-brand-50 border border-brand-100 rounded-lg px-3 py-2 leading-relaxed">
+              Staff accounts need two-step verification before you can continue. It protects the patient records you can open.
+            </p>
+          )}
           {error && <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+          {required && unavailable && (
+            <button type="button" onClick={onUnavailable} className="btn-secondary mb-4 w-full">Continue for now</button>
+          )}
 
           {step === 'reauth' && (
             <form onSubmit={doReauth} className="space-y-4">
@@ -169,6 +198,11 @@ export default function MfaEnrollModal({ onClose }) {
               ) : (
                 <button type="button" onClick={doSendVerification} disabled={busy} className="btn-primary w-full">
                   {busy ? 'Sending…' : 'Send verification email'}
+                </button>
+              )}
+              {verifySent && (
+                <button type="button" onClick={doRecheckEmail} disabled={busy} className="btn-primary w-full">
+                  {busy ? 'Checking…' : "I've verified my email"}
                 </button>
               )}
               <button type="button" onClick={() => { setStep('reauth'); setError('') }}
@@ -214,7 +248,19 @@ export default function MfaEnrollModal({ onClose }) {
             </div>
           )}
 
-          {step === 'manage' && (
+          {step === 'manage' && !removable && (
+            <div className="space-y-4">
+              <p className="flex items-center gap-2 text-sm font-medium text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                <MdCheckCircle size={16} /> Two-step verification is on for your account.
+              </p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                It's required for staff, so it can't be removed here. If you lost your phone, ask your administrator to reset it.
+              </p>
+              <button type="button" onClick={onClose} className="btn-primary w-full">Done</button>
+            </div>
+          )}
+
+          {step === 'manage' && removable && (
             <form onSubmit={doRemove} className="space-y-4">
               <p className="flex items-center gap-2 text-sm font-medium text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
                 <MdCheckCircle size={16} /> Two-step verification is on for your account.
@@ -228,6 +274,10 @@ export default function MfaEnrollModal({ onClose }) {
                 {busy ? 'Removing…' : 'Remove two-step verification'}
               </button>
             </form>
+          )}
+
+          {required && onSignOut && step !== 'done' && (
+            <button type="button" onClick={onSignOut} className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700">Sign out</button>
           )}
         </div>
       </div>

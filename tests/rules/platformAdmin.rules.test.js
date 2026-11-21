@@ -224,15 +224,12 @@ describe('agencies — network config belongs to the platform admin', () => {
     await assertSucceeds(updateDoc(ref('coord', 'agencies/dswd'), { 'slots.remaining': increment(-1) }))
   })
 
-  it('agenciesPublic: platform_admin writes and deletes; hospital admins mirror but cannot delete', async () => {
-    const pub = { name: 'DSWD', enabled: false, slots: { total: 10, remaining: 4 } }
-    await assertSucceeds(setDoc(ref('plat', 'agenciesPublic/dswd'), pub))
-    // Hospital staff refresh the mirror, but can't say the agency is closed
-    // when it isn't (role review 2026-11-15: name/enabled match the source).
+  it('agenciesPublic: written only by the Cloud Functions — no Super Admin or hospital browser writes (Phase 1, N10)', async () => {
+    const pub = { name: 'DSWD', enabled: true, slots: { total: 10, remaining: 4 } }
+    await assertFails(setDoc(ref('plat', 'agenciesPublic/dswd'), pub))
     await assertFails(setDoc(ref('staffA', 'agenciesPublic/dswd'), pub))
-    await assertSucceeds(setDoc(ref('staffA', 'agenciesPublic/dswd'), { ...pub, enabled: true }))
     await assertFails(deleteDoc(ref('superA', 'agenciesPublic/dswd')))
-    await assertSucceeds(deleteDoc(ref('plat', 'agenciesPublic/dswd')))
+    await assertFails(deleteDoc(ref('plat', 'agenciesPublic/dswd')))
   })
 })
 

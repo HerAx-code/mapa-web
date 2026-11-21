@@ -1,7 +1,7 @@
 import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -51,73 +51,44 @@ describe('agencies — read requires auth (SEC-3 closed)', () => {
   })
 })
 
-// ── agenciesPublic projection — world-readable, privileged client-write ───
-// The onAgencyWritten Cloud Function is the authoritative writer, but it is NOT
-// deployed on the live project, so the client mirrors this projection from the
-// agency-write paths (src/utils/agenciesPublic.js). Writes are therefore
-// allowed for the exact principals who may edit the source agencies/{id} doc
-// (CRMC admin, or any agency role on its OWN agency) — but ONLY the projected
-// fields (name/initials/color/location/enabled/slots), so it can never become a
-// budget/contact leak.
-describe('agenciesPublic — public read, field-pinned privileged write', () => {
+// ── agenciesPublic projection — world-readable, function-only write ───────
+// Phase 1 (N10, 2026-11-21): the onAgencyWritten / resyncAgenciesPublic Cloud
+// Functions are the only writers (Admin SDK, rules don't apply to them). No
+// browser — not even the Super Admin — writes or deletes the listing, and
+// patients read it instead of the full agencies record.
+describe('agenciesPublic — public read, no browser writes', () => {
   const VALID = { name: 'PCSO', initials: 'PC', color: 'bg-red-600', location: 'CRMC', enabled: true, slots: { total: 10, remaining: 9 } }
 
   beforeEach(async () => {
-    // The source doc the projection must match (name / enabled).
-    await seed('agencies', 'pcso', { name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 } })
-    await seed('agenciesPublic', 'pcso', {
-      name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 },
-    })
-    // Role/agency bindings the rules read via userRole() / userAgencyId().
+    await seed('agencies', 'pcso', { name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 }, budget: { allocated: 500000 } })
+    await seed('agenciesPublic', 'pcso', { name: 'PCSO', enabled: true, slots: { total: 10, remaining: 4 } })
     await seed('users', 'admin-uid',    { role: 'super_admin' })
     await seed('users', 'aadmin-pcso',  { role: 'agency_admin', agencyId: 'pcso' })
-    await seed('users', 'coord-other',  { role: 'agency',       agencyId: 'dswd' })
+    await seed('users', 'plat-uid',     { role: 'platform_admin' })
     await seed('users', 'patient-uid',  { role: 'patient' })
   })
 
-  it('allows an unauthenticated client to read the public projection (Landing)', async () => {
-    const ctx = testEnv.unauthenticatedContext()
-    await assertSucceeds(getDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso')))
+  it('anyone reads the public listing, signed in or not (Landing, patients)', async () => {
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'agenciesPublic', 'pcso')))
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext('patient-uid').firestore(), 'agenciesPublic', 'pcso')))
   })
 
-  it('denies an unauthenticated write', async () => {
-    const ctx = testEnv.unauthenticatedContext()
-    await assertFails(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  it('no browser writes or deletes it, whatever the role', async () => {
+    for (const uid of ['admin-uid', 'aadmin-pcso', 'plat-uid', 'patient-uid']) {
+      const db = testEnv.authenticatedContext(uid).firestore()
+      await assertFails(setDoc(doc(db, 'agenciesPublic', 'pcso'), VALID))
+      await assertFails(deleteDoc(doc(db, 'agenciesPublic', 'pcso')))
+    }
+    await assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'agenciesPublic', 'pcso'), VALID))
   })
 
-  it('denies a non-privileged authenticated write (patient)', async () => {
-    const ctx = testEnv.authenticatedContext('patient-uid')
-    await assertFails(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
+  it('a patient cannot read the full agency record (budget, caps, contacts)', async () => {
+    await assertFails(getDoc(doc(testEnv.authenticatedContext('patient-uid').firestore(), 'agencies', 'pcso')))
   })
 
-  it('allows a CRMC admin to write the projection (valid shape)', async () => {
-    const ctx = testEnv.authenticatedContext('admin-uid')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
-  })
-
-  it('allows an agency_admin to write its OWN agency projection', async () => {
-    const ctx = testEnv.authenticatedContext('aadmin-pcso')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
-  })
-
-  it("denies an agency coordinator writing a DIFFERENT agency's projection", async () => {
-    const ctx = testEnv.authenticatedContext('coord-other') // bound to 'dswd'
-    await assertFails(setDoc(doc(ctx.firestore(), 'agenciesPublic', 'pcso'), VALID))
-  })
-
-  it('denies an admin write that smuggles a non-projected field (budget leak guard)', async () => {
-    const ctx = testEnv.authenticatedContext('admin-uid')
-    await assertFails(setDoc(
-      doc(ctx.firestore(), 'agenciesPublic', 'pcso'),
-      { ...VALID, budget: { allocated: 999999 } },
-    ))
-  })
-
-  it('denies an admin write whose slots carry an extra key', async () => {
-    const ctx = testEnv.authenticatedContext('admin-uid')
-    await assertFails(setDoc(
-      doc(ctx.firestore(), 'agenciesPublic', 'pcso'),
-      { ...VALID, slots: { total: 10, remaining: 9, secret: 1 } },
-    ))
+  it('staff, agency users and a signed-in account without a profile still read it', async () => {
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext('admin-uid').firestore(), 'agencies', 'pcso')))
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext('aadmin-pcso').firestore(), 'agencies', 'pcso')))
+    await assertSucceeds(getDoc(doc(testEnv.authenticatedContext('anon-signup').firestore(), 'agencies', 'pcso')))
   })
 })
