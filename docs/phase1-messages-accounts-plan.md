@@ -1,6 +1,6 @@
 # Phase 1 plan — messages and accounts (T1, T2)
 
-Status: **PR 1 built on branch `feat/server-email`, not merged or deployed** (2026-11-21). Decisions P1-A to P1-D accepted by the owner on 2026-11-21. Source: the MAPA process-logic gap map (version 5), themes T1 and T2.
+Status: **PR 1 merged (HerAx-code/mapa-web#407, 2026-11-21); its functions are not deployed yet.** PR 2 not started. Decisions P1-A to P1-D accepted by the owner on 2026-11-21. Source: the MAPA process-logic gap map (version 5), themes T1 and T2.
 
 Phase 1 closes the gaps that are exposed today and don't depend on the money work in Phase 2:
 
@@ -83,7 +83,7 @@ Trigger: `onDocumentCreated('notifications/{uid}/items/{id}')`.
 7. **Send.** Gmail SMTP through nodemailer, then stamp `email: { state: 'sent', at }` or `{ state: 'skipped', reason }`.
 
 Setup:
-- Secrets: `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` via `defineSecret`.
+- Secrets: `SMTP_USER`, `SMTP_PASS` via `defineSecret`; `SMTP_FROM` is an optional plain parameter (`defineString`, default `MAPA <SMTP_USER>`), since a display address isn't secret.
 - New dependency: `nodemailer` in `functions/package.json` (agreed in this session).
 
 ### 2. `notify()` writes in-app only
@@ -175,7 +175,7 @@ Setup:
 
 ## Deploy order
 
-1. Set the Functions secrets `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (project `mapa-crmc`).
+1. Set the Functions secrets `SMTP_USER`, `SMTP_PASS` (project `mapa-crmc`; both already exist). `SMTP_FROM` is optional.
 2. Deploy the functions: `sendNotificationEmail`, `onAnnouncementCreated`, `announcementReminders`, `eraseAccount`, `disableAccount`, `resetStaffMfa`, and the updated `onAgencyWritten`.
 3. Backfill `agenciesPublic` once: touch each agency, or run a one-off script.
 4. Merge the web change; Vercel deploys it. Check on the preview URL first.
