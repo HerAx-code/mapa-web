@@ -4,7 +4,8 @@
 // much), or expired. Read-only: the agency still records use and expiry; this
 // only lets the hospital see every letter in one list and export it to match
 // against its own billing records. Pure, for tests.
-import { glExpiryMs, isGLExpired, glDaysRemaining, GL_EXPIRING_SOON_DAYS } from './constants'
+import { glExpiryMs, glDaysRemaining } from './constants'
+import { letterState } from '../shared/caseState'
 
 const toDate = (ts) => ts?.toDate ? ts.toDate()
   : typeof ts?.seconds === 'number' ? new Date(ts.seconds * 1000)
@@ -18,14 +19,11 @@ export const GL_STATES = {
 }
 
 // Where one letter stands. null for slices without a letter.
+// The letter's state — the shared definition (src/shared/caseState.js
+// letterState), with null for "no letter".
 export function glState(slice, now = Date.now()) {
-  const s = slice?.glStatus
-  if (s === 'redeemed') return 'used'
-  if (s === 'expired') return 'expired'
-  if (s !== 'issued') return null
-  if (isGLExpired(slice, now)) return 'expired'
-  const days = glDaysRemaining(slice, now)
-  return days != null && days <= GL_EXPIRING_SOON_DAYS ? 'expiring' : 'valid'
+  const st = letterState(slice, now)
+  return st === 'none' ? null : st
 }
 
 //   slices:   this hospital's applications (any status)

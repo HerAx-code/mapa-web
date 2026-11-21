@@ -4,6 +4,8 @@
 // approved agency slice (a patient helped by two agencies is two rows: one per
 // fund source). No patient names — the request id traces a row back.
 
+import { assistanceGivenOf } from '../shared/caseState'
+
 const toDate = (ts) => ts?.toDate ? ts.toDate()
   : typeof ts?.seconds === 'number' ? new Date(ts.seconds * 1000)
   : ts ? new Date(ts) : null
@@ -24,11 +26,13 @@ export function ageOn(birthdate, on) {
 //   range: { from?: Date, to?: Date } on approvedAt
 export function dohReportRows(slices, { requests = {}, users = {}, agencies = {} } = {}, { from = null, to = null } = {}) {
   return (slices ?? [])
-    .filter(s => ['approved', 'certificate'].includes(s.status))
-    .map(s => ({ s, at: toDate(s.approvedAt) }))
+    // "Assistance given" (decision P2-F, the shared definition): approved
+    // letters, except ones left to expire unused (M17).
+    .map(s => ({ s, given: assistanceGivenOf(s), at: toDate(s.approvedAt) }))
+    .filter(({ given }) => given !== null)
     .filter(({ at }) => at && (!from || at >= from) && (!to || at <= to))
     .sort((a, b) => a.at - b.at)
-    .map(({ s, at }) => {
+    .map(({ s, given, at }) => {
       const r = requests[s.requestId] ?? {}
       const u = users[s.patientId] ?? {}
       const a = agencies[s.agencyId] ?? {}
@@ -45,8 +49,8 @@ export function dohReportRows(slices, { requests = {}, users = {}, agencies = {}
         careSetting:    r.careSetting === 'outpatient' ? 'Outpatient' : 'Inpatient',
         assistanceType: r.assistanceType ?? s.assistanceType ?? '',
         fundSource:     [...new Set([a.name ?? s.agencyName ?? '', a.budget?.fundSource ?? a.fundSource ?? ''].filter(Boolean))].join(' — '),
-        amountApproved: Number(s.amountApproved ?? s.approvedAmount ?? 0) || 0,
-        amountBilled:   s.redeemedAmount != null ? Number(s.redeemedAmount) : '',
+        amountApproved: given.approved,
+        amountBilled:   given.billed ?? '',
       }
     })
 }

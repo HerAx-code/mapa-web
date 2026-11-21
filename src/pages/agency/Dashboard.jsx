@@ -165,7 +165,7 @@ export default function AgencyDashboard() {
               tx.update(appRef, {
                 glStatus:    'expired',
                 glExpiredAt: serverTimestamp(),
-                expiredBy:   'auto-sweep',
+                glExpiredBy: 'system_sweep',   // one field name with glExpirySweep (N19)
                 updatedAt:   serverTimestamp(),
               })
               if (amount > 0) {

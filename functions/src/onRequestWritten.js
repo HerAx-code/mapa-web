@@ -30,9 +30,12 @@ const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString('en-PH')}`
 
-// A request is "active" while it is not in a terminal state. Mirrors the
-// client's ACTIVE() in src/pages/patient/RequestAssistance.jsx — keep in sync.
-const isActiveStatus = (s) => !!s && !['closed', 'rejected', 'fully_funded'].includes(s)
+// A request is "active" until it is FINISHED (decision D4, Phase 2): closed,
+// rejected, or fully funded with every approved letter settled. The one
+// definition lives in src/shared/caseState.js (bundled into
+// ./generated/shared.cjs) and is the same one the patient's pages use.
+const { isRequestActive } = require('./generated/shared.cjs')
+const isActiveStatus = (s) => isRequestActive({ status: s })
 
 /**
  * Keep users/{patientId}.activeRequestId in step with this request's state so
@@ -54,16 +57,22 @@ async function syncActiveRequest({ db, before, after, requestId, FieldValue }) {
   const patientId = (after && after.patientId) || (before && before.patientId)
   if (!patientId) return { skipped: 'no-patient' }
   const userRef  = db.collection('users').doc(patientId)
-  const nowActive = !!after && isActiveStatus(after.status)
-  const wasActive = !!before && isActiveStatus(before.status)
+  const nowActive = !!after && isRequestActive(after)
+  const wasActive = !!before && isRequestActive(before)
 
   if (nowActive) {
     const snap = await userRef.get()
-    if (!snap.exists || snap.data().activeRequestId !== requestId) {
-      await userRef.set({ activeRequestId: requestId }, { merge: true })
-      return { active: 'set', patientId }
+    const current = snap.exists ? snap.data().activeRequestId : null
+    if (current === requestId) return { active: 'already-set', patientId }
+    // Never take the pointer from ANOTHER case that is still active (gap I3:
+    // an expired letter reopened a finished case and stole the pointer from
+    // the patient's newer request, leaving two active requests).
+    if (current) {
+      const other = await db.collection('requests').doc(current).get()
+      if (other.exists && isRequestActive(other.data())) return { active: 'kept-other', patientId }
     }
-    return { active: 'already-set', patientId }
+    await userRef.set({ activeRequestId: requestId }, { merge: true })
+    return { active: 'set', patientId }
   }
   if (wasActive) { // active → terminal (or deleted): free the patient to file again
     const snap = await userRef.get()

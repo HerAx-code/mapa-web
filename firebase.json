@@ -10,6 +10,7 @@
     {
       "source": "functions",
       "codebase": "default",
+      "predeploy": ["node scripts/build-shared.mjs"],
       "runtime": "nodejs22",
       "ignore": [
         "node_modules",

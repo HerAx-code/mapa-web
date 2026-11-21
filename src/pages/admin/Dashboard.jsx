@@ -351,7 +351,7 @@ export default function AdminDashboard() {
   // stages only (fully_funded/closed/rejected aren't loaded). Shared stageCounts
   // helper so the label mapping isn't duplicated with Analytics.
   const pipelineStages = useMemo(
-    () => stageCounts(pipelineReqs, ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded']),
+    () => stageCounts(pipelineReqs, ['submitted', 'under_review', 'endorsed', 'partially_funded']),
     [pipelineReqs])
 
   return (

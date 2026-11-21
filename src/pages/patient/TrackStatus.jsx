@@ -16,6 +16,7 @@ import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLiveData } from '../../contexts/LiveDataContext'
 import { proceedSlices } from '../../utils/proceed'
+import { isRequestActive, letterState } from '../../shared/caseState'
 import { glExpiryMs, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { computeFunding, isSliceTerminal } from '../../utils/requests'
 import { peso } from '../../utils/format'
@@ -97,8 +98,14 @@ const buildStages = (app, t) => {
       certificate:   'certificate',
       rejected:      null,
     }
-    const doneKeys  = sliceDoneMap[app.status]  ?? []
-    const activeKey = sliceActiveMap[app.status] ?? null
+    // The letter's own state decides (2026-11-16, N9): it exists from
+    // approval, before the agency's optional "Mark as Issued"; a used letter
+    // completes every step. Expired letters keep their approval step.
+    const ls = letterState(app)
+    const key = ['approved', 'certificate'].includes(app.status) && ['valid', 'expiring'].includes(ls) ? 'certificate' : app.status
+    const used = ls === 'used'
+    const doneKeys  = used ? ['endorsed', 'funding', 'approved', 'certificate'] : (sliceDoneMap[key] ?? [])
+    const activeKey = used ? null : (sliceActiveMap[key] ?? null)
     return SLICE_DEFS.map(s => ({
       ...s,
       done:   doneKeys.includes(s.key),
@@ -243,9 +250,10 @@ export default function TrackStatus() {
     return unsub
   }, [user])
 
-  const REQ_ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
-  const activeRequest = requests.find(r => REQ_ACTIVE(r.status)) ?? null
-  const pastRequests  = requests.filter(r => !REQ_ACTIVE(r.status))
+  // Active until FINISHED: a fully funded case stays here while any letter is
+  // still open (the shared definition, decision D4).
+  const activeRequest = requests.find(r => isRequestActive(r)) ?? null
+  const pastRequests  = requests.filter(r => !isRequestActive(r))
   // Marketplace: a request's hospital by name (the public list), else this
   // session's hospital for its own requests, else nothing better than the id.
   const hospitalName = (tenantId) => {
