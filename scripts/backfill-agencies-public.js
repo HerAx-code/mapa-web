@@ -39,12 +39,15 @@ async function main() {
   const db = getFirestore()
 
   const snap = await db.collection('agencies').get()
-  const liveIds = new Set(snap.docs.map(d => d.id))
+  // A training agency (the Training Hospital's practice funder) is never
+  // public — same rule as onAgencyWritten / resyncAgenciesPublic.
+  const liveIds = new Set(snap.docs.filter(d => d.data().training !== true).map(d => d.id))
   console.log(`Found ${snap.size} agencies. Writing public projections…`)
 
   let written = 0
   const batch = db.batch()
   snap.docs.forEach(d => {
+    if (d.data().training === true) { console.log(`  – ${d.id} → training agency, not published`); return }
     const pub = projectPublicAgency(d.data())
     batch.set(
       db.collection('agenciesPublic').doc(d.id),
@@ -62,7 +65,7 @@ async function main() {
     if (liveIds.has(d.id)) return
     batch.delete(db.collection('agenciesPublic').doc(d.id))
     pruned++
-    console.log(`  ✗ ${d.id} → orphan (agency deleted) — pruning`)
+    console.log(`  ✗ ${d.id} → not a published agency (deleted or training) — removing`)
   })
 
   await batch.commit()
