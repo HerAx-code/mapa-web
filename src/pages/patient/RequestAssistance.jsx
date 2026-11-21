@@ -15,6 +15,7 @@ import { peso } from '../../utils/format'
 import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '../../utils/uploadDocument'
 import { tenantIdFor, loadHospital } from '../../utils/hospitals'
 import { currentCodeInfo } from '../../utils/accessCodes'
+import { proceedSlices } from '../../utils/proceed'
 import { useMarketplace } from '../../hooks/useMarketplace'
 import HospitalGate from '../../components/patient/HospitalGate'
 import { ORG, DEFAULT_HOSPITAL_ID } from '../../config/org'
@@ -466,19 +467,8 @@ export default function RequestAssistance() {
     if (proceeding || toProceed.length === 0) return
     setProceeding(true)
     try {
-      const batch = writeBatch(db)
-      for (const s of toProceed) {
-        batch.update(doc(db, 'applications', s.id), {
-          status:    'reviewing',
-          updatedAt: serverTimestamp(),
-        })
-      }
-      await batch.commit()
+      await proceedSlices(user, toProceed)
       toast.success(t('patient.request.proceedOk'))
-
-      // Agency coordinators are notified server-side by the onSliceProceeded
-      // Cloud Function when each slice moves endorsed → reviewing (abuse
-      // hardening #1 — patients can no longer write into other users' feeds).
     } catch (err) {
       console.error('[handleProceed] batch commit failed:', err)
       toast.error(t('patient.request.proceedErr'))

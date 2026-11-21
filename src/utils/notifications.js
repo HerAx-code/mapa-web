@@ -1,7 +1,5 @@
-import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '../firebase'
-import { ORG } from '../config/org'
-import { currentTenantId } from './hospitals'
 
 // #10 — Notification failures should never break a user-facing action
 // (an app submission, a status change, a doc upload). We catch the write
@@ -11,27 +9,21 @@ import { currentTenantId } from './hospitals'
 // Callers may still wrap with `.catch(() => {})` for clarity; that's a
 // safe no-op now because this function always resolves.
 //
-// Email integration: every notify() call also POSTs to the
-// /api/send-email Vercel serverless route, which uses a Gmail App
-// Password via SMTP. If the user has no email on file, or the POST
-// fails, only the in-app notification fires. Email is a secondary
-// channel and never affects the primary in-app flow.
-// `sms: true` opts a call into the paid SMS channel (high-value, time-critical
-// messages only). `smsText` is the minimal SMS body (falls back to `title`) —
-// keep it free of financial/medical detail (RA-10173). Both are pulled out of
-// the params so they aren't written onto the in-app notification doc.
-export const notify = async (uid, { type, title, body, sms, smsText, ...extra } = {}) => {
-  // 1. In-app notification — primary surface, must succeed for the user
-  //    to see anything when they open the app.
+// Email (Phase 1, T1 — 2026-11-21): notify() writes the in-app notification
+// ONLY. The sendNotificationEmail Cloud Function emails each new notification
+// on the server, after checking that the sender may reach the recipient and
+// is under their hourly limit (functions/src/emailScope.js). The browser no
+// longer sends email or SMS: the old /api/send-email and /api/send-sms
+// endpoints mailed any address with any content (gap I5) and are removed.
+// Notifications written by other Cloud Functions are emailed the same way.
+export const notify = async (uid, { type, title, body, ...extra } = {}) => {
   let result = null
   try {
     result = await addDoc(collection(db, 'notifications', uid, 'items'), {
       type, title, body, read: false, createdAt: serverTimestamp(),
       // Phase 1.4: sender attribution, required by the notifications
-      // create rule. Cross-role notification writes stay allowed (a
-      // patient's submit notifies every the gateway admin), so the rule cannot
-      // check uid() == recipient — instead every notification names the
-      // account that wrote it, making a forged one traceable.
+      // create rule. Every notification names the account that wrote it,
+      // which is also who sendNotificationEmail checks the email scope for.
       fromUid: auth.currentUser?.uid ?? null,
       ...extra,
     })
@@ -58,77 +50,5 @@ export const notify = async (uid, { type, title, body, sms, smsText, ...extra } 
       console.warn('[notify] both delivery and error-log failed:', err, logErr)
     }
   }
-
-  // 2. Secondary channels — email (always, if on file) + SMS (opt-in). Both
-  //    go through Vercel /api/* relays that verify a Firebase ID token, and
-  //    both are best-effort: a failure here never touches the in-app write
-  //    above. Wrapped so a network blip / misconfig can't break the caller.
-  try {
-    if (!uid) return result
-    // R10: /api/* isn't served by the Vite dev server, so skip in dev to
-    // avoid noisy 404s. Production (Vercel) and any host serving /api/ work.
-    const isViteDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV === true
-    if (isViteDev) return result
-
-    const userSnap = await getDoc(doc(db, 'users', uid))
-    const udata    = userSnap.exists() ? userSnap.data() : null
-    // Both relays require a valid Firebase ID token; without a signed-in user
-    // we can't authenticate either send (the in-app notification landed already).
-    const token = auth.currentUser
-      ? await auth.currentUser.getIdToken().catch(() => null)
-      : null
-    if (!token) return result
-
-    // ── Email (if the user has one on file) ──
-    const email = udata?.email
-    if (email) {
-      // Phase 8: the footer names the sender's hospital. Agency and platform
-      // senders have none (network-level), so theirs is just the network brand —
-      // never the default hospital's name on another hospital's patient.
-      const footer = currentTenantId() ? `${ORG.name} · ${ORG.facilityName}` : ORG.name
-      const plain = `${body ?? ''}\n\n— ${footer}`
-      const html = [
-        '<div style="font-family:Inter,Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#111827;">',
-        `<h2 style="margin:0 0 12px;color:#111827;font-size:18px;">${escapeHtml(title ?? '')}</h2>`,
-        `<p style="margin:0 0 16px;color:#374151;line-height:1.5;font-size:14px;">${escapeHtml(body ?? '').replace(/\n/g, '<br>')}</p>`,
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;">',
-        `<p style="margin:0;color:#9ca3af;font-size:12px;">${escapeHtml(footer)}</p>`,
-        '</div>',
-      ].join('')
-      // Fire-and-forget so a slow SMTP server doesn't drag down the UX.
-      fetch('/api/send-email', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ to: email, subject: title || 'MAPA notification', text: plain, html }),
-      }).catch(err => console.warn('[notify] email POST failed:', err?.message))
-    }
-
-    // ── SMS (opt-in via sms:true; paid, so high-value messages only) ──
-    // Minimal content — smsText, else the title — never the full body, so no
-    // financial/medical detail rides an SMS (RA-10173). Needs a phone on file.
-    if (sms === true && udata?.contact) {
-      fetch('/api/send-sms', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ to: udata.contact, message: (smsText || title || '').slice(0, 300) }),
-      }).catch(err => console.warn('[notify] sms POST failed:', err?.message))
-    }
-  } catch (chErr) {
-    console.warn('[notify] secondary-channel setup failed:', chErr?.code, chErr?.message)
-  }
-
   return result
-}
-
-// Minimal HTML escape for email body. The serverless route does not
-// sanitize input; without this, agency-supplied free text in
-// awaitingInfoMessage or rejection reasons could break out of the
-// surrounding markup.
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }

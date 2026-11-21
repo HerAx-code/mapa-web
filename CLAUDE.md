@@ -25,8 +25,10 @@ Agencies and admins use the web only. Patients can use either, but mobile is the
 - Assessment — **remote and asynchronous. No appointments, no scheduled interview.** The mandatory human assessment is kept, but it is worked from a queue, not booked. After documents verify, the request enters an "assess" queue; a gateway social worker picks it up, reaches the patient through the in-app conversation, then completes the Unified Intake Sheet. The assessment is **text-only** — see the Meet note under Communication Channels before adding any live-call step. The completed intake sheet is the endorse gate (`docsVerified && intakeComplete`) — the human-in-the-loop requirement without the travel/wait/no-show friction. See docs/remove-interview-scheduling-plan.md.
   - **Why no booking:** a pre-booked appointment reintroduces exactly the friction MAPA exists to remove; congestion control is moot when the assessment is remote/async (nobody queues at the office for it). Reversed the earlier appointment-system decision (2026-09-24).
   - Google Meet (on demand) was the chosen answer for a live call — free, reliable on weak networks, no infra to run — but it is **not implemented.** `request.meetLink` (with interviewDate/Outcome) exists only on requests assessed before booking was removed (1 in production); the agency view shows it as a legacy record and **nothing writes it**. Treat remote assessment as text-only. Building our own video is still NOT planned (see Out Of Scope).
-- Notifications: in-app notifications (Firestore) + email (Firebase)
-  - **SMS via Semaphore** (semaphore.co, PH-local) — built as a third channel through `api/send-sms.js` + `notify({ sms: true, smsText })`. It's **opt-in per call and paid per segment**, so reserved for high-value, time-critical messages (e.g. approval) with minimal, PII-free copy (RA-10173) — never every notification. Provisioned by setting `SEMAPHORE_API_KEY` in Vercel; unset = the channel no-ops (in-app + email unaffected). Push is planned via Firebase Cloud Messaging when the mobile app ships.
+- Notifications: in-app notifications (Firestore) + email, **sent only by the server** (Phase 1, 2026-11-21; docs/phase1-messages-accounts-plan.md).
+  - `notify()` writes the in-app notification only. The `sendNotificationEmail` Cloud Function emails each new notification if the sender may reach the recipient (`functions/src/emailScope.js`: patients → only themselves; hospital staff → their hospital's patients and staff; agencies → patients endorsed to them, their team and partner hospitals' staff; Super Admin → staff) and is under the hourly limit (patients 10, staff 120). Notifications written by other functions are emailed too. `channel: 'inapp'` opts out (announcement fan-outs). SMTP login = Functions secrets `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`. Never add a browser-callable email or SMS endpoint again — the old `/api/send-email` and `/api/send-sms` mailed anyone anything (gap I5) and were removed.
+  - Announcements: the audience (`targetRoles` at the announcement's hospital) is notified by `onAnnouncementCreated`; the 24-hour reminder by `announcementReminders`.
+  - **SMS is off** (2026-11-21). The Semaphore channel was removed with `/api/send-sms`; if it returns, it is a branch of `sendNotificationEmail` limited to staff senders and named events.
   - When mobile app ships, add push notifications (free via Firebase Cloud Messaging)
 
 ## User Roles
@@ -85,7 +87,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
 ## Out Of Scope (do NOT build)
 - PhilSys API integration
 - Real money movement (no bank APIs, no payments). Note: monetary *commitments* ARE tracked as data — approved amounts, agency budgets, Guarantee Letter status. MAPA records intent; actual settlement happens off-system between agency and provider.
-- ~~SMS notifications~~ — **now built** via Semaphore (opt-in, high-value messages only). See Communication Channels.
+- SMS notifications — built via Semaphore, then **switched off** (2026-11-21) when the open `/api/send-sms` endpoint was removed. See Communication Channels.
 - Custom video calling built on raw WebRTC (own signaling/TURN/SFU/media infra) — **not planned.** Remote assessment is text-only today; an on-demand Google Meet link remains the chosen option if a live call is ever needed. A *managed* embedded-video provider (Daily / LiveKit / self-hosted Jitsi) is a reconsiderable production option only if in-app join friction proves to be a real, observed barrier — never a from-scratch WebRTC build. See Communication Channels.
 - Interview appointment / self-service booking system — **removed** (was built, now reversed). Assessment is remote/async; see docs/remove-interview-scheduling-plan.md.
 - Donor portal
@@ -184,7 +186,7 @@ Guarantee Letter issues at approval. See docs/redesign-plan.md.
 - Components in /src/components, pages in /src/pages
 - Firestore queries grouped in /src/utils
 - All admin actions must call logAudit()
-- All notifications use the notify() utility (writes to Firestore + sends email)
+- All notifications use the notify() utility (writes the in-app notification; the server sends the email)
 - Use Tailwind utility classes; no inline styles
 - Patient-facing strings should be ready for i18n (use t('key') pattern when adding new strings); `npm run lint:i18n` enforces this on patient-facing files
 - When building patient-side features in web, keep them mobile-friendly (touch targets ≥44px, large tap areas, readable font sizes on small screens) — the mobile app will reuse the same Firestore data, so the data model should serve both
