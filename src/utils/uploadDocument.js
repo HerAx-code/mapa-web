@@ -1,7 +1,7 @@
 import {
   collection, addDoc, setDoc, updateDoc, doc, deleteDoc, serverTimestamp,
 } from 'firebase/firestore'
-import { ref, getDownloadURL, deleteObject } from 'firebase/storage'
+import { ref, getDownloadURL } from 'firebase/storage'
 import { db, storage } from '../firebase'
 import { compressImage } from './image'
 import { fmtDate } from './dates'
@@ -226,19 +226,4 @@ export async function fetchDocumentContent(docMeta) {
     }
   }
   return null
-}
-
-// Best-effort Storage deletion (used by admin/Patients during patient
-// deletion). Silent on already-missing objects so legacy docs without
-// a Storage path don't produce false-positive errors. On Spark with
-// Storage disabled this is essentially a no-op.
-export async function deleteDocumentStorage(docMeta) {
-  if (!docMeta?.storagePath) return
-  try {
-    await deleteObject(ref(storage, docMeta.storagePath))
-  } catch (err) {
-    if (err?.code !== 'storage/object-not-found') {
-      console.warn('[deleteDocumentStorage] failed:', err)
-    }
-  }
 }

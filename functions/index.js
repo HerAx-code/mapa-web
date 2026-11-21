@@ -17,7 +17,6 @@ const { glExpirySweep }          = require('./src/glExpirySweep')
 const { purgeDeclinedOnboarding } = require('./src/purgeDeclinedOnboarding')
 const { verifyAccessCode }       = require('./src/verifyAccessCode')
 const { syncRequestFinancials }  = require('./src/syncRequestFinancials')
-const { deleteAuthUser }         = require('./src/deleteAuthUser')
 const { onAgencyWritten }        = require('./src/onAgencyWritten')
 const { purgeSelfieOnClose }     = require('./src/purgeSelfieOnClose')
 const { onRequestWritten }       = require('./src/onRequestWritten')
@@ -32,7 +31,6 @@ exports.glExpirySweep           = glExpirySweep
 exports.purgeDeclinedOnboarding = purgeDeclinedOnboarding
 exports.verifyAccessCode        = verifyAccessCode
 exports.syncRequestFinancials   = syncRequestFinancials
-exports.deleteAuthUser          = deleteAuthUser
 exports.onAgencyWritten         = onAgencyWritten
 exports.purgeSelfieOnClose      = purgeSelfieOnClose
 exports.onRequestWritten        = onRequestWritten
@@ -45,6 +43,11 @@ exports.onOnboardingRequestCreated = onOnboardingRequestCreated
 // Phase 1 (T1): email leaves from the server only; announcements fan out here.
 const { sendNotificationEmail } = require('./src/sendNotificationEmail')
 const { onAnnouncementCreated, announcementReminders } = require('./src/announcements')
+// Phase 1 (T2): account lifecycle; replaces deleteAuthUser.
+const { eraseAccount, disableAccount, resetStaffMfa } = require('./src/accountAdmin')
+exports.eraseAccount = eraseAccount
+exports.disableAccount = disableAccount
+exports.resetStaffMfa = resetStaffMfa
 exports.sendNotificationEmail = sendNotificationEmail
 exports.onAnnouncementCreated = onAnnouncementCreated
 exports.announcementReminders = announcementReminders

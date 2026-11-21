@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore'
 import { tenantWhere } from '../../utils/hospitals'
 import { sendPasswordResetEmail } from 'firebase/auth'
-import { db, auth } from '../../firebase'
+import { db, auth, functions, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
@@ -21,7 +21,7 @@ import PartnerHospitalsCard from '../../components/admin/PartnerHospitals'
 import ConfirmModal from '../../components/ConfirmModal'
 import {
   MdArrowBack, MdEdit, MdDelete, MdLock, MdLockOpen, MdKey,
-  MdClose, MdWarning, MdRefresh, MdMessage,
+  MdClose, MdWarning, MdRefresh, MdMessage, MdPhonelinkLock,
   MdLocationOn, MdPhone,
   MdAttachMoney, MdArrowUpward, MdArrowDownward,
 } from 'react-icons/md'
@@ -130,7 +130,6 @@ export default function AgencyDetail() {
   // Modal states
   const [showEdit,        setShowEdit]        = useState(false)
   const [editCoord,       setEditCoord]       = useState(null)
-  const [confirmCoord,    setConfirmCoord]    = useState(null)
   const [confirmDelete,   setConfirmDelete]   = useState(false)
   const [showDisableDialog, setShowDisableDialog] = useState(false)
   const [disableChoice,     setDisableChoice]     = useState('reject')
@@ -359,18 +358,22 @@ export default function AgencyDetail() {
 
   // ── Coordinator actions ───────────────────────────────────────────────
 
+  // Phase 1 (T2, decision P1-B): the Super Admin blocks or restores an agency
+  // user's sign-in on the server (disableAccount); nobody deletes agency
+  // accounts. The function writes the audit entry and notifies the person.
   const handleToggleCoord = async (coord) => {
+    const nowActive = coord.active === false
     try {
-      const nowActive = coord.active === false
-      await updateDoc(doc(db, 'users', coord.uid), { active: nowActive })
-      await notify(coord.uid, {
-        type:  nowActive ? 'account_activated' : 'account_deactivated',
-        title: nowActive ? 'Account Reactivated' : 'Account Deactivated',
-        body:  nowActive ? 'Your coordinator account has been reactivated.' : 'Your coordinator account has been deactivated.',
-      })
-      logAudit(user, { action: nowActive ? 'account_activated' : 'account_deactivated', targetType: 'account', targetId: coord.uid, targetName: coord.name, details: `Agency coordinator ${nowActive ? 'reactivated' : 'deactivated'}` })
+      await httpsCallable(functions, 'disableAccount')({ uid: coord.uid, enable: nowActive })
       toast.success(`${coord.name} ${nowActive ? 'reactivated' : 'deactivated'}.`)
-    } catch (err) { console.error(err); toast.error('Failed to update account.') }
+    } catch (err) { console.error(err); toast.error(err?.message || 'Failed to update account.') }
+  }
+
+  const handleResetMfa = async (coord) => {
+    try {
+      await httpsCallable(functions, 'resetStaffMfa')({ uid: coord.uid })
+      toast.success(`Two-factor reset for ${coord.name}. They set it up again at their next sign-in.`)
+    } catch (err) { console.error(err); toast.error(err?.message || 'Could not reset two-factor.') }
   }
 
   const handleResetPassword = async (coord) => {
@@ -379,15 +382,6 @@ export default function AgencyDetail() {
       await notify(coord.uid, { type: 'password_reset_sent', title: 'Password Reset Email Sent', body: 'A password reset link has been sent to your email.' })
       toast.success(`Password reset email sent to ${coord.email}.`)
     } catch (err) { console.error(err); toast.error('Failed to send reset email.') }
-  }
-
-  const handleDeleteCoord = async (coord) => {
-    try {
-      await deleteDoc(doc(db, 'users', coord.uid))
-      logAudit(user, { action: 'account_deleted', targetType: 'account', targetId: coord.uid, targetName: coord.name, details: `${coord.role === 'agency_admin' ? 'Agency Administrator' : 'Coordinator'} account deleted` })
-      setConfirmCoord(null)
-      toast.success(`${coord.name}'s account deleted.`)
-    } catch (err) { console.error(err); toast.error('Failed to delete account.') }
   }
 
   // Mirrors /agency/team's own toggle (Team.jsx) so a Super Admin and
@@ -747,7 +741,6 @@ export default function AgencyDetail() {
                 })
                 .map(coord => {
                 const isActive   = coord.active !== false
-                const isDeleting = confirmCoord?.uid === coord.uid
                 const isAdmin    = coord.role === 'agency_admin'
                 const onlyAdmin  = isAdmin && adminCount === 1
                 return (
@@ -799,30 +792,13 @@ export default function AgencyDetail() {
                             className={`p-1.5 rounded-lg transition-colors ${isActive ? 'text-gray-500 hover:text-orange-500 hover:bg-orange-50' : 'text-gray-500 hover:text-green-500 hover:bg-green-50'}`}>
                             {isActive ? <MdLock size={15} /> : <MdLockOpen size={15} />}
                           </button>
-                          <button title="Delete" onClick={() => setConfirmCoord(coord)}
-                            className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                            <MdDelete size={15} />
+                          <button title="Reset two-factor (lost phone)" onClick={() => handleResetMfa(coord)}
+                            className="p-1.5 text-gray-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors">
+                            <MdPhonelinkLock size={15} />
                           </button>
                         </div>
                       )}
                     </div>
-                    {isDeleting && (
-                      <div className="bg-red-50 border-t border-red-100 px-5 py-3 flex items-start gap-3">
-                        <MdWarning size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm text-red-700">
-                            Delete <strong>{coord.name}</strong>? They will lose portal access immediately.
-                          </p>
-                          <p className="text-xs text-red-600/80 mt-1 leading-relaxed">
-                            Note: The Firebase Auth account can't be deleted from the browser — the email stays registered until you also remove it from Firebase Console → Authentication.
-                          </p>
-                        </div>
-                        <button className="text-xs text-gray-500 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0"
-                          onClick={() => setConfirmCoord(null)}>Cancel</button>
-                        <button className="text-xs text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 flex-shrink-0"
-                          onClick={() => handleDeleteCoord(coord)}>Delete</button>
-                      </div>
-                    )}
                   </Fragment>
                 )
               })}

@@ -12,7 +12,7 @@ import {
   signOut as fbSignOut, sendPasswordResetEmail, deleteUser,
 } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app'
-import { db, auth, firebaseConfig } from '../../firebase'
+import { db, auth, firebaseConfig, functions, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { notify } from '../../utils/notifications'
@@ -327,28 +327,18 @@ export default function AgencyTeam() {
     )
   }
 
+  // Phase 1 (T2, decision P1-B): Deactivate blocks the coordinator's sign-in
+  // on the server (disableAccount) and signs them out; Reactivate restores
+  // it. The function writes the audit entry and notifies them, and refuses to
+  // deactivate the agency's last active Agency Admin.
   const handleToggleActive = async (coord) => {
+    const nowActive = coord.active === false
     try {
-      const nowActive = coord.active === false
-      await updateDoc(doc(db, 'users', coord.uid), { active: nowActive })
-      await notify(coord.uid, {
-        type:  nowActive ? 'account_activated' : 'account_deactivated',
-        title: nowActive ? 'Account Reactivated' : 'Account Deactivated',
-        body:  nowActive
-          ? 'Your account has been reactivated by your agency administrator.'
-          : 'Your account has been deactivated. Contact your agency administrator.',
-      })
-      logAudit(user, {
-        action:     nowActive ? 'account_activated' : 'account_deactivated',
-        targetType: 'account',
-        targetId:   coord.uid,
-        targetName: coord.name,
-        details:    `Toggled by agency admin`,
-      })
+      await httpsCallable(functions, 'disableAccount')({ uid: coord.uid, enable: nowActive })
       toast.success(`${coord.name} ${nowActive ? 'reactivated' : 'deactivated'}.`)
     } catch (err) {
       console.error('[Team] toggle active error:', err)
-      toast.error('Failed to update. Please try again.')
+      toast.error(err?.message || 'Failed to update. Please try again.')
     }
   }
 

@@ -7,7 +7,7 @@ import {
   MdRestoreFromTrash, MdDeleteForever, MdWarning,
   MdPhone, MdLocationOn, MdLocalHospital, MdCalendarToday, MdBadge,
 } from 'react-icons/md'
-import { deleteDoc, getDocs, writeBatch } from 'firebase/firestore'
+import { getDocs } from 'firebase/firestore'
 import { tenantWhere, patientWhere, currentTenantId } from '../../utils/hospitals'
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
@@ -17,7 +17,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
 import { getOrCreateConversation, sendMessage } from '../../utils/messages'
-import { deleteDocumentStorage } from '../../utils/uploadDocument'
 import GLDocumentPanel from '../../components/GLDocumentPanel'
 import { relationshipLabel } from '../../utils/intakeSheet'
 import toast from 'react-hot-toast'
@@ -188,6 +187,7 @@ export default function Patients() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [patients,             setPatients]             = useState([])
   const [confirmDeletePatient, setConfirmDeletePatient] = useState(null)
+  const [erasing, setErasing] = useState(false)
   useEscapeKey(() => setConfirmDeletePatient(null), !!confirmDeletePatient)
   const [loading,              setLoading]              = useState(true)
   const [search,               setSearch]               = useState(() => searchParams.get('q') ?? '')
@@ -312,125 +312,26 @@ export default function Patients() {
     } catch (err) { console.error(err); toast.error('Failed to update account status. Please try again.') }
   }
 
+  // Phase 1 (T2): erasure runs on the server (eraseAccount), which checks the
+  // patient filed only with this hospital and decides what happens (D7):
+  //   - never endorsed → everything erased, then the sign-in;
+  //   - endorsed / funded / with a certificate → restricted: sign-in, email,
+  //     phone, address and selfies removed; the case record is kept.
+  // The browser cascade it replaces stopped halfway (conversations can't be
+  // deleted by clients) and its Auth step could delete any account (I4).
   const handleDeleteAccount = async (patient) => {
-    const uid = patient.uid
-
-    // Batch-delete all docs in a snapshot, chunked at 500 (Firestore batch limit)
-    const batchDelete = async (snap) => {
-      if (snap.empty) return
-      for (let i = 0; i < snap.docs.length; i += 500) {
-        const batch = writeBatch(db)
-        snap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref))
-        await batch.commit()
-      }
-    }
-
+    setErasing(true)
     try {
-      // R20: Fetch every collection that holds the patient's data so the
-      // cascade is complete. Previously this missed `requests` (parent
-      // of slices -- left orphaned with patient name/amount visible to
-      // admin/Requests forever), `certificates/{appId}`, and
-      // `conversations` the patient participated in. RA 10173 §16(e)
-      // right-to-erasure expects all PII removed when the admin commits
-      // to a delete; orphan parent docs were a real privacy gap.
-      //
-      // Note `conversations` and `certificates/{appId}` use document IDs
-      // we have to look up via separate queries (no patientId field on
-      // certificates -- the doc ID IS the appId, so we look up via the
-      // already-fetched applications list).
-      const [docsSnap, contentsSnap, appsSnap, requestsSnap, notifsSnap, convsSnap] = await Promise.all([
-        getDocs(query(collection(db, 'documents'), ...tenantWhere(), where('patientId', '==', uid))),
-        getDocs(query(collection(db, 'documentContents'), ...tenantWhere(), where('patientId', '==', uid))),
-        getDocs(query(collection(db, 'applications'), ...tenantWhere(), where('patientId', '==', uid))),
-        getDocs(query(collection(db, 'requests'), ...tenantWhere(), where('patientId', '==', uid))),
-        getDocs(collection(db, 'notifications', uid, 'items')),
-        getDocs(query(collection(db, 'conversations'),    where('participants', 'array-contains', uid))),
-      ])
-
-      // A case that was endorsed or funded is a financial record (slices,
-      // Guarantee Letters, agency budgets) that funders and auditors rely on.
-      // It is never erased — the account can be deactivated instead. Checked
-      // BEFORE anything is deleted, so a refusal leaves everything intact.
-      // The rules enforce the same (requests/applications/certificates delete).
-      const funded = requestsSnap.docs.some(d => (d.data().agencyIds?.length ?? 0) > 0 || Number(d.data().amountCommitted) > 0)
-      if (funded || !appsSnap.empty) {
-        toast.error(`${patient.name} has an endorsed or funded case, which must be kept as a record. Deactivate the account instead.`)
-        setConfirmDeletion(null)
-        return
-      }
-
-      // Certificates: keyed by appId, no patientId field to query on.
-      // Resolve via the application snapshots we just fetched.
-      const certSnaps = await Promise.all(
-        appsSnap.docs.map(a => getDocs(query(
-          collection(db, 'certificates'),
-          ...tenantWhere(),
-          where('__name__', '==', a.id),
-        )).catch(() => null))
-      )
-
-      // Delete Storage objects for any docs that have been migrated to
-      // (or freshly uploaded into) Cloud Storage. deleteDocumentStorage
-      // is silent on already-missing objects so legacy docs whose content
-      // still lives in documentContents don't produce false-positive
-      // errors.
-      await Promise.all(docsSnap.docs.map(d => deleteDocumentStorage({
-        storagePath: d.data()?.storagePath,
-      })))
-
-      // Delete associated records. Conversation thread messages live
-      // under conversations/{id}/messages -- batch-delete those first,
-      // then the parent conversation docs.
-      const convMsgSnaps = await Promise.all(
-        convsSnap.docs.map(c => getDocs(collection(db, 'conversations', c.id, 'messages')))
-      )
-
-      await Promise.all([
-        batchDelete(docsSnap),
-        batchDelete(contentsSnap),
-        batchDelete(appsSnap),
-        batchDelete(requestsSnap),
-        batchDelete(notifsSnap),
-        // Per-conversation: messages then the conversation doc itself.
-        ...convMsgSnaps.map(s => batchDelete(s)),
-        batchDelete(convsSnap),
-        // Certificates: each query above returned at most one doc.
-        ...certSnaps.filter(Boolean).map(s => batchDelete(s)),
-      ])
-      await deleteDoc(doc(db, 'notifications', uid)).catch(() => {})
-      // user doc last so the admin can retry the cascade on partial failure
-      await deleteDoc(doc(db, 'users', uid))
-
-      // Delete the Firebase Auth account via the deleteAuthUser Cloud
-      // Function (the client SDK can't delete another user). Best-effort:
-      // the Firestore erasure has already succeeded, so an Auth-deletion
-      // failure must not fail the whole flow — it just leaves the email
-      // registered, the old pre-function behaviour, which the modal's
-      // fallback note still covers. RA 10173 §16(e).
-      let authDeleted = false
-      try {
-        const res = await httpsCallable(functions, 'deleteAuthUser')({ uid })
-        authDeleted = res?.data?.deleted === true || res?.data?.reason === 'not-found'
-      } catch (authErr) {
-        console.warn('[Patients] Auth account deletion failed; remove manually in Firebase Console:', authErr)
-      }
-
-      logAudit(adminUser, {
-        action: 'account_deleted', targetType: 'patient',
-        targetId: uid, targetName: patient.name,
-        details: `Permanently deleted: ${docsSnap.size} document(s), ${appsSnap.size} application(s), ${requestsSnap.size} request(s), ${convsSnap.size} conversation(s), and all notifications`,
-      })
+      const res = await httpsCallable(functions, 'eraseAccount')({ uid: patient.uid })
       setConfirmDeletePatient(null)
-      toast.success(
-        `${patient.name}'s account and all associated data permanently deleted.` +
-        (authDeleted ? '' : ' Their sign-in account could not be removed automatically — remove the email in Firebase Console → Authentication.')
-      )
+      toast.success(res?.data?.mode === 'restricted'
+        ? `${patient.name}'s account is restricted: sign-in and contact details removed, case record kept.`
+        : `${patient.name}'s account and data were erased.`)
     } catch (err) {
-      // R20: the previous bare `catch {}` swallowed every error. Without
-      // a log the admin had no way to tell whether the cascade failed
-      // mid-flight (some data deleted, some left) or never started.
-      console.error('[Patients] cascade delete failed:', err)
-      toast.error('Failed to delete account. Some data may not have been removed — please try again.')
+      console.error('[Patients] eraseAccount failed:', err)
+      toast.error(err?.message || 'Could not erase the account. Try again; it continues where it stopped.')
+    } finally {
+      setErasing(false)
     }
   }
 
@@ -614,7 +515,7 @@ export default function Patients() {
                         </button>
                       )}
                       {isSuperAdmin && p.deletion && (p.tenantIds ?? [p.tenantId]).every(t => t === currentTenantId()) && (
-                        <button title="Delete Permanently"
+                        <button title="Erase account"
                           className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           onClick={() => setConfirmDeletePatient(p)}>
                           <MdDeleteForever size={15} />
@@ -717,21 +618,21 @@ export default function Patients() {
         {confirmDeletePatient && (
           <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-              <p className="text-base font-semibold text-gray-900 mb-2">Delete Account Permanently?</p>
-              <p className="text-sm text-gray-500 mb-1">
-                You are about to permanently delete <strong>{confirmDeletePatient.name}</strong>'s account and all associated data.
+              <p className="text-base font-semibold text-gray-900 mb-2">Erase this account?</p>
+              <p className="text-sm text-gray-500 mb-2">
+                <strong>{confirmDeletePatient.name}</strong> loses their sign-in. What else happens depends on their case:
               </p>
-              <p className="text-xs text-red-500 mb-3">
-                This will erase all uploaded documents, file contents, application history, and notifications.
-                This cannot be undone and satisfies the patient's right to erasure under RA 10173.
-              </p>
+              <ul className="text-xs text-gray-600 mb-3 space-y-1.5 list-disc pl-4">
+                <li><strong>Never endorsed to an agency:</strong> their documents, requests, messages and notifications are erased too (RA 10173 right to erasure).</li>
+                <li><strong>Endorsed, funded or with a Certificate of Eligibility:</strong> their email, phone, address and selfies are removed, and the case record is kept for the retention period.</li>
+              </ul>
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-5 leading-relaxed">
-                <strong>Note:</strong> Their Firebase sign-in account is now removed automatically as part of this deletion (RA 10173 §16(e) full erasure). In the rare case that step fails, the confirmation message will tell you to remove the email from Firebase Console → Authentication.
+                A patient who also filed at another hospital can't be erased here. This can't be undone.
               </p>
               <div className="flex gap-2 justify-end">
-                <button className="btn-secondary text-sm" onClick={() => setConfirmDeletePatient(null)}>Cancel</button>
-                <button className="btn-danger text-sm" onClick={() => handleDeleteAccount(confirmDeletePatient)}>
-                  Delete Permanently
+                <button className="btn-secondary text-sm" disabled={erasing} onClick={() => setConfirmDeletePatient(null)}>Cancel</button>
+                <button className="btn-danger text-sm" disabled={erasing} onClick={() => handleDeleteAccount(confirmDeletePatient)}>
+                  {erasing ? 'Erasing…' : 'Erase account'}
                 </button>
               </div>
             </div>

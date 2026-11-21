@@ -1,6 +1,6 @@
 # Phase 1 plan — messages and accounts (T1, T2)
 
-Status: **PR 1 merged (HerAx-code/mapa-web#407, 2026-11-21); its functions are not deployed yet.** PR 2 not started. Decisions P1-A to P1-D accepted by the owner on 2026-11-21. Source: the MAPA process-logic gap map (version 5), themes T1 and T2.
+Status: **PR 1 merged and deployed (HerAx-code/mapa-web#407, #408, 2026-11-21). PR 2 split in two: 2A (sections 1–3, account functions and pages) built on `feat/account-lifecycle`; 2B (sections 4–5, required two-factor and the public agency listing) not started.**
 
 Phase 1 closes the gaps that are exposed today and don't depend on the money work in Phase 2:
 
@@ -124,7 +124,7 @@ Setup:
 
 ## PR 2 — Accounts (T2)
 
-### 1. `eraseAccount` (new callable, replaces `deleteAuthUser`)
+### 1. `eraseAccount` (new callable, replaces `deleteAuthUser`) — PR 2A
 **Caller:** a `super_admin` with a `tenantId`. Once P1-C is enforced, a two-factor session is also required.
 
 **Target**, read with the Admin SDK (the target's profile must exist):
@@ -137,17 +137,18 @@ Setup:
 | Patient who also filed at another hospital | — | Refused: "This patient also has a case at another hospital." |
 
 - **Idempotent:** a re-run continues where a failed one stopped.
+- Built in 2A with two additions: full erasure also takes the patient's name off their audit entries (`targetName` → "Erased patient"; free-text `details` are not rewritten), and a restricted profile keeps `city` and `province` because the DOH monthly report needs them.
 - Writes one audit entry itself, with no personal details.
 - **Confirm before go-live:** the retention period for restricted records (D7), from the records officer or Data Protection Officer.
 
 ### 2. `disableAccount` and `resetStaffMfa` (new callables)
-- **`disableAccount`** (P1-B): Agency Admin → own team; Super Admin → hospital and agency staff. Sets the Auth user to `disabled: true` and `active: false` on the profile. Undo with `enable: true`.
+- **`disableAccount`** (P1-B): Agency Admin → own team; Super Admin → hospital and agency staff; also Hospital Admin → own staff (their Accounts page Deactivate button is the same action). Refuses to disable a hospital's or agency's last active admin. Sets the Auth user to `disabled: true` and `active: false` on the profile. Undo with `enable: true`.
 - **`resetStaffMfa`** (P1-C): Hospital Admin → own staff; Super Admin → Hospital Admins and agency staff. Removes the enrolled factors with the Admin SDK and notifies the person.
 
 ### 3. Pages call the functions
 - `admin/Patients.jsx` `handleDeleteAccount` → `eraseAccount`. The modal explains the two outcomes (full erasure vs restricted). The browser cascade is removed.
 - `admin/Accounts.jsx` `handleDelete` → `eraseAccount`.
-- `admin/AgencyDetail.jsx` coordinator delete and active toggle (`handleDeleteCoord`, `handleToggleCoord`), and `agency/Team.jsx` `handleToggleActive` → `disableAccount`. Today these only flip `active` on the profile, which AuthContext checks after sign-in; the sign-in itself stays usable.
+- `admin/AgencyDetail.jsx`: the coordinator Delete button is replaced by **Reset two-factor** (nobody deletes agency accounts, P1-B); the active toggle (`handleDeleteCoord`, `handleToggleCoord`), and `agency/Team.jsx` `handleToggleActive` → `disableAccount`. Today these only flip `active` on the profile, which AuthContext checks after sign-in; the sign-in itself stays usable.
 - Delete `functions/src/deleteAuthUser.js` and its tests; remove its export from `functions/index.js`.
 
 ### 4. Two-factor required for staff (M18, P1-C)

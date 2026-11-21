@@ -57,6 +57,7 @@ show the names in UI (`ROLE_LABEL` / `ROLE_LABEL_SHORT` in src/utils/constants.j
   assistance types, name, the Agency Profile text and `enabled` are the Agency
   Admin's / Super Admin's (owner decision 2026-11-16: only the Agency Admin
   edits the profile). `enabled` is the Super Admin's alone.
+- **Account lifecycle runs on the server (Phase 1 T2, 2026-11-21).** Never delete a `users/` doc or toggle `active` from the browser. `eraseAccount` (Hospital Admin only): own-hospital staff → profile + sign-in deleted; a patient who filed only here → fully erased if never endorsed, otherwise **restricted** (sign-in, email, phone, address, selfies removed; case record kept for the retention period — D7, period still to be confirmed by the DPO); a patient who filed elsewhere too is refused. `disableAccount` (Hospital Admin → own staff, Agency Admin → own team, Super Admin → hospital and agency staff) blocks/restores the sign-in itself and signs the person out; nobody deletes agency accounts. `resetStaffMfa` (Hospital Admin → own staff, Super Admin → Hospital Admins and agency staff) clears two-factor for a lost phone. All three write their own audit entry (`functions/src/accountAdmin.js`).
 - **Messaging is reply-only for patients:** only staff and agencies start a
   conversation; patient copy must never tell them to start one. **No one deletes
   a conversation or message** (case record; owner decision 2026-11-16, rules deny it).
