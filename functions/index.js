@@ -42,6 +42,13 @@ exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated
 
+// Phase 1 (T1): email leaves from the server only; announcements fan out here.
+const { sendNotificationEmail } = require('./src/sendNotificationEmail')
+const { onAnnouncementCreated, announcementReminders } = require('./src/announcements')
+exports.sendNotificationEmail = sendNotificationEmail
+exports.onAnnouncementCreated = onAnnouncementCreated
+exports.announcementReminders = announcementReminders
+
 const { onPatientIdentityWritten, onIdDocumentIdentityWritten } = require('./src/identityIndex')
 exports.onPatientIdentityWritten    = onPatientIdentityWritten
 exports.onIdDocumentIdentityWritten = onIdDocumentIdentityWritten

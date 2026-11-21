@@ -4,6 +4,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const crypto = require('node:crypto')
 const { accessCodeRe, accessCodeFormatHint, DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 const { codeProof, blankCodeExpired } = require('./codeIssue')
+const { bumpWindowCounter } = require('./rateLimit')
 
 /**
  * verifyAccessCode — Phase 3.5 server-side rate-limited access-code check.
@@ -65,36 +66,16 @@ function hashIp(ip) {
     .slice(0, 16)
 }
 
+// The counter itself lives in ./rateLimit (shared with sendNotificationEmail);
+// a callable turns an over-limit attempt into resource-exhausted.
 async function checkAndBumpThrottle({ db, ref, max, label, now }) {
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref)
-    const nowMs = now()
-    let count = 0
-    let windowStart = nowMs
-    if (snap.exists) {
-      const data = snap.data()
-      const elapsed = nowMs - (data.windowStart ?? 0)
-      if (elapsed > WINDOW_MS) {
-        count = 0
-        windowStart = nowMs
-      } else {
-        count       = data.count ?? 0
-        windowStart = data.windowStart ?? nowMs
-      }
-    }
-    if (count >= max) {
-      const minutesLeft = Math.ceil((WINDOW_MS - (nowMs - windowStart)) / 60000)
-      throw new HttpsError(
-        'resource-exhausted',
-        `Too many verification attempts (${label} cap reached). Try again in about ${minutesLeft} minutes.`,
-      )
-    }
-    tx.set(ref, {
-      count: count + 1,
-      windowStart,
-      lastAttemptAt: FieldValue.serverTimestamp(),
-    })
-  })
+  const r = await bumpWindowCounter({ db, ref, max, now, windowMs: WINDOW_MS })
+  if (!r.allowed) {
+    throw new HttpsError(
+      'resource-exhausted',
+      `Too many verification attempts (${label} cap reached). Try again in about ${r.minutesLeft} minutes.`,
+    )
+  }
 }
 
 async function handleVerifyAccessCode({ uid, code, lastName = '', birthdate = '', ip, db, now = () => Date.now(), serverTimestamp }) {

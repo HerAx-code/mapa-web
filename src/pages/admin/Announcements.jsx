@@ -8,9 +8,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant, getUsersInScope, inMyTenant } from '../../utils/hospitals'
+import { withTenant, inMyTenant } from '../../utils/hospitals'
 import {
   MdAdd, MdEdit, MdDelete, MdClose, MdBuildCircle,
   MdWarning, MdInfo, MdCampaign, MdSchedule, MdCheckCircle,
@@ -398,7 +397,11 @@ export default function Announcements() {
     try {
       const detailSuffix = `Type: ${data.type} · Surface: ${data.surface ?? 'banner'} · Audience: ${(data.targetRoles ?? []).join('+') || 'none'}`
       if (editing) {
-        await updateDoc(doc(db, 'announcements', editing.id), { ...data, updatedAt: serverTimestamp() })
+        // A new start time gets its own 24-hour reminder.
+        const startMoved = editing.startAt?.toMillis?.() !== data.startAt?.toMillis?.()
+        await updateDoc(doc(db, 'announcements', editing.id), {
+          ...data, ...(startMoved ? { reminderSent: false } : {}), updatedAt: serverTimestamp(),
+        })
         logAudit(user, { action: 'announcement_updated', targetType: 'announcement', targetName: data.title, details: detailSuffix })
         toast.success('Announcement updated.')
       } else {
@@ -413,20 +416,10 @@ export default function Announcements() {
 
         logAudit(user, { action: 'announcement_created', targetType: 'announcement', targetId: ref.id, targetName: data.title, details: `${detailSuffix} · ${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}` })
 
-        // Notify all users — fire-and-forget
-        const cfg = TYPE_CONFIG[data.type] ?? TYPE_CONFIG.info
-        const window = `${fmtDt(data.startAt)} – ${fmtDt(data.endAt)}`
-        getUsersInScope(db).then(docs =>
-          Promise.all(docs.map(d =>
-            notify(d.id, {
-              type:  'system_announcement',
-              title: data.title,
-              body:  `${data.message} · ${window}`,
-            }).catch(() => {})
-          ))
-        ).catch(() => {})
-
-        toast.success('Announcement created and all users notified.')
+        // The audience (targetRoles at this hospital) is notified by the
+        // onAnnouncementCreated Cloud Function, and the 24-hour reminder by
+        // announcementReminders (Phase 1, M19/M20) — not from this browser.
+        toast.success('Announcement created. Its audience will be notified.')
       }
       resetForm()
       load()

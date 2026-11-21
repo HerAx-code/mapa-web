@@ -11,12 +11,11 @@ import JourneyStepper from '../../components/patient/JourneyStepper'
 import EligibilityCertNotice from '../../components/patient/EligibilityCertNotice'
 import PatientPage from '../../components/patient/PatientPage'
 import { useNavigate } from 'react-router-dom'
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLiveData } from '../../contexts/LiveDataContext'
-import { notify } from '../../utils/notifications'
-import { logAudit } from '../../utils/auditLog'
+import { proceedSlices } from '../../utils/proceed'
 import { glExpiryMs, REQUEST_STATUS_CONFIG, APP_STATUS_CONFIG, isGLExpired } from '../../utils/constants'
 import { computeFunding, isSliceTerminal } from '../../utils/requests'
 import { peso } from '../../utils/format'
@@ -195,42 +194,10 @@ export default function TrackStatus() {
     if (proceedingId || app.status !== 'endorsed') return
     setProceedingId(app.id)
     try {
-      await updateDoc(doc(db, 'applications', app.id), {
-        status:    'reviewing',
-        updatedAt: serverTimestamp(),
-      })
-      // Activity Timeline (§B.26): patient's proceed is the handoff from
-      // the gateway's endorsement to the agency's funding queue -- a key event
-      // every co-funding agency on this case should see in chronological
-      // context. Best-effort: a failed audit doesn't undo the proceed.
-      logAudit(user, {
-        action:     'patient_proceeded',
-        targetType: 'application',
-        targetId:   app.id,
-        targetName: app.patientName ?? user.name,
-        details:    `Patient confirmed coverage plan; slice handed off to ${app.agencyName ?? 'agency'} for funding review`,
-        requestId:  app.requestId ?? null,
-        patientId:  user.uid,
-      })
-
+      // Shared with RequestAssistance (utils/proceed.js). The agency is
+      // notified on the server by onSliceProceeded.
+      await proceedSlices(user, [app])
       toast.success(t('patient.track.proceedOk'))
-
-      // Notify the receiving agency's coordinators. Wrapped in its own
-      // try so a notification failure never undoes the slice update.
-      try {
-        const staffSnap = await getDocs(query(
-          collection(db, 'users'),
-          where('agencyId', '==', app.agencyId),
-          where('role', 'in', ['agency', 'agency_admin']),
-        ))
-        await Promise.all(staffSnap.docs.map(d => notify(d.id, {
-          type:  'app_submitted',
-          title: 'New endorsed request',
-          body:  `${user.name} accepted the endorsement and submitted their request. Please review.`,
-        })))
-      } catch (notifyErr) {
-        console.error('[handleSliceProceed] agency notify failed:', notifyErr)
-      }
     } catch (err) {
       console.error('[handleSliceProceed] update failed:', err)
       toast.error(t('patient.track.proceedErr'))

@@ -16,7 +16,7 @@ import {
   MdCampaign, MdBuildCircle, MdWarning, MdAttachMoney, MdReceiptLong, MdInsights,
   MdSync,
 } from 'react-icons/md'
-import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, updateDoc, getDocs, deleteDoc } from 'firebase/firestore'
+import { collection, query, where, orderBy, limit, onSnapshot, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore'
 import { getUsersInScope, inMyTenant, currentTenantId } from '../utils/hospitals'
 import { useOrg } from '../hooks/useOrg'
 import { useOnboardingRequests } from '../hooks/useOnboardingRequests'
@@ -997,7 +997,6 @@ export default function Layout({ children, breadcrumb }) {
   // ── Announcement banners ───────────────────────────────────────────────
   useEffect(() => {
     if (!user?.uid) return
-    const TWENTY_FOUR_H = 24 * 60 * 60 * 1000
     // Best-effort: sessionStorage access can throw (private mode, locked-down
     // webview) and the value could be corrupt — never let that crash the shell.
     let dismissed = []
@@ -1027,23 +1026,8 @@ export default function Layout({ children, breadcrumb }) {
             live.push(ann)
           }
 
-          // 24h reminder: upcoming within 24h, not yet reminded — first user
-          // triggers it. Skipped for agency announcements (not maintenance
-          // windows, and they shouldn't notify non-patients).
-          if (ann.source !== 'agency' && user?.role !== ROLES.PLATFORM_ADMIN &&
-              now < start && (start - now) <= TWENTY_FOUR_H && !ann.reminderSent) {
-            updateDoc(doc(db, 'announcements', ann.id), { reminderSent: true })
-              .then(async () => {
-                const allUsers = await getUsersInScope(db, null, user)
-                await Promise.all(allUsers.map(u =>
-                  notify(u.id, {
-                    type:  'system_announcement',
-                    title: `Reminder: ${ann.title}`,
-                    body:  `Scheduled in less than 24 hours. ${ann.message}`,
-                  }).catch(() => {})
-                ))
-              }).catch(() => {})
-          }
+          // The 24-hour reminder is sent by the announcementReminders Cloud
+          // Function (Phase 1, M19), not by whichever browser loads first.
         }
         setBanners(live)
       }).catch(() => {})
