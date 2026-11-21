@@ -1,5 +1,5 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore')
-const { defineSecret } = require('firebase-functions/params')
+const { defineSecret, defineString } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { mayEmail, emailLimitFor } = require('./emailScope')
@@ -25,7 +25,9 @@ const { bumpWindowCounter } = require('./rateLimit')
  */
 const SMTP_USER = defineSecret('SMTP_USER')
 const SMTP_PASS = defineSecret('SMTP_PASS')
-const SMTP_FROM = defineSecret('SMTP_FROM')
+// The display From address isn't secret: an optional plain parameter
+// (functions/.env or deploy prompt). Empty = "MAPA <SMTP_USER>".
+const SMTP_FROM = defineString('SMTP_FROM', { default: '' })
 
 const NETWORK_NAME = process.env.ORG_NAME || 'MAPA'
 
@@ -139,7 +141,7 @@ exports.sendNotificationEmail = onDocumentCreated({
   region: 'asia-southeast1',
   timeoutSeconds: 60,
   memory: '256MiB',
-  secrets: [SMTP_USER, SMTP_PASS, SMTP_FROM],
+  secrets: [SMTP_USER, SMTP_PASS],
 }, async (event) => {
   try {
     const from = SMTP_FROM.value() || `${NETWORK_NAME} <${SMTP_USER.value()}>`

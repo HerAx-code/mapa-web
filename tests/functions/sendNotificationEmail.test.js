@@ -11,7 +11,7 @@ import { memDb } from './helpers/memDb.js'
 const require = createRequire(import.meta.url)
 vi.mock('firebase-functions', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock('firebase-functions/v2/firestore', () => ({ onDocumentCreated: (o, fn) => fn }))
-vi.mock('firebase-functions/params', () => ({ defineSecret: () => ({ value: () => '' }) }))
+vi.mock('firebase-functions/params', () => ({ defineSecret: () => ({ value: () => '' }), defineString: () => ({ value: () => '' }) }))
 
 let mayEmail, emailLimitFor, handleNotificationEmail, renderEmail
 beforeAll(() => {
