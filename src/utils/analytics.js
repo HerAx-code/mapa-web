@@ -5,16 +5,14 @@
 // A slice carries: amountApproved, amountRequested, agencyName, assistanceType,
 // patientId, status, glStatus, submittedAt (endorse time), approvedAt.
 //
-// "Facilitated" money mirrors computeFunding's committed rule: a slice counts
-// only once an agency has approved it (status approved/certificate) and its GL
-// has not expired (an expired GL released the money back to the agency).
-
-const FACILITATED_STATUSES = ['approved', 'certificate']
+// "Facilitated" = "assistance given", the one definition every report uses
+// (src/shared/caseState.js, decision P2-F): an approved letter that was not
+// left to expire unused, including one past its validity that the sweep
+// hasn't expired yet.
+import { assistanceGivenOf } from '../shared/caseState'
 
 export function isFacilitatedSlice(s) {
-  if (!s || !FACILITATED_STATUSES.includes(s.status)) return false
-  if (s.glStatus === 'expired') return false   // any slice status (2026-11-16)
-  return true
+  return !!s && assistanceGivenOf(s) !== null
 }
 
 // Firestore Timestamp | Date | {seconds} → millis (or null).

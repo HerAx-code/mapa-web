@@ -16,6 +16,7 @@ import { uploadPatientDocument, replacePatientDocument, validateDocFile } from '
 import { tenantIdFor, loadHospital } from '../../utils/hospitals'
 import { currentCodeInfo } from '../../utils/accessCodes'
 import { proceedSlices } from '../../utils/proceed'
+import { isRequestActive } from '../../shared/caseState'
 import { agencyFromPublic } from '../../utils/agenciesPublic'
 import { useMarketplace } from '../../hooks/useMarketplace'
 import HospitalGate from '../../components/patient/HospitalGate'
@@ -60,7 +61,9 @@ const PER_TYPE_DOCS = import.meta.env.VITE_PER_TYPE_DOCS === 'true'
 
 // Active = anything not in a terminal state. A patient works one bill toward
 // zero balance at a time, so an active request blocks a new submission.
-const ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
+// Still the patient's current case: not closed or rejected, and not fully
+// funded with every letter settled (the shared definition, decision D4).
+const ACTIVE = (r) => isRequestActive(r)
 
 export default function RequestAssistance() {
   const { t, i18n } = useTranslation()
@@ -592,7 +595,7 @@ export default function RequestAssistance() {
     const unsub = onSnapshot(
       query(collection(db, 'requests'), where('patientId', '==', user.uid)),
       snap => {
-        const active = snap.docs.map(d => ({ id: d.id, ...d.data() })).find(r => ACTIVE(r.status))
+        const active = snap.docs.map(d => ({ id: d.id, ...d.data() })).find(r => ACTIVE(r))
         setActiveRequest(active ?? null)
         setLoading(false)
       },

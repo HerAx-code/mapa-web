@@ -194,82 +194,12 @@ export const SLOT_STATUS = (remaining, total) => {
 // since-removed Navbar/NotificationPanel components. Real notifications
 // come from Firestore via the Layout's onSnapshot subscription.
 
-// Guarantee Letter validity (owner decision 2026-11-16: "usually 10 days upon
-// issuance"). Each GL approved from that date stores its own expiry,
-// `glExpiresAt` = the start (Manila time) of the 11th day after issue, so a
-// GL issued 16 Nov is valid until the end of 26 Nov. GLs approved before
-// carry no glExpiresAt and keep the 30 days they were printed with
-// (LEGACY_GL_VALIDITY_DAYS). Mirrored in functions/src/glExpirySweep.js.
-export const GL_VALIDITY_DAYS = 10
-export const LEGACY_GL_VALIDITY_DAYS = 30
-const DAY_MS = 86400000
-const MANILA_OFFSET_MS = 8 * 3600000   // PH has no daylight saving
-
-const tsMillis = (ts) => ts?.toMillis ? ts.toMillis()
-  : ts?.toDate ? ts.toDate().getTime()
-  : typeof ts?.seconds === 'number' ? ts.seconds * 1000
-  : ts ? new Date(ts).getTime() : null
-
-// The instant a GL issued at `issuedMs` stops being valid (new rule).
-export const glExpiresAtFor = (issuedMs, days = GL_VALIDITY_DAYS) => {
-  const local = new Date(issuedMs + MANILA_OFFSET_MS)
-  return Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + days + 1) - MANILA_OFFSET_MS
-}
-
-// When this GL stops being valid (ms), or null without an issue date:
-// its stored glExpiresAt, else the legacy 30 days from approvedAt.
-export const glExpiryMs = (app) => {
-  const stored = tsMillis(app?.glExpiresAt)
-  if (stored != null && !Number.isNaN(stored)) return stored
-  const issued = tsMillis(app?.approvedAt)
-  if (issued == null || Number.isNaN(issued)) return null
-  return issued + (LEGACY_GL_VALIDITY_DAYS + 1) * DAY_MS
-}
-
-// The last day the GL is valid, for "valid until …" copy.
-export const glValidUntil = (app) => {
-  const ms = glExpiryMs(app)
-  return ms == null ? null : new Date(ms - 1)
-}
-
-// "Is this GL past its validity window even though glStatus still says
-// 'issued'?" The flip to glStatus='expired' happens via the expiry sweep
-// (agency/Dashboard and the glExpirySweep Cloud Function). Until then the UI
-// shows "Expired (action needed)" so the coordinator releases the budget.
-export const isGLExpired = (app, now = Date.now()) => {
-  if (app?.glStatus !== 'issued') return false
-  const ms = glExpiryMs(app)
-  return ms != null && now >= ms
-}
-// Default window for the pre-expiry "act now" warning. 3 days is the
-// triage signal: still time for the patient to redeem, but tight enough
-// that the agency coordinator should nudge them today rather than later.
-// (Patient TrackStatus uses a wider 7-day window so patients have more
-// runway to plan; agency triage wants a sharper threshold.)
-export const GL_EXPIRING_SOON_DAYS = 3
-
-// Days remaining in the GL validity window. Returns a positive integer
-// while valid, 0 on the last valid day, negative once past expiry, or
-// null when GL is not in 'issued' state or the issued-at date is missing.
-// For the simple "is it past?" answer use isGLExpired() — this helper
-// exists for "expires in N days" copy.
-export const glDaysRemaining = (app, now = Date.now()) => {
-  if (app?.glStatus !== 'issued') return null
-  const ms = glExpiryMs(app)
-  if (ms == null) return null
-  return Math.ceil((ms - now) / DAY_MS) - 1
-}
-
-
-// Pre-expiry triage signal: GL is issued, still valid, but its validity
-// window closes within the next `withinDays` days. Use this to surface
-// "expires in 3 days" chips so coordinators / patients can act before
-// the committed budget is reclaimed. False once the GL has actually
-// expired (use isGLExpired() for the post-window state).
-export const isGLExpiringSoon = (app, withinDays = GL_EXPIRING_SOON_DAYS) => {
-  const days = glDaysRemaining(app)
-  return days != null && days >= 0 && days <= withinDays
-}
+// Guarantee Letter validity and expiry live in the shared case-state module
+// (Phase 2, T8): one definition for the web and the Cloud Functions.
+export {
+  GL_VALIDITY_DAYS, LEGACY_GL_VALIDITY_DAYS, GL_EXPIRING_SOON_DAYS,
+  glExpiresAtFor, glExpiryMs, glValidUntil, isGLExpired, glDaysRemaining, isGLExpiringSoon,
+} from '../shared/caseState'
 
 // ── ID verification (advisory face-match + liveness) ───────────────────────
 // Thresholds for the on-device face-match / liveness check (src/utils/faceCheck).

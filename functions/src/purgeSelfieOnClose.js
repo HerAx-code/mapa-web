@@ -21,15 +21,17 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
  * syncRequestFinancials / glExpirySweep.
  */
 
-const TERMINAL = ['fully_funded', 'closed', 'rejected']
+// Purge once the case is FINISHED (decision D4): closed, rejected, or fully
+// funded with every letter settled — the shared definition.
+const { isRequestFinished } = require('./generated/shared.cjs')
 
 // Mirror of src/utils/idOcr.isSelfieType (separate bundle — can't import).
 const isSelfieType = (name) => /selfie|live photo/i.test(name || '')
 
 async function handlePurgeSelfieOnClose({ db, before, after, serverTimestamp }) {
   // Act only on the transition INTO a terminal state.
-  const wasTerminal = TERMINAL.includes(before?.status)
-  const isTerminal  = TERMINAL.includes(after?.status)
+  const wasTerminal = !!before && isRequestFinished(before)
+  const isTerminal  = !!after && isRequestFinished(after)
   if (!isTerminal || wasTerminal) return { skipped: 'no-terminal-transition' }
 
   const attached = Array.isArray(after?.attachedDocuments) ? after.attachedDocuments : []

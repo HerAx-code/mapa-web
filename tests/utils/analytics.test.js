@@ -8,7 +8,7 @@ const slices = [
   // Facilitated (approved) — DOH, medicine, ₱5k, patient p1
   { status: 'approved',    amountApproved: 5000, agencyName: 'DOH',  assistanceType: 'Medicine', patientId: 'p1', submittedAt: ts('2026-08-01'), approvedAt: ts('2026-08-03') },
   // Facilitated (certificate, GL issued) — PCSO, hospital bill, ₱10k, patient p2
-  { status: 'certificate', glStatus: 'issued', amountApproved: 10000, agencyName: 'PCSO', assistanceType: 'Hospital Bill', patientId: 'p2', submittedAt: ts('2026-08-05'), approvedAt: ts('2026-08-06') },
+  { status: 'certificate', glStatus: 'issued', amountApproved: 10000, agencyName: 'PCSO', assistanceType: 'Hospital Bill', patientId: 'p2', submittedAt: ts('2026-08-05'), approvedAt: ts('2026-08-06'), glExpiresAt: ts('2099-01-01') },
   // Facilitated again for the SAME patient p1 (should not double-count patient) — DOH, medicine, ₱2k
   { status: 'approved',    amountApproved: 2000, agencyName: 'DOH',  assistanceType: 'Medicine', patientId: 'p1', submittedAt: ts('2026-09-01'), approvedAt: ts('2026-09-02') },
   // Redeemed GL — counts as facilitated + redeemed
@@ -25,6 +25,9 @@ describe('isFacilitatedSlice', () => {
   it('counts approved and certificate slices', () => {
     expect(isFacilitatedSlice({ status: 'approved' })).toBe(true)
     expect(isFacilitatedSlice({ status: 'certificate', glStatus: 'issued' })).toBe(true)
+  })
+  it('excludes a letter past its validity that the sweep has not expired yet (P2-F)', () => {
+    expect(isFacilitatedSlice({ status: 'certificate', glStatus: 'issued', approvedAt: ts('2026-01-01'), glExpiresAt: ts('2026-01-12') })).toBe(false)
   })
   it('excludes expired GLs, endorsed, and rejected', () => {
     expect(isFacilitatedSlice({ status: 'certificate', glStatus: 'expired' })).toBe(false)

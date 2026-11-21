@@ -30,4 +30,13 @@ describe('dohReportRows', () => {
       diagnosis: 'CKD stage 5', careSetting: 'Outpatient', fundSource: 'MOH-MAIFIP', amountApproved: 5000, amountBilled: 4200 })
     expect(rows[0]).not.toHaveProperty('patientName')
   })
+
+  it('leaves out letters that expired unused (P2-F, M17)', () => {
+    const rows = dohReportRows([
+      slice('s1', 'approved', 10, { glStatus: 'expired' }),
+      slice('s2', 'certificate', 11, { glStatus: 'redeemed', redeemedAmount: 3000 }),
+    ], lookups, { from: new Date(2026, 9, 1), to: new Date(2026, 9, 31, 23, 59) })
+    expect(rows.map(r => r.id)).toEqual(['s2'])
+    expect(rows[0]).toMatchObject({ amountApproved: 5000, amountBilled: 3000 })
+  })
 })

@@ -131,7 +131,9 @@ export default function AgencyFunds() {
           appId:    a.id,
           type:     'redeem',
           date:     tsToDate(a.glRedeemedAt),
-          amount:   hasAmount ? approvedAmount : null,
+          // What the provider billed (N19): the redeemed amount, or the full
+          // approved amount on letters redeemed before it was recorded.
+          amount:   hasAmount ? (Number(a.redeemedAmount ?? approvedAmount) || 0) : null,
           appCode:  a.appId,
           patient:  a.patientName,
           payableTo: a.payableTo,
@@ -147,7 +149,9 @@ export default function AgencyFunds() {
           amount:   hasAmount ? approvedAmount : null,
           appCode:  a.appId,
           patient:  a.patientName,
-          actor:    a.expiredBy === 'auto-sweep' ? 'system (auto-sweep)' : 'manual',
+          // The server sweep writes glExpiredBy: 'system_sweep'; older browser
+          // sweeps wrote expiredBy: 'auto-sweep' (N19).
+          actor:    (a.glExpiredBy === 'system_sweep' || a.expiredBy === 'auto-sweep') ? 'system (auto-sweep)' : 'manual',
         })
       }
 

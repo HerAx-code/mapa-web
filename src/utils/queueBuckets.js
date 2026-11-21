@@ -114,10 +114,14 @@ export const LIFECYCLE_STAGE_LABELS = {
 
 // Count requests per lifecycle status, in the given order, as
 // [{ key, label, count }] — the shape PipelineFunnel expects.
+// Nothing writes 'assessment' any more (the assessment step is derived from
+// the documents and intake sheet), so the pipeline has no "Assessment" bar;
+// the few older requests still stored with it count as "Under review" (N15).
+const stageKeyOf = (status) => (status === 'assessment' ? 'under_review' : status)
 export function stageCounts(requests = [], keys = []) {
   return keys.map(key => ({
     key,
     label: LIFECYCLE_STAGE_LABELS[key] ?? key,
-    count: requests.filter(r => r?.status === key).length,
+    count: requests.filter(r => stageKeyOf(r?.status) === key).length,
   }))
 }

@@ -18,7 +18,7 @@ import toast from 'react-hot-toast'
 const peso = (n) => `₱${(Number(n) || 0).toLocaleString()}`
 
 // Full lifecycle (all requests, in flow order) for the pipeline distribution.
-const ANALYTICS_PIPELINE_KEYS = ['submitted', 'under_review', 'assessment', 'endorsed', 'partially_funded', 'fully_funded']
+const ANALYTICS_PIPELINE_KEYS = ['submitted', 'under_review', 'endorsed', 'partially_funded', 'fully_funded']
 const OUTCOME_TONE = { brand: 'bg-brand-500', gray: 'bg-gray-300', amber: 'bg-amber-400', red: 'bg-red-400' }
 
 // the gateway Program Overview — the board-level analytics surface (Magic Patterns

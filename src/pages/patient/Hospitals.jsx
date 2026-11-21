@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { isRequestActive } from '../../shared/caseState'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   MdSearch, MdPlace, MdEmail, MdLocalHospital, MdGroups, MdSchedule,
@@ -14,7 +15,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useMarketplace, hospitalForCode } from '../../hooks/useMarketplace'
 import { PENDING_CODE_KEY } from '../../utils/accessCodes'
 
-const ACTIVE = (s) => !['closed', 'rejected', 'fully_funded'].includes(s)
+// Still the patient's current case (the shared definition, decision D4).
+const ACTIVE = (r) => isRequestActive(r)
 const MAX_AVATARS = 5
 const MAX_CHIPS   = 4
 
@@ -37,7 +39,7 @@ export default function Hospitals() {
   useEffect(() => {
     if (!user?.uid) return
     getDocs(query(collection(db, 'requests'), where('patientId', '==', user.uid)))
-      .then((snap) => setHasActive(snap.docs.some((d) => ACTIVE(d.data().status))))
+      .then((snap) => setHasActive(snap.docs.some((d) => ACTIVE(d.data()))))
       .catch(() => {})
   }, [user?.uid])
 

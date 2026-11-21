@@ -89,6 +89,12 @@ jobs:
       - name: Run component tests
         run: npm run test:components
 
+      # Phase 2 (P2-A): functions/src/generated/shared.cjs is bundled from
+      # src/shared/ and committed. Fail if someone changed src/shared/ without
+      # regenerating it (test:functions rebuilds it, so check first).
+      - name: Check the shared functions bundle is current
+        run: npm run check:shared
+
       - name: Install functions dependencies
         working-directory: functions
         # functions/ is a separate npm package and the root `npm ci` does

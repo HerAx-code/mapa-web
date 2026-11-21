@@ -22,20 +22,11 @@ const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestor
  * cutoff timestamp + dependency bag and calls handleGLExpirySweep().
  */
 
-// Mirror of src/utils/constants.js (glExpiryMs). Kept in sync by hand: the
-// web and functions bundles don't share modules. Since 2026-11-16 each GL
-// stores its own glExpiresAt (10 days from issuance); older GLs carry none
-// and keep the 30 days they were printed with.
-const GL_VALIDITY_DAYS = 10
-const LEGACY_GL_VALIDITY_DAYS = 30
+// Letter validity is the shared definition (src/shared/caseState.js, bundled
+// into ./generated/shared.cjs) — no hand-kept mirror. Since 2026-11-16 each
+// letter stores its own glExpiresAt (10 days); older ones keep their 30 days.
+const { GL_VALIDITY_DAYS, glExpiryMs, sliceApproved } = require('./generated/shared.cjs')
 const DAY_MS = 86400000
-
-function glExpiryMs(app) {
-  const stored = app?.glExpiresAt?.toMillis?.()
-  if (typeof stored === 'number') return stored
-  const issued = app?.approvedAt?.toMillis?.()
-  return typeof issued === 'number' ? issued + (LEGACY_GL_VALIDITY_DAYS + 1) * DAY_MS : null
-}
 
 // nowMs (optional): when given, a candidate is expired only once it is past
 // its own validity (glExpiryMs); the query cutoff is the shortest window.
@@ -59,7 +50,7 @@ async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cut
       const expiry = glExpiryMs(app)
       if (expiry == null || nowMs < expiry) { skippedNotDue++; continue }
     }
-    const amount = Number(app.approvedAmount) || 0
+    const amount = sliceApproved(app)
     const agencyId = app.agencyId
 
     try {

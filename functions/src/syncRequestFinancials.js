@@ -61,51 +61,14 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 // 'needs_info' and omitted the real 'awaiting_info', so this trigger dropped an
 // awaiting_info slice from `outstanding` and could rewrite an endorsed request
 // back to 'submitted'.
-const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
-const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info', 'interview']
-
-// A slice whose GL has expired released its committed budget back to the
-// agency, so it must stop counting as committed. By glStatus whatever the
-// slice status (2026-11-16): the sweep also expires 'approved' slices that
-// were never marked Issued. Mirror of src/utils/requests.js.
-function isCommittedSlice(s) {
-  if (!COMMITTED_SLICE_STATUSES.includes(s.status)) return false
-  if (s.glStatus === 'expired') return false
-  return true
-}
-
-function computeFunding(amountNeeded = 0, slices = []) {
-  const need = Number(amountNeeded) || 0
-  const committed = slices
-    .filter(isCommittedSlice)
-    .reduce((sum, s) => sum + (Number(s.amountApproved) || 0), 0)
-  const outstanding = slices
-    .filter(s => OUTSTANDING_SLICE_STATUSES.includes(s.status))
-    .reduce((sum, s) => sum + (Number(s.amountRequested) || 0), 0)
-  return { committed, outstanding, need }
-}
-
-function deriveRequestStatus({ committed, outstanding }, amountNeeded = 0, endorsedBefore = false) {
-  const need = Number(amountNeeded) || 0
-  if (need > 0 && committed >= need) return 'fully_funded'
-  if (committed > 0)                 return 'partially_funded'
-  if (outstanding > 0)               return 'endorsed'
-  return endorsedBefore ? 'under_review' : 'submitted'
-}
-
-function deriveRequestFinancials(slices = [], amountNeeded = 0) {
-  const f = computeFunding(amountNeeded, slices)
-  return {
-    amountCommitted: f.committed,
-    status: deriveRequestStatus({ committed: f.committed, outstanding: f.outstanding }, amountNeeded, slices.length > 0),
-  }
-}
-
-// The only statuses this function is allowed to write. Anything else on
-// the request is the gateway's call -- see AUTHORITY BOUNDARY above.
-// 'under_review' may be WRITTEN (every slice declined → back to the gateway)
-// but, once there, is the gateway's again and never rewritten.
-const DERIVED_STATUSES = ['submitted', 'endorsed', 'partially_funded', 'fully_funded']
+// The funding maths is the shared definition (src/shared/caseState.js, bundled
+// into ./generated/shared.cjs) — the same one the web uses, so the two can't
+// drift (they had: see the awaiting_info note in git history).
+const {
+  deriveRequestFinancials, deriveRequestStatus,
+  COMMITTED_SLICE_STATUSES, OUTSTANDING_SLICE_STATUSES,
+  DERIVED_REQUEST_STATUSES: DERIVED_STATUSES,
+} = require('./generated/shared.cjs')
 
 async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {
   // Slices created before the co-funding redesign have no requestId.
@@ -130,6 +93,12 @@ async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {
   const update = {}
   if ((req.amountCommitted ?? 0) !== next.amountCommitted) {
     update.amountCommitted = next.amountCommitted
+  }
+  // Open (unsettled) letters decide when a fully funded case is FINISHED
+  // (decision D4): onRequestWritten frees the patient and purgeSelfieOnClose
+  // runs only once this reaches 0.
+  if ((req.openLetters ?? 0) !== next.openLetters) {
+    update.openLetters = next.openLetters
   }
   if (DERIVED_STATUSES.includes(req.status) && req.status !== next.status) {
     update.status = next.status

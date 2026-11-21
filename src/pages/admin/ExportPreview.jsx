@@ -79,6 +79,8 @@ const lastMonthRange = () => {
 const SECTION_CONFIG = {
   'doh-monthly': {
     title:       'DOH Monthly Assistance Report',
+    // Decision P2-F: say which definition of "assistance given" the rows use.
+    note:        'One row per approved guarantee letter, except letters that expired unused. "Billed" is filled once the provider redeems the letter.',
     load:        loadDohReport,
     statusField: null,
     extraConstraints: [],
@@ -483,6 +485,9 @@ export default function ExportPreview() {
             <MdRefresh size={15} /> Refresh
           </button>
         </div>
+        {config.note && (
+          <p className="bg-white border-b border-gray-100 px-5 py-2 text-xs text-gray-600">{config.note}</p>
+        )}
 
         {/* ── Filter bar ── */}
         <div className="bg-white border-b border-gray-100 px-5 py-3 space-y-2.5 flex-shrink-0">

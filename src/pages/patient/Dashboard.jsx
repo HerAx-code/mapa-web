@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isRequestActive } from '../../shared/caseState'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -291,7 +292,7 @@ export default function PatientDashboard() {
       query(collection(db, 'requests'), where('patientId', '==', user.uid)),
       snap => {
         const reqs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        setActiveRequest(reqs.find(r => !['closed', 'rejected', 'fully_funded'].includes(r.status)) ?? null)
+        setActiveRequest(reqs.find(r => isRequestActive(r)) ?? null)
       },
       (err) => console.error('[PatientDashboard] requests snapshot error:', err),
     )
