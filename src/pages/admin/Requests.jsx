@@ -21,7 +21,7 @@ import { peso } from '../../utils/format'
 import { deriveRequestStage } from '../../utils/requestStage'
 import { interviewReasons, secondPersonHold } from '../../utils/verificationPolicy'
 import { useIdentityFlag, useHospitalSettings } from '../../hooks/useVerification'
-import { coarseBucketOf, coarseCounts } from '../../utils/queueBuckets'
+import { coarseBucketOf, coarseCounts, isEndorseMoreOrClose, autoCloseInDays } from '../../utils/queueBuckets'
 import { overdueCount, isOverdue, slaState, slaLabel, SLA_HOURS } from '../../utils/sla'
 import QueueTabs from '../../components/admin/requests/QueueTabs'
 import RequestsTable from '../../components/admin/requests/RequestsTable'
@@ -852,6 +852,16 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
             className="btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1.5 disabled:opacity-50">
             <MdSend size={13} /> {request.caseConversationId ? 'Case conversation' : 'Message'}
           </button>
+          {/* Phase 4 PR 4.1 (P4-A): nothing waiting at any agency. */}
+          {isEndorseMoreOrClose(request) && (() => {
+            const left = autoCloseInDays(request, hospitalPolicy)
+            return (
+              <span className="text-xs font-medium px-2 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800"
+                title="No agency is still deciding. Endorse to another agency or close the case; otherwise it closes itself when the time limit in Hospital Settings passes.">
+                Endorse more or close{left != null ? ` · closes itself ${left === 0 ? 'today' : `in ${left} day${left === 1 ? '' : 's'}`}` : ''}
+              </span>
+            )
+          })()}
           <StatusBadge status={request.status} kind="request" />
         </div>
       </div>

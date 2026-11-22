@@ -150,3 +150,36 @@ describe('closeRequest', () => {
     expect(await codeOf(close(memDb(base()), 'swB', 'closed'))).toBe('permission-denied')
   })
 })
+
+// Phase 4 PR 4.1: the one closing path, for a person and for the case timers.
+describe('closeCaseCore (system actor)', () => {
+  let closeCaseCore, systemActor
+  beforeAll(() => { ;({ closeCaseCore, systemActor } = require('../../functions/src/caseActions')) })
+  const seed = () => base({
+    'requests/r1': { ...base()['requests/r1'], status: 'under_review', nothingPendingSince: ts(NOW - 8 * 86400e3) },
+    'applications/s1': { requestId: 'r1', agencyId: 'dswd', status: 'rejected' },
+  })
+
+  it('closes like a person would, records the timer, and sends as the server', async () => {
+    const db = memDb(seed())
+    const r = await closeCaseCore({
+      db, reqRef: db.doc('requests/r1'), outcome: 'closed', reason: 'No agency could fund this request.',
+      actor: systemActor('nothing_pending', H), closedAs: 'no_funding', auditAction: 'request_auto_closed',
+      guard: (req) => !!req.nothingPendingSince, now: () => NOW, serverTimestamp,
+    })
+    expect(r).toMatchObject({ closedSlices: 0 })
+    expect(db.store.get('requests/r1')).toMatchObject({ status: 'closed', closedAs: 'no_funding', closedBy: 'system:nothing_pending' })
+    const audit = [...db.store.entries()].find(([k]) => k.startsWith('auditLog/'))[1]
+    expect(audit).toMatchObject({ action: 'request_auto_closed', actorId: 'system', tenantId: H })
+    const note = [...db.store.entries()].find(([k]) => k.startsWith('notifications/pat/items/'))[1]
+    expect(note.fromUid).toBeNull()
+  })
+
+  it('leaves the case alone when the guard says someone acted first, or it is already closed', async () => {
+    const db = memDb(seed())
+    expect(await closeCaseCore({ db, reqRef: db.doc('requests/r1'), outcome: 'closed', actor: systemActor('t', H), guard: () => false, now: () => NOW, serverTimestamp })).toBeNull()
+    expect(db.store.get('requests/r1').status).toBe('under_review')
+    const closed = memDb(base({ 'requests/r1': { ...base()['requests/r1'], status: 'closed' } }))
+    expect(await closeCaseCore({ db: closed, reqRef: closed.doc('requests/r1'), outcome: 'closed', actor: systemActor('t', H), guard: () => true, now: () => NOW, serverTimestamp })).toBeNull()
+  })
+})

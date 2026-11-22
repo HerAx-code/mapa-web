@@ -97,6 +97,46 @@ async function expireLetterTx(tx, db, sliceRef, by, deps) {
   return { amount, agencyFound: !!c.agency }
 }
 
+// A slot taken today goes back to the hospital it came from (N1: the server's
+// Manila date, and only if that count was not reset since). Slots are daily
+// capacity: one from an earlier day has already refilled.
+function giveSlotBackTx(tx, c, now) {
+  const s = c.slice
+  const today = manilaDayKey(now)
+  const at = tsMillis(s.endorsedAt ?? s.submittedAt)
+  if (!c.agency || at == null || manilaDayKey(at) !== today) return
+  const t = tenantOf(s)
+  const own = c.agency.hospitalSlots?.[t]
+  if (own && own.lastResetDate === today) {
+    tx.update(c.agencyRef, { [`hospitalSlots.${t}.remaining`]: Math.min((Number(own.remaining) || 0) + 1, Number(own.total) || 0) })
+  } else if (!own && c.agency.lastResetDate === today) {
+    tx.update(c.agencyRef, { 'slots.remaining': Math.min((Number(c.agency.slots?.remaining) || 0) + 1, Number(c.agency.slots?.total) || 0) })
+  }
+}
+
+// Phase 4 PR 4.1: an open slice ended by the system (not accepted in time, the
+// partnership ended, the agency unavailable), with the same money, slot,
+// request-total and audit handling as a person's action. `from` lists the
+// statuses it may close from; a slice that moved on meanwhile is left alone
+// (returns null).
+async function closeSliceCore({ db, sliceRef, from, reason, closedAs, actor, auditAction, patient = null, hospital = null, overrides = {} }) {
+  const deps = { ...defaultDeps, ...overrides }
+  const now = deps.now()
+  const c = await db.runTransaction(async (tx) => {
+    const cc = await readSliceCase(tx, db, sliceRef)
+    if (!from.includes(cc.slice.status)) return null
+    writeSliceChange(tx, cc, {
+      status: 'closed', closedReason: reason, closedAs, closedAt: deps.serverTimestamp(),
+      closedBy: actor.system ? `system:${actor.system}` : actor.uid,
+    }, null, deps)
+    giveSlotBackTx(tx, cc, now)
+    return cc
+  })
+  if (!c) return null
+  await afterChange(db, actor, c.slice, sliceRef.id, { action: auditAction, details: `${c.slice.agencyName ?? 'Agency'}: ${c.slice.status} → closed · ${reason}`, patient, hospital })
+  return { slice: c.slice }
+}
+
 async function loadAgencyCaller(db, callerUid) {
   const caller = await loadCaller(db, callerUid)
   if (!AGENCY_ROLES.includes(caller.role) || !caller.agencyId) fail('permission-denied', "Only the agency's staff can do this.")
@@ -119,10 +159,12 @@ async function afterChange(db, caller, slice, sliceId, { action, details, patien
     details, requestId: slice.requestId ?? null, patientId: slice.patientId ?? null, tenantId: tenantOf(slice),
   }).catch((err) => logger.warn('[sliceActions] audit failed', { err: err?.message }))
   const sends = []
-  if (patient) sends.push(notifyServer(db, slice.patientId, patient, caller.uid))
-  if (hospital && slice.endorsedById) sends.push(notifyServer(db, slice.endorsedById, hospital, caller.uid))
+  // A system actor (the case timers) sends as a server event.
+  const fromUid = caller.system ? null : caller.uid
+  if (patient) sends.push(notifyServer(db, slice.patientId, patient, fromUid))
+  if (hospital && slice.endorsedById) sends.push(notifyServer(db, slice.endorsedById, hospital, fromUid))
   for (const uid of watchers?.uids ?? []) {
-    if (uid !== caller.uid && uid !== slice.endorsedById) sends.push(notifyServer(db, uid, watchers.note, caller.uid))
+    if (uid !== caller.uid && uid !== slice.endorsedById) sends.push(notifyServer(db, uid, watchers.note, fromUid))
   }
   await Promise.allSettled(sends)
 }
@@ -177,19 +219,7 @@ async function handleDecideSlice({ callerUid, data, db, ...overrides }) {
       if (!['reviewing', 'awaiting_info'].includes(s.status)) fail('failed-precondition', 'Only an application under review can be rejected.')
       if (!input.reason) fail('invalid-argument', 'Give the reason for rejecting.')
       writeSliceChange(tx, c, { status: 'rejected', rejectionReason: input.reason, rejectedAt: deps.serverTimestamp(), rejectedByUid: caller.uid }, null, deps)
-      // A slot taken today goes back to the hospital it came from (N1: the
-      // server's Manila date, and only if that count was not reset since).
-      const today = manilaDayKey(now)
-      const at = tsMillis(s.endorsedAt ?? s.submittedAt)
-      if (c.agency && at != null && manilaDayKey(at) === today) {
-        const t = tenantOf(s)
-        const own = c.agency.hospitalSlots?.[t]
-        if (own && own.lastResetDate === today) {
-          tx.update(c.agencyRef, { [`hospitalSlots.${t}.remaining`]: Math.min((Number(own.remaining) || 0) + 1, Number(own.total) || 0) })
-        } else if (!own && c.agency.lastResetDate === today) {
-          tx.update(c.agencyRef, { 'slots.remaining': Math.min((Number(c.agency.slots?.remaining) || 0) + 1, Number(c.agency.slots?.total) || 0) })
-        }
-      }
+      giveSlotBackTx(tx, c, now)
       return { c, from: s.status, to: 'rejected' }
     }
 
@@ -411,6 +441,7 @@ const wrap = (name, handler) => onCall({ region: 'asia-southeast1', timeoutSecon
 exports.handleDecideSlice = handleDecideSlice
 exports.handleSettleLetter = handleSettleLetter
 exports.expireLetterTx = expireLetterTx
+exports.closeSliceCore = closeSliceCore
 exports.readSliceCase = readSliceCase
 exports.writeSliceChange = writeSliceChange
 exports.decideSlice = wrap('decideSlice', handleDecideSlice)

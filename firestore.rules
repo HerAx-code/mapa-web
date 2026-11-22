@@ -1122,7 +1122,16 @@ service cloud.firestore {
                                                             'povertyLinePerCapita', 'povertyLineYear', 'region',
                                                             'povertyLineCitation', 'povertyLineCitationShort', 'povertyLineStatus',
                                                             'coeNotedByName', 'coeNotedByTitle',
+                                                            'sliceProceedDays', 'nothingPendingDays',
                                                             'updatedAt', 'updatedBy']) &&
+                      // Phase 4 (P4-C): the case timers' limits, whole days within
+                      // the bounds in src/shared/caseTimers.js.
+                      (request.resource.data.get('sliceProceedDays', null) == null ||
+                       (request.resource.data.sliceProceedDays is int &&
+                        request.resource.data.sliceProceedDays >= 1 && request.resource.data.sliceProceedDays <= 14)) &&
+                      (request.resource.data.get('nothingPendingDays', null) == null ||
+                       (request.resource.data.nothingPendingDays is int &&
+                        request.resource.data.nothingPendingDays >= 2 && request.resource.data.nothingPendingDays <= 30)) &&
                       request.resource.data.get('povertyLineCitation', '') is string && request.resource.data.get('povertyLineCitation', '').size() <= 1000 &&
                       request.resource.data.get('povertyLineCitationShort', '') is string && request.resource.data.get('povertyLineCitationShort', '').size() <= 200 &&
                       request.resource.data.get('povertyLineStatus', 'current') in ['interim', 'current'] &&
@@ -1528,6 +1537,8 @@ service cloud.firestore {
         // actions (printed, revoked, deleted, course ended) are still staff
         // browser actions.
         'hospitalid_issued',
+        // Phase 4: the case timers and partnership endings.
+        'request_auto_closed', 'slice_not_accepted', 'slice_partner_ended', 'slice_agency_unavailable',
       ];
     }
     // The actor fields equal the writer's own profile (no "as Hospital Admin").

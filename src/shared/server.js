@@ -18,3 +18,6 @@ export { approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../ut
 // Assessment amendments (Phase 3 PR 3.2): the completeness check the
 // amendAssessment function re-runs, and which fields are the patient's.
 export { isIntakeComplete, PATIENT_FACT_KEYS } from '../utils/intakeSheet.js'
+
+// Case endings (Phase 4): the hospital's timer limits.
+export { CASE_TIMERS, caseTimerDays } from './caseTimers.js'

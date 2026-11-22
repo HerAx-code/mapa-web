@@ -11,6 +11,7 @@ import { currentTenantId, clearBrandingCache } from '../../utils/hospitals'
 import { logAudit } from '../../utils/auditLog'
 import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import { validateHospital, normalizePrefix } from '../../utils/hospitalConfig'
+import { CASE_TIMERS, caseTimerDays } from '../../shared/caseTimers'
 
 // Hospital Settings — multi-hospital Phase 8 (docs/multi-hospital-network-plan.md).
 // A hospital's super admin edits its own BRANDING: the names and contact that
@@ -106,6 +107,74 @@ function VerificationPolicyCard({ user, tenantId }) {
       <div className="flex justify-end">
         <button className="btn-primary text-sm" onClick={save} disabled={saving || amountBad || secondBad}>
           {saving ? 'Saving…' : 'Save verification settings'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Phase 4 (P4-C / D8): how long the case timers wait before closing a slice
+// the patient never accepted, or a case nothing is pending on. The hospital
+// acts first; the timers only stop a case being forgotten.
+const TIMER_COPY = {
+  sliceProceedDays: {
+    label: 'Close an endorsement the patient never accepts after (days)',
+    hint: 'The patient is reminded at 24 and 48 hours. Default 3.',
+  },
+  nothingPendingDays: {
+    label: 'Close a case nothing is pending on after (days)',
+    hint: 'When every agency has decided and the case is not fully funded, it waits in "Endorse more or close". You are warned a day before. Default 7.',
+  },
+}
+function CaseTimersCard({ user, tenantId }) {
+  const saved = useHospitalSettings()
+  const [edit, setEdit] = useState({})
+  const [saving, setSaving] = useState(false)
+  const valueOf = (k) => edit[k] ?? String(caseTimerDays(saved, k))
+  const badOf = (k) => {
+    const n = Number(valueOf(k))
+    return !Number.isInteger(n) || n < CASE_TIMERS[k].min || n > CASE_TIMERS[k].max
+  }
+  const keys = Object.keys(CASE_TIMERS)
+  const anyBad = keys.some(badOf)
+  const save = async () => {
+    if (anyBad) return
+    setSaving(true)
+    try {
+      const values = Object.fromEntries(keys.map(k => [k, Number(valueOf(k))]))
+      await setDoc(doc(db, 'hospitalSettings', tenantId), {
+        tenantId, ...values, updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
+      }, { merge: true })
+      logAudit(user, {
+        action: 'case_timers_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
+        details: `Not accepted: ${values.sliceProceedDays} days; nothing pending: ${values.nothingPendingDays} days`,
+      })
+      setEdit({})
+      toast.success('Case time limits saved.')
+    } catch (e) {
+      console.error(e)
+      toast.error('Could not save. Please try again.')
+    } finally { setSaving(false) }
+  }
+  return (
+    <div className="card p-5 mt-4 space-y-4">
+      <div>
+        <p className="text-sm font-semibold text-gray-800">Case time limits</p>
+        <p className="text-xs text-gray-500 mt-1">
+          So cases don't stay open with nothing happening. Letters already issued are never affected.
+        </p>
+      </div>
+      {keys.map(k => (
+        <Field key={k} label={TIMER_COPY[k].label}
+          error={badOf(k) ? `Enter a whole number from ${CASE_TIMERS[k].min} to ${CASE_TIMERS[k].max}.` : undefined}
+          hint={TIMER_COPY[k].hint}>
+          <input className="input sm:w-32" inputMode="numeric" value={valueOf(k)}
+            onChange={(e) => setEdit(p => ({ ...p, [k]: e.target.value.replace(/[^\d]/g, '') }))} />
+        </Field>
+      ))}
+      <div className="flex justify-end">
+        <button className="btn-primary text-sm" onClick={save} disabled={saving || anyBad}>
+          {saving ? 'Saving…' : 'Save time limits'}
         </button>
       </div>
     </div>
@@ -381,6 +450,7 @@ export default function HospitalSettings() {
             </div>
 
             <VerificationPolicyCard user={user} tenantId={tenantId} />
+            <CaseTimersCard user={user} tenantId={tenantId} />
 
             <MeansTestCard user={user} tenantId={tenantId} region={hospital?.region ?? ''} />
 

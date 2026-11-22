@@ -160,7 +160,7 @@ describe('auditLog.create — M11 forgery lockdown (PR 3.5)', () => {
   })
 
   it('server-only actions are refused from a browser, even a super admin', async () => {
-    for (const action of ['app_approved', 'request_endorsed', 'request_closed', 'gl_issued', 'account_erased', 'mfa_reset', 'assessment_amended', 'identity_flag_cleared', 'case_conversation_opened', 'hospitalid_issued']) {
+    for (const action of ['app_approved', 'request_endorsed', 'request_closed', 'gl_issued', 'account_erased', 'mfa_reset', 'assessment_amended', 'identity_flag_cleared', 'case_conversation_opened', 'hospitalid_issued', 'request_auto_closed', 'slice_not_accepted', 'slice_partner_ended', 'slice_agency_unavailable']) {
       await assertFails(add('superA', mine('superA', 'Ana Admin', 'super_admin', { action })))
     }
   })
