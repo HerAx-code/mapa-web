@@ -67,14 +67,11 @@ describe('no commitment on a request the hospital ended', () => {
 })
 
 describe('reject vs close', () => {
-  it('the hospital rejects only before money is committed; close is always allowed', async () => {
-    await assertSucceeds(updateDoc(ref('admin', 'requests/open'), { status: 'rejected' }))
-    await assertFails(updateDoc(ref('admin', 'requests/funded'), { status: 'rejected' }))
-    await assertSucceeds(updateDoc(ref('admin', 'requests/funded'), { status: 'closed' }))
-  })
-
-  it('the hospital closes an open slice', async () => {
-    await assertSucceeds(updateDoc(ref('admin', 'applications/sOpen'), { status: 'closed', closedReason: 'x' }))
+  it('the hospital no longer rejects, closes or touches slices from the browser', async () => {
+    // Phase 2 PR 2.2: endorsing, closing and slots run in Cloud Functions (endorseRequest / closeRequest, tests/functions/caseActions.test.js).
+    await assertFails(updateDoc(ref('admin', 'requests/open'), { status: 'rejected' }))
+    await assertFails(updateDoc(ref('admin', 'requests/funded'), { status: 'closed' }))
+    await assertFails(updateDoc(ref('admin', 'applications/sOpen'), { status: 'closed', closedReason: 'x' }))
   })
 })
 
@@ -86,5 +83,21 @@ describe('patient withdrawal', () => {
 
   it('a withdrawal changes nothing else', async () => {
     await assertFails(updateDoc(ref('pat', 'requests/early'), { status: 'closed', amountNeeded: 1 }))
+  })
+})
+
+describe('what hospital staff may still write on a request (Phase 2 PR 2.2)', () => {
+  it('move a new request to under review, correct the bill before endorsement, nothing about money', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'requests', 'fresh'), { patientId: 'pat', status: 'submitted', agencyIds: [], amountCommitted: 0, tenantId: A, totalBill: 5000, amountNeeded: 5000 })
+    })
+    await assertSucceeds(updateDoc(ref('admin', 'requests/fresh'), { status: 'under_review' }))
+    await assertSucceeds(updateDoc(ref('admin', 'requests/fresh'), { totalBill: 6000, amountNeeded: 6000 }))
+    await assertFails(updateDoc(ref('admin', 'requests/fresh'), { status: 'endorsed' }))
+    await assertFails(updateDoc(ref('admin', 'requests/fresh'), { agencyIds: ['dswd'] }))
+    await assertFails(updateDoc(ref('admin', 'requests/fresh'), { amountCommitted: 100 }))
+  })
+  it('the bill and coverage lock once endorsed', async () => {
+    await assertFails(updateDoc(ref('admin', 'requests/open'), { amountNeeded: 1 }))
   })
 })

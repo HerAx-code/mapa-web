@@ -413,8 +413,10 @@ service cloud.firestore {
       // 'endorsed'), which runs as an admin. Every other reference is a
       // read. Patients reach slices through requests, never by creating one.
       // Phase 7: the gateway endorses only to agencies partnered with its hospital.
-      allow create: if isAdmin() && createsInOwnHospital() &&
-                       partnersWith(request.resource.data.agencyId, tenantOf(request.resource.data));
+      // Phase 2 PR 2.2: slices are created only by the endorseRequest Cloud
+      // Function (Admin SDK), which re-runs the endorse gate and takes a slot
+      // in the same transaction (gaps M8, I6). No browser creates one.
+      allow create: if false;
       allow update: if isAuth() && (
         // Patient can make exactly two transitions on their own application:
         //  1. pending → rejected (self-withdrawal)
@@ -467,8 +469,9 @@ service cloud.firestore {
            (request.resource.data.redeemedAmount is number &&
             request.resource.data.redeemedAmount >= 0 &&
             request.resource.data.redeemedAmount <=
-              request.resource.data.get('amountApproved', request.resource.data.get('approvedAmount', 0))))) ||
-        hospitalAdminWrite()
+              request.resource.data.get('amountApproved', request.resource.data.get('approvedAmount', 0)))))
+        // Phase 2 PR 2.2: hospital staff no longer write slices; closing a
+        // request closes its slices on the server (closeRequest).
       );
       // A slice exists only once a request is endorsed: it is part of the
       // funding record and is never deleted (2026-11-15 review).
@@ -642,6 +645,21 @@ service cloud.firestore {
                 'expenses', 'shortfallCoverage', 'shortfallCoverageOther',
                 'diagnosis', 'attendingPhysician', 'dateOfAdmission', 'estimatedTotalCost'];
       }
+      // Phase 2 PR 2.2: what hospital staff may still write on a request from
+      // the browser. Endorsing, closing and rejecting run on the server
+      // (endorseRequest / closeRequest), so the money and endorsement fields
+      // are theirs alone. Staff may move a new request to "under review" (the
+      // first document review), and correct the bill and coverage only until
+      // it is endorsed (the page locked them; now the rules do too).
+      function hospitalRequestWriteOk() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return !changed.hasAny(['agencyIds', 'amountCommitted', 'openLetters', 'watchers', 'patientId', 'patientHospitalId']) &&
+          (!changed.hasAny(['status']) ||
+           (resource.data.get('status', '') in ['submitted', 'assessment'] && request.resource.data.status == 'under_review')) &&
+          (!changed.hasAny(['totalBill', 'discountsApplied', 'philhealthCovered', 'otherCovered', 'amountNeeded']) ||
+           resource.data.get('agencyIds', []).size() == 0);
+      }
+
       function staffIntakeWriteOk() {
         let before = resource.data.get('intakeSheet', {});
         let after  = request.resource.data.get('intakeSheet', {});
@@ -654,10 +672,7 @@ service cloud.firestore {
 
       // Logic review: once an agency has committed money the request can only be
       // CLOSED (partial), never REJECTED — the patient may already hold a GL.
-      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk() &&
-                        (request.resource.data.get('status', '') != 'rejected' ||
-                         resource.data.get('status', '') == 'rejected' ||
-                         resource.data.get('amountCommitted', 0) == 0)) ||
+      allow update: if (hospitalAdminWrite() && staffIntakeWriteOk() && hospitalRequestWriteOk()) ||
         // The patient may withdraw until the request is endorsed to an agency
         // (the button shows for submitted / under review / assessment).
         (isPatient() && resource.data.patientId == uid() &&
@@ -952,16 +967,9 @@ service cloud.firestore {
       //     (GL expire, approval, redeem) work for non-admin agency
       //     coordinators.
       allow update: if (isPlatformAdmin() && fundingTypeOk()) ||
-                       (isAdmin() &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots', 'lastResetDate', 'hospitalSlots']) &&
-                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
-                        // Per-hospital slots (2026-11-14): a hospital admin uses
-                        // only ITS hospital's daily share and never changes the
-                        // total the agency admin set.
-                        request.resource.data.get('hospitalSlots', {}).diff(resource.data.get('hospitalSlots', {}))
-                          .affectedKeys().hasOnly([userTenantId()]) &&
-                        request.resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0) ==
-                          resource.data.get('hospitalSlots', {}).get(userTenantId(), {}).get('total', 0)) ||
+                       // Phase 2 PR 2.2: hospital staff no longer write agency slots —
+                       // endorseRequest / closeRequest take and return them (gap I6).
+
                        // Phase 7: agency staff can't change their own partner
                        // hospitals (D4 — the platform admin sets them).
                        // Role review 2026-11-15: enabling/disabling an agency is

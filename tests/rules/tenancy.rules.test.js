@@ -99,7 +99,8 @@ describe('create paths accept tenantId', () => {
   })
 
   it('admin slice, access code (super_admin only), audit entry', async () => {
-    await assertSucceeds(setDoc(doc(as('admin-1'), 'applications', 'a1'), { patientId: 'patient-1', agencyId: 'dswd', status: 'endorsed', tenantId: 'hospital-1' }))
+    // Slices are created only by endorseRequest (Phase 2 PR 2.2).
+    await assertFails(setDoc(doc(as('admin-1'), 'applications', 'a1'), { patientId: 'patient-1', agencyId: 'dswd', status: 'endorsed', tenantId: 'hospital-1' }))
     await assertSucceeds(issueCode(as('super-1'), 'MAPA-2026-00002', { tenantId: 'hospital-1', issued: issuedRecord({ issuedByUid: 'super-1' }) }))
     await assertSucceeds(setDoc(doc(as('admin-1'), 'auditLog', 'l1'), { actorId: 'admin-1', details: 'x', tenantId: 'hospital-1' }))
   })

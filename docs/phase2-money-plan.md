@@ -1,6 +1,6 @@
 # Phase 2 plan — money on the server (T8, then T3)
 
-Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 built on `feat/shared-case-state`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
+Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 built on `feat/endorse-on-server`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
 
 ## What Phase 2 fixes
 
@@ -64,7 +64,7 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 3. **Existing data:** `scripts/backfill-open-letters.mjs` stamps `openLetters` on every request (report-only unless `--write`), so fully funded cases with an open letter count as active from deploy on.
 4. **Tests:** utils tests for every definition (including a fully funded case with an open letter not being finished); functions tests for the I3 scenario reproduced in this session (an expired letter no longer steals `activeRequestId`); a CI check that the bundle is current.
 
-## PR 2.2 — Endorse and close on the server (T3 part 1)
+## PR 2.2 — Endorse and close on the server (T3 part 1) — built
 1. **`endorseRequest({ requestId, agencyIds, notes })`** (Hospital Admin / Staff Admin of the request's hospital). In one transaction it:
    - re-reads the request: open (M14), not already endorsed to those agencies;
    - re-checks the gate with the shared `deriveRequestStage` (documents read from `documents/`, not the request's copy), the verification-call reasons (hospital policy + duplicate flag) and the second-person rule **by uid** for the bill check, the call and the assessment — `completedBy` is now stamped with `completedByUid` only when the assessment completes (M15);

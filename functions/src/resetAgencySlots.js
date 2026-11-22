@@ -28,15 +28,25 @@ async function handleResetAgencySlots({ db, today }) {
   for (const docSnap of snap.docs) {
     const data = docSnap.data()
     const total = data?.slots?.total ?? 0
-    if (total <= 0) { skippedNoTotal++; continue }
-    // The lazy fallback may have already reset for today (if some agency
-    // user logged in at 00:00:05 before the scheduler fired). Skip to
-    // avoid undoing endorsements that happened in those seconds.
-    if (data.lastResetDate === today) { skippedAlreadyDone++; continue }
-
+    // Each partner hospital's own daily share refills too (Phase 2 PR 2.2;
+    // endorseRequest also refills a share lazily on its first use of the
+    // day). A count already reset today is left alone, so endorsements made
+    // in the first seconds after midnight are never undone.
+    const shareUpdates = {}
+    for (const [hid, share] of Object.entries(data?.hospitalSlots ?? {})) {
+      if ((Number(share?.total) || 0) > 0 && share?.lastResetDate !== today) {
+        shareUpdates[`hospitalSlots.${hid}.remaining`] = Number(share.total) || 0
+        shareUpdates[`hospitalSlots.${hid}.lastResetDate`] = today
+      }
+    }
+    const wide = total > 0 && data.lastResetDate !== today
+    if (!wide && !Object.keys(shareUpdates).length) {
+      if (total <= 0) skippedNoTotal++; else skippedAlreadyDone++
+      continue
+    }
     batch.update(docSnap.ref, {
-      'slots.remaining': total,
-      lastResetDate: today,
+      ...(wide ? { 'slots.remaining': total, lastResetDate: today } : {}),
+      ...shareUpdates,
     })
     resetCount++
   }

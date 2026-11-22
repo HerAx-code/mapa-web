@@ -41,15 +41,13 @@ describe('applications.create — Phase 1.4 forged funding slice', () => {
     submittedAt: serverTimestamp(), ...over,
   })
 
-  it('allows CRMC admin to create an endorsement slice', async () => {
+  it('no browser creates a slice, not even hospital staff (Phase 2 PR 2.2: endorseRequest only)', async () => {
     await seedUser('admin-1', 'staff_admin')
-    // Phase 7: the slice's agency must exist and partner with the hospital
-    // (a pre-Phase-7 agency with no list partners with hospital #1).
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), { name: 'Malasakit' })
     })
     const ctx = testEnv.authenticatedContext('admin-1')
-    await assertSucceeds(addDoc(collection(ctx.firestore(), 'applications'), slice()))
+    await assertFails(addDoc(collection(ctx.firestore(), 'applications'), slice()))
   })
 
   it('REGRESSION GUARD: rejects a patient forging an APPROVED slice for themselves', async () => {
@@ -143,11 +141,11 @@ describe('applications.update — Phase 1.6 identity lock', () => {
     }))
   })
 
-  it('still lets an admin change anything (e.g. re-endorse)', async () => {
+  it('hospital staff no longer update slices (Phase 2 PR 2.2)', async () => {
     await seedUser('admin-1', 'staff_admin')
     await seedSlice('app-1')
     const ctx = testEnv.authenticatedContext('admin-1')
-    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+    await assertFails(updateDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
       agencyId: 'pcso', amountRequested: 30000,
     }))
   })

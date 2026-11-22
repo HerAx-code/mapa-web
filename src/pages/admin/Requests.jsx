@@ -4,15 +4,15 @@ import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
-  collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, getDocs, updateDoc,
-  serverTimestamp, runTransaction, arrayUnion, writeBatch, FieldPath,
+  collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, updateDoc,
+  serverTimestamp, arrayUnion, writeBatch,
 } from 'firebase/firestore'
-import { db } from '../../firebase'
+import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
 import { logAudit } from '../../utils/auditLog'
-import { withTenant, currentTenantId, tenantWhere, agencyPartnersWith } from '../../utils/hospitals'
+import { currentTenantId, tenantWhere, agencyPartnersWith } from '../../utils/hospitals'
 import { computeFunding, computeAmountNeeded, agencyCoverage } from '../../utils/requests'
 import { careSettingLabel } from '../../utils/outpatient'
 import { missingAgencyDocs } from '../../utils/agencyDocs'
@@ -33,7 +33,7 @@ import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
 import { getOrCreateConversation } from '../../utils/messages'
 import { tsToDate, phTodayKey } from '../../utils/dates'
-import { effectiveSlots, OPEN_SLICE_STATUSES } from '../../utils/requests'
+import { effectiveSlots } from '../../utils/requests'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import DocViewerModal from '../../components/DocViewerModal'
 import CompareFacesModal from '../../components/admin/CompareFacesModal'
@@ -55,12 +55,6 @@ import toast from 'react-hot-toast'
 const fmtDate = (ts) => {
   const d = tsToDate(ts)
   return d ? d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
-}
-
-const newAppId = () => {
-  const year   = new Date().getFullYear()
-  const random = Math.random().toString(36).slice(2, 5).toUpperCase()
-  return `APP-${year}-${String(Date.now()).slice(-6)}${random}`
 }
 
 // Patient/agency surfaces derive the slice stepper from `app.status` directly
@@ -195,218 +189,23 @@ function EndorseModal({ request, slices, agencies, onClose }) {
   }
   const clear = () => setSelected(new Set())
 
+  // Phase 2 (PR 2.2): endorsing runs on the server (endorseRequest). It
+  // re-reads the request, re-runs this same gate (documents read live, the
+  // verification call, the second-person rule by uid), takes one of today's
+  // slots from each agency's share for this hospital, and writes the slices,
+  // the audit entry and the patient's notification in one go — gaps M8, M14,
+  // M15, I6. The checks shown here are now only feedback.
   const handleEndorse = async () => {
     if (!canSubmit) return
     setSaving(true)
     try {
       const selectedIds = [...selected]
-      const notesValue  = notes.trim() || null
-      // Slice's amountRequested = the full request total. Each agency may
-      // approve up to that, but should coordinate with sibling slices
-      // (visible to them on ApplicationDetail) so the patient isn't
-      // over-funded. Real Philippine practice: agencies do their own case
-      // assessment and approve what their policy allows; over-commitment
-      // is rare at this scale and resolved manually.
-      const sliceAmount = Number(request.amountNeeded) || 0
-
-      // Captured inside the transaction, drained AFTER it commits via
-      // best-effort per-doc updates. See R8 fix below for why this can't
-      // live inside the runTransaction itself.
-      const attachedDocsToStamp = []
-
-      // R34 (§B.26 Item 1.2): watcher subscriptions. Look up every
-      // agency_admin + coordinator of the agencies we're endorsing to,
-      // and seed them into request.watchers via arrayUnion inside the
-      // transaction. Subsequent slice events (approve, reject, patient
-      // proceed) fan notifications out to these watchers so each agency
-      // learns when siblings act -- ServiceNow Public Sector watcher
-      // pattern. Best-effort: a failed lookup just means fewer watchers,
-      // not a failed endorsement.
-      let watcherUids = []
-      try {
-        const staffSnap = await getDocs(query(
-          collection(db, 'users'),
-          where('agencyId', 'in', selectedIds),
-          where('role', 'in', ['agency', 'agency_admin']),
-        ))
-        watcherUids = staffSnap.docs.map(d => d.id)
-      } catch (lookupErr) {
-        console.warn('[endorse] watcher lookup failed:', lookupErr)
-      }
-
-      await runTransaction(db, async (tx) => {
-        const reqRef = doc(db, 'requests', request.id)
-
-        // ── All reads first ──
-        const rSnap = await tx.get(reqRef)
-        if (!rSnap.exists()) throw new Error('GONE')
-        const agencyRefs  = selectedIds.map(id => doc(db, 'agencies', id))
-        const agencySnaps = await Promise.all(agencyRefs.map(ref => tx.get(ref)))
-
-        for (let i = 0; i < selectedIds.length; i++) {
-          const snp = agencySnaps[i]
-          if (!snp.exists()) throw new Error(`GONE:${selectedIds[i]}`)
-          const remaining = effectiveSlots(snp.data(), phTodayKey(), caseTenant).remaining
-          if (remaining <= 0) throw new Error(`NO_SLOTS:${selectedIds[i]}`)
-        }
-
-        const r = rSnap.data()
-
-        // ── Writes ──
-        const reqUpdate = {
-          agencyIds: arrayUnion(...selectedIds),
-          status:    'endorsed',
-          updatedAt: serverTimestamp(),
-        }
-        // R34: only add the field when we actually have UIDs to add.
-        // arrayUnion(...[]) is a no-op but cleaner to skip entirely.
-        if (watcherUids.length > 0) {
-          reqUpdate.watchers = arrayUnion(...watcherUids)
-        }
-        tx.update(reqRef, reqUpdate)
-
-        for (let i = 0; i < selectedIds.length; i++) {
-          const id        = selectedIds[i]
-          const aData     = agencySnaps[i].data()
-          const { remaining, stale: slotsStale, perHospital } = effectiveSlots(aData, phTodayKey(), caseTenant)
-          const sliceRef  = doc(collection(db, 'applications'))
-          tx.set(sliceRef, {
-            // A slice belongs to its request's hospital (multi-hospital Phase 2);
-            // pre-backfill requests fall back to the endorsing admin's.
-            ...withTenant({}, r.tenantId ?? currentTenantId()),
-            appId:             newAppId(),
-            requestId:         request.id,
-            amountRequested:   sliceAmount,
-            amountApproved:    0,
-            patientId:         r.patientId,
-            patientName:       r.patientName ?? '',
-            patientContact:    r.patientContact ?? '',
-            patientAddress:    r.patientAddress ?? '',
-            patientHospitalId: r.patientHospitalId ?? null,
-            agencyId:          id,
-            agencyName:        aData.name,
-            agencyColor:       aData.color ?? 'bg-gray-500',
-            agencyInitials:    aData.initials ?? aData.name?.slice(0, 2).toUpperCase(),
-            assistanceType:    r.assistanceType ?? '',
-            // Phase 2A: agencies see whether this is an outpatient charge.
-            careSetting:       r.careSetting ?? 'inpatient',
-            ...(r.careUnit ? { careUnit: r.careUnit } : {}),
-            // 'endorsed' = awaiting the patient to review the coverage
-            // plan and Proceed. The agency only sees / acts on it once the
-            // patient proceeds (slice -> reviewing).
-            status:            'endorsed',
-            submittedAt:       serverTimestamp(),
-            updatedAt:         serverTimestamp(),
-            attachedDocuments: r.attachedDocuments ?? [],
-            endorsedById:      user.uid,
-            endorsedBy:        user.name ?? ORG.gatewayName,
-            endorsedAt:        serverTimestamp(),
-            // Optional free-text note from the gateway, shown in the agency's
-            // ApproveModal so the operator sees the referral context.
-            gatewayNotes:      notesValue,
-          })
-          // Per-hospital slots: use THIS hospital's daily share; otherwise the
-          // agency-wide default. The first endorsement of the day records the reset.
-          if (perHospital) {
-            tx.update(doc(db, 'agencies', id),
-              new FieldPath('hospitalSlots', caseTenant, 'remaining'), remaining - 1,
-              ...(slotsStale ? [new FieldPath('hospitalSlots', caseTenant, 'lastResetDate'), phTodayKey()] : []))
-          } else {
-            tx.update(doc(db, 'agencies', id), {
-              'slots.remaining': remaining - 1,
-              ...(slotsStale ? { lastResetDate: phTodayKey() } : {}),
-            })
-          }
-        }
-
-        // R8 fix (2026-06-03): the document agencyIds stamps used to live
-        // INSIDE the transaction with tx.update(). Firestore's
-        // transactional update requires every targeted doc to exist, so
-        // a single stale `attachedDocuments` reference (patient deleted
-        // a doc since request submission, document never made it past
-        // upload retry, prod data cleanup, etc.) would fail the ENTIRE
-        // endorsement with "No document to update" -- no slice created,
-        // no slot decrement, nothing. The stamp is best-effort metadata
-        // for the agency read rule; the slice's own agencyId field is
-        // already authoritative for "this agency owns this slice." So
-        // move the stamps to a post-transaction step where we can
-        // tolerate missing docs.
-        attachedDocsToStamp.push(...(r.attachedDocuments ?? [])
-          .map(a => a?.documentId)
-          .filter(Boolean))
-      })
-
-      // Best-effort post-step: stamp agencyIds[] on each attached
-      // document. Per-doc try/catch so a missing reference (Firestore
-      // returns 'not-found') just logs + skips instead of breaking the
-      // run. The endorsement itself has already committed at this point.
-      for (const docId of attachedDocsToStamp) {
-        try {
-          await updateDoc(doc(db, 'documents', docId), {
-            agencyIds: arrayUnion(...selectedIds),
-          })
-        } catch (err) {
-          if (err?.code === 'not-found') {
-            console.warn('[endorse] document missing, skipping agencyIds stamp:', docId)
-          } else {
-            console.error('[endorse] document stamp failed:', docId, err)
-          }
-        }
-      }
-
-      // Phase 7: let the endorsed agencies read this patient's profile (the
-      // rules allow an agency a patient only via users.agencyIds). Best-effort
-      // and after commit, like the document stamps above: a missing profile
-      // must never roll back the endorsement. Re-endorsing re-applies it.
-      if (request.patientId) {
-        try {
-          await updateDoc(doc(db, 'users', request.patientId), { agencyIds: arrayUnion(...selectedIds) })
-        } catch (err) {
-          console.error('[endorse] patient agencyIds stamp failed:', request.patientId, err)
-        }
-      }
-
-      // ── Post-transaction: audit + patient notification + UI ──
-      const names = selectedIds
-        .map(id => eligible.find(x => x.id === id)?.name ?? id)
-        .join(', ')
-
-      logAudit(user, {
-        action: 'request_endorsed', targetType: 'request', targetId: request.id,
-        targetName: request.requestId,
-        details: `Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}: ${names}`
-          + (notesValue ? ` · note: ${notesValue}` : ''),
-        // Timeline plumbing (§B.26): every cross-agency event on this case
-        // is queryable by participating agencies via `where('requestId', ...)`.
-        requestId: request.id,
-        patientId: request.patientId,
-      })
-
-      // Phase 2C: name the documents each agency still needs, so the patient
-      // can upload them from the coverage plan.
-      const toAdd = eligible.filter(a => selected.has(a.id) && a.missingDocs.length > 0)
-        .map(a => `${a.name}: ${a.missingDocs.join(', ')}`)
-      notify(request.patientId, {
-        type:  'app_advanced',
-        title: 'Your request was endorsed',
-        body:  `${ORG.gatewayName} referred your request to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'} (${names}). Each will assess your case. Review your coverage plan and proceed.` +
-               (toAdd.length ? ` Please also upload in your coverage plan: ${toAdd.join('; ')}.` : ''),
-      }).catch(() => {})
-
-      toast.success(`Endorsed to ${selectedCount} agenc${selectedCount === 1 ? 'y' : 'ies'}.`)
+      await httpsCallable(functions, 'endorseRequest')({ requestId: request.id, agencyIds: selectedIds, notes: notes.trim() || null })
+      toast.success(`Endorsed to ${selectedIds.length} agenc${selectedIds.length === 1 ? 'y' : 'ies'}.`)
       onClose()
     } catch (err) {
-      const m = String(err.message)
-      if (m.startsWith('NO_SLOTS:')) {
-        const id = m.split(':')[1]
-        const a  = eligible.find(x => x.id === id)
-        toast.error(`${a?.name ?? 'An agency'} just ran out of slots. Unselect it and retry.`)
-      } else if (m === 'GONE' || m.startsWith('GONE:')) {
-        toast.error('Request or agency no longer exists.')
-      } else {
-        console.error('[endorse-select]', err)
-        toast.error('Failed to endorse. Please try again.')
-      }
+      console.error('[endorse]', err)
+      toast.error(err?.message || 'Failed to endorse. Please try again.')
       setSaving(false)
     }
   }
@@ -1028,65 +827,18 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
     finally { setBusy(false) }
   }
 
+  // Phase 2 (PR 2.2): close / reject on the server (closeRequest): ends every
+  // open slice, refuses "rejected" once money is committed, gives back a slot
+  // taken today, and notifies the agencies and the patient.
   const setRequestStatus = async (status, { reason } = {}) => {
     setBusy(true)
     try {
-      // Logic review: rejecting / closing the request also closes every slice
-      // still open at an agency, so no agency keeps reviewing (or approves
-      // money on) a case the hospital has ended. Committed slices (approved /
-      // GL issued) are left as they are.
-      const openSlices = slices.filter(s => OPEN_SLICE_STATUSES.includes(s.status))
-      const closeNote = status === 'rejected' ? 'The hospital rejected this request.' : 'The hospital closed this request.'
-      await runTransaction(db, async (tx) => {
-        const reqRef = doc(db, 'requests', request.id)
-        const fresh  = await tx.get(reqRef)
-        if (status === 'rejected' && (fresh.data()?.amountCommitted ?? 0) > 0) throw new Error('HAS_COMMITMENTS')
-        tx.update(reqRef, {
-          status,
-          ...(reason ? { closeReason: reason } : {}),
-          updatedAt: serverTimestamp(),
-        })
-        for (const s of openSlices) {
-          tx.update(doc(db, 'applications', s.id), {
-            status: 'closed', closedReason: reason ? `${closeNote} ${reason}` : closeNote,
-            closedAt: serverTimestamp(), updatedAt: serverTimestamp(),
-          })
-        }
-      })
-      // Tell the affected agencies (best-effort).
-      if (openSlices.length) {
-        const agencyIds = [...new Set(openSlices.map(s => s.agencyId).filter(Boolean))]
-        try {
-          const staff = await getDocs(query(collection(db, 'users'),
-            where('agencyId', 'in', agencyIds.slice(0, 10)), where('role', 'in', ['agency', 'agency_admin'])))
-          await Promise.all(staff.docs.map(u => notify(u.id, {
-            type: 'app_advanced', title: 'Endorsement closed',
-            body: `${closeNote} ${request.patientName ?? ''} (${request.requestId ?? ''}) no longer needs your review.`,
-          }).catch(() => {})))
-        } catch (err) { console.warn('[Requests] agency notify after close failed:', err) }
-      }
-      logAudit(user, {
-        action: status === 'rejected' ? 'request_rejected' : 'request_closed',
-        targetType: 'request', targetId: request.id, targetName: request.requestId,
-        details: reason ?? status,
-      })
-      // Item 10 (one code per request): tell the patient a new request needs a
-      // new access code from the hospital.
-      const nextCode = ' To apply again, ask the hospital\'s social-services office for a new access code.'
-      await notify(request.patientId, {
-        type:  'app_advanced',
-        title: status === 'rejected' ? 'Request not approved' : 'Request closed',
-        body:  (reason || (status === 'rejected'
-          ? 'Your assistance request was not approved.'
-          : 'Your assistance request was closed.')) + nextCode,
-      }).catch(() => {})
+      await httpsCallable(functions, 'closeRequest')({ requestId: request.id, outcome: status, reason: reason || null })
       toast.success(status === 'rejected' ? 'Request rejected.' : 'Request closed.')
       onClose()
     } catch (err) {
       console.error(err)
-      toast.error(String(err?.message) === 'HAS_COMMITMENTS'
-        ? 'An agency has already committed funds — close the request instead of rejecting it.'
-        : 'Failed to update request.')
+      toast.error(err?.message || 'Failed to update request.')
     }
     finally { setBusy(false) }
   }
@@ -1636,42 +1388,9 @@ export default function Requests() {
     }
   }
 
-  // Mirror trigger for the daily slot reset. The primary mechanism in the
-  // pilot is the lazy check on agency/Dashboard.jsx, but if a gateway operator
-  // arrives before any agency user does, they'd see yesterday's remaining
-  // counts when endorsing. This fires the same reset from the gateway side so
-  // the critical-path (Requests page) is guaranteed to see today's slots.
-  //
-  // Once the scheduled Cloud Function is deployable (project on Blaze), it
-  // becomes the primary and both lazy paths are belt-and-suspenders.
-  useEffect(() => {
-    const ensureSlotReset = async () => {
-      try {
-        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
-        const snap  = await getDocs(query(collection(db, 'agencies'), where('enabled', '==', true)))
-        const batch = writeBatch(db)
-        let resetCount = 0
-        snap.docs.forEach(d => {
-          const data = d.data()
-          if (data.lastResetDate !== today && (data.slots?.total ?? 0) > 0) {
-            batch.update(d.ref, {
-              'slots.remaining': data.slots.total,
-              lastResetDate:     today,
-            })
-            resetCount++
-          }
-        })
-        if (resetCount > 0) {
-          await batch.commit()
-        }
-      } catch (err) {
-        // Best-effort: if the batch fails (rule denial, network), the gateway will
-        // see slightly stale counts but endorsement still works.
-        console.error('[Requests] daily slot reset check failed:', err)
-      }
-    }
-    ensureSlotReset()
-  }, [])
+  // The daily slot reset is the scheduled resetAgencySlots function plus the
+  // lazy check inside endorseRequest (Phase 2, R1) — no page writes agency
+  // slots any more.
 
   // Group slices by requestId so each row in the list can look up its own
   // children without iterating the whole array per render.

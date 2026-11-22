@@ -32,19 +32,7 @@ const isSelfie = (name) => /selfie|live photo/i.test(name || '')
 // monthly report need them.
 const RESTRICT_REMOVE = ['email', 'contact', 'address', 'barangay', 'photoURL', 'managedBy']
 
-const fail = (code, msg) => { throw new HttpsError(code, msg) }
-
-async function loadUser(db, uid) {
-  const s = await db.doc(`users/${uid}`).get()
-  return s.exists ? { uid, ...s.data() } : null
-}
-
-async function loadCaller(db, callerUid) {
-  if (!callerUid) fail('unauthenticated', 'Sign in required.')
-  const caller = await loadUser(db, callerUid)
-  if (!caller || caller.active === false) fail('permission-denied', 'Your account cannot do this.')
-  return caller
-}
+const { fail, loadUser, loadCaller } = require('./serverWrites')
 
 function targetUidOf(data) {
   const uid = data?.uid
@@ -52,22 +40,7 @@ function targetUidOf(data) {
   return uid
 }
 
-async function writeAudit(db, caller, entry) {
-  await db.collection('auditLog').add({
-    actorId: caller.uid, actorName: caller.name ?? '', actorRole: caller.role ?? '',
-    actorAgencyId: caller.agencyId ?? null,
-    targetType: 'account', targetName: '', details: '', requestId: null, patientId: null,
-    ...(caller.tenantId ? { tenantId: caller.tenantId } : {}),
-    ...entry,
-    createdAt: FieldValue.serverTimestamp(),
-  })
-}
-
-async function notifyServer(db, uid, { type, title, body }) {
-  await db.collection('notifications').doc(uid).collection('items').add({
-    type, title, body, read: false, fromUid: null, createdAt: FieldValue.serverTimestamp(),
-  })
-}
+const { writeAudit, notifyServer } = require('./serverWrites')
 
 async function deleteQuery(db, query) {
   const snap = await query.get()
