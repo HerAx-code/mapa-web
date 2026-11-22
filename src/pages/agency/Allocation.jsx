@@ -449,11 +449,11 @@ export default function AgencyAllocation() {
                   </p>
                 </div>
               )}
-              {/* Per-applicant cap — read-only summary line. Always shown so
+              {/* Maximum per approval — read-only summary line. Always shown so
                   agency admins see the current policy at a glance, even
                   when it's "no cap". */}
               <div className="mt-3 pt-3 border-t border-gray-50">
-                <p className="text-xs text-gray-500 mb-0.5">Per-applicant cap</p>
+                <p className="text-xs text-gray-500 mb-0.5">Maximum per approval</p>
                 {agency.maxPerApplicant != null && agency.maxPerApplicant > 0 ? (
                   <p className="text-sm font-medium text-gray-700">
                     ₱{Number(agency.maxPerApplicant).toLocaleString()} maximum per case
@@ -512,7 +512,7 @@ export default function AgencyAllocation() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Maximum per Applicant (₱) <span className="text-gray-500 font-normal">— optional</span>
+                  Maximum per Approval (₱) <span className="text-gray-500 font-normal">— optional</span>
                 </label>
                 <input type="number" min={0} step={1} className="input"
                   placeholder="e.g. 25000 (PCSO ceiling). Leave blank for no cap."
