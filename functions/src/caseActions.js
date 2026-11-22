@@ -206,21 +206,31 @@ async function handleEndorseRequest({ callerUid, data, db, now = () => Date.now(
 
 // ── closeRequest ───────────────────────────────────────────────────────────
 
-async function handleCloseRequest({ callerUid, data, db, now = () => Date.now(), serverTimestamp = () => FieldValue.serverTimestamp() }) {
-  const caller = await loadGatewayCaller(db, callerUid)
-  const outcome = data?.outcome
-  if (!['closed', 'rejected'].includes(outcome)) fail('invalid-argument', 'Choose close or reject.')
-  const reason = typeof data?.reason === 'string' && data.reason.trim() ? data.reason.trim().slice(0, 500) : null
-  const { ref: reqRef } = await loadCase(db, caller, data?.requestId)
-  const today = manilaDayKey(now())
-  const closeNote = outcome === 'rejected' ? 'The hospital rejected this request.' : 'The hospital closed this request.'
+// The one closing path (Phase 4 PR 4.1), used by a person (closeRequest) and
+// by the case timers (P4-A). `actor` is the staff member, or
+// systemActor(timer, tenantId); `guard(request, slices)` re-checks inside the
+// transaction and returns false to leave the case alone (someone acted first).
+// Letters already issued are not touched (D4): only OPEN slices close.
+const systemActor = (timer, tenantId) => ({ uid: 'system', name: 'MAPA (automatic)', role: 'system', system: timer, tenantId })
 
+async function closeCaseCore({
+  db, reqRef, outcome, reason = null, actor, closedAs = null, guard = null,
+  closeNote = outcome === 'rejected' ? 'The hospital rejected this request.' : 'The hospital closed this request.',
+  patientNote = null, auditAction = null,
+  now = () => Date.now(), serverTimestamp = () => FieldValue.serverTimestamp(),
+}) {
+  const today = manilaDayKey(now())
   const out = await db.runTransaction(async (tx) => {
     const fresh = await tx.get(reqRef)
+    if (!fresh.exists) fail('not-found', 'That request no longer exists.')
     const r = fresh.data()
-    if (isRequestClosed(r.status)) fail('failed-precondition', 'This request is already closed.')
+    if (isRequestClosed(r.status)) {
+      if (guard) return null
+      fail('failed-precondition', 'This request is already closed.')
+    }
     const sliceDocs = (await tx.get(db.collection('applications').where('requestId', '==', reqRef.id))).docs
     const slices = sliceDocs.map((d) => d.data())
+    if (guard && !guard(r, slices)) return null
     if (outcome === 'rejected' && computeFunding(r.amountNeeded, slices).committed > 0) {
       fail('failed-precondition', 'An agency has already committed funds — close the request instead of rejecting it.')
     }
@@ -236,7 +246,11 @@ async function handleCloseRequest({ callerUid, data, db, now = () => Date.now(),
       if (id && !agencySnaps[id]) agencySnaps[id] = await tx.get(db.doc(`agencies/${id}`))
     }
 
-    tx.update(reqRef, { status: outcome, ...(reason ? { closeReason: reason } : {}), updatedAt: serverTimestamp() })
+    tx.update(reqRef, {
+      status: outcome, ...(reason ? { closeReason: reason } : {}), ...(closedAs ? { closedAs } : {}),
+      ...(actor.system ? { closedBy: `system:${actor.system}` } : {}),
+      updatedAt: serverTimestamp(),
+    })
     for (const d of open) {
       tx.update(d.ref, {
         status: 'closed', closedReason: reason ? `${closeNote} ${reason}` : closeNote,
@@ -259,28 +273,40 @@ async function handleCloseRequest({ callerUid, data, db, now = () => Date.now(),
     }
     return { request: r, openAgencyIds: [...new Set(open.map((d) => d.data().agencyId).filter(Boolean))] }
   })
+  if (!out) return null
 
+  const fromUid = actor.system ? null : actor.uid
   if (out.openAgencyIds.length) {
     const staff = await db.collection('users').where('agencyId', 'in', out.openAgencyIds.slice(0, 30)).get()
     for (const u of staff.docs.filter((d) => ['agency', 'agency_admin'].includes(d.data().role))) {
       await notifyServer(db, u.id, {
         type: 'app_advanced', title: 'Endorsement closed',
         body: `${closeNote} ${out.request.patientName ?? ''} (${out.request.requestId ?? ''}) no longer needs your review.`,
-      }, caller.uid)
+      }, fromUid)
     }
   }
-  await writeAudit(db, caller, {
-    action: outcome === 'rejected' ? 'request_rejected' : 'request_closed', targetType: 'request',
+  await writeAudit(db, actor, {
+    action: auditAction ?? (outcome === 'rejected' ? 'request_rejected' : 'request_closed'), targetType: 'request',
     targetId: reqRef.id, targetName: out.request.requestId ?? '', details: reason ?? outcome,
     requestId: reqRef.id, patientId: out.request.patientId ?? null, tenantId: tenantOf(out.request),
   })
   await notifyServer(db, out.request.patientId, {
     type: 'app_advanced',
     title: outcome === 'rejected' ? 'Request not approved' : 'Request closed',
-    body: (reason || (outcome === 'rejected' ? 'Your assistance request was not approved.' : 'Your assistance request was closed.'))
+    body: (patientNote || reason || (outcome === 'rejected' ? 'Your assistance request was not approved.' : 'Your assistance request was closed.'))
       + " To apply again, ask the hospital's social-services office for a new access code.",
-  }, caller.uid)
-  return { closedSlices: out.openAgencyIds.length }
+  }, fromUid)
+  return { closedSlices: out.openAgencyIds.length, request: out.request }
+}
+
+async function handleCloseRequest({ callerUid, data, db, now = () => Date.now(), serverTimestamp = () => FieldValue.serverTimestamp() }) {
+  const caller = await loadGatewayCaller(db, callerUid)
+  const outcome = data?.outcome
+  if (!['closed', 'rejected'].includes(outcome)) fail('invalid-argument', 'Choose close or reject.')
+  const reason = typeof data?.reason === 'string' && data.reason.trim() ? data.reason.trim().slice(0, 500) : null
+  const { ref: reqRef } = await loadCase(db, caller, data?.requestId)
+  const out = await closeCaseCore({ db, reqRef, outcome, reason, actor: caller, now, serverTimestamp })
+  return { closedSlices: out.closedSlices }
 }
 
 // ── Callables ──────────────────────────────────────────────────────────────
@@ -297,6 +323,8 @@ const wrap = (name, handler) => onCall({ region: 'asia-southeast1', timeoutSecon
 
 exports.handleEndorseRequest = handleEndorseRequest
 exports.handleCloseRequest = handleCloseRequest
+exports.closeCaseCore = closeCaseCore
+exports.systemActor = systemActor
 exports.endorseRequest = wrap('endorseRequest', handleEndorseRequest)
 exports.closeRequest = wrap('closeRequest', handleCloseRequest)
 exports._peso = peso

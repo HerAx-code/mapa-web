@@ -10,10 +10,12 @@
 // denormalized count fields.
 
 import { deriveRequestStage, TERMINAL_REQUEST_STATUSES } from './requestStage'
+import { caseTimerDays } from '../shared/caseTimers'
 
-// verify → assess → endorse (the pre-endorsement stages), then endorsed
-// (awaiting agencies) and completed (terminal).
-export const QUEUE_BUCKETS = ['verify', 'assess', 'endorse', 'endorsed', 'completed']
+// verify → assess → endorse (the pre-endorsement stages), then decide
+// (endorsed, but nothing waiting at any agency: "Endorse more or close",
+// Phase 4 PR 4.1, P4-A), endorsed (awaiting agencies) and completed (terminal).
+export const QUEUE_BUCKETS = ['verify', 'assess', 'endorse', 'decide', 'endorsed', 'completed']
 
 // Post-endorsement, pre-terminal statuses — the request is out of the gateway's hands
 // and waiting on agencies. ('endorsing' is the brief transient at endorse time.)
@@ -23,6 +25,7 @@ export const BUCKET_LABELS = {
   verify:    'Needs verification',
   assess:    'Needs assessment',
   endorse:   'Ready to endorse',
+  decide:    'Endorse more or close',
   endorsed:  'Endorsed',
   completed: 'Completed',
   all:       'All',
@@ -38,10 +41,25 @@ export function requestDocs(request) {
   return (request?.attachedDocuments ?? []).map(a => ({ status: a?.status ?? 'pending' }))
 }
 
+// Phase 4 PR 4.1 (P4-A): endorsed, and nothing waiting at any agency — the
+// hospital endorses to another agency or closes it, else the case timers close
+// it after the hospital's limit (hospitalSettings.nothingPendingDays, default 7).
+// `nothingPendingSince` is stamped on the server (syncRequestFinancials).
+export const isEndorseMoreOrClose = (request) =>
+  !!request?.nothingPendingSince && !TERMINAL_REQUEST_STATUSES.includes(request?.status)
+export function autoCloseInDays(request, settings = {}, now = Date.now()) {
+  const since = request?.nothingPendingSince
+  const ms = since?.toMillis ? since.toMillis() : since?.seconds != null ? since.seconds * 1000 : null
+  if (!isEndorseMoreOrClose(request) || ms == null) return null
+  const days = caseTimerDays(settings, 'nothingPendingDays')
+  return Math.max(0, Math.ceil((ms + days * 86400000 - now) / 86400000))
+}
+
 // Which queue bucket a request belongs to.
 export function bucketOf(request) {
   const status = request?.status
   if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'completed'
+  if (isEndorseMoreOrClose(request)) return 'decide'
   if (ENDORSED_STATUSES.includes(status)) return 'endorsed'
   // Pre-endorsement: the stage model's current stage IS the bucket
   // (verify / assess / endorse).
@@ -86,6 +104,8 @@ export const COARSE_LABELS = {
 export function coarseBucketOf(request) {
   const status = request?.status
   if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'resolved'
+  // Endorsed, nothing waiting at any agency: the hospital's move (P4-A).
+  if (isEndorseMoreOrClose(request)) return 'needs_action'
   if (ENDORSED_STATUSES.includes(status)) return 'awaiting_agency'
   // Pre-endorsement: a freshly-submitted request, or one with a blocking
   // (rejected) document, needs the gateway to act; anything else is under active review.

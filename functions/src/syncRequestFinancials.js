@@ -67,10 +67,21 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const {
   deriveRequestFinancials, deriveRequestStatus,
   COMMITTED_SLICE_STATUSES, OUTSTANDING_SLICE_STATUSES,
-  DERIVED_REQUEST_STATUSES: DERIVED_STATUSES,
+  DERIVED_REQUEST_STATUSES: DERIVED_STATUSES, REQUEST_CLOSED_STATUSES,
 } = require('./generated/shared.cjs')
 
-async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {
+// Phase 4 PR 4.1 (P4-A): an endorsed case with nothing waiting at any agency
+// (every slice decided, not fully funded, still open) goes to the hospital's
+// "Endorse more or close" queue; `nothingPendingSince` is when that started,
+// and the case timers count from it. Cleared when something is pending again.
+function nothingPending(req, slices, next) {
+  return slices.length > 0 &&
+    !REQUEST_CLOSED_STATUSES.includes(req.status) &&
+    next.status !== 'fully_funded' &&
+    !slices.some((s) => OUTSTANDING_SLICE_STATUSES.includes(s.status))
+}
+
+async function handleSyncRequestFinancials({ db, requestId, serverTimestamp, deleteField = () => FieldValue.delete() }) {
   // Slices created before the co-funding redesign have no requestId.
   if (!requestId) return { skipped: 'no-request-id' }
 
@@ -103,6 +114,9 @@ async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {
   if (DERIVED_STATUSES.includes(req.status) && req.status !== next.status) {
     update.status = next.status
   }
+  const idle = nothingPending(req, slices, next)
+  if (idle && !req.nothingPendingSince) update.nothingPendingSince = serverTimestamp()
+  if (!idle && req.nothingPendingSince) update.nothingPendingSince = deleteField()
 
   // No-op writes still bill and still churn the updatedAt stamp, so skip.
   if (Object.keys(update).length === 0) {
@@ -116,6 +130,7 @@ async function handleSyncRequestFinancials({ db, requestId, serverTimestamp }) {
 }
 
 exports.handleSyncRequestFinancials = handleSyncRequestFinancials
+exports.nothingPending = nothingPending
 // Exported for tests + parity checks against src/utils/requests.js. The status
 // lists are exported too so the parity test can assert them directly, not just
 // transitively through fixtures (a list drift with no matching fixture would

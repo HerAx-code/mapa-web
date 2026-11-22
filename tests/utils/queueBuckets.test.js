@@ -105,7 +105,7 @@ describe('bucketCounts', () => {
     for (const key of QUEUE_BUCKETS) expect(counts).toHaveProperty(key)
   })
   it('empty list → all zeros', () => {
-    expect(bucketCounts([])).toEqual({ all: 0, verify: 0, assess: 0, endorse: 0, endorsed: 0, completed: 0 })
+    expect(bucketCounts([])).toEqual({ all: 0, verify: 0, assess: 0, endorse: 0, decide: 0, endorsed: 0, completed: 0 })
   })
 })
 
@@ -143,5 +143,27 @@ describe('coarse tabs (MP top-level categorization)', () => {
   it('every coarse tab has a label and All requests is last', () => {
     for (const key of COARSE_TABS) expect(COARSE_LABELS[key]).toBeTruthy()
     expect(COARSE_TABS[COARSE_TABS.length - 1]).toBe('all')
+  })
+})
+
+// Phase 4 PR 4.1 (P4-A): endorsed, nothing waiting at any agency.
+import { isEndorseMoreOrClose, autoCloseInDays, coarseBucketOf } from '../../src/utils/queueBuckets.js'
+describe('Endorse more or close', () => {
+  const DAY = 86400000
+  const now = Date.UTC(2026, 10, 22)
+  const since = (daysAgo) => ({ toMillis: () => now - daysAgo * DAY })
+  it('buckets an endorsed case with nothing pending as the hospital\'s move', () => {
+    const r = { status: 'partially_funded', nothingPendingSince: since(2) }
+    expect(isEndorseMoreOrClose(r)).toBe(true)
+    expect(bucketOf(r)).toBe('decide')
+    expect(coarseBucketOf(r)).toBe('needs_action')
+    expect(isEndorseMoreOrClose({ status: 'closed', nothingPendingSince: since(2) })).toBe(false)
+    expect(coarseBucketOf({ status: 'partially_funded' })).toBe('awaiting_agency')
+  })
+  it('counts the days left from the hospital\'s limit (default 7)', () => {
+    expect(autoCloseInDays({ status: 'under_review', nothingPendingSince: since(2) }, {}, now)).toBe(5)
+    expect(autoCloseInDays({ status: 'under_review', nothingPendingSince: since(2) }, { nothingPendingDays: 3 }, now)).toBe(1)
+    expect(autoCloseInDays({ status: 'under_review', nothingPendingSince: since(9) }, {}, now)).toBe(0)
+    expect(autoCloseInDays({ status: 'endorsed' }, {}, now)).toBeNull()
   })
 })

@@ -142,3 +142,22 @@ describe('billKeys', () => {
     await assertFails(deleteDoc(doc(as('adminA'), 'billKeys', `${A}__SOA1`)))
   })
 })
+
+// Phase 4 PR 4.1 (P4-C): the case timers' limits, whole days within bounds.
+describe('hospitalSettings (case time limits)', () => {
+  const t = (extra = {}) => ({ tenantId: A, sliceProceedDays: 3, nothingPendingDays: 7, updatedBy: 'S', ...extra })
+  it('the Hospital Admin sets them within the bounds', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), t()))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), t({ sliceProceedDays: 1, nothingPendingDays: 30 })))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), t({ sliceProceedDays: 14, nothingPendingDays: 2 })))
+  })
+  it('out of bounds, fractional or text values are refused, and staff admins cannot set them', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
+    for (const bad of [{ sliceProceedDays: 0 }, { sliceProceedDays: 15 }, { nothingPendingDays: 1 }, { nothingPendingDays: 31 },
+      { sliceProceedDays: 2.5 }, { nothingPendingDays: '7' }]) {
+      await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), t(bad)))
+    }
+    await assertFails(setDoc(doc(as('adminA'), 'hospitalSettings', A), t()))
+  })
+})

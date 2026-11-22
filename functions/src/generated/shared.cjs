@@ -21,6 +21,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/shared/server.js
 var server_exports = {};
 __export(server_exports, {
+  CASE_TIMERS: () => CASE_TIMERS,
   COMMITTED_SLICE_STATUSES: () => COMMITTED_SLICE_STATUSES,
   DERIVED_REQUEST_STATUSES: () => DERIVED_REQUEST_STATUSES,
   GL_EXPIRING_SOON_DAYS: () => GL_EXPIRING_SOON_DAYS,
@@ -36,6 +37,7 @@ __export(server_exports, {
   approvalCooldownBlock: () => approvalCooldownBlock,
   assistanceGivenOf: () => assistanceGivenOf,
   callRecorded: () => callRecorded,
+  caseTimerDays: () => caseTimerDays,
   committedOf: () => committedOf,
   computeAmountNeeded: () => computeAmountNeeded,
   computeFunding: () => computeFunding,
@@ -670,8 +672,22 @@ function approvalCooldownBlock(mark, requestId, now = Date.now(), limit = {}, ty
     requestId: prev.requestId ?? null
   };
 }
+
+// src/shared/caseTimers.js
+var CASE_TIMERS = {
+  // A slice the patient never accepts ("Proceed") closes after this.
+  sliceProceedDays: { default: 3, min: 1, max: 14 },
+  // An endorsed case with nothing waiting at any agency closes after this.
+  nothingPendingDays: { default: 7, min: 2, max: 30 }
+};
+function caseTimerDays(settings, key) {
+  const t = CASE_TIMERS[key];
+  const v = Number(settings?.[key]);
+  return Number.isInteger(v) && v >= t.min && v <= t.max ? v : t.default;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  CASE_TIMERS,
   COMMITTED_SLICE_STATUSES,
   DERIVED_REQUEST_STATUSES,
   GL_EXPIRING_SOON_DAYS,
@@ -687,6 +703,7 @@ function approvalCooldownBlock(mark, requestId, now = Date.now(), limit = {}, ty
   approvalCooldownBlock,
   assistanceGivenOf,
   callRecorded,
+  caseTimerDays,
   committedOf,
   computeAmountNeeded,
   computeFunding,

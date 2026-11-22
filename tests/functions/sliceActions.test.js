@@ -226,3 +226,39 @@ describe('settleLetter', () => {
     expect(db.store.get('applications/s1').glStatus).toBe('redeemed')
   })
 })
+
+// Phase 4 PR 4.1: an open slice ended by the system.
+describe('closeSliceCore', () => {
+  let closeSliceCore
+  beforeAll(() => { ;({ closeSliceCore } = require('../../functions/src/sliceActions')) })
+  const system = { uid: 'system', name: 'MAPA (automatic)', role: 'system', system: 'slice_not_accepted' }
+  const call = (db, from = ['endorsed']) => closeSliceCore({
+    db, sliceRef: db.doc('applications/s1'), from, reason: 'Not accepted by the patient within 3 days.',
+    closedAs: 'not_accepted', actor: system, auditAction: 'slice_not_accepted',
+    patient: { type: 'app_advanced', title: 'Endorsement closed', body: 'x' }, overrides: deps,
+  })
+
+  it('closes an endorsed slice, recomputes the request, audits as the system, and sends as the server', async () => {
+    const db = memDb(base({ 'applications/s1': slice({ status: 'endorsed' }) }))
+    expect(await call(db)).toBeTruthy()
+    expect(db.store.get('applications/s1')).toMatchObject({ status: 'closed', closedAs: 'not_accepted', closedBy: 'system:slice_not_accepted' })
+    expect(db.store.get('requests/r1')).toMatchObject({ amountCommitted: 0 })
+    expect(audits(db)[0]).toMatchObject({ action: 'slice_not_accepted', actorId: 'system' })
+    expect(notesFor(db, 'pat')[0].fromUid).toBeNull()
+  })
+
+  it('leaves a slice that moved on meanwhile (the patient proceeded a minute before)', async () => {
+    const db = memDb(base({ 'applications/s1': slice({ status: 'reviewing' }) }))
+    expect(await call(db)).toBeNull()
+    expect(db.store.get('applications/s1').status).toBe('reviewing')
+  })
+
+  it('gives the slot back only on the day it was endorsed', async () => {
+    const today = memDb(base({ 'applications/s1': slice({ status: 'endorsed', endorsedAt: ts(NOW - 3600e3) }) }))
+    await call(today)
+    expect(today.store.get('agencies/dswd')['slots.remaining']).toBe(3)
+    const older = memDb(base({ 'applications/s1': slice({ status: 'endorsed', endorsedAt: ts(NOW - 3 * DAY) }) }))
+    await call(older)
+    expect(Object.keys(older.store.get('agencies/dswd'))).not.toContain('slots.remaining')
+  })
+})

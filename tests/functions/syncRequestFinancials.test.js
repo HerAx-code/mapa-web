@@ -197,7 +197,8 @@ describe('syncRequestFinancials — quiet degradation', () => {
 
   it('skips the write entirely when already in sync', async () => {
     const { result, updates } = await run(
-      { amountNeeded: 25000, amountCommitted: 10000, status: 'partially_funded' },
+      // Nothing pending at any agency, already stamped (Phase 4 PR 4.1).
+      { amountNeeded: 25000, amountCommitted: 10000, status: 'partially_funded', nothingPendingSince: 'EARLIER' },
       [{ status: 'approved', amountApproved: 10000 }],
     )
     expect(result.skipped).toBe('in-sync')
@@ -249,5 +250,35 @@ describe('parity with src/utils/requests.js', () => {
     const web = await import('../../src/utils/requests.js')
     expect(fnCommittedStatuses).toEqual(web.COMMITTED_SLICE_STATUSES)
     expect(fnOutstandingStatuses).toEqual(web.OUTSTANDING_SLICE_STATUSES)
+  })
+})
+
+// Phase 4 PR 4.1 (P4-A): the case timers count from nothingPendingSince.
+describe('nothingPendingSince', () => {
+  it('is stamped when an endorsed case has nothing waiting at any agency', async () => {
+    const partial = await run({ amountNeeded: 25000, amountCommitted: 10000, status: 'partially_funded' },
+      [{ status: 'approved', amountApproved: 10000 }, { status: 'rejected', amountRequested: 25000 }])
+    expect(partial.updates[0].nothingPendingSince).toBe('MOCK_TS')
+    const declined = await run({ amountNeeded: 25000, amountCommitted: 0, status: 'endorsed' },
+      [{ status: 'rejected', amountRequested: 25000 }])
+    expect(declined.updates[0]).toMatchObject({ status: 'under_review', nothingPendingSince: 'MOCK_TS' })
+  })
+
+  it('is not stamped while something is pending, when fully funded, or before any endorsement', async () => {
+    for (const [req, slices] of [
+      [{ amountNeeded: 25000, amountCommitted: 0, status: 'endorsed' }, [{ status: 'reviewing', amountRequested: 25000 }]],
+      [{ amountNeeded: 10000, amountCommitted: 10000, status: 'fully_funded' }, [{ status: 'approved', amountApproved: 10000 }]],
+      [{ amountNeeded: 10000, amountCommitted: 0, status: 'submitted' }, []],
+    ]) {
+      const { updates } = await run(req, slices)
+      expect(updates.every((u) => !('nothingPendingSince' in u))).toBe(true)
+    }
+  })
+
+  it('is cleared when something is pending again', async () => {
+    const { updates } = await run({ amountNeeded: 25000, amountCommitted: 0, status: 'under_review', nothingPendingSince: 'EARLIER' },
+      [{ status: 'rejected', amountRequested: 25000 }, { status: 'endorsed', amountRequested: 25000 }])
+    expect(Object.keys(updates[0])).toContain('nothingPendingSince')
+    expect(updates[0].nothingPendingSince).not.toBe('MOCK_TS')
   })
 })
