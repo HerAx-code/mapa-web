@@ -271,3 +271,26 @@ describe('networkStats (Phase 9) — the platform admin reads counts, nobody wri
     await assertFails(setDoc(ref('plat', 'networkStats/current'), { totals: {} }))
   })
 })
+
+// Phase 5 PR 5.1 (N6): an onboarding hospital opens patient sign-ups only at
+// go-live (the write that sets onboarding.stage 'live'); the training hospital
+// is open for practice.
+describe('onboarding hospitals open only at go-live', () => {
+  const put = (id, data) => testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'hospitals', id), data))
+  it('pause/resume cannot open a hospital still in onboarding', async () => {
+    await put('newh', { gatewayName: 'MSS N', enabled: false, onboarding: { stage: 'setup' } })
+    await assertFails(updateDoc(ref('plat', 'hospitals/newh'), { enabled: true }))
+  })
+  it('the go-live write opens it, and a live or training hospital can be paused and resumed', async () => {
+    await put('newh', { gatewayName: 'MSS N', enabled: false, onboarding: { stage: 'setup' } })
+    await assertSucceeds(updateDoc(ref('plat', 'hospitals/newh'), { enabled: true, onboarding: { stage: 'live' } }))
+    await put('liveh', { gatewayName: 'MSS L', enabled: false, onboarding: { stage: 'live' } })
+    await assertSucceeds(updateDoc(ref('plat', 'hospitals/liveh'), { enabled: true }))
+    await put('train', { gatewayName: 'MSS T', enabled: false, onboarding: { stage: 'setup', training: true } })
+    await assertSucceeds(updateDoc(ref('plat', 'hospitals/train'), { enabled: true }))
+  })
+  it('closing an onboarding hospital is always allowed', async () => {
+    await put('openh', { gatewayName: 'MSS O', enabled: true, onboarding: { stage: 'setup' } })
+    await assertSucceeds(updateDoc(ref('plat', 'hospitals/openh'), { enabled: false }))
+  })
+})

@@ -17,12 +17,14 @@ const serverTimestamp = () => 'TS'
 
 function makeDb(coords = [{ id: 'c1' }, { id: 'c2' }]) {
   const writes = []
+  const audits = []
   const snap = { empty: coords.length === 0, size: coords.length, docs: coords }
   const chain = { where: () => chain, get: async () => snap }
   return {
-    writes,
+    writes, audits,
     collection(name) {
       if (name === 'users') return chain
+      if (name === 'auditLog') return { add: async (d) => { audits.push(d) } }
       if (name === 'notifications') return { doc: (id) => ({ collection: () => ({ add: async (d) => { writes.push({ id, d }) } }) }) }
       return {}
     },
@@ -48,5 +50,21 @@ describe('handleSliceProceeded', () => {
     const db = makeDb()
     const r = await handleSliceProceeded({ db, before: { status: 'endorsed' }, after: { status: 'reviewing' }, serverTimestamp })
     expect(r.skipped).toBe('no-agency')
+  })
+})
+
+// Phase 5 PR 5.1 (L1): the case timeline's entry is written on the server.
+describe('the Proceed audit entry', () => {
+  it('is written for the patient on endorsed → reviewing, even with no coordinators', async () => {
+    const db = makeDb([])
+    await handleSliceProceeded({ db, appId: 's1', before: { status: 'endorsed' },
+      after: { status: 'reviewing', agencyId: 'doh', agencyName: 'DOH', patientId: 'pat', patientName: 'Juan', requestId: 'r1', tenantId: 'h1' }, serverTimestamp })
+    expect(db.audits).toHaveLength(1)
+    expect(db.audits[0]).toMatchObject({ action: 'patient_proceeded', actorId: 'pat', actorRole: 'patient', targetId: 's1', requestId: 'r1', patientId: 'pat', tenantId: 'h1' })
+  })
+  it('is not written for other transitions', async () => {
+    const db = makeDb()
+    await handleSliceProceeded({ db, before: { status: 'reviewing' }, after: { status: 'approved' }, serverTimestamp })
+    expect(db.audits).toHaveLength(0)
   })
 })
