@@ -248,7 +248,7 @@ describe('reference data — platform_admin only', () => {
 
 describe('audit trail', () => {
   it('platform_admin logs its own actions untagged (network-level)', async () => {
-    await assertSucceeds(setDoc(ref('plat', 'auditLog/p1'), { actorId: 'plat', actorRole: 'platform_admin', action: 'hospital_created', details: 'x' }))
+    await assertSucceeds(setDoc(ref('plat', 'auditLog/p1'), { actorId: 'plat', actorName: 'Network Ops', actorRole: 'platform_admin', action: 'hospital_created', details: 'x' }))
     await assertFails(setDoc(ref('plat', 'auditLog/p2'), { actorId: 'plat', details: 'x', tenantId: B }))
   })
 })

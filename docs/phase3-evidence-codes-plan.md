@@ -1,6 +1,6 @@
 # Phase 3 plan — evidence and codes (T4, T6)
 
-Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 built on `feat/case-conversations`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
+Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 merged (#421); PR 3.4 built (#422, `feat/codes-on-server`); PR 3.5 built on `feat/audit-on-server`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
 
 ## What Phase 3 fixes
 
@@ -153,6 +153,11 @@ Why: the rules can't normalize names the way `codeProof()` does (accents, spaces
    - Case ids must be in the writer's scope.
 2. **Pages:** drop the browser `logAudit` calls that duplicate a function's own entry (any left after Phases 1–2). Keep the rest.
 3. **Tests:** rules tests reproducing the M11 forgery (a patient writing "approved" as "Hospital Admin") now refused, and each kept staff entry still allowed.
+4. **As built** (`feat/audit-on-server`):
+   - **Rules:** the `auditLog` create rule now requires `auditActorOk()` (actorId / actorName / actorRole all equal the writer's own profile — new `userName()` helper), refuses patients (`!isPatient()`), refuses `isServerOnlyAuditAction()` (the 20 actions the functions write: approvals, letters, endorse/close, accounts, amendments, flags, MFA, conversations), and scopes the case with `auditRequestInScope()` (the request is the writer's own hospital's, or an agency's slice) + `auditPatientInScope()` (the patient is in the writer's hospital `tenantIds`, or endorsed to the writer's agency). Details stay string ≤ 2000; entries immutable.
+   - **Codes excluded, for now:** `hospitalid_*` actions are browser-written until PR 3.4 lands; they join `isServerOnlyAuditAction` when this branch rebases onto a 3.4-merged `main`.
+   - **Pages:** no change — a check confirmed no browser `logAudit` call duplicates a function's entry or uses a server-only action (the AuditLog viewer's filter lists are not writes).
+   - **Tests:** `tests/rules/auditLog.rules.test.js` gains the M11 forgery lockdown (patient barred, role/name forgery refused, server-only actions refused, case-scope enforced, kept staff entry still allowed); `tenancy` / `tenantBoundary` / `platformAdmin` audit-create tests updated to carry the writer's own actor fields. Rules suite green (37 files / 550 tests).
 
 ## Deploy order (each PR)
 1. Regenerate the bundle; deploy the functions.
