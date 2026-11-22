@@ -14,3 +14,7 @@ export { missingAgencyDocs } from '../utils/agencyDocs.js'
 // Agency decisions (Phase 2 PR 2.3): the repeat limit per agency, re-checked
 // by the decideSlice function.
 export { approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../utils/approvalCooldown.js'
+
+// Assessment amendments (Phase 3 PR 3.2): the completeness check the
+// amendAssessment function re-runs, and which fields are the patient's.
+export { isIntakeComplete, PATIENT_FACT_KEYS } from '../utils/intakeSheet.js'

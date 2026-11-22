@@ -4,7 +4,7 @@
 // upload the signed scan. A correction voids the certificate and a new number
 // is issued; scans are never overwritten. See src/utils/eligibilityCert.js.
 import { useEffect, useMemo, useState } from 'react'
-import { doc, getDoc, onSnapshot, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, runTransaction, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { MdVerifiedUser, MdPrint, MdUpload, MdOpenInNew, MdBlock, MdWarningAmber } from 'react-icons/md'
 import toast from 'react-hot-toast'
 import { db } from '../../../firebase'
@@ -54,6 +54,11 @@ export default function EligibilityCertCard({ request, user }) {
       const year = manilaYear()
       const counterRef = doc(db, 'eligibilityCounters', counterId(request.tenantId, year))
       const out = await runTransaction(db, async (tx) => {
+        // Phase 3 PR 3.2 (gap N7): re-read the request inside the transaction,
+        // so two clicks (or two staff) can't number two certificates for one case.
+        const fresh = await tx.get(doc(db, 'requests', request.id))
+        const live = fresh.data()?.eligibilityCert
+        if (live?.id && live.status !== 'voided') throw new Error('COE_ACTIVE')
         const c = await tx.get(counterRef)
         const seq = c.exists() ? c.data().next : 1
         const controlNo = coeNumber(org.accessCodePrefix || ORG.accessCodePrefix, year, seq)
@@ -80,7 +85,9 @@ export default function EligibilityCertCard({ request, user }) {
       toast.success(`Certificate ${out.controlNo} generated. Print, sign and stamp it, then upload the scan.`)
     } catch (e) {
       console.error('[CoE] generate failed', e)
-      toast.error('Could not generate the certificate. Please try again.')
+      toast.error(e?.message === 'COE_ACTIVE'
+        ? 'This case already has a certificate. Void it first to issue a new one.'
+        : 'Could not generate the certificate. Please try again.')
     } finally { setBusy(false) }
   }
 
@@ -93,13 +100,16 @@ export default function EligibilityCertCard({ request, user }) {
 
   const saveSigned = async ({ base64, contentType, fileName }) => {
     const sha256 = await sha256Hex(base64)
-    await updateDoc(doc(db, 'eligibilityCertificates', active.id), {
+    // One batch: the certificate and the request's pointer move together (N7).
+    const batch = writeBatch(db)
+    batch.update(doc(db, 'eligibilityCertificates', active.id), {
       signed: { base64, contentType, fileName, sha256, uploadedBy: user.name ?? '', uploadedByUid: user.uid, uploadedAt: serverTimestamp() },
       status: 'signed', updatedAt: serverTimestamp(),
     })
-    await updateDoc(doc(db, 'requests', request.id), {
+    batch.update(doc(db, 'requests', request.id), {
       eligibilityCert: { ...pointer, status: 'signed', signedAt: serverTimestamp() }, updatedAt: serverTimestamp(),
     })
+    await batch.commit()
     logAudit(user, {
       action: 'coe_signed_uploaded', targetType: 'request', targetId: request.id, targetName: request.requestId ?? '',
       details: `Signed Certificate of Eligibility ${active.controlNo} uploaded (sha256 ${sha256.slice(0, 12)}…)`,
@@ -117,12 +127,14 @@ export default function EligibilityCertCard({ request, user }) {
     if (reason.length < 5) { toast.error('Give a reason (at least 5 characters).'); return }
     setBusy(true)
     try {
-      await updateDoc(doc(db, 'eligibilityCertificates', active.id), {
+      const batch = writeBatch(db)
+      batch.update(doc(db, 'eligibilityCertificates', active.id), {
         status: 'voided', voided: { reason, by: user.name ?? '', byUid: user.uid, at: serverTimestamp() }, updatedAt: serverTimestamp(),
       })
-      await updateDoc(doc(db, 'requests', request.id), {
+      batch.update(doc(db, 'requests', request.id), {
         eligibilityCert: { ...pointer, status: 'voided' }, updatedAt: serverTimestamp(),
       })
+      await batch.commit()
       logAudit(user, {
         action: 'coe_voided', targetType: 'request', targetId: request.id, targetName: request.requestId ?? '',
         details: `Certificate of Eligibility ${active.controlNo} voided · reason: ${reason}`, requestId: request.id, patientId: request.patientId,

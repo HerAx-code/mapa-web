@@ -7,7 +7,7 @@ import { normalizeBillNumber, billKeyId, BILL_CHECK_SOURCES, billCheckSourceLabe
 import { interviewReasons, CALL_METHODS } from '../../utils/verificationPolicy'
 import { encodedIntakeProblem } from '../../utils/requestStage'
 import { useIdentityFlag, useHospitalSettings } from '../../hooks/useVerification'
-import { db } from '../../firebase'
+import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -43,6 +43,16 @@ import PesoInput from '../../components/ui/PesoInput'
 import AssessmentSnapshot from '../../components/AssessmentSnapshot'
 
 const AUTOSAVE_MS = 1500
+
+// Phase 3 PR 3.2 (P3-B): what an amendment after endorsement may change —
+// the same list amendAssessment accepts (functions/src/assessmentActions.js).
+const AMENDABLE_KEYS = [
+  ...PATIENT_FACT_KEYS,
+  'hospitalCaseNumber', 'caseStudyNarrative', 'recommendation',
+  'meansTestCategory', 'meansTestOverrideReason', 'is4Ps', 'circumstances', 'circumstancesOther',
+  'classificationValidMonths', 'classificationBasis',
+]
+const AMEND_REASON_MIN = 10
 
 const SECTIONS = [
   // Revision 11: the bill comes first — staff confirm the amount against the
@@ -159,6 +169,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // Revision 9: encoding the patient's answers on their behalf (only when the
   // patient never filled the sheet). Ref mirror for the debounced save.
   const [encodeMode, setEncodeMode] = useState(false)
+  // Phase 3 PR 3.2: after endorsement the sheet is locked; "Amend assessment"
+  // opens it for one reasoned correction, sent to amendAssessment.
+  const [amending, setAmending] = useState(false)
+  const [amendReason, setAmendReason] = useState('')
+  const [amendBusy, setAmendBusy] = useState(false)
   const encodeModeRef = useRef(false)
   useEffect(() => { encodeModeRef.current = encodeMode }, [encodeMode])
   const [showEncodeModal, setShowEncodeModal] = useState(false)
@@ -239,14 +254,17 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
     patientFacts
       ? app.patientId === user?.uid && !['closed', 'rejected', 'fully_funded'].includes(app.status)
       : isRequestMode
-        ? isGatewayAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status)
+        ? isGatewayAdminRole(user?.role) && !['closed', 'rejected', 'fully_funded'].includes(app.status) &&
+          (!(app.agencyIds?.length > 0) || amending)
         : false
   )
   // Revision 9: the patient's answers are read-only for staff unless they are
   // encoding on behalf of a patient who never filled the sheet. If the
   // patient fills it after all, encoding ends and the facts become theirs.
   const remoteIntake = app?.intakeSheet ?? {}
-  const canEditFacts = !!canEdit && (!isRequestMode || (encodeMode && !remoteIntake.patientFilledAt))
+  const canEditFacts = !!canEdit && (!isRequestMode || amending || (encodeMode && !remoteIntake.patientFilledAt))
+  const isEndorsedRequest = isRequestMode && app?.agencyIds?.length > 0
+  const canAmend = isEndorsedRequest && isGatewayAdminRole(user?.role) && !['closed', 'rejected'].includes(app?.status)
   // Verification state comes from the STORED sheet (staff-only fields).
   const verificationRequired = isRequestMode && (remoteIntake.verificationRequired ?? !isIntakeComplete(app?.intakeSheet))
   const billVerificationRequired = isRequestMode && (remoteIntake.billVerificationRequired ?? !isIntakeComplete(app?.intakeSheet, app?.totalBill))
@@ -256,7 +274,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // acknowledge: the worker clicked "Mark as reviewed" on the patient-changes
   // banner — record every current fact as reviewed.
   const performSave = async ({ acknowledge = false } = {}) => {
-    if (!app || !dirtyRef.current) return
+    // An endorsed sheet changes only through submitAmendment (rules refuse a write).
+    if (!app || !dirtyRef.current || amending) return
     setSaveState(prev => ({ ...prev, status: 'saving' }))
     try {
       // Read the LATEST sheet (via ref), not this render's captured `sheet`.
@@ -376,9 +395,51 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   const scheduleAutosave = () => {
     if (!canEdit) return
     dirtyRef.current = true
+    if (amending) { setSaveState(prev => ({ ...prev, status: 'idle' })); return }
     setSaveState(prev => ({ ...prev, status: 'saving' }))
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(performSave, AUTOSAVE_MS)
+  }
+
+  // The amendment: the changed amendable fields, normalized the way autosave
+  // stores them, sent with the reason. The server re-checks completeness,
+  // records it, voids the certificate if the class changed and tells the
+  // agencies.
+  const normalizeForSave = (s) => ({
+    ...s,
+    familyMembers: (s.familyMembers ?? []).filter(m => m.name?.trim() || m.relationship?.trim()),
+    householdSize:      s.householdSize === '' ? null : Number(s.householdSize),
+    monthlyIncome:      s.monthlyIncome === '' ? null : Number(s.monthlyIncome),
+    estimatedTotalCost: s.estimatedTotalCost === '' ? null : Number(s.estimatedTotalCost),
+    expenses: Object.fromEntries(Object.entries(s.expenses ?? {}).map(([k, v]) => [k, v === '' ? null : Number(v)])),
+  })
+  const pendingAmendment = () => {
+    const next = normalizeForSave(sheetRef.current)
+    const remote = appRef.current?.intakeSheet ?? {}
+    return Object.fromEntries(AMENDABLE_KEYS
+      .filter(k => JSON.stringify(next[k] ?? null) !== JSON.stringify(remote[k] ?? null))
+      .map(k => [k, next[k] ?? null]))
+  }
+  const cancelAmendment = () => {
+    setSheet({ ...blankSheet(), ...(appRef.current?.intakeSheet ?? {}) })
+    dirtyRef.current = false
+    setAmending(false); setAmendReason('')
+  }
+  const submitAmendment = async () => {
+    const changes = pendingAmendment()
+    if (!Object.keys(changes).length) { toast.error('Change at least one field first.'); return }
+    if (amendReason.trim().length < AMEND_REASON_MIN) { toast.error(`Give the reason (at least ${AMEND_REASON_MIN} characters).`); return }
+    setAmendBusy(true)
+    try {
+      const res = await httpsCallable(functions, 'amendAssessment')({ requestId: app.id, changes, reason: amendReason.trim() })
+      dirtyRef.current = false
+      setAmending(false); setAmendReason('')
+      toast.success(res.data?.certVoided
+        ? 'Assessment amended. The classification changed, so the Certificate of Eligibility was voided — issue a new one.'
+        : 'Assessment amended. The endorsed agencies were told.', { duration: 8000 })
+    } catch (err) {
+      toast.error(err?.message && err?.code !== 'functions/internal' ? err.message : 'Could not amend the assessment.', { duration: 8000 })
+    } finally { setAmendBusy(false) }
   }
 
   // Cancel any pending autosave when the application id changes or the
@@ -581,13 +642,15 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
   // transaction. A bill number already confirmed on ANOTHER request stops here
   // and shows that request; staff may still use it with a written reason (a
   // closed request refiled), which is audited.
-  const [billForm, setBillForm] = useState({ billNumber: '', source: '' })
+  // ownBill (Phase 3 PR 3.2, P3-G / D9): MAPA covers only this hospital's own
+  // charges, so staff confirm the bill was issued here.
+  const [billForm, setBillForm] = useState({ billNumber: '', source: '', ownBill: false })
   const [billConflict, setBillConflict] = useState(null)
   const [billOverride, setBillOverride] = useState('')
   const verifyBill = async () => {
     if (!canEdit || !isRequestMode || app?.totalBill == null) return
     const billNumber = normalizeBillNumber(billForm.billNumber)
-    if (!billNumber || !billForm.source) return
+    if (!billNumber || !billForm.source || !billForm.ownBill) return
     if (billConflict && billOverride.trim().length < 5) return
     await flushSave()
     const remote = appRef.current?.intakeSheet ?? {}
@@ -599,7 +662,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         discounts: Number(app.discountsApplied) || 0,
         philhealth: Number(app.philhealthCovered) || 0,
         otherCovered: Number(app.otherCovered) || 0,
-        billNumber, source: billForm.source,
+        billNumber, source: billForm.source, ownBill: true,
         by: user.name, byUid: user.uid, at: serverTimestamp(),
       },
       updatedAt: serverTimestamp(),
@@ -634,7 +697,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         details: `Bill no. ${billNumber} was confirmed on request ${outcome.reused.requestRef || outcome.reused.requestId}; used here because: ${billOverride.trim()}`,
         requestId: app.id, patientId: app.patientId ?? null,
       })
-      setBillConflict(null); setBillOverride(''); setBillForm({ billNumber: '', source: '' })
+      setBillConflict(null); setBillOverride(''); setBillForm({ billNumber: '', source: '', ownBill: false })
       toast.success('Bill verified.')
     } catch (err) {
       console.error(err)
@@ -914,7 +977,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                 <MdPrint size={14} /> Print Form
               </button>
               <button className="btn-primary text-sm flex items-center gap-1.5"
-                onClick={handleManualSave} disabled={!canEdit}>
+                onClick={handleManualSave} disabled={!canEdit || amending}>
                 <MdSave size={14} /> Save now
               </button>
             </div>
@@ -943,8 +1006,37 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
           </div>
         )}
 
+        {/* Phase 3 PR 3.2: endorsed — locked, amend with a reason. */}
+        {canAmend && !amending && (
+          <div className="mb-5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-start gap-3 print:hidden">
+            <MdLock size={15} className="text-gray-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-700 leading-relaxed flex-1">
+              Locked at endorsement — the agencies decide on this sheet. To correct it, amend it with a reason: the endorsed
+              agencies are told, and if the classification changes the Certificate of Eligibility is voided.
+            </p>
+            <button className="btn-secondary text-xs flex-shrink-0" onClick={() => setAmending(true)}>Amend assessment</button>
+          </div>
+        )}
+        {amending && (
+          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-2 print:hidden">
+            <p className="text-xs font-semibold text-amber-800">Amending an endorsed assessment</p>
+            <p className="text-xs text-amber-800">
+              Edit the fields below, then give the reason and submit. Changed so far: {Object.keys(pendingAmendment()).join(', ') || 'nothing yet'}.
+            </p>
+            <label htmlFor="amend-reason" className="block text-xs font-medium text-amber-900">Reason for the amendment</label>
+            <textarea id="amend-reason" rows={2} className="input text-sm w-full" value={amendReason}
+              onChange={e => setAmendReason(e.target.value)} placeholder="e.g. Corrected monthly income after the payslip was seen" />
+            <div className="flex gap-2 justify-end">
+              <button className="btn-secondary text-xs" onClick={cancelAmendment} disabled={amendBusy}>Cancel</button>
+              <button className="btn-primary text-xs" onClick={submitAmendment} disabled={amendBusy}>
+                {amendBusy ? 'Submitting…' : 'Submit amendment'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Read-only banner */}
-        {!canEdit && (
+        {!canEdit && !canAmend && (
           <div className="mb-5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 flex items-start gap-2 print:hidden">
             <MdLock size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 leading-relaxed">
@@ -1233,6 +1325,11 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                           {BILL_CHECK_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                       </div>
+                      <label className="sm:col-span-2 flex items-start gap-2 text-xs text-gray-700">
+                        <input type="checkbox" className="mt-0.5" checked={billForm.ownBill}
+                          onChange={e => setBillForm(f => ({ ...f, ownBill: e.target.checked }))} />
+                        <span>This {app.careSetting === 'outpatient' ? 'charge slip' : 'bill'} was issued by {caseOrg.facilityName || 'this hospital'} itself. MAPA covers only this hospital's own charges; a bill from another hospital or provider can't be filed here.</span>
+                      </label>
                     </div>
                   )}
                   {billConflict && (
@@ -1250,7 +1347,7 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
                   <div className="mt-3 flex flex-wrap gap-2">
                     {canEdit && app.totalBill != null && (
                       <button type="button" className="btn-primary text-xs flex items-center gap-1.5" onClick={verifyBill}
-                        disabled={!normalizeBillNumber(billForm.billNumber) || !billForm.source || (billConflict && billOverride.trim().length < 5)}>
+                        disabled={!normalizeBillNumber(billForm.billNumber) || !billForm.source || !billForm.ownBill || (billConflict && billOverride.trim().length < 5)}>
                         <MdCheckCircle size={14} /> {billConflict ? 'Use this bill number here' : 'Bill matches — verify'}
                       </button>
                     )}

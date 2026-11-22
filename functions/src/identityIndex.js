@@ -91,8 +91,19 @@ async function recomputeFlags({ db, uid, FieldValue }) {
       const sameHospitalUids = others.filter(o => otherTenants[o].includes(t))
       matches.push({ kind, sameHospitalUids, otherHospitalCount: others.length - sameHospitalUids.length })
     }
-    await db.collection('identityFlags').doc(`${t}__${uid}`).set({
-      uid, tenantId: t, matches, updatedAt: FieldValue.serverTimestamp(),
+    // Phase 3 PR 3.2 (gap N18): a match found earlier is kept (marked
+    // `past`) when the profile changes, until a social worker clears it with a
+    // reason (clearIdentityFlag). Changing a phone no longer erases the flag
+    // or the verification-call reason it carries.
+    const flagRef = db.collection('identityFlags').doc(`${t}__${uid}`)
+    const prevSnap = await flagRef.get()
+    const prevMatches = prevSnap.exists ? (prevSnap.data().matches ?? []) : []
+    const carried = prevMatches
+      .filter((m) => !matches.some((c) => c.kind === m.kind))
+      .map((m) => ({ ...m, past: true }))
+    await flagRef.set({
+      uid, tenantId: t, matches: [...matches, ...carried], updatedAt: FieldValue.serverTimestamp(),
+      ...(prevSnap.exists && prevSnap.data().cleared ? { cleared: prevSnap.data().cleared } : {}),
     })
     written.push(t)
   }
@@ -145,6 +156,47 @@ const profileChanged = (before, after) => {
   const ta = JSON.stringify(before.tenantIds ?? [before.tenantId]), tb = JSON.stringify(after.tenantIds ?? [after.tenantId])
   return a.name_phone !== b.name_phone || a.phone !== b.phone || ta !== tb || before.role !== after.role
 }
+
+// A social worker of the flag's hospital clears the PAST matches (ones no
+// longer true of the profile) after asking the patient, with a reason.
+// Matches that are true now come back on the next recompute anyway.
+async function handleClearIdentityFlag({ callerUid, data, db, FieldValue: FV = FieldValue }) {
+  const { fail, loadCaller, writeAudit } = require('./serverWrites')
+  const caller = await loadCaller(db, callerUid)
+  if (!['super_admin', 'staff_admin'].includes(caller.role) || !caller.tenantId) fail('permission-denied', "Only the hospital's staff can clear a flag.")
+  const uid = typeof data?.patientId === 'string' ? data.patientId : ''
+  const reason = typeof data?.reason === 'string' ? data.reason.trim().slice(0, 500) : ''
+  if (!uid) fail('invalid-argument', 'A patient is required.')
+  if (reason.length < 10) fail('invalid-argument', 'Give the reason (at least 10 characters).')
+  const ref = db.collection('identityFlags').doc(`${caller.tenantId}__${uid}`)
+  const snap = await ref.get()
+  if (!snap.exists) fail('not-found', 'This patient has no flag at your hospital.')
+  const past = (snap.data().matches ?? []).filter((m) => m.past)
+  if (!past.length) fail('failed-precondition', 'There are no past matches to clear.')
+  await ref.set({
+    matches: (snap.data().matches ?? []).filter((m) => !m.past),
+    cleared: { byUid: caller.uid, byName: caller.name ?? '', reason, kinds: past.map((m) => m.kind), at: FV.serverTimestamp() },
+    updatedAt: FV.serverTimestamp(),
+  }, { merge: true })
+  await writeAudit(db, caller, {
+    action: 'identity_flag_cleared', targetType: 'patient', targetId: uid, targetName: '',
+    details: `Past duplicate-account matches cleared (${past.map((m) => m.kind).join(', ')}) · reason: ${reason}`,
+    patientId: uid, tenantId: caller.tenantId,
+  })
+  return { cleared: past.length }
+}
+
+exports.handleClearIdentityFlag = handleClearIdentityFlag
+exports.clearIdentityFlag = require('firebase-functions/v2/https').onCall({ region: 'asia-southeast1', timeoutSeconds: 30, memory: '256MiB' }, async (request) => {
+  const { HttpsError } = require('firebase-functions/v2/https')
+  try {
+    return await handleClearIdentityFlag({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() })
+  } catch (err) {
+    if (err instanceof HttpsError) throw err
+    logger.error('[clearIdentityFlag] failed', { err: err.message })
+    throw new HttpsError('internal', 'Something went wrong. Nothing was changed; try again.')
+  }
+})
 
 exports.normalizeName = normalizeName
 exports.normalizePhone = normalizePhone

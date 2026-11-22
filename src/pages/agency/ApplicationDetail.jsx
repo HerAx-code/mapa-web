@@ -796,6 +796,18 @@ export default function ApplicationDetail() {
             {/* INTAKE */}
             {section === 'intake' && (
               <div className="card p-5">
+                {/* Phase 3 PR 3.2 (P3-B): the hospital amended the assessment after
+                    this agency approved. Nothing was reversed; the agency looks. */}
+                {app.assessmentChangedAt && (
+                  <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <p className="font-semibold">Assessment changed after your approval</p>
+                    <p className="mt-0.5">
+                      {app.assessmentChange?.byName ?? ORG.gatewayName} amended {(app.assessmentChange?.fields ?? []).join(', ') || 'the assessment'}
+                      {app.assessmentChange?.classFrom !== app.assessmentChange?.classTo ? ' — the classification changed' : ''}
+                      {app.assessmentChange?.reason ? `. Reason: ${app.assessmentChange.reason}` : ''}. Review the case; nothing was reversed.
+                    </p>
+                  </div>
+                )}
                 <p className="eyebrow mb-3">Case Assessment <span className="text-gray-300 normal-case font-normal">· owned by {ORG.gatewayName}</span></p>
                 <div className="flex items-start gap-3 mb-4">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${

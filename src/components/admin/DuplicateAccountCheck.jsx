@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../../firebase'
+import toast from 'react-hot-toast'
+import { db, functions, httpsCallable } from '../../firebase'
 import { useIdentityFlag } from '../../hooks/useVerification'
 
 // Input verification Phase 1: other patient accounts that look like the same
@@ -17,6 +18,22 @@ const KIND_LABEL = {
 export default function DuplicateAccountCheck({ patientId }) {
   const flag = useIdentityFlag(patientId) // undefined loading · null not checked yet
   const [names, setNames] = useState({})
+  // Phase 3 PR 3.2 (N18): matches no longer true of the profile stay (`past`)
+  // until a social worker clears them here, with a reason (audited).
+  const [clearing, setClearing] = useState(false)
+  const [clearReason, setClearReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const clearPast = async () => {
+    if (clearReason.trim().length < 10) { toast.error('Give the reason (at least 10 characters).'); return }
+    setBusy(true)
+    try {
+      await httpsCallable(functions, 'clearIdentityFlag')({ patientId, reason: clearReason.trim() })
+      toast.success('Past matches cleared.')
+      setClearing(false); setClearReason('')
+    } catch (err) {
+      toast.error(err?.message && err?.code !== 'functions/internal' ? err.message : 'Could not clear the matches.')
+    } finally { setBusy(false) }
+  }
 
   const sameUids = [...new Set((flag?.matches ?? []).flatMap(m => m.sameHospitalUids ?? []))]
   const sameKey = sameUids.join(',')
@@ -44,12 +61,28 @@ export default function DuplicateAccountCheck({ patientId }) {
   return row(strong ? 'Possible duplicate — ask the patient' : 'Phone shared with another account', strong ? 'text-amber-600' : 'text-gray-600', (
     <ul className="mt-1 space-y-1 text-xs font-normal text-gray-700 text-right">
       {flag.matches.map(m => (
-        <li key={m.kind}>
-          <span className="font-medium">{KIND_LABEL[m.kind] ?? m.kind}:</span>{' '}
+        <li key={`${m.kind}${m.past ? '-past' : ''}`}>
+          <span className="font-medium">{KIND_LABEL[m.kind] ?? m.kind}{m.past ? ' (earlier — no longer on the profile)' : ''}:</span>{' '}
           {[
             ...(m.sameHospitalUids ?? []).map(u => names[u] ? `${names[u].name}${names[u].patientId ? ` (${names[u].patientId})` : ''}` : 'a patient here'),
             ...(m.otherHospitalCount ? [`${m.otherHospitalCount} account${m.otherHospitalCount === 1 ? '' : 's'} at another hospital`] : []),
           ].join(' · ')}
+        </li>
+      ))}
+      {flag.matches.some(m => m.past) && (clearing ? (
+        <li className="pt-1 space-y-1">
+          <textarea rows={2} className="input text-xs w-full" value={clearReason} aria-label="Reason for clearing the past matches"
+            onChange={e => setClearReason(e.target.value)} placeholder="e.g. Asked the patient: the old number was a relative's" />
+          <span className="inline-flex gap-2">
+            <button type="button" className="btn-secondary text-xs" onClick={() => setClearing(false)} disabled={busy}>Cancel</button>
+            <button type="button" className="btn-primary text-xs" onClick={clearPast} disabled={busy}>{busy ? 'Clearing…' : 'Clear past matches'}</button>
+          </span>
+        </li>
+      ) : (
+        <li>
+          <button type="button" className="text-xs text-brand-600 underline underline-offset-2" onClick={() => setClearing(true)}>
+            Clear past matches after asking the patient
+          </button>
         </li>
       ))}
     </ul>

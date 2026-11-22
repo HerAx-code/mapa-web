@@ -1,6 +1,6 @@
 # Phase 3 plan — evidence and codes (T4, T6)
 
-Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 in progress on `feat/documents-are-evidence`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
+Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 built on `feat/assessment-amendments`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
 
 ## What Phase 3 fixes
 
@@ -114,6 +114,13 @@ Why: the rules can't normalize names the way `codeProof()` does (accents, spaces
 6. **Duplicate flags (N18):** `identityFlags` keep a match until a social worker clears it with a reason (audited); a profile change adds matches but never removes one.
 7. **Bill check (N12, P3-G):** add the "this hospital's own bill" confirmation.
 8. **Tests:** function tests for each amendment outcome; rules tests for the lock; utils tests for income and flags.
+9. **As built:**
+   - **`amendAssessment`** (functions/src/assessmentActions.js) changes only the patient facts and the assessment fields, records `intakeSheet.amendments[]` with the before and after values, and refuses a result that would leave the sheet incomplete.
+   - **The rules lock the whole `intakeSheet`** once a request is endorsed, for staff and patients alike, and refuse `amendments` from any browser.
+   - **The intake page** shows "Amend assessment" on an endorsed case, which opens the sheet for one reasoned submit; autosave is off while amending.
+   - **The agency's case page** shows "Assessment changed after your approval".
+   - **Duplicate flags:** `clearIdentityFlag` clears the past matches, with a reason (audited). The clear action is on the hospital's duplicate-account check.
+   - **Bill check:** the bill check stores `billVerification.ownBill`.
 
 ## PR 3.3 — Case conversations (M16, N13)
 1. **Data:** a conversation started by hospital staff carries `tenantId`, `requestId` (when it is about a case) and `kind: 'case'`. A report-first backfill fills these on existing threads where the patient's request is clear.

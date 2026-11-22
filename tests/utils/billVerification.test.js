@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { billVerified, isIntakeComplete, requiredFieldsStatus } from '../../src/utils/intakeSheet.js'
+import { billVerified, isIntakeComplete, requiredFieldsStatus, incomeGiven } from '../../src/utils/intakeSheet.js'
 import { deriveRequestStage } from '../../src/utils/requestStage.js'
 
 // Revision 11: staff confirm the bill against the billing statement; it gates
@@ -40,5 +40,19 @@ describe('isIntakeComplete with the bill gate', () => {
     const flagged = { ...full, billVerificationRequired: true }
     expect(deriveRequestStage(req(flagged, 50000), docs).canEndorse).toBe(false)
     expect(deriveRequestStage(req({ ...flagged, ...confirmed(50000) }, 50000), docs).canEndorse).toBe(true)
+  })
+})
+
+// Phase 3 PR 3.2 (gap N17): a blank income is stored as null and used to read
+// as ₱0, completing the sheet and suggesting the poorest class.
+describe('a blank monthly income is not ₱0', () => {
+  it('null or empty keeps the sheet incomplete; a typed 0 counts', () => {
+    expect(incomeGiven(null)).toBe(false)
+    expect(incomeGiven('')).toBe(false)
+    expect(incomeGiven(undefined)).toBe(false)
+    expect(incomeGiven(0)).toBe(true)
+    expect(incomeGiven('0')).toBe(true)
+    expect(isIntakeComplete({ ...full, monthlyIncome: null }, 50000)).toBe(false)
+    expect(isIntakeComplete({ ...full, monthlyIncome: 0 }, 50000)).toBe(true)
   })
 })
