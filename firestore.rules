@@ -29,23 +29,39 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid())).data.get('name', '');
     }
 
+    // ── Two-factor stage 2 (Phase 5 PR 5.4, decision P5-D) ───────────────────
+    // When on, every STAFF permission below needs a session signed in with a
+    // second factor, so a stolen password alone is useless even outside the
+    // app. Patients are exempt. A staff member without one still reads their
+    // own profile (MfaGate needs it to send them to set it up).
+    // OFF until every active staff sign-in is enrolled
+    // (scripts/report-staff-mfa.mjs) and not before 2026-12-06. Turning it on
+    // is this line set to `true` here AND ENFORCE_STAFF_MFA in
+    // functions/src/mfaPolicy.js, then a rules + functions deploy
+    // (tests/functions/mfaPolicy.test.js checks the two agree).
+    function enforceStaffMfa() { return false; }
+    function staffMfaOk() {
+      return !enforceStaffMfa() ||
+        request.auth.token.get('firebase', {}).get('sign_in_second_factor', null) != null;
+    }
+
     function isSuperAdmin() {
-      return isAuth() && userRole() == 'super_admin';
+      return isAuth() && userRole() == 'super_admin' && staffMfaOk();
     }
 
     // Covers both super_admin and staff_admin
     function isAdmin() {
-      return isAuth() && userRole() in ['super_admin', 'staff_admin'];
+      return isAuth() && userRole() in ['super_admin', 'staff_admin'] && staffMfaOk();
     }
 
     function isAgencyAdmin() {
-      return isAuth() && userRole() == 'agency_admin';
+      return isAuth() && userRole() == 'agency_admin' && staffMfaOk();
     }
 
     // Convenience: covers both agency_admin (senior agency officer) and
     // agency (coordinator). Most case-handling permissions apply to both.
     function isAgency() {
-      return isAuth() && userRole() in ['agency_admin', 'agency'];
+      return isAuth() && userRole() in ['agency_admin', 'agency'] && staffMfaOk();
     }
 
     function isPatient() {
@@ -60,7 +76,7 @@ service cloud.firestore {
     // Accounts are created only with the Admin SDK
     // (scripts/create-platform-admin.mjs); no client can mint one.
     function isPlatformAdmin() {
-      return isAuth() && userRole() == 'platform_admin';
+      return isAuth() && userRole() == 'platform_admin' && staffMfaOk();
     }
 
     function isGatewayStaffRole(role) {

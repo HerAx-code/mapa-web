@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+const { assertStaffMfa } = require('./mfaPolicy')
 const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 const { fail, loadCaller, writeAudit, notifyServer } = require('./serverWrites')
 const {
@@ -313,6 +314,8 @@ async function handleCloseRequest({ callerUid, data, db, now = () => Date.now(),
 
 const wrap = (name, handler) => onCall({ region: 'asia-southeast1', timeoutSeconds: 120, memory: '256MiB' }, async (request) => {
   try {
+    // Two-factor stage 2 (Phase 5 PR 5.4): off until enabled in mfaPolicy.js.
+    await assertStaffMfa(getFirestore(), request.auth)
     return await handler({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() })
   } catch (err) {
     if (err instanceof HttpsError) throw err

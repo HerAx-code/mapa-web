@@ -2,6 +2,7 @@ const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+const { assertStaffMfa } = require('./mfaPolicy')
 const crypto = require('node:crypto')
 
 /**
@@ -190,6 +191,7 @@ exports.handleClearIdentityFlag = handleClearIdentityFlag
 exports.clearIdentityFlag = require('firebase-functions/v2/https').onCall({ region: 'asia-southeast1', timeoutSeconds: 30, memory: '256MiB' }, async (request) => {
   const { HttpsError } = require('firebase-functions/v2/https')
   try {
+    await assertStaffMfa(getFirestore(), request.auth)
     return await handleClearIdentityFlag({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() })
   } catch (err) {
     if (err instanceof HttpsError) throw err

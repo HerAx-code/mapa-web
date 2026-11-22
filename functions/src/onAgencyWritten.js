@@ -2,6 +2,7 @@ const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+const { assertStaffMfa } = require('./mfaPolicy')
 
 /**
  * onAgencyWritten — projects the PUBLIC subset of an agency doc into a
@@ -210,16 +211,19 @@ async function handleCountAgencyOpenSlices({ callerUid, data, db }) {
 exports.handleAgencyEndings = handleAgencyEndings
 exports.handleCountAgencyOpenSlices = handleCountAgencyOpenSlices
 exports.countAgencyOpenSlices = onCall({ region: 'asia-southeast1', timeoutSeconds: 30, memory: '256MiB' },
-  async (request) => handleCountAgencyOpenSlices({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() }))
+  async (request) => {
+    await assertStaffMfa(getFirestore(), request.auth)
+    return handleCountAgencyOpenSlices({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() })
+  })
 
 exports.handleAgencyWritten = handleAgencyWritten
 exports.projectPublicAgency = projectPublicAgency
 exports.handleResyncAgenciesPublic = handleResyncAgenciesPublic
 
 exports.resyncAgenciesPublic = onCall({ region: 'asia-southeast1', timeoutSeconds: 120, memory: '256MiB' },
-  async (request) => handleResyncAgenciesPublic({
+  async (request) => assertStaffMfa(getFirestore(), request.auth).then(() => handleResyncAgenciesPublic({
     callerUid: request.auth?.uid, db: getFirestore(), serverTimestamp: () => FieldValue.serverTimestamp(),
-  }))
+  })))
 
 exports.onAgencyWritten = onDocumentWritten({
   document: 'agencies/{agencyId}',
