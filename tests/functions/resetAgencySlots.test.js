@@ -110,3 +110,22 @@ describe('handleResetAgencySlots', () => {
     expect(result.skippedAlreadyDone).toBe(1)
   })
 })
+
+describe('handleResetAgencySlots — per-hospital shares (Phase 2 PR 2.2)', () => {
+  it("refills each hospital's own share, leaving shares already reset today", async () => {
+    const { memDb } = await import('./helpers/memDb.js')
+    const { handleResetAgencySlots } = require('../../functions/src/resetAgencySlots')
+    const db = memDb({
+      'agencies/a1': {
+        enabled: true, slots: { total: 0, remaining: 0 },
+        hospitalSlots: { h1: { total: 4, remaining: 0, lastResetDate: '2026-11-21' }, h2: { total: 3, remaining: 1, lastResetDate: '2026-11-22' } },
+      },
+    })
+    const r = await handleResetAgencySlots({ db, today: '2026-11-22' })
+    expect(r.reset).toBe(1)
+    const a = db.store.get('agencies/a1')
+    expect(a['hospitalSlots.h1.remaining']).toBe(4)
+    expect(a['hospitalSlots.h1.lastResetDate']).toBe('2026-11-22')
+    expect(Object.keys(a)).not.toContain('hospitalSlots.h2.remaining')
+  })
+})

@@ -273,8 +273,6 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
         expenses: Object.fromEntries(
           Object.entries(s.expenses ?? {}).map(([k, v]) => [k, v === '' ? null : Number(v)])
         ),
-        completedBy:   app.intakeSheet?.completedBy ?? user.name,
-        completedAt:   app.intakeSheet?.completedAt ?? serverTimestamp(),
         lastEditedBy:  user.name,
         lastEditedAt:  serverTimestamp(),
       }
@@ -316,6 +314,22 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
       // Lock the patient's answers the first time the assessment is complete
       // (A2). Only when the lock has never been set: once a worker explicitly
       // unlocks for a correction, autosave must not silently re-lock it.
+      // Who completed the assessment is stamped ONCE, by uid, when it first
+      // becomes complete — not on a draft's first save (gap M15: the
+      // second-person rule checked the first editor, by name). Older sheets
+      // keep the name they were stamped with.
+      if (isRequestMode) {
+        const stampedBy = remote.completedByUid || remote.completedBy
+        delete payload.completedBy; delete payload.completedByUid; delete payload.completedAt
+        if (stampedBy) {
+          for (const k of ['completedBy', 'completedByUid', 'completedAt']) if (remote[k] != null) payload[k] = remote[k]
+        } else if (isIntakeComplete({ ...payload, completedBy: user.name }, appRef.current?.totalBill)) {
+          Object.assign(payload, { completedBy: user.name, completedByUid: user.uid, completedAt: serverTimestamp() })
+        }
+      } else {
+        payload.completedBy = app.intakeSheet?.completedBy ?? user.name
+        payload.completedAt = app.intakeSheet?.completedAt ?? serverTimestamp()
+      }
       const autoLock = isRequestMode && remote.factsLocked === undefined && isIntakeComplete(payload)
       if (autoLock) Object.assign(payload, { factsLocked: true, factsLockedAt: serverTimestamp(), factsLockedBy: user.name })
 

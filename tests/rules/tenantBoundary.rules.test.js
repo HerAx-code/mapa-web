@@ -184,7 +184,8 @@ describe('untagged records and users', () => {
 describe('writes stay inside the writer\'s hospital', () => {
   it('an admin cannot create a slice in another hospital', async () => {
     await assertFails(setDoc(ref('adminA', 'applications/new'), { patientId: 'patB', agencyId: 'dswd', status: 'endorsed', tenantId: B }))
-    await assertSucceeds(setDoc(ref('adminA', 'applications/new'), { patientId: 'patA', agencyId: 'dswd', status: 'endorsed', tenantId: A }))
+    // Not in its own hospital either: slices come only from endorseRequest (Phase 2 PR 2.2).
+    await assertFails(setDoc(ref('adminA', 'applications/new'), { patientId: 'patA', agencyId: 'dswd', status: 'endorsed', tenantId: A }))
   })
 
   it('an admin cannot move a record or a patient to another hospital', async () => {

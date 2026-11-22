@@ -32,8 +32,9 @@ beforeEach(async () => {
 const ref = (uid) => doc(testEnv.authenticatedContext(uid).firestore(), 'agencies', 'dswd')
 
 describe('per-hospital slots', () => {
-  it("a hospital uses its own hospital's slots", async () => {
-    await assertSucceeds(updateDoc(ref('adminA'), new FieldPath('hospitalSlots', 'hospA', 'remaining'), 4))
+  it('a hospital no longer writes slots from the browser, not even its own share', async () => {
+    // Phase 2 PR 2.2: endorsing, closing and slots run in Cloud Functions (endorseRequest / closeRequest, tests/functions/caseActions.test.js).
+    await assertFails(updateDoc(ref('adminA'), new FieldPath('hospitalSlots', 'hospA', 'remaining'), 4))
   })
 
   it("a hospital can't use another hospital's slots or change a total", async () => {

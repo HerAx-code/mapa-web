@@ -215,9 +215,10 @@ describe('agencies — network config belongs to the platform admin', () => {
     await assertFails(updateDoc(ref(uid, 'agencies/dswd'), { name: 'Renamed' }))
   })
 
-  it('hospital admins keep the endorse slot decrement and the daily slot reset', async () => {
-    await assertSucceeds(updateDoc(ref('staffA', 'agencies/dswd'), { 'slots.remaining': 3 }))
-    await assertSucceeds(updateDoc(ref('superA', 'agencies/dswd'), { 'slots.remaining': 10, lastResetDate: '2026-11-14' }))
+  it('hospital admins no longer write agency slots (gap I6)', async () => {
+    // Phase 2 PR 2.2: endorsing, closing and slots run in Cloud Functions (endorseRequest / closeRequest, tests/functions/caseActions.test.js).
+    await assertFails(updateDoc(ref('staffA', 'agencies/dswd'), { 'slots.remaining': 3 }))
+    await assertFails(updateDoc(ref('superA', 'agencies/dswd'), { 'slots.remaining': 10, lastResetDate: '2026-11-14' }))
   })
 
   it('agency staff keep their own-agency updates', async () => {

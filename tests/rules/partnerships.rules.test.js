@@ -62,17 +62,18 @@ const ref = (uid, p) => doc(as(uid), ...p.split('/'))
 const slice = (agencyId, tenantId, patientId = 'patA') => ({ patientId, agencyId, status: 'endorsed', tenantId })
 
 describe('endorse only to a partner agency', () => {
-  it("a hospital endorses to its own partners", async () => {
-    await assertSucceeds(setDoc(ref('adminA', 'applications/s1'), slice('onlyA', A)))
-    await assertSucceeds(setDoc(ref('adminB', 'applications/s2'), slice('both', B, 'patB')))
+  it('no browser creates a slice; partnership is checked by endorseRequest', async () => {
+    // Phase 2 PR 2.2: endorsing, closing and slots run in Cloud Functions (endorseRequest / closeRequest, tests/functions/caseActions.test.js).
+    await assertFails(setDoc(ref('adminA', 'applications/s1'), slice('onlyA', A)))
+    await assertFails(setDoc(ref('adminB', 'applications/s2'), slice('both', B, 'patB')))
   })
 
   it("a hospital can't endorse to an agency that doesn't partner with it", async () => {
     await assertFails(setDoc(ref('adminB', 'applications/s3'), slice('onlyA', B, 'patB')))
   })
 
-  it('a pre-Phase-7 agency (no list yet) partners with hospital #1 only', async () => {
-    await assertSucceeds(setDoc(ref('adminA', 'applications/s4'), slice('legacy', A)))
+  it('a pre-Phase-7 agency slice is refused from the browser too', async () => {
+    await assertFails(setDoc(ref('adminA', 'applications/s4'), slice('legacy', A)))
     await assertFails(setDoc(ref('adminB', 'applications/s5'), slice('legacy', B, 'patB')))
   })
 

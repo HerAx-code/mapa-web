@@ -109,7 +109,7 @@ users, requests, applications, approvalMarks (per-agency 30-day cooldown), docum
 - The patient signs a declaration at submission (`patient.request.declaration*`, EN/FIL, naming the RA 11463 Sec. 11 penalties). It is stored on the request as `declaration { version, lang, byRep, at }`.
 - **Bump `DECLARATION_VERSION`** (src/utils/verificationPolicy.js) whenever that text changes. The wording should be reviewed by the team's adviser.
 - Optional second-person approval (`hospitalSettings.secondPersonAboveAmount`, off by default): above that amount, whoever confirmed the bill, recorded the call or completed the assessment can't also endorse (`secondPersonHold()`).
-- The endorse gates are client-side, like the rest of the endorse gate; the rules don't enforce them.
+- **The endorse gate is server-checked (Phase 2 PR 2.2, 2026-11-22).** `endorseRequest` (functions/src/caseActions.js) re-reads the request and re-runs `deriveRequestStage` with documents read live, the verification-call reasons and `secondPersonHold` — **by uid**: the intake sheet stamps `completedBy` / `completedByUid` / `completedAt` once, when the assessment first becomes complete (older sheets fall back to the name). The page's checks are feedback only.
 
 ## Tenancy (multi-hospital network — all phases built, not yet deployed)
 MAPA is moving from one host facility per deployment to **one deployment serving many
@@ -130,7 +130,9 @@ queries, roles, access codes, or org config). Locked decisions (2026-11-13):
   = { total, remaining, lastResetDate }`, set by the agency admin on Slot
   Management; `effectiveSlots(agency, today, hospitalId)` in src/utils/requests.js).
   A hospital without its own entry uses the agency-wide `slots`. A hospital's
-  endorsement consumes only its own share (rules-enforced).
+  endorsement consumes only its own share — taken by `endorseRequest` on the
+  server and given back by `closeRequest` the same Manila day; the rules no
+  longer let hospital staff write any slot count (Phase 2, gap I6).
 - **Agencies are network-level and shared**: an agency partners with many hospitals
   (`agencies.partnerHospitalIds`, set by platform_admin; no list = no hospital)
   and funds slices only from partner hospitals (rules-enforced). Slices carry both
@@ -166,7 +168,7 @@ to one or more agencies as child application "slices" toward zero balance. Agenc
 do NOT re-review documents or re-assess — they only approve their slice and the
 Guarantee Letter issues at approval. See docs/redesign-plan.md.
 
-- **Request lifecycle:** submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). Patient can withdraw before endorsement. (`assessment` may be skipped in the status field now that entry is no longer stamped by interview booking; the gateway stage machine `verify → assess → endorse` in `src/utils/requestStage.js` drives the queue off docs + intake, not the status.)
+- **Request lifecycle:** submitted → under_review → assessment → endorsed → partially_funded → fully_funded (or closed / rejected). **Endorsing, closing and rejecting run on the server** (`endorseRequest` / `closeRequest`, Phase 2 PR 2.2): no browser creates a slice, and hospital staff may write only `submitted → under_review` and, before endorsement, the bill and coverage (rules: `hospitalRequestWriteOk`). Patient can withdraw before endorsement. (`assessment` may be skipped in the status field now that entry is no longer stamped by interview booking; the gateway stage machine `verify → assess → endorse` in `src/utils/requestStage.js` drives the queue off docs + intake, not the status.)
 - **Slice lifecycle:** endorsed → (patient Proceeds) → reviewing ("For Funding") → approved (GL issued) (or awaiting_info ("Needs Info") / rejected / closed). The patient's Assessment step is derived (`inAssessment()` in src/utils/journey.js: every attached document verified, not yet endorsed); nothing writes status `assessment`. An agency's `amountApproved` is **rules-capped at that slice's endorsed `amountRequested`** (which equals the full request `amountNeeded` — each slice is endorsed for the whole need, not a pre-split portion). So a *single* agency can't approve past the need, but **cumulative over-commitment across multiple agencies IS allowed by design** — the gateway sometimes intentionally over-endorses to give the patient a buffer. ApproveModal shows a soft `overCommit` warning (not a block) when sibling coverage + this approval exceed `amountNeeded`. Per-agency `maxPerApplicant` is a separate hard cap.
 - **Repeat limit per agency (rules-enforced; Phase 1, 2026-11-16 — was a fixed 30-day cooldown).** `approvalMarks/{agencyId}__{patientId}` records an agency's latest approval for a patient (plus `byType` per assistance type); the approval must write it in the same transaction. The limit is the agency's own `repeatLimit = { days, perType }` (default 30 days, not per type; 0 = none), set by its Agency Admin on Budget Allocation. Inside the limit the rules (`outsideRepeatLimit` / `repeatOverrideOk`) allow the approval only with a written reason stamped on the slice as `repeatOverride` (audited). The SAME request never counts; a reversal keeps the mark. src/utils/approvalCooldown.js mirrors the rule for the UI.
 - **GL settlement (Phase 1):** Mark GL Redeemed records `redeemedAmount` (≤ approved, rules-checked); the full approved amount leaves `budget.committed`, only the actual amount enters `budget.disbursed`. Request funding still counts approved amounts.

@@ -54,9 +54,13 @@ export function secondPersonHold({ request, settings, user } = {}) {
   const amount = Number(request?.amountNeeded ?? request?.totalBill)
   if (!(limit > 0) || !Number.isFinite(amount) || amount < limit || !user) return null
   const s = request?.intakeSheet ?? {}
-  const didIt = s.billVerification?.byUid === user.uid ||
-    s.verificationCall?.byUid === user.uid ||
-    (!!s.completedBy && s.completedBy === user.name)
+  // By uid (gap M15): who confirmed the bill, recorded the call or completed
+  // the assessment. Sheets completed before completedByUid existed fall back
+  // to the stamped name.
+  const uid = user.uid
+  const didIt = (!!uid && s.billVerification?.byUid === uid) ||
+    (!!uid && s.verificationCall?.byUid === uid) ||
+    (s.completedByUid ? s.completedByUid === uid : (!!s.completedBy && s.completedBy === user.name))
   return didIt
     ? { key: 'second_person', label: 'Another staff member must endorse', detail: `You prepared this case, and it is ₱${limit.toLocaleString()} or more` }
     : null

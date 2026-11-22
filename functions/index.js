@@ -46,6 +46,10 @@ const { sendNotificationEmail } = require('./src/sendNotificationEmail')
 const { onAnnouncementCreated, announcementReminders } = require('./src/announcements')
 // Phase 1 (T2): account lifecycle; replaces deleteAuthUser.
 const { eraseAccount, disableAccount, resetStaffMfa } = require('./src/accountAdmin')
+// Phase 2 (T3, PR 2.2): the hospital's money actions on a case.
+const { endorseRequest, closeRequest } = require('./src/caseActions')
+exports.endorseRequest = endorseRequest
+exports.closeRequest = closeRequest
 exports.eraseAccount = eraseAccount
 exports.disableAccount = disableAccount
 exports.resetStaffMfa = resetStaffMfa

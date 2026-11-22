@@ -86,6 +86,11 @@ describe('second-person approval', () => {
     expect(secondPersonHold({ request: prepared(10000, { verificationCall: { byUid: 'sw1' } }), settings, user: me })?.key).toBe('second_person')
     expect(secondPersonHold({ request: prepared(10000, { completedBy: 'Social Worker' }), settings, user: me })?.key).toBe('second_person')
   })
+  it('by uid once the assessment carries completedByUid (M15): a same-named colleague is not held', () => {
+    const settings = { secondPersonAboveAmount: 10000 }
+    expect(secondPersonHold({ request: prepared(10000, { completedBy: 'Social Worker', completedByUid: 'sw1' }), settings, user: me })?.key).toBe('second_person')
+    expect(secondPersonHold({ request: prepared(10000, { completedBy: 'Social Worker', completedByUid: 'sw9' }), settings, user: me })).toBeNull()
+  })
   it('another staff member may endorse', () => {
     const settings = { secondPersonAboveAmount: 10000 }
     const r = prepared(50000, { billVerification: { byUid: 'sw1' }, verificationCall: { byUid: 'sw1' } })

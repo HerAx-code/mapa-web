@@ -30,12 +30,15 @@ __export(server_exports, {
   OUTSTANDING_SLICE_STATUSES: () => OUTSTANDING_SLICE_STATUSES,
   REQUEST_CLOSED_STATUSES: () => REQUEST_CLOSED_STATUSES,
   REQ_RANK: () => REQ_RANK,
+  TERMINAL_REQUEST_STATUSES: () => TERMINAL_REQUEST_STATUSES,
   assistanceGivenOf: () => assistanceGivenOf,
+  callRecorded: () => callRecorded,
   committedOf: () => committedOf,
   computeAmountNeeded: () => computeAmountNeeded,
   computeFunding: () => computeFunding,
   deriveAmountNeeded: () => deriveAmountNeeded,
   deriveRequestFinancials: () => deriveRequestFinancials,
+  deriveRequestStage: () => deriveRequestStage,
   deriveRequestStatus: () => deriveRequestStatus,
   disbursedOf: () => disbursedOf,
   effectiveSlots: () => effectiveSlots,
@@ -43,6 +46,7 @@ __export(server_exports, {
   glExpiresAtFor: () => glExpiresAtFor,
   glExpiryMs: () => glExpiryMs,
   glValidUntil: () => glValidUntil,
+  interviewReasons: () => interviewReasons,
   isCommittedSlice: () => isCommittedSlice,
   isGLExpired: () => isGLExpired,
   isGLExpiringSoon: () => isGLExpiringSoon,
@@ -54,8 +58,10 @@ __export(server_exports, {
   isSliceTerminal: () => isSliceTerminal,
   letterState: () => letterState,
   manilaDayKey: () => manilaDayKey,
+  missingAgencyDocs: () => missingAgencyDocs,
   openLettersOf: () => openLettersOf,
   reqRank: () => reqRank,
+  secondPersonHold: () => secondPersonHold,
   sliceApproved: () => sliceApproved,
   syncedRequestStatus: () => syncedRequestStatus
 });
@@ -201,6 +207,406 @@ function effectiveSlots(agency, todayKey, hospitalId) {
   return { total, remaining: stale ? total : Math.min(stored, total || stored), stale, perHospital: !!own };
 }
 var manilaDayKey = (ms = Date.now()) => new Date(ms + MANILA_OFFSET_MS).toISOString().slice(0, 10);
+
+// src/data/relationships.js
+var RELATIONSHIPS = [
+  { value: "spouse", label: "Spouse", en: "Spouse", fil: "Asawa" },
+  { value: "partner", label: "Live-in partner", en: "Live-in partner", fil: "Kinakasama" },
+  { value: "child", label: "Son / Daughter", en: "Son / Daughter", fil: "Anak" },
+  { value: "parent", label: "Father / Mother", en: "Father / Mother", fil: "Magulang" },
+  { value: "sibling", label: "Brother / Sister", en: "Brother / Sister", fil: "Kapatid" },
+  { value: "grandparent", label: "Grandparent", en: "Grandparent", fil: "Lolo / Lola" },
+  { value: "grandchild", label: "Grandchild", en: "Grandchild", fil: "Apo" },
+  { value: "in_law", label: "In-law", en: "In-law", fil: "Biyenan / Manugang / Bayaw / Hipag" },
+  { value: "other_relative", label: "Other relative", en: "Other relative", fil: "Ibang kamag-anak" },
+  { value: "non_relative", label: "Not related (boarder, helper)", en: "Not related (boarder, helper)", fil: "Hindi kaanak" }
+];
+
+// src/utils/intakeSheet.js
+var LEGACY_MEANS_CATEGORIES = {
+  indigent: "Indigent",
+  marginalized: "Marginalized",
+  low_income: "Low income",
+  above_threshold: "Above threshold"
+};
+var isLegacyCategory = (v) => !!v && v in LEGACY_MEANS_CATEGORIES;
+var EXPENSE_FIELDS = [
+  { key: "food", label: "Food", en: "Food", fil: "Pagkain" },
+  { key: "utilities", label: "Utilities", en: "Water & power", fil: "Tubig at kuryente" },
+  { key: "rent", label: "Rent", en: "Rent", fil: "Upa sa bahay" },
+  { key: "education", label: "Education", en: "Education", fil: "Pag-aaral" },
+  { key: "medicine", label: "Medicine", en: "Medicine", fil: "Gamot" },
+  { key: "other", label: "Other", en: "Other", fil: "Iba pa" }
+];
+var MAX_HOUSEHOLD_OTHERS = 20;
+var expenseTotal = (s) => EXPENSE_FIELDS.reduce((sum, f) => sum + (Number(s?.expenses?.[f.key]) || 0), 0);
+function monthlyShortfall(s) {
+  if (s?.monthlyIncome === "" || s?.monthlyIncome == null) return 0;
+  const income = Number(s.monthlyIncome);
+  if (!Number.isFinite(income) || income < 0) return 0;
+  return Math.max(0, expenseTotal(s) - income);
+}
+var EXPENSE_DOUBLE_CHECK_RATIO = 3;
+function expensesLookMistyped(s) {
+  const income = Number(s?.monthlyIncome);
+  return Number.isFinite(income) && income > 0 && expenseTotal(s) > EXPENSE_DOUBLE_CHECK_RATIO * income;
+}
+function povertyBasis(sheet, settings) {
+  const b = sheet?.classificationBasis;
+  if (b && Number(b.povertyLine) > 0) {
+    return { povertyLine: Number(b.povertyLine), year: b.year ?? null, region: b.region ?? "", citationShort: b.citationShort ?? "", status: b.status ?? "" };
+  }
+  const line = Number(settings?.povertyLinePerCapita);
+  if (line > 0) {
+    return {
+      povertyLine: line,
+      year: settings.povertyLineYear ?? null,
+      region: settings.region ?? "",
+      citationShort: settings.povertyLineCitationShort ?? "",
+      status: settings.povertyLineStatus ?? ""
+    };
+  }
+  return null;
+}
+function perCapitaOf(monthlyIncome, householdSize) {
+  if (monthlyIncome === "" || monthlyIncome == null) return null;
+  if (householdSize === "" || householdSize == null) return null;
+  const income = Number(monthlyIncome);
+  const size = Number(householdSize);
+  if (!Number.isFinite(income) || income < 0) return null;
+  if (!Number.isFinite(size) || size <= 0) return null;
+  return income / size;
+}
+function meansTestSuggestion({ monthlyIncome, householdSize, povertyLine, is4Ps = false } = {}) {
+  const perCapita = perCapitaOf(monthlyIncome, householdSize);
+  const line = Number(povertyLine);
+  const ratio = perCapita != null && line > 0 ? perCapita / line : null;
+  if (is4Ps) return { perCapita, ratio, category: "indigent_c3", via4Ps: true };
+  if (ratio == null) return null;
+  const category = ratio < 1.4 ? "indigent_c3" : ratio <= 1.8 ? "incapacitated_c2" : ratio <= 2.2 ? "incapacitated_c1" : "capable";
+  return { perCapita, ratio, category, via4Ps: false };
+}
+var sheetSuggestion = (s, settings) => meansTestSuggestion({
+  monthlyIncome: s?.monthlyIncome,
+  householdSize: s?.householdSize,
+  povertyLine: povertyBasis(s, settings)?.povertyLine,
+  is4Ps: !!s?.is4Ps
+});
+function needsMeansTestReason(s, settings) {
+  const category = s?.meansTestCategory;
+  if (!category || isLegacyCategory(category)) return false;
+  if (category === "capable") return true;
+  const suggestion = sheetSuggestion(s, settings);
+  return !!suggestion && suggestion.category !== category;
+}
+var billVerified = (s, bill) => {
+  const v = s?.billVerification;
+  if (!v || v.amount == null) return false;
+  return bill == null || Number(v.amount) === Number(bill);
+};
+var isIntakeComplete = (s, bill) => {
+  if (!s) return false;
+  return Boolean(
+    s.householdSize && Number(s.householdSize) > 0 && s.monthlyIncome !== "" && Number(s.monthlyIncome) >= 0 && s.diagnosis?.trim() && s.recommendation?.trim() && s.meansTestCategory && (!needsMeansTestReason(s) || s.meansTestOverrideReason?.trim()) && // Revision 9: the patient's answers must be verified section by section.
+    // Only for sheets flagged verificationRequired (set when staff first work
+    // a not-yet-complete sheet) — already-assessed cases are grandfathered.
+    (!s.verificationRequired || allSectionsVerified(s)) && // Revision 11: same grandfathering — only sheets flagged
+    // billVerificationRequired need the bill confirmed.
+    (!s.billVerificationRequired || billVerified(s, bill)) && s.completedBy
+  );
+};
+function normFact(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.map(normFact).filter((x) => !(x && typeof x === "object" && Object.keys(x).length === 0) && x !== "");
+  if (typeof v === "object") {
+    const out = {};
+    for (const k of Object.keys(v).sort()) {
+      const n = normFact(v[k]);
+      if (n !== "") out[k] = n;
+    }
+    return out;
+  }
+  return String(v).trim();
+}
+var sameFact = (a, b) => JSON.stringify(normFact(a)) === JSON.stringify(normFact(b));
+var FACT_SECTIONS = [
+  {
+    key: "family",
+    label: "Household",
+    en: "Your household",
+    fil: "Ang inyong sambahayan",
+    keys: ["familyMembers", "householdSize"]
+  },
+  {
+    key: "income",
+    label: "Income & work",
+    en: "Income & work",
+    fil: "Kita at trabaho",
+    keys: ["monthlyIncome", "employmentType", "employmentTypeOther", "employer", "lengthOfEmployment", "incomeSource"]
+  },
+  {
+    key: "expenses",
+    label: "Expenses",
+    en: "Monthly expenses",
+    fil: "Buwanang gastusin",
+    keys: ["expenses", "shortfallCoverage", "shortfallCoverageOther"]
+  },
+  {
+    key: "medical",
+    label: "Medical",
+    en: "Medical details",
+    fil: "Detalye ng sakit",
+    keys: ["diagnosis", "attendingPhysician", "dateOfAdmission", "estimatedTotalCost"]
+  }
+];
+function sectionFacts(s, sectionKey) {
+  const sec = FACT_SECTIONS.find((x) => x.key === sectionKey);
+  return Object.fromEntries((sec?.keys ?? []).map((k) => [k, s?.[k] ?? null]));
+}
+function sectionVerification(s, sectionKey) {
+  const v = s?.factsVerification?.[sectionKey];
+  if (!v?.status) return { status: "pending" };
+  if (!sameFact(v.facts, sectionFacts(s, sectionKey))) return { ...v, status: "changed", previousStatus: v.status };
+  return v;
+}
+function allSectionsVerified(s) {
+  return FACT_SECTIONS.every((sec) => sectionVerification(s, sec.key).status === "verified");
+}
+
+// src/utils/verificationPolicy.js
+var DEFAULT_POLICY = {
+  interviewAboveAmount: null,
+  // ₱; null = no amount rule
+  interviewOnDuplicate: true,
+  // another account looks like the same patient
+  secondPersonAboveAmount: null
+  // ₱; null = off (Phase 3)
+};
+var policyOf = (settings) => ({ ...DEFAULT_POLICY, ...settings ?? {} });
+function interviewReasons({ request, settings, identityFlag } = {}) {
+  const p = policyOf(settings);
+  const reasons = [];
+  const amount = Number(request?.amountNeeded ?? request?.totalBill);
+  if (p.interviewAboveAmount != null && Number(p.interviewAboveAmount) > 0 && Number.isFinite(amount) && amount >= Number(p.interviewAboveAmount)) {
+    reasons.push({ key: "amount", label: `Amount is \u20B1${Number(p.interviewAboveAmount).toLocaleString()} or more` });
+  }
+  if (p.interviewOnDuplicate && (identityFlag?.matches ?? []).some((m) => m.kind !== "phone")) {
+    reasons.push({ key: "duplicate", label: "Another account looks like the same patient" });
+  }
+  if (request?.intakeSheet?.billVerification?.reusedFromRequestId) {
+    reasons.push({ key: "bill_reused", label: "The bill number was used on another request" });
+  }
+  return reasons;
+}
+var callRecorded = (request) => !!request?.intakeSheet?.verificationCall?.at;
+function secondPersonHold({ request, settings, user } = {}) {
+  const limit = Number(policyOf(settings).secondPersonAboveAmount);
+  const amount = Number(request?.amountNeeded ?? request?.totalBill);
+  if (!(limit > 0) || !Number.isFinite(amount) || amount < limit || !user) return null;
+  const s = request?.intakeSheet ?? {};
+  const uid = user.uid;
+  const didIt = !!uid && s.billVerification?.byUid === uid || !!uid && s.verificationCall?.byUid === uid || (s.completedByUid ? s.completedByUid === uid : !!s.completedBy && s.completedBy === user.name);
+  return didIt ? { key: "second_person", label: "Another staff member must endorse", detail: `You prepared this case, and it is \u20B1${limit.toLocaleString()} or more` } : null;
+}
+
+// src/utils/intakeValidation.js
+var blank = (v) => v === "" || v == null || typeof v === "string" && !v.trim();
+var num = (v) => Number(v);
+var isWhole = (v) => Number.isInteger(num(v));
+var peso = (n) => `\u20B1${Math.round(n).toLocaleString()}`;
+var err = (field, en, fil) => ({ field, en, fil });
+var memberHasData = (m) => !!(m && (m.name?.trim() || m.relationship || !blank(m.age) || m.occupation?.trim() || !blank(m.monthlyContribution)));
+function validateFamily(s) {
+  const size = s.householdSize;
+  const others = num(size) - 1;
+  if (blank(size) || !isWhole(size) || others < 0 || others > MAX_HOUSEHOLD_OTHERS) {
+    return err(
+      "householdSize",
+      `Enter how many people live with you \u2014 a whole number from 0 to ${MAX_HOUSEHOLD_OTHERS}.`,
+      `Ilagay kung ilan ang kasama ninyo sa bahay \u2014 buong numero mula 0 hanggang ${MAX_HOUSEHOLD_OTHERS}.`
+    );
+  }
+  const members = s.familyMembers ?? [];
+  if (members.length !== others) {
+    return err(
+      "householdSize",
+      `You said ${others} ${others === 1 ? "person lives" : "people live"} with you but listed ${members.length}. Please make them match.`,
+      `Sinabi ninyong ${others} ang kasama ninyo pero ${members.length} ang nakalista. Pakitugma.`
+    );
+  }
+  for (let i = 0; i < members.length; i++) {
+    const m = members[i] ?? {};
+    const n = i + 1;
+    if (!m.name?.trim()) {
+      return err(`member.${i}.name`, `Enter the name of household member ${n}.`, `Ilagay ang pangalan ng kasapi ${n}.`);
+    }
+    if (!RELATIONSHIPS.some((r) => r.value === m.relationship)) {
+      return err(`member.${i}.relationship`, `Choose how household member ${n} is related to you.`, `Piliin ang kaugnayan ng kasapi ${n} sa inyo.`);
+    }
+    if (blank(m.age) || !isWhole(m.age) || num(m.age) < 0 || num(m.age) > 120) {
+      return err(`member.${i}.age`, `Enter the age of household member ${n} (0 to 120).`, `Ilagay ang edad ng kasapi ${n} (0 hanggang 120).`);
+    }
+    if (!blank(m.monthlyContribution) && !(num(m.monthlyContribution) >= 0)) {
+      return err(`member.${i}.monthlyContribution`, `The monthly contribution of member ${n} must be \u20B10 or more.`, `Ang buwanang ambag ng kasapi ${n} ay dapat \u20B10 o higit pa.`);
+    }
+  }
+  return null;
+}
+function validateIncome(s) {
+  if (blank(s.monthlyIncome) || !(num(s.monthlyIncome) >= 0)) {
+    return err("monthlyIncome", "Enter your household's monthly income (\u20B10 or more).", "Ilagay ang buwanang kita ng sambahayan (\u20B10 o higit pa).");
+  }
+  if (!s.employmentType) {
+    return err("employmentType", "Choose your work situation.", "Piliin ang inyong kalagayan sa trabaho.");
+  }
+  if (s.employmentType === "other" && !s.employmentTypeOther?.trim()) {
+    return err("employmentTypeOther", "Describe your work situation.", "Ilarawan ang inyong trabaho.");
+  }
+  const income = num(s.monthlyIncome);
+  if (["employed", "self-employed"].includes(s.employmentType) && income === 0) {
+    return err(
+      "monthlyIncome",
+      "You said you have work, but your income is \u20B10. Please enter what you earn, or change your work situation.",
+      "Sinabi ninyong may trabaho kayo pero \u20B10 ang kita. Ilagay ang kinikita, o palitan ang kalagayan sa trabaho."
+    );
+  }
+  const contributions = (s.familyMembers ?? []).reduce((sum, m) => sum + (num(m?.monthlyContribution) || 0), 0);
+  if (contributions > income) {
+    return err(
+      "monthlyIncome",
+      `Your household members contribute ${peso(contributions)} a month, more than the household income of ${peso(income)}. Household income should include everyone's contributions.`,
+      `Ang ambag ng mga kasapi ay ${peso(contributions)} kada buwan, mas malaki sa kita ng sambahayan na ${peso(income)}. Dapat kasama sa kita ng sambahayan ang ambag ng lahat.`
+    );
+  }
+  return null;
+}
+function validateExpenses(s) {
+  for (const f of EXPENSE_FIELDS) {
+    const v = s.expenses?.[f.key];
+    if (blank(v) || !(num(v) >= 0)) {
+      return err(
+        `expenses.${f.key}`,
+        `Enter your monthly spending on ${f.en.toLowerCase()} (enter 0 if none).`,
+        `Ilagay ang buwanang gastos sa ${f.fil.toLowerCase()} (ilagay ang 0 kung wala).`
+      );
+    }
+  }
+  if (expensesLookMistyped(s) && !s._amountsConfirmed) {
+    return err(
+      "amountsConfirmed",
+      `Your expenses are more than ${EXPENSE_DOUBLE_CHECK_RATIO} times your household income. Please double-check the amounts, then tick "The amounts are correct".`,
+      `Ang gastos ay higit sa ${EXPENSE_DOUBLE_CHECK_RATIO} beses ng kita ng sambahayan. Pakisuring muli ang mga halaga, at i-tsek ang "Tama ang mga halaga".`
+    );
+  }
+  if (monthlyShortfall(s) > 0) {
+    const cov = s.shortfallCoverage ?? [];
+    if (!cov.length) {
+      return err(
+        "shortfallCoverage",
+        "Your expenses are more than your income. Choose how you cover the difference.",
+        "Mas malaki ang gastos kaysa kita. Piliin kung paano ninyo natutugunan ang kulang."
+      );
+    }
+    if (cov.includes("other") && !s.shortfallCoverageOther?.trim()) {
+      return err("shortfallCoverageOther", "Describe how else you cover the difference.", "Ilarawan kung paano pa ninyo natutugunan ang kulang.");
+    }
+  }
+  return null;
+}
+function validateMedical(s, today) {
+  if (!s.diagnosis?.trim()) {
+    return err("diagnosis", "Enter the illness or condition.", "Pakilagay ang sakit o kondisyon.");
+  }
+  if (s.dateOfAdmission && s.dateOfAdmission > today) {
+    return err("dateOfAdmission", "The admission date can't be in the future.", "Hindi maaaring nasa hinaharap ang petsa ng pag-admit.");
+  }
+  if (!blank(s.estimatedTotalCost) && !(num(s.estimatedTotalCost) >= 0)) {
+    return err("estimatedTotalCost", "The estimated cost must be \u20B10 or more.", "Ang tinatayang gastos ay dapat \u20B10 o higit pa.");
+  }
+  return null;
+}
+var VALIDATORS = { family: validateFamily, income: validateIncome, expenses: validateExpenses, medical: validateMedical };
+var todayIso = (d = /* @__PURE__ */ new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function validateIntakeStep(stepKey, sheet, { today = todayIso() } = {}) {
+  const v = VALIDATORS[stepKey];
+  return v ? v(sheet ?? {}, today) : null;
+}
+function validateIntakeAll(sheet, stepKeys, opts) {
+  for (const key of stepKeys) {
+    const e = validateIntakeStep(key, sheet, opts);
+    if (e) return { stepKey: key, ...e };
+  }
+  return null;
+}
+
+// src/utils/requestStage.js
+function encodedIntakeProblem(sheet) {
+  if (!sheet?.encodedOnBehalf) return null;
+  return validateIntakeAll(
+    { ...sheet, familyMembers: (sheet.familyMembers ?? []).filter(memberHasData), _amountsConfirmed: true },
+    ["family", "income", "expenses", "medical"]
+  );
+}
+var TERMINAL_REQUEST_STATUSES = ["fully_funded", "closed", "rejected"];
+var GATEWAY_STAGE_KEYS = ["verify", "assess", "endorse"];
+function deriveRequestStage(request = {}, docs = [], { callReasons = [], holds = [] } = {}) {
+  const terminal = TERMINAL_REQUEST_STATUSES.includes(request?.status);
+  const totalDocs = docs.length;
+  const verifiedDocs = docs.filter((d) => d?.status === "verified").length;
+  const docsVerified = totalDocs > 0 && verifiedDocs === totalDocs;
+  const encodedProblem = encodedIntakeProblem(request?.intakeSheet);
+  const intakeComplete = isIntakeComplete(request?.intakeSheet, request?.totalBill) && !encodedProblem;
+  const callNeeded = callReasons.length > 0 && !callRecorded(request);
+  const canEndorse = docsVerified && intakeComplete && !callNeeded && holds.length === 0;
+  const done = { verify: docsVerified, assess: intakeComplete, endorse: false };
+  const detail = {
+    verify: totalDocs ? `${verifiedDocs}/${totalDocs} verified` : "No documents",
+    assess: intakeComplete ? "Intake complete" : encodedProblem ? `Encoded answers: ${encodedProblem.en}` : "Intake incomplete",
+    endorse: canEndorse ? "Ready to endorse" : callNeeded && docsVerified && intakeComplete ? "Verification call needed" : "Prerequisites pending"
+  };
+  const label = { verify: "Verify documents", assess: "Assess", endorse: "Endorse" };
+  const firstIncomplete = ["verify", "assess"].find((k) => !done[k]);
+  const current = terminal ? null : firstIncomplete ?? "endorse";
+  const stages = GATEWAY_STAGE_KEYS.map((key) => ({
+    key,
+    label: label[key],
+    detail: detail[key],
+    done: done[key],
+    // status drives the rail: done · current · blocked (endorse before its
+    // prereqs) · upcoming.
+    status: terminal ? done[key] ? "done" : "upcoming" : done[key] ? "done" : key === current ? "current" : key === "endorse" ? "blocked" : "upcoming"
+  }));
+  const blockers = ["verify", "assess"].filter((k) => !done[k]).map((k) => ({ key: k, label: label[k], detail: detail[k] }));
+  if (callNeeded) blockers.push({ key: "assess", label: "Verification call", detail: callReasons.map((r) => r.label).join(" \xB7 "), call: true });
+  for (const h of holds) blockers.push({ ...h, hold: true });
+  return {
+    terminal,
+    current,
+    canEndorse,
+    stages,
+    blockers,
+    callNeeded,
+    docsVerified,
+    intakeComplete,
+    verifiedDocs,
+    totalDocs
+  };
+}
+
+// src/utils/agencyDocs.js
+var norm = (s) => String(s ?? "").toLowerCase().trim();
+var BILLING = "hospital billing statement";
+var CHARGE_SLIP = "charge slip from the hospital unit";
+function missingAgencyDocs(requirements, haveNames, request) {
+  const have = new Set([...haveNames ?? []].map(norm));
+  const outpatient = request?.careSetting === "outpatient";
+  return (requirements ?? []).filter((name) => {
+    const n = norm(name);
+    if (!n || have.has(n)) return false;
+    if (outpatient && n === BILLING && have.has(CHARGE_SLIP)) return false;
+    return true;
+  });
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   COMMITTED_SLICE_STATUSES,
@@ -212,12 +618,15 @@ var manilaDayKey = (ms = Date.now()) => new Date(ms + MANILA_OFFSET_MS).toISOStr
   OUTSTANDING_SLICE_STATUSES,
   REQUEST_CLOSED_STATUSES,
   REQ_RANK,
+  TERMINAL_REQUEST_STATUSES,
   assistanceGivenOf,
+  callRecorded,
   committedOf,
   computeAmountNeeded,
   computeFunding,
   deriveAmountNeeded,
   deriveRequestFinancials,
+  deriveRequestStage,
   deriveRequestStatus,
   disbursedOf,
   effectiveSlots,
@@ -225,6 +634,7 @@ var manilaDayKey = (ms = Date.now()) => new Date(ms + MANILA_OFFSET_MS).toISOStr
   glExpiresAtFor,
   glExpiryMs,
   glValidUntil,
+  interviewReasons,
   isCommittedSlice,
   isGLExpired,
   isGLExpiringSoon,
@@ -236,8 +646,10 @@ var manilaDayKey = (ms = Date.now()) => new Date(ms + MANILA_OFFSET_MS).toISOStr
   isSliceTerminal,
   letterState,
   manilaDayKey,
+  missingAgencyDocs,
   openLettersOf,
   reqRank,
+  secondPersonHold,
   sliceApproved,
   syncedRequestStatus
 });
