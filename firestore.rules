@@ -569,7 +569,14 @@ service cloud.firestore {
           (!changed.hasAny(['status']) ||
            (resource.data.get('status', '') in ['submitted', 'assessment'] && request.resource.data.status == 'under_review')) &&
           (!changed.hasAny(['totalBill', 'discountsApplied', 'philhealthCovered', 'otherCovered', 'amountNeeded']) ||
-           resource.data.get('agencyIds', []).size() == 0);
+           resource.data.get('agencyIds', []).size() == 0) &&
+          // Phase 3 PR 3.2 (P3-B, gap M7): the intake sheet locks at
+          // endorsement, like coverage; a correction goes through the
+          // amendAssessment function (reason, audit, agencies told).
+          (!changed.hasAny(['intakeSheet']) || resource.data.get('agencyIds', []).size() == 0) &&
+          // Amendments are recorded only by amendAssessment.
+          request.resource.data.get('intakeSheet', {}).get('amendments', null) ==
+            resource.data.get('intakeSheet', {}).get('amendments', null);
       }
 
       function staffIntakeWriteOk() {
@@ -613,6 +620,8 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['intakeSheet', 'updatedAt']) &&
           resource.data.get('intakeSheet', {}).get('factsLocked', false) != true &&
+          // Phase 3 PR 3.2: nobody edits the sheet from a browser after endorsement.
+          resource.data.get('agencyIds', []).size() == 0 &&
           request.resource.data.intakeSheet is map &&
           request.resource.data.intakeSheet.diff(resource.data.get('intakeSheet', {})).affectedKeys()
             .hasOnly([

@@ -29,6 +29,7 @@ __export(server_exports, {
   OPEN_SLICE_STATUSES: () => OPEN_SLICE_STATUSES,
   OUTSTANDING_SLICE_STATUSES: () => OUTSTANDING_SLICE_STATUSES,
   OVERRIDE_REASON_MIN: () => OVERRIDE_REASON_MIN,
+  PATIENT_FACT_KEYS: () => PATIENT_FACT_KEYS,
   REQUEST_CLOSED_STATUSES: () => REQUEST_CLOSED_STATUSES,
   REQ_RANK: () => REQ_RANK,
   TERMINAL_REQUEST_STATUSES: () => TERMINAL_REQUEST_STATUSES,
@@ -52,6 +53,7 @@ __export(server_exports, {
   isCommittedSlice: () => isCommittedSlice,
   isGLExpired: () => isGLExpired,
   isGLExpiringSoon: () => isGLExpiringSoon,
+  isIntakeComplete: () => isIntakeComplete,
   isLetterOpen: () => isLetterOpen,
   isRequestActive: () => isRequestActive,
   isRequestClosed: () => isRequestClosed,
@@ -307,10 +309,11 @@ var billVerified = (s, bill) => {
   if (!v || v.amount == null) return false;
   return bill == null || Number(v.amount) === Number(bill);
 };
+var incomeGiven = (v) => v !== "" && v != null && Number.isFinite(Number(v)) && Number(v) >= 0;
 var isIntakeComplete = (s, bill) => {
   if (!s) return false;
   return Boolean(
-    s.householdSize && Number(s.householdSize) > 0 && s.monthlyIncome !== "" && Number(s.monthlyIncome) >= 0 && s.diagnosis?.trim() && s.recommendation?.trim() && s.meansTestCategory && (!needsMeansTestReason(s) || s.meansTestOverrideReason?.trim()) && // Revision 9: the patient's answers must be verified section by section.
+    s.householdSize && Number(s.householdSize) > 0 && incomeGiven(s.monthlyIncome) && s.diagnosis?.trim() && s.recommendation?.trim() && s.meansTestCategory && (!needsMeansTestReason(s) || s.meansTestOverrideReason?.trim()) && // Revision 9: the patient's answers must be verified section by section.
     // Only for sheets flagged verificationRequired (set when staff first work
     // a not-yet-complete sheet) — already-assessed cases are grandfathered.
     (!s.verificationRequired || allSectionsVerified(s)) && // Revision 11: same grandfathering — only sheets flagged
@@ -318,6 +321,23 @@ var isIntakeComplete = (s, bill) => {
     (!s.billVerificationRequired || billVerified(s, bill)) && s.completedBy
   );
 };
+var PATIENT_FACT_KEYS = [
+  "familyMembers",
+  "householdSize",
+  "monthlyIncome",
+  "employmentType",
+  "employmentTypeOther",
+  "employer",
+  "lengthOfEmployment",
+  "incomeSource",
+  "expenses",
+  "shortfallCoverage",
+  "shortfallCoverageOther",
+  "diagnosis",
+  "attendingPhysician",
+  "dateOfAdmission",
+  "estimatedTotalCost"
+];
 function normFact(v) {
   if (v == null) return "";
   if (Array.isArray(v)) return v.map(normFact).filter((x) => !(x && typeof x === "object" && Object.keys(x).length === 0) && x !== "");
@@ -660,6 +680,7 @@ function approvalCooldownBlock(mark, requestId, now = Date.now(), limit = {}, ty
   OPEN_SLICE_STATUSES,
   OUTSTANDING_SLICE_STATUSES,
   OVERRIDE_REASON_MIN,
+  PATIENT_FACT_KEYS,
   REQUEST_CLOSED_STATUSES,
   REQ_RANK,
   TERMINAL_REQUEST_STATUSES,
@@ -683,6 +704,7 @@ function approvalCooldownBlock(mark, requestId, now = Date.now(), limit = {}, ty
   isCommittedSlice,
   isGLExpired,
   isGLExpiringSoon,
+  isIntakeComplete,
   isLetterOpen,
   isRequestActive,
   isRequestClosed,

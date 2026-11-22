@@ -40,6 +40,8 @@ exports.onDocumentCountChanged  = onDocumentCountChanged
 // Phase 3 PR 3.1: the document owns its status; requests' lists follow it.
 exports.syncDocumentStatus = require('./src/syncDocumentStatus').syncDocumentStatus
 exports.purgeUnattachedDocuments = require('./src/purgeUnattachedDocuments').purgeUnattachedDocuments
+// Phase 3 PR 3.2: assessment corrections after endorsement.
+exports.amendAssessment = require('./src/assessmentActions').amendAssessment
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated
@@ -64,6 +66,7 @@ exports.sendNotificationEmail = sendNotificationEmail
 exports.onAnnouncementCreated = onAnnouncementCreated
 exports.announcementReminders = announcementReminders
 
-const { onPatientIdentityWritten, onIdDocumentIdentityWritten } = require('./src/identityIndex')
+const { onPatientIdentityWritten, onIdDocumentIdentityWritten, clearIdentityFlag } = require('./src/identityIndex')
+exports.clearIdentityFlag = clearIdentityFlag
 exports.onPatientIdentityWritten    = onPatientIdentityWritten
 exports.onIdDocumentIdentityWritten = onIdDocumentIdentityWritten

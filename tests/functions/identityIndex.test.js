@@ -107,7 +107,7 @@ describe('handleIdentityIndex', () => {
     expect(db.store['identityFlags/h1__a'].matches).toEqual([{ kind: 'pcn', sameHospitalUids: [], otherHospitalCount: 1 }])
   })
 
-  it('changing the phone clears the old match for both accounts', async () => {
+  it('changing the phone keeps the old match as "past" for both accounts until a social worker clears it (N18)', async () => {
     const db = makeDb({
       'users/a': patient('Ana Cruz', '09171234567', ['h1']),
       'users/b': patient('Ben Cruz', '09171234567', ['h1']),
@@ -116,8 +116,31 @@ describe('handleIdentityIndex', () => {
     await index(db, 'b', db.store['users/b'])
     db.store['users/b'].contact = '09998887777'
     await index(db, 'b', db.store['users/b'])
-    expect(db.store['identityFlags/h1__a'].matches).toEqual([])
-    expect(db.store['identityFlags/h1__b'].matches).toEqual([])
+    for (const u of ['a', 'b']) {
+      const ms = db.store[`identityFlags/h1__${u}`].matches
+      expect(ms).toHaveLength(1)
+      expect(ms[0]).toMatchObject({ kind: 'phone', past: true })
+    }
+  })
+
+  it('clearIdentityFlag: hospital staff clear past matches with a reason; current ones stay', async () => {
+    const db = makeDb({
+      'users/sw': { role: 'staff_admin', tenantId: 'h1', name: 'SW' },
+      'users/swB': { role: 'staff_admin', tenantId: 'h2', name: 'Other' },
+      'identityFlags/h1__a': { uid: 'a', tenantId: 'h1', matches: [
+        { kind: 'phone', sameHospitalUids: ['b'], otherHospitalCount: 0, past: true },
+        { kind: 'pcn', sameHospitalUids: ['c'], otherHospitalCount: 0 },
+      ] },
+    })
+    db.collection = ((orig) => (col) => (col === 'auditLog' ? { add: async (d) => { db.store['auditLog/x'] = d } } : orig(col)))(db.collection)
+    db.doc = (path) => { const [c, id] = path.split('/'); return db.collection(c).doc(id) }
+    const call = (callerUid, data) => m.handleClearIdentityFlag({ callerUid, data, db, FieldValue })
+    await expect(call('sw', { patientId: 'a', reason: 'short' })).rejects.toMatchObject({ code: 'invalid-argument' })
+    await expect(call('swB', { patientId: 'a', reason: 'Asked the patient about it' })).rejects.toMatchObject({ code: 'not-found' })
+    expect(await call('sw', { patientId: 'a', reason: 'Asked the patient: old number was a relative' })).toEqual({ cleared: 1 })
+    expect(db.store['identityFlags/h1__a'].matches.map((x) => x.kind)).toEqual(['pcn'])
+    expect(db.store['identityFlags/h1__a'].cleared).toMatchObject({ byUid: 'sw', kinds: ['phone'] })
+    expect(db.store['auditLog/x']).toMatchObject({ action: 'identity_flag_cleared', patientId: 'a' })
   })
 
   it('writes one flag per hospital the patient filed with', async () => {

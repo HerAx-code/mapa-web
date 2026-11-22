@@ -145,6 +145,8 @@ export default function IntakeWizard() {
   // progress bar so the patient sees progress is being preserved.
   const [autoSaving, setAutoSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState(null)
+  // Phase 3 PR 3.2 (N11): an autosave that fails is shown, not swallowed.
+  const [saveError, setSaveError] = useState(null)
   // Field name flagged by validation, or null. Drives the red-border state
   // on the matching input + scrolls it into view via ref. Cleared as soon
   // as the patient touches it (via the set() helper).
@@ -276,12 +278,13 @@ export default function IntakeWizard() {
     setSheet(p => ({ ...p, householdSize: n + 1, familyMembers: next }))
   }
 
-  // Persist the patient's facts onto the request, merging over any existing
-  // intake so the gateway assessment fields are never clobbered.
+  // Persist the patient's facts onto the request. Phase 3 PR 3.2 (gap N11):
+  // only the patient's own fields are written (dotted paths), never the whole
+  // sheet from this page's copy — so a staff edit in between is kept, and the
+  // save no longer fails because the copy was stale.
   const toNum = (v) => (v === '' || v == null ? null : Number(v))
   const persist = async () => {
-    const payload = {
-      ...(request?.intakeSheet ?? {}),
+    const facts = {
       familyMembers: members.filter(memberHasData).map(m => ({
         name: m.name?.trim() ?? '', relationship: m.relationship ?? '',
         age: toNum(m.age), occupation: m.occupation?.trim() ?? '',
@@ -306,7 +309,14 @@ export default function IntakeWizard() {
       estimatedTotalCost: toNum(sheet.estimatedTotalCost),
       patientFilledAt:    serverTimestamp(),
     }
-    await updateDoc(doc(db, 'requests', id), { intakeSheet: payload, updatedAt: serverTimestamp() })
+    const update = Object.fromEntries(Object.entries(facts).map(([k, v]) => [`intakeSheet.${k}`, v]))
+    try {
+      await updateDoc(doc(db, 'requests', id), { ...update, updatedAt: serverTimestamp() })
+      setSaveError(null)
+    } catch (err) {
+      setSaveError(err?.code === 'permission-denied' ? 'locked' : 'failed')
+      throw err
+    }
   }
 
   // Auto-save: debounced 2s after the last field change, plus an immediate
@@ -432,6 +442,14 @@ export default function IntakeWizard() {
               since the next field change or step navigation retries. */}
           {autoSaving ? (
             <p className="text-xs text-gray-500 italic">{L('Saving…', 'Sine-save…')}</p>
+          ) : saveError ? (
+            <p className="text-xs text-red-600" role="alert">
+              {saveError === 'locked'
+                ? L('Not saved: the hospital has locked your answers. Tell the social worker if something must change.',
+                    'Hindi na-save: ni-lock na ng ospital ang inyong mga sagot. Sabihin sa social worker kung may kailangang baguhin.')
+                : L('Not saved yet. Check your connection; we will try again.',
+                    'Hindi pa na-save. Suriin ang inyong koneksyon; susubukan naming muli.')}
+            </p>
           ) : lastSavedAt ? (
             <p className="text-xs text-gray-500">
               {L('Saved', 'Na-save')} · {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

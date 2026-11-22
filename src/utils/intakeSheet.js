@@ -272,6 +272,11 @@ export const billVerified = (s, bill) => {
   return bill == null || Number(v.amount) === Number(bill)
 }
 
+// Phase 3 PR 3.2 (gap N17): a monthly income counts only when it was actually
+// entered. A blank one is stored as null, and null used to read as ₱0 —
+// completing the sheet and suggesting the poorest class. ₱0 must be typed as 0.
+export const incomeGiven = (v) => v !== '' && v != null && Number.isFinite(Number(v)) && Number(v) >= 0
+
 // The full sheet is complete when BOTH the patient facts AND the gateway
 // assessment (means-test + recommendation) are present. `bill` = the request's
 // totalBill, for the bill-confirmation check.
@@ -279,7 +284,7 @@ export const isIntakeComplete = (s, bill) => {
   if (!s) return false
   return Boolean(
     s.householdSize && Number(s.householdSize) > 0 &&
-    s.monthlyIncome !== '' && Number(s.monthlyIncome) >= 0 &&
+    incomeGiven(s.monthlyIncome) &&
     s.diagnosis?.trim() &&
     s.recommendation?.trim() &&
     s.meansTestCategory &&
@@ -301,7 +306,7 @@ export const isPatientIntakeComplete = (s) => {
   if (!s) return false
   return Boolean(
     s.householdSize && Number(s.householdSize) > 0 &&
-    s.monthlyIncome !== '' && Number(s.monthlyIncome) >= 0 &&
+    incomeGiven(s.monthlyIncome) &&
     s.diagnosis?.trim()
   )
 }
@@ -320,7 +325,7 @@ export const requiredFieldsStatus = (sheet, currentUserName, bill) => {
     if (f.key === 'verify.bill')        done = billVerified(sheet, bill)
     else if (f.key.startsWith('verify.')) done = sectionVerification(sheet, f.key.slice(7)).status === 'verified'
     else if (f.key === 'householdSize') done = !!sheet.householdSize && Number(sheet.householdSize) > 0
-    else if (f.key === 'monthlyIncome') done = sheet.monthlyIncome !== '' && Number(sheet.monthlyIncome) >= 0
+    else if (f.key === 'monthlyIncome') done = incomeGiven(sheet.monthlyIncome)
     else if (f.key === 'completedBy')   done = !!(sheet.completedBy || currentUserName)
     else                                done = !!sheet[f.key]?.toString().trim()
     return { ...f, done }
