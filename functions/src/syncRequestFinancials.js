@@ -116,7 +116,11 @@ async function handleSyncRequestFinancials({ db, requestId, serverTimestamp, del
   }
   const idle = nothingPending(req, slices, next)
   if (idle && !req.nothingPendingSince) update.nothingPendingSince = serverTimestamp()
-  if (!idle && req.nothingPendingSince) update.nothingPendingSince = deleteField()
+  if (!idle && req.nothingPendingSince) {
+    update.nothingPendingSince = deleteField()
+    // A new idle stretch gets its own warning (caseTimers, PR 4.2).
+    if (req.closingWarnedAt) update.closingWarnedAt = deleteField()
+  }
 
   // No-op writes still bill and still churn the updatedAt stamp, so skip.
   if (Object.keys(update).length === 0) {

@@ -276,9 +276,10 @@ describe('nothingPendingSince', () => {
   })
 
   it('is cleared when something is pending again', async () => {
-    const { updates } = await run({ amountNeeded: 25000, amountCommitted: 0, status: 'under_review', nothingPendingSince: 'EARLIER' },
+    const { updates } = await run({ amountNeeded: 25000, amountCommitted: 0, status: 'under_review', nothingPendingSince: 'EARLIER', closingWarnedAt: 'EARLIER' },
       [{ status: 'rejected', amountRequested: 25000 }, { status: 'endorsed', amountRequested: 25000 }])
     expect(Object.keys(updates[0])).toContain('nothingPendingSince')
+    expect(Object.keys(updates[0])).toContain('closingWarnedAt')     // a new idle stretch gets its own warning
     expect(updates[0].nothingPendingSince).not.toBe('MOCK_TS')
   })
 })
