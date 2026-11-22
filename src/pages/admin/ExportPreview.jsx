@@ -171,8 +171,6 @@ const SECTION_CONFIG = {
       { key: 'approved',      label: 'Approved'           },
       { key: 'certificate',   label: 'Guarantee Letter'   },
       { key: 'rejected',      label: 'Rejected'           },
-      { key: 'pending',       label: 'Pending (legacy)'   },
-      { key: 'interview',     label: 'Interview (legacy)' },
     ],
     cols: [
       { label: '#',           getValue: (d, i) => i + 1 },

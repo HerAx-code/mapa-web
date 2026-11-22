@@ -219,7 +219,6 @@ export function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 export const REQUEST_CLOSED_STATUSES = ['closed', 'rejected']
 // The hospital ended it (no new commitments).
 export const isRequestClosed = (status) => REQUEST_CLOSED_STATUSES.includes(status)
-export const isRequestClosedByGateway = isRequestClosed
 
 /**
  * Is the case FINISHED (decision D4 / P2-B)? Closed or rejected, or fully

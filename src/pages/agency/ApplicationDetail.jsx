@@ -131,10 +131,8 @@ export default function ApplicationDetail() {
     const base = [where('agencyId', '==', user.agencyId)]
     const statuses = {
       all:           null,
-      pending:       ['pending'],
       reviewing:     ['reviewing'],
       awaiting_info: ['awaiting_info'],
-      interview:     ['interview'],
       approved:      ['approved', 'certificate'],
       rejected:      ['rejected'],
     }[queueFilter]

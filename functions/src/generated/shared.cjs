@@ -60,7 +60,6 @@ __export(server_exports, {
   isPublishedHospital: () => isPublishedHospital,
   isRequestActive: () => isRequestActive,
   isRequestClosed: () => isRequestClosed,
-  isRequestClosedByGateway: () => isRequestClosedByGateway,
   isRequestFinished: () => isRequestFinished,
   isSliceTerminal: () => isSliceTerminal,
   letterState: () => letterState,
@@ -204,7 +203,6 @@ function deriveRequestFinancials(slices = [], amountNeeded = 0) {
 }
 var REQUEST_CLOSED_STATUSES = ["closed", "rejected"];
 var isRequestClosed = (status) => REQUEST_CLOSED_STATUSES.includes(status);
-var isRequestClosedByGateway = isRequestClosed;
 var isRequestFinished = (req) => isRequestClosed(req?.status) || req?.status === "fully_funded" && !(Number(req?.openLetters) > 0);
 var isRequestActive = (req) => !!req?.status && !isRequestFinished(req);
 function effectiveSlots(agency, todayKey, hospitalId) {
@@ -743,7 +741,6 @@ var isPublishedHospital = (h) => !!h && h.onboarding?.training !== true;
   isPublishedHospital,
   isRequestActive,
   isRequestClosed,
-  isRequestClosedByGateway,
   isRequestFinished,
   isSliceTerminal,
   letterState,

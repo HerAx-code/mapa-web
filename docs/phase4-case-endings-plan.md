@@ -1,6 +1,6 @@
 # Phase 4 plan — case endings (T5)
 
-Status: **plan accepted 2026-11-22 (P4-A to P4-E); PR 4.1 merged and deployed (#424); PR 4.2 merged and deployed (#425); PR 4.3 built on `feat/partnership-endings`.** Phases 1–3 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md). Source: the MAPA process-logic gap map, theme T5 (endings), and its proposed decisions D2, D3 and D8. Each gap below was re-checked against `main` at f713150.
+Status: **plan accepted 2026-11-22 (P4-A to P4-E); PR 4.1 merged and deployed (#424); PR 4.2 merged and deployed (#425); PR 4.3 merged and deployed (#426). Phase 4 is shipped.** Phases 1–3 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md). Source: the MAPA process-logic gap map, theme T5 (endings), and its proposed decisions D2, D3 and D8. Each gap below was re-checked against `main` at f713150.
 
 ## What Phase 4 fixes
 

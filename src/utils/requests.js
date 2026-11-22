@@ -27,7 +27,7 @@ export {
   computeAmountNeeded, deriveAmountNeeded,
   COMMITTED_SLICE_STATUSES, OUTSTANDING_SLICE_STATUSES, OPEN_SLICE_STATUSES,
   REQ_RANK, reqRank, computeFunding, deriveRequestStatus,
-  DERIVED_REQUEST_STATUSES, syncedRequestStatus, isRequestClosedByGateway,
+  DERIVED_REQUEST_STATUSES, syncedRequestStatus,
   effectiveSlots, deriveRequestFinancials, isSliceTerminal,
   isRequestFinished, isRequestActive, isRequestClosed, sliceApproved,
 } from '../shared/caseState'
