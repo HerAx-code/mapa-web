@@ -2,11 +2,10 @@
 // A patient registers with the NETWORK; to file a request at a hospital they
 // enter a code issued by THAT hospital (proof of an in-person visit). Each code
 // backs one request. This module checks a code and claims it.
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { auth, db, functions, signInAnonymously, httpsCallable } from '../firebase'
 import { accessCodeRe, DEFAULT_HOSPITAL_ID } from '../config/org'
-import { fmtDate } from './dates'
-import { codeProof, blankCodeExpired } from './codeIssue'
+import { blankCodeExpired } from './codeIssue'
 
 // A scanned code slip (/register?code=…) is kept here until the patient picks
 // that hospital in the request flow.
@@ -91,41 +90,19 @@ export const nextTenantIds = (user, tenantId) =>
   [...new Set([...(user?.tenantIds ?? []), ...(user?.tenantId ? [user.tenantId] : []), tenantId])]
 
 /**
- * Claim `code` (issued by `tenantId`) for the signed-in patient and make that
- * hospital their current one — one transaction, as the rules require.
- * Resolves to the profile fields that changed (to merge into AuthContext).
+ * Claim `code` for the signed-in patient and make that hospital their current
+ * one. Phase 3 PR 3.4: the claim runs on the server (`claimAccessCode`
+ * callable) — the one path for sign-up and filing (gap R4) — which checks the
+ * code against the ACCOUNT's own last name + birthdate (gap I1), so a browser
+ * can never claim another patient's code. Resolves to the profile fields that
+ * changed (to merge into AuthContext). `user` / `tenantId` are accepted for
+ * call-site compatibility; the server derives the hospital from the code.
  */
-export async function claimAccessCode({ user, code: rawCode, tenantId, lastName = '', birthdate = '' }) {
+export async function claimAccessCode({ code: rawCode, lastName = '', birthdate = '' }) {
   const code = normalizeCode(rawCode)
-  const uid = user.uid
-  const fields = {
-    tenantId, tenantIds: nextTenantIds(user, tenantId), hospitalId: code,
-    // An account made before patient-bound codes has no stored last name /
-    // birthdate: keep the ones just proven, so the next claim is pre-filled.
-    // (The rules let a patient set these once, never change them.)
-    ...(!user.lastName && lastName ? { lastName: lastName.trim() } : {}),
-    ...(!user.birthdate && birthdate ? { birthdate } : {}),
-  }
-  await runTransaction(db, async (tx) => {
-    const codeRef = doc(db, 'hospitalIds', code)
-    const snap = await tx.get(codeRef)
-    if (!snap.exists()) throw new Error('CODE_NOT_FOUND')
-    const c = snap.data()
-    const mine = c.status === 'used' && c.patId === uid && !c.requestId
-    if (c.status !== 'available' && !mine) throw new Error('CODE_USED')
-    if ((c.tenantId || DEFAULT_HOSPITAL_ID) !== tenantId) throw new Error('CODE_OTHER_HOSPITAL')
-    if (!mine) {
-      tx.update(codeRef, { status: 'used', patId: uid, date: fmtDate(new Date()), time: new Date().toLocaleTimeString() })
-      tx.set(doc(db, 'hospitalIds', code, 'privateInfo', 'details'), {
-        usedBy: user.name ?? '', usedById: uid, createdAt: serverTimestamp(),
-        // Patient-bound codes: the rules compare this with the issued record.
-        ...(c.bound === true ? { proof: codeProof(lastName, birthdate) } : {}),
-      })
-    }
-    tx.update(doc(db, 'users', uid), fields)
-  })
+  const res = await httpsCallable(functions, 'claimAccessCode')({ code, lastName, birthdate })
   try { sessionStorage.removeItem(PENDING_CODE_KEY) } catch { /* ignore */ }
-  return fields
+  return res.data || {}
 }
 
 // Can the patient file with their CURRENT code? Yes if it's claimed by them

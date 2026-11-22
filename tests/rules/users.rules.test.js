@@ -47,11 +47,14 @@ describe('users.create — patient self-create only with role=patient', () => {
     await setDoc(doc(db, 'hospitalIds', 'MAPA-2026-00001'), { status: 'available', patId: null, tenantId: 'hospital-1' })
   })
 
-  it('allows a patient to register by claiming an access code', async () => {
+  it('allows a patient to self-create a no-code account; the code-claim batch is server-only now (PR 3.4)', async () => {
+    // Registration creates the account with no hospital (patientSelfCreate),
+    // then claimAccessCode (server) claims any code — the browser batch is refused.
+    await assertSucceeds(setDoc(doc(testEnv.authenticatedContext('new-user-1').firestore(), 'users', 'new-user-1'),
+      { role: 'patient', agencyId: null, name: 'Juan Dela Cruz', email: 'juan@example.com' }))
     await seedCode()
-    const db = testEnv.authenticatedContext('new-user-1').firestore()
-    await assertSucceeds(registerWithCode(db, { uid: 'new-user-1', code: 'MAPA-2026-00001', tenantId: 'hospital-1',
-      profile: { name: 'Juan Dela Cruz', email: 'juan@example.com' } }))
+    await assertFails(registerWithCode(testEnv.authenticatedContext('new-user-3').firestore(),
+      { uid: 'new-user-3', code: 'MAPA-2026-00001', tenantId: 'hospital-1' }))
   })
 
   it('rejects registration with an unclaimed code, a wrong hospital, or agency links', async () => {

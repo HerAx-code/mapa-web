@@ -134,41 +134,19 @@ describe('hospitalIds/{id}/privateInfo/{infoId} — Phase 0.3 PII gate', () => {
     )))
   })
 
-  // Create is the claim-transaction path. The rule requires the writer
-  // to self-attribute via usedById and bounds usedBy at 120 chars.
-  describe('create (claim transaction)', () => {
+  // Phase 3 PR 3.4: privateInfo/details is written by the claimAccessCode
+  // callable (server, Admin SDK). No browser creates it any more.
+  describe('create — server-only now (PR 3.4)', () => {
     beforeEach(async () => {
-      // Different parent so the create test isn't blocked by an
-      // existing sub-doc from the read tests' beforeEach.
       await seedHospitalId('MAPA-2026-00099', { status: 'used', patId: 'new-patient' })
     })
 
-    it('allows the claimant to create their own privateInfo', async () => {
+    it('refuses a browser create of privateInfo, even by the claimant themselves', async () => {
       await seedUser('new-patient', 'patient')
       const ctx = testEnv.authenticatedContext('new-patient')
-      await assertSucceeds(setDoc(
+      await assertFails(setDoc(
         doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00099', 'privateInfo', 'details'),
         { usedBy: 'Juan Dela Cruz', usedById: 'new-patient', createdAt: 'whenever' },
-      ))
-    })
-
-    it("REGRESSION GUARD: rejects creating privateInfo with someone else's usedById", async () => {
-      // Self-attribution requirement prevents a malicious user from
-      // writing a name + foreign uid combination.
-      await seedUser('attacker', 'patient')
-      const ctx = testEnv.authenticatedContext('attacker')
-      await assertFails(setDoc(
-        doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00099', 'privateInfo', 'details'),
-        { usedBy: 'Fake Name', usedById: 'someone-else', createdAt: 'whenever' },
-      ))
-    })
-
-    it('rejects oversize usedBy (> 120 chars) on create', async () => {
-      await seedUser('new-patient', 'patient')
-      const ctx = testEnv.authenticatedContext('new-patient')
-      await assertFails(setDoc(
-        doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00099', 'privateInfo', 'details'),
-        { usedBy: 'A'.repeat(121), usedById: 'new-patient', createdAt: 'whenever' },
       ))
     })
   })

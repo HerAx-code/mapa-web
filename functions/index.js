@@ -63,6 +63,10 @@ exports.closeRequest = closeRequest
 const { decideSlice, settleLetter } = require('./src/sliceActions')
 exports.decideSlice = decideSlice
 exports.settleLetter = settleLetter
+// Phase 3 (T6, PR 3.4): access codes on the server (issue + claim).
+const { issueAccessCode, claimAccessCode } = require('./src/codeActions')
+exports.issueAccessCode = issueAccessCode
+exports.claimAccessCode = claimAccessCode
 exports.eraseAccount = eraseAccount
 exports.disableAccount = disableAccount
 exports.resetStaffMfa = resetStaffMfa

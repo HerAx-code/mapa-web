@@ -104,30 +104,20 @@ describe('prefix claims keep prefixes unique (D5)', () => {
   })
 })
 
-describe('each hospital issues codes under its own prefix', () => {
+// Phase 3 PR 3.4: issuing and claiming run on the server (issueAccessCode /
+// claimAccessCode). The browser can no longer do either; the prefix check,
+// well-formedness and the paused-hospital rule now live server-side and are
+// covered by tests/functions/codeActions.test.js.
+describe('issuing a code is a server action now', () => {
   const code = (tenantId) => ({ status: 'available', patId: null, tenantId })
-
-  it('own prefix, well-formed: allowed', async () => {
-    await assertSucceeds(issueCode(as('superA'), 'MAPA-2026-00002', { tenantId: A, issued: issuedRecord({ issuedByUid: 'superA' }) }))
-    await assertSucceeds(issueCode(as('superB'), 'BGH-2026-00001', { tenantId: B, issued: issuedRecord({ issuedByUid: 'superB' }) }))
-    // Blank codes are no longer created (patient-bound codes, 2026-11-15).
+  it('no browser issues a code, even under its own well-formed prefix', async () => {
+    await assertFails(issueCode(as('superA'), 'MAPA-2026-00002', { tenantId: A, issued: issuedRecord({ issuedByUid: 'superA' }) }))
+    await assertFails(issueCode(as('superB'), 'BGH-2026-00001', { tenantId: B, issued: issuedRecord({ issuedByUid: 'superB' }) }))
     await assertFails(setDoc(ref('superA', 'hospitalIds/MAPA-2026-00003'), code(A)))
-  })
-
-  it("another hospital's prefix: denied", async () => {
-    await assertFails(setDoc(ref('superA', 'hospitalIds/BGH-2026-00002'), code(A)))
-  })
-
-  it('malformed code ids: denied', async () => {
-    await assertFails(setDoc(ref('superA', 'hospitalIds/MAPA-26-00002'), code(A)))
-    await assertFails(setDoc(ref('superA', 'hospitalIds/MAPA-2026-0002'), code(A)))
-    await assertFails(setDoc(ref('superA', 'hospitalIds/XMAPA-2026-00002'), code(A)))
   })
 })
 
-// Marketplace: patients join a hospital per request by claiming its code;
-// a paused hospital's codes can't be claimed.
-describe('a disabled hospital takes no new patients', () => {
+describe('claiming a code is a server action now', () => {
   beforeEach(async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore()
@@ -135,12 +125,8 @@ describe('a disabled hospital takes no new patients', () => {
       await setDoc(doc(db, 'users', 'new2'), { role: 'patient', name: 'Ana', agencyId: null })
     })
   })
-
-  it("an open hospital's code is claimed normally", async () => {
-    await assertSucceeds(claimCode(as('new1'), { uid: 'new1', code: 'MAPA-2026-00001', tenantId: A, tenantIds: [A] }))
-  })
-
-  it("a disabled hospital's code can't be claimed", async () => {
+  it('no browser claims a code, open or paused hospital', async () => {
+    await assertFails(claimCode(as('new1'), { uid: 'new1', code: 'MAPA-2026-00001', tenantId: A, tenantIds: [A] }))
     await assertFails(claimCode(as('new2'), { uid: 'new2', code: 'CLS-2026-00001', tenantId: 'closed', tenantIds: ['closed'] }))
   })
 })

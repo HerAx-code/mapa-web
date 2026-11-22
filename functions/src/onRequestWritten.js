@@ -137,14 +137,41 @@ async function notifyOnRequestWritten({ db, before, after, requestId, serverTime
   return { skipped: 'no-notify-event' }
 }
 
+// Phase 3 PR 3.4 (P3-E / D1): a withdrawal BEFORE any staff action gives the
+// access code back to the patient for one new filing; after a review it is used
+// up. "Before any staff action" = the request never left `submitted` and no
+// attached document has been verified or rejected. Giving it back just clears
+// the code's `requestId` (the patient still holds it: `claimableBy`), which only
+// the server may do (the rules let a browser set requestId, never clear it).
+const STAFF_TOUCHED_DOC = (s) => s === 'verified' || s === 'rejected'
+async function returnCodeOnWithdrawal({ db, before, after, requestId, FieldValue }) {
+  if (!(before && after &&
+        before.status !== 'closed' && after.status === 'closed' &&
+        typeof after.closeReason === 'string' && after.closeReason.toLowerCase().includes('withdraw'))) {
+    return { codeReturn: 'not-a-withdrawal' }
+  }
+  if (before.status !== 'submitted') return { codeReturn: 'past-submitted' }
+  if ((after.attachedDocuments ?? []).some((a) => STAFF_TOUCHED_DOC(a?.status))) return { codeReturn: 'doc-reviewed' }
+  // One code backs one request, so this matches at most one doc.
+  const snap = await db.collection('hospitalIds').where('requestId', '==', requestId).get()
+  if (snap.empty) return { codeReturn: 'no-code' }
+  const codeRef = snap.docs[0].ref
+  // A course code keeps backing requests in turn — leave its requestId as the
+  // course transaction manages it; an ordinary code is freed for one new filing.
+  await codeRef.update({ requestId: FieldValue.delete() })
+  return { codeReturn: 'returned', code: snap.docs[0].id }
+}
+exports.returnCodeOnWithdrawal = returnCodeOnWithdrawal
+
 async function handleRequestWritten({ db, before, after, requestId, serverTimestamp, FieldValue }) {
-  // Two independent concerns run on every request write: the staff notification
-  // (create/withdraw) and the one-active-request guard mirror. Keep them
-  // separate so a failure in one is contained by the wrapper's try/catch and
-  // the other still ran.
+  // Independent concerns run on every request write: the staff notification
+  // (create/withdraw), the one-active-request guard mirror, and the withdrawal
+  // code-return. Keep them separate so a failure in one is contained by the
+  // wrapper's try/catch and the others still ran.
   const notify     = await notifyOnRequestWritten({ db, before, after, requestId, serverTimestamp })
   const activeSync = await syncActiveRequest({ db, before, after, requestId, FieldValue })
-  return { ...notify, activeSync, requestId }
+  const codeReturn = await returnCodeOnWithdrawal({ db, before, after, requestId, FieldValue })
+  return { ...notify, activeSync, ...codeReturn, requestId }
 }
 
 exports.handleRequestWritten = handleRequestWritten

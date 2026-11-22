@@ -62,36 +62,49 @@ const ref = (uid, p) => doc(as(uid), ...p.split('/'))
 const newReq = (uid, tenantId) => ({ patientId: uid, status: 'submitted', agencyIds: [], amountCommitted: 0, tenantId, submittedAt: serverTimestamp() })
 
 describe('choosing a hospital = claiming its code', () => {
-  it('a network patient joins hospital B by claiming a B code', async () => {
-    await assertSucceeds(claimCode(as('fresh'), { uid: 'fresh', code: 'BGH-2026-00001', tenantId: B, tenantIds: [B] }))
+  // Phase 3 PR 3.4: claiming runs on the server (claimAccessCode). The browser
+  // can no longer write the code's status / patId or privateInfo.
+  it('the browser claim (status / patId + privateInfo) is refused', async () => {
+    await assertFails(claimCode(as('fresh'), { uid: 'fresh', code: 'BGH-2026-00001', tenantId: B, tenantIds: [B] }))
   })
 
+  // The server sets the patient's current hospital, but the users-doc rule
+  // (patientSwitchesHospital) still governs that move: it must name a code the
+  // patient holds, for the hospital being joined, and keep the old hospital in
+  // tenantIds. Seed the claim as the server would, then test the move.
+  const seedUsed = (code, uid) => testEnv.withSecurityRulesDisabled(async (ctx) =>
+    updateDoc(doc(ctx.firestore(), 'hospitalIds', code), { status: 'used', patId: uid }))
+  const switchTo = (uid, { tenantId, tenantIds, code = 'BGH-2026-00001' }) =>
+    updateDoc(ref(uid, `users/${uid}`), { tenantId, tenantIds, hospitalId: code })
+
   it('a patient switches hospital and KEEPS the old one in tenantIds', async () => {
-    // patA was at A; filing at B now. Dropping A would cut A off from its own case.
-    await assertFails(claimCode(as('patA'), { uid: 'patA', code: 'BGH-2026-00001', tenantId: B, tenantIds: [B] }))
-    await assertSucceeds(claimCode(as('patA'), { uid: 'patA', code: 'BGH-2026-00001', tenantId: B, tenantIds: [A, B] }))
+    await seedUsed('BGH-2026-00001', 'patA') // patA was at A; filing at B now
+    await assertFails(switchTo('patA', { tenantId: B, tenantIds: [B] }))        // dropping A cuts A off its case
+    await assertSucceeds(switchTo('patA', { tenantId: B, tenantIds: [A, B] }))
   })
 
   it('a legacy patient (tenantId only) keeps the old hospital too', async () => {
-    await assertFails(claimCode(as('legacy'), { uid: 'legacy', code: 'BGH-2026-00001', tenantId: B, tenantIds: [B] }))
-    await assertSucceeds(claimCode(as('legacy'), { uid: 'legacy', code: 'BGH-2026-00001', tenantId: B, tenantIds: [A, B] }))
+    await seedUsed('BGH-2026-00001', 'legacy')
+    await assertFails(switchTo('legacy', { tenantId: B, tenantIds: [B] }))
+    await assertSucceeds(switchTo('legacy', { tenantId: B, tenantIds: [A, B] }))
   })
 
-  it("the code must belong to the hospital being joined, and be theirs", async () => {
-    await assertFails(claimCode(as('fresh'), { uid: 'fresh', code: 'BGH-2026-00001', tenantId: A, tenantIds: [A] }))
-    // Someone else's already-used code can't be reused.
-    await assertFails(claimCode(as('fresh'), { uid: 'fresh', code: 'MAPA-2026-00001', tenantId: A, tenantIds: [A] }))
+  it('the move must name a code the patient holds, for the hospital being joined', async () => {
+    await assertFails(switchTo('patA', { tenantId: B, tenantIds: [A, B] })) // BGH code not claimed by patA
+    await seedUsed('BGH-2026-00001', 'fresh')
+    await assertFails(switchTo('fresh', { tenantId: A, tenantIds: [A] }))    // code is B's, not A's
+    await assertSucceeds(switchTo('fresh', { tenantId: B, tenantIds: [B] }))
   })
 
-  it('no hospital switch without claiming a code in the same write', async () => {
-    await assertFails(updateDoc(ref('patA', 'users/patA'), { tenantId: B, tenantIds: [A, B] }))
+  it('no hospital switch at all without holding that code', async () => {
     await assertFails(updateDoc(ref('fresh', 'users/fresh'), { tenantIds: [A] }))
   })
 
-  it("a paused hospital's code can't be claimed", async () => {
+  it("a paused hospital's code can't be used to switch", async () => {
+    await seedUsed('BGH-2026-00001', 'fresh')
     await testEnv.withSecurityRulesDisabled(async (ctx) =>
       updateDoc(doc(ctx.firestore(), 'hospitals', 'bgh'), { enabled: false }))
-    await assertFails(claimCode(as('fresh'), { uid: 'fresh', code: 'BGH-2026-00001', tenantId: B, tenantIds: [B] }))
+    await assertFails(switchTo('fresh', { tenantId: B, tenantIds: [B] }))
   })
 })
 

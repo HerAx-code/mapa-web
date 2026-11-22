@@ -48,10 +48,11 @@ const as = (uid) => testEnv.authenticatedContext(uid).firestore()
 describe('users.tenantId', () => {
   // Marketplace: registration is network-level — no code, no hospital.
   // Registration requires the code; the code's hospital is the patient's.
-  it("a patient registers by claiming a code and joins that code's hospital", async () => {
+  it('a patient self-creates a no-code account; registering with a code runs on the server (PR 3.4)', async () => {
     // Open sign-up (2026-11-15): a no-code account is allowed (it has no hospital).
     await assertSucceeds(setDoc(doc(as('patient-2b'), 'users', 'patient-2b'), { role: 'patient', name: 'Ana' }))
-    await assertSucceeds(registerWithCode(as('patient-2'), { uid: 'patient-2', code: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
+    // Claiming a code moved to claimAccessCode (server); the browser batch is refused.
+    await assertFails(registerWithCode(as('patient-2'), { uid: 'patient-2', code: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
   })
 
   it('a patient may NOT change their own tenantId', async () => {
@@ -101,7 +102,8 @@ describe('create paths accept tenantId', () => {
   it('admin slice, access code (super_admin only), audit entry', async () => {
     // Slices are created only by endorseRequest (Phase 2 PR 2.2).
     await assertFails(setDoc(doc(as('admin-1'), 'applications', 'a1'), { patientId: 'patient-1', agencyId: 'dswd', status: 'endorsed', tenantId: 'hospital-1' }))
-    await assertSucceeds(issueCode(as('super-1'), 'MAPA-2026-00002', { tenantId: 'hospital-1', issued: issuedRecord({ issuedByUid: 'super-1' }) }))
+    // Issuing a code moved to issueAccessCode (server, Phase 3 PR 3.4).
+    await assertFails(issueCode(as('super-1'), 'MAPA-2026-00002', { tenantId: 'hospital-1', issued: issuedRecord({ issuedByUid: 'super-1' }) }))
     await assertSucceeds(setDoc(doc(as('admin-1'), 'auditLog', 'l1'), { actorId: 'admin-1', actorRole: 'staff_admin', details: 'x', tenantId: 'hospital-1' }))
   })
 

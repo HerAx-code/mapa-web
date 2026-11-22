@@ -523,24 +523,17 @@ describe('hospitalIds.update — Phase 1.5 claim write scope', () => {
     })
   }
 
-  it('allows the real registration claim', async () => {
-    await seedCode('MAPA-2026-00001')
-    const ctx = testEnv.authenticatedContext('new-patient')
-    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), {
-      status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
-    }))
-  })
-
-  it('REGRESSION GUARD: rejects rewriting unrelated fields while claiming', async () => {
+  // Phase 3 PR 3.4: claiming moved to the claimAccessCode callable; the browser
+  // can no longer write a code's status / patId at all.
+  it('refuses a browser claim (status / patId) — server-only now', async () => {
     await seedCode('MAPA-2026-00001')
     const ctx = testEnv.authenticatedContext('new-patient')
     await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), {
       status: 'used', patId: 'new-patient', date: '2026-07-23', time: '10:00:00',
-      note: 'tampered',
     }))
   })
 
-  it('still rejects claiming an already-used code', async () => {
+  it('still refuses claiming an already-used code', async () => {
     await seedCode('MAPA-2026-00001', { status: 'used', patId: 'someone-else' })
     const ctx = testEnv.authenticatedContext('new-patient')
     await assertFails(updateDoc(doc(ctx.firestore(), 'hospitalIds', 'MAPA-2026-00001'), {
