@@ -1,6 +1,6 @@
 # Phase 3 plan — evidence and codes (T4, T6)
 
-Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 built on `feat/assessment-amendments`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
+Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 built on `feat/case-conversations`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
 
 ## What Phase 3 fixes
 
@@ -132,6 +132,11 @@ Why: the rules can't normalize names the way `codeProof()` does (accents, spaces
    - Names and roles are set when the thread starts and never by a patient.
 5. **Email scope:** `mayEmail` already lets a hospital's staff reach its patients; no change, but tests confirm a joined staff member's reply is emailed.
 6. **Tests:** rules tests that a patient can no longer move `lastAt` or names; function tests for join (same hospital only, audited).
+7. **As built:**
+   - **`openCaseConversation({ requestId })`** (functions/src/caseConversations.js) creates the case's thread on first use, or joins the caller to it. It stores `requests.caseConversationId`, which the rules refuse from browsers, and joins only a thread whose `requestId` and hospital match the case.
+   - **`onConversationMessage`** writes `lastAt`, the preview (200 characters) and the unread count for every other participant. A participant may change only their own `unread` and `seenBy` entries, and browsers can't create `kind: 'case'` threads.
+   - **The hospital's case page** has a "Case conversation" button.
+   - **The backfill was not needed.** `scripts/backfill-case-conversations.mjs` (report run 2026-11-22) found nothing to tag: of the 13 existing threads, 8 are between a patient and a staff account that no longer exists, and 5 involve agency staff.
 
 ## PR 3.4 — Codes on the server (I1, M10, R4, D1)
 1. **`issueAccessCode`** and **`claimAccessCode`** (P3-F), with tests for: the account-profile check (Juan can't claim Ana's code), two desks at once, a deleted number not reissued, the open-code warning, and a hospital that takes no claims.

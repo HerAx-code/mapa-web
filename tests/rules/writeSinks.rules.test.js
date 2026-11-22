@@ -477,14 +477,21 @@ describe('conversations.update — Phase 1.5 participant tampering', () => {
     })
   }
 
-  it('allows the real unread/last-message denormalisation write', async () => {
+  it('Phase 3 PR 3.3 (N13): a participant writes only their own read marker; the server writes lastAt and the preview', async () => {
     await seedUser('patient-1', 'patient')
     await seedConv('conv-1', ['patient-1', 'admin-1'])
-    const ctx = testEnv.authenticatedContext('patient-1')
-    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'conversations', 'conv-1'), {
-      lastMessage: 'hello', lastFrom: 'patient-1', lastAt: serverTimestamp(),
-      'unread.admin-1': 1,
-    }))
+    const ref = doc(testEnv.authenticatedContext('patient-1').firestore(), 'conversations', 'conv-1')
+    await assertSucceeds(updateDoc(ref, { 'unread.patient-1': 0, 'seenBy.patient-1': serverTimestamp() }))
+    await assertFails(updateDoc(ref, { lastMessage: 'hello', lastFrom: 'patient-1', lastAt: serverTimestamp() }))
+    await assertFails(updateDoc(ref, { 'unread.admin-1': 0 }))
+    await assertFails(updateDoc(ref, { 'names.admin-1': 'Someone else' }))
+  })
+
+  it('Phase 3 PR 3.3 (P3-C): no browser creates a case conversation', async () => {
+    await seedUser('admin-1', 'staff_admin')
+    const db = testEnv.authenticatedContext('admin-1').firestore()
+    await assertFails(addDoc(collection(db, 'conversations'), { participants: ['admin-1', 'patient-1'], kind: 'case', requestId: 'r1' }))
+    await assertSucceeds(addDoc(collection(db, 'conversations'), { participants: ['admin-1', 'patient-1'] }))
   })
 
   it('REGRESSION GUARD: rejects adding a third party to the thread', async () => {

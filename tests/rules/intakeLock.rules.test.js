@@ -49,6 +49,10 @@ describe('the intake sheet locks at endorsement', () => {
     await assertSucceeds(updateDoc(doc(as('sw'), 'requests', 'endorsed'), { eligibilityCert: { id: 'c1', status: 'generated' } }))
   })
 
+  it("no browser points a case at a conversation (Phase 3 PR 3.3: openCaseConversation only)", async () => {
+    await assertFails(updateDoc(doc(as('sw'), 'requests', 'open'), { caseConversationId: 'someone-elses-thread' }))
+  })
+
   it('no browser writes the amendment record, even before endorsement', async () => {
     await assertFails(updateDoc(doc(as('sw'), 'requests', 'open'), { 'intakeSheet.amendments': [{ reason: 'forged' }] }))
   })
