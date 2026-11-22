@@ -46,6 +46,8 @@ exports.amendAssessment = require('./src/assessmentActions').amendAssessment
 const { openCaseConversation, onConversationMessage } = require('./src/caseConversations')
 exports.openCaseConversation = openCaseConversation
 exports.onConversationMessage = onConversationMessage
+// Phase 4 PR 4.2: the daily case timers.
+exports.caseTimers = require('./src/caseTimers').caseTimers
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated

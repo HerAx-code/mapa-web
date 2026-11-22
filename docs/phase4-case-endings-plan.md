@@ -1,6 +1,6 @@
 # Phase 4 plan — case endings (T5)
 
-Status: **plan accepted 2026-11-22 (P4-A to P4-E); PR 4.1 built on `feat/case-endings-core`.** Phases 1–3 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md). Source: the MAPA process-logic gap map, theme T5 (endings), and its proposed decisions D2, D3 and D8. Each gap below was re-checked against `main` at f713150.
+Status: **plan accepted 2026-11-22 (P4-A to P4-E); PR 4.1 merged and deployed (#424); PR 4.2 built on `feat/case-timers`.** Phases 1–3 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md). Source: the MAPA process-logic gap map, theme T5 (endings), and its proposed decisions D2, D3 and D8. Each gap below was re-checked against `main` at f713150.
 
 ## What Phase 4 fixes
 
@@ -100,6 +100,12 @@ Why: unlike Proceed, the agency asked for something specific and is best placed 
    - **Held at a disabled agency (P4-D):** close after the limit, as "Agency unavailable" (needs `agencies.disabledAt`, PR 4.3).
 2. **Re-checks before closing.** Each close re-reads inside its transaction. A patient who proceeded, or a hospital that endorsed, a minute before the run is not closed.
 3. **Tests:** handler tests per step, including idempotence (two runs, one reminder) and the last-minute race.
+4. **As built:**
+   - **The function.** `functions/src/caseTimers.js` (`handleCaseTimers`, scheduled daily at 06:00 Asia/Manila).
+   - **Which cases it reads.** Endorsed and awaiting-info slices by status; requests whose status is endorsed, partially funded or under review that carry `nothingPendingSince`.
+   - **A new cycle gets a new warning.** `syncRequestFinancials` clears `closingWarnedAt` with `nothingPendingSince`, and a new "Needs info" resets `infoReminders`.
+   - **Disabled agencies.** Step 4 acts only on agencies that carry `disabledAt`, which PR 4.3 stamps; until then it does nothing.
+   - **Notifications.** All are written by the server (`fromUid` null), so `sendNotificationEmail` emails them as server events.
 
 ## PR 4.3 — Partnerships and disabled agencies
 1. **`onAgencyWritten`** (it already projects `agenciesPublic`) also:

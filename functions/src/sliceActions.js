@@ -202,6 +202,8 @@ async function handleDecideSlice({ callerUid, data, db, ...overrides }) {
       writeSliceChange(tx, c, {
         status: 'awaiting_info', awaitingInfoMessage: input.message,
         awaitingInfoRequestedAt: deps.serverTimestamp(), awaitingInfoRequestedBy: caller.name ?? '',
+        // A new request restarts the case timers' reminders (PR 4.2).
+        infoReminders: 0,
       }, null, deps)
       return { c, from: s.status, to: 'awaiting_info' }
     }
