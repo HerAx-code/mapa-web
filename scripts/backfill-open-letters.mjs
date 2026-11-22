@@ -9,6 +9,11 @@
 //   $env:GOOGLE_APPLICATION_CREDENTIALS = (Resolve-Path .\service-account.json).Path
 //   node scripts/backfill-open-letters.mjs            # report
 //   node scripts/backfill-open-letters.mjs --write    # apply
+//   ... --skip=REQ-2026-XXXXXX[,REQ-...]               # leave these requests alone
+//
+// --skip is for a fully funded case whose patient already filed a newer
+// request under the old rule: reopening it would give them two active cases.
+// Its count is set correctly the next time one of its slices changes.
 //
 // Uses the same shared definition as the functions (functions/src/generated/
 // shared.cjs, built from src/shared/caseState.js).
@@ -18,6 +23,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 
 const { openLettersOf, isRequestFinished } = createRequire(import.meta.url)('../functions/src/generated/shared.cjs')
 const write = process.argv.includes('--write')
+const skip = new Set((process.argv.find((a) => a.startsWith('--skip=')) ?? '').slice('--skip='.length).split(',').filter(Boolean))
 
 initializeApp({ credential: applicationDefault() })
 const db = getFirestore()
@@ -36,6 +42,10 @@ let reopened = 0
 const batch = db.batch()
 for (const r of requests.docs) {
   const req = r.data()
+  if (skip.has(req.requestId) || skip.has(r.id)) {
+    console.log(`  – ${req.requestId ?? r.id}: skipped (--skip)`)
+    continue
+  }
   const open = openLettersOf(byRequest.get(r.id) ?? [])
   if ((req.openLetters ?? 0) === open && req.openLetters !== undefined) continue
   const wasFinished = isRequestFinished(req)
