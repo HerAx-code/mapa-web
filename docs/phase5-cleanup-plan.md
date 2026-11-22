@@ -1,6 +1,6 @@
 # Phase 5 plan — cleanup (T7) and two-factor stage 2
 
-Status: **plan accepted 2026-11-22 (P5-A to P5-D); PR 5.1 merged and deployed (#427); PR 5.2 built on `feat/patient-ids-hospital-listing`.** Phases 1–4 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md, docs/phase4-case-endings-plan.md). Source: the MAPA process-logic gap map, theme T7 (N3–N6, R5–R8, R10), plus the leftovers found while building Phases 2–4. Each item was re-checked against `main` after #426.
+Status: **plan accepted 2026-11-22 (P5-A to P5-D); PR 5.1 merged and deployed (#427); PR 5.2 merged and deployed (#428); PR 5.3 built on `chore/phase5-records-docs`.** Phases 1–4 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md, docs/phase4-case-endings-plan.md). Source: the MAPA process-logic gap map, theme T7 (N3–N6, R5–R8, R10), plus the leftovers found while building Phases 2–4. Each item was re-checked against `main` after #426.
 
 ## What is left
 
@@ -89,6 +89,10 @@ Why: enforcement is the point, but switching it on before enrolment locks the of
 1. `scripts/report-orphan-staff.mjs`: report, then `--write` on your OK (`active: false`, `orphaned: true`).
 2. Remove the dead labels and aliases (L4).
 3. Bring CLAUDE.md and the phase plans up to date (L3).
+4. **As built:**
+   - **Orphan profiles.** `scripts/report-orphan-staff.mjs` found 12 agency staff profiles with no sign-in account (10 still active) at Malasakit, PCSO, AMBAG, DOH, PhilHealth and DSWD. On the owner's OK (2026-11-22) all 12 were marked `active: false, orphaned: true`; none was deleted. A re-run shows none left.
+   - **Dead code.** The legacy filters (`pending`, `interview`) are gone from App Logs, the agency Logs, Export and the agency queue, along with the aliases `isRequestClosedByGateway` and `APPROVAL_COOLDOWN_DAYS`. Display code that renders old records is kept.
+   - **A bug found while doing it.** The agency Dashboard's "Review" opened the removed `pending` queue, so the case page's previous/next found nothing; it now opens `reviewing`.
 
 ## PR 5.4 — Two-factor stage 2, switched off (P5-D)
 1. The rules function and the callable checks, behind `config/security.enforceStaffMfa` (default off; Super Admin only).

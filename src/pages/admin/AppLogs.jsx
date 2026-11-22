@@ -22,8 +22,6 @@ const STATUS_ROWS = [
   ['approved',      'Approved'          ],
   ['certificate',   'Guarantee Letter'  ],
   ['rejected',      'Rejected'          ],
-  ['pending',       'Pending (legacy)'  ],
-  ['interview',     'Interview (legacy)'],
 ]
 
 const fmtTime = (ts) => {

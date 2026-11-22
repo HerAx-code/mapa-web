@@ -387,7 +387,7 @@ export default function AgencyDashboard() {
                     </td>
                     <td>
                       <button className="btn-primary text-xs py-1.5 px-3"
-                        onClick={() => navigate(`/agency/applications/${app.id}?queue=pending`)}>
+                        onClick={() => navigate(`/agency/applications/${app.id}?queue=reviewing`)}>
                         Review
                       </button>
                     </td>

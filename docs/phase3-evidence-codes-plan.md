@@ -1,6 +1,6 @@
 # Phase 3 plan — evidence and codes (T4, T6)
 
-Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 merged (#421); PR 3.5 merged (#423); PR 3.4 built (#422, `feat/codes-on-server`).** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
+Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 merged (#421); PR 3.4 merged and deployed (#422); PR 3.5 merged and deployed (#423). Phase 3 is shipped.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
 
 ## What Phase 3 fixes
 

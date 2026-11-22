@@ -13,8 +13,6 @@
 // A reversal keeps the mark, so the clock runs from the first approval.
 
 export const DEFAULT_REPEAT_DAYS = 30
-// Older name, kept for callers that print the default.
-export const APPROVAL_COOLDOWN_DAYS = DEFAULT_REPEAT_DAYS
 export const OVERRIDE_REASON_MIN = 10
 const DAY_MS = 86400000
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { approvalCooldownBlock, approvalMarkId, APPROVAL_COOLDOWN_DAYS } from '../../src/utils/approvalCooldown.js'
+import { approvalCooldownBlock, approvalMarkId, DEFAULT_REPEAT_DAYS } from '../../src/utils/approvalCooldown.js'
 
 const DAY = 86400000
 const NOW = Date.UTC(2026, 10, 15)
@@ -13,7 +13,7 @@ describe('approvalCooldownBlock', () => {
 
   it('a recent approval for another request blocks, with days left', () => {
     const b = approvalCooldownBlock(mark(10), 'r2', NOW)
-    expect(b).toMatchObject({ daysAgo: 10, daysRemaining: APPROVAL_COOLDOWN_DAYS - 10, requestId: 'r1' })
+    expect(b).toMatchObject({ daysAgo: 10, daysRemaining: DEFAULT_REPEAT_DAYS - 10, requestId: 'r1' })
   })
 
   it('the same request never blocks (re-approval after a reversal)', () => {
