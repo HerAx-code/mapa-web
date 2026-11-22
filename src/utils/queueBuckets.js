@@ -32,7 +32,8 @@ export const BUCKET_LABELS = {
 export const QUEUE_TABS = [...QUEUE_BUCKETS, 'all']
 
 // Documents are stored on the request as attachedDocuments[{documentId, status}],
-// kept in sync by reviewDoc / bulkVerifyPending. Shape them for the stage model.
+// kept in step with the documents by the syncDocumentStatus function (Phase 3
+// PR 3.1). Shape them for the stage model.
 export function requestDocs(request) {
   return (request?.attachedDocuments ?? []).map(a => ({ status: a?.status ?? 'pending' }))
 }

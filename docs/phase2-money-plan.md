@@ -1,6 +1,6 @@
 # Phase 2 plan — money on the server (T8, then T3)
 
-Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 merged and deployed (#416); PR 2.3 merged and deployed (#417); PR 2.4 built on `feat/budget-reconcile`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
+Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 merged and deployed (#416); PR 2.3 merged and deployed (#417); PR 2.4 merged and deployed (#418). Phase 2 is shipped.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
 
 ## What Phase 2 fixes
 
@@ -87,7 +87,7 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 6. **Tests:** functions tests for every action, including two approvals at once (only one succeeds, the budget counted once) and the sweep racing a redemption; rules tests that agencies can't write money fields.
 7. **As built:** `functions/src/sliceActions.js`. The signed-letter upload still writes its own `certificates/` doc and the slice's `certificateUploaded` flag from the browser (no money; the rules allow agency staff only that flag and `caseNotes`). Also: the agency Dashboard's browser slot reset is gone (resetAgencySlots), the Agency Admin can no longer rewrite `committed` / `disbursed` (a new period may start disbursed at 0 once nothing is committed), and patients may move only a slice's status.
 
-## PR 2.4 — Repair and cleanup — built
+## PR 2.4 — Repair and cleanup — shipped
 **As built (2026-11-22):**
 - **The budget reconcile found no drift.** The report run of `scripts/reconcile-agency-budgets.mjs` found all 7 agencies' `committed` and `disbursed` equal to their slices, so nothing was written. The script stays for future repairs. Each agency is fixed in its own transaction; `disbursed` counts the current budget period only.
 - **No legacy statuses remain.** No slice in production is `pending` or `interview`, so both left the shared lists, `decideSlice` (`start_review`), the agency's Start Review button, the patient's pending → rejected rule and the status queries. Display labels for them stay, harmless.

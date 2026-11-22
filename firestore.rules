@@ -562,7 +562,10 @@ service cloud.firestore {
       // it is endorsed (the page locked them; now the rules do too).
       function hospitalRequestWriteOk() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
-        return !changed.hasAny(['agencyIds', 'amountCommitted', 'openLetters', 'watchers', 'patientId', 'patientHospitalId']) &&
+        // Phase 3 PR 3.1: attachedDocuments follows the documents on the
+        // server (syncDocumentStatus); staff review the document itself.
+        return !changed.hasAny(['agencyIds', 'amountCommitted', 'openLetters', 'watchers', 'patientId', 'patientHospitalId',
+                                'attachedDocuments', 'replacedDocuments']) &&
           (!changed.hasAny(['status']) ||
            (resource.data.get('status', '') in ['submitted', 'assessment'] && request.resource.data.status == 'under_review')) &&
           (!changed.hasAny(['totalBill', 'discountsApplied', 'philhealthCovered', 'otherCovered', 'amountNeeded']) ||
@@ -758,8 +761,13 @@ service cloud.firestore {
       // client-side patient write, replacePatientDocument in
       // src/utils/uploadDocument.js, which sets precisely these keys and
       // always resets status to 'pending' for re-review.
+      // Phase 3 PR 3.1 (P3-A, gap I7): a patient re-uploads in place only
+      // while the document is pending or rejected and was never sent to an
+      // agency. A verified or endorsed document is evidence: its file and
+      // status are fixed, and a correction is a new document (supersedes).
       allow update: if hospitalAdminWrite() ||
                        (isPatient() && resource.data.patientId == uid() &&
+                        patientMayReplace(resource.data) &&
                         request.resource.data.status == 'pending' &&
                         request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['status', 'fileName', 'type', 'size', 'date',
@@ -783,7 +791,13 @@ service cloud.firestore {
       allow delete: if isHospitalAdmin(resource.data) ||
                        (isPatient() && resource.data.patientId == uid() &&
                         resource.data.status == 'pending' &&
-                        !('agencyIds' in resource.data));
+                        resource.data.get('agencyIds', []).size() == 0);
+    }
+
+    // A patient may change a document's file only before anyone relied on it.
+    function patientMayReplace(d) {
+      return d.get('status', '') in ['pending', 'rejected'] &&
+             d.get('agencyIds', []).size() == 0;
     }
 
     // ── agencies ──────────────────────────────────────────────────────────────
@@ -1721,11 +1735,19 @@ service cloud.firestore {
                          request.resource.data.content.size() <= 1000000));
       allow update: if (hospitalAdminWrite() ||
                         (isPatient() && resource.data.patientId == uid() &&
-                         tenantOf(request.resource.data) == tenantOf(resource.data))) &&
+                         tenantOf(request.resource.data) == tenantOf(resource.data) &&
+                         patientMayReplace(get(/databases/$(database)/documents/documents/$(docId)).data))) &&
                        (!('content' in request.resource.data) ||
                         (request.resource.data.content is string &&
                          request.resource.data.content.size() <= 1000000));
-      allow delete: if isHospitalAdmin(resource.data) || (isPatient() && resource.data.patientId == uid());
+      // Phase 3 PR 3.1: a patient deletes content only with its pending,
+      // never-endorsed document (the upload rollback, or a document whose
+      // parent is already gone).
+      allow delete: if isHospitalAdmin(resource.data) ||
+                       (isPatient() && resource.data.patientId == uid() &&
+                        (!exists(/databases/$(database)/documents/documents/$(docId)) ||
+                         (get(/databases/$(database)/documents/documents/$(docId)).data.get('status', '') == 'pending' &&
+                          get(/databases/$(database)/documents/documents/$(docId)).data.get('agencyIds', []).size() == 0)));
     }
 
     // ── reports ───────────────────────────────────────────────────────────────

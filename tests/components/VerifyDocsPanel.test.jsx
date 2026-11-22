@@ -47,7 +47,7 @@ describe('VerifyDocsPanel — advisory verification chips', () => {
         idVerifyMethod: 'ocr', faceMatch: 'pass', faceMatchScore: 0.83, liveness: 'unclear', livenessScore: 0.4 },
     ]
     render(<VerifyDocsPanel {...baseProps} reqDocs={reqDocs} onCompare={onCompare} />)
-    expect(screen.getByText(/Face match: likely the same person/)).toBeInTheDocument()
+    expect(screen.getByText(/Face match \(patient's phone\): likely the same person/)).toBeInTheDocument()
     expect(screen.getByText(/0\.83/)).toBeInTheDocument()
     expect(screen.getByText(/Liveness: hard to confirm/i)).toBeInTheDocument()
     expect(screen.getByText(/Compare with ID side-by-side/)).toBeInTheDocument()
@@ -103,9 +103,9 @@ describe('VerifyDocsPanel — Identity review card', () => {
       { id: 'sf-1', documentTypeName: 'Live Selfie', status: 'pending', faceMatch: 'pass', liveness: 'pass' },
     ]
     render(<VerifyDocsPanel {...idProps} reqDocs={reqDocs} />)
-    expect(screen.getByText(/National ID · PSA signature valid/)).toBeInTheDocument()
-    expect(screen.getByText('Matches account')).toBeInTheDocument()
-    expect(screen.getByText('Likely same person')).toBeInTheDocument()
+    expect(screen.getByText(/National ID · the patient's phone reports the PSA signature valid/)).toBeInTheDocument()
+    expect(screen.getByText('Matches account (phone)')).toBeInTheDocument()
+    expect(screen.getByText('Likely same person (phone)')).toBeInTheDocument()
     // Duplicate-account flag: same-hospital match by name, elsewhere a count only.
     expect(screen.getByText(/Possible duplicate — ask the patient/)).toBeInTheDocument()
     expect(await screen.findByText(/Ana Cruz \(PAT-1\)/)).toBeInTheDocument()
