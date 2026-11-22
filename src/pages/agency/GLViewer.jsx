@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { doc, getDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
-import { notify } from '../../utils/notifications'
+import { settleLetter } from '../../utils/sliceActions'
 import {
   MdArrowBack, MdPrint, MdUpload, MdInfo, MdKeyboard,
   MdCheckCircle, MdWarning,
@@ -115,20 +115,14 @@ export default function GLViewer() {
     if (!app || markingIssued) return
     setMarkingIssued(true)
     try {
-      await updateDoc(doc(db, 'applications', app.id), {
-        status:    'certificate',
-        updatedAt: serverTimestamp(),
-      })
-      await notify(app.patientId, {
-        type:  'certificate_ready',
-        title: 'Your Guarantee Letter has been issued',
-        body:  `Your Guarantee Letter for ₱${Number(app.approvedAmount ?? 0).toLocaleString()} from ${app.agencyName} has been issued. ${app.agencyName} is preparing the signed copy — you'll be notified when it's ready to download.`,
-      })
+      // Phase 2 PR 2.3: the server checks the letter is still open, marks it
+      // issued, writes the audit entry and notifies the patient.
+      await settleLetter({ sliceId: app.id, action: 'mark_issued' })
       toast.success('Marked as Issued. Patient has been notified.')
       setShowConfirmIssued(false)
     } catch (err) {
       console.error(err)
-      toast.error('Failed to mark as Issued. Please try again.')
+      toast.error(err?.message && err?.code !== 'functions/internal' ? err.message : 'Failed to mark as Issued. Please try again.')
     } finally {
       setMarkingIssued(false)
     }
@@ -238,7 +232,7 @@ export default function GLViewer() {
               <dl className="space-y-2 text-sm">
                 <div className="flex items-baseline justify-between gap-2">
                   <dt className="text-gray-500">Amount approved</dt>
-                  <dd className="tabular-nums font-semibold text-brand-700">₱{Number(app.approvedAmount ?? 0).toLocaleString()}</dd>
+                  <dd className="tabular-nums font-semibold text-brand-700">₱{Number(app.amountApproved ?? app.approvedAmount ?? 0).toLocaleString()}</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-2">
                   <dt className="text-gray-500 flex-shrink-0">Patient</dt>

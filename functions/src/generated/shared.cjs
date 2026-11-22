@@ -28,9 +28,11 @@ __export(server_exports, {
   LEGACY_GL_VALIDITY_DAYS: () => LEGACY_GL_VALIDITY_DAYS,
   OPEN_SLICE_STATUSES: () => OPEN_SLICE_STATUSES,
   OUTSTANDING_SLICE_STATUSES: () => OUTSTANDING_SLICE_STATUSES,
+  OVERRIDE_REASON_MIN: () => OVERRIDE_REASON_MIN,
   REQUEST_CLOSED_STATUSES: () => REQUEST_CLOSED_STATUSES,
   REQ_RANK: () => REQ_RANK,
   TERMINAL_REQUEST_STATUSES: () => TERMINAL_REQUEST_STATUSES,
+  approvalCooldownBlock: () => approvalCooldownBlock,
   assistanceGivenOf: () => assistanceGivenOf,
   callRecorded: () => callRecorded,
   committedOf: () => committedOf,
@@ -60,6 +62,7 @@ __export(server_exports, {
   manilaDayKey: () => manilaDayKey,
   missingAgencyDocs: () => missingAgencyDocs,
   openLettersOf: () => openLettersOf,
+  repeatLimitOf: () => repeatLimitOf,
   reqRank: () => reqRank,
   secondPersonHold: () => secondPersonHold,
   sliceApproved: () => sliceApproved,
@@ -607,6 +610,46 @@ function missingAgencyDocs(requirements, haveNames, request) {
     return true;
   });
 }
+
+// src/utils/approvalCooldown.js
+var DEFAULT_REPEAT_DAYS = 30;
+var OVERRIDE_REASON_MIN = 10;
+var DAY_MS2 = 864e5;
+function repeatLimitOf(agency) {
+  const days = Number(agency?.repeatLimit?.days);
+  return {
+    days: Number.isFinite(days) && days >= 0 ? Math.floor(days) : DEFAULT_REPEAT_DAYS,
+    perType: agency?.repeatLimit?.perType === true
+  };
+}
+function toMillis(ts) {
+  if (!ts) return null;
+  if (typeof ts.toMillis === "function") return ts.toMillis();
+  if (ts instanceof Date) return ts.getTime();
+  if (typeof ts.seconds === "number") return ts.seconds * 1e3;
+  const n = new Date(ts).getTime();
+  return Number.isNaN(n) ? null : n;
+}
+function approvalCooldownBlock(mark, requestId, now = Date.now(), limit = {}, type = "") {
+  const days = limit.days ?? DEFAULT_REPEAT_DAYS;
+  if (!mark || days === 0) return null;
+  const prev = limit.perType ? mark.byType?.[type] ?? null : { at: mark.lastApprovedAt, requestId: mark.requestId };
+  const at = toMillis(prev?.at);
+  if (at == null) return null;
+  if (requestId && prev.requestId === requestId) return null;
+  const until = at + days * DAY_MS2;
+  if (until <= now) return null;
+  return {
+    days,
+    perType: !!limit.perType,
+    type: limit.perType ? type : null,
+    lastApprovedAt: new Date(at),
+    until: new Date(until),
+    daysAgo: Math.floor((now - at) / DAY_MS2),
+    daysRemaining: Math.ceil((until - now) / DAY_MS2),
+    requestId: prev.requestId ?? null
+  };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   COMMITTED_SLICE_STATUSES,
@@ -616,9 +659,11 @@ function missingAgencyDocs(requirements, haveNames, request) {
   LEGACY_GL_VALIDITY_DAYS,
   OPEN_SLICE_STATUSES,
   OUTSTANDING_SLICE_STATUSES,
+  OVERRIDE_REASON_MIN,
   REQUEST_CLOSED_STATUSES,
   REQ_RANK,
   TERMINAL_REQUEST_STATUSES,
+  approvalCooldownBlock,
   assistanceGivenOf,
   callRecorded,
   committedOf,
@@ -648,6 +693,7 @@ function missingAgencyDocs(requirements, haveNames, request) {
   manilaDayKey,
   missingAgencyDocs,
   openLettersOf,
+  repeatLimitOf,
   reqRank,
   secondPersonHold,
   sliceApproved,

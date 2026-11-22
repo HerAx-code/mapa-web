@@ -102,7 +102,7 @@ export default function AgencyFunds() {
     const out = []
     for (const a of appsInScope) {
       const isReversed     = !!a.reversedAt || !!a.reversalReason
-      const approvedAmount = Number(a.approvedAmount) || 0
+      const approvedAmount = Number(a.amountApproved ?? a.approvedAmount) || 0
       const hasAmount      = approvedAmount > 0
 
       // Approve event — prefer real approvedAt, fall back to back-solving

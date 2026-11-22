@@ -652,7 +652,7 @@ export default function TrackStatus() {
                           </button>
                         </div>
                       )}
-                      {(app.status === 'approved' || app.status === 'certificate') && app.approvedAmount != null && (() => {
+                      {(app.status === 'approved' || app.status === 'certificate') && (app.amountApproved ?? app.approvedAmount) != null && (() => {
                         // #6 — Patient-side GL expiry visibility. The agency
                         // already enforces a 30-day window; without surfacing
                         // it here, the patient finds out at the provider
@@ -688,7 +688,7 @@ export default function TrackStatus() {
                             <p className="text-xs text-green-600 uppercase tracking-wide">{t('patient.track.approval.amountLabel')}</p>
                             {/* eslint-disable-next-line i18next/no-literal-string -- ₱ is currency, not copy */}
                             <p className="text-2xl sm:text-3xl font-bold text-green-700 leading-tight">
-                              ₱{Number(app.approvedAmount).toLocaleString()}
+                              ₱{Number(app.amountApproved ?? app.approvedAmount).toLocaleString()}
                             </p>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -709,7 +709,7 @@ export default function TrackStatus() {
                         </div>
                         )
                       })()}
-                      {app.status === 'approved' && app.approvedAmount == null && (
+                      {app.status === 'approved' && (app.amountApproved ?? app.approvedAmount) == null && (
                         <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-3">
                           <p className="text-sm text-green-700 font-medium flex items-start gap-2">
                             <MdCheckCircle size={16} className="flex-shrink-0 mt-0.5" />
@@ -719,7 +719,7 @@ export default function TrackStatus() {
                       )}
 
                       {/* GL document panel */}
-                      {(app.status === 'approved' || app.status === 'certificate') && app.approvedAmount != null && (
+                      {(app.status === 'approved' || app.status === 'certificate') && (app.amountApproved ?? app.approvedAmount) != null && (
                         <div className="mb-4">
                           <GLDocumentPanel app={app} compact />
                         </div>

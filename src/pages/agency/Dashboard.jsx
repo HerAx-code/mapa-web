@@ -13,21 +13,18 @@ import {
   MdCheckCircleOutline,
 } from 'react-icons/md'
 import { useAuth } from '../../contexts/AuthContext'
-import { PERIOD_NOUN, PERIOD_ADJECTIVE, isGLExpired } from '../../utils/constants'
+import { PERIOD_NOUN, PERIOD_ADJECTIVE } from '../../utils/constants'
 import {
-  collection, query, where, onSnapshot, doc, getDoc, getDocs,
-  updateDoc, writeBatch, increment, serverTimestamp, addDoc,
-  runTransaction,
+  collection, query, where, onSnapshot, doc, getDocs,
+  updateDoc, serverTimestamp, addDoc,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
-import { logAudit } from '../../utils/auditLog'
-import { deriveRequestFinancials, syncedRequestStatus } from '../../utils/requests'
 import HospitalSlotsCard from '../../components/agency/HospitalSlotsCard'
 import { notify } from '../../utils/notifications'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Tour from '../../components/Tour'
 import { agencyDashboardTour, resetTourFlag } from '../../utils/tours'
-import { tsToDate, phTodayKey } from '../../utils/dates'
+import { tsToDate } from '../../utils/dates'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import toast from 'react-hot-toast'
@@ -38,7 +35,6 @@ const LOW_BALANCE_FRAC = 0.10
 // Stale-period detection: monthly periods older than this trigger a banner.
 const STALE_PERIOD_DAYS = 31
 
-// GL expiry rule: isGLExpired() in utils/constants (single source of truth).
 // Application status badge + label rendering is delegated to <StatusBadge />
 // which reads APP_STATUS_CONFIG from constants.js.
 
@@ -62,27 +58,12 @@ export default function AgencyDashboard() {
     role: user?.role, agencyId: user?.agencyId, uid: user?.uid,
   })
 
-  // Load agency data + auto-reset slots at start of each new day
+  // Load agency data. The daily slot refill is the resetAgencySlots function
+  // at Manila midnight (Phase 2 PR 2.3: no browser writes slots).
   useEffect(() => {
     if (!user?.agencyId) return
-    const unsub = onSnapshot(doc(db, 'agencies', user.agencyId), async snap => {
-      if (!snap.exists()) return
-      const data  = snap.data()
-      // Anchor the "today" key to Asia/Manila so the reset fires at the
-      // pilot-local midnight, not at UTC midnight (which is 08:00 PHT and
-      // would delay the reset by 8 hours). Shared with Slot Management's
-      // reset-pending check via phTodayKey() so the two never diverge.
-      const today = phTodayKey()
-      if (data.lastResetDate !== today && (data.slots?.total ?? 0) > 0) {
-        // New day — reset remaining slots back to total
-        await updateDoc(doc(db, 'agencies', snap.id), {
-          'slots.remaining': data.slots.total,
-          lastResetDate:     today,
-        })
-        // onSnapshot will fire again with updated data — setAgency happens then
-      } else {
-        setAgency({ id: snap.id, ...data })
-      }
+    const unsub = onSnapshot(doc(db, 'agencies', user.agencyId), snap => {
+      if (snap.exists()) setAgency({ id: snap.id, ...snap.data() })
     }, (err) => console.error('[Dashboard] agency snapshot error:', err))
     return unsub
   }, [user?.agencyId])
@@ -107,107 +88,9 @@ export default function AgencyDashboard() {
     return unsub
   }, [user?.agencyId])
 
-  // Sweep expired GLs on Dashboard load. A GL is expired when:
-  //   glStatus === 'issued' AND it is past its validity (isGLExpired: the
-  //   letter's own glExpiresAt, else 30 days for letters approved before
-  //   2026-11-16).
-  // For each such application: flip glStatus → 'expired', release the
-  // committed budget back to the agency. Atomically per application.
-  // Audit-logged so super_admin can see automated sweeps.
-  useEffect(() => {
-    if (!user?.agencyId || !user?.uid) return
-    let cancelled = false
-    const run = async () => {
-      try {
-        const snap = await getDocs(query(
-          collection(db, 'applications'),
-          where('agencyId', '==', user.agencyId),
-          where('glStatus', '==', 'issued')
-        ))
-        const now = Date.now()
-        const expired = snap.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(a => isGLExpired(a, now))
-        if (cancelled || expired.length === 0) return
-
-        // R3 fix: each expiry is now a runTransaction that re-syncs
-        // the parent request's amountCommitted + status alongside the
-        // slice flip + agency budget release. Mirrors performExpireGL
-        // in ApplicationDetail.jsx -- same end-state docs regardless
-        // of which path fired.
-        for (const a of expired) {
-          if (cancelled) break
-          try {
-            const amount = Number(a.approvedAmount) || 0
-            await runTransaction(db, async (tx) => {
-              const appRef = doc(db, 'applications', a.id)
-              const appSnap = await tx.get(appRef)
-              if (!appSnap.exists()) return
-              // Skip if a coordinator already marked it expired between
-              // the query and this transaction.
-              if (appSnap.data().glStatus !== 'issued') return
-
-              let reqRef = null, reqSnap = null, siblings = []
-              if (a.requestId) {
-                reqRef  = doc(db, 'requests', a.requestId)
-                reqSnap = await tx.get(reqRef)
-                const sibSnap = await getDocs(query(
-                  collection(db, 'applications'),
-                  where('requestId', '==', a.requestId),
-                ))
-                siblings = sibSnap.docs.map(d => {
-                  const data = { id: d.id, ...d.data() }
-                  if (d.id === a.id) return { ...data, glStatus: 'expired' }
-                  return data
-                })
-              }
-
-              tx.update(appRef, {
-                glStatus:    'expired',
-                glExpiredAt: serverTimestamp(),
-                glExpiredBy: 'system_sweep',   // one field name with glExpirySweep (N19)
-                updatedAt:   serverTimestamp(),
-              })
-              if (amount > 0) {
-                tx.update(doc(db, 'agencies', user.agencyId), {
-                  'budget.committed': increment(-amount),
-                })
-              }
-              if (reqRef && reqSnap?.exists()) {
-                const need = reqSnap.data().amountNeeded ?? 0
-                const next = deriveRequestFinancials(siblings, need)
-                tx.update(reqRef, {
-                  amountCommitted: next.amountCommitted,
-                  status:          syncedRequestStatus(reqSnap.data().status, next.status),
-                  updatedAt:       serverTimestamp(),
-                })
-              }
-            })
-            logAudit(user, {
-              action:     'gl_auto_expired',
-              targetType: 'application',
-              targetId:   a.id,
-              targetName: a.patientName,
-              details:    `Auto-expired by Dashboard sweep — ₱${amount.toLocaleString()} released to budget`,
-              requestId:  a.requestId ?? null,
-              patientId:  a.patientId,
-            })
-          } catch (err) {
-            console.error(`Failed to auto-expire ${a.id}:`, err)
-          }
-        }
-        if (!cancelled && expired.length > 0) {
-          toast(`${expired.length} expired Guarantee Letter${expired.length === 1 ? '' : 's'} were swept and committed budget released.`, {
-            duration: 5000,
-          })
-        }
-      } catch (err) {
-        console.error('GL expiry sweep failed:', err)
-      }
-    }
-    run()
-    return () => { cancelled = true }
-  }, [user?.agencyId, user?.uid])
+  // Expired letters are released by the hourly glExpirySweep function on the
+  // server (Phase 2 PR 2.3, gap R2); the browser sweep that ran here was
+  // removed, so two paths can no longer release the same letter twice.
 
   // ── Low-balance one-shot notification ──────────────────────────────────
   // Fires when remaining drops below LOW_BALANCE_FRAC of allocated and we

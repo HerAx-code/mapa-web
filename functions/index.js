@@ -50,6 +50,10 @@ const { eraseAccount, disableAccount, resetStaffMfa } = require('./src/accountAd
 const { endorseRequest, closeRequest } = require('./src/caseActions')
 exports.endorseRequest = endorseRequest
 exports.closeRequest = closeRequest
+// Phase 2 (T3, PR 2.3): the agency's decisions and letters.
+const { decideSlice, settleLetter } = require('./src/sliceActions')
+exports.decideSlice = decideSlice
+exports.settleLetter = settleLetter
 exports.eraseAccount = eraseAccount
 exports.disableAccount = disableAccount
 exports.resetStaffMfa = resetStaffMfa

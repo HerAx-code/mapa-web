@@ -209,7 +209,7 @@ export const buildCertificateHTML = ({ app, patient, approvalDate, issueDate, si
       The bearer is hereby <strong>guaranteed</strong> financial assistance in the amount of:
     </p>
     <p style="font-size: 24px; font-weight: bold; color: #1a3a5c; letter-spacing: 1px; margin-bottom: 6px;">
-      &#8369; ${Number(app.approvedAmount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      &#8369; ${Number(app.amountApproved ?? app.approvedAmount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
     </p>
     <p style="font-size: 11.5px; color: #444; margin-top: 4px;">
       <strong>For:</strong> ${(app.purposeOfAssistance ?? []).join(', ') || 'Medical assistance'}
@@ -466,7 +466,7 @@ export default function CertificateGenerator() {
                       <p className="text-xs text-gray-500 mt-0.5">
                         <span className="font-mono">{app.appId}</span>
                         <span className="mx-1.5 text-gray-200">·</span>
-                        ₱{Number(app.approvedAmount ?? 0).toLocaleString()}
+                        ₱{Number(app.amountApproved ?? app.approvedAmount ?? 0).toLocaleString()}
                         <span className="mx-1.5 text-gray-200">·</span>
                         Approved: {formatDate(app.approvedAt) ?? '—'}
                       </p>

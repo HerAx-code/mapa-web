@@ -1,7 +1,7 @@
 import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, collection, addDoc } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore'
 import { approveWithMark } from './helpers/approval.js'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -119,6 +119,32 @@ describe('agencies.update — coordinator budget guard', () => {
     }))
   })
 
+  it("the Agency Admin can't rewrite the committed or disbursed counts (Phase 2 PR 2.3)", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
+        name: 'Malasakit Center', budget: { allocated: 100_000, committed: 5_000, disbursed: 7_000 },
+      })
+    })
+    await seedUser('admin-1', 'agency_admin', 'malasakit')
+    const ref = doc(testEnv.authenticatedContext('admin-1').firestore(), 'agencies', 'malasakit')
+    await assertFails(updateDoc(ref, { 'budget.committed': 0 }))
+    await assertFails(updateDoc(ref, { 'budget.disbursed': 0 }))
+    await assertFails(updateDoc(ref, { 'budget.disbursed': 0, 'budget.periodStart': serverTimestamp() }))  // still committed
+    await assertSucceeds(updateDoc(ref, { 'budget.allocated': 150_000 }))
+  })
+
+  it('a new budget period starts disbursed at 0 once nothing is committed', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
+        name: 'Malasakit Center', budget: { allocated: 100_000, committed: 0, disbursed: 7_000 },
+      })
+    })
+    await seedUser('admin-1', 'agency_admin', 'malasakit')
+    const ref = doc(testEnv.authenticatedContext('admin-1').firestore(), 'agencies', 'malasakit')
+    await assertFails(updateDoc(ref, { 'budget.disbursed': 0 }))  // only with a new period
+    await assertSucceeds(updateDoc(ref, { 'budget.disbursed': 0, 'budget.periodStart': serverTimestamp(), 'budget.lowBalanceNotifiedAt': null }))
+  })
+
   it('rejects coordinator from mutating budget.allocated', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
@@ -129,10 +155,11 @@ describe('agencies.update — coordinator budget guard', () => {
     }))
   })
 
-  it('lets a coordinator record budget usage but not edit the profile (Agency Admin only, 2026-11-16)', async () => {
+  it('a coordinator no longer records budget usage, nor edits the profile (Agency Admin only, 2026-11-16)', async () => {
+    // Phase 2 PR 2.3: agency decisions, letters and budgets run in Cloud Functions (decideSlice / settleLetter, tests/functions/sliceActions.test.js).
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
+    await assertFails(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
       name: 'Malasakit Center',
       budget: { allocated: 100_000, committed: 5_000, disbursed: 0 },  // usage only
     }))
@@ -158,20 +185,20 @@ describe('agencies.update — coordinator budget guard', () => {
   // The pre-hotfix rule blocked all budget changes by coordinators and
   // broke the dashboard load. The new rule pins only `allocated` and
   // `fundSource` (the inflation-attack surface).
-  it('allows coordinator to mutate budget.committed (GL expiry sweep)', async () => {
+  it('refuses a coordinator writing budget.committed (the sweep is a function now)', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
+    await assertFails(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
       name: 'Malasakit Center',
       // allocated unchanged; committed decremented (sweep released funds)
       budget: { allocated: 100_000, committed: -50_000, disbursed: 0 },
     }))
   })
 
-  it('allows coordinator to mutate budget.disbursed (approval flow)', async () => {
+  it('refuses a coordinator writing budget.disbursed (redeem is a function now)', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
+    await assertFails(setDoc(doc(ctx.firestore(), 'agencies', 'malasakit'), {
       name: 'Malasakit Center',
       budget: { allocated: 100_000, committed: 0, disbursed: 50_000 },
     }))
@@ -275,11 +302,11 @@ describe('applications.update — amountApproved capped at amountRequested', () 
     })
   }
 
-  it('allows an agency to approve up to the endorsed cap', async () => {
+  it('refuses an agency approving from the browser, even within the endorsed cap (decideSlice checks the cap)', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     await seedApp()
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertSucceeds(approveWithMark(ctx.firestore(), 'app-1', APP, { status: 'approved', amountApproved: 5000 }))
+    await assertFails(approveWithMark(ctx.firestore(), 'app-1', APP, { status: 'approved', amountApproved: 5000 }))
   })
 
   it('rejects an agency approving MORE than the endorsed cap', async () => {
@@ -289,11 +316,11 @@ describe('applications.update — amountApproved capped at amountRequested', () 
     await assertFails(approveWithMark(ctx.firestore(), 'app-1', APP, { status: 'approved', amountApproved: 6000 }))
   })
 
-  it('allows a non-approval update that carries no amountApproved', async () => {
+  it('refuses a status change from the browser too (request info is decideSlice)', async () => {
     await seedUser('coord-1', 'agency', 'malasakit')
     await seedApp()
     const ctx = testEnv.authenticatedContext('coord-1')
-    await assertSucceeds(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
+    await assertFails(setDoc(doc(ctx.firestore(), 'applications', 'app-1'), {
       ...APP, status: 'awaiting_info',
     }))
   })

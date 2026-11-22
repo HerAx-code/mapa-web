@@ -63,7 +63,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
   }, [app?.id])
 
   // No GL yet — application not approved
-  if (!app?.approvedAmount && app?.status !== 'approved' && app?.status !== 'certificate') {
+  if (!(app?.amountApproved ?? app?.approvedAmount) && app?.status !== 'approved' && app?.status !== 'certificate') {
     return null
   }
 
@@ -230,7 +230,7 @@ export default function GLDocumentPanel({ app, canReplace = false, onReplace, co
           <div className="sm:col-span-2 space-y-2">
             <div className="bg-gray-50 rounded-lg px-3 py-2">
               <p className="text-xs text-gray-500">Approved Amount</p>
-              <p className="text-sm font-semibold text-gray-800">₱{Number(app.approvedAmount ?? 0).toLocaleString()}</p>
+              <p className="text-sm font-semibold text-gray-800">₱{Number(app.amountApproved ?? app.approvedAmount ?? 0).toLocaleString()}</p>
             </div>
             {app.purposeOfAssistance?.length > 0 && (
               <div className="bg-gray-50 rounded-lg px-3 py-2">

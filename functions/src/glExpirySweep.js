@@ -9,10 +9,8 @@ const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestor
  * agency/ApplicationDetail.jsx (performExpireGL) so operators and
  * the sweep produce identical end-state docs.
  *
- * STATUS: not currently deployed. The pilot's client-side fallback
- * in agency/Dashboard.jsx runs on dashboard load. When Blaze
- * deployment activates this scheduled function, the client fallback
- * becomes defence-in-depth.
+ * Phase 2 PR 2.3: the only automatic expiry. The agency Dashboard's
+ * browser sweep was removed (R2); both paths now share expireLetterTx.
  *
  * Query shape:   glStatus == 'issued' AND approvedAt < (now - 30d)
  * Requires composite index: applications(glStatus ASC, approvedAt ASC)
@@ -25,7 +23,8 @@ const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestor
 // Letter validity is the shared definition (src/shared/caseState.js, bundled
 // into ./generated/shared.cjs) — no hand-kept mirror. Since 2026-11-16 each
 // letter stores its own glExpiresAt (10 days); older ones keep their 30 days.
-const { GL_VALIDITY_DAYS, glExpiryMs, sliceApproved } = require('./generated/shared.cjs')
+const { GL_VALIDITY_DAYS, glExpiryMs } = require('./generated/shared.cjs')
+const { expireLetterTx } = require('./sliceActions')
 const DAY_MS = 86400000
 
 // nowMs (optional): when given, a candidate is expired only once it is past
@@ -50,40 +49,20 @@ async function handleGLExpirySweep({ db, cutoff, serverTimestamp, increment, cut
       const expiry = glExpiryMs(app)
       if (expiry == null || nowMs < expiry) { skippedNotDue++; continue }
     }
-    const amount = sliceApproved(app)
     const agencyId = app.agencyId
 
     try {
-      await db.runTransaction(async (tx) => {
-        // Re-read inside the transaction so a coordinator who clicked
-        // "Mark GL Expired" between the query and the transaction does
-        // not get their budget release silently doubled.
-        const fresh = await tx.get(docSnap.ref)
-        if (!fresh.exists)                                { skippedRaced++; return }
-        if (fresh.data().glStatus !== 'issued')           { skippedRaced++; return }
-        // 2026-11-16: an agency deleted since approval (e.g. the hospital-1
-        // merge) has no budget to release; updating it would fail the whole
-        // transaction and leave the letter open forever. Read first (all reads
-        // before writes), then expire the letter either way.
-        const agencySnap = agencyId ? await tx.get(db.doc(`agencies/${agencyId}`)) : null
-        const agencyExists = !!agencySnap?.exists
-
-        tx.update(docSnap.ref, {
-          glStatus:    'expired',
-          glExpiredAt: serverTimestamp(),
-          glExpiredBy: 'system_sweep',
-          updatedAt:   serverTimestamp(),
-        })
-
-        if (agencyId && agencyExists && amount > 0) {
-          tx.update(db.doc(`agencies/${agencyId}`), {
-            'budget.committed': increment(-amount),
-          })
-          releasedTotal += amount
-        } else if (!agencyId || !agencyExists) {
-          skippedNoAgency++
-        }
-      })
+      // The same expiry the agency's "Mark expired" runs (sliceActions:
+      // expireLetterTx): it re-reads the letter inside the transaction, so a
+      // person who settled or expired it first is not released twice (M3),
+      // and it recomputes the request's totals.
+      const deps = { serverTimestamp, increment }
+      const released = await db.runTransaction((tx) => expireLetterTx(tx, db, docSnap.ref, 'system_sweep', deps))
+      if (released == null) skippedRaced++
+      else {
+        if (!agencyId || !released.agencyFound) skippedNoAgency++
+        else releasedTotal += released.amount
+      }
       expiredCount++
     } catch (err) {
       failedCount++

@@ -94,11 +94,11 @@ describe('applications.update — Phase 1.6 identity lock', () => {
     })
   }
 
-  it('allows the agency approval write (funding fields, identity unchanged)', async () => {
+  it('refuses the agency approval write from the browser (decideSlice only, Phase 2 PR 2.3)', async () => {
     await seedUser('agency-1', 'agency', 'malasakit')
     await seedSlice('app-1')
     const ctx = testEnv.authenticatedContext('agency-1')
-    await assertSucceeds(approveWithMark(ctx.firestore(), 'app-1',
+    await assertFails(approveWithMark(ctx.firestore(), 'app-1',
       { requestId: 'req-1', patientId: 'patient-1', agencyId: 'malasakit' }, {
       status: 'approved', amountApproved: 20000, glStatus: 'issued',
       approvedBy: 'Dr. X', approvedAt: serverTimestamp(),
@@ -421,11 +421,11 @@ describe('requests.update — Phase 1.5 agency value constraints', () => {
     })
   }
 
-  it('allows the real approval write (committed + derived status)', async () => {
+  it('refuses the agency writing request totals (the server recomputes them, Phase 2 PR 2.3)', async () => {
     await seedUser('agency-1', 'agency', 'malasakit')
     await seedRequest('req-1')
     const ctx = testEnv.authenticatedContext('agency-1')
-    await assertSucceeds(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
+    await assertFails(updateDoc(doc(ctx.firestore(), 'requests', 'req-1'), {
       amountCommitted: 10000, status: 'partially_funded', updatedAt: serverTimestamp(),
     }))
   })

@@ -10,3 +10,7 @@ export * from './caseState.js'
 export { deriveRequestStage, TERMINAL_REQUEST_STATUSES } from '../utils/requestStage.js'
 export { interviewReasons, secondPersonHold, callRecorded } from '../utils/verificationPolicy.js'
 export { missingAgencyDocs } from '../utils/agencyDocs.js'
+
+// Agency decisions (Phase 2 PR 2.3): the repeat limit per agency, re-checked
+// by the decideSlice function.
+export { approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../utils/approvalCooldown.js'
