@@ -234,7 +234,7 @@ export default function Patients() {
     getDocs(query(
       collection(db, 'applications'),
       ...tenantWhere(),
-      where('status', 'in', ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview', 'approved'])
+      where('status', 'in', ['endorsed', 'reviewing', 'awaiting_info', 'approved'])
     )).then(snap => {
       setActiveApplicantIds(new Set(snap.docs.map(d => d.data().patientId).filter(Boolean)))
     }).catch(err => console.error('[Patients] active applicants query failed:', err))

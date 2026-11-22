@@ -93,10 +93,11 @@ export function letterState(app, now = Date.now(), withinDays = GL_EXPIRING_SOON
 // ── Slices ──────────────────────────────────────────────────────────────────
 // The exact strings written to `applications.status`: endorsed → reviewing
 // ("For Funding") ⇄ awaiting_info → approved → certificate, or rejected / closed.
-// 'pending' and 'interview' are pre-redesign states kept for old records.
+// The pre-redesign 'pending' and 'interview' were dropped in Phase 2 PR 2.4:
+// no slice in production carries them (checked 2026-11-22).
 export const COMMITTED_SLICE_STATUSES   = ['approved', 'certificate']
-export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info', 'interview']
-export const OPEN_SLICE_STATUSES        = ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview']
+export const OUTSTANDING_SLICE_STATUSES = ['endorsed', 'reviewing', 'awaiting_info']
+export const OPEN_SLICE_STATUSES        = ['endorsed', 'reviewing', 'awaiting_info']
 
 // The approved amount (amountApproved; approvedAmount on older slices).
 export const sliceApproved = (s) => Number(s?.amountApproved ?? s?.approvedAmount ?? 0) || 0

@@ -118,15 +118,15 @@ describe('computeFunding', () => {
     expect(computeFunding(0, [{ status: 'approved', amountApproved: 100 }]).pct).toBe(0)
   })
 
-  it('treats legacy slice statuses as outstanding (reviewing, interview, etc.)', () => {
-    // Pre-redesign data may still have status='reviewing' or 'interview'.
-    // The aggregation should not lose track of them.
+  it('counts a reviewing slice as outstanding; the dropped legacy "interview" no longer counts', () => {
+    // Phase 2 PR 2.4: 'pending' and 'interview' left the lists (no slice in
+    // production carries them).
     const slices = [
       { status: 'reviewing', amountRequested: 10_000 },
       { status: 'interview', amountRequested: 5_000 },
     ]
     const f = computeFunding(50_000, slices)
-    expect(f.outstanding).toBe(15_000)
+    expect(f.outstanding).toBe(10_000)
     expect(f.committed).toBe(0)
   })
 

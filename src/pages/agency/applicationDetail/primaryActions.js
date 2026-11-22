@@ -8,7 +8,7 @@
  * state-changing handlers.
  *
  * The handlers object expected by the actions is the agency-detail
- * page's bag of setShow* state setters + thunks (handleStartReview,
+ * page's bag of setShow* state setters + thunks (handleResumeFromAwaiting,
  * handleRequestInfo, handlePrintGL, etc.). Keeps the rendering layer
  * thin and lets the hook-extracted handlers stay testable.
  */
@@ -21,17 +21,6 @@ import { glDaysRemaining } from '../../../utils/constants'
 
 export function getPrimaryActions(ctx) {
   const { app, expired, expiringSoon, handlers, signedScan } = ctx
-
-  if (app.status === 'pending') {
-    return {
-      hint: 'Start the review to move this case forward.',
-      tone: 'brand',
-      actions: [
-        { label: 'Start Review', icon: MdCheckCircle, variant: 'primary', onClick: handlers.handleStartReview },
-        { label: 'Reject',       icon: MdCancel,      variant: 'danger',  onClick: () => handlers.setShowReject(true) },
-      ],
-    }
-  }
 
   if (app.status === 'reviewing') {
     return {

@@ -158,7 +158,7 @@ export default function AgencyDashboard() {
 
   const slots      = agency.slots ?? { total: 0, remaining: 0 }
   const slotPct    = slots.total > 0 ? Math.round(((slots.total - slots.remaining) / slots.total) * 100) : 0
-  const pendingApps = applications.filter(a => a.status === 'pending' || a.status === 'reviewing')
+  const pendingApps = applications.filter(a => a.status === 'reviewing')
   const approvedCount = applications.filter(a => a.status === 'approved' || a.status === 'certificate').length
   const hasPending = pendingApps.length > 0
 

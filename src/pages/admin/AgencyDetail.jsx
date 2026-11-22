@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
   collection, doc, query, where, onSnapshot,
-  updateDoc, deleteDoc, serverTimestamp, getDocs, writeBatch,
+  updateDoc, deleteDoc, serverTimestamp, getDocs,
 } from 'firebase/firestore'
 import { tenantWhere } from '../../utils/hospitals'
 import { sendPasswordResetEmail } from 'firebase/auth'
@@ -120,10 +120,6 @@ export default function AgencyDetail() {
   const [agency,        setAgency]        = useState(null)
   const [coordinators,  setCoordinators]  = useState([])
   const [appStats,      setAppStats]      = useState(null)
-  // Live list of non-terminal apps for this agency — used by the disable
-  // cascade dialog to show "N pending applications" + iterate them on
-  // auto-reject. Kept separate from appStats so we have the full docs.
-  const [pendingApps,   setPendingApps]   = useState([])
   const [loading,       setLoading]       = useState(true)
 
   // Modal states
@@ -131,7 +127,6 @@ export default function AgencyDetail() {
   const [editCoord,       setEditCoord]       = useState(null)
   const [confirmDelete,   setConfirmDelete]   = useState(false)
   const [showDisableDialog, setShowDisableDialog] = useState(false)
-  const [disableChoice,     setDisableChoice]     = useState('reject')
   // Holds the coordinator pending promote/demote confirmation, or null.
   const [promotionTarget, setPromotionTarget] = useState(null)
   const [promoting,         setPromoting]         = useState(false)
@@ -178,7 +173,6 @@ export default function AgencyDetail() {
       query(collection(db, 'applications'), ...tenantWhere(), where('agencyId', '==', id)),
       snap => {
         const s = { total: 0, pending: 0, approved: 0, rejected: 0 }
-        const pendings = []
         snap.docs.forEach(d => {
           const data = { id: d.id, ...d.data() }
           s.total++
@@ -186,11 +180,9 @@ export default function AgencyDetail() {
           else if (data.status === 'rejected') s.rejected++
           else {
             s.pending++
-            pendings.push(data)
           }
         })
         setAppStats(s)
-        setPendingApps(pendings)
       },
       (err) => console.error('[AgencyDetail] appStats snapshot error:', err),
     )
@@ -210,7 +202,7 @@ export default function AgencyDetail() {
 
   // Re-enabling is a single-step action (no choice needed). Disabling
   // opens a dialog because there may be in-flight applications that need
-  // explicit handling — see handleDisableWithCascade.
+  // explicit handling — see handleDisable.
   const handleReEnable = async () => {
     try {
       await updateDoc(doc(db, 'agencies', id), { enabled: true })
@@ -229,53 +221,25 @@ export default function AgencyDetail() {
     } catch (err) { console.error(err); toast.error('Failed to update agency status.') }
   }
 
-  // #7 — Disable cascade: when an agency is disabled mid-flow, the admin
-  // chooses what happens to in-flight applications.
-  //   - 'hold':   apps stay in their current status; patients see a
-  //               "paused" banner on TrackStatus until the agency is
-  //               re-enabled. Use for short outages (coordinator on leave).
-  //   - 'reject': apps moved to rejected with a clear reason and 0-day
-  //               cooldown so patients can apply elsewhere immediately.
-  //               Use for indefinite / budget-exhausted closures.
-  const handleDisableWithCascade = async ({ choice }) => {
+  // Disabling stops new endorsements; applications already with the agency
+  // are held (patients see "Application paused") until it is re-enabled, and
+  // each hospital can re-endorse them elsewhere. Only the Super Admin disables
+  // an agency (the rules refuse everyone else). Phase 2 PR 2.4: the old
+  // "auto-reject in-flight applications" branch was removed — it wrote slices
+  // from the browser, which the rules refuse, and the Super Admin can't read
+  // slices to begin with (no patient data).
+  const handleDisable = async () => {
     setDisabling(true)
     try {
-      // Always set the agency disabled first so no new applications can
-      // be submitted while we're cascading the existing ones.
       await updateDoc(doc(db, 'agencies', id), { enabled: false })
 
-      if (choice === 'reject' && pendingApps.length > 0) {
-        // Batch update — Firestore supports up to 500 ops per batch.
-        for (let i = 0; i < pendingApps.length; i += 400) {
-          const batch = writeBatch(db)
-          pendingApps.slice(i, i + 400).forEach(app => {
-            batch.update(doc(db, 'applications', app.id), {
-              status:          'rejected',
-              rejectionReason: 'Agency temporarily unavailable. Your request may be endorsed to another agency.',
-              rejectionType:   'agency_disabled',  // distinguishes from a patient-fault rejection
-              cooldownUntilAt: null,                // no 30-day penalty for the patient
-              updatedAt:       serverTimestamp(),
-            })
-          })
-          await batch.commit()
-        }
-        // Notify the affected patients
-        await Promise.all(pendingApps.map(app => notify(app.patientId, {
-          type:  'app_advanced',
-          title: 'Application closed — agency unavailable',
-          body:  `Your application to ${agency.name} was closed because the agency is temporarily unavailable. Your request may be endorsed to another agency.`,
-        }).catch(() => {})))
-      }
-
-      // Notify the agency coordinators either way
+      // Tell the agency's team.
       try {
         const snap = await getDocs(query(collection(db, 'users'), where('agencyId', '==', id), where('role', 'in', ['agency', 'agency_admin'])))
         await Promise.all(snap.docs.map(d => notify(d.id, {
           type:  'agency_disabled',
           title: 'Agency Disabled',
-          body:  choice === 'reject'
-            ? `${agency.name} disabled. ${pendingApps.length} pending application(s) were auto-rejected.`
-            : `${agency.name} disabled. ${pendingApps.length} application(s) on hold pending re-enable.`,
+          body:  `${agency.name} disabled. Applications already with you are on hold until it is re-enabled.`,
         }).catch(() => {})))
       } catch (err) {
         console.error('[AgencyDetail] agency_disabled notify fan-out failed:', err)
@@ -286,7 +250,7 @@ export default function AgencyDetail() {
         targetType: 'agency',
         targetId:   id,
         targetName: agency.name,
-        details:    `Agency disabled (${choice}: ${pendingApps.length} app(s) ${choice === 'reject' ? 'auto-rejected' : 'on hold'})`,
+        details:    'Agency disabled; in-flight applications on hold',
       })
       toast.success(`${agency.name} disabled.`)
       setShowDisableDialog(false)
@@ -827,48 +791,15 @@ export default function AgencyDetail() {
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 id="disable-modal-title" className="text-base font-semibold text-gray-900">Disable {agency.name}?</h2>
               <p className="text-xs text-gray-500 mt-1">
-                {isPlatform
-                  ? 'New endorsements stop at once. Applications already with this agency are held: patients see an "Application paused" notice until you re-enable, and each hospital\'s gateway can re-endorse them to another agency.'
-                  : pendingApps.length === 0
-                  ? 'No applications are currently in flight. Disabling will simply hide this agency from new applicants.'
-                  : `${pendingApps.length} application${pendingApps.length === 1 ? '' : 's'} are currently in flight. Choose what happens to them.`}
+                New endorsements stop at once. Applications already with this agency are held: patients see an "Application paused" notice until you re-enable, and each hospital's gateway can re-endorse them to another agency.
               </p>
             </div>
-
-            {pendingApps.length > 0 && (
-              <div className="px-5 py-4 space-y-3">
-                <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${disableChoice === 'reject' ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <input type="radio" name="disable-choice" value="reject" className="mt-0.5 accent-brand-500"
-                    checked={disableChoice === 'reject'} onChange={() => setDisableChoice('reject')} />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-800">Auto-reject — recommended</p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                      Mark all {pendingApps.length} app{pendingApps.length === 1 ? '' : 's'} as rejected with reason
-                      "Agency temporarily unavailable" and <strong>no 30-day cooldown</strong>. Patients can apply
-                      to other programs immediately.
-                    </p>
-                  </div>
-                </label>
-
-                <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${disableChoice === 'hold' ? 'border-brand-400 bg-brand-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <input type="radio" name="disable-choice" value="hold" className="mt-0.5 accent-brand-500"
-                    checked={disableChoice === 'hold'} onChange={() => setDisableChoice('hold')} />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-800">Hold for re-enable</p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                      Apps stay in place. Patients see an "Application paused" banner. Coordinators will see
-                      the queue again once you re-enable. Use for short outages (coordinator on leave).
-                    </p>
-                  </div>
-                </label>
-              </div>
-            )}
 
             <div className="px-5 pb-4 pt-2 flex gap-2 justify-end border-t border-gray-50">
               <button className="btn-secondary text-sm" onClick={() => setShowDisableDialog(false)} disabled={disabling}>
                 Cancel
               </button>
-              <button className="btn-danger text-sm" onClick={() => handleDisableWithCascade({ choice: isPlatform ? 'hold' : disableChoice })} disabled={disabling}>
+              <button className="btn-danger text-sm" onClick={handleDisable} disabled={disabling}>
                 {disabling ? 'Disabling…' : 'Confirm Disable'}
               </button>
             </div>

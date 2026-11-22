@@ -105,9 +105,10 @@ export default function AgencyFunds() {
       const approvedAmount = Number(a.amountApproved ?? a.approvedAmount) || 0
       const hasAmount      = approvedAmount > 0
 
-      // Approve event — prefer real approvedAt, fall back to back-solving
-      // from cooldownUntilAt for reversed apps (cooldown = approvedAt + 30d).
-      let approveDate = tsToDate(a.approvedAt)
+      // Approve event — the real approvedAt; for a reversed approval the date
+      // the server kept (reversedApprovalAt, Phase 2), else, on older records,
+      // back-solved from cooldownUntilAt (cooldown = approvedAt + 30d).
+      let approveDate = tsToDate(a.approvedAt) ?? (isReversed ? tsToDate(a.reversedApprovalAt) : null)
       if (!approveDate && isReversed && a.cooldownUntilAt) {
         const cooldownUntil = tsToDate(a.cooldownUntilAt)
         if (cooldownUntil) approveDate = new Date(cooldownUntil.getTime() - 30 * 86400000)

@@ -84,7 +84,7 @@ export default function AgencyLogs() {
       a.patientContact?.includes(q)
   })
 
-  const openTotal     = countOf('endorsed') + countOf('reviewing') + countOf('awaiting_info') + countOf('pending') + countOf('interview')
+  const openTotal     = countOf('endorsed') + countOf('reviewing') + countOf('awaiting_info')
   const approvedTotal = countOf('approved') + countOf('certificate')
   const dayGroups  = groupByDay(filtered, a => a.submittedAt)
   const isFiltered = search || filter !== 'all' || dateFilter !== 'all' || hospitalFilter !== 'all'

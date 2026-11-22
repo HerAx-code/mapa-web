@@ -70,7 +70,7 @@ export default function AppLogs() {
   // both the co-funding slice statuses and the legacy pending / interview
   // statuses, so legacy data isn't silently excluded from counts.
   useEffect(() => {
-    const statuses = ['pending', 'endorsed', 'reviewing', 'awaiting_info', 'interview', 'approved', 'certificate', 'rejected']
+    const statuses = ['endorsed', 'reviewing', 'awaiting_info', 'approved', 'certificate', 'rejected']
     Promise.all([
       getCountFromServer(query(collection(db, 'applications'), ...tenantWhere())),
       ...statuses.map(s => getCountFromServer(query(collection(db, 'applications'), ...tenantWhere(), where('status', '==', s)))),

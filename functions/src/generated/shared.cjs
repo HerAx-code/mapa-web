@@ -117,8 +117,8 @@ function letterState(app, now = Date.now(), withinDays = GL_EXPIRING_SOON_DAYS) 
   return d != null && d <= withinDays ? "expiring" : "valid";
 }
 var COMMITTED_SLICE_STATUSES = ["approved", "certificate"];
-var OUTSTANDING_SLICE_STATUSES = ["endorsed", "reviewing", "awaiting_info", "interview"];
-var OPEN_SLICE_STATUSES = ["pending", "endorsed", "reviewing", "awaiting_info", "interview"];
+var OUTSTANDING_SLICE_STATUSES = ["endorsed", "reviewing", "awaiting_info"];
+var OPEN_SLICE_STATUSES = ["endorsed", "reviewing", "awaiting_info"];
 var sliceApproved = (s) => Number(s?.amountApproved ?? s?.approvedAmount ?? 0) || 0;
 var isCommittedSlice = (s) => COMMITTED_SLICE_STATUSES.includes(s?.status) && s?.glStatus !== "expired";
 var isLetterOpen = (s) => COMMITTED_SLICE_STATUSES.includes(s?.status) && s?.glStatus === "issued";
