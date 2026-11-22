@@ -57,6 +57,7 @@ __export(server_exports, {
   isGLExpiringSoon: () => isGLExpiringSoon,
   isIntakeComplete: () => isIntakeComplete,
   isLetterOpen: () => isLetterOpen,
+  isPublishedHospital: () => isPublishedHospital,
   isRequestActive: () => isRequestActive,
   isRequestClosed: () => isRequestClosed,
   isRequestClosedByGateway: () => isRequestClosedByGateway,
@@ -66,6 +67,7 @@ __export(server_exports, {
   manilaDayKey: () => manilaDayKey,
   missingAgencyDocs: () => missingAgencyDocs,
   openLettersOf: () => openLettersOf,
+  projectPublicHospital: () => projectPublicHospital,
   repeatLimitOf: () => repeatLimitOf,
   reqRank: () => reqRank,
   secondPersonHold: () => secondPersonHold,
@@ -685,6 +687,21 @@ function caseTimerDays(settings, key) {
   const v = Number(settings?.[key]);
   return Number.isInteger(v) && v >= t.min && v <= t.max ? v : t.default;
 }
+
+// src/shared/hospitalPublic.js
+function projectPublicHospital(h = {}) {
+  return {
+    facilityName: h.facilityName ?? "",
+    shortName: h.shortName ?? "",
+    accessCodePrefix: h.accessCodePrefix ?? "",
+    enabled: h.enabled !== false,
+    gatewayName: h.gatewayName ?? "",
+    address: h.address ?? "",
+    region: h.region ?? "",
+    contactEmail: h.contactEmail ?? ""
+  };
+}
+var isPublishedHospital = (h) => !!h && h.onboarding?.training !== true;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   CASE_TIMERS,
@@ -723,6 +740,7 @@ function caseTimerDays(settings, key) {
   isGLExpiringSoon,
   isIntakeComplete,
   isLetterOpen,
+  isPublishedHospital,
   isRequestActive,
   isRequestClosed,
   isRequestClosedByGateway,
@@ -732,6 +750,7 @@ function caseTimerDays(settings, key) {
   manilaDayKey,
   missingAgencyDocs,
   openLettersOf,
+  projectPublicHospital,
   repeatLimitOf,
   reqRank,
   secondPersonHold,

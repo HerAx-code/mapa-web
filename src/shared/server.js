@@ -21,3 +21,6 @@ export { isIntakeComplete, PATIENT_FACT_KEYS } from '../utils/intakeSheet.js'
 
 // Case endings (Phase 4): the hospital's timer limits.
 export { CASE_TIMERS, caseTimerDays } from './caseTimers.js'
+
+// The public hospital listing (Phase 5 PR 5.2).
+export { projectPublicHospital, isPublishedHospital } from './hospitalPublic.js'

@@ -578,7 +578,6 @@ export default function Register() {
         .map(s => s.trim()).filter(Boolean).join(' ')
       const address = [form.barangay, form.city, form.province]
         .map(s => s.trim()).filter(Boolean).join(', ')
-      const patientId = `PAT-${Date.now().toString().slice(-6)}`
 
       const userData = {
         name, email: normalizedEmail, role: 'patient',
@@ -591,7 +590,9 @@ export default function Register() {
         sex:       form.sex,
         lastName:  officialName?.nameParts?.lastName ?? form.lastName.trim(),
         ...(form.managedByFamily ? { managedBy: { name: form.managerName.trim(), relationship: form.managerRelationship } } : {}),
-        hospitalId: null, patientId,
+        // patientId (PAT-000123) is assigned on the server from a counter
+        // (assignPatientId, Phase 5 PR 5.2): the clock-based one repeated.
+        hospitalId: null,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
         // Terms of Use acceptance record (who = this uid, when, which version).
