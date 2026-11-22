@@ -106,6 +106,33 @@ npm run dev
 npm run build
 ```
 
+### Local dev against the Firebase emulator (demo accounts)
+
+`npm run dev` talks to whatever Firebase project your `.env` points at. For a
+self-contained local setup with working demo logins — and zero risk to
+production — run against the local emulator suite instead:
+
+```bash
+# 1. Start the emulators (leave running). Needs Java + firebase-tools.
+npm run emulators
+
+# 2. In another terminal, seed the two-hospital demo network + accounts.
+npm run seed:emulator
+
+# 3. Turn on emulator mode for the dev server and start it.
+echo "VITE_USE_EMULATOR=true" >> .env.local
+npm run dev
+```
+
+Now log in with any account from `scripts/demo-accounts.js` — e.g.
+`admin@mapa.gov.ph` / `admin123` (Hospital Admin), `coordinator@dswd.gov.ph` /
+`agency123`, `patient@gmail.com` / `patient123`.
+
+The emulator wiring is **opt-in and dev-only**: it activates solely when
+`VITE_USE_EMULATOR=true` (kept in the git-ignored `.env.local`), so the Vercel
+production build never connects to an emulator. Demo accounts are **never**
+seeded to production — the real project has its own locked-down logins.
+
 ### Optional setup for full test coverage
 
 | Need | Why |
