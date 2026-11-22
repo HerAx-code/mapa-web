@@ -10,13 +10,14 @@
  *
  * Not for a live patient-serving deployment — demo/sample data only.
  */
-import admin from 'firebase-admin'
+import { initializeApp, cert } from 'firebase-admin/app'
+import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { readFileSync } from 'fs'
 
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(readFileSync('./service-account.json', 'utf8'))) })
-const db = admin.firestore()
-const now = () => admin.firestore.FieldValue.serverTimestamp()
-const monthsAgo = (m, day = 12) => { const d = new Date(); d.setMonth(d.getMonth() - m); d.setDate(day); return admin.firestore.Timestamp.fromDate(d) }
+initializeApp({ credential: cert(JSON.parse(readFileSync('./service-account.json', 'utf8'))) })
+const db = getFirestore()
+const now = () => FieldValue.serverTimestamp()
+const monthsAgo = (m, day = 12) => { const d = new Date(); d.setMonth(d.getMonth() - m); d.setDate(day); return Timestamp.fromDate(d) }
 const initials = (name) => name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
 const mode = process.argv[2]
 
@@ -49,7 +50,7 @@ if (mode === 'clean') {
     const ref = db.collection('agencies').doc(id)
     const doc = await ref.get()
     const b = doc.data()?._demoBudgetBackup
-    if (b !== undefined) await ref.update({ budget: b, _demoBudgetBackup: admin.firestore.FieldValue.delete() })
+    if (b !== undefined) await ref.update({ budget: b, _demoBudgetBackup: FieldValue.delete() })
   }
   console.log(`[clean] removed ${n} demo docs and restored agency budgets`)
   process.exit(0)
