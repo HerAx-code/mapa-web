@@ -104,7 +104,7 @@ describe('create paths accept tenantId', () => {
     await assertFails(setDoc(doc(as('admin-1'), 'applications', 'a1'), { patientId: 'patient-1', agencyId: 'dswd', status: 'endorsed', tenantId: 'hospital-1' }))
     // Issuing a code moved to issueAccessCode (server, Phase 3 PR 3.4).
     await assertFails(issueCode(as('super-1'), 'MAPA-2026-00002', { tenantId: 'hospital-1', issued: issuedRecord({ issuedByUid: 'super-1' }) }))
-    await assertSucceeds(setDoc(doc(as('admin-1'), 'auditLog', 'l1'), { actorId: 'admin-1', details: 'x', tenantId: 'hospital-1' }))
+    await assertSucceeds(setDoc(doc(as('admin-1'), 'auditLog', 'l1'), { actorId: 'admin-1', actorRole: 'staff_admin', details: 'x', tenantId: 'hospital-1' }))
   })
 
   it('patient report', async () => {

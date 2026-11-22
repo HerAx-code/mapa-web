@@ -23,6 +23,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid())).data.agencyId;
     }
 
+    // The writer's own display name, for pinning audit entries to their profile
+    // (Phase 3 PR 3.5, M11). A profile without a name reads as '' .
+    function userName() {
+      return get(/databases/$(database)/documents/users/$(uid())).data.get('name', '');
+    }
+
     function isSuperAdmin() {
       return isAuth() && userRole() == 'super_admin';
     }
@@ -1500,6 +1506,58 @@ service cloud.firestore {
     // vector against AI agents reviewing the dashboard). The `details`
     // field is bounded at 2000 chars to defang multi-paragraph payloads.
     // Entries are immutable — no updates or deletes ever.
+    // Phase 3 PR 3.5 (M11): a browser-written audit entry is pinned to the
+    // writer's own identity and scope. The actor fields must be their own, no
+    // patient may write at all, server-only actions are refused (they are the
+    // functions' own entries — approvals, letters, endorse/close, accounts,
+    // amendments, flags, MFA, conversations), and a case id must sit in the
+    // writer's scope. Codes (hospitalid_*) are NOT here: they are browser-
+    // written until Phase 3 PR 3.4 moves them server-side, and join this list
+    // then.
+    function isServerOnlyAuditAction(a) {
+      return a in [
+        'app_approved', 'approval_reversed', 'slice_advanced',
+        'gl_issued', 'gl_redeemed', 'gl_unmark_redeemed', 'gl_expired',
+        'request_endorsed', 'request_closed', 'request_rejected',
+        'assessment_amended',
+        'account_deleted', 'account_erased', 'account_restricted',
+        'account_activated', 'account_deactivated', 'mfa_reset',
+        'identity_flag_cleared', 'onboarding_request_purged',
+        'case_conversation_opened',
+        // Phase 3 PR 3.4: issueAccessCode writes it. The other hospitalid_*
+        // actions (printed, revoked, deleted, course ended) are still staff
+        // browser actions.
+        'hospitalid_issued',
+      ];
+    }
+    // The actor fields equal the writer's own profile (no "as Hospital Admin").
+    function auditActorOk() {
+      return request.resource.data.actorId == uid() &&
+             request.resource.data.get('actorName', '') == userName() &&
+             request.resource.data.get('actorRole', '') == userRole();
+    }
+    // A request named on the entry must be the writer's own hospital's case
+    // (gateway staff) or one their agency holds a slice in.
+    function auditRequestInScope() {
+      return !('requestId' in request.resource.data) ||
+             request.resource.data.requestId == null ||
+             (isAdmin() &&
+              isHospitalAdmin(get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data)) ||
+             (isAgency() &&
+              userAgencyId() in get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.get('agencyIds', []));
+    }
+    // A patient named on the entry must be in the writer's hospital (their
+    // tenantIds, defaulting a pre-backfill patient to hospital #1) or endorsed
+    // to the writer's agency (users.agencyIds, written at endorsement).
+    function auditPatientInScope() {
+      return !('patientId' in request.resource.data) ||
+             request.resource.data.patientId == null ||
+             (isAdmin() &&
+              userTenantId() in get(/databases/$(database)/documents/users/$(request.resource.data.patientId)).data.get('tenantIds', [defaultTenant()])) ||
+             (isAgency() &&
+              userAgencyId() in get(/databases/$(database)/documents/users/$(request.resource.data.patientId)).data.get('agencyIds', []));
+    }
+
     match /auditLog/{logId} {
       // R33 (§B.26): Activity Timeline reads. Any co-funding agency
       // can read auditLog entries scoped to a request it holds a slice
@@ -1523,11 +1581,18 @@ service cloud.firestore {
                        (isAgency() && resource.data.requestId != null &&
                         userAgencyId() in get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data.agencyIds) ||
                        (isAuth() && resource.data.patientId == uid());
-      allow create: if isAuth() &&
-                       request.resource.data.actorId == uid() &&
+      // Phase 3 PR 3.5 (M11): the earlier rule pinned only actorId, so a patient
+      // could append an entry reading actorRole "Hospital Admin", action
+      // "app_approved", against any case. Now a browser entry must be the
+      // writer's own name + role, never a patient's, never a server-only action,
+      // and its case (requestId / patientId) must be in the writer's scope.
+      allow create: if isAuth() && !isPatient() &&
+                       auditActorOk() &&
+                       !isServerOnlyAuditAction(request.resource.data.get('action', '')) &&
                        // Tenant-less entries come from agency actors; a tagged
                        // entry must carry the writer's own hospital.
                        (!('tenantId' in request.resource.data) || createsInOwnHospital()) &&
+                       auditRequestInScope() && auditPatientInScope() &&
                        request.resource.data.details is string &&
                        request.resource.data.details.size() <= 2000;
       allow update, delete: if false;

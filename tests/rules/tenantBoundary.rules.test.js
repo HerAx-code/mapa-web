@@ -223,8 +223,8 @@ describe('writes stay inside the writer\'s hospital', () => {
   })
 
   it('audit entries and reports can only be tagged with the writer\'s own hospital', async () => {
-    await assertFails(setDoc(ref('adminA', 'auditLog/x'), { actorId: 'adminA', details: 'x', tenantId: B }))
-    await assertSucceeds(setDoc(ref('adminA', 'auditLog/y'), { actorId: 'adminA', details: 'x', tenantId: A }))
+    await assertFails(setDoc(ref('adminA', 'auditLog/x'), { actorId: 'adminA', actorRole: 'staff_admin', details: 'x', tenantId: B }))
+    await assertSucceeds(setDoc(ref('adminA', 'auditLog/y'), { actorId: 'adminA', actorRole: 'staff_admin', details: 'x', tenantId: A }))
     await assertFails(setDoc(ref('patA', 'reports/x'), {
       reportedBy: 'patA', status: 'open', createdAt: serverTimestamp(), category: 'Bug', description: 'x', tenantId: B,
     }))
