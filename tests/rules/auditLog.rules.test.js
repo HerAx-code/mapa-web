@@ -30,9 +30,11 @@ beforeEach(async () => {
 
 // Helper: seed a user doc via the admin-context (rules bypassed) so that
 // our get(users/{uid}).data.role lookups in helper functions resolve.
-async function seedUser(uid, role, agencyId = null) {
+async function seedUser(uid, role, agencyId = null, name = 'Test User') {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
-    await setDoc(doc(ctx.firestore(), 'users', uid), { role, agencyId })
+    // Phase 3 PR 3.5: the audit create rule pins actorName/actorRole to the
+    // writer's profile, so the seeded profile carries the name the payload uses.
+    await setDoc(doc(ctx.firestore(), 'users', uid), { role, agencyId, name })
   })
 }
 
@@ -118,6 +120,67 @@ describe('auditLog — immutability (L13a)', () => {
     })
     const ctx = testEnv.authenticatedContext('user-alice')
     await assertFails(setDoc(doc(ctx.firestore(), 'auditLog', entryId), payload('user-alice', { details: 'tampered' })))
+  })
+})
+
+// Phase 3 PR 3.5 (M11): the earlier rule pinned only actorId, so a patient
+// could append an entry reading actorRole "Hospital Admin" / action
+// "app_approved" against any case. These pin the actor to their own profile,
+// bar patients, refuse server-only actions, and scope the case.
+describe('auditLog.create — M11 forgery lockdown (PR 3.5)', () => {
+  const H = 'hospital-1'
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      const put = (p, d) => setDoc(doc(db, ...p.split('/')), d)
+      await Promise.all([
+        put('users/superA', { role: 'super_admin', tenantId: H, name: 'Ana Admin', agencyId: null }),
+        put('users/staffA', { role: 'staff_admin', tenantId: H, name: 'Ben Staff', agencyId: null }),
+        put('users/coord', { role: 'agency', agencyId: 'dswd', name: 'Dee Coord' }),
+        put('users/pat', { role: 'patient', name: 'Pat Ient', tenantId: H, tenantIds: [H] }),
+        put('users/patElsewhere', { role: 'patient', name: 'Elsa', tenantId: 'bgh', tenantIds: ['bgh'] }),
+        put('requests/rA', { patientId: 'pat', tenantId: H, agencyIds: ['dswd'] }),
+        put('requests/rB', { patientId: 'patElsewhere', tenantId: 'bgh', agencyIds: [] }),
+      ])
+    })
+  })
+  const add = (uid, data) => addDoc(collection(testEnv.authenticatedContext(uid).firestore(), 'auditLog'), data)
+  const base = (over) => ({ action: 'doc_verified', actorAgencyId: null, details: 'x', createdAt: serverTimestamp(), ...over })
+  // A staff entry tagged with the writer's own hospital.
+  const mine = (uid, name, role, over = {}) => base({ actorId: uid, actorName: name, actorRole: role, tenantId: H, ...over })
+
+  it('a patient cannot write any audit entry — not even posing as an approving admin', async () => {
+    await assertFails(add('pat', base({ actorId: 'pat', actorName: 'Pat Ient', actorRole: 'patient' })))
+    await assertFails(add('pat', base({ actorId: 'pat', actorName: 'Hospital Admin', actorRole: 'super_admin', action: 'app_approved', tenantId: H })))
+  })
+
+  it('a staffer cannot forge another role or another name', async () => {
+    await assertFails(add('staffA', mine('staffA', 'Ben Staff', 'super_admin')))   // not their role
+    await assertFails(add('staffA', mine('staffA', 'Someone Else', 'staff_admin'))) // not their name
+  })
+
+  it('server-only actions are refused from a browser, even a super admin', async () => {
+    for (const action of ['app_approved', 'request_endorsed', 'request_closed', 'gl_issued', 'account_erased', 'mfa_reset', 'assessment_amended', 'identity_flag_cleared', 'case_conversation_opened']) {
+      await assertFails(add('superA', mine('superA', 'Ana Admin', 'super_admin', { action })))
+    }
+  })
+
+  it("a staff entry must name the writer's own hospital's case and patient", async () => {
+    await assertSucceeds(add('superA', mine('superA', 'Ana Admin', 'super_admin', { requestId: 'rA', patientId: 'pat' })))
+    await assertFails(add('superA', mine('superA', 'Ana Admin', 'super_admin', { requestId: 'rB', patientId: 'patElsewhere' })))
+    await assertFails(add('superA', mine('superA', 'Ana Admin', 'super_admin', { patientId: 'patElsewhere' }))) // patient at another hospital
+  })
+
+  it('an agency may write about a case it holds a slice in, not others', async () => {
+    const ag = (over) => base({ actorId: 'coord', actorName: 'Dee Coord', actorRole: 'agency', actorAgencyId: 'dswd', action: 'docs_requested', ...over })
+    await assertSucceeds(add('coord', ag({ requestId: 'rA' })))  // dswd ∈ rA.agencyIds
+    await assertFails(add('coord', ag({ requestId: 'rB' })))     // not in rB.agencyIds
+  })
+
+  it('a kept staff entry (own identity, in-scope case) is still allowed', async () => {
+    await assertSucceeds(add('staffA', mine('staffA', 'Ben Staff', 'staff_admin', { action: 'doc_verified', requestId: 'rA', patientId: 'pat' })))
+    // An entry with no case at all (e.g. a settings change) is fine too.
+    await assertSucceeds(add('superA', mine('superA', 'Ana Admin', 'super_admin', { action: 'hospital_updated' })))
   })
 })
 
