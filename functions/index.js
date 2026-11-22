@@ -42,6 +42,10 @@ exports.syncDocumentStatus = require('./src/syncDocumentStatus').syncDocumentSta
 exports.purgeUnattachedDocuments = require('./src/purgeUnattachedDocuments').purgeUnattachedDocuments
 // Phase 3 PR 3.2: assessment corrections after endorsement.
 exports.amendAssessment = require('./src/assessmentActions').amendAssessment
+// Phase 3 PR 3.3: conversations belong to the case; thread fields are server-written.
+const { openCaseConversation, onConversationMessage } = require('./src/caseConversations')
+exports.openCaseConversation = openCaseConversation
+exports.onConversationMessage = onConversationMessage
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated

@@ -31,7 +31,7 @@ import EligibilityCertCard from '../../components/admin/requests/EligibilityCert
 import { fundingTypeShort, fundingTypeClass, fundingSummary } from '../../utils/fundingType'
 import RequestStageRail from '../../components/admin/RequestStageRail'
 import VerifyDocsPanel from '../../components/admin/VerifyDocsPanel'
-import { getOrCreateConversation } from '../../utils/messages'
+import { openCaseConversation } from '../../utils/messages'
 import { tsToDate, phTodayKey } from '../../utils/dates'
 import { effectiveSlots } from '../../utils/requests'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -509,18 +509,16 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
     return next
   })
 
-  // Open (or create) a conversation with the patient and jump to Messages.
-  // Used for the stale-endorsement nudge so the gateway can poke the patient without
-  // hunting through the conversation list.
+  // Open the case's conversation with the patient and jump to Messages
+  // (Phase 3 PR 3.3): one per case, shared by the hospital's staff — created
+  // on first use or joined, on the server. Also used for the stale-endorsement
+  // nudge so the gateway can poke the patient without hunting for the thread.
+  // eslint-disable-next-line no-unused-vars
   const handleMessagePatient = async (subjectHint) => {
     if (messagingPatient) return
     setMessagingPatient(true)
     try {
-      const convId = await getOrCreateConversation(user.uid, request.patientId, {
-        names:   { [user.uid]: user.name, [request.patientId]: request.patientName },
-        roles:   { [user.uid]: user.role, [request.patientId]: 'patient' },
-        subject: subjectHint ?? `Re: Request ${request.requestId}`,
-      })
+      const convId = await openCaseConversation(request.id)
       navigate(`/admin/messages?conv=${convId}`)
     } catch {
       toast.error('Could not open conversation. Please try again.')
@@ -848,9 +846,11 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
               patient has sat on it. Operators need to reach the patient
               earlier too (doc clarifications, intake follow-ups). */}
           <button onClick={() => handleMessagePatient()} disabled={messagingPatient}
-            title="Message patient"
+            title={request.caseConversationId
+              ? "Open this case's conversation with the patient (shared with your hospital's social workers)"
+              : 'Start the case conversation with the patient'}
             className="btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1.5 disabled:opacity-50">
-            <MdSend size={13} /> Message
+            <MdSend size={13} /> {request.caseConversationId ? 'Case conversation' : 'Message'}
           </button>
           <StatusBadge status={request.status} kind="request" />
         </div>
