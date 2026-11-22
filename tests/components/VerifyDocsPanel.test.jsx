@@ -105,7 +105,7 @@ describe('VerifyDocsPanel — Identity review card', () => {
     render(<VerifyDocsPanel {...idProps} reqDocs={reqDocs} />)
     expect(screen.getByText(/National ID · the patient's phone reports the PSA signature valid/)).toBeInTheDocument()
     expect(screen.getByText('Matches account (phone)')).toBeInTheDocument()
-    expect(screen.getByText('Likely same person')).toBeInTheDocument()
+    expect(screen.getByText('Likely same person (phone)')).toBeInTheDocument()
     // Duplicate-account flag: same-hospital match by name, elsewhere a count only.
     expect(screen.getByText(/Possible duplicate — ask the patient/)).toBeInTheDocument()
     expect(await screen.findByText(/Ana Cruz \(PAT-1\)/)).toBeInTheDocument()
