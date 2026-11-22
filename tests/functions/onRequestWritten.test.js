@@ -30,12 +30,15 @@ function makeDb(admins = [{ id: 'a1' }, { id: 'a2' }]) {
   const docs = admins.map(({ id, ...data }) => ({ id, data: () => data }))
   const usersSnap = { empty: docs.length === 0, size: docs.length, docs }
   const chain = { where: () => chain, get: async () => usersSnap }
+  // Empty result for any other collection query (e.g. the PR 3.4 withdrawal
+  // code-return looks up hospitalIds by requestId; these tests bind no code).
+  const empty = { where: () => empty, get: async () => ({ docs: [], size: 0, empty: true }) }
   return {
     writes,
     collection(name) {
       if (name === 'users') return chain
       if (name === 'notifications') return { doc: (id) => ({ collection: () => ({ add: async (d) => { writes.push({ id, d }) } }) }) }
-      return {}
+      return empty
     },
   }
 }

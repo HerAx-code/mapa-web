@@ -51,10 +51,11 @@ describe('course-of-treatment codes', () => {
     await seed({ courseUntil: at(-1) })
     await assertFails(next())
   })
-  it('staff issue a course of up to ~3 months, not longer', async () => {
+  it('issuing a course code runs on the server now (PR 3.4); the length limit is server-checked', async () => {
     await seed()
-    await assertSucceeds(issueCode(as('staff'), 'MAPA-2026-00010', { tenantId: A, extra: { courseUntil: at(60) } }))
-    await assertFails(issueCode(as('staff'), 'MAPA-2026-00011', { tenantId: A, extra: { courseUntil: at(120) } }))
+    // Browsers no longer issue codes at all — the ~3-month course cap now lives
+    // in issueAccessCode (tests/functions/codeActions.test.js).
+    await assertFails(issueCode(as('staff'), 'MAPA-2026-00010', { tenantId: A, extra: { courseUntil: at(60) } }))
   })
   it('staff can end a course early but not extend it', async () => {
     await seed({ courseUntil: at(30) })

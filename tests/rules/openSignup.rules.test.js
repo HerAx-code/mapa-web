@@ -48,23 +48,20 @@ describe('open sign-up', () => {
   })
 })
 
-describe('joining a hospital later, by claiming its code', () => {
-  const claim = (proof) => {
+describe('joining a hospital later runs on the server now (PR 3.4)', () => {
+  // claimAccessCode (server) does the whole claim and checks the proof against
+  // the account's own profile; the browser can no longer write status / patId
+  // or privateInfo. The positive proof paths live in
+  // tests/functions/codeActions.test.js.
+  beforeEach(async () => { await setDoc(doc(as('p1'), 'users', 'p1'), profile) })
+
+  it('the browser claim batch is refused', async () => {
     const db = as('p1')
     const b = writeBatch(db)
     b.update(doc(db, 'hospitalIds', CODE), { status: 'used', patId: 'p1', date: 'x', time: '' })
-    b.set(doc(db, 'hospitalIds', CODE, 'privateInfo', 'details'), { usedBy: 'Ana Cruz', usedById: 'p1', createdAt: serverTimestamp(), ...(proof ? { proof } : {}) })
+    b.set(doc(db, 'hospitalIds', CODE, 'privateInfo', 'details'), { usedBy: 'Ana Cruz', usedById: 'p1', createdAt: serverTimestamp(), proof: codeProof('Cruz', '1990-05-01') })
     b.update(doc(db, 'users', 'p1'), { tenantId: A, tenantIds: [A], hospitalId: CODE })
-    return b.commit()
-  }
-  beforeEach(async () => { await setDoc(doc(as('p1'), 'users', 'p1'), profile) })
-
-  it('works with the patient-bound proof', async () => {
-    await assertSucceeds(claim(codeProof('Cruz', '1990-05-01')))
-  })
-  it('is refused without it', async () => {
-    await assertFails(claim(null))
-    await assertFails(claim(codeProof('Santos', '1990-05-01')))
+    await assertFails(b.commit())
   })
 })
 

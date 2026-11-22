@@ -115,9 +115,9 @@ describe("another hospital's records are off-limits to gateway staff", () => {
     await assertFails(deleteDoc(ref('superA', 'hospitalIds/CODE-B2')))
     const issued = issuedRecord({ issuedByUid: 'superA' })
     await assertFails(issueCode(as('superA'), 'BGH-2026-00099', { tenantId: B, issued }))
-    // Phase 8: codes only under the issuing hospital's own prefix.
     await assertFails(issueCode(as('superA'), 'BGH-2026-00098', { tenantId: A, issued }))
-    await assertSucceeds(issueCode(as('superA'), 'MAPA-2026-00099', { tenantId: A, issued }))
+    // Phase 3 PR 3.4: no browser issues a code — even its own hospital's.
+    await assertFails(issueCode(as('superA'), 'MAPA-2026-00099', { tenantId: A, issued }))
   })
 
   it("hospital A super admin cannot rebrand hospital B", async () => {
@@ -213,12 +213,13 @@ describe('writes stay inside the writer\'s hospital', () => {
     await assertFails(setDoc(ref('patA', 'documents/x3'), { patientId: 'patA', status: 'pending', tenantId: B }))
   })
 
-  // Registration requires a code, and joins exactly the code's hospital.
-  it("registration joins the access code's hospital, nothing else", async () => {
+  // Registration creates a no-code account; claiming a code runs on the server.
+  it('registration self-creates a no-code account; the browser code-claim is refused (PR 3.4)', async () => {
     // Open sign-up (2026-11-15): no code, no hospital — allowed.
     await assertSucceeds(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', name: 'Pat' }))
+    // The browser register-with-code batch is refused whichever hospital it names.
     await assertFails(registerWithCode(as('newPat1'), { uid: 'newPat1', code: 'CODE-B2', tenantId: A }))
-    await assertSucceeds(registerWithCode(as('newPat2'), { uid: 'newPat2', code: 'CODE-B2', tenantId: B }))
+    await assertFails(registerWithCode(as('newPat2'), { uid: 'newPat2', code: 'CODE-B2', tenantId: B }))
   })
 
   it('audit entries and reports can only be tagged with the writer\'s own hospital', async () => {

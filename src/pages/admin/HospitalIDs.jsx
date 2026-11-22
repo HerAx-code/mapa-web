@@ -468,7 +468,7 @@ export default function HospitalIDs() {
         </div>{/* /two-pane grid */}
 
         {showIssue && (
-          <IssueCodeModal nextNum={nextNum} onClose={() => setShowIssue(false)} onPrint={handlePrint} />
+          <IssueCodeModal onClose={() => setShowIssue(false)} onPrint={handlePrint} />
         )}
       </div>
     </Layout>

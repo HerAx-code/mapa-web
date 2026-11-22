@@ -9,7 +9,7 @@ import Logo from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import LanguageToggle from '../../components/LanguageToggle'
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, functions, signInAnonymously, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { loadHospital } from '../../utils/hospitals'
@@ -21,10 +21,9 @@ import { TERMS_VERSION } from '../../utils/constants'
 import { hasReservedToken } from '../../utils/names'
 import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
-import { fmtDate } from '../../utils/dates'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
-import { codeProof, isBirthdate, blankCodeExpired } from '../../utils/codeIssue'
-import { PENDING_CODE_KEY } from '../../utils/accessCodes'
+import { isBirthdate, blankCodeExpired } from '../../utils/codeIssue'
+import { PENDING_CODE_KEY, claimAccessCode } from '../../utils/accessCodes'
 import { RELATIONSHIPS } from '../../data/relationships'
 
 const CURRENT_YEAR        = new Date().getFullYear()
@@ -592,7 +591,7 @@ export default function Register() {
         sex:       form.sex,
         lastName:  officialName?.nameParts?.lastName ?? form.lastName.trim(),
         ...(form.managedByFamily ? { managedBy: { name: form.managerName.trim(), relationship: form.managerRelationship } } : {}),
-        hospitalId: codeTyped() ? form.hospitalId : null, patientId,
+        hospitalId: null, patientId,
         agencyId: null, rank: null, cooldown: 0,
         deletion: false, active: true,
         // Terms of Use acceptance record (who = this uid, when, which version).
@@ -601,79 +600,43 @@ export default function Register() {
         createdAt: serverTimestamp(),
       }
 
-      // The access code is OPTIONAL at registration (2026-11-15). When one is
-      // given, it decides the patient's first hospital and is the code for
-      // their FIRST request (claimed here, bound to the request when they
-      // file). Later requests need a new code — from any hospital.
-      let joinedTenant = null
-      if (!codeTyped()) {
-        // No code: a network account with no hospital yet (open sign-up).
-        try {
-          await setDoc(doc(db, 'users', uid), userData)
-        } catch (createErr) {
-          try { await deleteUser(createdAuthUser) }
-          catch (delErr) { console.error('[Register] orphan Auth rollback failed (open sign-up):', delErr) }
-          createdAuthUser = null
-          throw createErr
-        }
-      } else
-      // #2 — Transactional hospital ID claim: re-read status INSIDE the
-      // transaction and abort if another patient won the race between
-      // the patient's Verify click and Submit. Prevents a second patient's
-      // claim from silently overwriting the first patient's record.
-      //
-      // Phase 0.3 hardening: the patient NAME is written to a dedicated
-      // sub-doc (hospitalIds/{id}/privateInfo/details) instead of the
-      // parent. The parent allows unauthenticated GET during registration
-      // and previously leaked `usedBy: name` on every claimed code. Now
-      // the parent only carries the uid (`patId`) and status; the name
-      // sits behind the auth-gated sub-collection rule. All three writes
-      // (users, parent hospitalIds, privateInfo) commit atomically in the
-      // same transaction.
+      // The access code is OPTIONAL at registration (2026-11-15). Create the
+      // account first as a network account with NO hospital (patientSelfCreate),
+      // then — if a code was given — claim it on the server (Phase 3 PR 3.4,
+      // gaps I1/R4). `claimAccessCode` is the one claim path for sign-up and
+      // filing: it checks the code against this account's own last name +
+      // birthdate, moves the patient's current hospital and records the claim.
+      // The browser no longer writes hospitalIds or privateInfo.
       try {
-        await runTransaction(db, async (tx) => {
-          const hidRef  = doc(db, 'hospitalIds', form.hospitalId)
-          const hidSnap = await tx.get(hidRef)
-          if (!hidSnap.exists()) throw new Error('CODE_NOT_FOUND')
-          if (hidSnap.data().status !== 'available') throw new Error('CODE_USED')
-          // Tenant (multi-hospital Phase 2): the patient joins the hospital
-          // that issued the access code. Codes carry tenantId from Phase 2 on;
-          // older codes belong to hospital #1 (Phase 3 backfills them).
-          joinedTenant = hidSnap.data().tenantId || DEFAULT_HOSPITAL_ID
-          tx.set(doc(db, 'users', uid), { ...userData, tenantId: joinedTenant, tenantIds: [joinedTenant] })
-          tx.update(hidRef, {
-            status: 'used', patId: uid,
-            date: fmtDate(new Date()),
-            time: new Date().toLocaleTimeString(),
-          })
-          tx.set(doc(db, 'hospitalIds', form.hospitalId, 'privateInfo', 'details'), {
-            usedBy:    name,
-            usedById:  uid,
-            createdAt: serverTimestamp(),
-            // Patient-bound code: compared by the rules with the issued record.
-            ...(hidSnap.data().bound === true ? { proof: codeProof(form.lastName, form.birthdate) } : {}),
-          })
-        })
-      } catch (txErr) {
-        // #1 — Roll back the orphan Auth account so the patient can retry
-        // (e.g. with a different access code) without their email being
-        // permanently "already in use" with no profile attached.
+        await setDoc(doc(db, 'users', uid), userData)
+      } catch (createErr) {
         try { await deleteUser(createdAuthUser) }
-        catch (delErr) { console.error('[Register] orphan Auth rollback failed (tx path):', delErr) }
+        catch (delErr) { console.error('[Register] orphan Auth rollback failed:', delErr) }
         createdAuthUser = null
-        if (String(txErr.message) === 'CODE_USED') {
-          setErrors({ hospitalId: t('register.errors.codeUsed') })
-          setHospitalVerified(false)
-          setStep(3)
-          return
+        throw createErr
+      }
+
+      let joinedTenant = null
+      if (codeTyped()) {
+        try {
+          const claimed = await claimAccessCode({
+            user: { uid, ...userData }, code: form.hospitalId,
+            tenantId: null, lastName: form.lastName, birthdate: form.birthdate,
+          })
+          joinedTenant = claimed.tenantId || null
+          Object.assign(userData, claimed)
+        } catch (claimErr) {
+          // The account is valid (a network account with no hospital yet); keep
+          // it and let the patient claim a code when they file. Map the server
+          // reason to the existing field messages.
+          console.warn('[Register] code claim after sign-up failed:', claimErr?.code, claimErr?.message)
+          const code = claimErr?.code || ''
+          const msg = code.includes('permission-denied') ? t('register.errors.codeMismatch')
+            : code.includes('not-found') ? t('register.errors.codeNotFound')
+            : code.includes('failed-precondition') ? t('register.errors.codeUsed')
+            : t('register.errors.generic')
+          toast.error(msg)
         }
-        if (String(txErr.message) === 'CODE_NOT_FOUND') {
-          setErrors({ hospitalId: t('register.errors.codeNotFound') })
-          setHospitalVerified(false)
-          setStep(3)
-          return
-        }
-        throw txErr
       }
 
       // Immediately sync role into AuthContext so PrivateRoute sees 'patient'

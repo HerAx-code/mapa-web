@@ -1,16 +1,10 @@
 import { useRef, useState } from 'react'
-import { doc, getDoc, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore'
-import { MdClose, MdPrint, MdCheckCircle } from 'react-icons/md'
+import { MdClose, MdPrint, MdCheckCircle, MdWarning } from 'react-icons/md'
 import toast from 'react-hot-toast'
-import { db } from '../../firebase'
-import { useAuth } from '../../contexts/AuthContext'
+import { functions, httpsCallable } from '../../firebase'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
-import { logAudit } from '../../utils/auditLog'
-import { withTenant } from '../../utils/hospitals'
-import { fmtDate } from '../../utils/dates'
-import { accessCodePrefixFor } from '../../config/org'
-import { codeProof, fullNameOf, isBirthdate, ID_TYPES } from '../../utils/codeIssue'
+import { isBirthdate, ID_TYPES } from '../../utils/codeIssue'
 
 // Patient-bound access codes (2026-11-15): the social-services desk issues a
 // code to ONE named patient, recording who they are. The patient can only
@@ -48,16 +42,6 @@ export function validateIssue(f) {
   return e
 }
 
-// The first code id from `start` up that doesn't exist anywhere (codes are one
-// network-wide namespace; another hospital may have used a number).
-async function freeCodeId(prefix, start) {
-  for (let num = start; num < start + 500; num++) {
-    const id = `${prefix}${String(num).padStart(5, '0')}`
-    if (!(await getDoc(doc(db, 'hospitalIds', id))).exists()) return id
-  }
-  throw new Error('NO_FREE_IDS')
-}
-
 function Field({ id, label, required, error, hint, children }) {
   return (
     <div>
@@ -68,12 +52,12 @@ function Field({ id, label, required, error, hint, children }) {
   )
 }
 
-export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
-  const { user } = useAuth()
+export default function IssueCodeModal({ onClose, onPrint }) {
   const [f, setF] = useState(EMPTY)
   const [showErrors, setShowErrors] = useState(false)
   const [saving, setSaving] = useState(false)
   const [issued, setIssued] = useState(null) // { id, name }
+  const [confirmOpen, setConfirmOpen] = useState(null) // { code, name } when the patient already holds an open code
   const panelRef = useRef(null)
   useEscapeKey(onClose, !saving)
   useFocusTrap(panelRef, true)
@@ -81,38 +65,30 @@ export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
   const err = (k) => (showErrors ? errors[k] : undefined)
   const set = (k) => (e) => setF(p => ({ ...p, [k]: e.target.value }))
 
-  const issue = async () => {
+  // Phase 3 PR 3.4 (gap M10): issuing runs on the server. `issueAccessCode`
+  // takes the next number from a per-prefix counter in a transaction (no
+  // collisions, no reuse of a deleted number), uses the hospital's own prefix
+  // and writes the issued record + audit entry. When the patient already holds
+  // an open code the server asks the desk to confirm (not a block).
+  const issue = async (confirm = false) => {
     setShowErrors(true)
     if (Object.keys(errors).length) return
     setSaving(true)
     try {
-      const nameParts = {
-        firstName: f.firstName.trim(), middleName: f.middleName.trim(), lastName: f.lastName.trim(), suffix: f.suffix.trim(),
+      const payload = {
+        lastName: f.lastName.trim(), firstName: f.firstName.trim(), middleName: f.middleName.trim(),
+        suffix: f.suffix.trim(), birthdate: f.birthdate, contact: f.contact,
+        visitDate: f.visitDate, caseNumber: f.caseNumber.trim(), idType: f.idType, idLast4: f.idLast4,
+        course: f.course, courseUntil: f.course ? f.courseUntil : '', confirm,
       }
-      const name = fullNameOf(nameParts)
-      const id = await freeCodeId(accessCodePrefixFor(new Date().getFullYear()), nextNum)
-      const batch = writeBatch(db)
-      batch.set(doc(db, 'hospitalIds', id), withTenant({
-        status: 'available', patId: null, bound: true,
-        date: fmtDate(new Date()), time: '', createdAt: serverTimestamp(),
-        ...(f.course ? { courseUntil: Timestamp.fromMillis(courseEndMs(f.courseUntil)) } : {}),
-      }))
-      batch.set(doc(db, 'hospitalIds', id, 'privateInfo', 'issued'), {
-        name, nameParts, birthdate: f.birthdate, proof: codeProof(nameParts.lastName, f.birthdate),
-        contact: f.contact || null, visitDate: f.visitDate, caseNumber: f.caseNumber.trim() || null,
-        idType: f.idType, idLast4: f.idLast4 ? f.idLast4.toUpperCase() : null,
-        issuedBy: user.name ?? '', issuedByUid: user.uid, issuedAt: serverTimestamp(),
-      })
-      await batch.commit()
-      logAudit(user, {
-        action: 'hospitalid_issued', targetType: 'hospitalId', targetId: id, targetName: id,
-        details: `Issued to ${name} (visit ${f.visitDate}; ID seen: ${f.idType}${f.idLast4 ? ` …${f.idLast4.toUpperCase()}` : ''})${f.course ? `; course of treatment until ${f.courseUntil}` : ''}`,
-      })
-      setIssued({ id, name, courseUntil: f.course ? f.courseUntil : null })
-      toast.success(`${id} issued to ${name}.`)
+      const res = (await httpsCallable(functions, 'issueAccessCode')(payload)).data
+      if (res?.needsConfirm) { setConfirmOpen({ code: res.openCode, name: res.name }); return }
+      setConfirmOpen(null)
+      setIssued({ id: res.id, name: res.name, courseUntil: res.courseUntil || null })
+      toast.success(`${res.id} issued to ${res.name}.`)
     } catch (e) {
       console.error(e)
-      toast.error('Could not issue the code. Please try again.')
+      toast.error(e?.message || 'Could not issue the code. Please try again.')
     } finally { setSaving(false) }
   }
 
@@ -198,9 +174,21 @@ export default function IssueCodeModal({ nextNum, onClose, onPrint }) {
                 )}
               </div>
             </div>
+            {confirmOpen && (
+              <div className="mx-5 mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <MdWarning size={18} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                <div className="flex-1 text-sm text-amber-800">
+                  <p><strong>{confirmOpen.name || 'This patient'}</strong> already holds an open code (<span className="font-mono">{confirmOpen.code}</span>) that hasn’t backed a request yet. Issue another anyway?</p>
+                  <div className="mt-2 flex gap-2">
+                    <button className="text-xs border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-50" onClick={() => setConfirmOpen(null)} disabled={saving}>Cancel</button>
+                    <button className="text-xs text-white bg-amber-500 px-3 py-1.5 rounded-lg hover:bg-amber-600" onClick={() => issue(true)} disabled={saving}>{saving ? 'Issuing…' : 'Issue anyway'}</button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="px-5 pb-4 flex gap-2 justify-end border-t border-gray-50 pt-3">
               <button className="btn-secondary text-sm" onClick={onClose} disabled={saving}>Cancel</button>
-              <button className="btn-primary text-sm" onClick={issue} disabled={saving}>{saving ? 'Issuing…' : 'Issue code'}</button>
+              <button className="btn-primary text-sm" onClick={() => issue(false)} disabled={saving}>{saving ? 'Issuing…' : 'Issue code'}</button>
             </div>
           </>
         )}

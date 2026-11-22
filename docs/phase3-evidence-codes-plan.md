@@ -1,6 +1,6 @@
 # Phase 3 plan — evidence and codes (T4, T6)
 
-Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 built on `feat/case-conversations`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
+Status: **plan accepted 2026-11-22 (P3-A to P3-G); PR 3.1 merged and deployed (#419); PR 3.2 merged and deployed (#420); PR 3.3 merged (#421); PR 3.4 built on `feat/codes-on-server`.** Phase 2 is shipped (docs/phase2-money-plan.md, #413–#418). Source: the MAPA process-logic gap map, themes T4 (evidence) and T6 (codes), and its proposed decisions D1, D6, D9 and D11. Each gap below was re-checked against `main` at 902eea7+ and is still present.
 
 ## What Phase 3 fixes
 
@@ -144,6 +144,13 @@ Why: the rules can't normalize names the way `codeProof()` does (accents, spaces
 3. **Withdrawal (P3-E):** `onRequestWritten` gives the code back when a withdrawal comes before any staff action.
 4. **Rules:** browsers no longer write `hospitalIds` claim fields or `privateInfo`.
 5. **Existing data:** none to migrate. Codes keep their ids; the counter starts above each prefix's highest number (a one-off script, report first).
+6. **As built** (`feat/codes-on-server`):
+   - **`functions/src/codeActions.js`** — `issueAccessCode` draws the next number from `accessCodeCounters/{PREFIX}__{YEAR}` in a transaction (monotonic + a belt-and-braces free-id check, so a mis-seeded counter can't overwrite a live code), uses the issuing hospital's own `accessCodePrefix`, refuses a paused hospital and a non-gateway caller, and returns `{ needsConfirm, openCode }` when the patient already holds an open code (the desk confirms, `confirm: true`). `claimAccessCode` is the one claim path: it checks the code against the **account's own** last name + birthdate (a fresh account adopts the recorded identity), enforces the blank-code cutoff for non-bound codes, and writes the claim + user move in one transaction.
+   - **Withdrawal (P3-E):** `onRequestWritten` clears a code's `requestId` when a `submitted` request with no reviewed document is withdrawn (a course code is left to its own transaction).
+   - **Rules:** `hospitalIds` create → `if false`, the patient self-claim branch removed, `privateInfo` create/update → `if false`, new `accessCodeCounters` server-only. Kept: admin revoke / end-course / delete, the patient `requestId`-bind, and `patientSwitchesHospital`.
+   - **Clients:** IssueCodeModal and `utils/accessCodes.js` call the callables; Register creates a no-code account then claims on the server; the `privateInfo` typo-correction path was dropped (no server replacement in scope).
+   - **Seeding:** `scripts/seed-code-counters.mjs` (report-first) raises each prefix's counter above its highest existing code; a brand-new prefix starts at 1 on its own.
+   - **Tests:** `tests/functions/codeActions.test.js` (18 incl. two-desk, deleted-number, open-code, I1, letters-only, blank cutoff, course cap) + `returnCodeOnWithdrawal.test.js`; the browser-write rules tests across 10 files now prove the old issue/claim/register writes are refused. All suites green (utils 560, components 167, functions 232, rules 526).
 
 ## PR 3.5 — Audit entries (M11)
 1. **Rules (P3-D):**

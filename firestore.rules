@@ -1266,25 +1266,12 @@ service cloud.firestore {
       // is the gateway's job, scoped to its own hospital.
       allow get:    if isAuth();
       allow list:   if isHospitalAdmin(resource.data);
-      // Phase 8: a hospital issues codes only under its own prefix, so codes
-      // from different hospitals can never collide in this one namespace.
-      // Patient-bound codes (2026-11-15): a new code is always issued to a
-      // named patient — `bound: true` plus privateInfo/issued in the same batch.
-      // Blank slips are no longer created.
-      // Issuing is desk work: the Hospital Admin AND Staff Admins (owner
-      // decision 2026-11-15). Revoking / deleting stay Hospital Admin only.
-      allow create: if isAdmin() && createsInOwnHospital() &&
-                       hospitalId.matches(hospitalDoc(tenantOf(request.resource.data)).get('accessCodePrefix', '') +
-                                          '-[0-9]{4}-[0-9]{5}') &&
-                       request.resource.data.get('bound', false) == true &&
-                       // Phase 3A: a code may cover a course of treatment (several requests
-                       // in turn) until courseUntil — at most ~3 months, like the reuse of
-                       // the doctor's order and indigency certificate.
-                       (!('courseUntil' in request.resource.data) ||
-                        (request.resource.data.courseUntil is timestamp &&
-                         request.resource.data.courseUntil > request.time &&
-                         request.resource.data.courseUntil <= request.time + duration.value(93, 'd'))) &&
-                       existsAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)/privateInfo/issued);
+      // Phase 3 PR 3.4 (gap M10): issuing moved to the `issueAccessCode`
+      // callable. It takes the next number from a per-prefix counter in a
+      // transaction (no collisions, no reuse of a deleted number), checks the
+      // issuing hospital's own prefix and writes privateInfo/issued server-side.
+      // No browser creates a code any more.
+      allow create: if false;
       // A code that backs a request (requestId, marketplace) is part of that
       // case's record: the gateway can't reset, re-bind or delete it.
       // Gateway staff may only REVOKE an unfiled code (the Hospital Admin's
@@ -1307,20 +1294,11 @@ service cloud.firestore {
                           .hasOnly(['courseUntil', 'courseEndedAt', 'courseEndedBy']) &&
                         request.resource.data.courseUntil is timestamp &&
                         request.resource.data.courseUntil <= request.time) ||
-                       // Phase 1.5: the claim branch pinned status and patId
-                       // but left every OTHER field on the doc writable in
-                       // the same operation -- a registering user could
-                       // rewrite arbitrary fields on a hospitalIds doc while
-                       // legitimately claiming it. Restricted to the four
-                       // keys the registration transaction actually writes
-                       // (src/pages/auth/Register.jsx).
-                       (isAuth() &&
-                        resource.data.status == 'available' &&
-                        request.resource.data.status == 'used' &&
-                        request.resource.data.patId == uid() &&
-                        request.resource.data.diff(resource.data).affectedKeys()
-                          .hasOnly(['status', 'patId', 'date', 'time']) &&
-                        codeClaimProofOk(hospitalId)) ||
+                       // Phase 3 PR 3.4 (gaps I1, R4): claiming moved to the
+                       // `claimAccessCode` callable — one path for sign-up and
+                       // filing, which checks the code against the ACCOUNT's own
+                       // last name + birthdate (a browser can't be trusted to).
+                       // No browser writes the claim fields any more.
                        // Phase 2 PR 2.4: the agency branch that stamped cooldown
                        // fields here is gone — the repeat limit lives in
                        // approvalMarks, written by decideSlice.
@@ -1359,35 +1337,27 @@ service cloud.firestore {
         allow read:   if isHospitalAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) ||
                          (infoId == 'details' && isAuth() &&
                           get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.patId == uid());
-        // `issued`: written by the issuing Hospital Admin in the same batch as
-        // the code (getAfter — the parent may not exist yet).
-        // `details`: created inside the registration / marketplace claim
-        // transaction. The patient user doc may not exist yet (same-transaction
-        // limitation), so isAuth() + self-attribution via usedById carries the
-        // security; the claim's `proof` is checked by the parent's
-        // codeClaimProofOk.
-        allow create: if (infoId == 'issued' && isAdmin() &&
-                          getAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.get('tenantId', '') == userTenantId() &&
-                          issuedOk() && request.resource.data.issuedByUid == uid()) ||
-                         (infoId == 'details' && isAuth() &&
-                          request.resource.data.usedById == uid() &&
-                          request.resource.data.usedBy is string &&
-                          request.resource.data.usedBy.size() <= 120 &&
-                          request.resource.data.keys().hasOnly(['usedBy', 'usedById', 'createdAt', 'proof']));
-        // Only the Hospital Admin may correct `issued` (a typo), only while the
-        // code is unclaimed, and the correction names who made it. `details`
-        // (who claimed it) is never edited.
-        allow update: if infoId == 'issued' &&
-                         isHospitalSuperAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) &&
-                         get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data.status == 'available' &&
-                         issuedOk() &&
-                         request.resource.data.get('updatedByUid', '') == uid();
+        // Phase 3 PR 3.4: `issued` is written by `issueAccessCode` and `details`
+        // by `claimAccessCode`, both server-side (Admin SDK, rules-bypassing).
+        // No browser writes privateInfo any more (gaps M10, I1, R4).
+        allow create: if false;
+        allow update: if false;
         // `details` goes when the Hospital Admin revokes or deletes the code;
         // `issued` only together with the code itself (never left dangling).
         allow delete: if isHospitalSuperAdmin(get(/databases/$(database)/documents/hospitalIds/$(hospitalId)).data) &&
                          (infoId == 'details' ||
                           !existsAfter(/databases/$(database)/documents/hospitalIds/$(hospitalId)));
       }
+    }
+
+    // ── accessCodeCounters ──────────────────────────────────────────────────────
+    // Phase 3 PR 3.4 (gap M10): the per-prefix issuing counter
+    // (accessCodeCounters/{PREFIX}__{YEAR} = { next }). Written and read ONLY by
+    // the `issueAccessCode` callable and the seed script (Admin SDK), never a
+    // browser — so two desks can't pick the same number and a client can't read
+    // how many codes a hospital has issued.
+    match /accessCodeCounters/{counterId} {
+      allow read, write: if false;
     }
 
     // ── notifications ─────────────────────────────────────────────────────────
