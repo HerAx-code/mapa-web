@@ -1,6 +1,6 @@
 # Phase 5 plan — cleanup (T7) and two-factor stage 2
 
-Status: **plan accepted 2026-11-22 (P5-A to P5-D); PR 5.1 merged and deployed (#427); PR 5.2 merged and deployed (#428); PR 5.3 built on `chore/phase5-records-docs`.** Phases 1–4 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md, docs/phase4-case-endings-plan.md). Source: the MAPA process-logic gap map, theme T7 (N3–N6, R5–R8, R10), plus the leftovers found while building Phases 2–4. Each item was re-checked against `main` after #426.
+Status: **plan accepted 2026-11-22 (P5-A to P5-D); PR 5.1 merged and deployed (#427); PR 5.2 merged and deployed (#428); PR 5.3 merged (#429); PR 5.4 built on `feat/staff-mfa-stage2`.** Phases 1–4 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md, docs/phase4-case-endings-plan.md). Source: the MAPA process-logic gap map, theme T7 (N3–N6, R5–R8, R10), plus the leftovers found while building Phases 2–4. Each item was re-checked against `main` after #426.
 
 ## What is left
 
@@ -99,6 +99,15 @@ Why: enforcement is the point, but switching it on before enrolment locks the of
 2. `scripts/report-staff-mfa.mjs`: who is enrolled, per hospital and agency.
 3. The switch is turned on separately, on your OK, once the report shows everyone enrolled and the date has passed.
 4. **Tests:** rules tests with and without a second factor, the switch on and off.
+5. **As built — the switch is code, not a config document.** The plan said `config/security.enforceStaffMfa`. Instead it is `enforceStaffMfa()` in firestore.rules plus `ENFORCE_STAFF_MFA` in functions/src/mfaPolicy.js, and a test checks the two agree. Why:
+   - no extra document read in every rule check;
+   - turning it on needs a reviewed rules + functions deploy, which a stolen Super Admin session can't do;
+   - turning it off again is the same one-line change.
+
+   Where the check runs:
+   - **Rules:** `staffMfaOk()` is added to the five staff-role helpers. A staff member's own profile stays readable, so MfaGate can send them to enrol, and patients are exempt.
+   - **Callables:** `assertStaffMfa` runs in every staff callable — the account, case, slice, code, amendment, conversation, flag-clearing, agency-count and resync callables.
+   - **Readiness report (2026-11-22):** 0 of 21 active staff sign-ins enrolled.
 
 ## Deploy order (each PR)
 1. Regenerate the bundle; deploy the functions.

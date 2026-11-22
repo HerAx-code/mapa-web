@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore')
+const { assertStaffMfa } = require('./mfaPolicy')
 const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 const { fail, loadCaller, writeAudit, notifyServer } = require('./serverWrites')
 const { isIntakeComplete, PATIENT_FACT_KEYS, isRequestClosed } = require('./generated/shared.cjs')
@@ -128,6 +129,7 @@ exports.handleAmendAssessment = handleAmendAssessment
 exports.AMENDABLE = AMENDABLE
 exports.amendAssessment = onCall({ region: 'asia-southeast1', timeoutSeconds: 60, memory: '256MiB' }, async (request) => {
   try {
+    await assertStaffMfa(getFirestore(), request.auth)
     return await handleAmendAssessment({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() })
   } catch (err) {
     if (err instanceof HttpsError) throw err

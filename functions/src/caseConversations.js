@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { onDocumentCreated } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+const { assertStaffMfa } = require('./mfaPolicy')
 const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
 const { fail, loadCaller, writeAudit } = require('./serverWrites')
 
@@ -104,6 +105,7 @@ exports.handleConversationMessage = handleConversationMessage
 
 exports.openCaseConversation = onCall({ region: 'asia-southeast1', timeoutSeconds: 30, memory: '256MiB' }, async (request) => {
   try {
+    await assertStaffMfa(getFirestore(), request.auth)
     return await handleOpenCaseConversation({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() })
   } catch (err) {
     if (err instanceof HttpsError) throw err

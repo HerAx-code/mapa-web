@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+const { assertStaffMfa } = require('./mfaPolicy')
 const { getAuth } = require('firebase-admin/auth')
 const { getStorage } = require('firebase-admin/storage')
 
@@ -238,6 +239,8 @@ const wrap = (name, handler, deps = () => ({})) => onCall({
   region: 'asia-southeast1', timeoutSeconds: 300, memory: '256MiB',
 }, async (request) => {
   try {
+    // Two-factor stage 2 (Phase 5 PR 5.4): off until enabled in mfaPolicy.js.
+    await assertStaffMfa(getFirestore(), request.auth)
     return await handler({ callerUid: request.auth?.uid, data: request.data, db: getFirestore(), auth: getAuth(), ...deps() })
   } catch (err) {
     if (err instanceof HttpsError) throw err
