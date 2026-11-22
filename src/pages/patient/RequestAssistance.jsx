@@ -870,6 +870,9 @@ export default function RequestAssistance() {
         // '' for legacy/free-text origins → eligibility resolves to 'unknown',
         // never a block. See src/utils/eligibility.js.
         patientProvince:   user.province ?? '',
+        // N14: snapshot the city too, so the DOH monthly report uses the address
+        // the patient had WHEN THEY FILED — a later move can't rewrite past months.
+        patientCity:       user.city ?? '',
         patientHospitalId: user.hospitalId ?? null,
         tenantId:          tenantIdFor(user),   // multi-hospital Phase 2
         assistanceType:    form.assistanceType,

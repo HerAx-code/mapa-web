@@ -31,6 +31,24 @@ describe('dohReportRows', () => {
     expect(rows[0]).not.toHaveProperty('patientName')
   })
 
+  it('N14: uses the address snapshotted on the request, falling back to the profile for older ones', () => {
+    const filedCity = {
+      requests: {
+        rSnap: { requestId: 'REQ-SNAP', patientCity: 'Datu Odin Sinsuat', patientProvince: 'Maguindanao del Norte' },
+        rOld: { requestId: 'REQ-OLD' }, // pre-N14 request: no snapshot
+      },
+      // The patient has since MOVED — the current profile must not win for rSnap.
+      users: { p1: { birthdate: '1980-01-15', sex: 'female', city: 'Davao City', province: 'Davao del Sur' } },
+      agencies: { a1: { name: 'MOH-MAIFIP' } },
+    }
+    const rows = dohReportRows([
+      slice('s1', 'approved', 10, { requestId: 'rSnap' }),
+      slice('s2', 'approved', 11, { requestId: 'rOld' }),
+    ], filedCity, { from: new Date(2026, 9, 1), to: new Date(2026, 9, 31, 23, 59) })
+    expect(rows.find(r => r.id === 's1')).toMatchObject({ city: 'Datu Odin Sinsuat', province: 'Maguindanao del Norte' })
+    expect(rows.find(r => r.id === 's2')).toMatchObject({ city: 'Davao City', province: 'Davao del Sur' })
+  })
+
   it('leaves out letters that expired unused (P2-F, M17)', () => {
     const rows = dohReportRows([
       slice('s1', 'approved', 10, { glStatus: 'expired' }),

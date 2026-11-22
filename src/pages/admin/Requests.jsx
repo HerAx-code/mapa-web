@@ -357,12 +357,12 @@ function EndorseModal({ request, slices, agencies, onClose }) {
                             )}
                             {/* Capacity verdict (Phase 2.2): can this funder cover the
                                 remaining balance right now? Advisory — budget headroom
-                                + per-applicant cap, re-checked with authority at approval.
+                                + maximum per approval, re-checked with authority at approval.
                                 Uncapped funders show nothing here ("no budget cap" below
                                 already says it). */}
                             {headroom > 0 && a.coverage.status === 'partial' && (
                               <span className="text-xs text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-medium"
-                                    title={`Headroom / per-applicant cap limits this funder to ${peso(a.coverage.ceiling)} of the ${peso(headroom)} balance`}>
+                                    title={`Headroom / maximum per approval limits this funder to ${peso(a.coverage.ceiling)} of the ${peso(headroom)} balance`}>
                                 Covers {peso(a.coverage.ceiling)} of {peso(headroom)}
                               </span>
                             )}

@@ -134,8 +134,8 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
   const isSlice  = !!app?.requestId
   const sliceCap = Number(app?.amountRequested) || 0
 
-  // Per-applicant cap: the agency's policy ceiling per case (PCSO ₱25K,
-  // DSWD tier limits, etc.). Hard-enforced here; the gateway saw a soft warning
+  // Maximum per approval (D10): the agency's policy ceiling per approval (PCSO
+  // ₱25K, DSWD tier limits, etc.). Hard-enforced here; the gateway saw a soft warning
   // at endorse time.
   const perApplicantCap = Number(agency?.maxPerApplicant) || 0
 
@@ -188,7 +188,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
     if (exceedsBudget)       { toast.error(`Amount exceeds remaining budget of ₱${remaining.toLocaleString()}.`); return }
     if (exceedsRequested)    { toast.error(`Amount exceeds the ₱${sliceCap.toLocaleString()} ${ORG.gatewayName} endorsed for this slice.`); return }
     if (outpatientOver)      { toast.error(`This outpatient charge is ₱${needAmount.toLocaleString()}; other agencies already cover ₱${siblingsCommitted.toLocaleString()}. Approve at most ₱${Math.max(0, needAmount - siblingsCommitted).toLocaleString()}.`); return }
-    if (exceedsPerCap)       { toast.error(`Amount exceeds this agency's per-applicant cap of ₱${perApplicantCap.toLocaleString()}.`); return }
+    if (exceedsPerCap)       { toast.error(`Amount exceeds this agency's maximum per approval of ₱${perApplicantCap.toLocaleString()}.`); return }
     if (priorApproval && overrideReason.trim().length < OVERRIDE_REASON_MIN) {
       toast.error(`Give a reason (at least ${OVERRIDE_REASON_MIN} characters) for approving inside your repeat limit.`); return
     }
@@ -346,7 +346,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
               <p className="text-xs text-gray-500 mt-1">Bill total: ₱{sliceCap.toLocaleString()} — approve what your agency can.</p>
             )}
             {perApplicantCap > 0 && !exceedsPerCap && (
-              <p className="text-xs text-gray-500 mt-1">Per-applicant cap: ₱{perApplicantCap.toLocaleString()}.</p>
+              <p className="text-xs text-gray-500 mt-1">Maximum per approval: ₱{perApplicantCap.toLocaleString()}.</p>
             )}
             {exceedsRequested && (
               <p className="text-xs text-red-500 mt-1">
@@ -360,7 +360,7 @@ export function ApproveModal({ app, agency, currentUser, request = null, sibling
             )}
             {exceedsPerCap && (
               <p className="text-xs text-red-500 mt-1">
-                Exceeds the per-applicant cap of ₱{perApplicantCap.toLocaleString()} by ₱{(amountNum - perApplicantCap).toLocaleString()}.
+                Exceeds the maximum per approval of ₱{perApplicantCap.toLocaleString()} by ₱{(amountNum - perApplicantCap).toLocaleString()}.
               </p>
             )}
           </div>

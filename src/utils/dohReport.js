@@ -43,8 +43,11 @@ export function dohReportRows(slices, { requests = {}, users = {}, agencies = {}
         approvedOn:     at,
         age:            ageOn(u.birthdate, at),
         sex:            u.sex === 'female' ? 'F' : u.sex === 'male' ? 'M' : '',
-        city:           u.city ?? '',
-        province:       u.province ?? '',
+        // N14: the address the patient had WHEN THEY FILED, snapshotted on the
+        // request, so a later move doesn't rewrite past months' reports. Older
+        // requests have no snapshot → fall back to the current profile.
+        city:           r.patientCity ?? u.city ?? '',
+        province:       r.patientProvince ?? u.province ?? '',
         diagnosis:      r.intakeSheet?.diagnosis ?? '',
         careSetting:    r.careSetting === 'outpatient' ? 'Outpatient' : 'Inpatient',
         assistanceType: r.assistanceType ?? s.assistanceType ?? '',
