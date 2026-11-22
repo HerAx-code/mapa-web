@@ -15,7 +15,6 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { logAudit } from '../../utils/auditLog'
 import { tsToDate } from '../../utils/dates'
-import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import { createStaffAccount } from '../../utils/staffAccounts'
 import { DEFAULT_HOSPITAL_ID } from '../../config/org'
 import { agencyPartnersWith } from '../../utils/hospitals'
@@ -133,7 +132,6 @@ function HospitalModal({ hospital, hospitals, agencies = [], onClose, onCreated,
         batch.update(doc(db, 'hospitals', id), { ...data, ...cleared, updatedAt: serverTimestamp() })
         await batch.commit()
         const after = { ...Object.fromEntries(Object.entries(hospital).filter(([k]) => !(k in cleared))), ...data }
-        await syncHospitalPublic(id, after)
         logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: [prefixChanged ? `Hospital details updated (access-code prefix now ${data.accessCodePrefix})` : 'Hospital details updated', partnerChanges.length ? `partner agencies: ${[...partners].join(', ') || 'none'}` : ''].filter(Boolean).join('; ') })
         toast.success('Hospital updated.')
       } else {
@@ -146,7 +144,6 @@ function HospitalModal({ hospital, hospitals, agencies = [], onClose, onCreated,
           ...(fromRequest ? { onboarding: { stage: 'setup', requestId: fromRequest } } : {}),
         })
         await batch.commit()
-        await syncHospitalPublic(id, { ...data, enabled: openNow })
         logAudit(user, { action: 'hospital_created', targetType: 'hospital', targetId: id, targetName: data.facilityName, details: `Hospital onboarded (access codes ${data.accessCodePrefix}-YYYY-NNNNN; partner agencies: ${[...partners].join(', ') || 'none yet'})` })
         if (fromRequest) {
           await updateDoc(doc(db, 'onboardingRequests', fromRequest), { status: 'onboarded', hospitalId: id, statusUpdatedAt: serverTimestamp() })
@@ -372,7 +369,6 @@ export default function Hospitals() {
     setBusy(true)
     try {
       await updateDoc(doc(db, 'hospitals', h.id), { enabled: next, updatedAt: serverTimestamp() })
-      await syncHospitalPublic(h.id, { ...h, enabled: next })
       logAudit(user, { action: 'hospital_updated', targetType: 'hospital', targetId: h.id, targetName: h.facilityName || h.id, details: next ? 'New requests resumed' : 'New requests paused' })
       toast.success(next ? 'New requests resumed.' : 'New requests paused.')
       setToggling(null)

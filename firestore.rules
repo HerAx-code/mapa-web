@@ -253,6 +253,8 @@ service cloud.firestore {
         // agencyIds and the hospital fields stay server/claim-owned.
         (uid() == userId && request.resource.data.role == 'patient' &&
           !('agencyIds' in request.resource.data) &&
+          // Phase 5 PR 5.2 (N3): the display ID comes from the server's counter.
+          !('patientId' in request.resource.data) &&
           // Phase 3B: sex for the DOH monthly report.
           (!('sex' in request.resource.data) || request.resource.data.sex in ['female', 'male']) &&
           (patientRegistersWithCode() ||
@@ -1003,21 +1005,10 @@ service cloud.firestore {
     // public list can never drift from or contradict the real hospital.
     match /hospitalsPublic/{hospitalId} {
       allow read: if true;
-      allow create, update: if (isPlatformAdmin() || (isSuperAdmin() && hospitalId == userTenantId())) &&
-                       request.resource.data.keys().hasOnly(['facilityName', 'shortName', 'accessCodePrefix', 'enabled',
-                                                             'gatewayName', 'address', 'region', 'contactEmail', 'updatedAt']) &&
-                       request.resource.data.facilityName     == hospitalAfter(hospitalId).get('facilityName', '') &&
-                       request.resource.data.shortName        == hospitalAfter(hospitalId).get('shortName', '') &&
-                       request.resource.data.accessCodePrefix == hospitalAfter(hospitalId).get('accessCodePrefix', '') &&
-                       request.resource.data.enabled          == hospitalAfter(hospitalId).get('enabled', true) &&
-                       request.resource.data.get('gatewayName', '')  == hospitalAfter(hospitalId).get('gatewayName', '') &&
-                       request.resource.data.get('address', '')      == hospitalAfter(hospitalId).get('address', '') &&
-                       request.resource.data.get('region', '')       == hospitalAfter(hospitalId).get('region', '') &&
-                       request.resource.data.get('contactEmail', '') == hospitalAfter(hospitalId).get('contactEmail', '');
-    }
-
-    function hospitalAfter(hospitalId) {
-      return getAfter(/databases/$(database)/documents/hospitals/$(hospitalId)).data;
+      // Phase 5 PR 5.2 (P5-B, gap R10): written ONLY by the onHospitalWritten
+      // Cloud Function (Admin SDK), like agenciesPublic. It also keeps the
+      // training hospital off the list.
+      allow write: if false;
     }
 
     // ── onboardingRequests ─────────────────────────────────────────────────────

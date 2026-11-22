@@ -1,6 +1,6 @@
 # Phase 5 plan — cleanup (T7) and two-factor stage 2
 
-Status: **plan accepted 2026-11-22 (P5-A to P5-D); PR 5.1 built on `fix/phase5-small-fixes`.** Phases 1–4 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md, docs/phase4-case-endings-plan.md). Source: the MAPA process-logic gap map, theme T7 (N3–N6, R5–R8, R10), plus the leftovers found while building Phases 2–4. Each item was re-checked against `main` after #426.
+Status: **plan accepted 2026-11-22 (P5-A to P5-D); PR 5.1 merged and deployed (#427); PR 5.2 built on `feat/patient-ids-hospital-listing`.** Phases 1–4 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md, docs/phase4-case-endings-plan.md). Source: the MAPA process-logic gap map, theme T7 (N3–N6, R5–R8, R10), plus the leftovers found while building Phases 2–4. Each item was re-checked against `main` after #426.
 
 ## What is left
 
@@ -80,6 +80,10 @@ Why: enforcement is the point, but switching it on before enrolment locks the of
 1. Server-assigned `patientId` from `counters/patientIds`, with a one-off script that seeds the counter above the highest existing ID (report first).
 2. `onHospitalWritten` plus the rules refusing browser writes to `hospitalsPublic`. The browser calls are removed. A resync script, report first.
 3. **Tests:** trigger tests (training hospital skipped, deletion), and a registration test that the browser no longer sets `patientId`.
+4. **As built:**
+   - **Patient IDs.** `assignPatientId` (functions/src/patientIds.js), `onDocumentCreated users/{uid}`, retried on failure. It **seeds itself**: with no counter it starts one above the highest `PAT-` number in use, inside the same transaction. So the planned seed script wasn't needed.
+   - **The hospital listing.** `onHospitalWritten` with the shared projection in `src/shared/hospitalPublic.js`. The browser helper `syncHospitalPublic` is gone.
+   - **The resync script (`scripts/resync-hospitals-public.mjs`).** Its report run (2026-11-22) found the 2 published listings already current and nothing to remove, so no write was needed.
 
 ## PR 5.3 — Records and docs (P5-C, L3, L4)
 1. `scripts/report-orphan-staff.mjs`: report, then `--write` on your OK (`active: false`, `orphaned: true`).

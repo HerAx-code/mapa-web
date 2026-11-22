@@ -203,3 +203,12 @@ describe('hospitalsPublicStats — public counts, no client writes', () => {
     await assertFails(setDoc(doc(as('plat'), 'hospitalsPublicStats', 'hospital-1'), { turnaroundDays: 1 }))
   })
 })
+
+// Phase 5 PR 5.2 (P5-A, N3): the display ID comes from the server's counter
+// (assignPatientId); a patient can't pick one at sign-up.
+describe('patient display IDs', () => {
+  it('a network sign-up without a patientId is allowed; one that sets it is refused', async () => {
+    await assertSucceeds(setDoc(ref('fresh1', 'users/fresh1'), pat({ hospitalId: null })))
+    await assertFails(setDoc(ref('fresh2', 'users/fresh2'), pat({ hospitalId: null, patientId: 'PAT-000001' })))
+  })
+})

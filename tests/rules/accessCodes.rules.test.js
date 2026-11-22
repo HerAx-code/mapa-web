@@ -141,9 +141,9 @@ describe('hospitalsPublic — public, and always equal to the hospital doc', () 
     await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'hospitalsPublic', 'hospital-1')))
   })
 
-  it('the platform admin and the own super admin may write a faithful copy', async () => {
-    await assertSucceeds(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH', gatewayName: 'MSS B' }))
-    await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), pub))
+  it('no browser writes it, not even a faithful copy (Phase 5 PR 5.2: onHospitalWritten only)', async () => {
+    await assertFails(setDoc(ref('plat', 'hospitalsPublic/bgh'), { ...pub, accessCodePrefix: 'BGH', gatewayName: 'MSS B' }))
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), pub))
   })
 
   it('a copy that disagrees with the hospital is denied (prefix, sign-ups, name)', async () => {
@@ -156,7 +156,8 @@ describe('hospitalsPublic — public, and always equal to the hospital doc', () 
   it('the marketplace fields (office, address, region, email) must mirror the hospital', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) =>
       updateDoc(doc(ctx.firestore(), 'hospitals', 'hospital-1'), { address: 'Cotabato City', region: 'BARMM' }))
-    await assertSucceeds(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM' }))
+    // The trigger projects them (tests/functions/patientIdsAndListing.test.js); browsers can't.
+    await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM' }))
     await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Somewhere else', region: 'BARMM' }))
     await assertFails(setDoc(ref('superA', 'hospitalsPublic/hospital-1'), { ...pub, address: 'Cotabato City', region: 'BARMM', contactEmail: 'x@y.ph' }))
   })

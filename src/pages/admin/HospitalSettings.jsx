@@ -9,7 +9,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import { applyHospital } from '../../config/org'
 import { currentTenantId, clearBrandingCache } from '../../utils/hospitals'
 import { logAudit } from '../../utils/auditLog'
-import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import { validateHospital, normalizePrefix } from '../../utils/hospitalConfig'
 import { CASE_TIMERS, caseTimerDays } from '../../shared/caseTimers'
 
@@ -388,7 +387,6 @@ export default function HospitalSettings() {
       }
       await updateDoc(doc(db, 'hospitals', tenantId), update)
       setHospital(next)
-      await syncHospitalPublic(tenantId, next)
       // Show the new branding at once (header, copy, documents).
       clearBrandingCache()
       applyHospital(next)

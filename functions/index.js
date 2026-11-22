@@ -50,6 +50,10 @@ exports.openCaseConversation = openCaseConversation
 exports.onConversationMessage = onConversationMessage
 // Phase 4 PR 4.2: the daily case timers.
 exports.caseTimers = require('./src/caseTimers').caseTimers
+// Phase 5 PR 5.2: patient display IDs from a counter.
+exports.assignPatientId = require('./src/patientIds').assignPatientId
+// Phase 5 PR 5.2: the public hospital listing has one writer.
+exports.onHospitalWritten = require('./src/onHospitalWritten').onHospitalWritten
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated

@@ -14,7 +14,6 @@ import { db, storage } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { logAudit } from '../../utils/auditLog'
 import { tsToDate } from '../../utils/dates'
-import { syncHospitalPublic } from '../../utils/hospitalsPublic'
 import {
   STAGES, DECLINED, stageOf, stageIndex, stageLabel, stageChecklist, stageComplete, goLiveGate, canGoLive,
   DOCUMENTS, OWNERSHIP_TYPES, ownershipOf, PLAN_TIERS, complianceReminders,
@@ -206,7 +205,6 @@ export default function OnboardingWorkspace() {
         updatedAt: serverTimestamp(),
       })
       await b.commit()
-      await syncHospitalPublic(hospital.id, { ...hospital, enabled: true })
       logAudit(user, { action: 'hospital_live', targetType: 'hospital', targetId: hospital.id, targetName: hospital.facilityName ?? r.hospitalName, details: `Go-live approved; patient registration open. Plan: ${onboarding.planTier}` })
       toast.success(`${hospital.facilityName ?? r.hospitalName} is live. Patients can now register.`)
       setView('live')

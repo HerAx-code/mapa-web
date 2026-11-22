@@ -1,41 +1,5 @@
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../firebase'
-
-/**
- * hospitalsPublic — the public, sign-in-free projection of each hospital
- * (multi-hospital), so the Landing page and the patient marketplace
- * (/patient/hospitals) can list participating hospitals with a real
- * access-code prefix, office, location and contact. hospitals/{id} itself
- * needs sign-in.
- *
- * Only these fields, and the rules require them to EQUAL the hospital
- * doc (getAfter), so the projection can never drift from or contradict it.
- * Same belt-and-braces mirroring as agenciesPublic: every client path that
- * changes a hospital's public fields re-syncs it, best-effort.
- */
-export function projectPublicHospital(h = {}) {
-  return {
-    facilityName:     h.facilityName ?? '',
-    shortName:        h.shortName ?? '',
-    accessCodePrefix: h.accessCodePrefix ?? '',
-    enabled:          h.enabled !== false,
-    gatewayName:      h.gatewayName ?? '',
-    address:          h.address ?? '',
-    region:           h.region ?? '',
-    contactEmail:     h.contactEmail ?? '',
-  }
-}
-
-// Never throws — a failed mirror must not break the hospital write before it.
-export async function syncHospitalPublic(hospitalId, hospitalData) {
-  if (!hospitalId) return
-  // The Training Hospital (onboarding practice, sample patients only) is never
-  // published: it must not appear on Landing, Register or the marketplace.
-  if (hospitalData?.onboarding?.training) return
-  try {
-    await setDoc(doc(db, 'hospitalsPublic', hospitalId),
-      { ...projectPublicHospital(hospitalData), updatedAt: serverTimestamp() })
-  } catch (err) {
-    console.warn('[hospitalsPublic] sync failed for', hospitalId, err)
-  }
-}
+// hospitalsPublic — the public projection of each hospital. Since Phase 5
+// PR 5.2 (decision P5-B) it is written ONLY by the onHospitalWritten Cloud
+// Function (functions/src/onHospitalWritten.js), like agenciesPublic; the
+// rules refuse browser writes. The projection itself is the shared definition.
+export { projectPublicHospital, isPublishedHospital } from '../shared/hospitalPublic'
