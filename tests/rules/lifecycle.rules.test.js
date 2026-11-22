@@ -46,8 +46,9 @@ const as = (uid) => testEnv.authenticatedContext(uid).firestore()
 const ref = (uid, p) => doc(as(uid), ...p.split('/'))
 
 describe('no commitment on a request the hospital ended', () => {
-  it('an agency approves on an open request, not on a rejected one', async () => {
-    await assertSucceeds(approveWithMark(as('coord'), 'sOpen', slice('open'), { status: 'approved', amountApproved: 20000 }))
+  it('an agency approves on neither from the browser (decideSlice refuses a closed request)', async () => {
+    // Phase 2 PR 2.3: agency decisions, letters and budgets run in Cloud Functions (decideSlice / settleLetter, tests/functions/sliceActions.test.js).
+    await assertFails(approveWithMark(as('coord'), 'sOpen', slice('open'), { status: 'approved', amountApproved: 20000 }))
     await assertFails(approveWithMark(as('coord'), 'sRej', slice('rej'), { status: 'approved', amountApproved: 20000 }))
   })
 
@@ -59,9 +60,9 @@ describe('no commitment on a request the hospital ended', () => {
     await assertFails(updateDoc(ref('pat', 'applications/sEndorsedRej'), { status: 'reviewing' }))
   })
 
-  it("an agency can't rewrite a rejected request's status; it may send one back to review", async () => {
+  it("an agency writes no request at all (the totals are recomputed on the server)", async () => {
     await assertFails(updateDoc(ref('coord', 'requests/rej'), { status: 'partially_funded', amountCommitted: 5000 }))
-    await assertSucceeds(updateDoc(ref('coord', 'requests/open'), { status: 'under_review', amountCommitted: 0 }))
+    await assertFails(updateDoc(ref('coord', 'requests/open'), { status: 'under_review', amountCommitted: 0 }))
     await assertFails(updateDoc(ref('coord', 'requests/open'), { status: 'submitted', amountCommitted: 0 }))
   })
 })

@@ -1,7 +1,7 @@
 import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, updateDoc, increment, FieldPath } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, increment, serverTimestamp, FieldPath } from 'firebase/firestore'
 
 // Role review 2026-11-15: an agency coordinator writes only what its work
 // changes (budget usage, today's remaining slots, one hospital's remaining
@@ -39,11 +39,13 @@ const as = (uid) => testEnv.authenticatedContext(uid).firestore()
 const ag = (uid) => doc(as(uid), 'agencies', 'dswd')
 
 describe('agency coordinator: usage only', () => {
-  it('records budget usage, resets today\'s slots and restores one hospital\'s slot', async () => {
-    await assertSucceeds(updateDoc(ag('coord'), { 'budget.committed': increment(5000) }))
-    await assertSucceeds(updateDoc(ag('coord'), { 'budget.committed': increment(-5000), 'budget.disbursed': increment(5000) }))
-    await assertSucceeds(updateDoc(ag('coord'), { 'slots.remaining': 10, lastResetDate: '2026-11-15' }))
-    await assertSucceeds(updateDoc(ag('coord'), new FieldPath('hospitalSlots', 'hospital-1', 'remaining'), 3, 'slotRestoredFor', 'hospital-1'))
+  it('writes only the low-balance marker: budget usage and slot counts are the server\'s', async () => {
+    // Phase 2 PR 2.3: agency decisions, letters and budgets run in Cloud Functions (decideSlice / settleLetter, tests/functions/sliceActions.test.js).
+    await assertSucceeds(updateDoc(ag('coord'), { 'budget.lowBalanceNotifiedAt': serverTimestamp() }))
+    await assertFails(updateDoc(ag('coord'), { 'budget.committed': increment(5000) }))
+    await assertFails(updateDoc(ag('coord'), { 'budget.committed': increment(-5000), 'budget.disbursed': increment(5000) }))
+    await assertFails(updateDoc(ag('coord'), { 'slots.remaining': 10, lastResetDate: '2026-11-15' }))
+    await assertFails(updateDoc(ag('coord'), new FieldPath('hospitalSlots', 'hospital-1', 'remaining'), 3, 'slotRestoredFor', 'hospital-1'))
   })
 
   it("can't change capacity, settings, allocation or enabled", async () => {

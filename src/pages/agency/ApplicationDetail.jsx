@@ -3,20 +3,18 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import {
   collection, query, where, orderBy, onSnapshot,
-  doc, updateDoc, getDoc, getDocs, serverTimestamp,
-  writeBatch, increment, runTransaction, Timestamp, FieldPath,
+  doc, updateDoc, getDoc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { ORG } from '../../config/org'
 import { useAuth } from '../../contexts/AuthContext'
 import { notify } from '../../utils/notifications'
-import { logAudit } from '../../utils/auditLog'
+import { decideSlice, settleLetter } from '../../utils/sliceActions'
 import { getOrCreateConversation } from '../../utils/messages'
-import { isGLExpired, isGLExpiringSoon, glDaysRemaining, glExpiresAtFor } from '../../utils/constants'
+import { isGLExpired, isGLExpiringSoon, glDaysRemaining } from '../../utils/constants'
 import { tsToDate, fmtDate } from '../../utils/dates'
-import { computeFunding, deriveRequestFinancials, syncedRequestStatus, isRequestClosedByGateway } from '../../utils/requests'
+import { computeFunding, sliceApproved } from '../../utils/requests'
 import { careSettingLabel } from '../../utils/outpatient'
-import { approvalMarkId, approvalCooldownBlock, repeatLimitOf, OVERRIDE_REASON_MIN } from '../../utils/approvalCooldown'
 import StatusBadge from '../../components/ui/StatusBadge'
 import {
   MdArrowBack, MdArrowForward, MdMessage, MdCheckCircle, MdCancel,
@@ -273,405 +271,58 @@ export default function ApplicationDetail() {
   const goTo   = (targetId) => navigate(`/agency/applications/${targetId}?queue=${queueFilter}`)
 
   // ── Status update handlers ───────────────────────────────────────────
+  // Phase 2 PR 2.3: every decision and letter action runs on the server
+  // (decideSlice / settleLetter), which re-reads the slice, the request, the
+  // sibling slices and the budget in one transaction, moves the budget, writes
+  // the request's totals, the audit entry and the notifications. The page only
+  // asks; the rules refuse a direct write. The server's message is shown as is.
 
-  const updateStatus = async (newStatus, extra = {}) => {
+  const runAction = async (call, okMessage, failMessage) => {
     if (!app) return false
     setUpdating(true)
-    const prevStatus = app.status
     try {
-      await updateDoc(doc(db, 'applications', app.id), {
-        status:    newStatus,
-        updatedAt: serverTimestamp(),
-        ...extra,
-      })
-      // Activity Timeline (§B.26): capture every slice transition so the
-      // co-funding case shows a chronological cross-agency feed. Best-effort
-      // -- a failed audit write doesn't undo the slice update.
-      if (prevStatus !== newStatus) {
-        logAudit(user, {
-          action:     'slice_advanced',
-          targetType: 'application',
-          targetId:   app.id,
-          targetName: app.patientName,
-          details:    `${app.agencyName ?? 'Agency'}: ${prevStatus} → ${newStatus}`,
-          requestId:  app.requestId ?? null,
-          patientId:  app.patientId,
-        })
-      }
+      await call()
+      if (okMessage) toast.success(okMessage)
       return true
     } catch (err) {
-      console.error(err)
-      toast.error('Failed to update application.')
+      console.error('[ApplicationDetail]', err?.code, err?.message)
+      toast.error(err?.message && err?.code !== 'functions/internal' ? err.message : failMessage, { duration: 8000 })
       return false
     } finally {
       setUpdating(false)
     }
   }
+  const decide = (action, extra = {}) => decideSlice({ sliceId: app.id, action, ...extra })
+  const settle = (action, extra = {}) => settleLetter({ sliceId: app.id, action, ...extra })
 
-  const handleStartReview = async () => {
-    const ok = await updateStatus('reviewing')
-    if (!ok) return
-    await notify(app.patientId, {
-      type:  'app_advanced',
-      title: 'Application under review',
-      body:  `${user.name} from ${app.agencyName} has started reviewing your application.`,
-    })
-    toast.success('Application moved to Reviewing.')
-  }
+  const handleStartReview = () =>
+    runAction(() => decide('start_review'), 'Application moved to Reviewing.', 'Failed to update application.')
 
   const handleRequestInfo = async (message) => {
-    const ok = await updateStatus('awaiting_info', {
-      awaitingInfoMessage:     message,
-      awaitingInfoRequestedAt: serverTimestamp(),
-      awaitingInfoRequestedBy: user.name,
-    })
-    if (!ok) return
-    await notify(app.patientId, {
-      type:  'awaiting_info_requested',
-      title: 'Information requested by your agency',
-      body:  `${app.agencyName} is asking you to: ${message}`,
-    })
-    if (app.endorsedById) {
-      notify(app.endorsedById, {
-        type:  'app_advanced',
-        title: `${app.agencyName} requested more info from the patient`,
-        body:  `${app.patientName}'s endorsed slice paused — agency needs: "${message}".`,
-      }).catch(() => {})
-    }
-    setShowRequestInfo(false)
-    toast.success('Patient notified. Application paused from the urgent queue.')
+    const ok = await runAction(() => decide('request_info', { message }),
+      'Patient notified. Application paused from the urgent queue.', 'Failed to request more information.')
+    if (ok) setShowRequestInfo(false)
   }
 
-  // Manual resume — coordinator decides the patient has responded enough to
-  // move on, or the request was sent in error. Auto-revert (on patient
-  // document upload) does the same thing.
-  const handleResumeFromAwaiting = async () => {
-    const ok = await updateStatus('reviewing', {
-      awaitingInfoMessage:     null,
-      awaitingInfoRequestedAt: null,
-      awaitingInfoRequestedBy: null,
-      awaitingInfoResumedAt:   serverTimestamp(),
-    })
-    if (!ok) return
-    toast.success('Application resumed. Back in the active queue.')
-  }
+  // Manual resume — the coordinator decides the patient has responded enough
+  // to move on, or the request was sent in error.
+  const handleResumeFromAwaiting = () =>
+    runAction(() => decide('resume'), 'Application resumed. Back in the active queue.', 'Failed to resume the application.')
 
-  // Interview scheduling/rescheduling lived here pre-co-funding when each
-  // agency interviewed its applicants. Removed: the single assessment
-  // interview is now on the parent request and conducted by the gateway.
-
-  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, approvedBy, approvedByUid, repeatOverrideReason = '' }) => {
-    setUpdating(true)
-    try {
-      // ── Repeat limit per agency (Phase 1). The rules require this agency's
-      // approval mark in the same write; inside the agency's limit
-      // (agencies.repeatLimit, default 30 days) the approval needs a written
-      // reason, saved on the slice as repeatOverride. Checked again inside
-      // the transaction with fresh data (src/utils/approvalCooldown.js).
-      if (!app.requestId) {
-        toast.error('This slice is not linked to a request and cannot be approved.')
-        return
-      }
-      const markRef = doc(db, 'approvalMarks', approvalMarkId(user.agencyId, app.patientId))
-      const overrideReason = String(repeatOverrideReason ?? '').trim()
-      const COOLDOWN_MSG = (b) =>
-        `Your agency approved ${b.type ? `${b.type} ` : ''}assistance for this patient ${b.daysAgo} day${b.daysAgo === 1 ? '' : 's'} ago, ` +
-        `on another request (your limit is ${b.days} days). Give a reason of at least ${OVERRIDE_REASON_MIN} characters to approve anyway.`
-
-      // ── Transactional approve + budget commit.
-      // Closes the read-then-write race where two parallel approvals could
-      // both pass the client-side budget check and both increment committed,
-      // pushing the agency over allocated. The transaction re-reads the
-      // live agency doc; if remaining budget no longer covers the amount,
-      // we abort with an explicit message so the coordinator can retry.
-      const agencyRef = doc(db, 'agencies', user.agencyId)
-      const appRef    = doc(db, 'applications', app.id)
-
-      // Co-funding: if this application is a slice of a parent request, the
-      // approval also advances the request's secured total toward zero
-      // balance. Read it inside the transaction (all reads before writes).
-      const reqRef = app.requestId ? doc(db, 'requests', app.requestId) : null
-
-      await runTransaction(db, async (tx) => {
-        const agencySnap = await tx.get(agencyRef)
-        const reqSnap    = reqRef ? await tx.get(reqRef) : null
-        const markSnap   = await tx.get(markRef)
-        // Logic review: no commitment on a request the hospital rejected/closed.
-        if (reqSnap?.exists() && isRequestClosedByGateway(reqSnap.data().status)) throw new Error('REQUEST_CLOSED')
-        const data       = agencySnap.exists() ? agencySnap.data() : {}
-        const markData   = markSnap.exists() ? markSnap.data() : null
-        const assistanceType = reqSnap?.exists() ? (reqSnap.data().assistanceType ?? '') : ''
-        const block = approvalCooldownBlock(markData, app.requestId, Date.now(), repeatLimitOf(data), assistanceType)
-        if (block && overrideReason.length < OVERRIDE_REASON_MIN) throw new Error(`COOLDOWN:${COOLDOWN_MSG(block)}`)
-        const allocated  = data.budget?.allocated ?? 0
-        const committed  = data.budget?.committed ?? 0
-        const remaining  = Math.max(0, allocated - committed)
-
-        // Only enforce the budget gate when the agency actually has a
-        // budget allocated. Agencies with allocated=0 are unfunded; we
-        // record the approval as data but don't track against budget.
-        if (allocated > 0 && approvedAmount > remaining) {
-          throw new Error(
-            `BUDGET_INSUFFICIENT:Only ₱${remaining.toLocaleString()} remaining ` +
-            `(another approval may have just landed). Lower the amount or contact an administrator.`
-          )
-        }
-
-        tx.update(appRef, {
-          status:              'approved',
-          approvedAmount,
-          // Record the approved figure on the slice so the parent request's
-          // funding tally and the coordination board reflect what this agency
-          // actually committed (may be less than the endorsed amountRequested).
-          amountApproved:      approvedAmount,
-          purposeOfAssistance,
-          payableTo,
-          approvedBy,
-          // Link the actor by UID so future filtering / click-through can
-          // resolve them reliably even if their display name changes.
-          approvedByUid:       approvedByUid ?? null,
-          approvedAt:          serverTimestamp(),
-          glStatus:            'issued',
-          // Valid 10 days from issuance (owner decision 2026-11-16); stored
-          // per letter so older letters keep the 30 days printed on them.
-          glExpiresAt:         Timestamp.fromMillis(glExpiresAtFor(Date.now())),
-          glRedeemedAt:        null,
-          redeemedAmount:      null,
-          // Inside the agency's repeat limit: the recorded exception.
-          repeatOverride:      block
-            ? { reason: overrideReason, byUid: user.uid, byName: user.name ?? '', at: serverTimestamp() }
-            : null,
-          updatedAt:           serverTimestamp(),
-        })
-        if (allocated > 0) {
-          tx.update(agencyRef, {
-            'budget.committed': increment(approvedAmount),
-          })
-        }
-
-        // Approval mark (required by the rules in this same write). byType
-        // keeps the last approval per assistance type for per-type limits;
-        // other types' entries are carried over unchanged.
-        tx.set(markRef, {
-          agencyId:       user.agencyId,
-          patientId:      app.patientId,
-          requestId:      app.requestId,
-          sliceId:        app.id,
-          lastApprovedAt: serverTimestamp(),
-          ...(assistanceType || markData?.byType ? {
-            byType: {
-              ...(markData?.byType ?? {}),
-              ...(assistanceType ? { [assistanceType]: { at: serverTimestamp(), requestId: app.requestId } } : {}),
-            },
-          } : {}),
-        })
-
-        // Co-funding: advance the parent request. amountCommitted grows by the
-        // approved amount; the request becomes fully_funded once the secured
-        // total reaches the net need, else partially_funded. (The rule limits
-        // agency writes here to amountCommitted/status/updatedAt.)
-        if (reqSnap?.exists()) {
-          const r            = reqSnap.data()
-          const need         = r.amountNeeded ?? 0
-          const newCommitted = (r.amountCommitted ?? 0) + approvedAmount
-          // Phase 2A: outpatient = one charge slip, funded only up to its amount.
-          if (r.careSetting === 'outpatient' && newCommitted > need) {
-            throw new Error(`OUTPATIENT_CAP:This outpatient charge is ₱${need.toLocaleString()} and other agencies already cover ₱${(r.amountCommitted ?? 0).toLocaleString()}. Approve at most ₱${Math.max(0, need - (r.amountCommitted ?? 0)).toLocaleString()}.`)
-          }
-          // approvedAmount is always > 0 here (ApproveModal validates), so
-          // newCommitted > 0 is guaranteed -- the request can only move into
-          // 'fully_funded' or 'partially_funded'. The previous 'endorsing'
-          // fallback was unreachable.
-          const newStatus = (need > 0 && newCommitted >= need)
-            ? 'fully_funded'
-            : 'partially_funded'
-          tx.update(reqRef, {
-            amountCommitted: newCommitted,
-            status:          syncedRequestStatus(r.status, newStatus),
-            updatedAt:       serverTimestamp(),
-          })
-        }
-      })
-
-      // Activity Timeline (§B.26): approval is a major case event; every
-      // sibling agency should see this in the Case Timeline.
-      logAudit(user, {
-        action:     'app_approved',
-        targetType: 'application',
-        targetId:   app.id,
-        targetName: app.patientName,
-        details:    `${app.agencyName ?? 'Agency'} approved ₱${approvedAmount.toLocaleString()}${purposeOfAssistance?.length ? ` (${purposeOfAssistance.join(', ')})` : ''}${String(repeatOverrideReason ?? '').trim() ? ` · inside the repeat limit: ${String(repeatOverrideReason).trim()}` : ''}`,
-        requestId:  app.requestId ?? null,
-        patientId:  app.patientId,
-      })
-
-      await notify(app.patientId, {
-        type:  'interview_approved',
-        title: 'Application approved',
-        body:  `Your application to ${app.agencyName} is approved for ₱${approvedAmount.toLocaleString()} (${purposeOfAssistance.join(', ')}). A Guarantee Letter will be issued shortly.`,
-        // SMS is off for now (Phase 1, 2026-11-21): the open /api/send-sms
-        // endpoint was removed. The server emails this notification.
-      })
-      if (app.endorsedById) {
-        const partial = approvedAmount < (app.amountRequested ?? 0)
-        notify(app.endorsedById, {
-          type:  'app_advanced',
-          title: `${app.agencyName} approved ${app.patientName}'s slice`,
-          body:  partial
-            ? `Approved ₱${approvedAmount.toLocaleString()} (less than the ₱${Number(app.amountRequested).toLocaleString()} endorsed). You may need to top up coverage from another agency.`
-            : `Approved the full endorsed ₱${approvedAmount.toLocaleString()}. Guarantee Letter pending issuance.`,
-        }).catch(() => {})
-      }
-
-      // R34 (§B.26 Item 1.2): fan out to sibling-agency watchers so they
-      // learn about the approval in real time. Excludes the actor (own
-      // approver, who already saw the success toast) and excludes the
-      // endorsedById admin (already notified above). Best-effort -- a
-      // failed fan-out doesn't undo the approval.
-      const watchers = request?.watchers ?? []
-      const watcherTargets = watchers.filter(uid =>
-        uid !== user.uid && uid !== app.endorsedById)
-      if (watcherTargets.length > 0) {
-        Promise.allSettled(watcherTargets.map(uid => notify(uid, {
-          type:  'app_advanced',
-          title: `Sibling agency approved on a shared case`,
-          body:  `${app.agencyName ?? 'An agency'} approved ₱${approvedAmount.toLocaleString()} for ${app.patientName ?? 'patient'}. Open the case to see updated coverage.`,
-        }))).catch(() => {})
-      }
-
-      setShowApprove(false)
-      toast.success('Application approved. Guarantee Letter pending issuance.')
-    } catch (err) {
-      console.error('[ApplicationDetail] approve error:', err?.code, err?.message, err)
-      // Surface the explicit budget message; Firestore wraps thrown errors
-      // from inside runTransaction in err.message.
-      if (String(err?.message).includes('REQUEST_CLOSED')) {
-        toast.error('The hospital has closed this request — it can no longer be approved.', { duration: 8000 })
-      } else if (typeof err?.message === 'string' && err.message.startsWith('OUTPATIENT_CAP:')) {
-        toast.error(err.message.replace('OUTPATIENT_CAP:', ''), { duration: 8000 })
-      } else if (typeof err?.message === 'string' && err.message.startsWith('COOLDOWN:')) {
-        toast.error(err.message.replace('COOLDOWN:', ''), { duration: 8000 })
-      } else if (typeof err?.message === 'string' && err.message.startsWith('BUDGET_INSUFFICIENT:')) {
-        toast.error(err.message.replace('BUDGET_INSUFFICIENT:', ''), { duration: 8000 })
-      } else if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
-        // Most common cause: agency user is trying to approve an application
-        // that belongs to a different agency (agencyId mismatch). Could also
-        // be the 30-day cooldown (approvalMarks) refusing the approval.
-        toast.error(
-          `Permission denied. ${app.agencyId !== user?.agencyId
-            ? `This application belongs to a different agency (${app.agencyName}). You're signed in as ${user?.name}.`
-            : 'Your account may not have approve permission. Contact your agency admin.'}`,
-          { duration: 10000 }
-        )
-      } else if (err?.code === 'failed-precondition' || err?.code === 'aborted') {
-        toast.error('Another approval just landed for this patient. Refresh and check the application status.', { duration: 8000 })
-      } else {
-        toast.error(`Failed to approve application. ${err?.code ? `(${err.code})` : ''}`)
-      }
-    } finally {
-      setUpdating(false)
+  const handleApprove = async ({ approvedAmount, purposeOfAssistance, payableTo, repeatOverrideReason = '' }) => {
+    if (!app.requestId) {
+      toast.error('This slice is not linked to a request and cannot be approved.')
+      return
     }
+    const ok = await runAction(
+      () => decide('approve', { amount: approvedAmount, purposeOfAssistance, payableTo, repeatOverrideReason }),
+      'Application approved. Guarantee Letter pending issuance.', 'Failed to approve application.')
+    if (ok) setShowApprove(false)
   }
 
   const handleReject = async (reason) => {
-    const ok = await updateStatus('rejected', { rejectionReason: reason })
+    const ok = await runAction(() => decide('reject', { reason }), null, 'Failed to reject application.')
     if (!ok) return
-
-    // R4 fix: same family as R3 -- the rejection moves a slice out of
-    // OUTSTANDING_SLICE_STATUSES, which changes the request's derived
-    // financials. If this was the last outstanding slice, the parent
-    // should drop from 'endorsed' to 'submitted'. Without the re-sync,
-    // admin/Requests keeps showing the parent as 'Endorsing' forever
-    // even though no agency is processing.
-    //
-    // The rejection itself doesn't affect committed (slice was never
-    // approved), so agency.budget.committed stays untouched -- only the
-    // parent's status needs updating.
-    if (app.requestId) {
-      try {
-        await runTransaction(db, async (tx) => {
-          const reqRef = doc(db, 'requests', app.requestId)
-          const reqSnap = await tx.get(reqRef)
-          if (!reqSnap.exists()) return
-          const sibSnap = await getDocs(query(
-            collection(db, 'applications'),
-            where('requestId', '==', app.requestId),
-          ))
-          // Substitute the rejected status for THIS slice
-          const siblings = sibSnap.docs.map(d => {
-            const data = { id: d.id, ...d.data() }
-            if (d.id === app.id) return { ...data, status: 'rejected' }
-            return data
-          })
-          const need = reqSnap.data().amountNeeded ?? 0
-          const next = deriveRequestFinancials(siblings, need)
-          tx.update(reqRef, {
-            amountCommitted: next.amountCommitted,
-            status:          syncedRequestStatus(reqSnap.data().status, next.status),
-            updatedAt:       serverTimestamp(),
-          })
-        })
-      } catch (err) {
-        console.error('[ApplicationDetail] parent re-sync after reject failed:', err)
-      }
-    }
-
-    const submittedDate = app.submittedAt?.toDate?.()
-    const isToday = submittedDate &&
-      submittedDate.toDateString() === new Date().toDateString()
-    if (isToday) {
-      try {
-        const agencyRef = doc(db, 'agencies', user.agencyId)
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(agencyRef)
-          if (!snap.exists()) return
-          // Give the slot back to the hospital it came from (per-hospital
-          // slots), else to the agency-wide default.
-          const own = app.tenantId ? snap.data()?.hospitalSlots?.[app.tenantId] : null
-          if (own) {
-            // slotRestoredFor names the hospital for the rules (a coordinator
-            // may touch only that hospital's remaining count).
-            tx.update(agencyRef, new FieldPath('hospitalSlots', app.tenantId, 'remaining'),
-              Math.min((Number(own.remaining) || 0) + 1, Number(own.total) || 0),
-              'slotRestoredFor', app.tenantId)
-          } else {
-            const current = snap.data()?.slots?.remaining ?? 0
-            const total   = snap.data()?.slots?.total    ?? 0
-            tx.update(agencyRef, { 'slots.remaining': Math.min(current + 1, total) })
-          }
-        })
-      } catch (err) {
-        // Slot restore is best-effort — the rejection already committed.
-        console.error('[ApplicationDetail] slot restore failed:', err)
-      }
-    }
-    await notify(app.patientId, {
-      type:  'doc_rejected',
-      title: 'Application rejected',
-      body:  `Your application to ${app.agencyName} was not approved. Reason: ${reason}.`,
-    })
-    if (app.endorsedById) {
-      notify(app.endorsedById, {
-        type:  'app_advanced',
-        title: `${app.agencyName} rejected ${app.patientName}'s slice`,
-        body:  `Reason: ${reason}. Re-endorse to another agency to cover the balance.`,
-      }).catch(() => {})
-    }
-
-    // R34: watcher fan-out -- rejection on a co-funded case means the
-    // remaining agencies might need to step up (or expect the gateway to add
-    // a new sibling). Higher signal than a pure status flip.
-    const rejWatchers = request?.watchers ?? []
-    const rejTargets = rejWatchers.filter(uid =>
-      uid !== user.uid && uid !== app.endorsedById)
-    if (rejTargets.length > 0) {
-      Promise.allSettled(rejTargets.map(uid => notify(uid, {
-        type:  'app_advanced',
-        title: `Sibling agency rejected on a shared case`,
-        body:  `${app.agencyName ?? 'An agency'} rejected ${app.patientName ?? 'patient'}'s slice. ${ORG.gatewayName} may re-endorse to another agency or this case may need additional coverage.`,
-      }))).catch(() => {})
-    }
-
     setShowReject(false)
     toast.error('Application rejected. Patient has been notified.')
   }
@@ -686,247 +337,42 @@ export default function ApplicationDetail() {
     navigate(`/agency/applications/${app.id}/gl`)
   }
 
-  // Each of the GL lifecycle actions below now opens an in-app ConfirmModal
-  // (see render at the end of the page). The actual mutation lives in a
-  // performX function that the modal's onConfirm invokes.
-  const handleRedeemGL = () => { setRedeemAmount(String(Number(app.approvedAmount) || '')); setShowConfirmRedeem(true) }
+  // Each of the GL lifecycle actions below opens an in-app ConfirmModal (see
+  // the render at the end of the page); its onConfirm runs the performX.
+  const handleRedeemGL = () => { setRedeemAmount(String(sliceApproved(app) || '')); setShowConfirmRedeem(true) }
   const performRedeemGL = async () => {
-    // Phase 1 (2026-11-16): settle on what the provider actually billed. The
-    // whole approved amount leaves "committed"; only the actual amount counts
-    // as disbursed, so the unused part returns to the agency's budget.
-    const amount = Number(app.approvedAmount) || 0
+    // Settle on what the provider actually billed (Phase 1): the whole
+    // approved amount leaves "committed", only the billed amount is disbursed.
+    const amount = sliceApproved(app)
     const actual = Number(redeemAmount)
     if (redeemAmount === '' || !Number.isFinite(actual) || actual < 0 || actual > amount) {
       toast.error(`Enter the amount billed, from ₱0 up to the approved ₱${amount.toLocaleString()}.`)
       return
     }
-    setUpdating(true)
-    try {
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'applications', app.id), {
-        glStatus:       'redeemed',
-        glRedeemedAt:   serverTimestamp(),
-        redeemedAmount: actual,
-        // A letter used before the agency clicked Mark as Issued was issued.
-        ...(app.status === 'approved' ? { status: 'certificate' } : {}),
-        updatedAt:      serverTimestamp(),
-      })
-      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
-        batch.update(doc(db, 'agencies', user.agencyId), {
-          'budget.committed': increment(-amount),
-          'budget.disbursed': increment(actual),
-        })
-      }
-      await batch.commit()
-      logAudit(user, { action: 'gl_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${actual.toLocaleString()} of ₱${amount.toLocaleString()} billed by ${app.payableTo}${actual < amount ? ` · ₱${(amount - actual).toLocaleString()} returned to budget` : ''}`, requestId: app.requestId ?? null, patientId: app.patientId })
-      toast.success('GL marked as redeemed.')
-      setShowConfirmRedeem(false)
-    } catch (err) { console.error(err); toast.error('Failed to mark GL redeemed.') }
-    finally { setUpdating(false) }
+    const ok = await runAction(() => settle('redeem', { redeemedAmount: actual }), 'GL marked as redeemed.', 'Failed to mark GL redeemed.')
+    if (ok) setShowConfirmRedeem(false)
   }
 
-  // Reverses a mistaken Mark Redeemed: moves the amount back from disbursed to
-  // committed and flips glStatus back to 'issued'. Use only to correct errors
-  // (e.g. the provider hadn't actually billed back yet). Audit-logged.
+  // Reverses a mistaken Mark Redeemed: the amount moves back from disbursed
+  // to committed and the letter is open again. Audited.
   const handleUnmarkRedeemed = () => setShowConfirmUnmark(true)
   const performUnmarkRedeemed = async () => {
-    setUpdating(true)
-    try {
-      const amount = Number(app.approvedAmount) || 0
-      // Letters redeemed before Phase 1 have no redeemedAmount: they were
-      // settled at the full approved amount.
-      const actual = app.redeemedAmount != null ? Number(app.redeemedAmount) : amount
-      const batch = writeBatch(db)
-      batch.update(doc(db, 'applications', app.id), {
-        glStatus:       'issued',
-        glRedeemedAt:   null,
-        redeemedAmount: null,
-        updatedAt:      serverTimestamp(),
-      })
-      if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
-        batch.update(doc(db, 'agencies', user.agencyId), {
-          'budget.committed': increment(amount),
-          'budget.disbursed': increment(-actual),
-        })
-      }
-      await batch.commit()
-      logAudit(user, { action: 'gl_unmark_redeemed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} returned to committed (redemption reversed)`, requestId: app.requestId ?? null, patientId: app.patientId })
-      toast.success('Redemption reversed. Amount returned to committed.')
-      setShowConfirmUnmark(false)
-    } catch (err) { console.error(err); toast.error('Failed to reverse redemption.') }
-    finally { setUpdating(false) }
+    const ok = await runAction(() => settle('undo_redeem'), 'Redemption reversed. Amount returned to committed.', 'Failed to reverse redemption.')
+    if (ok) setShowConfirmUnmark(false)
   }
 
   const handleExpireGL = () => setShowConfirmExpire(true)
   const performExpireGL = async () => {
-    setUpdating(true)
-    try {
-      const amount = Number(app.approvedAmount) || 0
-
-      // R3 fix: the previous version was a writeBatch that only updated the
-      // slice + the agency budget. The parent request's `amountCommitted`
-      // and `status` fields went stale on every expiry (the L11 'data
-      // check' chip surfaced this). Promote to a runTransaction so we can
-      // safely re-read all sibling slices and re-derive parent financials.
-      await runTransaction(db, async (tx) => {
-        const appRef = doc(db, 'applications', app.id)
-        const appSnap = await tx.get(appRef)
-        if (!appSnap.exists()) throw new Error('GONE')
-
-        // If we have a parent request, read the request + all sibling slices.
-        let reqRef = null, reqSnap = null, siblings = []
-        if (app.requestId) {
-          reqRef  = doc(db, 'requests', app.requestId)
-          reqSnap = await tx.get(reqRef)
-          const sibSnap = await getDocs(query(
-            collection(db, 'applications'),
-            where('requestId', '==', app.requestId),
-          ))
-          // Substitute the post-transition state for THIS slice so the
-          // derivation reflects the about-to-commit world. Same slice
-          // status (`certificate`) but glStatus flips to 'expired', which
-          // computeFunding now excludes from committed.
-          siblings = sibSnap.docs.map(d => {
-            const data = { id: d.id, ...d.data() }
-            if (d.id === app.id) return { ...data, glStatus: 'expired' }
-            return data
-          })
-        }
-
-        // Slice write
-        tx.update(appRef, {
-          glStatus:    'expired',
-          glExpiredAt: serverTimestamp(),
-          updatedAt:   serverTimestamp(),
-        })
-
-        // Agency budget release
-        if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
-          tx.update(doc(db, 'agencies', user.agencyId), {
-            'budget.committed': increment(-amount),
-          })
-        }
-
-        // Parent re-sync
-        if (reqRef && reqSnap?.exists()) {
-          const need = reqSnap.data().amountNeeded ?? 0
-          const next = deriveRequestFinancials(siblings, need)
-          tx.update(reqRef, {
-            amountCommitted: next.amountCommitted,
-            status:          syncedRequestStatus(reqSnap.data().status, next.status),
-            updatedAt:       serverTimestamp(),
-          })
-        }
-      })
-
-      logAudit(user, { action: 'gl_expired', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released back to budget`, requestId: app.requestId ?? null, patientId: app.patientId })
-      toast.success('GL marked as expired. Budget released.')
-      setShowConfirmExpire(false)
-    } catch (err) { console.error(err); toast.error('Failed to mark GL expired.') }
-    finally { setUpdating(false) }
+    const ok = await runAction(() => settle('expire'), 'GL marked as expired. Budget released.', 'Failed to mark GL expired.')
+    if (ok) setShowConfirmExpire(false)
   }
 
+  // Back to review, the letter withdrawn and the budget released. The repeat
+  // limit keeps running from the original approval (the mark is kept).
   const handleReverseApproval = () => setShowConfirmReverse(true)
   const performReverseApproval = async () => {
-    setUpdating(true)
-    try {
-      const amount = Number(app.approvedAmount) || 0
-
-      // The 30-day cooldown keeps running from the original approval: the
-      // agency's approval mark (approvalMarks) is left untouched. cooldownUntilAt
-      // stays on the slice as a record (Funds reads it).
-      const original = app.approvedAt?.toDate ? app.approvedAt.toDate() : (app.approvedAt ? new Date(app.approvedAt) : null)
-      const cooldownUntil = original
-        ? Timestamp.fromDate(new Date(original.getTime() + APPROVAL_COOLDOWN_DAYS * 86400000))
-        : null
-
-      // R3 fix (companion to performExpireGL): re-sync the parent
-      // request after a reversal. Promoted from writeBatch to
-      // runTransaction so we can read sibling slices + the request
-      // atomically and re-derive amountCommitted + status. Without
-      // this, the parent stays at 'fully_funded' with the old
-      // committed total long after the reversed slice has stopped
-      // counting.
-
-      await runTransaction(db, async (tx) => {
-        const appRef = doc(db, 'applications', app.id)
-        const appSnap = await tx.get(appRef)
-        if (!appSnap.exists()) throw new Error('GONE')
-
-        let reqRef = null, reqSnap = null, siblings = []
-        if (app.requestId) {
-          reqRef  = doc(db, 'requests', app.requestId)
-          reqSnap = await tx.get(reqRef)
-          const sibSnap = await getDocs(query(
-            collection(db, 'applications'),
-            where('requestId', '==', app.requestId),
-          ))
-          // Substitute the post-transition state for THIS slice. After
-          // reversal status flips from 'approved' / 'certificate' back
-          // to 'reviewing', which is in OUTSTANDING_SLICE_STATUSES (not
-          // committed).
-          siblings = sibSnap.docs.map(d => {
-            const data = { id: d.id, ...d.data() }
-            if (d.id === app.id) {
-              return { ...data, status: 'reviewing', glStatus: null }
-            }
-            return data
-          })
-        }
-
-        // Slice write -- preserves approvedAmount + the other approval-
-        // context fields as historical record (status=='reviewing' +
-        // approvedAt==null is the authoritative 'not currently approved'
-        // signal; every consumer of approvedAmount also checks status).
-        tx.update(appRef, {
-          status:              'reviewing',
-          approvedAt:          null,
-          glStatus:            null,
-          glExpiresAt:         null,
-          glRedeemedAt:        null,
-          cooldownUntilAt:     cooldownUntil,
-          reversedAt:          serverTimestamp(),
-          reversedBy:          user.name,
-          reversedByUid:       user.uid,
-          reversalReason:      `Reversed by ${user.name} on ${fmtDate(new Date())}`,
-          updatedAt:           serverTimestamp(),
-        })
-
-        // Agency budget release
-        if (amount > 0 && (agency?.budget?.allocated ?? 0) > 0) {
-          tx.update(doc(db, 'agencies', user.agencyId), {
-            'budget.committed': increment(-amount),
-          })
-        }
-
-        // Parent re-sync
-        if (reqRef && reqSnap?.exists()) {
-          const need = reqSnap.data().amountNeeded ?? 0
-          const next = deriveRequestFinancials(siblings, need)
-          tx.update(reqRef, {
-            amountCommitted: next.amountCommitted,
-            status:          syncedRequestStatus(reqSnap.data().status, next.status),
-            updatedAt:       serverTimestamp(),
-          })
-        }
-      })
-      await notify(app.patientId, {
-        type:  'app_advanced',
-        title: 'Approval reversed',
-        body:  `Your approved application to ${app.agencyName} has been returned to review. The agency may contact you with details.`,
-      })
-      if (app.endorsedById) {
-        notify(app.endorsedById, {
-          type:  'app_advanced',
-          title: `${app.agencyName} reversed an approval`,
-          body:  `${app.patientName}'s slice is back to review. The previously-secured amount is no longer guaranteed.`,
-        }).catch(() => {})
-      }
-      logAudit(user, { action: 'approval_reversed', targetType: 'application', targetId: app.id, targetName: app.patientName, details: `₱${amount.toLocaleString()} released. Cooldown preserved until ${cooldownUntil?.toDate?.()?.toLocaleDateString?.() ?? 'n/a'}.`, requestId: app.requestId ?? null, patientId: app.patientId })
-      toast.success('Approval reversed. Budget released. Cooldown preserved.')
-      setShowConfirmReverse(false)
-    } catch (err) { console.error(err); toast.error('Failed to reverse approval.') }
-    finally { setUpdating(false) }
+    const ok = await runAction(() => settle('reverse'), 'Approval reversed. Budget released.', 'Failed to reverse approval.')
+    if (ok) setShowConfirmReverse(false)
   }
 
   const handleMessagePatient = async () => {
@@ -1329,12 +775,12 @@ export default function ApplicationDetail() {
                   </div>
                 )}
 
-                {isApproved && app.approvedAmount != null && (
+                {isApproved && sliceApproved(app) > 0 && (
                   <div className="card p-5">
                     <p className="eyebrow mb-3 flex items-center gap-2">
                       <MdAttachMoney size={13} /> Approved Assistance
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 mb-2">₱{Number(app.approvedAmount).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-gray-900 mb-2">₱{sliceApproved(app).toLocaleString()}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       {app.purposeOfAssistance?.length > 0 && (
                         <div className="bg-gray-50 rounded-lg p-2"><p className="text-xs text-gray-500">For</p><p className="text-gray-700">{app.purposeOfAssistance.join(', ')}</p></div>
@@ -1551,7 +997,7 @@ export default function ApplicationDetail() {
                   )}
                   {app.glStatus === 'redeemed' && (
                     <>
-                      <p className="text-sm text-green-700 italic flex-1">✓ GL redeemed on {formatDate(app.glRedeemedAt)}{app.redeemedAmount != null && Number(app.redeemedAmount) < Number(app.approvedAmount ?? 0) ? ` for ₱${Number(app.redeemedAmount).toLocaleString()} of ₱${Number(app.approvedAmount).toLocaleString()}` : ''}. Case complete.</p>
+                      <p className="text-sm text-green-700 italic flex-1">✓ GL redeemed on {formatDate(app.glRedeemedAt)}{app.redeemedAmount != null && Number(app.redeemedAmount) < sliceApproved(app) ? ` for ₱${Number(app.redeemedAmount).toLocaleString()} of ₱${sliceApproved(app).toLocaleString()}` : ''}. Case complete.</p>
                       <button className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg ${VARIANT_CLS['secondary']}`}
                         disabled={updating}
                         title="Reverse the redemption — for correcting mistakes only"
@@ -1663,12 +1109,12 @@ export default function ApplicationDetail() {
           title="Mark Guarantee Letter as Redeemed?"
           body={(
             <div className="space-y-2">
-              <p>Record the amount {app?.payableTo ?? 'the provider'} actually billed against this letter (approved: ₱{Number(app?.approvedAmount ?? 0).toLocaleString()}).</p>
-              <input type="number" min={0} max={Number(app?.approvedAmount ?? 0)} step="0.01"
+              <p>Record the amount {app?.payableTo ?? 'the provider'} actually billed against this letter (approved: ₱{sliceApproved(app).toLocaleString()}).</p>
+              <input type="number" min={0} max={sliceApproved(app)} step="0.01"
                 className="input w-full" aria-label="Amount billed"
                 value={redeemAmount} onChange={e => setRedeemAmount(e.target.value)} />
-              {Number(redeemAmount) >= 0 && Number(redeemAmount) < Number(app?.approvedAmount ?? 0) && redeemAmount !== '' && (
-                <p className="text-xs text-gray-500">₱{(Number(app?.approvedAmount ?? 0) - Number(redeemAmount)).toLocaleString()} unused goes back to your budget.</p>
+              {Number(redeemAmount) >= 0 && Number(redeemAmount) < sliceApproved(app) && redeemAmount !== '' && (
+                <p className="text-xs text-gray-500">₱{(sliceApproved(app) - Number(redeemAmount)).toLocaleString()} unused goes back to your budget.</p>
               )}
             </div>
           )}
@@ -1682,7 +1128,7 @@ export default function ApplicationDetail() {
           onClose={() => setShowConfirmUnmark(false)}
           onConfirm={performUnmarkRedeemed}
           title="Reverse the redemption?"
-          body={`This moves the letter back to "Issued": ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} is committed again and the ₱${Number(app?.redeemedAmount ?? app?.approvedAmount ?? 0).toLocaleString()} recorded as billed is removed from disbursed. Use only to correct a mistaken Mark Redeemed.`}
+          body={`This moves the letter back to "Issued": ₱${sliceApproved(app).toLocaleString()} is committed again and the ₱${Number(app?.redeemedAmount ?? sliceApproved(app)).toLocaleString()} recorded as billed is removed from disbursed. Use only to correct a mistaken Mark Redeemed.`}
           tone="warning"
           confirmLabel="Reverse Redemption"
           confirmLabelBusy="Reversing…"
@@ -1693,7 +1139,7 @@ export default function ApplicationDetail() {
           onClose={() => setShowConfirmExpire(false)}
           onConfirm={performExpireGL}
           title="Mark Guarantee Letter as Expired?"
-          body={`The GL is past its validity date. The committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} will be released back to the agency.`}
+          body={`The GL is past its validity date. The committed budget of ₱${sliceApproved(app).toLocaleString()} will be released back to the agency.`}
           tone="warning"
           confirmLabel="Mark Expired"
           confirmLabelBusy="Marking…"
@@ -1704,7 +1150,7 @@ export default function ApplicationDetail() {
           onClose={() => setShowConfirmReverse(false)}
           onConfirm={() => requireReauth(performReverseApproval)}
           title="Reverse this approval?"
-          body={`The application returns to 'Reviewing' status, the committed budget of ₱${Number(app?.approvedAmount ?? 0).toLocaleString()} is released, and the patient is notified.\n\nThe 30-day cooldown clock keeps running from the original approval date — the patient cannot be re-approved at any agency until the cooldown elapses.\n\nUse this only to correct mistakes, not to deny assistance after the fact.`}
+          body={`The application returns to 'Reviewing' status, the committed budget of ₱${sliceApproved(app).toLocaleString()} is released, and the patient is notified.\n\nYour agency's repeat limit keeps running from the original approval date — approving this patient again on another request inside it needs a written reason.\n\nUse this only to correct mistakes, not to deny assistance after the fact.`}
           tone="warning"
           confirmLabel="Reverse Approval"
           confirmLabelBusy="Reversing…"

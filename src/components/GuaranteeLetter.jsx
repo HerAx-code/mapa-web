@@ -239,7 +239,7 @@ export default function GuaranteeLetter({ app, patient = {}, signatory, approval
           The bearer is hereby <strong>guaranteed</strong> financial assistance in the amount of:
         </p>
         <p className="guarantee-amount">
-          ₱ {Number(app.approvedAmount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          ₱ {Number(app.amountApproved ?? app.approvedAmount ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
         <p className="guarantee-detail">
           <strong>For:</strong> {(app.purposeOfAssistance ?? []).join(', ') || 'Medical assistance'}

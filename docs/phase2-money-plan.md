@@ -1,6 +1,6 @@
 # Phase 2 plan — money on the server (T8, then T3)
 
-Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 built on `feat/endorse-on-server`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
+Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 merged and deployed (#416); PR 2.3 built on `feat/agency-decisions-on-server`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
 
 ## What Phase 2 fixes
 
@@ -64,7 +64,7 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 3. **Existing data:** `scripts/backfill-open-letters.mjs` stamps `openLetters` on every request (report-only unless `--write`), so fully funded cases with an open letter count as active from deploy on.
 4. **Tests:** utils tests for every definition (including a fully funded case with an open letter not being finished); functions tests for the I3 scenario reproduced in this session (an expired letter no longer steals `activeRequestId`); a CI check that the bundle is current.
 
-## PR 2.2 — Endorse and close on the server (T3 part 1) — built
+## PR 2.2 — Endorse and close on the server (T3 part 1) — shipped
 1. **`endorseRequest({ requestId, agencyIds, notes })`** (Hospital Admin / Staff Admin of the request's hospital). In one transaction it:
    - re-reads the request: open (M14), not already endorsed to those agencies;
    - re-checks the gate with the shared `deriveRequestStage` (documents read from `documents/`, not the request's copy), the verification-call reasons (hospital policy + duplicate flag) and the second-person rule **by uid** for the bill check, the call and the assessment — `completedBy` is now stamped with `completedByUid` only when the assessment completes (M15);
@@ -75,7 +75,7 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 4. **Pages:** the Endorse modal and Reject / Close call the functions. The Requests page's network-wide daily slot reset is removed (R1); `resetAgencySlots` also resets `hospitalSlots`.
 5. **Tests:** functions tests for the gate, the race (request closed mid-endorse), slots per hospital, the second-person rule by uid; rules tests that a hospital can no longer create a slice or touch an agency's slots.
 
-## PR 2.3 — Agency decisions and letters on the server (T3 part 2)
+## PR 2.3 — Agency decisions and letters on the server (T3 part 2) — built
 1. **`decideSlice({ sliceId, action, ... })`** — agency staff of the slice's agency; one transaction re-reading the slice, the request, the agency and the repeat-limit mark:
    - `request_info` / `resume` (reviewing ↔ awaiting_info);
    - `approve`: only from `reviewing` (I2); request open; partnership still current (M13); amount ≤ endorsed, ≤ the **maximum per approval** (renamed, D10), ≤ the budget headroom when an allocation is set (P2-C), and for outpatients ≤ the charge minus what other agencies cover (N2); repeat limit or a written override; writes the slice, the letter (`glStatus: issued`, `glExpiresAt`), the mark, `budget.committed`, the request totals, audit and notifications;
@@ -85,8 +85,10 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 4. **Rules:** agency staff may write only notes on a slice; budget fields, `glStatus`, amounts and status come only from the functions. The agency coordinator's budget branch is removed.
 5. **Pages:** ApplicationDetail, ApproveModal, GLViewer and the signed-letter upload call the functions; their browser transactions and the duplicate request-total writes are removed (R3). `approvedAmount` stops being written; `amountApproved` is the one field (R7).
 6. **Tests:** functions tests for every action, including two approvals at once (only one succeeds, the budget counted once) and the sweep racing a redemption; rules tests that agencies can't write money fields.
+7. **As built:** `functions/src/sliceActions.js`. The signed-letter upload still writes its own `certificates/` doc and the slice's `certificateUploaded` flag from the browser (no money; the rules allow agency staff only that flag and `caseNotes`). Also: the agency Dashboard's browser slot reset is gone (resetAgencySlots), the Agency Admin can no longer rewrite `committed` / `disbursed` (a new period may start disbursed at 0 once nothing is committed), and patients may move only a slice's status.
 
 ## PR 2.4 — Repair and cleanup
+- The Super Admin's "disable agency and reject its open applications" (admin/AgencyDetail) writes slices from the browser, which the rules have refused since before Phase 2; move it to a function (reusing decideSlice's reject) or drop the cascade.
 - `scripts/reconcile-agency-budgets.mjs` (P2-D): report, then write on your OK.
 - Remove what PRs 2.2–2.3 left unused: the old cooldown path (`cooldownUntilAt` written on reversal, the rules branch letting agencies stamp cooldown fields on access codes), legacy statuses handled in lists (`pending`, `interview`).
 - CLAUDE.md: "the endorse gates are client-side" becomes "server-checked"; the money section describes the functions.

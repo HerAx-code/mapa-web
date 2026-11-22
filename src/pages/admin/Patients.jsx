@@ -40,7 +40,7 @@ function ProfileModal({ patient, onClose, onMessage }) {
       // All approved/certificate apps for the GL document section
       setGlApps(
         apps
-          .filter(a => ['approved', 'certificate'].includes(a.status) && a.approvedAmount != null)
+          .filter(a => ['approved', 'certificate'].includes(a.status) && (a.amountApproved ?? a.approvedAmount) != null)
           // Sort via tsToDate so legacy data stored as JS Date or ISO
           // string still sorts correctly. The previous `.seconds`
           // accessor was Firestore-Timestamp-only; legacy entries

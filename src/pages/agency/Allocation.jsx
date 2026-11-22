@@ -295,7 +295,8 @@ export default function AgencyAllocation() {
     setResetting(true)
     try {
       await updateDoc(doc(db, 'agencies', agency.id), {
-        'budget.committed':            0,
+        // committed is a server-kept count (already 0 here, the reset is
+        // refused otherwise); the rules let a new period start disbursed at 0.
         'budget.disbursed':            0,
         'budget.periodStart':          serverTimestamp(),
         'budget.lowBalanceNotifiedAt': null,

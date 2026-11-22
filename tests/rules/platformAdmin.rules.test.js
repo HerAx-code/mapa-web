@@ -221,8 +221,9 @@ describe('agencies — network config belongs to the platform admin', () => {
     await assertFails(updateDoc(ref('superA', 'agencies/dswd'), { 'slots.remaining': 10, lastResetDate: '2026-11-14' }))
   })
 
-  it('agency staff keep their own-agency updates', async () => {
-    await assertSucceeds(updateDoc(ref('coord', 'agencies/dswd'), { 'slots.remaining': increment(-1) }))
+  it('agency coordinators no longer write slot counts (resetAgencySlots / decideSlice do)', async () => {
+    // Phase 2 PR 2.3: agency decisions, letters and budgets run in Cloud Functions (decideSlice / settleLetter, tests/functions/sliceActions.test.js).
+    await assertFails(updateDoc(ref('coord', 'agencies/dswd'), { 'slots.remaining': increment(-1) }))
   })
 
   it('agenciesPublic: written only by the Cloud Functions — no Super Admin or hospital browser writes (Phase 1, N10)', async () => {

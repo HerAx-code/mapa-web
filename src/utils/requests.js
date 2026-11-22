@@ -29,7 +29,7 @@ export {
   REQ_RANK, reqRank, computeFunding, deriveRequestStatus,
   DERIVED_REQUEST_STATUSES, syncedRequestStatus, isRequestClosedByGateway,
   effectiveSlots, deriveRequestFinancials, isSliceTerminal,
-  isRequestFinished, isRequestActive, isRequestClosed,
+  isRequestFinished, isRequestActive, isRequestClosed, sliceApproved,
 } from '../shared/caseState'
 
 // Phase 2.2 — capacity at endorsement. Can an agency actually fund `need`

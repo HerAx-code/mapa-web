@@ -424,7 +424,9 @@ service cloud.firestore {
         //     by uploading a document; the client flips status as part of
         //     the same write)
         // Any other status transition by a patient is denied here.
-        (isPatient() && resource.data.patientId == uid() && (
+        // Phase 2 PR 2.3: only the status moves (no amounts, letters or notes).
+        (isPatient() && resource.data.patientId == uid() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) && (
           (resource.data.status == 'pending'       && request.resource.data.status == 'rejected') ||
           (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing') ||
           // Co-funding: patient accepts the coverage plan, advancing their
@@ -432,44 +434,14 @@ service cloud.firestore {
           (resource.data.status == 'endorsed'      && request.resource.data.status == 'reviewing' &&
            parentRequestOpen(resource.data))
         )) ||
-        // Phase 1.6: an agency may write its own slice, but the identity +
-        // endorsement fields are LOCKED — they can't reassign the slice to
-        // another patient/agency/request or inflate the gateway-endorsed cap.
-        // Everything else (the funding decision: status, amountApproved,
-        // glStatus, approvedBy, cooldown, purposeOfAssistance, payableTo,
-        // signedScan pointer, timestamps, …) stays writable, so no legitimate
-        // approve / reverse / GL / redeem flow is affected. This is a locked-
-        // immutables guard rather than a field allowlist precisely so it can't
-        // silently break one of those multi-field transitions.
-        // amountApproved (the agency's decision) stays writable but is CAPPED
-        // at amountRequested (the gateway's endorsed cap, itself locked). Without the
-        // cap an agency could approve MORE than the gateway endorsed via a direct
-        // write, over-committing the request past its need (double-funding) —
-        // syncRequestFinancials would then faithfully sum the inflated figure.
-        // Guarded so non-approval updates that don't carry amountApproved
-        // (needs_info, reject) still pass.
+        // Phase 2 PR 2.3: an agency writes only notes on its own slice (and the
+        // flag that its signed letter is uploaded). Start review, request info,
+        // approve, reject, issue, redeem, expire and reverse run on the server
+        // (decideSlice / settleLetter), which re-read the slice, the request
+        // and the budget in one transaction (gaps I2, M3, M13, N1, N2).
         (isAgency() && resource.data.agencyId == userAgencyId() &&
-          request.resource.data.patientId      == resource.data.patientId &&
-          request.resource.data.agencyId       == resource.data.agencyId &&
-          request.resource.data.requestId      == resource.data.requestId &&
-          request.resource.data.amountRequested == resource.data.amountRequested &&
-          (!('amountApproved' in request.resource.data) ||
-            request.resource.data.amountApproved <= resource.data.amountRequested) &&
-          // Logic review: a slice the hospital closed is final, and nothing is
-          // approved on a request the hospital rejected or closed.
-          resource.data.get('status', '') != 'closed' &&
-          (!(request.resource.data.get('status', '') in ['approved', 'certificate']) ||
-           resource.data.get('status', '') in ['approved', 'certificate'] ||
-           parentRequestOpen(resource.data)) &&
-          approvalCooldownOk(resource.data, request.resource.data) &&
-          // Phase 1: the amount the provider actually billed, recorded at
-          // redemption — never more than this agency approved.
-          (!('redeemedAmount' in request.resource.data) ||
-           request.resource.data.redeemedAmount == null ||
-           (request.resource.data.redeemedAmount is number &&
-            request.resource.data.redeemedAmount >= 0 &&
-            request.resource.data.redeemedAmount <=
-              request.resource.data.get('amountApproved', request.resource.data.get('approvedAmount', 0)))))
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['caseNotes', 'certificateUploaded', 'updatedAt']))
         // Phase 2 PR 2.2: hospital staff no longer write slices; closing a
         // request closes its slices on the server (closeRequest).
       );
@@ -487,75 +459,13 @@ service cloud.firestore {
     // old. A reversal leaves the mark alone, so the clock keeps running from
     // the original approval. Other agencies have their own marks: each program
     // keeps its own frequency rule.
-    function approvalMark(agencyId, patientId) {
-      return /databases/$(database)/documents/approvalMarks/$(agencyId + '__' + patientId);
-    }
-    // Phase 1 (2026-11-16): the limit is a per-agency setting, set by its
-    // Agency Admin: agencies.repeatLimit = { days, perType } (default 30 days,
-    // not per type — the old fixed rule). days 0 = no limit. perType counts
-    // separately per assistance type (the request's assistanceType), from
-    // the mark's byType map. Inside the limit the approval is still allowed
-    // WITH a written reason (repeatOverride on the slice, stamped now by the
-    // approver), so it is a recorded exception, never a silent one.
-    function outsideRepeatLimit(before) {
-      let path = approvalMark(before.agencyId, before.patientId);
-      let lim = get(/databases/$(database)/documents/agencies/$(before.agencyId)).data.get('repeatLimit', {});
-      let days = lim.get('days', 30);
-      let perType = lim.get('perType', false);
-      let type = get(/databases/$(database)/documents/requests/$(before.requestId)).data.get('assistanceType', '');
-      let prev = !exists(path) ? {} :
-        (perType ? get(path).data.get('byType', {}).get(type, {})
-                 : { 'at': get(path).data.get('lastApprovedAt', null), 'requestId': get(path).data.get('requestId', '') });
-      return days == 0 ||
-        prev.get('at', null) == null ||
-        prev.get('requestId', '') == before.requestId ||
-        prev.at <= request.time - duration.value(days, 'd');
-    }
-    function repeatOverrideOk(after) {
-      let o = after.get('repeatOverride', {});
-      return o.get('reason', '') is string && o.get('reason', '').size() >= 10 &&
-        o.get('byUid', '') == uid() && o.get('at', null) == request.time;
-    }
-    function approvalCooldownOk(before, after) {
-      let path = approvalMark(before.agencyId, before.patientId);
-      return after.get('status', '') != 'approved' ||
-        before.get('status', '') in ['approved', 'certificate'] ||
-        (before.get('requestId', null) is string &&
-         getAfter(path).data.get('requestId', '') == before.requestId &&
-         getAfter(path).data.get('lastApprovedAt', null) == request.time &&
-         (outsideRepeatLimit(before) || repeatOverrideOk(after)));
-    }
-
-    // byType on a mark may change only for the approved request's own
-    // assistance type, stamped now (so other types can't be back-dated).
-    function markByTypeOk() {
-      let before = resource == null ? {} : resource.data.get('byType', {});
-      let after = request.resource.data.get('byType', {});
-      let type = get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data.get('assistanceType', '');
-      return after.diff(before).affectedKeys().size() == 0 ||
-        (after.diff(before).affectedKeys().hasOnly([type]) &&
-         after.get(type, {}).keys().hasOnly(['at', 'requestId']) &&
-         after.get(type, {}).get('at', null) == request.time &&
-         after.get(type, {}).get('requestId', '') == request.resource.data.requestId);
-    }
+    // Phase 2 PR 2.3: the mark is written only by decideSlice (Admin SDK) in
+    // the approval's own transaction, which also checks the agency's repeat
+    // limit (agencies.repeatLimit; src/utils/approvalCooldown.js) and records
+    // a written reason as repeatOverride inside it.
     match /approvalMarks/{markId} {
       allow read: if isAgency() && markId.split('__')[0] == userAgencyId();
-      // Written only with a real approval of this agency's slice for that
-      // patient and request (the slice rule above checks the other direction).
-      allow create, update: if isAgency() &&
-        request.resource.data.keys().hasOnly(['agencyId', 'patientId', 'requestId', 'sliceId', 'lastApprovedAt', 'byType']) &&
-        markByTypeOk() &&
-        request.resource.data.agencyId == userAgencyId() &&
-        request.resource.data.patientId is string &&
-        markId == userAgencyId() + '__' + request.resource.data.patientId &&
-        request.resource.data.requestId is string &&
-        request.resource.data.sliceId is string &&
-        request.resource.data.lastApprovedAt == request.time &&
-        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('status', '') == 'approved' &&
-        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('agencyId', '') == userAgencyId() &&
-        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('patientId', '') == request.resource.data.patientId &&
-        getAfter(/databases/$(database)/documents/applications/$(request.resource.data.sliceId)).data.get('requestId', '') == request.resource.data.requestId;
-      allow delete: if false;
+      allow write: if false;
     }
 
     // The slice's parent request isn't rejected/closed (legacy slices without
@@ -710,32 +620,10 @@ service cloud.firestore {
               'diagnosis', 'attendingPhysician', 'dateOfAdmission',
               'estimatedTotalCost', 'patientFilledAt'
             ])) ||
-        // Phase 1.5: hasOnly limited WHICH fields an agency may touch but not
-        // WHAT it may write, so an agency holding one slice could set status
-        // to any string -- including the gateway-only states like 'under_review',
-        // 'assessment' or 'closed' -- and amountCommitted to a non-number or
-        // a negative. Constrain both to what the real path can produce:
-        // deriveRequestStatus() in src/utils/requests.js returns exactly this
-        // four-value set, and amountCommitted is always a non-negative sum of
-        // approved slices.
-        //
-        // LIMITATION: this does NOT stop an agency writing an inflated but
-        // well-formed amountCommitted. Rules cannot re-derive the sum over
-        // sibling slices, so verifying that figure needs a Cloud Function.
-        (isAgency() && userAgencyId() in resource.data.agencyIds &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['amountCommitted', 'status', 'updatedAt']) &&
-          request.resource.data.amountCommitted is number &&
-          request.resource.data.amountCommitted >= 0 &&
-          // Phase 2A: an outpatient request is one priced charge slip, so agencies
-          // together fund it only up to its amount (no over-endorsing buffer —
-          // that stays for inpatient bills). Lowering the total is always fine.
-          (resource.data.get('careSetting', 'inpatient') != 'outpatient' ||
-           request.resource.data.amountCommitted <= resource.data.get('amountNeeded', 0) ||
-           request.resource.data.amountCommitted <= resource.data.get('amountCommitted', 0)) &&
-          !(resource.data.get('status', '') in ['closed', 'rejected']) &&
-          request.resource.data.status in
-            ['under_review', 'endorsed', 'partially_funded', 'fully_funded']);
+        // Phase 2 PR 2.3: agencies no longer write requests. decideSlice and
+        // settleLetter recompute the funding totals on the server (the old
+        // agency branch could not check the sum, gap M3).
+        false;
       // A request that was endorsed or funded is a financial record (slices,
       // Guarantee Letters, budgets) and is never deleted. Only the Hospital
       // Admin may delete a request that never reached an agency — the
@@ -929,10 +817,7 @@ service cloud.firestore {
                        (!exists(/databases/$(database)/documents/users/$(uid())) ||
                         get(/databases/$(database)/documents/users/$(uid())).data.get('role', '') != 'patient');
       // Phase 6: agencies are network config — the platform admin onboards,
-      // edits and removes them. Hospital admins keep only the slot counters
-      // their endorse transaction and the daily slot-reset fallback write
-      // (admin/Requests.jsx); they can't change slots.total, enabled, or
-      // anything else.
+      // edits and removes them.
       // Funder type (2026-11-17): Super Admin only, one of a fixed list or
       // unset. Keep in sync with FUNDING_TYPE_VALUES in src/utils/fundingType.js.
       function fundingTypeOk() {
@@ -942,30 +827,14 @@ service cloud.firestore {
       allow create: if isPlatformAdmin() && fundingTypeOk();
       // Update authority split:
       //   - platform admin (Super Admin): anything.
-      //   - hospital staff: only their own hospital's slot counters (below).
-      //   - agency_admin: own agency. Allowed to write budget.* because
-      //     they are the allocation authority for their own fund source.
-      //   - agency coordinator (role=='agency'): own agency, but the
-      //     budget object must stay byte-identical. This prevents an
-      //     authenticated coordinator from calling the Firestore SDK
-      //     directly to inflate budget.allocated past whatever the UI
-      //     gate enforces -- the previous version trusted the client
-      //     for that.
-      // Coordinator update rule (hotfix from prod):
-      //   - The original rule required the entire budget object to be
-      //     byte-identical, which blocked the GL-expiry sweep on the
-      //     agency dashboard (it mutates `budget.committed` to release
-      //     funds when a coordinator-issued GL lapses). Symptom in prod:
-      //     "GL expiry sweep failed: Missing or insufficient permissions"
-      //     on every coordinator dashboard load with at least one
-      //     expired GL.
-      //   - The threat the original rule guards is "coordinator inflates
-      //     budget.allocated past the UI limit." That threat is
-      //     preserved by pinning `allocated` and `fundSource` only.
-      //     Usage-tracking fields (committed, disbursed, totalSpent)
-      //     are allowed to change so automated transaction flows
-      //     (GL expire, approval, redeem) work for non-admin agency
-      //     coordinators.
+      //   - agency_admin: own agency's settings (allocation, period, caps,
+      //     slots, profile); not partners, enabled, funder type, or the usage
+      //     counts committed / disbursed (agencyAdminBudgetOk).
+      //   - agency coordinator: only the low-balance marker.
+      //   - hospital staff: nothing (endorseRequest / closeRequest, PR 2.2).
+      // Budget usage and slot counts move only in Cloud Functions
+      // (Phase 2 PR 2.3: decideSlice, settleLetter, glExpirySweep,
+      // resetAgencySlots).
       allow update: if (isPlatformAdmin() && fundingTypeOk()) ||
                        // Phase 2 PR 2.2: hospital staff no longer write agency slots —
                        // endorseRequest / closeRequest take and return them (gap I6).
@@ -977,41 +846,31 @@ service cloud.firestore {
                        (isAgencyAdmin() && userAgencyId() == agencyId &&
                         request.resource.data.get('partnerHospitalIds', null) == resource.data.get('partnerHospitalIds', null) &&
                         request.resource.data.get('enabled', null) == resource.data.get('enabled', null) &&
-                        request.resource.data.get('fundingType', null) == resource.data.get('fundingType', null)) ||
-                       // A coordinator writes only what its own work changes:
-                       // budget usage (approve / redeem / expire / reverse),
-                       // today's remaining slots + reset date, and one
-                       // hospital's remaining slots (reject restores it). The
-                       // settings the Agency Admin owns are pinned: slot
-                       // capacity, per-hospital totals, manual slot
-                       // adjustments, budget allocation/period/fund source,
-                       // per-applicant cap, assistance types, name, enabled, and
-                       // the Agency Profile text (owner decision 2026-11-16: the
-                       // Agency Admin edits the profile). Allowlist, not denylist.
+                        request.resource.data.get('fundingType', null) == resource.data.get('fundingType', null) &&
+                        agencyAdminBudgetOk()) ||
+                       // Phase 2 PR 2.3: a coordinator writes only the one-shot
+                       // "budget running low" marker (Dashboard). Budget usage
+                       // moves in decideSlice / settleLetter / glExpirySweep; the
+                       // daily slot reset is resetAgencySlots; slots come back
+                       // on reject in decideSlice.
                        (isAgency() && !isAgencyAdmin() && userAgencyId() == agencyId &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                          'budget', 'slots', 'lastResetDate', 'hospitalSlots', 'slotRestoredFor']) &&
-                        request.resource.data.get('slots', {}).get('total', 0) == resource.data.get('slots', {}).get('total', 0) &&
-                        coordinatorBudgetOk() && coordinatorHospitalSlotsOk());
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['budget']) &&
+                        request.resource.data.get('budget', {}).diff(resource.data.get('budget', {})).affectedKeys()
+                          .hasOnly(['lowBalanceNotifiedAt']));
       allow delete: if isPlatformAdmin();
 
-      // Coordinator budget writes: usage counters only.
-      function coordinatorBudgetOk() {
-        return request.resource.data.get('budget', {}).diff(resource.data.get('budget', {})).affectedKeys()
-          .hasOnly(['committed', 'disbursed', 'totalSpent', 'lowBalanceNotifiedAt']);
-      }
-      // Coordinator per-hospital slot writes: only the hospital named in
-      // slotRestoredFor (written with it, ApplicationDetail's reject restore),
-      // and only its remaining count / reset date. (Rules can't index a set,
-      // so the write names the hospital it touches.)
-      function coordinatorHospitalSlotsOk() {
-        let before = resource.data.get('hospitalSlots', {});
-        let after  = request.resource.data.get('hospitalSlots', {});
-        let h = request.resource.data.get('slotRestoredFor', '');
-        return after.diff(before).affectedKeys().size() == 0 ||
-          (h is string && h != '' &&
-           after.diff(before).affectedKeys().hasOnly([h]) &&
-           after.get(h, {}).diff(before.get(h, {})).affectedKeys().hasOnly(['remaining', 'lastResetDate']));
+      // Phase 2 PR 2.3: the Agency Admin sets the allocation, period and cap,
+      // but committed and disbursed are counts the server keeps. The one
+      // exception is a new budget period, which starts disbursed at 0
+      // (Allocation's reset, allowed only once nothing is committed).
+      function agencyAdminBudgetOk() {
+        let b0 = resource.data.get('budget', {});
+        let b1 = request.resource.data.get('budget', {});
+        return b1.get('committed', 0) == b0.get('committed', 0) &&
+          b1.get('totalSpent', 0) == b0.get('totalSpent', 0) &&
+          (b1.get('disbursed', 0) == b0.get('disbursed', 0) ||
+           (b1.get('disbursed', 0) == 0 && b0.get('committed', 0) == 0 &&
+            b1.get('periodStart', null) == request.time));
       }
     }
 

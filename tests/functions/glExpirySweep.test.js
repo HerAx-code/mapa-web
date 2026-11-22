@@ -1,9 +1,9 @@
 /**
  * glExpirySweep — pure-handler unit tests.
  *
- * Not currently deployed; client-side fallback in agency/Dashboard.jsx
- * does the same work on dashboard load. Tests ready the function for
- * Blaze deployment by pinning the transaction semantics:
+ * The only automatic expiry since Phase 2 PR 2.3 (the Dashboard's browser
+ * sweep was removed). It shares expireLetterTx with the agency's "Mark
+ * expired". These tests pin the transaction semantics:
  *   - Per-app transaction (one expiry doesn't roll back another)
  *   - Re-read inside the transaction (avoid double-release if a
  *     coordinator clicked "Mark Expired" between query and tx)
@@ -63,7 +63,7 @@ function makeDb(apps, opts = {}) {
         get: async (ref) => {
           const id = ref._id
           // Agencies exist unless listed in opts.missingAgencies (2026-11-16).
-          if (String(ref._path).startsWith('agencies/')) return { exists: !(opts.missingAgencies ?? []).includes(id) }
+          if (String(ref._path).startsWith('agencies/')) return { exists: !(opts.missingAgencies ?? []).includes(id), data: () => ({}) }
           if (opts[id] && opts[id].fresh) return opts[id].fresh
           // Default: app still exists with the same data
           const doc = docs.find(d => d.id === id)
@@ -72,9 +72,10 @@ function makeDb(apps, opts = {}) {
         update: (ref, data) => txOps.push({ ref, data }),
       }
       try {
-        await fn(tx)
+        const result = await fn(tx)
         // commit
         updates.push(...txOps)
+        return result
       } catch (err) {
         // Re-throw so handleGLExpirySweep increments failed count
         throw err

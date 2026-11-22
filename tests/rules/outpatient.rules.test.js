@@ -57,12 +57,11 @@ describe('filing an outpatient request', () => {
 })
 
 describe('outpatient funding cap', () => {
-  it('agencies together cannot commit more than the outpatient charge', async () => {
+  it('agencies write no request totals from the browser (decideSlice checks the outpatient cap)', async () => {
+    // Phase 2 PR 2.3: agency decisions, letters and budgets run in Cloud Functions (decideSlice / settleLetter, tests/functions/sliceActions.test.js).
     await assertFails(updateDoc(doc(as('coord'), 'requests', 'out'), { amountCommitted: 6000, status: 'fully_funded' }))
-    await assertSucceeds(updateDoc(doc(as('coord'), 'requests', 'out'), { amountCommitted: 5000, status: 'fully_funded' }))
-  })
-  it('inpatient bills keep the over-endorsing buffer', async () => {
-    await assertSucceeds(updateDoc(doc(as('coord'), 'requests', 'inp'), { amountCommitted: 6000, status: 'fully_funded' }))
+    await assertFails(updateDoc(doc(as('coord'), 'requests', 'out'), { amountCommitted: 5000, status: 'fully_funded' }))
+    await assertFails(updateDoc(doc(as('coord'), 'requests', 'inp'), { amountCommitted: 6000, status: 'fully_funded' }))
   })
 })
 
