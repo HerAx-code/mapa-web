@@ -1,12 +1,12 @@
 import { initializeApp } from 'firebase/app'
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check'
-import { getAuth, signInAnonymously } from 'firebase/auth'
+import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth'
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  terminate, clearIndexedDbPersistence,
+  terminate, clearIndexedDbPersistence, connectFirestoreEmulator,
 } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { getStorage, connectStorageEmulator } from 'firebase/storage'
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions'
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,6 +18,15 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
+
+// Local development against the Firebase emulator suite. Opt-in, dev-only: the
+// app talks to the local Auth/Firestore/Functions/Storage emulators instead of
+// the cloud project, so the seeded demo accounts (scripts/demo-accounts.js) work
+// on localhost without touching production. Enabled ONLY when
+// VITE_USE_EMULATOR === 'true' in a local env file (.env.local). The Vercel
+// production build never sets it, so this is a complete no-op there. See the
+// "Local emulator" section of the README / package.json scripts.
+const USE_EMULATOR = import.meta.env.VITE_USE_EMULATOR === 'true'
 
 // App Check — bot / abuse protection for self-registration and the public
 // callables/endpoints. Initialised ONLY when an App Check site key is
@@ -35,7 +44,7 @@ const app = initializeApp(firebaseConfig)
 // local dev against an enforcing project, set VITE_APPCHECK_DEBUG='true' and
 // register the debug token the console prints.
 const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY
-if (appCheckSiteKey) {
+if (appCheckSiteKey && !USE_EMULATOR) {
   if (import.meta.env.VITE_APPCHECK_DEBUG === 'true' && typeof self !== 'undefined') {
     // eslint-disable-next-line no-undef
     self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
@@ -95,6 +104,20 @@ export const storage = getStorage(app)
 // verification); future callables (e.g. reCAPTCHA-protected mutations)
 // would register here.
 export const functions = getFunctions(app, 'asia-southeast1')
+
+// Point every client at the local emulator suite when VITE_USE_EMULATOR=true
+// (dev only — see above). Must run before any read/write, which is the case
+// here: nothing in this module touches a service before export. Hosts use
+// 127.0.0.1 (not "localhost") to avoid the IPv6/IPv4 resolution mismatch that
+// can make the emulator unreachable on some Windows setups.
+if (USE_EMULATOR) {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectFirestoreEmulator(db, '127.0.0.1', 8080)
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001)
+  connectStorageEmulator(storage, '127.0.0.1', 9199)
+  // eslint-disable-next-line no-console
+  console.info('[firebase] Using local emulators (auth:9099 firestore:8080 functions:5001 storage:9199)')
+}
 
 // Convenience for callers that need to do a one-shot anonymous sign-in
 // before invoking a callable function (Register.jsx access-code check).

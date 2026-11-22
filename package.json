@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "emulators": "firebase emulators:start --only auth,firestore,functions,storage --project mapa-crmc",
+    "seed:emulator": "node scripts/seed-emulator.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run tests/utils",
