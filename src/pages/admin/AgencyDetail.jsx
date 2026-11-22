@@ -127,6 +127,17 @@ export default function AgencyDetail() {
   const [editCoord,       setEditCoord]       = useState(null)
   const [confirmDelete,   setConfirmDelete]   = useState(false)
   const [showDisableDialog, setShowDisableDialog] = useState(false)
+  // Phase 4 PR 4.3 (P4-D): how many open applications the disable holds. The
+  // Super Admin can't read slices, so the count comes from the server.
+  const [heldCount, setHeldCount] = useState(null)
+  useEffect(() => {
+    if (!showDisableDialog) { setHeldCount(null); return }
+    let live = true
+    httpsCallable(functions, 'countAgencyOpenSlices')({ agencyId: id })
+      .then(({ data }) => { if (live) setHeldCount(data.total) })
+      .catch(() => { if (live) setHeldCount(null) })
+    return () => { live = false }
+  }, [showDisableDialog, id])
   // Holds the coordinator pending promote/demote confirmation, or null.
   const [promotionTarget, setPromotionTarget] = useState(null)
   const [promoting,         setPromoting]         = useState(false)
@@ -792,6 +803,13 @@ export default function AgencyDetail() {
               <h2 id="disable-modal-title" className="text-base font-semibold text-gray-900">Disable {agency.name}?</h2>
               <p className="text-xs text-gray-500 mt-1">
                 New endorsements stop at once. Applications already with this agency are held: patients see an "Application paused" notice until you re-enable, and each hospital's gateway can re-endorse them to another agency.
+              </p>
+              <p className="text-xs text-gray-700 mt-2">
+                {heldCount == null
+                  ? 'Checking open applications…'
+                  : heldCount === 0
+                    ? 'No applications are open at this agency.'
+                    : `${heldCount} open application${heldCount === 1 ? ' is' : 's are'} held. If the agency is still disabled after each hospital's time limit (7 days by default), they close as "agency unavailable".`}
               </p>
             </div>
 

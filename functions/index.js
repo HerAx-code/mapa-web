@@ -17,7 +17,9 @@ const { glExpirySweep }          = require('./src/glExpirySweep')
 const { purgeDeclinedOnboarding } = require('./src/purgeDeclinedOnboarding')
 const { verifyAccessCode }       = require('./src/verifyAccessCode')
 const { syncRequestFinancials }  = require('./src/syncRequestFinancials')
-const { onAgencyWritten, resyncAgenciesPublic } = require('./src/onAgencyWritten')
+const { onAgencyWritten, resyncAgenciesPublic, countAgencyOpenSlices } = require('./src/onAgencyWritten')
+// Phase 4 PR 4.3: how many open applications a partner removal or disable affects.
+exports.countAgencyOpenSlices = countAgencyOpenSlices
 const { purgeSelfieOnClose }     = require('./src/purgeSelfieOnClose')
 const { onRequestWritten }       = require('./src/onRequestWritten')
 const { onSliceProceeded }       = require('./src/onSliceProceeded')
