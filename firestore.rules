@@ -969,7 +969,21 @@ service cloud.firestore {
                        ]))) &&
                       (!('accessCodePrefix' in request.resource.data) ||
                        request.resource.data.accessCodePrefix == resource.data.get('accessCodePrefix', '') ||
-                       prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId));
+                       prefixHeldBy(request.resource.data.accessCodePrefix, hospitalId)) &&
+                      onboardingOpenOk();
+    }
+
+    // Phase 5 PR 5.1 (N6): a hospital set up from onboarding opens patient
+    // sign-ups only at go-live — the write that sets onboarding.stage 'live'.
+    // The training hospital is open for practice.
+    function onboardingOpenOk() {
+      let ob = resource.data.get('onboarding', null);
+      return ob == null ||
+        ob.get('training', false) == true ||
+        ob.get('stage', '') == 'live' ||
+        resource.data.get('enabled', true) == true ||
+        request.resource.data.get('enabled', true) == false ||
+        request.resource.data.get('onboarding', {}).get('stage', '') == 'live';
     }
 
     // ── hospitalsPublicStats ──────────────────────────────────────────────────
@@ -1539,6 +1553,8 @@ service cloud.firestore {
         'hospitalid_issued',
         // Phase 4: the case timers and partnership endings.
         'request_auto_closed', 'slice_not_accepted', 'slice_partner_ended', 'slice_agency_unavailable',
+        // Phase 5 PR 5.1: written by onSliceProceeded.
+        'patient_proceeded',
       ];
     }
     // The actor fields equal the writer's own profile (no "as Hospital Admin").

@@ -287,6 +287,8 @@ export default function AgencyDetail() {
     try {
       const total = agency.slots?.total ?? 25
       await updateDoc(doc(db, 'agencies', id), { 'slots.remaining': total })
+      // Phase 5 PR 5.1 (N4): every admin action leaves an entry.
+      logAudit(user, { action: 'agency_slots_reset', targetType: 'agency', targetId: id, targetName: agency.name, details: `Today's remaining slots reset to ${total}` })
       toast.success(`Slots reset to ${total}.`)
     } catch (err) { console.error(err); toast.error('Failed to reset slots.') }
   }
@@ -350,6 +352,7 @@ export default function AgencyDetail() {
     try {
       await sendPasswordResetEmail(auth, coord.email)
       await notify(coord.uid, { type: 'password_reset_sent', title: 'Password Reset Email Sent', body: 'A password reset link has been sent to your email.' })
+      logAudit(user, { action: 'password_reset_sent', targetType: 'account', targetId: coord.uid, targetName: coord.name ?? coord.email, details: `Password reset email sent to ${coord.email}` })
       toast.success(`Password reset email sent to ${coord.email}.`)
     } catch (err) { console.error(err); toast.error('Failed to send reset email.') }
   }

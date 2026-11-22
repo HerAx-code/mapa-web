@@ -335,6 +335,8 @@ export default function Accounts() {
         type: 'password_reset_sent', title: 'Password Reset Email Sent',
         body: 'A password reset link has been sent to your email by the administrator.',
       })
+      // Phase 5 PR 5.1 (N4): every admin action leaves an entry.
+      logAudit(currentUser, { action: 'password_reset_sent', targetType: 'account', targetId: account.uid, targetName: account.name ?? account.email, details: `Password reset email sent to ${account.email}` })
       toast.success(`Password reset email sent to ${account.email}.`)
     } catch (err) { console.error(err); toast.error('Failed to send reset email.') }
   }

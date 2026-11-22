@@ -15,10 +15,22 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
  * (both onDocumentWritten triggers fire independently). Testable-handler pattern.
  */
 
-async function handleSliceProceeded({ db, before, after, serverTimestamp }) {
+async function handleSliceProceeded({ db, before, after, serverTimestamp, appId = null }) {
   if (!(before?.status === 'endorsed' && after?.status === 'reviewing')) {
     return { skipped: 'not-a-proceed' }
   }
+  // Phase 5 PR 5.1 (L1): the case timeline's "patient accepted" entry is
+  // written here. Patients write no audit entries since Phase 3 PR 3.5, so the
+  // browser's own entry was being refused and lost.
+  await db.collection('auditLog').add({
+    action: 'patient_proceeded', actorId: after.patientId ?? 'system', actorName: after.patientName ?? '',
+    actorRole: 'patient', actorAgencyId: null,
+    targetType: 'application', targetId: appId ?? '', targetName: after.patientName ?? '',
+    details: `Patient confirmed coverage plan; slice handed off to ${after.agencyName ?? 'agency'} for funding review`,
+    requestId: after.requestId ?? null, patientId: after.patientId ?? null,
+    ...(after.tenantId ? { tenantId: after.tenantId } : {}),
+    createdAt: serverTimestamp(),
+  })
   const agencyId = after.agencyId
   if (!agencyId) return { skipped: 'no-agency' }
 
@@ -54,7 +66,7 @@ exports.onSliceProceeded = onDocumentWritten({
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
   try {
     const result = await handleSliceProceeded({
-      db: getFirestore(), before, after,
+      db: getFirestore(), before, after, appId: event.params?.appId ?? null,
       serverTimestamp: () => FieldValue.serverTimestamp(),
     })
     if (result.notified) logger.info('[onSliceProceeded] notified agency', result)
