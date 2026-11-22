@@ -142,6 +142,76 @@ async function handleResyncAgenciesPublic({ callerUid, db, serverTimestamp }) {
   return { written, pruned }
 }
 
+// ── Phase 4 PR 4.3 (P4-D, gaps M2, M13): partnership endings and disables ──
+// Removing a hospital from partnerHospitalIds closes that hospital's open
+// slices at this agency at once (the partnership is over; the hospital can
+// endorse elsewhere). Disabling stamps disabledAt so the daily caseTimers can
+// release slices held longer than the hospital's limit; re-enabling clears it.
+const OPEN = ['endorsed', 'reviewing', 'awaiting_info']
+const partnersOf = (a) => {
+  const { DEFAULT_HOSPITAL_ID } = require('./orgConfig')
+  return Array.isArray(a?.partnerHospitalIds) ? a.partnerHospitalIds : [DEFAULT_HOSPITAL_ID]
+}
+
+async function handleAgencyEndings({ db, agencyId, before, after, serverTimestamp, deleteField = () => FieldValue.delete(), sliceOverrides = {} }) {
+  if (!before || !after) return { skipped: 'create-or-delete' }
+  const out = { closed: 0, disabledAt: null }
+  const ref = db.collection('agencies').doc(agencyId)
+  if (before.enabled !== false && after.enabled === false && !after.disabledAt) {
+    await ref.update({ disabledAt: serverTimestamp() })
+    out.disabledAt = 'set'
+  } else if (after.enabled !== false && after.disabledAt) {
+    await ref.update({ disabledAt: deleteField() })
+    out.disabledAt = 'cleared'
+  }
+
+  const removed = partnersOf(before).filter((h) => !partnersOf(after).includes(h))
+  if (!removed.length) return out
+  const { closeSliceCore } = require('./sliceActions')
+  const slices = await db.collection('applications').where('agencyId', '==', agencyId).get()
+  const name = after.name ?? 'The agency'
+  for (const d of slices.docs.filter((x) => OPEN.includes(x.data().status) && removed.includes(x.data().tenantId))) {
+    const s = d.data()
+    try {
+      const done = await closeSliceCore({
+        db, sliceRef: d.ref, from: OPEN, closedAs: 'partner_ended',
+        reason: `${name} no longer partners with this hospital.`,
+        actor: { uid: 'system', name: 'MAPA (automatic)', role: 'system', system: 'partner_ended', tenantId: s.tenantId },
+        auditAction: 'slice_partner_ended',
+        patient: { type: 'app_advanced', title: 'Application closed', body: `${name} no longer works with your hospital, so your application to it was closed. The hospital may endorse your request to another agency.` },
+        hospital: { type: 'app_advanced', title: `${name} no longer partners with your hospital`, body: `${s.patientName ?? 'A patient'}'s endorsement to ${name} was closed. Endorse to another agency.` },
+        overrides: sliceOverrides,
+      })
+      if (done) out.closed++
+    } catch (err) {
+      logger.error('[onAgencyWritten] closing a slice failed', { sliceId: d.id, err: err.message })
+    }
+  }
+  return out
+}
+
+// The Super Admin can't read slices (no patient data), so the dialogs ask
+// here how many open applications a partner removal or a disable affects.
+async function handleCountAgencyOpenSlices({ callerUid, data, db }) {
+  if (!callerUid) throw new HttpsError('unauthenticated', 'Sign in required.')
+  const caller = await db.doc(`users/${callerUid}`).get()
+  if (!caller.exists || caller.data().role !== 'platform_admin') throw new HttpsError('permission-denied', 'Only the Super Admin can see this.')
+  const agencyId = data?.agencyId
+  if (typeof agencyId !== 'string' || !agencyId) throw new HttpsError('invalid-argument', 'An agency is required.')
+  const slices = await db.collection('applications').where('agencyId', '==', agencyId).get()
+  const byHospital = {}
+  for (const d of slices.docs.filter((x) => OPEN.includes(x.data().status))) {
+    const t = d.data().tenantId ?? 'unknown'
+    byHospital[t] = (byHospital[t] ?? 0) + 1
+  }
+  return { total: Object.values(byHospital).reduce((a, b) => a + b, 0), byHospital }
+}
+
+exports.handleAgencyEndings = handleAgencyEndings
+exports.handleCountAgencyOpenSlices = handleCountAgencyOpenSlices
+exports.countAgencyOpenSlices = onCall({ region: 'asia-southeast1', timeoutSeconds: 30, memory: '256MiB' },
+  async (request) => handleCountAgencyOpenSlices({ callerUid: request.auth?.uid, data: request.data, db: getFirestore() }))
+
 exports.handleAgencyWritten = handleAgencyWritten
 exports.projectPublicAgency = projectPublicAgency
 exports.handleResyncAgenciesPublic = handleResyncAgenciesPublic
@@ -159,6 +229,17 @@ exports.onAgencyWritten = onDocumentWritten({
 }, async (event) => {
   const before = event.data?.before?.exists ? event.data.before.data() : null
   const after  = event.data?.after?.exists  ? event.data.after.data()  : null
+  // Phase 4 PR 4.3: partnership endings and the disable stamp (own try, so a
+  // failure here never blocks the public projection, and vice versa).
+  try {
+    const endings = await handleAgencyEndings({
+      db: getFirestore(), agencyId: event.params.agencyId, before, after,
+      serverTimestamp: () => FieldValue.serverTimestamp(),
+    })
+    if (endings.closed || endings.disabledAt) logger.info('[onAgencyWritten] endings', { agencyId: event.params.agencyId, ...endings })
+  } catch (err) {
+    logger.error('[onAgencyWritten] endings failed', { agencyId: event.params?.agencyId, err: err.message })
+  }
   try {
     const result = await handleAgencyWritten({
       db: getFirestore(),

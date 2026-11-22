@@ -1,6 +1,6 @@
 # Phase 4 plan — case endings (T5)
 
-Status: **plan accepted 2026-11-22 (P4-A to P4-E); PR 4.1 merged and deployed (#424); PR 4.2 built on `feat/case-timers`.** Phases 1–3 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md). Source: the MAPA process-logic gap map, theme T5 (endings), and its proposed decisions D2, D3 and D8. Each gap below was re-checked against `main` at f713150.
+Status: **plan accepted 2026-11-22 (P4-A to P4-E); PR 4.1 merged and deployed (#424); PR 4.2 merged and deployed (#425); PR 4.3 built on `feat/partnership-endings`.** Phases 1–3 are shipped (docs/phase1-messages-accounts-plan.md, docs/phase2-money-plan.md, docs/phase3-evidence-codes-plan.md). Source: the MAPA process-logic gap map, theme T5 (endings), and its proposed decisions D2, D3 and D8. Each gap below was re-checked against `main` at f713150.
 
 ## What Phase 4 fixes
 
@@ -117,6 +117,11 @@ Why: unlike Proceed, the agency asked for something specific and is best placed 
 
    The count comes from a small `countAgencyOpenSlices` callable, since the Super Admin can't read slices.
 3. **Tests:** trigger tests for partner removal (only that hospital's open slices close) and for `disabledAt`.
+4. **As built:**
+   - **`handleAgencyEndings`** (functions/src/onAgencyWritten.js) runs in the same trigger as the public projection, in its own try block. It closes slices with `closedAs: 'partner_ended'` and audit action `slice_partner_ended`.
+   - **`countAgencyOpenSlices`** is Super Admin only and returns counts per hospital, never patient data.
+   - **Partner hospitals card:** removing a partner with open applications asks first ("Remove and close them").
+   - **Disable dialog:** shows how many open applications are held.
 
 ## Deploy order (each PR)
 1. Regenerate the bundle; deploy the functions.

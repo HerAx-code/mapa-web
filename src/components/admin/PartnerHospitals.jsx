@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import toast from 'react-hot-toast'
-import { db } from '../../firebase'
+import { db, functions, httpsCallable } from '../../firebase'
 import { logAudit } from '../../utils/auditLog'
 import { partnerHospitalIdsOf } from '../../utils/hospitals'
 import { useHospitals, hospitalLabel } from '../../hooks/useHospitals'
@@ -37,14 +37,30 @@ export default function PartnerHospitalsCard({ agency, canEdit, user }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(current)
   const [saving, setSaving] = useState(false)
+  // Phase 4 PR 4.3 (P4-D): removing a partner closes that hospital's open
+  // applications at this agency, so the admin confirms with the count first.
+  const [closing, setClosing] = useState(null) // { n, names } awaiting confirmation
   const currentKey = current.join(',')
   useEffect(() => { if (!editing) setDraft(current) }, [currentKey, editing]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const byId = Object.fromEntries(hospitals.map((h) => [h.id, h]))
   const legacy = !Array.isArray(agency.partnerHospitalIds)
 
-  const save = async () => {
+  const save = async ({ confirmed = false } = {}) => {
     if (!draft.length) { toast.error('Pick at least one hospital. To stop all endorsements, disable the agency instead.'); return }
+    const removed = current.filter((id) => !draft.includes(id))
+    if (removed.length && !confirmed) {
+      try {
+        const { data } = await httpsCallable(functions, 'countAgencyOpenSlices')({ agencyId: agency.id })
+        const n = removed.reduce((sum, id) => sum + (data.byHospital?.[id] ?? 0), 0)
+        if (n > 0) { setClosing({ n, names: removed.map((id) => hospitalLabel(byId[id]) || id) }); return }
+      } catch (err) {
+        console.error(err)
+        toast.error('Could not check open applications. Try again.')
+        return
+      }
+    }
+    setClosing(null)
     setSaving(true)
     try {
       await updateDoc(doc(db, 'agencies', agency.id), { partnerHospitalIds: draft, updatedAt: serverTimestamp() })
@@ -77,9 +93,21 @@ export default function PartnerHospitalsCard({ agency, canEdit, user }) {
           <PartnerHospitalPicker hospitals={hospitals} value={draft} onChange={setDraft} disabled={saving} />
           <p className="text-xs text-gray-500 mt-2">Only these hospitals' gateways can endorse patients to this agency.</p>
           <div className="flex gap-2 justify-end mt-3">
-            <button className="btn-secondary text-xs" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
-            <button className="btn-primary text-xs" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+            <button className="btn-secondary text-xs" onClick={() => { setEditing(false); setClosing(null) }} disabled={saving}>Cancel</button>
+            <button className="btn-primary text-xs" onClick={() => save()} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
           </div>
+          {closing && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900" role="alert">
+              <p>
+                Removing {closing.names.join(', ')} closes <strong>{closing.n} open application{closing.n === 1 ? '' : 's'}</strong> at
+                this agency. The hospital and the patients are told, and the hospital can endorse them elsewhere.
+              </p>
+              <div className="flex gap-2 justify-end mt-2">
+                <button className="btn-secondary text-xs" onClick={() => setClosing(null)} disabled={saving}>Keep them</button>
+                <button className="btn-danger text-xs" onClick={() => save({ confirmed: true })} disabled={saving}>Remove and close them</button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <>
