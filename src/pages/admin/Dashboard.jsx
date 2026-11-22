@@ -163,7 +163,7 @@ export default function AdminDashboard() {
   // here to avoid double-flagging.
   useEffect(() => {
     const u1 = onSnapshot(
-      query(collection(db, 'applications'), ...tenantWhere(), where('status', 'in', ['pending', 'reviewing', 'awaiting_info'])),
+      query(collection(db, 'applications'), ...tenantWhere(), where('status', 'in', ['reviewing', 'awaiting_info'])),
       snap => {
         const stale = snap.docs
           .map(d => ({ id: d.id, ...d.data() }))

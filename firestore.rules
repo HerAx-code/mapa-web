@@ -427,7 +427,6 @@ service cloud.firestore {
         // Phase 2 PR 2.3: only the status moves (no amounts, letters or notes).
         (isPatient() && resource.data.patientId == uid() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) && (
-          (resource.data.status == 'pending'       && request.resource.data.status == 'rejected') ||
           (resource.data.status == 'awaiting_info' && request.resource.data.status == 'reviewing') ||
           // Co-funding: patient accepts the coverage plan, advancing their
           // endorsed slice into the agency's review queue.
@@ -1173,8 +1172,7 @@ service cloud.firestore {
     // code unauthenticated: Register.jsx signs the user in anonymously before
     // the verify step, and the atomic claim runs a `tx.get` after the real
     // account is created (createUserWithEmailAndPassword) -- both are isAuth().
-    // Agencies get() the parent to read cooldown fields at approval; admins
-    // manage codes. Closing the previous `allow get: if true` removes the
+    // Admins manage codes. Closing the previous `allow get: if true` removes the
     // unauthenticated code-existence probe (NFR-04 deny-by-default); the parent
     // carries no PII (the patient name lives behind the auth-gated privateInfo
     // sub-collection, and patId is an opaque uid). An anon-authenticated probe
@@ -1298,14 +1296,9 @@ service cloud.firestore {
                         request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['status', 'patId', 'date', 'time']) &&
                         codeClaimProofOk(hospitalId)) ||
-                       // #9 — Agencies (and agency admins) may stamp the
-                       // cooldown fields when approving or reversing an
-                       // approval, but cannot touch status / usedBy / patId.
-                       // Tracking cooldown here (keyed by the human's the gateway
-                       // ID, not by the per-account UID) makes the 30-day
-                       // lock survive account-deletion + re-registration.
-                       (isAgency() &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cooldownUntilAt', 'lastApprovedAt'])) ||
+                       // Phase 2 PR 2.4: the agency branch that stamped cooldown
+                       // fields here is gone — the repeat limit lives in
+                       // approvalMarks, written by decideSlice.
                        // Marketplace: the code's patient binds it to the request
                        // they're filing, once (a code backs one request).
                        // Phase 3A: a course code binds to each new request in turn while

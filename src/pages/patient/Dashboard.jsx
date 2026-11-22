@@ -394,7 +394,7 @@ export default function PatientDashboard() {
   // sentence so the patient knows the score before scrolling.
   const greetingStatus = (() => {
     if (loading) return null
-    if (activeStatus && ['pending','reviewing','awaiting_info','interview','approved','certificate'].includes(activeStatus)) {
+    if (activeStatus && ['reviewing','awaiting_info','approved','certificate'].includes(activeStatus)) {
       return t(`patient.dashboard.greeting.${activeStatus}`)
     }
     if (appCount > 0)             return t('patient.dashboard.greeting.rejected')

@@ -1,6 +1,6 @@
 # Phase 2 plan — money on the server (T8, then T3)
 
-Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 merged and deployed (#416); PR 2.3 built on `feat/agency-decisions-on-server`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
+Status: **plan accepted 2026-11-22 (P2-A to P2-F, including esbuild as a devDependency); PR 2.1 merged and deployed (#413, #415); PR 2.2 merged and deployed (#416); PR 2.3 merged and deployed (#417); PR 2.4 built on `feat/budget-reconcile`.** Source: the MAPA process-logic gap map (themes T8 and T3, decisions D4, D5, D10). Phase 1 is shipped (docs/phase1-messages-accounts-plan.md).
 
 ## What Phase 2 fixes
 
@@ -75,7 +75,7 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 4. **Pages:** the Endorse modal and Reject / Close call the functions. The Requests page's network-wide daily slot reset is removed (R1); `resetAgencySlots` also resets `hospitalSlots`.
 5. **Tests:** functions tests for the gate, the race (request closed mid-endorse), slots per hospital, the second-person rule by uid; rules tests that a hospital can no longer create a slice or touch an agency's slots.
 
-## PR 2.3 — Agency decisions and letters on the server (T3 part 2) — built
+## PR 2.3 — Agency decisions and letters on the server (T3 part 2) — shipped
 1. **`decideSlice({ sliceId, action, ... })`** — agency staff of the slice's agency; one transaction re-reading the slice, the request, the agency and the repeat-limit mark:
    - `request_info` / `resume` (reviewing ↔ awaiting_info);
    - `approve`: only from `reviewing` (I2); request open; partnership still current (M13); amount ≤ endorsed, ≤ the **maximum per approval** (renamed, D10), ≤ the budget headroom when an allocation is set (P2-C), and for outpatients ≤ the charge minus what other agencies cover (N2); repeat limit or a written override; writes the slice, the letter (`glStatus: issued`, `glExpiresAt`), the mark, `budget.committed`, the request totals, audit and notifications;
@@ -87,7 +87,14 @@ Why: the endorse gate alone pulls in ~800 lines (intake completeness, validation
 6. **Tests:** functions tests for every action, including two approvals at once (only one succeeds, the budget counted once) and the sweep racing a redemption; rules tests that agencies can't write money fields.
 7. **As built:** `functions/src/sliceActions.js`. The signed-letter upload still writes its own `certificates/` doc and the slice's `certificateUploaded` flag from the browser (no money; the rules allow agency staff only that flag and `caseNotes`). Also: the agency Dashboard's browser slot reset is gone (resetAgencySlots), the Agency Admin can no longer rewrite `committed` / `disbursed` (a new period may start disbursed at 0 once nothing is committed), and patients may move only a slice's status.
 
-## PR 2.4 — Repair and cleanup
+## PR 2.4 — Repair and cleanup — built
+**As built (2026-11-22):**
+- **The budget reconcile found no drift.** The report run of `scripts/reconcile-agency-budgets.mjs` found all 7 agencies' `committed` and `disbursed` equal to their slices, so nothing was written. The script stays for future repairs. Each agency is fixed in its own transaction; `disbursed` counts the current budget period only.
+- **No legacy statuses remain.** No slice in production is `pending` or `interview`, so both left the shared lists, `decideSlice` (`start_review`), the agency's Start Review button, the patient's pending → rejected rule and the status queries. Display labels for them stay, harmless.
+- **Cooldown leftovers are gone.** The rules branch letting agencies stamp `cooldownUntilAt` / `lastApprovedAt` on access codes was removed (nothing writes them). A reversal now keeps the approval date as `reversedApprovalAt` for the Funds ledger.
+- **The disable-agency auto-reject was dead code, and was dropped.** Only the Super Admin can disable an agency, and its dialog already only holds in-flight applications. That browser branch could never run.
+
+Planned:
 - The Super Admin's "disable agency and reject its open applications" (admin/AgencyDetail) writes slices from the browser, which the rules have refused since before Phase 2; move it to a function (reusing decideSlice's reject) or drop the cascade.
 - `scripts/reconcile-agency-budgets.mjs` (P2-D): report, then write on your OK.
 - Remove what PRs 2.2–2.3 left unused: the old cooldown path (`cooldownUntilAt` written on reversal, the rules branch letting agencies stamp cooldown fields on access codes), legacy statuses handled in lists (`pending`, `interview`).

@@ -13,7 +13,7 @@ const {
  * The agency's decisions and letters, on the server (Phase 2 PR 2.3 —
  * docs/phase2-money-plan.md):
  *
- *   decideSlice  — start_review, request_info, resume, approve, reject.
+ *   decideSlice  — request_info, resume, approve, reject.
  *                  Approve only from "reviewing" (I2), on an open request,
  *                  from a current partner (M13), within the endorsed amount,
  *                  the agency's maximum per approval, its budget headroom when
@@ -129,7 +129,7 @@ async function afterChange(db, caller, slice, sliceId, { action, details, patien
 
 // ── decideSlice ────────────────────────────────────────────────────────────
 
-const ACTIONS = ['start_review', 'request_info', 'resume', 'approve', 'reject']
+const ACTIONS = ['request_info', 'resume', 'approve', 'reject']
 
 async function handleDecideSlice({ callerUid, data, db, ...overrides }) {
   const deps = { ...defaultDeps, ...overrides }
@@ -154,12 +154,6 @@ async function handleDecideSlice({ callerUid, data, db, ...overrides }) {
     const s = c.slice
     if (s.status === 'closed') fail('failed-precondition', 'The hospital closed this application.')
 
-    if (action === 'start_review') {
-      if (s.status !== 'pending') fail('failed-precondition', 'This application is not waiting for a review to start.')
-      writeSliceChange(tx, c, { status: 'reviewing' }, null, deps)
-      return { c, from: s.status, to: 'reviewing' }
-    }
-
     if (action === 'request_info') {
       if (!['reviewing', 'awaiting_info'].includes(s.status)) fail('failed-precondition', 'You can ask for more information only while reviewing.')
       if (!input.message) fail('invalid-argument', 'Say what the patient needs to send.')
@@ -180,7 +174,7 @@ async function handleDecideSlice({ callerUid, data, db, ...overrides }) {
     }
 
     if (action === 'reject') {
-      if (!['pending', 'reviewing', 'awaiting_info'].includes(s.status)) fail('failed-precondition', 'Only an application under review can be rejected.')
+      if (!['reviewing', 'awaiting_info'].includes(s.status)) fail('failed-precondition', 'Only an application under review can be rejected.')
       if (!input.reason) fail('invalid-argument', 'Give the reason for rejecting.')
       writeSliceChange(tx, c, { status: 'rejected', rejectionReason: input.reason, rejectedAt: deps.serverTimestamp(), rejectedByUid: caller.uid }, null, deps)
       // A slot taken today goes back to the hospital it came from (N1: the
@@ -301,11 +295,6 @@ async function handleDecideSlice({ callerUid, data, db, ...overrides }) {
       patient: { type: 'awaiting_info_requested', title: 'Information requested by your agency', body: `${agencyName} is asking you to: ${input.message}` },
       hospital: { type: 'app_advanced', title: `${agencyName} requested more info from the patient`, body: `${s.patientName ?? 'The patient'}'s endorsed slice paused — agency needs: "${input.message}".` },
     })
-  } else if (action === 'start_review') {
-    await afterChange(db, caller, s, sliceRef.id, {
-      action: 'slice_advanced', details: transition,
-      patient: { type: 'app_advanced', title: 'Application under review', body: `${caller.name ?? 'Your agency'} from ${agencyName} has started reviewing your application.` },
-    })
   } else {
     await afterChange(db, caller, s, sliceRef.id, { action: 'slice_advanced', details: transition })
   }
@@ -374,6 +363,8 @@ async function handleSettleLetter({ callerUid, data, db, ...overrides }) {
     if (s.glStatus !== 'issued') fail('failed-precondition', 'Only an open letter can be reversed (not one redeemed or expired).')
     writeSliceChange(tx, c, {
       status: 'reviewing', approvedAt: null, glStatus: null, glExpiresAt: null, glRedeemedAt: null,
+      // Kept so the Funds ledger still shows when the reversed approval was made.
+      reversedApprovalAt: s.approvedAt ?? null,
       reversedAt: deps.serverTimestamp(), reversedBy: caller.name ?? '', reversedByUid: caller.uid,
     }, { committed: -amount }, deps)
     return { c, amount }

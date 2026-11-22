@@ -295,9 +295,6 @@ export default function ApplicationDetail() {
   const decide = (action, extra = {}) => decideSlice({ sliceId: app.id, action, ...extra })
   const settle = (action, extra = {}) => settleLetter({ sliceId: app.id, action, ...extra })
 
-  const handleStartReview = () =>
-    runAction(() => decide('start_review'), 'Application moved to Reviewing.', 'Failed to update application.')
-
   const handleRequestInfo = async (message) => {
     const ok = await runAction(() => decide('request_info', { message }),
       'Patient notified. Application paused from the urgent queue.', 'Failed to request more information.')
@@ -488,7 +485,6 @@ export default function ApplicationDetail() {
     signedScan,
     navigate,
     handlers: {
-      handleStartReview,
       handlePrintGL,
       handleRedeemGL,
       handleExpireGL,
