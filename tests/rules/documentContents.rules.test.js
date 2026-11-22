@@ -30,13 +30,13 @@ async function seedUser(uid, role, agencyId = null) {
 // Seed the parent documents metadata doc with a specific agencyIds[] —
 // the documentContents read rule uses get() against this. Without it,
 // the chain returns null and the rule denies (correctly).
-async function seedDocumentMeta(docId, patientId, agencyIds = []) {
+async function seedDocumentMeta(docId, patientId, agencyIds = [], status = 'verified') {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), 'documents', docId), {
       patientId,
       patientName: 'Test Patient',
       name: 'Test Doc',
-      status: 'verified',
+      status,
       agencyIds,
       tenantId: 'hospital-1',   // post-backfill (multi-hospital Phase 5)
     })
@@ -119,7 +119,9 @@ describe('documentContents.read — Phase 0.2 cross-agency leak fix', () => {
 // Cap at 1MB so a malicious actor can't push 999KB blobs in a loop.
 describe('documentContents.update — Phase 1.2 size cap', () => {
   beforeEach(async () => {
-    await seedDocumentMeta('doc-1', 'patient-1', ['malasakit'])
+    // A pending, never-endorsed parent: since Phase 3 PR 3.1 a patient may
+    // change content only then (documentsEvidence.rules.test.js covers the lock).
+    await seedDocumentMeta('doc-1', 'patient-1', [], 'pending')
     await seedDocumentContent('doc-1', 'patient-1')
   })
 

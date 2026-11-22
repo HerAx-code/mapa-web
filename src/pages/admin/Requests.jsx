@@ -5,7 +5,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
   collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, updateDoc,
-  serverTimestamp, arrayUnion, writeBatch,
+  serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db, functions, httpsCallable } from '../../firebase'
 import { ORG } from '../../config/org'
@@ -658,25 +658,13 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
         checks: newStatus === 'verified' && checks ? { items: checks, by: user.name ?? '', byUid: user.uid } : null,
         issuedOn: newStatus === 'verified' && issuedOn ? issuedOn : null,
       })
-      const isAttached = (request.attachedDocuments ?? []).some(a => a.documentId === docItem.id)
-      const updatedAttached = isAttached
-        ? (request.attachedDocuments ?? []).map(a => a.documentId === docItem.id ? { ...a, status: newStatus } : a)
-        // Phase 2C: a late upload joins the request once staff verify it.
-        : newStatus === 'verified'
-          ? [...(request.attachedDocuments ?? []), {
-              documentId: docItem.id, name: docItem.name, documentTypeName: docItem.documentTypeName ?? docItem.name,
-              status: newStatus, date: docItem.date ?? '',
-            }]
-          : (request.attachedDocuments ?? [])
-      // …and the agencies already endorsed may read it.
-      if (!isAttached && newStatus === 'verified' && (request.agencyIds ?? []).length > 0) {
-        await updateDoc(doc(db, 'documents', docItem.id), { agencyIds: arrayUnion(...request.agencyIds) })
+      // Phase 3 PR 3.1 (gap M4): the document owns its status. The request's
+      // document list follows it on the server (syncDocumentStatus), which
+      // also attaches a verified late upload and lets the endorsed agencies
+      // read it — so two staff reviewing at once can't overwrite each other.
+      if (request.status === 'submitted' && !isPending) {
+        await updateDoc(doc(db, 'requests', request.id), { status: 'under_review', updatedAt: serverTimestamp() })
       }
-      await updateDoc(doc(db, 'requests', request.id), {
-        attachedDocuments: updatedAttached,
-        ...(request.status === 'submitted' && !isPending ? { status: 'under_review' } : {}),
-        updatedAt: serverTimestamp(),
-      })
       logAudit(user, {
         action: newStatus === 'verified' ? 'doc_verified'
               : newStatus === 'rejected' ? 'doc_rejected'
@@ -748,14 +736,10 @@ function RequestDetail({ request, agencies, onClose, autoEndorse = false }) {
           rejectionReason: null,
         })
       })
-      const pendingIds = new Set(pendingDocs.map(d => d.id))
-      const updatedAttached = (request.attachedDocuments ?? []).map(a =>
-        pendingIds.has(a.documentId) ? { ...a, status: 'verified' } : a)
-      batch.update(doc(db, 'requests', request.id), {
-        attachedDocuments: updatedAttached,
-        ...(request.status === 'submitted' ? { status: 'under_review' } : {}),
-        updatedAt: now,
-      })
+      // The request's document list follows on the server (syncDocumentStatus).
+      if (request.status === 'submitted') {
+        batch.update(doc(db, 'requests', request.id), { status: 'under_review', updatedAt: now })
+      }
       await batch.commit()
       // Audit entries fan out after the batch commits -- logAudit writes are
       // best-effort and shouldn't block or roll back a successful bulk verify.

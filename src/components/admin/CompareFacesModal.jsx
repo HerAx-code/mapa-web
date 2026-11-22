@@ -17,7 +17,8 @@ import { useFocusTrap } from '../../hooks/useFocusTrap'
 // through the panel. Verify updates in place (buttons collapse to a badge);
 // Reject hands off to the parent's reason dialog (which closes this modal).
 const TONE = {
-  pass:    { chip: 'bg-green-50 text-green-700 border-green-200', icon: '✓' },
+  // Phase 3 PR 3.1 (M12): the patient's phone computed this; a pass is neutral.
+  pass:    { chip: 'bg-gray-50 text-gray-700 border-gray-200',    icon: '·' },
   unclear: { chip: 'bg-amber-50 text-amber-700 border-amber-200', icon: '⚠' },
   null:    { chip: 'bg-gray-50 text-gray-500 border-gray-200',    icon: '·' },
 }
@@ -75,11 +76,11 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
     : 'Could not check'
   // ID OCR name cross-check (advisory) — surfaced here too so the verifier has
   // the name signal beside the face, not only back in the panel.
-  const ocrLabel = idDoc?.ocrMatch === true ? '✓ OCR: ID name matches the account'
+  const ocrLabel = idDoc?.ocrMatch === true ? "OCR (patient's phone): ID name matches the account"
     : idDoc?.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
     : idDoc && (idDoc.ocrText || idDoc.idTypeDetected) ? 'OCR: could not auto-read — verify manually'
     : null
-  const ocrCls = idDoc?.ocrMatch === true ? 'text-green-600' : idDoc?.ocrMatch === false ? 'text-amber-600' : 'text-gray-500'
+  const ocrCls = idDoc?.ocrMatch === false ? 'text-amber-600' : 'text-gray-500'
 
   return (
     <div className="fixed inset-0 bg-black/40 z-[400] flex items-end sm:items-center justify-center sm:p-4"
@@ -102,10 +103,10 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
         {/* Advisory readout */}
         <div className="px-5 py-3 border-b border-gray-50 flex flex-wrap items-center gap-2 flex-shrink-0">
           <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${fm.chip}`}>
-            {fm.icon} Face match: {fmLabel}{score ? ` · ${score}` : ''}
+            {fm.icon} Face match (patient's phone): {fmLabel}{score ? ` · ${score}` : ''}
           </span>
           <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${lv.chip}`}>
-            {lv.icon} Liveness: {lvLabel}
+            {lv.icon} Liveness (patient's phone): {lvLabel}
           </span>
           {/* Advisory screen/photo-recapture flag — shown only when suspected, so
               a clean selfie stays uncluttered. Weak heuristic; a prompt to look
@@ -116,7 +117,7 @@ export default function CompareFacesModal({ selfieDoc, idDoc, busy = false, onVe
             </span>
           )}
           <span className="inline-flex items-center gap-1 text-xs text-gray-500 ml-auto">
-            <MdInfoOutline size={13} /> Advisory — you make the final call
+            <MdInfoOutline size={13} /> Reported by the patient's phone, not checked by MAPA — you make the final call
           </span>
         </div>
 

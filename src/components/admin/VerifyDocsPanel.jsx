@@ -9,7 +9,11 @@ import { docChecksFor, checksComplete, needsIssuedDate } from '../../utils/docCh
 
 // Advisory verdict → text colour, reusing the OCR line's green/amber/gray
 // pattern: pass = green ✓, unclear = amber ⚠, null/absent = gray "verify manually".
-const advisoryTone = (v) => v === 'pass' ? 'text-green-600' : v === 'unclear' ? 'text-amber-600' : 'text-gray-500'
+// Phase 3 PR 3.1 (M12): ID checks run on the patient's own phone and are stored
+// by it, so a "pass" is the phone's report, not a result MAPA checked: shown
+// grey, never green. A warning stays amber.
+const advisoryTone = (v) => v === 'unclear' ? 'text-amber-600' : 'text-gray-500'
+const PHONE_NOTE = "Reported by the patient's phone, not checked by MAPA — you make the final call."
 
 // ① Verify documents — the gateway document-review panel, extracted verbatim from
 // admin/Requests.jsx (redesign Phase 0: decompose the 1,700-line file). Pure
@@ -129,8 +133,8 @@ export default function VerifyDocsPanel({
                 {showOcr && (
                   <div className="mt-1 pl-6">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className={`text-xs ${d.ocrMatch === true ? 'text-green-600' : d.ocrMatch === false ? 'text-amber-600' : 'text-gray-500'}`}>
-                        {d.ocrMatch === true ? '✓ OCR: ID name matches the account'
+                      <p className={`text-xs ${d.ocrMatch === false ? 'text-amber-600' : 'text-gray-500'}`}>
+                        {d.ocrMatch === true ? "OCR (patient's phone): ID name matches the account"
                           : d.ocrMatch === false ? '⚠ OCR: name not auto-matched — verify manually'
                           : 'OCR: could not auto-read — verify manually'}
                       </p>
@@ -168,13 +172,13 @@ export default function VerifyDocsPanel({
                 {showFace && (
                   <div className="mt-1 pl-6 space-y-0.5">
                     <p className={`text-xs ${advisoryTone(d.faceMatch)}`}>
-                      {d.faceMatch === 'pass' ? '✓ Face match: likely the same person'
+                      {d.faceMatch === 'pass' ? "Face match (patient's phone): likely the same person"
                         : d.faceMatch === 'unclear' ? '⚠ Face match: unclear — compare manually'
                         : 'Face match: could not check — compare manually'}
                       {typeof d.faceMatchScore === 'number' && <span className="text-gray-500"> · {d.faceMatchScore.toFixed(2)}</span>}
                     </p>
                     <p className={`text-xs ${advisoryTone(d.liveness)}`}>
-                      {d.liveness === 'pass' ? '✓ Liveness: looks like a live capture'
+                      {d.liveness === 'pass' ? "Liveness (patient's phone): looks like a live capture"
                         : d.liveness === 'unclear' ? '⚠ Liveness: hard to confirm — compare manually'
                         : 'Liveness: could not check'}
                     </p>
@@ -186,7 +190,7 @@ export default function VerifyDocsPanel({
                           <MdCompareArrows size={13} /> Compare with ID side-by-side
                         </button>
                       )}
-                      <span className="text-[11px] text-gray-500 italic">Advisory — you make the final call.</span>
+                      <span className="text-[11px] text-gray-500 italic">{PHONE_NOTE}</span>
                     </div>
                   </div>
                 )}
@@ -279,7 +283,7 @@ function idSourceCheck(idDoc) {
   const pcn = idDoc.pcnLast4 ? ` · PCN ${idDoc.pcnLast4}` : ''
   if (m === 'philid_qr') {
     return idDoc.philIdSigValid === true
-      ? { label: `National ID · PSA signature valid${pcn}`, tone: 'text-green-600' }
+      ? { label: `National ID · the patient's phone reports the PSA signature valid${pcn}`, tone: 'text-gray-600' }
       : { label: `National ID · signature unverified${pcn}`, tone: 'text-amber-600' }
   }
   if (m === 'pcn_manual') return { label: `PCN entered manually · unverified${pcn}`, tone: 'text-amber-600' }
@@ -324,20 +328,20 @@ function IdentityReview({ idDoc, selfieDoc, accountName, busy, onView, onCompare
   const src = idSourceCheck(idDoc)
 
   const nameCheck = idDoc?.ocrMatch === true
-    ? { value: 'Matches account', tone: 'text-green-600' }
+    ? { value: 'Matches account (phone)', tone: 'text-gray-600' }
     : idDoc?.ocrMatch === false
       ? { value: 'Not auto-matched — check', tone: 'text-amber-600' }
       : { value: 'Could not auto-read — check', tone: 'text-gray-500' }
 
   const face = selfieDoc?.faceMatch
   const faceCheck = face === 'pass'
-    ? { value: 'Likely same person', tone: 'text-green-600' }
+    ? { value: 'Likely same person (phone)', tone: 'text-gray-600' }
     : face === 'unclear' ? { value: 'Unclear — compare', tone: 'text-amber-600' }
     : { value: 'Could not check — compare', tone: 'text-gray-500' }
 
   const live = selfieDoc?.liveness
   const liveCheck = live === 'pass'
-    ? { value: 'Pass', tone: 'text-green-600' }
+    ? { value: 'Pass (phone)', tone: 'text-gray-600' }
     : live === 'unclear' ? { value: 'Unclear', tone: 'text-amber-600' }
     : { value: 'Could not check', tone: 'text-gray-500' }
 
@@ -381,6 +385,7 @@ function IdentityReview({ idDoc, selfieDoc, accountName, busy, onView, onCompare
             <DuplicateAccountCheck patientId={idDoc?.patientId ?? selfieDoc?.patientId} />
             <CheckRow label="Access code" value="Issued in person · ID seen at counter" last />
           </div>
+          <p className="text-[11px] text-gray-500 italic mt-2">ID source, name, face and liveness: {PHONE_NOTE.charAt(0).toLowerCase() + PHONE_NOTE.slice(1)}</p>
         </div>
       </div>
 

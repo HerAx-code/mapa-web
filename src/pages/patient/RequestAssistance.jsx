@@ -184,6 +184,10 @@ export default function RequestAssistance() {
   // Remembers the rep ID/selfie doc ids created during a submit so a retry after
   // a partial failure REPLACES them instead of creating duplicate rep docs.
   const repDocsRef     = useRef({ id: null, selfie: null })
+  // Documents created by THIS filing attempt, by type: a retry after a partial
+  // failure replaces these (still pending, never endorsed) instead of adding
+  // duplicates. Earlier cases' documents are never touched (P3-A, gap I8).
+  const filingDocsRef  = useRef({})
   const faceResults    = useRef({ patient: null, rep: null }) // face-match (from the pair)
   const selfieLiveness = useRef({ patient: null, rep: null }) // liveness (from the capture modal)
   const faceChecked    = useRef({ patient: null, rep: null })
@@ -524,8 +528,10 @@ export default function RequestAssistance() {
     }
   }
 
-  // Re-upload a rejected document in place (keeps the same id so every slice
-  // referencing it picks up the new file + reset status).
+  // Re-upload a rejected document. In place (same id) while it was never sent
+  // to an agency; once endorsed it is evidence, so the fix is a new document
+  // on the active request that supersedes it (P3-A) — the hospital sees it as
+  // "Added after filing" and verifying it gives the agencies access.
   const reuploadDoc = (docId) => async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -534,7 +540,12 @@ export default function RequestAssistance() {
     if (err) { toast.error(err); return }
     setReplacing(docId)
     try {
-      await replacePatientDocument({ docId, file, user })
+      const d = myDocs.find((x) => x.id === docId)
+      if ((d?.agencyIds?.length ?? 0) > 0 && activeRequest?.id) {
+        await uploadPatientDocument({ file, typeName: d.documentTypeName ?? d.name, user, requestId: activeRequest.id, supersedes: docId })
+      } else {
+        await replacePatientDocument({ docId, file, user })
+      }
       toast.success(t('patient.request.reuploadOk'))
     } catch {
       toast.error(t('patient.request.reuploadErr'))
@@ -732,12 +743,12 @@ export default function RequestAssistance() {
 
     setSubmitting(true)
     try {
-      // Upload each attached required document before snapshotting. Replace a
-      // same-type doc in place so we never create duplicates on retry --
-      // when this loop fails partway, the patient's `myDocs` snapshot
-      // already includes whatever uploaded successfully, so the next
-      // attempt routes those through replacePatientDocument instead of
-      // creating fresh duplicates. R26: per-doc try/catch so a failure
+      // Upload each attached required document before snapshotting. Every
+      // file is a NEW document (P3-A): an earlier case's document of the same
+      // type stays as it was, and the new one records it as `supersedes`. A
+      // retry replaces only what this attempt already created
+      // (filingDocsRef), so a partial failure leaves no duplicates and no
+      // altered evidence (gaps I8, N8). R26: per-doc try/catch so a failure
       // tells the patient WHICH document broke ("Failed to upload your
       // Medical Certificate") instead of a generic "submission failed."
       // Build attachedDocuments from ONLY the documents that back THIS
@@ -751,7 +762,8 @@ export default function RequestAssistance() {
       const attachedDocuments = []
       for (const tp of reqDocTypes) {
         const file     = pendingFiles[tp.name]
-        const existing = docForType(tp.name)
+        const earlier = docForType(tp.name)
+        const fromThisAttempt = filingDocsRef.current[tp.name] ?? null
         if (file) {
           const ocr      = ocrResults[tp.name] ?? null
           // Advisory verification: idTypeDetected onto the ID doc, the face-match +
@@ -760,12 +772,13 @@ export default function RequestAssistance() {
           const verify         = isSelfieType(tp.name) ? selfieVerify('patient') : null
           setUploadState(s => ({ ...s, [tp.name]: 'saving' }))
           try {
-            if (existing) {
-              await replacePatientDocument({ docId: existing.id, file, ocr, verify, idTypeDetected, user })
-              attachedDocuments.push({ documentId: existing.id, name: tp.name, documentTypeName: tp.name, status: 'pending', date: today })
+            if (fromThisAttempt) {
+              await replacePatientDocument({ docId: fromThisAttempt, file, ocr, verify, idTypeDetected, user })
+              attachedDocuments.push({ documentId: fromThisAttempt, name: tp.name, documentTypeName: tp.name, status: 'pending', date: today })
             } else {
               const idMeta = isIdType(tp.name) ? (idMetaByType[tp.name] ?? null) : null
-              const ref = await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, idMeta, user })
+              const ref = await uploadPatientDocument({ file, typeName: tp.name, typeId: tp.id, ocr, verify, idTypeDetected, idMeta, user, supersedes: earlier?.id ?? null })
+              filingDocsRef.current[tp.name] = ref.documentId
               attachedDocuments.push(ref)
             }
             setUploadState(s => { const n = { ...s }; delete n[tp.name]; return n })

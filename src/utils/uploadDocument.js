@@ -75,7 +75,10 @@ const readContent = (file) => file.type?.startsWith('image/')
 // stay light).
 // requestId (Phase 2C): set for a document added to an ACTIVE request (an
 // agency's list in the coverage plan), so the hospital sees and verifies it.
-export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, idMeta = null, user, requestId = null }) {
+// supersedes (Phase 3 PR 3.1): the earlier document of the same type this one
+// replaces. The earlier one is left untouched — it may be evidence of a past
+// case (P3-A).
+export async function uploadPatientDocument({ file, typeName, typeId = null, idType = null, ocr = null, verify = null, idTypeDetected = null, idMeta = null, user, requestId = null, supersedes = null }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)
 
@@ -94,6 +97,7 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
     status:              'pending',
     agreedToAttestation: true,
     ...(requestId ? { requestId, addedAfterFiling: true } : {}),
+    ...(supersedes ? { supersedes } : {}),
     attestedAt:          new Date().toISOString(),
     ...(idType ? { idType } : {}),
     // Advisory on-device OCR result (ID docs only): extracted text + a
@@ -161,11 +165,11 @@ export async function uploadPatientDocument({ file, typeName, typeId = null, idT
   }
 }
 
-// Replaces the file content of an EXISTING document (used to re-upload
-// a rejected document). Keeps the same document id so every application
-// slice that references it picks up the new file + reset status
-// without any snapshot rewrite. Resets status to 'pending' for
-// re-review.
+// Replaces the file content of an EXISTING document, keeping its id. Allowed
+// only while the document is pending or rejected and was never sent to an
+// agency (rules: patientMayReplace) — a fix before anyone relied on it.
+// Resets status to 'pending' for re-review. Anything verified or endorsed
+// gets a NEW document instead (uploadPatientDocument with supersedes).
 export async function replacePatientDocument({ docId, file, ocr = null, verify = null, idTypeDetected = null, user }) {
   const content = await readContent(file)
   const sizeKB  = (content.length * 0.75 / 1024).toFixed(2)

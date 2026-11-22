@@ -37,6 +37,9 @@ exports.purgeSelfieOnClose      = purgeSelfieOnClose
 exports.onRequestWritten        = onRequestWritten
 exports.onSliceProceeded        = onSliceProceeded
 exports.onDocumentCountChanged  = onDocumentCountChanged
+// Phase 3 PR 3.1: the document owns its status; requests' lists follow it.
+exports.syncDocumentStatus = require('./src/syncDocumentStatus').syncDocumentStatus
+exports.purgeUnattachedDocuments = require('./src/purgeUnattachedDocuments').purgeUnattachedDocuments
 exports.onAuditLogCreated       = onAuditLogCreated
 exports.refreshNetworkStats     = refreshNetworkStats
 exports.onOnboardingRequestCreated = onOnboardingRequestCreated
