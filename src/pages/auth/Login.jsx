@@ -416,13 +416,13 @@ export default function Login() {
             </p>
 
             {/* Fix 1 — Demo accounts only in development */}
-            {/* DEV ONLY: one-click demo sign-in. Build-time flags, so a
-                production build drops the panel and the demo passwords. */}
+            {/* DEV ONLY: picking a demo account fills the email + password
+                fields above (it does NOT auto sign-in) so you can review them
+                and press Sign in yourself. Build-time flags, so a production
+                build drops the panel and the demo passwords. */}
             {(import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true') && (
               <DemoAccountsPanel busy={loading} onPick={(email, password) => {
                 setForm({ email, password })
-                // No saved password (private list): just fill the email.
-                if (password) signIn(email, password)
               }} />
             )}
 

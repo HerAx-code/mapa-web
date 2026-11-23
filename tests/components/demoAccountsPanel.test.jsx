@@ -2,7 +2,8 @@
  * DemoAccountsPanel (dev only) — reads the same list bootstrap-users.js seeds,
  * shows it as ONE dropdown grouped by role with the current display names,
  * hides accounts that can't sign in (active:false) or are switched off
- * (loginPanel:false), and signs in with the chosen account.
+ * (loginPanel:false), and fills the login fields with the chosen account
+ * (picking copies email + password into the form — it does not auto sign-in).
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
@@ -38,18 +39,23 @@ describe('DemoAccountsPanel', () => {
     for (const u of hidden) expect(box.querySelector(`option[value="${u.email}"]`)).toBeNull()
   })
 
-  it('signs in with the chosen account', async () => {
+  it('fills the login fields with the chosen account on select (no auto sign-in)', async () => {
     const onPick = vi.fn()
     render(<DemoAccountsPanel onPick={onPick} load={seeded} />)
     fireEvent.change(await select(), { target: { value: 'admin@mapa.gov.ph' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(onPick).toHaveBeenCalledWith('admin@mapa.gov.ph', 'admin123')
   })
 
-  it('does nothing until an account is chosen', async () => {
-    render(<DemoAccountsPanel onPick={() => {}} load={seeded} />)
+  it('the Fill button re-fills from the current pick, and is disabled until one is chosen', async () => {
+    const onPick = vi.fn()
+    render(<DemoAccountsPanel onPick={onPick} load={seeded} />)
     await select()
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
+    const fill = screen.getByRole('button', { name: 'Fill' })
+    expect(fill).toBeDisabled()
+    fireEvent.change(await select(), { target: { value: 'admin@mapa.gov.ph' } })
+    onPick.mockClear()
+    fireEvent.click(fill)
+    expect(onPick).toHaveBeenCalledWith('admin@mapa.gov.ph', 'admin123')
   })
 
   it('a private-list entry without a password only hands over the email', async () => {
@@ -60,7 +66,6 @@ describe('DemoAccountsPanel', () => {
     render(<DemoAccountsPanel onPick={onPick} load={local} />)
     expect(await screen.findByText(/your private list/)).toBeTruthy()
     fireEvent.change(await select(), { target: { value: 'ops@hospital.example' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Fill in email' }))
     expect(onPick).toHaveBeenCalledWith('ops@hospital.example', '')
   })
 })
