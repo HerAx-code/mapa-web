@@ -91,9 +91,17 @@ export default function DemoAccountsPanel({ onPick, busy = false, load = loadDem
       {state.accounts.length === 0 ? (
         <p className="text-xs text-amber-900 mt-2">No accounts to show.</p>
       ) : (
+        <>
         <div className="mt-2 flex gap-2">
           <select id="demo-account" className="input text-sm min-h-[44px] flex-1 min-w-0" value={email}
-            onChange={(e) => setEmail(e.target.value)} disabled={busy}>
+            onChange={(e) => {
+              const value = e.target.value
+              setEmail(value)
+              // Picking an account copies its email + password into the login
+              // fields above (no auto sign-in — press Sign in yourself).
+              const a = state.accounts.find((x) => x.email === value)
+              if (a) onPick(a.email, a.password || '')
+            }} disabled={busy}>
             <option value="">Choose an account…</option>
             {GROUPS.map((g) => {
               const list = state.accounts.filter((a) => g.roles.includes(a.role))
@@ -105,12 +113,16 @@ export default function DemoAccountsPanel({ onPick, busy = false, load = loadDem
               )
             })}
           </select>
+          {/* Re-fill the login fields from the current pick (handy after editing
+              them, or re-selecting the same account). Never signs in. */}
           <button type="button" disabled={busy || !picked}
-            className="btn-primary text-sm min-h-[44px] px-4 flex-shrink-0 disabled:opacity-60"
+            className="btn-secondary text-sm min-h-[44px] px-4 flex-shrink-0 disabled:opacity-60"
             onClick={() => picked && onPick(picked.email, picked.password || '')}>
-            {picked && !picked.password ? 'Fill in email' : 'Sign in'}
+            Fill
           </button>
         </div>
+        <p className="mt-2 text-xs text-amber-800/80">Choosing an account fills the email and password above — then press <strong>Sign in</strong>.</p>
+        </>
       )}
     </div>
   )
