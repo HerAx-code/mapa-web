@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MAPA System Map</title>
+
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a civic reference manual — sticky section rail on the left, wide scrollable tables on the right. */
+:root {
+  --bg: #f5f7f6; --surface: #ffffff; --ink: #14231d; --muted: #56655e; --line: #d9e1dd;
+  --pine: #1f5f4a; --pine-soft: #e3efe9; --amber: #9a5b00; --amber-soft: #fbf0dc;
+  --fn: #234a82; --fn-soft: #e5ecf7; --w: #7a2a4a; --w-soft: #f6e7ee;
+  --display: "Public Sans", system-ui, sans-serif; --body: "Public Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1714; --surface: #15201c; --ink: #e5ece8; --muted: #9db0a7; --line: #2a3832;
+  --pine: #6fc3a2; --pine-soft: #1c3a30; --amber: #f0b75a; --amber-soft: #3a2b12;
+  --fn: #93b6ee; --fn-soft: #1b2a42; --w: #eaa0bf; --w-soft: #3a1d2a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1714; --surface: #15201c; --ink: #e5ece8; --muted: #9db0a7; --line: #2a3832;
+  --pine: #6fc3a2; --pine-soft: #1c3a30; --amber: #f0b75a; --amber-soft: #3a2b12;
+  --fn: #93b6ee; --fn-soft: #1b2a42; --w: #eaa0bf; --w-soft: #3a1d2a; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 32px; max-width: 1500px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px; }
+nav.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+nav.rail a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+nav.rail a:hover, nav.rail a:focus-visible { background: var(--pine-soft); color: var(--ink); outline: none }
+nav.rail .navlbl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 10px 4px; }
+main { min-width: 0; display: flex; flex-direction: column; gap: 48px }
+header h1 { font: 800 clamp(28px, 4vw, 40px)/1.1 var(--display); margin: 0 0 8px; letter-spacing: -.01em; text-wrap: balance }
+header p { margin: 0; color: var(--muted); max-width: 70ch }
+.meta { font: 12px var(--mono); color: var(--muted); margin-top: 10px }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 22px }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px }
+.stat b { display: block; font: 800 28px/1 var(--display); color: var(--pine); font-variant-numeric: tabular-nums }
+.stat span { font-size: 13px; color: var(--muted) }
+.sechead h2 { font: 700 24px/1.2 var(--display); margin: 0 0 4px; text-wrap: balance }
+h3 { font: 700 18px/1.3 var(--display); margin: 26px 0 4px }
+.count { font: 500 13px var(--mono); color: var(--muted) }
+.lede { margin: 0 0 14px; color: var(--muted); max-width: 80ch }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch }
+table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 13.5px }
+th { text-align: left; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--bg); white-space: nowrap }
+td { vertical-align: top; padding: 12px; border-bottom: 1px solid var(--line) }
+tr:last-child td { border-bottom: 0 }
+table.screens { min-width: 1100px } table.screens td:nth-child(1) { width: 190px } table.screens td:nth-child(2) { width: 32% }
+table.fns { min-width: 860px } table.fns td:nth-child(1) { width: 210px } table.fns td:nth-child(2) { width: 22% }
+.sname { font-weight: 700 }
+code, .path { font: 12px var(--mono); color: var(--pine); word-break: break-all }
+.who { font-size: 12px; color: var(--muted); margin-top: 3px }
+.sub { font-size: 12px; color: var(--muted); margin-top: 6px }
+.chip { display: inline-block; font-size: 12px; line-height: 1.35; padding: 2px 8px; border-radius: 999px; margin: 0 4px 4px 0; border: 1px solid transparent }
+.chip.modal { background: var(--amber-soft); color: var(--amber) }
+.chip.fn { background: var(--fn-soft); color: var(--fn); font-family: var(--mono); font-size: 11.5px }
+.chip.w { background: var(--w-soft); color: var(--w); font-family: var(--mono); font-size: 11.5px }
+.chip.r { border-color: var(--line); color: var(--muted); font-family: var(--mono); font-size: 11.5px }
+.lbl { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 2px 0 3px }
+.none { color: var(--muted) }
+a.lead { display: block; color: var(--pine); text-decoration: none; font-size: 13px; margin-bottom: 3px }
+a.lead:hover { text-decoration: underline }
+.num { font-variant-numeric: tabular-nums; text-align: right }
+details.graph { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px }
+details.graph summary { cursor: pointer; font-weight: 600; color: var(--pine) }
+pre.mermaid { background: transparent; margin: 12px 0 4px; min-width: 640px }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 13px; color: var(--muted); margin: 6px 0 0 }
+.search { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px }
+.search input { width: 100%; font: 15px var(--body); padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink) }
+.search input:focus-visible { outline: 2px solid var(--pine); outline-offset: 1px }
+.hidden-row { display: none }
+.callout { background: var(--pine-soft); border-radius: 10px; padding: 14px 16px; max-width: 90ch }
+.shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px }
+.panel h4 { margin: 0 0 8px; font-size: 14px }
+ul.plain { margin: 0; padding-left: 18px } ul.plain li { margin-bottom: 4px }
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr) } nav.rail { display: none } .shell { grid-template-columns: minmax(0, 1fr) } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important } }
+html { scroll-behavior: smooth }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections">
+  <div class="navlbl">Overview</div>
+  <a href="#overview">At a glance</a><a href="#lifecycle">The case, end to end</a><a href="#shell">The shared shell</a>
+  <div class="navlbl">Screens by role</div>
+  <a href="#public">Public and sign-in <span class="count">6</span></a><a href="#patient">Patient <span class="count">13</span></a><a href="#hospital">Hospital (gateway) <span class="count">17</span></a><a href="#agency">Agency (funder) <span class="count">18</span></a><a href="#platform">Super Admin (network) <span class="count">6</span></a><a href="#shared">Shared by every signed-in role <span class="count">1</span></a>
+  <a href="#redirects">Redirects</a>
+  <div class="navlbl">Back end</div>
+  <a href="#functions">Cloud Functions</a><a href="#data">Data (Firestore)</a><a href="#method">How this was made</a>
+</nav>
+<main>
+<header id="overview">
+  <h1>MAPA System Map</h1>
+  <p>Every screen, modal, server action and collection in MAPA, from the patient’s phone to the Cloud Functions. Screens are grouped by who uses them. Each row says what the screen does, which dialogs it opens, which server actions it calls, which data it reads and writes, and where it leads.</p>
+  <div class="meta">Generated from the code at 8a91901 on 2026-11-23</div>
+  <div class="stats">
+    <div class="stat"><b>61</b><span>screens (routes)</span></div>
+    <div class="stat"><b>54</b><span>modals and dialogs</span></div>
+    <div class="stat"><b>38</b><span>Cloud Functions</span></div>
+    <div class="stat"><b>35</b><span>Firestore collections</span></div>
+    <div class="stat"><b>6</b><span>roles</span></div>
+  </div>
+  <div class="legend"><span><span class="chip modal">modal</span> a dialog the screen opens</span><span><span class="chip fn">fn</span> a server action (callable)</span><span><span class="chip w">writes</span> data the browser writes</span><span><span class="chip r">reads</span> data it reads</span></div>
+</header>
+
+<div class="search"><label for="q" class="lbl">Filter every table</label><input id="q" type="search" placeholder="Try “letter”, “endorse”, “agencies”, “/patient”…" autocomplete="off"></div>
+
+<section id="lifecycle" class="block">
+  <div class="sechead"><h2>The case, end to end</h2><p class="lede">One assistance case from the hospital desk to a finished case. Server actions are named where the step runs in a Cloud Function.</p></div>
+  <div class="panel scroll"><pre class="mermaid">flowchart TD
+  A([Patient visits the hospital office]) --&gt; B[Staff issue an access code&lt;br/&gt;issueAccessCode]
+  B --&gt; C[Patient registers or signs in&lt;br/&gt;claims the code · claimAccessCode]
+  C --&gt; D[Files a request&lt;br/&gt;bill · documents · live selfie · declaration]
+  D --&gt; E{Hospital verifies documents}
+  E -- returned --&gt; D
+  E -- all verified --&gt; F[Remote assessment&lt;br/&gt;case conversation · intake sheet]
+  F --&gt; G{Endorse gate on the server&lt;br/&gt;endorseRequest}
+  G -- blocked --&gt; F
+  G -- passes --&gt; H[Slices created, one per agency&lt;br/&gt;slots taken]
+  H --&gt; I{Patient accepts the plan&lt;br/&gt;Proceed}
+  I -- not in 3 days --&gt; X1[Slice closes · caseTimers]
+  I -- accepts --&gt; J[Agency reviews&lt;br/&gt;decideSlice]
+  J -- needs info --&gt; K[Patient answers] --&gt; J
+  J -- rejects --&gt; L[Slice rejected]
+  J -- approves --&gt; M[Guarantee Letter issued&lt;br/&gt;10-day validity]
+  M --&gt; N{Letter settles&lt;br/&gt;settleLetter · glExpirySweep}
+  N -- redeemed --&gt; O[Billed amount disbursed]
+  N -- expired --&gt; P[Budget released]
+  L --&gt; Q{Anything still pending?}
+  X1 --&gt; Q
+  O --&gt; R{Fully funded and every letter settled?}
+  P --&gt; R
+  R -- yes --&gt; Z([Case finished · patient may file again])
+  R -- no --&gt; Q
+  Q -- no --&gt; S[Endorse more or close&lt;br/&gt;auto-closes after 7 days]
+  S -- endorse more --&gt; G
+  S -- close --&gt; Z
+  D -. patient withdraws early .-&gt; Z</pre></div>
+  <p class="lede" style="margin-top:12px">Roles: the patient files and accepts; the hospital (gateway) verifies, assesses and endorses; each agency decides its own slice and issues the Guarantee Letter; the Super Admin runs the network (hospitals, agencies, onboarding) and never sees patient data.</p>
+</section>
+
+<section id="shell" class="block">
+  <div class="sechead"><h2>The shared shell</h2><p class="lede">Every signed-in screen sits inside the shell (components/Layout.jsx): role-specific sidebar or bottom bar, the notifications bell, the messages drawer, the profile menu, the announcement banner, the offline banner and the install nudge. Staff pass MfaGate first.</p></div>
+  <div class="shell">
+    <div class="panel"><h4>Dialogs available on every screen</h4><span class="chip modal">Two-factor gate and setup (staff)</span><span class="chip modal">Notification detail</span><span class="chip modal">New message (staff)</span><span class="chip modal">Account settings</span><span class="chip modal">Change password</span><span class="chip modal">Settings</span><span class="chip modal">Help</span><span class="chip modal">Report a problem</span></div>
+    <div class="panel"><h4>Built from</h4><p class="sub" style="margin:0">Layout, NotificationModal, CommandPalette, Logo, ProfileModals, MfaGate, LanguageToggle, OfflineBanner, AnnouncementBanner, InstallNudge, DesktopAppHint, BottomTabBar, MfaEnrollModal, SearchableSelect, AddressPicker</p>
+    <h4 style="margin-top:12px">Server actions and data</h4><span class="chip fn">openCaseConversation</span><span class="chip r">notifications</span><span class="chip r">announcements</span><span class="chip r">agencies</span><span class="chip r">users</span><span class="chip r">reports</span></div>
+  </div>
+</section>
+
+<section id="public" class="block">
+  <div class="sechead"><h2>Public and sign-in</h2><p class="lede">6 screens · Anyone, signed out</p></div>
+  <details class="graph" open><summary>How these screens link</summary><div class="scroll"><pre class="mermaid">flowchart LR
+  n1[&quot;Landing&lt;br/&gt;&lt;small&gt;/&lt;/small&gt;&quot;]
+  n2[&quot;Sign in&lt;br/&gt;&lt;small&gt;/login&lt;/small&gt;&quot;]
+  n3[&quot;Register&lt;br/&gt;&lt;small&gt;/register&lt;/small&gt;&quot;]
+  n4[&quot;For hospitals&lt;br/&gt;&lt;small&gt;/for-hospitals&lt;/small&gt;&quot;]
+  n5[&quot;Install the app&lt;br/&gt;&lt;small&gt;/install&lt;/small&gt;&quot;]
+  n6[&quot;Choose a hospital&lt;br/&gt;&lt;small&gt;/patient/hospitals&lt;/small&gt;&quot;]
+  n7[&quot;Seed (dev only)&lt;br/&gt;&lt;small&gt;/seed&lt;/small&gt;&quot;]
+  n1 --&gt; n2
+  n1 --&gt; n3
+  n1 --&gt; n4
+  n1 --&gt; n5
+  n2 --&gt; n3
+  n3 --&gt; n2
+  n3 --&gt; n6
+  n4 --&gt; n2</pre></div></details>
+  <div class="scroll"><table class="screens">
+    <thead><tr><th>Screen</th><th>What it does</th><th>Modals and dialogs</th><th>Server actions</th><th>Data</th><th>Leads to</th></tr></thead>
+    <tbody><tr id="sn1" data-q="/ landing public home: what mapa is, the participating hospitals and programs (from the public listings), and the way in to sign in or register. terms of use agenciespublic">
+    <td><div class="sname">Landing</div><code class="path">/</code><div class="who">Public</div></td>
+    <td class="does">Public home: what MAPA is, the participating hospitals and programs (from the public listings), and the way in to sign in or register.</td>
+    <td><span class="chip modal">Terms of Use</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">agenciesPublic</span></td>
+    <td><a href="#sn2" class="lead">Sign in</a><a href="#sn3" class="lead">Register</a><a href="#sn4" class="lead">For hospitals</a><a href="#sn5" class="lead">Install the app</a></td>
+  </tr><tr id="sn2" data-q="/login sign in email and password sign-in; staff then pass the two-factor gate. sends each role to its home. in local development against the firebase emulator (vite_use_emulator), a demo-account picker fills the fields. announcements">
+    <td><div class="sname">Sign in</div><code class="path">/login</code><div class="who">Public</div></td>
+    <td class="does">Email and password sign-in; staff then pass the two-factor gate. Sends each role to its home. In local development against the Firebase emulator (VITE_USE_EMULATOR), a demo-account picker fills the fields.<div class="sub">Built from 1 page part: Announcements</div></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">announcements</span></td>
+    <td><a href="#sn3" class="lead">Register</a></td>
+  </tr><tr id="sn3" data-q="/register register patient sign-up with an optional access code: the code is previewed (verifyaccesscode) and claimed on the server (claimaccesscode). terms acceptance recorded. terms of use verifyaccesscode claimaccesscode hospitalids hospitals users">
+    <td><div class="sname">Register</div><code class="path">/register</code><div class="who">Public</div></td>
+    <td class="does">Patient sign-up with an optional access code: the code is previewed (verifyAccessCode) and claimed on the server (claimAccessCode). Terms acceptance recorded.</td>
+    <td><span class="chip modal">Terms of Use</span></td>
+    <td><span class="chip fn">verifyAccessCode</span><span class="chip fn">claimAccessCode</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><div class="lbl">reads</div><span class="chip r">hospitalIds</span><span class="chip r">hospitals</span></td>
+    <td><a href="#sn2" class="lead">Sign in</a><a href="#sn6" class="lead">Choose a hospital</a></td>
+  </tr><tr id="sn5" data-q="/install install the app how to add mapa to a phone home screen (pwa). install steps">
+    <td><div class="sname">Install the app</div><code class="path">/install</code><div class="who">Public</div></td>
+    <td class="does">How to add MAPA to a phone home screen (PWA).</td>
+    <td><span class="chip modal">Install steps</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn4" data-q="/for-hospitals for hospitals public expression-of-interest form for a hospital to join the network; creates an onboarding request for the super admin. onboardingrequests">
+    <td><div class="sname">For hospitals</div><code class="path">/for-hospitals</code><div class="who">Public</div></td>
+    <td class="does">Public expression-of-interest form for a hospital to join the network; creates an onboarding request for the Super Admin.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">onboardingRequests</span></td>
+    <td><a href="#sn2" class="lead">Sign in</a></td>
+  </tr><tr id="sn7" data-q="/seed seed (dev only) seeds reference data in development; only routed when vite_enable_seed is on. applications documents users agencies documenttypes assistancetypes">
+    <td><div class="sname">Seed (dev only)</div><code class="path">/seed</code><div class="who">Public</div></td>
+    <td class="does">Seeds reference data in development; only routed when VITE_ENABLE_SEED is on.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">documents</span><span class="chip w">users</span><span class="chip w">agencies</span><span class="chip w">documentTypes</span><span class="chip w">assistanceTypes</span><div class="lbl">reads</div><span class="chip r">applications</span></td>
+    <td><span class="none">—</span></td>
+  </tr></tbody>
+  </table></div>
+</section>
+<section id="patient" class="block">
+  <div class="sechead"><h2>Patient</h2><p class="lede">13 screens · patient</p></div>
+  <details class="graph" open><summary>How these screens link</summary><div class="scroll"><pre class="mermaid">flowchart LR
+  n8[&quot;Patient home&lt;br/&gt;&lt;small&gt;/patient/dashboard&lt;/small&gt;&quot;]
+  n9[&quot;Request assistance&lt;br/&gt;&lt;small&gt;/patient/request&lt;/small&gt;&quot;]
+  n10[&quot;Messages&lt;br/&gt;&lt;small&gt;/patient/messages&lt;/small&gt;&quot;]
+  n11[&quot;Track status&lt;br/&gt;&lt;small&gt;/patient/status&lt;/small&gt;&quot;]
+  n12[&quot;Medical programs&lt;br/&gt;&lt;small&gt;/patient/programs&lt;/small&gt;&quot;]
+  n6[&quot;Choose a hospital&lt;br/&gt;&lt;small&gt;/patient/hospitals&lt;/small&gt;&quot;]
+  n13[&quot;Household information&lt;br/&gt;&lt;small&gt;/patient/request/:id/intake&lt;/small&gt;&quot;]
+  n14[&quot;User guide&lt;br/&gt;&lt;small&gt;/patient/guide&lt;/small&gt;&quot;]
+  n15[&quot;More&lt;br/&gt;&lt;small&gt;/patient/more&lt;/small&gt;&quot;]
+  n16[&quot;Account and security&lt;br/&gt;&lt;small&gt;/patient/account&lt;/small&gt;&quot;]
+  n17[&quot;Privacy notice&lt;br/&gt;&lt;small&gt;/patient/privacy&lt;/small&gt;&quot;]
+  n18[&quot;Access log&lt;br/&gt;&lt;small&gt;/patient/access-log&lt;/small&gt;&quot;]
+  n19[&quot;Help&lt;br/&gt;&lt;small&gt;/patient/help&lt;/small&gt;&quot;]
+  n8 --&gt; n9
+  n8 --&gt; n10
+  n8 --&gt; n11
+  n12 --&gt; n9
+  n6 --&gt; n11
+  n6 --&gt; n9
+  n9 --&gt; n11
+  n9 --&gt; n10
+  n9 --&gt; n13
+  n13 --&gt; n9
+  n11 --&gt; n9
+  n15 --&gt; n8
+  n15 --&gt; n16
+  n16 --&gt; n15
+  n17 --&gt; n15
+  n17 --&gt; n18
+  n19 --&gt; n15</pre></div></details>
+  <div class="scroll"><table class="screens">
+    <thead><tr><th>Screen</th><th>What it does</th><th>Modals and dialogs</th><th>Server actions</th><th>Data</th><th>Leads to</th></tr></thead>
+    <tbody><tr id="sn8" data-q="/patient/dashboard patient home the patient’s current case at a glance (journey strip, status hero), messages and next step. applications requests documents conversations users">
+    <td><div class="sname">Patient home</div><code class="path">/patient/dashboard</code><div class="who">Patient</div></td>
+    <td class="does">The patient’s current case at a glance (journey strip, status hero), messages and next step.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">requests</span><span class="chip r">documents</span><span class="chip r">conversations</span></td>
+    <td><a href="#sn9" class="lead">Request assistance</a><a href="#sn10" class="lead">Messages</a><a href="#sn11" class="lead">Track status</a></td>
+  </tr><tr id="sn12" data-q="/patient/programs medical programs browse funding agencies and what they cover (from agenciespublic). resyncagenciespublic agenciespublic announcements">
+    <td><div class="sname">Medical programs</div><code class="path">/patient/programs</code><div class="who">Patient</div></td>
+    <td class="does">Browse funding agencies and what they cover (from agenciesPublic).</td>
+    <td><span class="none">—</span></td>
+    <td><span class="chip fn">resyncAgenciesPublic</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">agenciesPublic</span><span class="chip r">announcements</span></td>
+    <td><a href="#sn9" class="lead">Request assistance</a></td>
+  </tr><tr id="sn6" data-q="/patient/hospitals choose a hospital compare participating hospitals (turnaround, office, contact) and enter the access code a hospital gave you, to file there. verifyaccesscode claimaccesscode requests">
+    <td><div class="sname">Choose a hospital</div><code class="path">/patient/hospitals</code><div class="who">Patient</div></td>
+    <td class="does">Compare participating hospitals (turnaround, office, contact) and enter the access code a hospital gave you, to file there.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="chip fn">verifyAccessCode</span><span class="chip fn">claimAccessCode</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">requests</span></td>
+    <td><a href="#sn11" class="lead">Track status</a><a href="#sn9" class="lead">Request assistance</a></td>
+  </tr><tr id="sn9" data-q="/patient/request request assistance the filing wizard: hospital and code, bill and coverage, care setting, document checklist (ocr on ids), live selfie, declaration, submit. after filing it becomes the active-request home: re-upload a returned document, accept the coverage plan (proceed), withdraw. live selfie capture guided id capture identity check withdraw request (confirm) verifyaccesscode claimaccesscode resyncagenciespublic requests assistancetypes documenttypes applications documents agenciespublic hospitalids">
+    <td><div class="sname">Request assistance</div><code class="path">/patient/request</code><div class="who">Patient</div></td>
+    <td class="does">The filing wizard: hospital and code, bill and coverage, care setting, document checklist (OCR on IDs), live selfie, declaration, submit. After filing it becomes the active-request home: re-upload a returned document, accept the coverage plan (Proceed), withdraw.</td>
+    <td><span class="chip modal">Live selfie capture</span><span class="chip modal">Guided ID capture</span><span class="chip modal">Identity check</span><span class="chip modal">Withdraw request (confirm)</span></td>
+    <td><span class="chip fn">verifyAccessCode</span><span class="chip fn">claimAccessCode</span><span class="chip fn">resyncAgenciesPublic</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">requests</span><span class="chip w">hospitalIds</span><div class="lbl">reads</div><span class="chip r">assistanceTypes</span><span class="chip r">documentTypes</span><span class="chip r">applications</span><span class="chip r">documents</span><span class="chip r">agenciesPublic</span></td>
+    <td><a href="#sn11" class="lead">Track status</a><a href="#sn10" class="lead">Messages</a><a href="#sn13" class="lead">Household information</a></td>
+  </tr><tr id="sn13" data-q="/patient/request/:id/intake household information step-by-step intake wizard: household, income, expenses, medical facts. autosaves the patient’s own fields only; locked once the hospital completes the assessment or endorses. requests">
+    <td><div class="sname">Household information</div><code class="path">/patient/request/:id/intake</code><div class="who">Patient</div></td>
+    <td class="does">Step-by-step intake wizard: household, income, expenses, medical facts. Autosaves the patient’s own fields only; locked once the hospital completes the assessment or endorses.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">requests</span></td>
+    <td><a href="#sn9" class="lead">Request assistance</a></td>
+  </tr><tr id="sn11" data-q="/patient/status track status &quot;my application&quot;: each agency slice’s steps, guarantee letters (valid, expiring, used, expired) with download, certificate of eligibility, and past cases. applications requests documents certificates eligibilitycertificates">
+    <td><div class="sname">Track status</div><code class="path">/patient/status</code><div class="who">Patient</div></td>
+    <td class="does">&quot;My application&quot;: each agency slice’s steps, Guarantee Letters (valid, expiring, used, expired) with download, Certificate of Eligibility, and past cases.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">requests</span><span class="chip r">documents</span><span class="chip r">certificates</span><span class="chip r">eligibilityCertificates</span></td>
+    <td><a href="#sn9" class="lead">Request assistance</a></td>
+  </tr><tr id="sn10" data-q="/patient/messages messages conversations staff started with the patient (reply-only for patients), including the case conversation. opencaseconversation conversations">
+    <td><div class="sname">Messages</div><code class="path">/patient/messages</code><div class="who">Patient</div></td>
+    <td class="does">Conversations staff started with the patient (reply-only for patients), including the case conversation.<div class="sub">Built from 3 page parts: helpers, ConversationThread, AdminComposeModal</div></td>
+    <td><span class="none">—</span></td>
+    <td><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">conversations</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn14" data-q="/patient/guide user guide bilingual help on filing, documents and letters.">
+    <td><div class="sname">User guide</div><code class="path">/patient/guide</code><div class="who">Patient</div></td>
+    <td class="does">Bilingual help on filing, documents and letters.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn15" data-q="/patient/more more phone-style menu: account, privacy, help, sign out.">
+    <td><div class="sname">More</div><code class="path">/patient/more</code><div class="who">Patient</div></td>
+    <td class="does">Phone-style menu: account, privacy, help, sign out.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn2" class="lead">Sign in</a><a href="#sn8" class="lead">Patient home</a><a href="#sn16" class="lead">Account and security</a></td>
+  </tr><tr id="sn16" data-q="/patient/account account and security profile and password; fill-once fields (birthdate, sex) for older accounts.">
+    <td><div class="sname">Account and security</div><code class="path">/patient/account</code><div class="who">Patient</div></td>
+    <td class="does">Profile and password; fill-once fields (birthdate, sex) for older accounts.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn15" class="lead">More</a></td>
+  </tr><tr id="sn17" data-q="/patient/privacy privacy notice what mapa keeps, why and for how long; link to the access log.">
+    <td><div class="sname">Privacy notice</div><code class="path">/patient/privacy</code><div class="who">Patient</div></td>
+    <td class="does">What MAPA keeps, why and for how long; link to the access log.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn15" class="lead">More</a><a href="#sn18" class="lead">Access log</a></td>
+  </tr><tr id="sn19" data-q="/patient/help help contact the hospital office and report a problem.">
+    <td><div class="sname">Help</div><code class="path">/patient/help</code><div class="who">Patient</div></td>
+    <td class="does">Contact the hospital office and report a problem.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn15" class="lead">More</a></td>
+  </tr><tr id="sn18" data-q="/patient/access-log access log who opened or changed the patient’s case and data (audit entries carrying their patientid), e.g. staff joining the case conversation. auditlog">
+    <td><div class="sname">Access log</div><code class="path">/patient/access-log</code><div class="who">Patient</div></td>
+    <td class="does">Who opened or changed the patient’s case and data (audit entries carrying their patientId), e.g. staff joining the case conversation.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">auditLog</span></td>
+    <td><span class="none">—</span></td>
+  </tr></tbody>
+  </table></div>
+</section>
+<section id="hospital" class="block">
+  <div class="sechead"><h2>Hospital (gateway)</h2><p class="lede">17 screens · super_admin &quot;Hospital Admin&quot;, staff_admin &quot;Staff Admin&quot;</p></div>
+  <details class="graph" open><summary>How these screens link</summary><div class="scroll"><pre class="mermaid">flowchart LR
+  n20[&quot;Hospital dashboard&lt;br/&gt;&lt;small&gt;/admin/dashboard&lt;/small&gt;&quot;]
+  n21[&quot;Requests (the case queue)&lt;br/&gt;&lt;small&gt;/admin/requests&lt;/small&gt;&quot;]
+  n22[&quot;Application logs&lt;br/&gt;&lt;small&gt;/admin/logs&lt;/small&gt;&quot;]
+  n23[&quot;Program overview&lt;br/&gt;&lt;small&gt;/admin/analytics&lt;/small&gt;&quot;]
+  n24[&quot;Messages (hospital)&lt;br/&gt;&lt;small&gt;/admin/messages&lt;/small&gt;&quot;]
+  n25[&quot;Unified Intake Sheet (hospital)&lt;br/&gt;&lt;small&gt;/admin/requests/:id/intake&lt;/small&gt;&quot;]
+  n26[&quot;Patients&lt;br/&gt;&lt;small&gt;/admin/patients&lt;/small&gt;&quot;]
+  n27[&quot;Access codes&lt;br/&gt;&lt;small&gt;/admin/hospitalids&lt;/small&gt;&quot;]
+  n28[&quot;Partner agencies&lt;br/&gt;&lt;small&gt;/admin/agencies&lt;/small&gt;&quot;]
+  n29[&quot;Agency detail&lt;br/&gt;&lt;small&gt;/admin/agencies/:id&lt;/small&gt;&quot;]
+  n30[&quot;Staff accounts&lt;br/&gt;&lt;small&gt;/admin/accounts&lt;/small&gt;&quot;]
+  n31[&quot;Export&lt;br/&gt;&lt;small&gt;/admin/export&lt;/small&gt;&quot;]
+  n32[&quot;Export preview&lt;br/&gt;&lt;small&gt;/admin/export/:type&lt;/small&gt;&quot;]
+  n33[&quot;Problem reports&lt;br/&gt;&lt;small&gt;/admin/reports&lt;/small&gt;&quot;]
+  n34[&quot;Audit log&lt;br/&gt;&lt;small&gt;/admin/auditlog&lt;/small&gt;&quot;]
+  n35[&quot;Announcements&lt;br/&gt;&lt;small&gt;/admin/announcements&lt;/small&gt;&quot;]
+  n36[&quot;Hospital Settings&lt;br/&gt;&lt;small&gt;/admin/settings&lt;/small&gt;&quot;]
+  n20 --&gt; n21
+  n20 --&gt; n22
+  n23 --&gt; n21
+  n21 --&gt; n24
+  n21 --&gt; n25
+  n25 --&gt; n21
+  n26 --&gt; n24
+  n28 --&gt; n24
+  n29 --&gt; n24
+  n31 --&gt; n32
+  n32 --&gt; n31</pre></div></details>
+  <div class="scroll"><table class="screens">
+    <thead><tr><th>Screen</th><th>What it does</th><th>Modals and dialogs</th><th>Server actions</th><th>Data</th><th>Leads to</th></tr></thead>
+    <tbody><tr id="sn20" data-q="/admin/dashboard hospital dashboard today’s queue counts, stale items (cases waiting 7+ days), pipeline by stage. users agencies requests documents applications reports notificationerrors hospitals hospitalids">
+    <td><div class="sname">Hospital dashboard</div><code class="path">/admin/dashboard</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Today’s queue counts, stale items (cases waiting 7+ days), pipeline by stage.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">users</span><span class="chip r">agencies</span><span class="chip r">requests</span><span class="chip r">documents</span><span class="chip r">applications</span><span class="chip r">reports</span><span class="chip r">notificationErrors</span><span class="chip r">hospitals</span><span class="chip r">hospitalIds</span></td>
+    <td><a href="#sn21" class="lead">Requests (the case queue)</a><a href="#sn22" class="lead">Application logs</a></td>
+  </tr><tr id="sn23" data-q="/admin/analytics program overview board-level analytics: facilitation kpis with period-over-period change, the request pipeline, where requests end up, and breakdowns by agency and assistance type. applications requests">
+    <td><div class="sname">Program overview</div><code class="path">/admin/analytics</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Board-level analytics: facilitation KPIs with period-over-period change, the request pipeline, where requests end up, and breakdowns by agency and assistance type.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">requests</span></td>
+    <td><a href="#sn21" class="lead">Requests (the case queue)</a></td>
+  </tr><tr id="sn21" data-q="/admin/requests requests (the case queue) the operational heart. queue tabs (needs action incl. &quot;endorse more or close&quot;, under review, awaiting agency, resolved). case page: verify documents (checklists, ocr and selfie compare), the bill check, verification call, intake sheet link, certificate of eligibility, coverage plan, endorse to agencies, reject / close, case conversation, case timeline. endorse to agencies compare id portrait ↔ live selfie document viewer endorse? (confirm) reject request? (confirm) close request? (confirm) reject document (confirm) reset document (confirm) upload signed certificate endorserequest closerequest opencaseconversation clearidentityflag documents applications auditlog requests agencies referralsuggestions eligibilitycertificates users eligibilitycounters documentcontents certificates">
+    <td><div class="sname">Requests (the case queue)</div><code class="path">/admin/requests</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">The operational heart. Queue tabs (Needs action incl. &quot;Endorse more or close&quot;, Under review, Awaiting agency, Resolved). Case page: verify documents (checklists, OCR and selfie compare), the bill check, verification call, intake sheet link, Certificate of Eligibility, coverage plan, endorse to agencies, reject / close, case conversation, case timeline.</td>
+    <td><span class="chip modal">Endorse to agencies</span><span class="chip modal">Compare ID portrait ↔ live selfie</span><span class="chip modal">Document viewer</span><span class="chip modal">Endorse? (confirm)</span><span class="chip modal">Reject request? (confirm)</span><span class="chip modal">Close request? (confirm)</span><span class="chip modal">Reject document (confirm)</span><span class="chip modal">Reset document (confirm)</span><span class="chip modal">Upload signed certificate</span></td>
+    <td><span class="chip fn">endorseRequest</span><span class="chip fn">closeRequest</span><span class="chip fn">openCaseConversation</span><span class="chip fn">clearIdentityFlag</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">documents</span><span class="chip w">requests</span><span class="chip w">referralSuggestions</span><span class="chip w">eligibilityCertificates</span><span class="chip w">certificates</span><div class="lbl">reads</div><span class="chip r">auditLog</span><span class="chip r">agencies</span><span class="chip r">users</span><span class="chip r">eligibilityCounters</span><span class="chip r">documentContents</span></td>
+    <td><a href="#sn24" class="lead">Messages (hospital)</a><a href="#sn25" class="lead">Unified Intake Sheet (hospital)</a></td>
+  </tr><tr id="sn25" data-q="/admin/requests/:id/intake unified intake sheet (hospital) the social worker’s assessment: verify the patient’s answers by section, bill check (own-bill confirmation), verification call, ao 2021-0044 classification, recommendation. after endorsement it is locked; &quot;amend assessment&quot; submits a reasoned change (amendassessment). encode on the patient’s behalf? amendassessment requests users billkeys">
+    <td><div class="sname">Unified Intake Sheet (hospital)</div><code class="path">/admin/requests/:id/intake</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">The social worker’s assessment: verify the patient’s answers by section, bill check (own-bill confirmation), verification call, AO 2021-0044 classification, recommendation. After endorsement it is locked; &quot;Amend assessment&quot; submits a reasoned change (amendAssessment).</td>
+    <td><span class="chip modal">Encode on the patient’s behalf?</span></td>
+    <td><span class="chip fn">amendAssessment</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">requests</span><span class="chip r">users</span><span class="chip r">billKeys</span></td>
+    <td><a href="#sn21" class="lead">Requests (the case queue)</a></td>
+  </tr><tr id="sn26" data-q="/admin/patients patients the hospital’s patients (through tenantids): profile, cases, holding period, erase or restrict (eraseaccount). patient profile eraseaccount opencaseconversation applications documents users certificates">
+    <td><div class="sname">Patients</div><code class="path">/admin/patients</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">The hospital’s patients (through tenantIds): profile, cases, holding period, erase or restrict (eraseAccount).</td>
+    <td><span class="chip modal">Patient profile</span></td>
+    <td><span class="chip fn">eraseAccount</span><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">documents</span><span class="chip r">certificates</span></td>
+    <td><a href="#sn24" class="lead">Messages (hospital)</a></td>
+  </tr><tr id="sn27" data-q="/admin/hospitalids access codes issue a patient-bound access code at the desk (issueaccesscode; warns when the person already holds an open one), print it, end a course, reset or delete (hospital admin). issue an access code issueaccesscode hospitalids">
+    <td><div class="sname">Access codes</div><code class="path">/admin/hospitalids</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Issue a patient-bound access code at the desk (issueAccessCode; warns when the person already holds an open one), print it, end a course, reset or delete (Hospital Admin).</td>
+    <td><span class="chip modal">Issue an access code</span></td>
+    <td><span class="chip fn">issueAccessCode</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">hospitalIds</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn28" data-q="/admin/agencies partner agencies the agencies that partner with this hospital: programs, slots, fund source and type (read-mostly for hospitals). agency editor resyncagenciespublic opencaseconversation users assistancetypes documenttypes agencies applications">
+    <td><div class="sname">Partner agencies</div><code class="path">/admin/agencies</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">The agencies that partner with this hospital: programs, slots, fund source and type (read-mostly for hospitals).</td>
+    <td><span class="chip modal">Agency editor</span></td>
+    <td><span class="chip fn">resyncAgenciesPublic</span><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">users</span><span class="chip r">assistanceTypes</span><span class="chip r">documentTypes</span><span class="chip r">applications</span></td>
+    <td><a href="#sn24" class="lead">Messages (hospital)</a></td>
+  </tr><tr id="sn29" data-q="/admin/agencies/:id agency detail one agency: profile, partner hospitals, team, slots, applications statistics. agency editor edit coordinator promote / demote (confirm) disable agency? delete agency? (confirm) countagencyopenslices disableaccount resetstaffmfa opencaseconversation resyncagenciespublic users agencies applications assistancetypes documenttypes">
+    <td><div class="sname">Agency detail</div><code class="path">/admin/agencies/:id</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">One agency: profile, partner hospitals, team, slots, applications statistics.<div class="sub">Built from 1 page part: Agencies</div></td>
+    <td><span class="chip modal">Agency editor</span><span class="chip modal">Edit coordinator</span><span class="chip modal">Promote / demote (confirm)</span><span class="chip modal">Disable agency?</span><span class="chip modal">Delete agency? (confirm)</span></td>
+    <td><span class="chip fn">countAgencyOpenSlices</span><span class="chip fn">disableAccount</span><span class="chip fn">resetStaffMfa</span><span class="chip fn">openCaseConversation</span><span class="chip fn">resyncAgenciesPublic</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">assistanceTypes</span><span class="chip r">documentTypes</span></td>
+    <td><a href="#sn24" class="lead">Messages (hospital)</a></td>
+  </tr><tr id="sn30" data-q="/admin/accounts staff accounts hospital admin manages the hospital’s staff: create, edit role, disable (disableaccount), reset two-factor (resetstaffmfa), erase (eraseaccount), send password reset. account editor disableaccount resetstaffmfa eraseaccount users">
+    <td><div class="sname">Staff accounts</div><code class="path">/admin/accounts</code><div class="who">Hospital Admin only</div></td>
+    <td class="does">Hospital Admin manages the hospital’s staff: create, edit role, disable (disableAccount), reset two-factor (resetStaffMfa), erase (eraseAccount), send password reset.</td>
+    <td><span class="chip modal">Account editor</span></td>
+    <td><span class="chip fn">disableAccount</span><span class="chip fn">resetStaffMfa</span><span class="chip fn">eraseAccount</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn22" data-q="/admin/logs application logs every agency slice from this hospital, filterable by status and day. applications">
+    <td><div class="sname">Application logs</div><code class="path">/admin/logs</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Every agency slice from this hospital, filterable by status and day.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn31" data-q="/admin/export export report picker: requests, slices, doh monthly assistance report (city and province as recorded when the patient filed), guarantee letters ledger.">
+    <td><div class="sname">Export</div><code class="path">/admin/export</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Report picker: requests, slices, DOH Monthly Assistance Report (city and province as recorded when the patient filed), Guarantee Letters ledger.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn32" class="lead">Export preview</a></td>
+  </tr><tr id="sn32" data-q="/admin/export/:type export preview preview and download one export (scoped to the hospital). export n rows? (confirm) applications requests hospitalids">
+    <td><div class="sname">Export preview</div><code class="path">/admin/export/:type</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Preview and download one export (scoped to the hospital).</td>
+    <td><span class="chip modal">Export N rows? (confirm)</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">requests</span><span class="chip r">hospitalIds</span></td>
+    <td><a href="#sn31" class="lead">Export</a></td>
+  </tr><tr id="sn24" data-q="/admin/messages messages (hospital) staff conversations with patients, agencies and colleagues; start a new one. new message opencaseconversation conversations">
+    <td><div class="sname">Messages (hospital)</div><code class="path">/admin/messages</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Staff conversations with patients, agencies and colleagues; start a new one.<div class="sub">Built from 3 page parts: helpers, ConversationThread, AdminComposeModal</div></td>
+    <td><span class="chip modal">New message</span></td>
+    <td><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">conversations</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn33" data-q="/admin/reports problem reports reports patients and staff filed from help. reports">
+    <td><div class="sname">Problem reports</div><code class="path">/admin/reports</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Reports patients and staff filed from Help.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">reports</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn34" data-q="/admin/auditlog audit log hospital admin only: every audit entry for the hospital. auditlog">
+    <td><div class="sname">Audit log</div><code class="path">/admin/auditlog</code><div class="who">Hospital Admin only</div></td>
+    <td class="does">Hospital Admin only: every audit entry for the hospital.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">auditLog</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn35" data-q="/admin/announcements announcements post notices to the hospital’s patients or staff; the audience is notified on the server. announcements">
+    <td><div class="sname">Announcements</div><code class="path">/admin/announcements</code><div class="who">Hospital Admin, Staff Admin</div></td>
+    <td class="does">Post notices to the hospital’s patients or staff; the audience is notified on the server.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">announcements</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn36" data-q="/admin/settings hospital settings hospital admin only: branding and contact, verification-call policy, second-person approval, case time limits, poverty line (ao 2021-0044), certificate of eligibility signatory. hospitalsettings hospitals">
+    <td><div class="sname">Hospital Settings</div><code class="path">/admin/settings</code><div class="who">Hospital Admin only</div></td>
+    <td class="does">Hospital Admin only: branding and contact, verification-call policy, second-person approval, case time limits, poverty line (AO 2021-0044), Certificate of Eligibility signatory.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">hospitalSettings</span><span class="chip w">hospitals</span></td>
+    <td><span class="none">—</span></td>
+  </tr></tbody>
+  </table></div>
+</section>
+<section id="agency" class="block">
+  <div class="sechead"><h2>Agency (funder)</h2><p class="lede">18 screens · agency &quot;Agency Coordinator&quot;, agency_admin &quot;Agency Admin&quot;</p></div>
+  <details class="graph" open><summary>How these screens link</summary><div class="scroll"><pre class="mermaid">flowchart LR
+  n37[&quot;Agency dashboard&lt;br/&gt;&lt;small&gt;/agency/dashboard&lt;/small&gt;&quot;]
+  n38[&quot;Inbox&lt;br/&gt;&lt;small&gt;/agency/inbox&lt;/small&gt;&quot;]
+  n39[&quot;Impact&lt;br/&gt;&lt;small&gt;/agency/impact&lt;/small&gt;&quot;]
+  n40[&quot;Application (agency case page)&lt;br/&gt;&lt;small&gt;/agency/applications/:id&lt;/small&gt;&quot;]
+  n41[&quot;Slot management&lt;br/&gt;&lt;small&gt;/agency/slots&lt;/small&gt;&quot;]
+  n42[&quot;Messages (agency)&lt;br/&gt;&lt;small&gt;/agency/messages&lt;/small&gt;&quot;]
+  n43[&quot;Guarantee Letter viewer&lt;br/&gt;&lt;small&gt;/agency/applications/:id/gl&lt;/small&gt;&quot;]
+  n44[&quot;Intake sheet (read-only)&lt;br/&gt;&lt;small&gt;/agency/applications/:id/intake&lt;/small&gt;&quot;]
+  n45[&quot;Guarantee Letters&lt;br/&gt;&lt;small&gt;/agency/generator&lt;/small&gt;&quot;]
+  n46[&quot;Agency profile&lt;br/&gt;&lt;small&gt;/agency/program&lt;/small&gt;&quot;]
+  n47[&quot;Signed letters (legacy)&lt;br/&gt;&lt;small&gt;/agency/certificates&lt;/small&gt;&quot;]
+  n48[&quot;Agency logs&lt;br/&gt;&lt;small&gt;/agency/logs&lt;/small&gt;&quot;]
+  n49[&quot;Funds ledger&lt;br/&gt;&lt;small&gt;/agency/funds&lt;/small&gt;&quot;]
+  n50[&quot;Agency audit log&lt;br/&gt;&lt;small&gt;/agency/audit&lt;/small&gt;&quot;]
+  n51[&quot;Budget allocation&lt;br/&gt;&lt;small&gt;/agency/allocation&lt;/small&gt;&quot;]
+  n52[&quot;Team&lt;br/&gt;&lt;small&gt;/agency/team&lt;/small&gt;&quot;]
+  n53[&quot;Agency announcements&lt;br/&gt;&lt;small&gt;/agency/announcements&lt;/small&gt;&quot;]
+  n54[&quot;Agency guide&lt;br/&gt;&lt;small&gt;/agency/guide&lt;/small&gt;&quot;]
+  n37 --&gt; n38
+  n37 --&gt; n39
+  n37 --&gt; n40
+  n41 --&gt; n37
+  n38 --&gt; n42
+  n38 --&gt; n40
+  n40 --&gt; n38
+  n40 --&gt; n43
+  n40 --&gt; n42
+  n40 --&gt; n44
+  n43 --&gt; n38
+  n43 --&gt; n40
+  n45 --&gt; n43
+  n46 --&gt; n41
+  n47 --&gt; n45
+  n49 --&gt; n40
+  n49 --&gt; n50
+  n51 --&gt; n37
+  n51 --&gt; n50
+  n50 --&gt; n37
+  n52 --&gt; n37</pre></div></details>
+  <div class="scroll"><table class="screens">
+    <thead><tr><th>Screen</th><th>What it does</th><th>Modals and dialogs</th><th>Server actions</th><th>Data</th><th>Leads to</th></tr></thead>
+    <tbody><tr id="sn37" data-q="/agency/dashboard agency dashboard budget hero (allocated, committed, disbursed), today’s slots, items needing review, low-balance alert. request budget top-up agencies applications users reports">
+    <td><div class="sname">Agency dashboard</div><code class="path">/agency/dashboard</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Budget hero (allocated, committed, disbursed), today’s slots, items needing review, low-balance alert.</td>
+    <td><span class="chip modal">Request budget top-up</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">agencies</span><span class="chip w">reports</span><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">users</span></td>
+    <td><a href="#sn38" class="lead">Inbox</a><a href="#sn39" class="lead">Impact</a><a href="#sn40" class="lead">Application (agency case page)</a></td>
+  </tr><tr id="sn41" data-q="/agency/slots slot management agency admin sets daily capacity overall and per partner hospital. agencies applications">
+    <td><div class="sname">Slot management</div><code class="path">/agency/slots</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Agency Admin sets daily capacity overall and per partner hospital.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">applications</span></td>
+    <td><a href="#sn37" class="lead">Agency dashboard</a></td>
+  </tr><tr id="sn38" data-q="/agency/inbox inbox the funding queue: slices endorsed to this agency from any partner hospital, by status. opencaseconversation applications">
+    <td><div class="sname">Inbox</div><code class="path">/agency/inbox</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">The funding queue: slices endorsed to this agency from any partner hospital, by status.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span></td>
+    <td><a href="#sn42" class="lead">Messages (agency)</a><a href="#sn40" class="lead">Application (agency case page)</a></td>
+  </tr><tr id="sn40" data-q="/agency/applications/:id application (agency case page) one slice: patient, documents (read-only), the hospital’s assessment, co-funding coverage, case timeline. decisions on the server: request info / resume / approve / reject (decideslice); letter actions: redeem, undo, expire, reverse (settleletter). shows &quot;assessment changed after your approval&quot;. approve &amp; issue guarantee letter reject request more information suggest another agency upload signed letter document viewer re-enter password (step-up) mark letter redeemed (billed amount) reverse the redemption? mark letter expired? reverse this approval? decideslice settleletter opencaseconversation applications agencies documents users certificates requests auditlog eligibilitycertificates documentcontents approvalmarks referralsuggestions">
+    <td><div class="sname">Application (agency case page)</div><code class="path">/agency/applications/:id</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">One slice: patient, documents (read-only), the hospital’s assessment, co-funding coverage, case timeline. Decisions on the server: request info / resume / approve / reject (decideSlice); letter actions: redeem, undo, expire, reverse (settleLetter). Shows &quot;Assessment changed after your approval&quot;.<div class="sub">Built from 3 page parts: helpers, CompactStepper, primaryActions</div></td>
+    <td><span class="chip modal">Approve &amp; issue Guarantee Letter</span><span class="chip modal">Reject</span><span class="chip modal">Request more information</span><span class="chip modal">Suggest another agency</span><span class="chip modal">Upload signed letter</span><span class="chip modal">Document viewer</span><span class="chip modal">Re-enter password (step-up)</span><span class="chip modal">Mark letter redeemed (billed amount)</span><span class="chip modal">Reverse the redemption?</span><span class="chip modal">Mark letter expired?</span><span class="chip modal">Reverse this approval?</span></td>
+    <td><span class="chip fn">decideSlice</span><span class="chip fn">settleLetter</span><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">certificates</span><span class="chip w">referralSuggestions</span><div class="lbl">reads</div><span class="chip r">agencies</span><span class="chip r">documents</span><span class="chip r">users</span><span class="chip r">requests</span><span class="chip r">auditLog</span><span class="chip r">eligibilityCertificates</span><span class="chip r">documentContents</span><span class="chip r">approvalMarks</span></td>
+    <td><a href="#sn38" class="lead">Inbox</a><a href="#sn43" class="lead">Guarantee Letter viewer</a><a href="#sn42" class="lead">Messages (agency)</a><a href="#sn44" class="lead">Intake sheet (read-only)</a></td>
+  </tr><tr id="sn44" data-q="/agency/applications/:id/intake intake sheet (read-only) the hospital’s unified intake sheet as the agency sees it. encode on the patient’s behalf? amendassessment requests users billkeys">
+    <td><div class="sname">Intake sheet (read-only)</div><code class="path">/agency/applications/:id/intake</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">The hospital’s Unified Intake Sheet as the agency sees it.</td>
+    <td><span class="chip modal">Encode on the patient’s behalf?</span></td>
+    <td><span class="chip fn">amendAssessment</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">requests</span><span class="chip r">users</span><span class="chip r">billKeys</span></td>
+    <td><a href="#sn21" class="lead">Requests (the case queue)</a></td>
+  </tr><tr id="sn43" data-q="/agency/applications/:id/gl guarantee letter viewer printable letter on the case hospital’s branding; mark as issued (settleletter mark_issued); upload the signed scan. mark guarantee letter as issued? upload signed letter decideslice settleletter applications users agencies certificates">
+    <td><div class="sname">Guarantee Letter viewer</div><code class="path">/agency/applications/:id/gl</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Printable letter on the case hospital’s branding; Mark as Issued (settleLetter mark_issued); upload the signed scan.</td>
+    <td><span class="chip modal">Mark Guarantee Letter as Issued?</span><span class="chip modal">Upload signed letter</span></td>
+    <td><span class="chip fn">decideSlice</span><span class="chip fn">settleLetter</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">certificates</span><div class="lbl">reads</div><span class="chip r">users</span><span class="chip r">agencies</span></td>
+    <td><a href="#sn38" class="lead">Inbox</a><a href="#sn40" class="lead">Application (agency case page)</a></td>
+  </tr><tr id="sn42" data-q="/agency/messages messages (agency) the agency’s conversations with patients and hospital staff. new message opencaseconversation conversations">
+    <td><div class="sname">Messages (agency)</div><code class="path">/agency/messages</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">The agency’s conversations with patients and hospital staff.<div class="sub">Built from 3 page parts: helpers, ConversationThread, AdminComposeModal</div></td>
+    <td><span class="chip modal">New message</span></td>
+    <td><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">conversations</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn45" data-q="/agency/generator guarantee letters all of the agency’s letters with their age: print, and upload the signed copy (the old upload certificates page was merged here). upload signed letter applications certificates">
+    <td><div class="sname">Guarantee Letters</div><code class="path">/agency/generator</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">All of the agency’s letters with their age: print, and upload the signed copy (the old Upload Certificates page was merged here).</td>
+    <td><span class="chip modal">Upload signed letter</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">certificates</span></td>
+    <td><a href="#sn43" class="lead">Guarantee Letter viewer</a></td>
+  </tr><tr id="sn46" data-q="/agency/program agency profile agency admin edits the public program text, assistance types and document requirements (published to agenciespublic). countagencyopenslices agencies users">
+    <td><div class="sname">Agency profile</div><code class="path">/agency/program</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Agency Admin edits the public program text, assistance types and document requirements (published to agenciesPublic).</td>
+    <td><span class="none">—</span></td>
+    <td><span class="chip fn">countAgencyOpenSlices</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">users</span></td>
+    <td><a href="#sn41" class="lead">Slot management</a></td>
+  </tr><tr id="sn47" data-q="/agency/certificates signed letters (legacy) old route; redirects to guarantee letters (/agency/generator).">
+    <td><div class="sname">Signed letters (legacy)</div><code class="path">/agency/certificates</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Old route; redirects to Guarantee Letters (/agency/generator).</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn45" class="lead">Guarantee Letters</a></td>
+  </tr><tr id="sn48" data-q="/agency/logs agency logs every slice for the agency, filterable by status. applications">
+    <td><div class="sname">Agency logs</div><code class="path">/agency/logs</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Every slice for the agency, filterable by status.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn49" data-q="/agency/funds funds ledger approvals, redemptions (billed amount), expiries and reversals over time. agencies applications">
+    <td><div class="sname">Funds ledger</div><code class="path">/agency/funds</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Approvals, redemptions (billed amount), expiries and reversals over time.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">agencies</span><span class="chip r">applications</span></td>
+    <td><a href="#sn40" class="lead">Application (agency case page)</a><a href="#sn50" class="lead">Agency audit log</a></td>
+  </tr><tr id="sn39" data-q="/agency/impact impact assistance given by type, hospital and month. applications">
+    <td><div class="sname">Impact</div><code class="path">/agency/impact</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">Assistance given by type, hospital and month.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">applications</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn51" data-q="/agency/allocation budget allocation agency admin: allocation, period and reset, maximum per approval, repeat limit. start a new budget period? change budget period? agencies auditlog reports">
+    <td><div class="sname">Budget allocation</div><code class="path">/agency/allocation</code><div class="who">Agency Admin only</div></td>
+    <td class="does">Agency Admin: allocation, period and reset, maximum per approval, repeat limit.</td>
+    <td><span class="chip modal">Start a new budget period?</span><span class="chip modal">Change budget period?</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">auditLog</span><span class="chip r">reports</span></td>
+    <td><a href="#sn37" class="lead">Agency dashboard</a><a href="#sn50" class="lead">Agency audit log</a></td>
+  </tr><tr id="sn50" data-q="/agency/audit agency audit log agency admin: the agency’s own audit entries. auditlog">
+    <td><div class="sname">Agency audit log</div><code class="path">/agency/audit</code><div class="who">Agency Admin only</div></td>
+    <td class="does">Agency Admin: the agency’s own audit entries.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">reads</div><span class="chip r">auditLog</span></td>
+    <td><a href="#sn37" class="lead">Agency dashboard</a></td>
+  </tr><tr id="sn52" data-q="/agency/team team agency admin: add and edit coordinators, promote or demote, disable (disableaccount). add coordinator edit coordinator promote / demote (confirm) disableaccount users agencies">
+    <td><div class="sname">Team</div><code class="path">/agency/team</code><div class="who">Agency Admin only</div></td>
+    <td class="does">Agency Admin: add and edit coordinators, promote or demote, disable (disableAccount).</td>
+    <td><span class="chip modal">Add coordinator</span><span class="chip modal">Edit coordinator</span><span class="chip modal">Promote / demote (confirm)</span></td>
+    <td><span class="chip fn">disableAccount</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><div class="lbl">reads</div><span class="chip r">agencies</span></td>
+    <td><a href="#sn37" class="lead">Agency dashboard</a></td>
+  </tr><tr id="sn53" data-q="/agency/announcements agency announcements agency admin posts notices to the agency’s team. agencies announcements">
+    <td><div class="sname">Agency announcements</div><code class="path">/agency/announcements</code><div class="who">Agency Admin only</div></td>
+    <td class="does">Agency Admin posts notices to the agency’s team.<div class="sub">Built from 1 page part: Announcements</div></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">announcements</span><div class="lbl">reads</div><span class="chip r">agencies</span></td>
+    <td><span class="none">—</span></td>
+  </tr><tr id="sn54" data-q="/agency/guide agency guide how the agency workflow works.">
+    <td><div class="sname">Agency guide</div><code class="path">/agency/guide</code><div class="who">Coordinator, Agency Admin</div></td>
+    <td class="does">How the agency workflow works.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+  </tr></tbody>
+  </table></div>
+</section>
+<section id="platform" class="block">
+  <div class="sechead"><h2>Super Admin (network)</h2><p class="lede">6 screens · platform_admin &quot;Super Admin&quot;</p></div>
+  <details class="graph" open><summary>How these screens link</summary><div class="scroll"><pre class="mermaid">flowchart LR
+  n55[&quot;Hospitals&lt;br/&gt;&lt;small&gt;/platform/hospitals&lt;/small&gt;&quot;]
+  n56[&quot;Onboarding requests&lt;br/&gt;&lt;small&gt;/platform/onboarding&lt;/small&gt;&quot;]
+  n57[&quot;Onboarding workspace&lt;br/&gt;&lt;small&gt;/platform/onboarding/:id&lt;/small&gt;&quot;]
+  n58[&quot;Agencies (network)&lt;br/&gt;&lt;small&gt;/platform/agencies&lt;/small&gt;&quot;]
+  n59[&quot;Add agency&lt;br/&gt;&lt;small&gt;/platform/agencies/new&lt;/small&gt;&quot;]
+  n60[&quot;Agency detail (network)&lt;br/&gt;&lt;small&gt;/platform/agencies/:id&lt;/small&gt;&quot;]
+  n55 --&gt; n56
+  n55 --&gt; n57
+  n56 --&gt; n57
+  n57 --&gt; n56
+  n57 --&gt; n55
+  n59 --&gt; n58</pre></div></details>
+  <div class="scroll"><table class="screens">
+    <thead><tr><th>Screen</th><th>What it does</th><th>Modals and dialogs</th><th>Server actions</th><th>Data</th><th>Leads to</th></tr></thead>
+    <tbody><tr id="sn55" data-q="/platform/hospitals hospitals the network’s hospitals: create, branding, access-code prefix, add the first admins, pause or resume new requests (guarded for onboarding hospitals). hospital editor add hospital admin pause / resume new requests? (confirm) accesscodeprefixes agencies hospitals onboardingrequests users networkstats">
+    <td><div class="sname">Hospitals</div><code class="path">/platform/hospitals</code><div class="who">Super Admin</div></td>
+    <td class="does">The network’s hospitals: create, branding, access-code prefix, add the first admins, pause or resume new requests (guarded for onboarding hospitals).</td>
+    <td><span class="chip modal">Hospital editor</span><span class="chip modal">Add hospital admin</span><span class="chip modal">Pause / resume new requests? (confirm)</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">onboardingRequests</span><span class="chip w">hospitals</span><span class="chip w">accessCodePrefixes</span><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">users</span><span class="chip r">networkStats</span></td>
+    <td><a href="#sn56" class="lead">Onboarding requests</a><a href="#sn57" class="lead">Onboarding workspace</a></td>
+  </tr><tr id="sn56" data-q="/platform/onboarding onboarding requests queue of hospitals that asked to join, by stage.">
+    <td><div class="sname">Onboarding requests</div><code class="path">/platform/onboarding</code><div class="who">Super Admin</div></td>
+    <td class="does">Queue of hospitals that asked to join, by stage.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><a href="#sn57" class="lead">Onboarding workspace</a></td>
+  </tr><tr id="sn57" data-q="/platform/onboarding/:id onboarding workspace one hospital’s onboarding: interest → verification → agreement → setup &amp; training → live (go-live opens patient sign-ups), with filed documents. onboardingrequests hospitals users agencies">
+    <td><div class="sname">Onboarding workspace</div><code class="path">/platform/onboarding/:id</code><div class="who">Super Admin</div></td>
+    <td class="does">One hospital’s onboarding: Interest → Verification → Agreement → Setup &amp; training → Live (go-live opens patient sign-ups), with filed documents.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">onboardingRequests</span><div class="lbl">reads</div><span class="chip r">hospitals</span><span class="chip r">users</span><span class="chip r">agencies</span></td>
+    <td><a href="#sn56" class="lead">Onboarding requests</a><a href="#sn55" class="lead">Hospitals</a></td>
+  </tr><tr id="sn58" data-q="/platform/agencies agencies (network) every agency: create, edit, funder type, enable or disable. agency editor resyncagenciespublic opencaseconversation users assistancetypes documenttypes agencies applications">
+    <td><div class="sname">Agencies (network)</div><code class="path">/platform/agencies</code><div class="who">Super Admin</div></td>
+    <td class="does">Every agency: create, edit, funder type, enable or disable.</td>
+    <td><span class="chip modal">Agency editor</span></td>
+    <td><span class="chip fn">resyncAgenciesPublic</span><span class="chip fn">openCaseConversation</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">users</span><span class="chip r">assistanceTypes</span><span class="chip r">documentTypes</span><span class="chip r">applications</span></td>
+    <td><a href="#sn24" class="lead">Messages (hospital)</a></td>
+  </tr><tr id="sn59" data-q="/platform/agencies/new add agency create an agency with its partner hospitals and first admin. countagencyopenslices documenttypes assistancetypes users agencies">
+    <td><div class="sname">Add agency</div><code class="path">/platform/agencies/new</code><div class="who">Super Admin</div></td>
+    <td class="does">Create an agency with its partner hospitals and first admin.</td>
+    <td><span class="none">—</span></td>
+    <td><span class="chip fn">countAgencyOpenSlices</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">documentTypes</span><span class="chip r">assistanceTypes</span></td>
+    <td><a href="#sn58" class="lead">Agencies (network)</a></td>
+  </tr><tr id="sn60" data-q="/platform/agencies/:id agency detail (network) same page as the hospital view, with network powers: partner hospitals (removing one closes its open applications after a confirm with the count), team, disable (held applications close after the limit). agency editor edit coordinator promote / demote (confirm) disable agency? (shows held count) delete agency? (confirm) remove partner hospital (confirm with count) countagencyopenslices disableaccount resetstaffmfa opencaseconversation resyncagenciespublic users agencies applications assistancetypes documenttypes">
+    <td><div class="sname">Agency detail (network)</div><code class="path">/platform/agencies/:id</code><div class="who">Super Admin</div></td>
+    <td class="does">Same page as the hospital view, with network powers: partner hospitals (removing one closes its open applications after a confirm with the count), team, disable (held applications close after the limit).<div class="sub">Built from 1 page part: Agencies</div></td>
+    <td><span class="chip modal">Agency editor</span><span class="chip modal">Edit coordinator</span><span class="chip modal">Promote / demote (confirm)</span><span class="chip modal">Disable agency? (shows held count)</span><span class="chip modal">Delete agency? (confirm)</span><span class="chip modal">Remove partner hospital (confirm with count)</span></td>
+    <td><span class="chip fn">countAgencyOpenSlices</span><span class="chip fn">disableAccount</span><span class="chip fn">resetStaffMfa</span><span class="chip fn">openCaseConversation</span><span class="chip fn">resyncAgenciesPublic</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">users</span><span class="chip w">agencies</span><div class="lbl">reads</div><span class="chip r">applications</span><span class="chip r">assistanceTypes</span><span class="chip r">documentTypes</span></td>
+    <td><a href="#sn24" class="lead">Messages (hospital)</a></td>
+  </tr></tbody>
+  </table></div>
+</section>
+<section id="shared" class="block">
+  <div class="sechead"><h2>Shared by every signed-in role</h2><p class="lede">1 screen · all signed-in roles</p></div>
+  
+  <div class="scroll"><table class="screens">
+    <thead><tr><th>Screen</th><th>What it does</th><th>Modals and dialogs</th><th>Server actions</th><th>Data</th><th>Leads to</th></tr></thead>
+    <tbody><tr id="sn61" data-q="/notifications notifications full list of in-app notifications for any signed-in role, with detail view and read state. notification detail notifications">
+    <td><div class="sname">Notifications</div><code class="path">/notifications</code><div class="who">Patient, Coordinator, Agency Admin, Hospital Admin, Staff Admin, Super Admin</div></td>
+    <td class="does">Full list of in-app notifications for any signed-in role, with detail view and read state.</td>
+    <td><span class="chip modal">Notification detail</span></td>
+    <td><span class="none">—</span></td>
+    <td><div class="lbl">writes</div><span class="chip w">notifications</span></td>
+    <td><span class="none">—</span></td>
+  </tr></tbody>
+  </table></div>
+</section>
+
+<section id="redirects" class="block">
+  <div class="sechead"><h2>Redirects</h2><p class="lede">Old addresses that forward to a current screen.</p></div>
+  <div class="scroll"><table><thead><tr><th>Address</th><th>Goes to</th></tr></thead><tbody>
+  <tr data-q="/admin/agencies/new /admin/agencies"><td><code>/admin/agencies/new</code></td><td><code>/admin/agencies</code></td></tr><tr data-q="/admin/coordinators /admin/agencies"><td><code>/admin/coordinators</code></td><td><code>/admin/agencies</code></td></tr><tr data-q="/platform /platform/hospitals"><td><code>/platform</code></td><td><code>/platform/hospitals</code></td></tr><tr data-q="/platform/overview /platform/hospitals"><td><code>/platform/overview</code></td><td><code>/platform/hospitals</code></td></tr><tr data-q="/platform/network /platform/hospitals"><td><code>/platform/network</code></td><td><code>/platform/hospitals</code></td></tr><tr data-q="/platform/requests /platform/onboarding"><td><code>/platform/requests</code></td><td><code>/platform/onboarding</code></td></tr>
+  <tr data-q="* not found"><td><code>*</code></td><td>Not found page</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="functions" class="block">
+  <div class="sechead"><h2>Cloud Functions</h2><p class="lede">The server side (region asia-southeast1, project mapa-crmc). Money, accounts, codes, endorsement and case endings run here; the browser asks and the Firestore rules refuse a direct write.</p></div>
+  <h3>Callable from the app <span class="count">15</span></h3><p class="lede">Each checks who is calling, re-reads what it changes inside one transaction, and writes its own audit entry.</p>
+<div class="scroll"><table class="fns"><thead><tr><th>Function</th><th>Called from</th><th>What it does</th><th>Data it touches</th></tr></thead><tbody>
+<tr data-q="eraseaccount erase a staff account, or erase/restrict a patient. staff accounts, patients  applications auditlog billkeys conversations documentcontents documents eligibilitycertificates hospitalids identityflags identityindex identityindexbyuser notifications requests users"><td><code>eraseAccount</code><div class="who">accountAdmin.js</div></td><td>Staff accounts, Patients</td><td>Erase a staff account, or erase/restrict a patient.</td><td><span class="chip r">applications</span><span class="chip r">auditLog</span><span class="chip r">billKeys</span><span class="chip r">conversations</span><span class="chip r">documentContents</span><span class="chip r">documents</span><span class="chip r">eligibilityCertificates</span><span class="chip r">hospitalIds</span><span class="chip r">identityFlags</span><span class="chip r">identityIndex</span><span class="chip r">identityIndexByUser</span><span class="chip r">notifications</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="disableaccount block or restore a sign-in and sign the person out. staff accounts, team, agency detail  applications auditlog billkeys conversations documentcontents documents eligibilitycertificates hospitalids identityflags identityindex identityindexbyuser notifications requests users"><td><code>disableAccount</code><div class="who">accountAdmin.js</div></td><td>Staff accounts, Team, Agency detail</td><td>Block or restore a sign-in and sign the person out.</td><td><span class="chip r">applications</span><span class="chip r">auditLog</span><span class="chip r">billKeys</span><span class="chip r">conversations</span><span class="chip r">documentContents</span><span class="chip r">documents</span><span class="chip r">eligibilityCertificates</span><span class="chip r">hospitalIds</span><span class="chip r">identityFlags</span><span class="chip r">identityIndex</span><span class="chip r">identityIndexByUser</span><span class="chip r">notifications</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="resetstaffmfa clear two-factor for a lost phone. staff accounts, agency detail  applications auditlog billkeys conversations documentcontents documents eligibilitycertificates hospitalids identityflags identityindex identityindexbyuser notifications requests users"><td><code>resetStaffMfa</code><div class="who">accountAdmin.js</div></td><td>Staff accounts, Agency detail</td><td>Clear two-factor for a lost phone.</td><td><span class="chip r">applications</span><span class="chip r">auditLog</span><span class="chip r">billKeys</span><span class="chip r">conversations</span><span class="chip r">documentContents</span><span class="chip r">documents</span><span class="chip r">eligibilityCertificates</span><span class="chip r">hospitalIds</span><span class="chip r">identityFlags</span><span class="chip r">identityIndex</span><span class="chip r">identityIndexByUser</span><span class="chip r">notifications</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="amendassessment reasoned change to an endorsed assessment; voids the certificate if the class changed; tells the agencies. intake sheet  applications eligibilitycertificates requests users"><td><code>amendAssessment</code><div class="who">assessmentActions.js</div></td><td>Intake sheet</td><td>Reasoned change to an endorsed assessment; voids the certificate if the class changed; tells the agencies.</td><td><span class="chip r">applications</span><span class="chip r">eligibilityCertificates</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="endorserequest re-check the endorse gate on the server, take a slot per agency, create the slices. requests  agencies applications documents hospitalsettings hospitals identityflags requests users"><td><code>endorseRequest</code><div class="who">caseActions.js</div></td><td>Requests</td><td>Re-check the endorse gate on the server, take a slot per agency, create the slices.</td><td><span class="chip r">agencies</span><span class="chip r">applications</span><span class="chip r">documents</span><span class="chip r">hospitalSettings</span><span class="chip r">hospitals</span><span class="chip r">identityFlags</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="closerequest close or reject a case; close open slices; give back same-day slots. requests  agencies applications documents hospitalsettings hospitals identityflags requests users"><td><code>closeRequest</code><div class="who">caseActions.js</div></td><td>Requests</td><td>Close or reject a case; close open slices; give back same-day slots.</td><td><span class="chip r">agencies</span><span class="chip r">applications</span><span class="chip r">documents</span><span class="chip r">hospitalSettings</span><span class="chip r">hospitals</span><span class="chip r">identityFlags</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="opencaseconversation create or join the case’s conversation; the patient sees each join. requests, message actions  conversations requests"><td><code>openCaseConversation</code><div class="who">caseConversations.js</div></td><td>Requests, message actions</td><td>Create or join the case’s conversation; the patient sees each join.</td><td><span class="chip r">conversations</span><span class="chip r">requests</span></td></tr><tr data-q="issueaccesscode issue a patient-bound code from the per-prefix counter; warns if the person already holds an open code. access codes  accesscodecounters hospitalids hospitals users"><td><code>issueAccessCode</code><div class="who">codeActions.js</div></td><td>Access codes</td><td>Issue a patient-bound code from the per-prefix counter; warns if the person already holds an open code.</td><td><span class="chip r">accessCodeCounters</span><span class="chip r">hospitalIds</span><span class="chip r">hospitals</span><span class="chip r">users</span></td></tr><tr data-q="claimaccesscode claim a code against the account’s own last name and birthdate; moves the patient’s current hospital. register, choose a hospital, request assistance  accesscodecounters hospitalids hospitals users"><td><code>claimAccessCode</code><div class="who">codeActions.js</div></td><td>Register, Choose a hospital, Request assistance</td><td>Claim a code against the account’s own last name and birthdate; moves the patient’s current hospital.</td><td><span class="chip r">accessCodeCounters</span><span class="chip r">hospitalIds</span><span class="chip r">hospitals</span><span class="chip r">users</span></td></tr><tr data-q="clearidentityflag clear past duplicate-account matches with a reason. requests (identity check)  identityflags identityindex identityindexbyuser users"><td><code>clearIdentityFlag</code><div class="who">identityIndex.js</div></td><td>Requests (identity check)</td><td>Clear past duplicate-account matches with a reason.</td><td><span class="chip r">identityFlags</span><span class="chip r">identityIndex</span><span class="chip r">identityIndexByUser</span><span class="chip r">users</span></td></tr><tr data-q="countagencyopenslices open application counts per hospital, for the super admin’s dialogs. agency detail (network)  agencies agenciespublic applications users"><td><code>countAgencyOpenSlices</code><div class="who">onAgencyWritten.js</div></td><td>Agency detail (network)</td><td>Open application counts per hospital, for the Super Admin’s dialogs.</td><td><span class="chip r">agencies</span><span class="chip r">agenciesPublic</span><span class="chip r">applications</span><span class="chip r">users</span></td></tr><tr data-q="resyncagenciespublic rebuild the public agency listing. agencies  agencies agenciespublic applications users"><td><code>resyncAgenciesPublic</code><div class="who">onAgencyWritten.js</div></td><td>Agencies</td><td>Rebuild the public agency listing.</td><td><span class="chip r">agencies</span><span class="chip r">agenciesPublic</span><span class="chip r">applications</span><span class="chip r">users</span></td></tr><tr data-q="decideslice agency decisions: request info, resume, approve (all caps and the repeat limit), reject. application  agencies applications approvalmarks requests"><td><code>decideSlice</code><div class="who">sliceActions.js</div></td><td>Application</td><td>Agency decisions: request info, resume, approve (all caps and the repeat limit), reject.</td><td><span class="chip r">agencies</span><span class="chip r">applications</span><span class="chip r">approvalMarks</span><span class="chip r">requests</span></td></tr><tr data-q="settleletter letter actions: mark issued, redeem (billed amount), undo, expire, reverse. application, gl viewer  agencies applications approvalmarks requests"><td><code>settleLetter</code><div class="who">sliceActions.js</div></td><td>Application, GL viewer</td><td>Letter actions: mark issued, redeem (billed amount), undo, expire, reverse.</td><td><span class="chip r">agencies</span><span class="chip r">applications</span><span class="chip r">approvalMarks</span><span class="chip r">requests</span></td></tr><tr data-q="verifyaccesscode preview an access code before claiming (hospital, bound or not). read-only. register, choose a hospital, request assistance  hospitalids hospitals"><td><code>verifyAccessCode</code><div class="who">verifyAccessCode.js</div></td><td>Register, Choose a hospital, Request assistance</td><td>Preview an access code before claiming (hospital, bound or not). Read-only.</td><td><span class="chip r">hospitalIds</span><span class="chip r">hospitals</span></td></tr>
+</tbody></table></div>
+  <h3>Triggers <span class="count">16</span></h3><p class="lede">Run on their own when a document changes.</p>
+<div class="scroll"><table class="fns"><thead><tr><th>Function</th><th>Runs on</th><th>What it does</th><th>Data it touches</th></tr></thead><tbody>
+<tr data-q="onannouncementcreated notify an announcement’s audience.  created announcements/{annid} agencies announcements notifications users"><td><code>onAnnouncementCreated</code><div class="who">announcements.js</div></td><td>Created announcements/{annId}</td><td>Notify an announcement’s audience.</td><td><span class="chip r">agencies</span><span class="chip r">announcements</span><span class="chip r">notifications</span><span class="chip r">users</span></td></tr><tr data-q="onconversationmessage on each new message: lastat, preview and unread counts.  created conversations/{convid}/messages/{msgid} conversations requests"><td><code>onConversationMessage</code><div class="who">caseConversations.js</div></td><td>Created conversations/{convId}/messages/{msgId}</td><td>On each new message: lastAt, preview and unread counts.</td><td><span class="chip r">conversations</span><span class="chip r">requests</span></td></tr><tr data-q="onpatientidentitywritten re-index name and phone for duplicate-account flags.  written users/{uid} identityflags identityindex identityindexbyuser users"><td><code>onPatientIdentityWritten</code><div class="who">identityIndex.js</div></td><td>Written users/{uid}</td><td>Re-index name and phone for duplicate-account flags.</td><td><span class="chip r">identityFlags</span><span class="chip r">identityIndex</span><span class="chip r">identityIndexByUser</span><span class="chip r">users</span></td></tr><tr data-q="oniddocumentidentitywritten re-index the philsys card fingerprint for duplicate-account flags.  written documents/{docid} identityflags identityindex identityindexbyuser users"><td><code>onIdDocumentIdentityWritten</code><div class="who">identityIndex.js</div></td><td>Written documents/{docId}</td><td>Re-index the PhilSys card fingerprint for duplicate-account flags.</td><td><span class="chip r">identityFlags</span><span class="chip r">identityIndex</span><span class="chip r">identityIndexByUser</span><span class="chip r">users</span></td></tr><tr data-q="onagencywritten project agenciespublic; close a removed partner’s open slices; stamp disabledat.  written agencies/{agencyid} agencies agenciespublic applications users"><td><code>onAgencyWritten</code><div class="who">onAgencyWritten.js</div></td><td>Written agencies/{agencyId}</td><td>Project agenciesPublic; close a removed partner’s open slices; stamp disabledAt.</td><td><span class="chip r">agencies</span><span class="chip r">agenciesPublic</span><span class="chip r">applications</span><span class="chip r">users</span></td></tr><tr data-q="onauditlogcreated stamp the case’s hospital on agency-written audit entries.  created auditlog/{logid} applications requests"><td><code>onAuditLogCreated</code><div class="who">onAuditLogCreated.js</div></td><td>Created auditLog/{logId}</td><td>Stamp the case’s hospital on agency-written audit entries.</td><td><span class="chip r">applications</span><span class="chip r">requests</span></td></tr><tr data-q="ondocumentcountchanged keep each patient’s upload count (abuse cap).  written documents/{docid} users"><td><code>onDocumentCountChanged</code><div class="who">onDocumentCountChanged.js</div></td><td>Written documents/{docId}</td><td>Keep each patient’s upload count (abuse cap).</td><td><span class="chip r">users</span></td></tr><tr data-q="onhospitalwritten project hospitalspublic (never the training hospital).  written hospitals/{hospitalid} hospitalspublic"><td><code>onHospitalWritten</code><div class="who">onHospitalWritten.js</div></td><td>Written hospitals/{hospitalId}</td><td>Project hospitalsPublic (never the training hospital).</td><td><span class="chip r">hospitalsPublic</span></td></tr><tr data-q="ononboardingrequestcreated notify the super admin of a new hospital interest.  created onboardingrequests/{reqid} notifications users"><td><code>onOnboardingRequestCreated</code><div class="who">onOnboardingRequestCreated.js</div></td><td>Created onboardingRequests/{reqId}</td><td>Notify the Super Admin of a new hospital interest.</td><td><span class="chip r">notifications</span><span class="chip r">users</span></td></tr><tr data-q="onrequestwritten keeps the patient’s activerequestid (only finished cases free it); gives a code back on an early withdrawal; notifies.  written requests/{requestid} hospitalids notifications requests users"><td><code>onRequestWritten</code><div class="who">onRequestWritten.js</div></td><td>Written requests/{requestId}</td><td>Keeps the patient’s activeRequestId (only finished cases free it); gives a code back on an early withdrawal; notifies.</td><td><span class="chip r">hospitalIds</span><span class="chip r">notifications</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="onsliceproceeded when the patient accepts (proceed): notify the agency and write the timeline entry.  written applications/{appid} auditlog notifications users"><td><code>onSliceProceeded</code><div class="who">onSliceProceeded.js</div></td><td>Written applications/{appId}</td><td>When the patient accepts (Proceed): notify the agency and write the timeline entry.</td><td><span class="chip r">auditLog</span><span class="chip r">notifications</span><span class="chip r">users</span></td></tr><tr data-q="assignpatientid give a new patient the next pat- number from the counter.  created users/{uid} users"><td><code>assignPatientId</code><div class="who">patientIds.js</div></td><td>Created users/{uid}</td><td>Give a new patient the next PAT- number from the counter.</td><td><span class="chip r">users</span></td></tr><tr data-q="purgeselfieonclose when a case finishes: delete the live selfie.  written requests/{requestid} documentcontents documents"><td><code>purgeSelfieOnClose</code><div class="who">purgeSelfieOnClose.js</div></td><td>Written requests/{requestId}</td><td>When a case finishes: delete the live selfie.</td><td><span class="chip r">documentContents</span><span class="chip r">documents</span></td></tr><tr data-q="sendnotificationemail email each new in-app notification within the sender’s scope and the hourly limit.  created notifications/{uid}/items/{notifid} agencies hospitals notifications users"><td><code>sendNotificationEmail</code><div class="who">sendNotificationEmail.js</div></td><td>Created notifications/{uid}/items/{notifId}</td><td>Email each new in-app notification within the sender’s scope and the hourly limit.</td><td><span class="chip r">agencies</span><span class="chip r">hospitals</span><span class="chip r">notifications</span><span class="chip r">users</span></td></tr><tr data-q="syncdocumentstatus on a document’s status change: update every request list that names it; attach a verified late upload.  written documents/{docid} documents requests"><td><code>syncDocumentStatus</code><div class="who">syncDocumentStatus.js</div></td><td>Written documents/{docId}</td><td>On a document’s status change: update every request list that names it; attach a verified late upload.</td><td><span class="chip r">documents</span><span class="chip r">requests</span></td></tr><tr data-q="syncrequestfinancials on every slice write: recompute the request’s committed total, open letters, status and nothingpendingsince.  written applications/{appid} applications requests"><td><code>syncRequestFinancials</code><div class="who">syncRequestFinancials.js</div></td><td>Written applications/{appId}</td><td>On every slice write: recompute the request’s committed total, open letters, status and nothingPendingSince.</td><td><span class="chip r">applications</span><span class="chip r">requests</span></td></tr>
+</tbody></table></div>
+  <h3>Scheduled jobs <span class="count">7</span></h3><p class="lede">Run on a timer.</p>
+<div class="scroll"><table class="fns"><thead><tr><th>Function</th><th>Schedule (Manila)</th><th>What it does</th><th>Data it touches</th></tr></thead><tbody>
+<tr data-q="announcementreminders every 15 minutes: 24-hour announcement reminders.  every 15 minutes agencies announcements notifications users"><td><code>announcementReminders</code><div class="who">announcements.js</div></td><td>every 15 minutes</td><td>Every 15 minutes: 24-hour announcement reminders.</td><td><span class="chip r">agencies</span><span class="chip r">announcements</span><span class="chip r">notifications</span><span class="chip r">users</span></td></tr><tr data-q="casetimers 06:00 daily: proceed reminders and closes; needs-info reminders; warn and close cases nothing is pending on; release slices held at disabled agencies.  0 6 * * * agencies applications hospitalsettings requests users"><td><code>caseTimers</code><div class="who">caseTimers.js</div></td><td>0 6 * * *</td><td>06:00 daily: Proceed reminders and closes; Needs-info reminders; warn and close cases nothing is pending on; release slices held at disabled agencies.</td><td><span class="chip r">agencies</span><span class="chip r">applications</span><span class="chip r">hospitalSettings</span><span class="chip r">requests</span><span class="chip r">users</span></td></tr><tr data-q="glexpirysweep hourly: expire letters past their date and release the budget.  every 1 hours applications"><td><code>glExpirySweep</code><div class="who">glExpirySweep.js</div></td><td>every 1 hours</td><td>Hourly: expire letters past their date and release the budget.</td><td><span class="chip r">applications</span></td></tr><tr data-q="purgedeclinedonboarding monthly: delete declined onboarding requests after a year.  0 3 1 * * auditlog onboardingrequests"><td><code>purgeDeclinedOnboarding</code><div class="who">purgeDeclinedOnboarding.js</div></td><td>0 3 1 * *</td><td>Monthly: delete declined onboarding requests after a year.</td><td><span class="chip r">auditLog</span><span class="chip r">onboardingRequests</span></td></tr><tr data-q="purgeunattacheddocuments monthly: delete pending uploads no request lists after 30 days.  30 3 1 * * documentcontents documents requests"><td><code>purgeUnattachedDocuments</code><div class="who">purgeUnattachedDocuments.js</div></td><td>30 3 1 * *</td><td>Monthly: delete pending uploads no request lists after 30 days.</td><td><span class="chip r">documentContents</span><span class="chip r">documents</span><span class="chip r">requests</span></td></tr><tr data-q="refreshnetworkstats every 6 hours: per-hospital counts and the marketplace turnaround.  0 */6 * * * "><td><code>refreshNetworkStats</code><div class="who">refreshNetworkStats.js</div></td><td>0 */6 * * *</td><td>Every 6 hours: per-hospital counts and the marketplace turnaround.</td><td><span class="none">—</span></td></tr><tr data-q="resetagencyslots midnight manila: refill daily slots.  0 0 * * * agencies"><td><code>resetAgencySlots</code><div class="who">resetAgencySlots.js</div></td><td>0 0 * * *</td><td>Midnight Manila: refill daily slots.</td><td><span class="chip r">agencies</span></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="data" class="block">
+  <div class="sechead"><h2>Data (Firestore)</h2><p class="lede">Every collection, what it holds and who may write it. “Screens” counts the screens that read or write it.</p></div>
+  <div class="scroll"><table class="fns"><thead><tr><th>Collection</th><th>What it holds</th><th>Written by</th><th>Screens</th><th>Functions</th></tr></thead><tbody><tr data-q="accesscodecounters next code number per prefix and year. issueaccesscode only"><td><code>accessCodeCounters</code></td><td>Next code number per prefix and year.</td><td>issueAccessCode only</td><td class="num">0</td><td><span class="chip fn">codeActions</span></td></tr><tr data-q="accesscodeprefixes which hospital holds a prefix. super admin"><td><code>accessCodePrefixes</code></td><td>Which hospital holds a prefix.</td><td>Super Admin</td><td class="num">1</td><td><span class="none">—</span></td></tr><tr data-q="agencies funders: budget, slots, partners, caps, repeat limit, profile. agency admin and super admin settings; server for budget and slots"><td><code>agencies</code></td><td>Funders: budget, slots, partners, caps, repeat limit, profile.</td><td>Agency Admin and Super Admin settings; server for budget and slots</td><td class="num">19</td><td><span class="chip fn">announcements</span><span class="chip fn">caseActions</span><span class="chip fn">caseTimers</span><span class="chip fn">onAgencyWritten</span><span class="chip fn">resetAgencySlots</span><span class="chip fn">sendNotificationEmail</span><span class="chip fn">sliceActions</span></td></tr><tr data-q="agenciespublic public agency listing. onagencywritten only"><td><code>agenciesPublic</code></td><td>Public agency listing.</td><td>onAgencyWritten only</td><td class="num">3</td><td><span class="chip fn">onAgencyWritten</span></td></tr><tr data-q="announcements notices to patients or staff. hospital and agency admins"><td><code>announcements</code></td><td>Notices to patients or staff.</td><td>Hospital and Agency Admins</td><td class="num">4</td><td><span class="chip fn">announcements</span></td></tr><tr data-q="applications slices: one agency’s part of a case, its decision and its guarantee letter. server only (endorse, decide, settle, timers); patient proceed; agency notes"><td><code>applications</code></td><td>Slices: one agency’s part of a case, its decision and its Guarantee Letter.</td><td>Server only (endorse, decide, settle, timers); patient Proceed; agency notes</td><td class="num">23</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">assessmentActions</span><span class="chip fn">caseActions</span><span class="chip fn">caseTimers</span><span class="chip fn">glExpirySweep</span><span class="chip fn">networkStats</span><span class="chip fn">onAgencyWritten</span><span class="chip fn">onAuditLogCreated</span><span class="chip fn">sliceActions</span><span class="chip fn">syncRequestFinancials</span></td></tr><tr data-q="approvalmarks each agency’s latest approval per patient (repeat limit). decideslice only"><td><code>approvalMarks</code></td><td>Each agency’s latest approval per patient (repeat limit).</td><td>decideSlice only</td><td class="num">1</td><td><span class="chip fn">sliceActions</span></td></tr><tr data-q="assistancetypes assistance type catalog. super admin / seed"><td><code>assistanceTypes</code></td><td>Assistance type catalog.</td><td>Super Admin / seed</td><td class="num">7</td><td><span class="none">—</span></td></tr><tr data-q="auditlog every recorded action (patients see their own). staff for their own work; server for money, accounts, codes and timers"><td><code>auditLog</code></td><td>Every recorded action (patients see their own).</td><td>Staff for their own work; server for money, accounts, codes and timers</td><td class="num">6</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">onSliceProceeded</span><span class="chip fn">purgeDeclinedOnboarding</span><span class="chip fn">serverWrites</span></td></tr><tr data-q="billkeys bill numbers confirmed per hospital (reuse check). hospital bill check"><td><code>billKeys</code></td><td>Bill numbers confirmed per hospital (reuse check).</td><td>Hospital bill check</td><td class="num">2</td><td><span class="chip fn">accountAdmin</span></td></tr><tr data-q="certificates signed guarantee letter scans. agency upload"><td><code>certificates</code></td><td>Signed Guarantee Letter scans.</td><td>Agency upload</td><td class="num">6</td><td><span class="none">—</span></td></tr><tr data-q="conversations message threads (case threads carry tenantid and requestid) and their messages. staff start threads; opencaseconversation; participants post; onconversationmessage"><td><code>conversations</code></td><td>Message threads (case threads carry tenantId and requestId) and their messages.</td><td>Staff start threads; openCaseConversation; participants post; onConversationMessage</td><td class="num">4</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">caseConversations</span></td></tr><tr data-q="counters patientids: the patient display-id counter. assignpatientid only"><td><code>counters</code></td><td>patientIds: the patient display-ID counter.</td><td>assignPatientId only</td><td class="num">0</td><td><span class="none">—</span></td></tr><tr data-q="docreviewpresence who is reviewing a case now (soft lock). hospital staff"><td><code>docReviewPresence</code></td><td>Who is reviewing a case now (soft lock).</td><td>Hospital staff</td><td class="num">0</td><td><span class="none">—</span></td></tr><tr data-q="documentcontents the file itself (base64). patient upload while replaceable; purge functions"><td><code>documentContents</code></td><td>The file itself (base64).</td><td>Patient upload while replaceable; purge functions</td><td class="num">2</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">purgeSelfieOnClose</span><span class="chip fn">purgeUnattachedDocuments</span></td></tr><tr data-q="documenttypes document catalog and reuse rules. super admin / seed"><td><code>documentTypes</code></td><td>Document catalog and reuse rules.</td><td>Super Admin / seed</td><td class="num">7</td><td><span class="none">—</span></td></tr><tr data-q="documents uploaded document metadata and status. patient upload (locked once verified or endorsed); hospital review"><td><code>documents</code></td><td>Uploaded document metadata and status.</td><td>Patient upload (locked once verified or endorsed); hospital review</td><td class="num">8</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">caseActions</span><span class="chip fn">purgeSelfieOnClose</span><span class="chip fn">purgeUnattachedDocuments</span><span class="chip fn">syncDocumentStatus</span></td></tr><tr data-q="eligibilitycertificates certificates of eligibility (frozen snapshot, signed scan, void). hospital staff; amendassessment voids"><td><code>eligibilityCertificates</code></td><td>Certificates of Eligibility (frozen snapshot, signed scan, void).</td><td>Hospital staff; amendAssessment voids</td><td class="num">3</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">assessmentActions</span></td></tr><tr data-q="eligibilitycounters certificate numbers per hospital and year. hospital staff (transaction)"><td><code>eligibilityCounters</code></td><td>Certificate numbers per hospital and year.</td><td>Hospital staff (transaction)</td><td class="num">1</td><td><span class="none">—</span></td></tr><tr data-q="hospitalids access codes; privateinfo holds who it was issued to. issueaccesscode, claimaccesscode, staff reset/delete"><td><code>hospitalIds</code></td><td>Access codes; privateInfo holds who it was issued to.</td><td>issueAccessCode, claimAccessCode, staff reset/delete</td><td class="num">5</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">codeActions</span><span class="chip fn">onRequestWritten</span><span class="chip fn">verifyAccessCode</span></td></tr><tr data-q="hospitalsettings verification policy, time limits, poverty line, signatory (staff-only). hospital admin"><td><code>hospitalSettings</code></td><td>Verification policy, time limits, poverty line, signatory (staff-only).</td><td>Hospital Admin</td><td class="num">1</td><td><span class="chip fn">caseActions</span><span class="chip fn">caseTimers</span></td></tr><tr data-q="hospitals the tenants: branding, prefix, sign-ups open, onboarding stage. super admin; hospital admin branding"><td><code>hospitals</code></td><td>The tenants: branding, prefix, sign-ups open, onboarding stage.</td><td>Super Admin; Hospital Admin branding</td><td class="num">5</td><td><span class="chip fn">caseActions</span><span class="chip fn">codeActions</span><span class="chip fn">networkStats</span><span class="chip fn">sendNotificationEmail</span><span class="chip fn">verifyAccessCode</span></td></tr><tr data-q="hospitalspublic public hospital listing. onhospitalwritten only"><td><code>hospitalsPublic</code></td><td>Public hospital listing.</td><td>onHospitalWritten only</td><td class="num">0</td><td><span class="chip fn">onHospitalWritten</span></td></tr><tr data-q="hospitalspublicstats marketplace turnaround per hospital. refreshnetworkstats"><td><code>hospitalsPublicStats</code></td><td>Marketplace turnaround per hospital.</td><td>refreshNetworkStats</td><td class="num">0</td><td><span class="chip fn">networkStats</span></td></tr><tr data-q="identityflags possible duplicate accounts per hospital. identity functions; clearidentityflag"><td><code>identityFlags</code></td><td>Possible duplicate accounts per hospital.</td><td>Identity functions; clearIdentityFlag</td><td class="num">0</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">caseActions</span><span class="chip fn">identityIndex</span></td></tr><tr data-q="identityindex keyed hashes of identity values (server-only). identity functions"><td><code>identityIndex</code></td><td>Keyed hashes of identity values (server-only).</td><td>Identity functions</td><td class="num">0</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">identityIndex</span></td></tr><tr data-q="identityindexbyuser each user’s hashes (server-only). identity functions"><td><code>identityIndexByUser</code></td><td>Each user’s hashes (server-only).</td><td>Identity functions</td><td class="num">0</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">identityIndex</span></td></tr><tr data-q="networkstats network counts for the super admin. refreshnetworkstats"><td><code>networkStats</code></td><td>Network counts for the Super Admin.</td><td>refreshNetworkStats</td><td class="num">1</td><td><span class="chip fn">networkStats</span></td></tr><tr data-q="notificationerrors failed deliveries. server"><td><code>notificationErrors</code></td><td>Failed deliveries.</td><td>Server</td><td class="num">1</td><td><span class="none">—</span></td></tr><tr data-q="notifications per-user in-app notifications. notify() and functions"><td><code>notifications</code></td><td>Per-user in-app notifications.</td><td>notify() and functions</td><td class="num">1</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">announcements</span><span class="chip fn">onOnboardingRequestCreated</span><span class="chip fn">onRequestWritten</span><span class="chip fn">onSliceProceeded</span><span class="chip fn">sendNotificationEmail</span><span class="chip fn">serverWrites</span></td></tr><tr data-q="onboardingrequests hospitals joining the network, by stage. public form; super admin"><td><code>onboardingRequests</code></td><td>Hospitals joining the network, by stage.</td><td>Public form; Super Admin</td><td class="num">3</td><td><span class="chip fn">purgeDeclinedOnboarding</span></td></tr><tr data-q="referralsuggestions an agency suggesting another agency for a case. agency staff"><td><code>referralSuggestions</code></td><td>An agency suggesting another agency for a case.</td><td>Agency staff</td><td class="num">2</td><td><span class="none">—</span></td></tr><tr data-q="reports problem reports. help form"><td><code>reports</code></td><td>Problem reports.</td><td>Help form</td><td class="num">4</td><td><span class="none">—</span></td></tr><tr data-q="requests a patient’s case: bill, coverage, documents list, intake sheet, status and totals. patient filing; hospital review fields; endorse/close, amendments, timers and sync functions"><td><code>requests</code></td><td>A patient’s case: bill, coverage, documents list, intake sheet, status and totals.</td><td>Patient filing; hospital review fields; endorse/close, amendments, timers and sync functions</td><td class="num">12</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">assessmentActions</span><span class="chip fn">caseActions</span><span class="chip fn">caseConversations</span><span class="chip fn">caseTimers</span><span class="chip fn">networkStats</span><span class="chip fn">onAuditLogCreated</span><span class="chip fn">onRequestWritten</span><span class="chip fn">purgeUnattachedDocuments</span><span class="chip fn">sliceActions</span><span class="chip fn">syncDocumentStatus</span><span class="chip fn">syncRequestFinancials</span></td></tr><tr data-q="users every account and profile (role, hospital, agency, patient details). registration and profile edits (browser, rules-limited); account functions; assignpatientid"><td><code>users</code></td><td>Every account and profile (role, hospital, agency, patient details).</td><td>Registration and profile edits (browser, rules-limited); account functions; assignPatientId</td><td class="num">21</td><td><span class="chip fn">accountAdmin</span><span class="chip fn">announcements</span><span class="chip fn">assessmentActions</span><span class="chip fn">caseActions</span><span class="chip fn">caseTimers</span><span class="chip fn">codeActions</span><span class="chip fn">identityIndex</span><span class="chip fn">mfaPolicy</span><span class="chip fn">networkStats</span><span class="chip fn">onAgencyWritten</span><span class="chip fn">onDocumentCountChanged</span><span class="chip fn">onOnboardingRequestCreated</span><span class="chip fn">onRequestWritten</span><span class="chip fn">onSliceProceeded</span><span class="chip fn">patientIds</span><span class="chip fn">sendNotificationEmail</span><span class="chip fn">serverWrites</span></td></tr></tbody></table></div>
+</section>
+
+<section id="method" class="block">
+  <div class="sechead"><h2>How this was made</h2></div>
+  <div class="callout">The routes, page parts, dialogs, server actions, collections, links between screens and the functions list were read from the code (src/App.jsx, every file under src/pages and src/components, functions/index.js, functions/src and firestore.rules) at 8a91901. The descriptions were written by hand against that inventory. Dialog names are their titles where the title is fixed text, otherwise the dialog’s component name. Data columns show what each screen touches directly or through its components; helper modules under src/utils count one step deep.</div>
+</section>
+</main>
+</div>
+
+
+<script>
+  const q = document.getElementById('q')
+  q.addEventListener('input', () => {
+    const v = q.value.trim().toLowerCase()
+    document.querySelectorAll('tr[data-q]').forEach((tr) => tr.classList.toggle('hidden-row', !!v && !tr.dataset.q.includes(v)))
+  })
+</script>
+
+<script type="module">
+  // Standalone copy: draw the diagrams (the artifact viewer does this itself).
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs'
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches
+  mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'neutral', securityLevel: 'strict' })
+  await mermaid.run({ querySelector: 'pre.mermaid' })
+</script>
+</body>
+</html>
