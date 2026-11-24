@@ -3,7 +3,7 @@
  * and several participating hospitals, so every multi-hospital section mounts)
  * and the "For hospitals" onboarding page. Guards against a runtime crash the
  * build can't see (e.g. a JSX component used but never imported), which the
- * CI e2e smoke caught once on the Landing "two doors" cards.
+ * CI e2e smoke caught once on the Landing's old "two doors" cards.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
@@ -47,36 +47,41 @@ describe('public pages (signed out)', () => {
     const { default: Landing } = await import('../../src/pages/auth/Landing')
     await i18n.changeLanguage('en')
     wrap(<Landing />)
-    // Two doors
-    expect(screen.getByText('For patients')).toBeTruthy()
-    expect(screen.getByText('Request onboarding')).toBeTruthy()
-    // Compact partner-agency strip (landing review 2026-11-16)
-    expect(screen.getByText('Funded by 2 partner programs')).toBeTruthy()
-    // Participating hospitals: the access-code list and the offices in "Need help"
-    expect(screen.getAllByText('Bangsamoro General Hospital').length).toBeGreaterThan(1)
-    expect(screen.getAllByText('participating hospitals').length).toBeGreaterThan(0)
+    // The one journey uses the tracker's own stage names (relayout 2026-11-24)
+    for (const stage of ['Submitted', 'Under review', 'Assessment', 'Endorsed', 'Funding', 'Complete']) {
+      expect(screen.getByText(stage)).toBeTruthy()
+    }
+    // Who can apply: no "already classified indigent" precondition
+    expect(screen.getByText('Who can apply')).toBeTruthy()
+    expect(document.body.textContent).not.toMatch(/classified you as an indigent/)
+    // One list of hospital offices, each with its code prefix
+    expect(screen.getAllByText('Bangsamoro General Hospital')).toHaveLength(1)
+    expect(screen.getByText('Codes from this office start with BGH-')).toBeTruthy()
+    // Partner agencies by name only (FAQ), no public slot counts
+    expect(screen.getByRole('list', { name: 'Partner programs' }).textContent).toMatch(/DSWD.*PCSO/)
+    expect(document.body.textContent).not.toMatch(/slots remaining|Funded by/)
+    // Nothing that isn't built: no Meet link, no authorization letter
+    expect(document.body.textContent).not.toMatch(/Google Meet|authorization letter/)
+    // A one-line band for hospitals
+    expect(screen.getByText('Are you a hospital?')).toBeTruthy()
     // No single hospital's address or phone is written into the page
     expect(document.body.textContent).not.toMatch(/Sinsuat|421-2500/)
   })
 
-  it('Landing scales to many agencies: 6 badges + "+N", 6 cards + show all, search', async () => {
+  it('Landing lists many hospitals 4 at a time, with one show-all switch', async () => {
     const { default: Landing } = await import('../../src/pages/auth/Landing')
     await i18n.changeLanguage('en')
-    const saved = DATA.agenciesPublic
-    DATA.agenciesPublic = Array.from({ length: 20 }, (_, i) => ({
-      id: `a${i}`, name: `Agency ${String(i + 1).padStart(2, '0')}`, enabled: true, slots: { total: 10, remaining: 10 },
+    const saved = DATA.hospitalsPublic
+    DATA.hospitalsPublic = Array.from({ length: 7 }, (_, i) => ({
+      id: `h${i}`, facilityName: `Hospital ${i + 1}`, accessCodePrefix: `H${i}`, enabled: true,
     }))
     try {
       wrap(<Landing />)
-      expect(screen.getByText('Funded by 20 partner programs')).toBeTruthy()
-      expect(screen.getByText('+14')).toBeTruthy()
-      expect(screen.getAllByRole('heading', { level: 3, name: /^Agency \d+$/ })).toHaveLength(6)
-      fireEvent.click(screen.getByRole('button', { name: 'Show all 20 programs' }))
-      expect(screen.getAllByRole('heading', { level: 3, name: /^Agency \d+$/ })).toHaveLength(20)
-      fireEvent.change(screen.getByPlaceholderText('Search programs'), { target: { value: 'Agency 07' } })
-      expect(screen.getAllByRole('heading', { level: 3, name: /^Agency \d+$/ })).toHaveLength(1)
+      expect(screen.getAllByText(/^Hospital \d$/)).toHaveLength(4)
+      fireEvent.click(screen.getByRole('button', { name: 'Show all 7 hospitals' }))
+      expect(screen.getAllByText(/^Hospital \d$/)).toHaveLength(7)
     } finally {
-      DATA.agenciesPublic = saved
+      DATA.hospitalsPublic = saved
     }
   })
 
@@ -85,7 +90,8 @@ describe('public pages (signed out)', () => {
     // Filipino is loaded on demand (perf: lazy Filipino) — switch the way the app does.
     await setLanguage('fil')
     wrap(<Landing />)
-    expect(screen.getByText('Para sa mga pasyente')).toBeTruthy()
+    expect(screen.getByText('Sino ang maaaring mag-apply')).toBeTruthy()
+    expect(screen.getByText('Kayo ba ay isang ospital?')).toBeTruthy()
     await i18n.changeLanguage('en')
   })
 

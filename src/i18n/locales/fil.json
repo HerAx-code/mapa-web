@@ -178,142 +178,45 @@
     },
     "nav": {
       "how": "Paano ito gumagana",
-      "programs": "Mga programa",
-      "forHospitals": "Para sa mga ospital"
-    },
-    "trust": {
-      "seeAll": "Tingnan ang lahat ng programa",
-      "fundedBy": "Pinopondohan ng {{count}} katuwang na programa",
-      "heading": "Isang aplikasyon, abot ang bawat katuwang na ahensya"
-    },
-    "doors": {
-      "patientsTitle": "Para sa mga pasyente",
-      "patientsBody": "Mag-apply nang isang beses gamit ang inyong mga dokumento at live selfie. Isang beses lang kayong susuriin — walang paulit-ulit na interview — at makikita ninyo ang desisyon ng bawat ahensya sa iisang pahina, sa Filipino o English.",
-      "p1": "Isang beses mag-apply, isang beses masuri",
-      "p2": "Isang tracker para sa lahat ng ahensya",
-      "p3": "Gumagana sa cellphone at mabagal na internet",
-      "patientsCta": "Magsimula",
-      "hospitalsTitle": "Para sa mga ospital",
-      "hospitalsBody": "Patakbuhin nang digital ang inyong medical assistance desk. Gamitin ang MAPA sa pamamagitan ng pag-configure — ang inyong pangalan, mga katuwang na ahensya, at mga dokumento — nang hindi bumubuo ng sariling bersyon. Iisang proseso, sariling settings.",
-      "h1": "I-configure, hindi bubuuin muli",
-      "h2": "One-stop-shop na proseso ng RA 11463",
-      "h3": "Hiwalay ang datos ng bawat ospital",
-      "hospitalsCta": "Humiling ng onboarding"
-    },
-    "network": {
-      "eyebrow": "Ang mas malaking layunin",
-      "heading": "Isang pintuan — hindi isa pang hiwalay na sistema",
-      "body": "Ang pasyenteng nangangailangan ng tulong mula sa ilang ahensya ay hindi dapat mag-apply nang ilang beses. Isang beses sinusuri ng MAPA at ipinapadala ang bawat bahagi ng bayarin sa bawat ahensya — walang pila, walang paulit-ulit na pag-encode o pag-apply.",
-      "hospitals": "kasaling ospital",
-      "agencies": "katuwang na ahensya",
-      "perPatient": "aplikasyon bawat pasyente",
-      "balance": "balanse — ang layunin"
+      "forHospitals": "Para sa mga ospital",
+      "offices": "Mga opisina ng ospital"
     },
     "header": {
       "downloadApp": "I-install ang App",
-      "mobileToast": "Malapit nang ilunsad ang MAPA mobile app. Sundan ang {{org}} para sa updates.",
       "register": "Mag-register",
       "login": "Mag-login →",
       "dashboard": "Dashboard →"
     },
     "hero": {
-      "statLanguages": "wika: Filipino at Ingles",
-      "statPrograms": "katuwang na programa",
-      "statHospitals": "kalahok na ospital",
       "headlineNetwork": "Tulong medikal sa inyong ospital — isang aplikasyon, mula sa inyong telepono.",
       "badgeNetwork": "Network ng tulong medikal ng mga kalahok na ospital",
       "badge": "Opisyal na portal ng {{facility}}",
       "tagline": "Mag-apply nang isang beses para sa tulong pinansiyal na medikal. Susuriin ng social-services office ng ospital ang inyong kahilingan at ipapadala ito sa mga ahensyang makakatulong sa inyong bayarin.",
-      "ctaPatient": "Mag-apply para sa Patient Account",
       "ctaDashboard": "Pumunta sa Dashboard",
-      "learnMore": "Alamin pa ↓",
       "headline": "Tulong medikal sa {{facility}} — isang aplikasyon, mula sa inyong telepono.",
-      "proof1Value": "Isa",
-      "proof1Label": "aplikasyon para sa lahat ng kasosyong ahensya",
-      "proof2Value": "Libre",
-      "proof2Label": "walang bayad — huwag magbayad sa fixer",
-      "proof3Value": "2 wika",
-      "proof3Label": "Filipino at Ingles",
       "journeyTitle": "Ang daloy ng inyong aplikasyon",
-      "journeyDesc": "Bawat request ay dumadaan sa parehong malinaw na hakbang — subaybayan ito mula sa pag-file hanggang sa release.",
-      "stage1Label": "Na-file",
-      "stage1Detail": "Nagsusumite kayo ng isang request kasama ang mga requirements.",
-      "stage2Label": "Na-review at na-assess",
-      "stage2Detail": "Bini-verify ng {{gateway}} ang inyong dokumento at sinusuri ang inyong kaso.",
-      "stage3Label": "Na-endorso at naaprubahan",
-      "stage3Detail": "Pinopondohan ito ng mga kasosyong ahensya at ini-issue ang Guarantee Letter.",
-      "stage4Label": "Na-release",
-      "stage4Detail": "Inilalapat ang Guarantee Letter sa inyong hospital bill."
-    },
-    "prepare": {
-      "heading": "Bago mag-register, ihanda ang sumusunod",
-      "codeTitle": "Patient Access Code (sa paghahain)",
-      "codeDesc": "Opsyonal sa pagpaparehistro. Kailangan ito sa paghahain ng kahilingan: ibinibigay ito ng social-services office ng ospital na inyong pipiliin, nakapangalan sa pasyente (halimbawa {{example}}).",
-      "emailTitle": "Email Address",
-      "emailDesc": "Isang gumaganang email address para sa account login, abiso, at password recovery.",
-      "mobileTitle": "Mobile Number",
-      "mobileDesc": "Ang inyong 11-digit na Philippine mobile number (hal. 09XXXXXXXXX).",
-      "addressTitle": "Tirahan",
-      "addressDesc": "Ang inyong kumpletong tirahan — barangay, munisipalidad, at probinsya. Lalabas sa inyong Guarantee Letter.",
-      "ready": "Nakahanda na ba ang lahat ng ito?",
-      "registerNow": "Mag-register na →"
-    },
-    "steps": {
-      "heading": "Paano kumuha ng tulong medikal",
-      "subtitle": "Gumawa ng account, pumili ng ospital, kumuha ng code sa social-services office nito, at isumite ang inyong kahilingan. Isang account para sa lahat ng kalahok na ospital.",
-      "s1Title": "Gumawa ng MAPA Account",
-      "s1Desc": "Magparehistro online nang libre gamit ang pangalan, petsa ng kapanganakan, email, numero ng telepono at address. Kung kapamilya ang pasyente, maaari kayong magparehistro para sa kanya. May code na? Maaari ninyo itong ilagay ngayon.",
-      "s2Title": "Pumili ng Ospital at Kumuha ng Code",
-      "s2Desc": "Ikumpara ang mga kalahok na ospital, at pumunta sa social-services office ng inyong napili. Susuriin nila ang ID ng pasyente at bibigyan kayo ng Patient Access Code sa pangalan ng pasyente.",
-      "s3Title": "Isumite ang Inyong Request",
-      "s3Desc": "Ilagay ang code kasama ang apelyido at petsa ng kapanganakan ng pasyente, i-upload ang mga kailangang dokumento at i-verify ang ID gamit ang selfie.",
-      "s4Title": "Sinusuri ng Ospital ang Inyong Kaso",
-      "s4Desc": "Bine-verify ng social worker ang inyong mga dokumento at sinusuri ang kaso nang malayuan, at maaaring mag-message kung may kailangan — walang interview na pupuntahan.",
-      "s5Title": "Ma-endorse at Tanggapin ang Guarantee Letter",
-      "s5Desc": "Ine-endorse ng ospital ang inyong request sa mga ahensyang makapagpopondo. Kunin ang Guarantee Letter para ipakita sa nakasaad na provider.",
-      "s6Title": "Ang inyong susunod na kahilingan",
-      "s6Desc": "Ang bawat code ay para sa isang kahilingan, nakapangalan sa pasyente. Para sa paulit-ulit na pagpapagamot gaya ng dialysis o chemotherapy, maaaring magbigay ang ospital ng isang code para sa isang kurso ng paggamot. Para sa kahilingan sa ibang ospital, kumuha ng code doon.",
-      "startBtn": "Magsimula sa Hakbang 1",
-      "footer": "Libre · Walang babayaran · Pinapatakbo ng {{gateway}}"
-    },
-    "programs": {
-      "showFewer": "Ipakita nang mas kaunti",
-      "showAll": "Ipakita ang lahat ng {{count}} programa",
-      "noMatch": "Walang programang tugma sa “{{q}}”.",
-      "search": "Maghanap ng programa",
-      "heading": "Mga available na programa",
-      "subtitle": "Tingnan ang mga programang tumutulong sa mga pasyente ng mga kalahok na ospital. Nire-reset araw-araw sa hatinggabi ang mga slot.",
-      "applyNow": "Mag-apply Na →",
-      "goToDashboard": "Pumunta sa Dashboard →",
-      "full": "Puno",
-      "slotsBadge": "{{count}} slots",
-      "slotsRemaining": "{{remaining}} sa {{total}} na slot ang natitira ngayon"
+      "journeyDesc": "Dumadaan ang inyong request sa mga yugtong ito. Ito rin ang makikita ninyo sa inyong status page.",
+      "findOffice": "Hanapin ang opisina ng ospital",
+      "free": "Libre. Walang bayad sa anumang hakbang."
     },
     "cost": {
       "title": "Libre ang pag-apply",
       "body": "Hindi kayo hihingan ng bayad ng MAPA — hindi sa pagrehistro, hindi sa Access Code, at hindi sa paglabas ng Guarantee Letter.",
-      "point1": "Walang bayad sa pagrehistro",
-      "point2": "Walang processing fee",
-      "point3": "Walang fixer o tagapamagitan",
       "warning": "Kung may humingi ng bayad para mapabilis ang approval, hindi siya taga-{{gateway}}. Isumbong agad sa {{gateway}}."
     },
     "eligibility": {
       "notCovered": "Maaaring mag-apply ang mga outpatient na ginagamot sa sariling dialysis, chemotherapy, pharmacy, laboratoryo o clinic ng ospital. Hindi pa saklaw: mga gamot o test na binili sa labas ng ospital. Magtanong sa social-services office ng ospital tungkol sa ibang tulong.",
       "title": "Sino ang maaaring mag-apply",
-      "intro": "Para sa mga pasyente ng {{facility}} na hindi kayang bayaran ang bill. Hindi kailangang marunong sa computer — maikli ang form, at may staff na maaaring tumulong sa inyo.",
+      "intro": "Para sa mga pasyente ng mga kalahok na ospital na hindi kayang bayaran ang bill. Hindi kailangang marunong sa computer — maikli ang form, at may staff na maaaring tumulong sa inyo.",
       "qualifyHeading": "Maaari kayong mag-apply kung…",
-      "q1": "Kayo ay ididischarge na mula sa isang kalahok na ospital at may final bill na, na-discharge na may hindi pa nababayarang bill, o ginagamot doon bilang outpatient.",
-      "q2": "May hindi pa bayad na bill o billing statement.",
-      "q3": "Naitala kayong indigent patient ng social worker.",
-      "q4": "Kayo ang pasyente, o kapamilyang nag-aapply para sa kanya.",
+      "q1": "May bill kayo sa isang kalahok na ospital: ididischarge na kayo na may final bill, na-discharge na may hindi pa bayad na bill, o ginagamot doon bilang outpatient.",
+      "q2": "Kailangan ninyo ng tulong sa pagbabayad nito. Titingnan ng social worker ang inyong kalagayan pagkatapos ninyong mag-apply.",
+      "q3": "Kayo ang pasyente, o kapamilyang nag-aapply para sa kanya.",
       "codeHeading": "Para magsumite ng kahilingan, kailangan ninyo ng Patient Access Code",
       "codeBody": "Ibinibigay ito nang personal, sa pangalan ng pasyente, sa social-services office ng ospital na inyong pipiliin. Hindi ito ipinapadala sa text, email, o social media — at walang sinuman online ang makapagbibigay nito. Maaari kayong gumawa ng account bago pa ninyo ito makuha.",
       "codeSample": "Halimbawa ng code",
-      "hospitalsHeading": "Mga kasaling ospital",
-      "codeStartsWith": "{{prefix}}-…",
-      "hospitalsShowAll": "Ipakita ang lahat ng {{count}} ospital",
-      "hospitalsShowFewer": "Ipakita nang mas kaunti",
-      "codeCta": "Saan ang opisina?"
+      "codeCta": "Hanapin ang opisina ng ospital",
+      "signupNeeds": "Para mag-sign up, kailangan ninyo ng email address at mobile number."
     },
     "faq": {
       "heading": "Mga tanong na madalas itanong",
@@ -321,26 +224,32 @@
       "q1": "May kailangan ba akong bayaran?",
       "a1": "Wala. Libre ang buong proseso sa MAPA, mula sa pagre-register hanggang sa paglabas ng Guarantee Letter. Hindi kayo hihingan ng bayad, deposito, o 'processing fee' ng {{gateway}} o ng MAPA. Kung may humingi ng pera kapalit ng approval, ipagbigay-alam agad sa Medical Social Services.",
       "q2": "Ano ang Patient Access Code at paano ito makukuha?",
-      "a2": "Isang naka-print na code na ibinibigay nang personal sa {{gateway}} office, matapos makumpirma ng social worker na kayo ay pasyente ng {{facility}} na may hindi pa bayad na bill. Ang code ang nag-uugnay sa inyong online application at tunay na hospital record, kaya hindi ito maaaring hingin sa telepono, text, o email. Magdala ng valid ID at billing statement.",
+      "a2": "Isang naka-print na code na ibinibigay nang personal sa {{gateway}} office, matapos makumpirma ng social worker na kayo ay pasyente ng ospital na may hindi pa bayad na bill. Ang code ang nag-uugnay sa inyong online application at tunay na hospital record, kaya hindi ito maaaring hingin sa telepono, text, o email. Magdala ng valid ID at billing statement.",
       "q3": "Maaari ba akong mag-apply para sa kapamilya?",
-      "a3": "Oo. Maaaring mag-apply ang asawa, magulang, anak na nasa hustong gulang, o awtorisadong kinatawan para sa pasyente — karaniwan kapag naka-confine pa ang pasyente o hindi kayang gumamit ng telepono. Itatanong ang inyong relasyon sa pasyente, sarili ninyong valid ID, at authorization letter na nilagdaan ng pasyente o pamilya.",
+      "a3": "Oo. Maaaring mag-apply ang asawa, magulang, anak na nasa hustong gulang, o ibang kinatawan para sa pasyente. Karaniwan ito kapag naka-confine pa ang pasyente o hindi kayang gumamit ng telepono. Ibibigay ninyo ang inyong pangalan at relasyon sa pasyente, mag-a-upload ng sarili ninyong valid ID, kukuha ng selfie, at kukumpirmahin na pinapayagan kayong mag-apply para sa kanya.",
       "q4": "Gaano katagal ang proseso?",
       "a4": "Depende ito sa kakumpletuhan ng inyong dokumento at sa review at bakanteng slot ng bawat ahensya. Sinisikap ng {{gateway}} na mabilis na masuri ang dokumento at masuri ang inyong kaso, at makikita ninyo ang bawat hakbang sa inyong account.",
-      "q5": "Kailangan ko bang pumunta sa {{facility}} para sa panayam?",
-      "a5": "Hindi. Ginagawa nang malayuan ang pagsusuri — sinusuri ng isang social worker ang inyong kaso online at magme-message sa inyo sa app kung may kailangan sila. Kung kailangan ng maikling live na usapan, magpapadala sila ng Google Meet link. Walang naka-iskedyul na panayam sa opisina na dadaluhan.",
+      "q5": "Kailangan ko bang pumunta sa ospital para sa panayam?",
+      "a5": "Hindi. Ginagawa nang malayuan ang pagsusuri. Sinusuri ng isang social worker ang inyong kaso online at magme-message sa inyo sa app kung may kailangan sila. Walang panayam sa opisina na dadaluhan.",
       "q6": "Ligtas ba ang aking impormasyon?",
-      "a6": "Oo. Pinapatakbo ang MAPA ng {{gateway}} at pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ahensyang pinagsumite ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras."
+      "a6": "Oo. Pinoproseso ang inyong datos sa ilalim ng Data Privacy Act of 2012 (RA 10173). Ang inyong dokumento at selfie ay ginagamit lamang upang mapatunayan ang inyong pagkakakilanlan at pangangailangan, at ibinabahagi lamang sa ospital na pinag-aplayan ninyo at sa mga ahensyang pinagpadalhan ng inyong request. Maaari kayong humiling ng kopya o pagwawasto ng inyong datos anumang oras.",
+      "q7": "Paulit-ulit ang aking pagpapagamot, gaya ng dialysis o chemotherapy. Kailangan ko ba ng bagong code tuwing kailan?",
+      "a7": "Ang bawat code ay para sa isang request. Para sa paulit-ulit na pagpapagamot, maaaring magbigay ang ospital ng isang code para sa isang kurso ng paggamot, hanggang mga tatlong buwan. Isang request pa rin ang isinusumite sa bawat pagkakataon.",
+      "q8": "Maaari ba akong mag-apply sa ibang ospital?",
+      "a8": "Oo. Iisang account ang gumagana sa lahat ng kalahok na ospital. Kumuha ng code sa social-services office ng ospital kung saan ginagamot ang pasyente, at doon isumite ang request.",
+      "q9": "Aling mga ahensya ang nagbabayad ng tulong?",
+      "a9": "Ipinapadala ng ospital ang inyong request sa mga katuwang na ahensyang makakatulong sa inyong kaso. Hindi kayo ang direktang mag-aapply sa kanila. Ang kasalukuyang mga katuwang na programa ay:",
+      "partnersLabel": "Mga katuwang na programa"
     },
     "help": {
       "title": "Kailangan ng tulong? Pumunta sa ospital.",
       "intro": "Ang mga kawani ng social-services office ng alinmang kalahok na ospital ay makakatulong sa pagpaparehistro, pagkuha ng selfie at pag-upload ng inyong mga dokumento. Dalhin ang inyong mga papeles at may tutulong sa inyo.",
       "onsite": "May tulong para sa walk-in — hindi kailangan ng appointment.",
-      "startBtn": "Simulan ang aplikasyon",
-      "addressLabel": "Address",
-      "phoneLabel": "Telepono",
-      "emailLabel": "Email",
       "hoursLabel": "Oras ng opisina",
-      "hours": "Lunes hanggang Biyernes, 8:00 AM – 5:00 PM. Sarado sa holiday."
+      "hours": "Iba-iba ang oras ng opisina sa bawat ospital. Kung maaari, mag-email muna sa opisina bago pumunta.",
+      "codePrefix": "Nagsisimula sa {{prefix}}- ang mga code mula sa opisinang ito",
+      "showAll": "Ipakita ang lahat ng {{count}} ospital",
+      "showFewer": "Ipakita nang mas kaunti"
     },
     "footer": {
       "officesLink": "Mga social-services office",
@@ -352,10 +261,10 @@
       "dashboard": "Pumunta sa dashboard",
       "howItWorks": "Paano ito gumagana",
       "contact": "Makipag-ugnayan",
-      "hours": "Lun – Biy, 8:00 AM – 5:00 PM",
       "copyright": "© {{year}} MAPA · Lahat ng karapatan ay nakalaan",
       "privacy": "Privacy Notice",
-      "officialPortal": "Opisyal na Portal ng {{org}}"
+      "officialPortal": "Opisyal na Portal ng {{org}}",
+      "network": "Network ng MAPA ng mga kalahok na ospital"
     },
     "privacy": {
       "title": "Privacy Notice",
@@ -379,6 +288,19 @@
       "access4": "System Administrators — buong access para sa management at audit",
       "contactNote": "Para sa mga alalahanin sa datos, makipag-ugnayan sa <b>{{gateway}}</b> sa {{contactEmail}}.",
       "close": "Isara"
+    },
+    "journey": {
+      "submitted": "Magsusumite kayo ng isang request gamit ang code, mga dokumento at selfie.",
+      "under_review": "Sinusuri ng {{gateway}} ang inyong mga dokumento.",
+      "assessment": "Sinusuri ng social worker ang inyong kaso at magme-message sa app kung may kailangan. Walang interview na pupuntahan.",
+      "endorsed": "Ipinapadala ng ospital ang inyong request sa mga ahensyang makakatulong magbayad.",
+      "funding": "Nagpapasya ang mga ahensya. Bawat pag-apruba ay may kasamang Guarantee Letter.",
+      "complete": "Inilalapat ang mga Guarantee Letter sa inyong hospital bill."
+    },
+    "hospitals": {
+      "title": "Kayo ba ay isang ospital?",
+      "body": "Patakbuhin ang inyong medical assistance desk sa MAPA at abutin ang mga katuwang na ahensya sa iisang network.",
+      "cta": "Para sa mga ospital"
     }
   },
   "shell": {
@@ -1556,22 +1478,61 @@
     "journey": {
       "label": "Iyong progreso",
       "stage": {
-        "submitted":    { "label": "Naisumite",    "now": "Naipasa na sa {{gateway}} ang iyong kahilingan at mga dokumento.",                 "next": "Sisimulan itong suriin ng {{gateway}} sa lalong madaling panahon." },
-        "under_review": { "label": "Sinusuri",     "now": "Bini-verify ng {{gateway}} ang iyong mga dokumento at bill.",                       "next": "Susunod, susuriin ng social worker ang iyong kaso." },
-        "assessment":   { "label": "Pagsusuri",    "now": "Sinusuri ng social worker ang iyong kaso at maaaring mag-message.",  "next": "Susunod, ie-endorso ng {{gateway}} ang kahilingan sa mga ahensya." },
-        "endorsed":     { "label": "Na-endorso",   "now": "In-endorso ng {{gateway}} ang iyong kahilingan sa isa o higit pang ahensya.",       "next": "Suriin ang plano ng saklaw at magpatuloy." },
-        "funding":      { "label": "Pinopondohan", "now": "Inaaprubahan ng mga ahensya ang kanilang bahagi at gumagawa ng Guarantee Letter.", "next": "Susunod, ganap nang masasaklaw ang iyong bill." },
-        "complete":     { "label": "Kumpleto",     "now": "Ganap nang saklaw ang iyong bill — kunin ang Guarantee Letters sa ahensya.", "next": "" }
+        "submitted": {
+          "label": "Naisumite",
+          "now": "Naipasa na sa {{gateway}} ang iyong kahilingan at mga dokumento.",
+          "next": "Sisimulan itong suriin ng {{gateway}} sa lalong madaling panahon."
+        },
+        "under_review": {
+          "label": "Sinusuri",
+          "now": "Bini-verify ng {{gateway}} ang iyong mga dokumento at bill.",
+          "next": "Susunod, susuriin ng social worker ang iyong kaso."
+        },
+        "assessment": {
+          "label": "Pagsusuri",
+          "now": "Sinusuri ng social worker ang iyong kaso at maaaring mag-message.",
+          "next": "Susunod, ie-endorso ng {{gateway}} ang kahilingan sa mga ahensya."
+        },
+        "endorsed": {
+          "label": "Na-endorso",
+          "now": "In-endorso ng {{gateway}} ang iyong kahilingan sa isa o higit pang ahensya.",
+          "next": "Suriin ang plano ng saklaw at magpatuloy."
+        },
+        "funding": {
+          "label": "Pinopondohan",
+          "now": "Inaaprubahan ng mga ahensya ang kanilang bahagi at gumagawa ng Guarantee Letter.",
+          "next": "Susunod, ganap nang masasaklaw ang iyong bill."
+        },
+        "complete": {
+          "label": "Kumpleto",
+          "now": "Ganap nang saklaw ang iyong bill — kunin ang Guarantee Letters sa ahensya.",
+          "next": ""
+        }
       }
     },
     "hero": {
       "step": "Hakbang {{n}} ng {{total}}",
       "trackCta": "Tingnan ang kahilingan",
-      "s0": { "title": "Natanggap ang kahilingan", "sub": "Sisimulan nang suriin ng {{gateway}} ang iyong mga dokumento." },
-      "s1": { "title": "Sinusuri", "sub": "Sinusuri ng {{gateway}} ang iyong mga dokumento." },
-      "s2": { "title": "Pagsusuri", "sub": "Sinusuri ng isang social worker ang inyong kaso at maaaring mag-message sa inyo." },
-      "s3": { "title": "Nasa mga ahensya", "sub": "Na-endorso ng {{gateway}} ang iyong kahilingan sa ahensya." },
-      "s4": { "title": "Bahagyang naaprubahan", "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan." }
+      "s0": {
+        "title": "Natanggap ang kahilingan",
+        "sub": "Sisimulan nang suriin ng {{gateway}} ang iyong mga dokumento."
+      },
+      "s1": {
+        "title": "Sinusuri",
+        "sub": "Sinusuri ng {{gateway}} ang iyong mga dokumento."
+      },
+      "s2": {
+        "title": "Pagsusuri",
+        "sub": "Sinusuri ng isang social worker ang inyong kaso at maaaring mag-message sa inyo."
+      },
+      "s3": {
+        "title": "Nasa mga ahensya",
+        "sub": "Na-endorso ng {{gateway}} ang iyong kahilingan sa ahensya."
+      },
+      "s4": {
+        "title": "Bahagyang naaprubahan",
+        "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan."
+      }
     }
   },
   "register": {
