@@ -311,6 +311,8 @@
       "codeSample": "Sample code",
       "hospitalsHeading": "Participating hospitals",
       "codeStartsWith": "{{prefix}}-…",
+      "hospitalsShowAll": "Show all {{count}} hospitals",
+      "hospitalsShowFewer": "Show fewer",
       "codeCta": "Where is the office?"
     },
     "faq": {
