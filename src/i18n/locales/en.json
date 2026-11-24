@@ -113,12 +113,6 @@
     "timeoutNotice": "You were signed out for inactivity, to keep records secure. Please sign in again.",
     "brand": {
       "headline": "One request, verified once, funded by many.",
-      "a1title": "A single request",
-      "a1desc": "Apply once with your documents and a live selfie — no repeating yourself for every agency.",
-      "a2title": "Funded toward zero balance",
-      "a2desc": "Any insurance or prior coverage you have, like PhilHealth, is applied to your bill first; partner agencies cover the rest until it reaches zero.",
-      "a3title": "Your data, your rights",
-      "a3desc": "Download your records, see who accessed them, and request erasure — protected under RA 10173.",
       "trust": "Secured under the Philippine Data Privacy Act (RA 10173). Your health data is encrypted and never sold.",
       "sub": "One place to follow your medical assistance through every agency — verified once, tracked always.",
       "chipPrivacy": "RA 10173 protected",
@@ -136,10 +130,6 @@
     "noAccount": "Don't have an account?",
     "registerHere": "Register here",
     "backHome": "← Back to Home",
-    "banner": {
-      "ongoing": "Ongoing: ",
-      "upcoming": "Upcoming: "
-    },
     "reset": {
       "title": "Reset your password",
       "desc": "Enter your email and we'll send you a reset link.",
@@ -154,17 +144,21 @@
       "userNotFound": "No account found with this email address.",
       "invalidEmail": "Please enter a valid email address.",
       "tooManyRequests": "Too many failed attempts. Please wait a few minutes and try again.",
-      "userDisabled": "This account has been deactivated. Contact your administrator.",
+      "userDisabled": "This account has been turned off. Patients: ask the social-services office of your hospital. Staff: ask your administrator.",
       "networkFailed": "Network error. Please check your connection and try again.",
       "loginFailed": "Login failed. Please check your credentials and try again.",
       "enterEmail": "Please enter your email address first.",
-      "resetFailed": "Failed to send reset email. Please try again."
+      "resetFailed": "Failed to send reset email. Please try again.",
+      "wrongCredentials": "The email or password is incorrect.",
+      "resetPasswordLink": "Reset your password",
+      "createAccountLink": "Create an account"
     },
     "toast": {
       "welcomeBack": "Welcome back, {{name}}!",
       "resetSent": "If an account exists with this email, a reset link is on its way. Check your inbox in a few minutes (and your spam folder)."
     },
-    "devOnly": "Dev only — Demo accounts"
+    "devOnly": "Dev only — Demo accounts",
+    "helpStuck": "Forgot which email you used, or can’t open it? Ask the social-services office of your hospital for help."
   },
   "landing": {
     "cta": {

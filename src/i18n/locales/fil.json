@@ -113,12 +113,6 @@
     "timeoutNotice": "Na-sign out kayo dahil sa matagal na hindi paggamit, para sa seguridad ng mga rekord. Mangyaring mag-sign in muli.",
     "brand": {
       "headline": "Isang kahilingan, isang beses na beripikasyon, tinustusan ng marami.",
-      "a1title": "Isang kahilingan lamang",
-      "a1desc": "Mag-apply nang isang beses kasama ang inyong mga dokumento at live selfie — hindi na kailangang ulit-ulitin para sa bawat ahensya.",
-      "a2title": "Tinutustusan tungo sa zero balance",
-      "a2desc": "Ang anumang insurance o naunang saklaw na mayroon kayo, tulad ng PhilHealth, ay inilalapat muna sa inyong bayarin; sinasaklaw ng mga kasosyong ahensya ang natitira hanggang maging zero ito.",
-      "a3title": "Ang inyong datos, ang inyong karapatan",
-      "a3desc": "I-download ang inyong mga rekord, tingnan kung sino ang nag-access, at humiling ng pagbura — protektado sa ilalim ng RA 10173.",
       "trust": "Protektado sa ilalim ng Data Privacy Act ng Pilipinas (RA 10173). Naka-encrypt ang inyong health data at hindi kailanman ibinebenta.",
       "sub": "Isang lugar para subaybayan ang inyong tulong medikal sa bawat ahensya — isang beses na beripikasyon, laging nakikita ang progreso.",
       "chipPrivacy": "Protektado ng RA 10173",
@@ -136,10 +130,6 @@
     "noAccount": "Wala pang account?",
     "registerHere": "Mag-register dito",
     "backHome": "← Bumalik sa Home",
-    "banner": {
-      "ongoing": "Kasalukuyan: ",
-      "upcoming": "Paparating: "
-    },
     "reset": {
       "title": "I-reset ang inyong password",
       "desc": "Ipasok ang inyong email at magpapadala kami ng reset link.",
@@ -154,17 +144,21 @@
       "userNotFound": "Walang account na nakita sa email address na ito.",
       "invalidEmail": "Mangyaring magpasok ng wastong email address.",
       "tooManyRequests": "Sobrang dami ng nabigong pagsubok. Maghintay ng ilang minuto at subukan muli.",
-      "userDisabled": "Na-deactivate ang account na ito. Makipag-ugnayan sa inyong administrator.",
+      "userDisabled": "Naka-off ang account na ito. Mga pasyente: magtanong sa social-services office ng inyong ospital. Staff: magtanong sa inyong administrator.",
       "networkFailed": "May problema sa network. Pakisuri ang inyong koneksyon at subukan muli.",
       "loginFailed": "Nabigo ang pag-login. Pakisuri ang inyong credentials at subukan muli.",
       "enterEmail": "Mangyaring ipasok muna ang inyong email address.",
-      "resetFailed": "Nabigo ang pagpapadala ng reset email. Pakisubukan muli."
+      "resetFailed": "Nabigo ang pagpapadala ng reset email. Pakisubukan muli.",
+      "wrongCredentials": "Mali ang email o password.",
+      "resetPasswordLink": "I-reset ang inyong password",
+      "createAccountLink": "Gumawa ng account"
     },
     "toast": {
       "welcomeBack": "Maligayang pagbabalik, {{name}}!",
       "resetSent": "Kung may account na nakatugma sa email na ito, papadala ang reset link sa loob ng ilang minuto. Tingnan ang inyong inbox (at spam folder)."
     },
-    "devOnly": "Dev lamang — Demo accounts"
+    "devOnly": "Dev lamang — Demo accounts",
+    "helpStuck": "Nakalimutan kung aling email ang ginamit, o hindi ito mabuksan? Humingi ng tulong sa social-services office ng inyong ospital."
   },
   "landing": {
     "cta": {
