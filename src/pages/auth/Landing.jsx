@@ -71,6 +71,8 @@ export default function Landing() {
   // "Show all"; a search box appears past PROGRAMS_SEARCH_FROM.
   const [showAllPrograms, setShowAllPrograms] = useState(false)
   const [programQuery, setProgramQuery]       = useState('')
+  // Hospital prefix list scales the same way: first HOSPITALS_SHOWN, then expand.
+  const [showAllHospitals, setShowAllHospitals] = useState(false)
   // Participating hospitals (public projection, multi-hospital).
   const hospitals = usePublicHospitals()
   // Program-slot bars fill from empty the first time the Programs section
@@ -132,6 +134,8 @@ export default function Landing() {
   // A signed-in user's ORG is their hospital; a visitor sees the network.
   const scoped = !!user?.tenantId
   const PROGRAMS_SHOWN = 6
+  const HOSPITALS_SHOWN = 4
+  const visibleHospitals = showAllHospitals ? hospitals : hospitals.slice(0, HOSPITALS_SHOWN)
   const PROGRAMS_SEARCH_FROM = 12
   const q = programQuery.trim().toLowerCase()
   const matchingPrograms = q
@@ -395,13 +399,22 @@ export default function Landing() {
                   <div className="mt-4">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.hospitalsHeading')}</p>
                     <ul className="mt-2 space-y-1.5">
-                      {hospitals.map(h => (
+                      {visibleHospitals.map(h => (
                         <li key={h.id} className="flex items-baseline justify-between gap-3 text-sm">
                           <span className="text-gray-800">{h.facilityName}</span>
                           <span className="font-mono text-xs text-gray-500 whitespace-nowrap">{t('landing.eligibility.codeStartsWith', { prefix: h.accessCodePrefix })}</span>
                         </li>
                       ))}
                     </ul>
+                    {hospitals.length > HOSPITALS_SHOWN && (
+                      <button type="button"
+                        className="mt-2 inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+                        onClick={() => setShowAllHospitals(v => !v)}>
+                        {showAllHospitals
+                          ? t('landing.eligibility.hospitalsShowFewer')
+                          : t('landing.eligibility.hospitalsShowAll', { count: hospitals.length })}
+                      </button>
+                    )}
                   </div>
                 )}
                 <a href="#help" className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
@@ -658,7 +671,7 @@ export default function Landing() {
             {/* Each participating hospital's own office (hospitalsPublic) —
                 no single hospital's address or phone is written into the page. */}
             <ul className="lp-card divide-y divide-gray-100 px-5 sm:px-6">
-              {hospitals.map(h => (
+              {visibleHospitals.map(h => (
                 <li key={h.id} className="flex gap-4 py-4">
                   <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600">
                     <MdLocalHospital size={18} />
@@ -671,6 +684,17 @@ export default function Landing() {
                   </div>
                 </li>
               ))}
+              {hospitals.length > HOSPITALS_SHOWN && (
+                <li className="py-3">
+                  <button type="button"
+                    className="inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+                    onClick={() => setShowAllHospitals(v => !v)}>
+                    {showAllHospitals
+                      ? t('landing.eligibility.hospitalsShowFewer')
+                      : t('landing.eligibility.hospitalsShowAll', { count: hospitals.length })}
+                  </button>
+                </li>
+              )}
               <li className="flex gap-4 py-4">
                 <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600"><MdSchedule size={18} /></span>
                 <div className="min-w-0">

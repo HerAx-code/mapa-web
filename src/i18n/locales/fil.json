@@ -311,6 +311,8 @@
       "codeSample": "Halimbawa ng code",
       "hospitalsHeading": "Mga kasaling ospital",
       "codeStartsWith": "{{prefix}}-…",
+      "hospitalsShowAll": "Ipakita ang lahat ng {{count}} ospital",
+      "hospitalsShowFewer": "Ipakita nang mas kaunti",
       "codeCta": "Saan ang opisina?"
     },
     "faq": {
