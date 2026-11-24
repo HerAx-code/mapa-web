@@ -33,6 +33,13 @@ describe('For Hospitals request form', () => {
     expect(validateRequest({ ...complete, privacyConsent: false })).toMatch(/privacy notice/)
   })
 
+  it('needs a region from the list (the address is now dropdowns)', async () => {
+    const { validateRequest, validateFields } = await import('../../src/pages/ForHospitals')
+    expect(validateRequest({ ...complete, region: '' })).toMatch(/region/)
+    expect(validateRequest({ ...complete, region: 'Mindanao' })).toMatch(/region/)
+    expect(validateFields({ ...complete, region: '' }).map(p => p.field)).toEqual(['region'])
+  })
+
   it('needs the ownership chosen (it starts blank)', async () => {
     const { validateRequest } = await import('../../src/pages/ForHospitals')
     expect(validateRequest({ ...complete, hospitalType: '' })).toMatch(/ownership/)

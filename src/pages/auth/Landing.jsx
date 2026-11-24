@@ -4,6 +4,7 @@ import { useTranslation, Trans } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../utils/constants'
 import { accessCodePrefixFor, ORG } from '../../config/org'
+import { displayEmail } from '../../utils/maskEmail'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import {
@@ -343,7 +344,7 @@ export default function Landing() {
                     <p className="font-semibold text-gray-900">{h.facilityName}</p>
                     {h.gatewayName && <p className="text-gray-600">{h.gatewayName}</p>}
                     {h.address && <p className="mt-1 flex gap-1.5 text-gray-600"><MdLocationOn size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{h.address}</p>}
-                    {h.contactEmail && <p className="flex gap-1.5 text-gray-600 break-all"><MdMailOutline size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{h.contactEmail}</p>}
+                    {h.contactEmail && <p className="flex gap-1.5 text-gray-600 break-all"><MdMailOutline size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{displayEmail(h.contactEmail)}</p>}
                     <p className="mt-1 text-xs text-gray-500">{t('landing.help.codePrefix', { prefix: h.accessCodePrefix })}</p>
                   </div>
                 </li>
@@ -478,7 +479,7 @@ export default function Landing() {
               <ul className="space-y-2 text-xs text-brand-100/70">
                 <li className="flex items-center gap-2">
                   <MdMailOutline size={15} className="flex-shrink-0 text-brand-300" />
-                  <span className="break-all">{ORG.contactEmail}</span>
+                  <span className="break-all">{displayEmail(ORG.contactEmail)}</span>
                 </li>
                 <li>
                   <button onClick={() => scrollTo(officesRef)} className="hover:text-white transition-colors">{t('landing.footer.officesLink')}</button>

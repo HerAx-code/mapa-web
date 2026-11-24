@@ -1,3 +1,4 @@
+import EmailLink from '../ui/EmailLink'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MdLocalHospital, MdCheckCircle, MdPlace, MdEventSeat, MdCompareArrows } from 'react-icons/md'
@@ -155,7 +156,7 @@ export default function HospitalGate({ user, hospitals, initialId, onClaimed, on
 
       <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-800">
         {t('patient.gate.noCode', { office: hospital?.gatewayName || t('patient.gate.officeFallback'), hospital: hospital?.facilityName || t('patient.gate.yourHospital') })}
-        {hospital?.contactEmail && <> <a href={`mailto:${hospital.contactEmail}`} className="font-semibold underline break-all">{hospital.contactEmail}</a></>}
+        {hospital?.contactEmail && <> <EmailLink email={hospital.contactEmail} className="font-semibold underline break-all" /></>}
       </div>
 
       <div className="flex gap-3">

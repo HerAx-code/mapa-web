@@ -1,3 +1,5 @@
+import EmailLink from '../../components/ui/EmailLink'
+import { displayEmail } from '../../utils/maskEmail'
 import { useEffect, useMemo, useState } from 'react'
 import { isRequestActive } from '../../shared/caseState'
 import { Link, useNavigate } from 'react-router-dom'
@@ -215,9 +217,9 @@ function HospitalCard({ h, t, current, filedBefore, scanned, canFile, onFile }) 
         <Row icon={MdPlace} label={t('patient.hospitals.location')}>
           <span className="text-gray-800">{[h.address, h.region].filter(Boolean).join(' · ') || t('patient.hospitals.noAddress')}</span>
           {h.contactEmail && (
-            <a href={`mailto:${h.contactEmail}`} className="mt-1 flex items-center gap-1 break-all text-xs font-medium text-brand-600 hover:text-brand-700">
-              <MdEmail size={14} aria-hidden="true" /> {h.contactEmail}
-            </a>
+            <EmailLink email={h.contactEmail} className="mt-1 flex items-center gap-1 break-all text-xs font-medium text-brand-600 hover:text-brand-700">
+              <MdEmail size={14} aria-hidden="true" /> {displayEmail(h.contactEmail)}
+            </EmailLink>
           )}
         </Row>
       </dl>

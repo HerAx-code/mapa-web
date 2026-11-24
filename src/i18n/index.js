@@ -10,6 +10,7 @@ import en from './locales/en.json'
 // (~30 KB gzipped) is fetched only for patients who choose it — see
 // ensureLanguage / setLanguage / i18nReady below.
 import { ORG, accessCodeFormatHint, accessCodePrefixFor, onOrgChange } from '../config/org'
+import { displayEmail } from '../utils/maskEmail'
 
 const STORAGE_KEY = 'mapa.lang'
 
@@ -31,7 +32,7 @@ const ORG_VARS = {
   prefix:       ORG.accessCodePrefix,
   codeFormat:   accessCodeFormatHint(),
   codeExample:  `${accessCodePrefixFor(new Date().getFullYear())}00001`,
-  contactEmail: ORG.contactEmail,
+  contactEmail: displayEmail(ORG.contactEmail), // masked if it is the network address (utils/maskEmail.js)
 }
 
 // Reading window.localStorage can throw a SecurityError when storage is
@@ -65,7 +66,7 @@ i18n
 // tokens in place (same object i18next holds by reference).
 onOrgChange(() => {
   ORG_VARS.gateway      = ORG.gatewayName
-  ORG_VARS.contactEmail = ORG.contactEmail
+  ORG_VARS.contactEmail = displayEmail(ORG.contactEmail)
   ORG_VARS.facility     = facilityFor(i18n.language)
 })
 
