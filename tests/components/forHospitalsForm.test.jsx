@@ -33,6 +33,21 @@ describe('For Hospitals request form', () => {
     expect(validateRequest({ ...complete, privacyConsent: false })).toMatch(/privacy notice/)
   })
 
+  it('needs the ownership chosen (it starts blank)', async () => {
+    const { validateRequest } = await import('../../src/pages/ForHospitals')
+    expect(validateRequest({ ...complete, hospitalType: '' })).toMatch(/ownership/)
+    expect(validateRequest({ ...complete, hospitalType: 'Hospital' })).toMatch(/ownership/)
+  })
+
+  it('lists every problem at once, each on the field it belongs to', async () => {
+    const { validateFields } = await import('../../src/pages/ForHospitals')
+    expect(validateFields(complete)).toEqual([])
+    const found = validateFields({ ...complete, nhfrCode: '', city: '', contactPosition: '', privacyConsent: false })
+    expect(found.map(p => p.field)).toEqual(['nhfrCode', 'city', 'contactPosition', 'privacyConsent'])
+    // A message covering two fields lands on the first one that is wrong.
+    expect(validateFields({ ...complete, province: '', city: '' }).map(p => p.field)).toEqual(['province'])
+  })
+
   it('makes a reference the rules accept: MAPA-HR-YYMMDD-XXXX', async () => {
     const { referenceFor } = await import('../../src/pages/ForHospitals')
     const ref = referenceFor('aB3dEFGH', new Date(2026, 10, 15))
