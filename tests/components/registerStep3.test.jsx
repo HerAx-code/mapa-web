@@ -35,11 +35,21 @@ const DRAFT = {
   },
 }
 
-const renderStep3 = async (form = {}) => {
-  sessionStorage.setItem('mapa_register_draft', JSON.stringify({ ...DRAFT, form: { ...DRAFT.form, ...form } }))
+const renderDraft = async (form = {}, step = 3) => {
+  sessionStorage.setItem('mapa_register_draft', JSON.stringify({ ...DRAFT, step, form: { ...DRAFT.form, ...form } }))
   await i18n.changeLanguage('en')
   const { default: Register } = await import('../../src/pages/auth/Register')
   return render(<I18nextProvider i18n={i18n}><MemoryRouter><Register /></MemoryRouter></I18nextProvider>)
+}
+// A draft saved at step 3 reopens step 2 (passwords are never saved), so the
+// patient types the password again and moves on — as a real patient would.
+const renderStep3 = async (form = {}) => {
+  const r = await renderDraft(form, 3)
+  fireEvent.change(screen.getByLabelText(/^Password/), { target: { value: 'Abcdefg1' } })
+  fireEvent.change(screen.getByLabelText(/^Confirm Password/), { target: { value: 'Abcdefg1' } })
+  fireEvent.click(screen.getByRole('button', { name: /^Next/ }))
+  await screen.findByLabelText('Patient Access Code (optional)')
+  return r
 }
 
 describe('Register step 3', () => {
@@ -76,5 +86,44 @@ describe('Register step 3', () => {
     expect(screen.getByText('March 14, 1958')).toBeTruthy()
     expect(screen.getByText(/can't be changed after you sign up/)).toBeTruthy()
     expect(document.querySelector('details').open).toBe(true)
+  })
+
+  it('the Privacy Notice link has its words and opens the notice', async () => {
+    await renderStep3()
+    const link = screen.getByRole('button', { name: 'Privacy Notice' })
+    fireEvent.click(link)
+    const checkbox = document.querySelector('main form input[type=checkbox]')
+    expect(checkbox.checked).toBe(false)
+    // The shared profile dialog has no dialog role (app-wide, separate fix);
+    // its heading is the notice's title.
+    expect(await screen.findByRole('heading', { level: 2, name: 'Privacy Notice' })).toBeTruthy()
+  })
+
+  it('the step circles going back are named for screen readers', async () => {
+    await renderStep3()
+    expect(screen.getByRole('button', { name: 'Go back to step 1: Personal Info' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Go back to step 2: Account Setup' })).toBeTruthy()
+  })
+})
+
+describe('Register after a refresh', () => {
+  beforeEach(() => sessionStorage.clear())
+
+  it('a draft saved at step 3 reopens step 2 and asks for the password again', async () => {
+    await renderDraft({}, 3)
+    expect(screen.getByLabelText(/^Password/).value).toBe('')
+    expect(screen.getByText(/your password is not saved/)).toBeTruthy()
+    expect(screen.queryByLabelText('Patient Access Code (optional)')).toBeNull()
+  })
+})
+
+describe('sanitizePhone', () => {
+  it('keeps pasted numbers whole: spaces, dashes and +63 are cleaned, not cut', async () => {
+    const { sanitizePhone } = await import('../../src/pages/auth/Register')
+    expect(sanitizePhone('0917 123 4567')).toBe('09171234567')
+    expect(sanitizePhone('0917-123-4567')).toBe('09171234567')
+    expect(sanitizePhone('+639171234567')).toBe('09171234567')
+    expect(sanitizePhone('+63 917 123 4567')).toBe('09171234567')
+    expect(sanitizePhone('091712345678999')).toBe('09171234567')
   })
 })

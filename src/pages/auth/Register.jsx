@@ -59,7 +59,7 @@ const sanitizeName  = (val) => val.replace(/[^A-Za-zÑñ\s\-'.,]/g, '').slice(0,
 // Accept +63 / 63 international prefix by normalizing to local 09… form
 // before the 11-digit truncation. Otherwise pasted "+639171234567" becomes
 // "63917123456" and silently fails validation.
-const sanitizePhone = (val) => {
+export const sanitizePhone = (val) => {
   let digits = val.replace(/\D/g, '')
   if (digits.startsWith('63') && digits.length >= 12) digits = '0' + digits.slice(2)
   return digits.slice(0, 11)
@@ -119,10 +119,16 @@ function StepIndicator({ current, steps, onJump }) {
                 s.num <= current ? 'bg-brand-500' : 'bg-gray-200'
               }`} />
             )}
+            {/* A past step is a 44 px button (the padding is cancelled by an
+                equal negative margin, so the circle and its connector don't
+                move) with a name screen readers read — on phones its label
+                below is hidden (review 2026-11-24). */}
             <CircleWrap
               type={canJump ? 'button' : undefined}
               onClick={canJump ? () => onJump?.(s.num) : undefined}
-              className={`relative z-10 flex flex-col items-center ${canJump ? 'cursor-pointer group' : ''}`}>
+              aria-label={canJump ? t('register.stepJump', { num: s.num, label: s.label }) : undefined}
+              aria-current={s.num === current ? 'step' : undefined}
+              className={`relative z-10 flex flex-col items-center ${canJump ? 'cursor-pointer group p-1.5 -m-1.5 rounded-2xl' : ''}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                 s.num < current  ? 'bg-brand-500 text-white group-hover:bg-brand-600'
                 : s.num === current ? 'bg-brand-500 text-white ring-4 ring-brand-100'
@@ -185,7 +191,11 @@ export default function Register() {
   }
   const draft = loadDraft()
 
-  const [step, setStep]                     = useState(draft?.step ?? 1)
+  // Passwords are never saved in the draft, so a draft restored at step 3
+  // reopens step 2 for them (review 2026-11-24: before, step 3 sent an empty
+  // password and showed a raw Firebase error).
+  const [step, setStep]                     = useState((draft?.step ?? 1) >= 3 ? 2 : (draft?.step ?? 1))
+  const [passwordRestored]                  = useState(() => (draft?.step ?? 1) >= 2)
   const [hospitalVerified, setHospitalVerified] = useState(false)
   // Which hospital the verified code belongs to (Phase 8) — shown so the
   // patient can confirm before creating the account.
@@ -321,6 +331,12 @@ export default function Register() {
 
   const validateStep1 = () => {
     const e = {}
+    // In page order: the family-member fields sit above the patient's name,
+    // and the first key is the field focused on Next (review 2026-11-24).
+    if (form.managedByFamily) {
+      if (!form.managerName.trim() || !NAME_RE.test(form.managerName)) e.managerName = t('register.errors.managerNameRequired')
+      if (!RELATIONSHIPS.some(r => r.value === form.managerRelationship)) e.managerRelationship = t('register.errors.managerRelationshipRequired')
+    }
     if (!form.firstName.trim()) e.firstName = t('register.errors.firstNameRequired')
     else if (!NAME_RE.test(form.firstName)) e.firstName = t('register.errors.nameLettersOnly')
     else if (hasReservedToken(form.firstName)) e.firstName = t('register.errors.nameReserved')
@@ -331,10 +347,6 @@ export default function Register() {
     else if (form.middleName && hasReservedToken(form.middleName)) e.middleName = t('register.errors.nameReserved')
     if (!isBirthdate(form.birthdate) || form.birthdate > new Date().toISOString().slice(0, 10)) e.birthdate = t('register.errors.birthdateRequired')
     if (!['female', 'male'].includes(form.sex)) e.sex = t('register.errors.sexRequired')
-    if (form.managedByFamily) {
-      if (!form.managerName.trim() || !NAME_RE.test(form.managerName)) e.managerName = t('register.errors.managerNameRequired')
-      if (!RELATIONSHIPS.some(r => r.value === form.managerRelationship)) e.managerRelationship = t('register.errors.managerRelationshipRequired')
-    }
 
     if (!form.contactNumber) {
       e.contactNumber = t('register.errors.contactRequired')
@@ -575,6 +587,13 @@ export default function Register() {
 
     const errs = validateStep3()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    // The password is checked again here: never send an empty or weak one.
+    const pwErrs = validateStep2()
+    if (Object.keys(pwErrs).length > 0) {
+      setErrors(pwErrs); setStep(2)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
 
     setLoading(true)
     let createdAuthUser = null   // tracked for rollback on Firestore failure
@@ -917,7 +936,10 @@ export default function Register() {
               <div>
                 <label htmlFor="reg-contactNumber" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.contactNumber')} <span className="text-red-400">*</span></label>
                 <input id="reg-contactNumber" data-field="contactNumber" className={inputCls('contactNumber')} placeholder="09171234567"
-                  inputMode="numeric" autoComplete="tel" maxLength={11}
+                  // No maxLength: it cut a pasted "0917 123 4567" or
+                  // "+639171234567" BEFORE sanitizePhone could strip the
+                  // spaces / +63 (review 2026-11-24). sanitizePhone keeps 11 digits.
+                  inputMode="numeric" autoComplete="tel"
                   value={form.contactNumber} onChange={setPhone} />
                 <FieldError msg={errors.contactNumber} />
                 {!errors.contactNumber && (
@@ -960,6 +982,11 @@ export default function Register() {
                 <p className="text-sm font-semibold text-gray-800">{t('register.step2.sectionTitle')}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{t('register.step2.sectionDesc')}</p>
               </div>
+              {passwordRestored && !form.password && (
+                <p role="status" className="rounded-xl bg-blue-50 border border-blue-100 px-3.5 py-2.5 text-xs text-blue-800">
+                  {t('register.step2.passwordAgain')}
+                </p>
+              )}
 
               <div>
                 <label htmlFor="reg-email" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.email')} <span className="text-red-400">*</span></label>
@@ -972,13 +999,13 @@ export default function Register() {
               <div>
                 <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.password')} <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <input id="reg-password" type={showPw ? 'text' : 'password'} data-field="password" className={`${inputCls('password')} pr-10`}
+                  <input id="reg-password" type={showPw ? 'text' : 'password'} data-field="password" className={`${inputCls('password')} pr-12`}
                     placeholder={t('register.step2.passwordPlaceholder')}
                     autoComplete="new-password"
                     value={form.password} onChange={set('password')} />
                   <button type="button"
                     aria-label={showPw ? t('register.step2.hidePassword') : t('register.step2.showPassword')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowPw(p => !p)}>
                     {showPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -999,7 +1026,7 @@ export default function Register() {
               <div>
                 <label htmlFor="reg-confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step2.confirmPassword')} <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <input id="reg-confirmPassword" type={showConfirmPw ? 'text' : 'password'} data-field="confirmPassword" className={`${inputCls('confirmPassword')} pr-16`}
+                  <input id="reg-confirmPassword" type={showConfirmPw ? 'text' : 'password'} data-field="confirmPassword" className={`${inputCls('confirmPassword')} pr-20`}
                     placeholder={t('register.step2.confirmPlaceholder')}
                     autoComplete="new-password"
                     value={form.confirmPassword} onChange={set('confirmPassword')} />
@@ -1008,7 +1035,7 @@ export default function Register() {
                       red x when they diverge. Saves the "click Next to find
                       out" round-trip. */}
                   {form.password && form.confirmPassword && (
-                    <span className="absolute right-10 top-1/2 -translate-y-1/2">
+                    <span className="absolute right-12 top-1/2 -translate-y-1/2">
                       {form.password === form.confirmPassword
                         ? <MdCheckCircle size={16} className="text-green-500" />
                         : <MdCancel size={16} className="text-red-400" />}
@@ -1016,7 +1043,7 @@ export default function Register() {
                   )}
                   <button type="button"
                     aria-label={showConfirmPw ? t('register.step2.hidePassword') : t('register.step2.showPassword')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-gray-500 hover:text-gray-600 hover:bg-gray-100 rounded-md"
                     onClick={() => setShowConfirmPw(p => !p)}>
                     {showConfirmPw ? <MdVisibilityOff size={16} /> : <MdVisibility size={16} />}
                   </button>
@@ -1194,8 +1221,11 @@ export default function Register() {
                     checked={agreedToTerms}
                     onChange={e => { setAgreedToTerms(e.target.checked); if (errors.terms) setErrors(p => ({ ...p, terms: '' })) }} />
                   <span className="text-xs text-gray-600 leading-relaxed">
+                    {/* "privacylink", not "link": <link> is a void HTML element, so
+                        the translation parser closed it at once and the
+                        Privacy Notice button rendered empty (review 2026-11-24). */}
                     <Trans i18nKey="register.step3.termsAgree" components={{
-                      link: <button type="button"
+                      privacylink: <button type="button"
                         className="text-brand-600 hover:text-brand-700 underline underline-offset-2 font-medium"
                         onClick={(e) => { e.preventDefault(); setShowPrivacy(true) }} />,
                       termslink: <button type="button"

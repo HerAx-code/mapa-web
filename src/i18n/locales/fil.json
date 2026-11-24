@@ -1616,7 +1616,8 @@
       "confirmPassword": "Kumpirmahin ang Password",
       "confirmPlaceholder": "Ulitin ang inyong password",
       "showPassword": "Ipakita ang password",
-      "hidePassword": "Itago ang password"
+      "hidePassword": "Itago ang password",
+      "passwordAgain": "Para sa inyong kaligtasan, hindi sine-save ang password habang pinupunan ang form na ito. I-type itong muli para magpatuloy."
     },
     "step3": {
       "boundHint": "Gagana lamang ang code para sa pasyenteng pinagbigyan nito: dapat tugma ang inyong apelyido at petsa ng kapanganakan sa talaan ng ospital.",
@@ -1631,7 +1632,7 @@
       "reviewToggle": "Suriin ang inyong detalye bago gumawa ng account",
       "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa {{gateway}} para masuri at mabigyan ng bago.",
       "codeUsedRecoveryAction": "I-email ang {{gateway}}",
-      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at <termslink>Terms of Use</termslink>. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal.",
+      "termsAgree": "Sumasang-ayon ako sa <privacylink>Privacy Notice</privacylink> at <termslink>Terms of Use</termslink>. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal.",
       "codeHint": "I-type ang buong code mula sa inyong slip, halimbawa {{example}}. Ang mga letra sa simula ang nagsasabi kung aling ospital ang nagbigay nito.",
       "reviewLocked": "Ihambing ang apelyido at petsa ng kapanganakan sa ID ng pasyente. Hindi na ito mababago pagkatapos mag-sign up.",
       "reviewName": "Buong pangalan",
@@ -1689,7 +1690,8 @@
       "good": "Maayos",
       "weakNeed8": "Mahina — kailangan ng 8+ character",
       "weakAddLN": "Mahina — magdagdag ng titik at numero"
-    }
+    },
+    "stepJump": "Bumalik sa hakbang {{num}}: {{label}}"
   },
   "tour": {
     "patient": {

@@ -1616,7 +1616,8 @@
       "confirmPassword": "Confirm Password",
       "confirmPlaceholder": "Repeat your password",
       "showPassword": "Show password",
-      "hidePassword": "Hide password"
+      "hidePassword": "Hide password",
+      "passwordAgain": "For your safety, your password is not saved while you fill in this form. Type it again to continue."
     },
     "step3": {
       "boundHint": "The code works only for the patient it was issued to: your last name and birthdate must match the hospital's record.",
@@ -1631,7 +1632,7 @@
       "reviewToggle": "Check your details before you create the account",
       "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to {{gateway}} so they can investigate and issue a new one.",
       "codeUsedRecoveryAction": "Email {{gateway}}",
-      "termsAgree": "I agree to the <link>Privacy Notice</link> and <termslink>Terms of Use</termslink>. I consent to {{gateway}} collecting my personal information for medical assistance purposes.",
+      "termsAgree": "I agree to the <privacylink>Privacy Notice</privacylink> and <termslink>Terms of Use</termslink>. I consent to {{gateway}} collecting my personal information for medical assistance purposes.",
       "codeHint": "Type the whole code from your slip, for example {{example}}. The letters at the start name the hospital that issued it.",
       "reviewLocked": "Check the last name and birthdate against the patient's ID. They can't be changed after you sign up.",
       "reviewName": "Full name",
@@ -1689,7 +1690,8 @@
       "good": "Good",
       "weakNeed8": "Weak — needs 8+ chars",
       "weakAddLN": "Weak — add letters & numbers"
-    }
+    },
+    "stepJump": "Go back to step {{num}}: {{label}}"
   },
   "tour": {
     "patient": {
