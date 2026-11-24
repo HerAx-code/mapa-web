@@ -213,6 +213,15 @@ export default function Landing() {
               </span>
               {t('landing.hero.free')}
             </p>
+            {/* The way to /install on a phone: the header's install icon is
+                hidden below 400 px (most phones), so it's here as well
+                (install page review 2026-11-25). */}
+            <button type="button" onClick={() => navigate('/install')}
+              className="hero-rise mt-2 inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800" style={{ animationDelay: '430ms' }}>
+              <MdDownload size={18} aria-hidden="true" />
+              {t('landing.hero.installLink')}
+              <MdChevronRight size={16} aria-hidden="true" />
+            </button>
           </div>
 
           <div ref={journeyRef} className="hero-rise lp-card p-6 sm:p-7 lg:justify-self-end w-full max-w-md scroll-mt-20" style={{ animationDelay: '240ms' }}>
@@ -463,6 +472,12 @@ export default function Landing() {
                   <button onClick={() => scrollTo(journeyRef)}
                     className="text-xs text-brand-100/70 hover:text-white transition-colors">
                     {t('landing.footer.howItWorks')}
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigate('/install')}
+                    className="text-xs text-brand-100/70 hover:text-white transition-colors">
+                    {t('landing.footer.install')}
                   </button>
                 </li>
                 <li>

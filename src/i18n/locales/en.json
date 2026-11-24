@@ -41,7 +41,7 @@
   },
   "installPage": {
     "backHome": "Back to home",
-    "org": "{{facility}}",
+    "org": "MAPA · Medical assistance",
     "trustLine": "Installed by your browser, not an app store. Takes about ten seconds.",
     "phonePreviewCaption": "MAPA next to your everyday apps",
     "steps": {
@@ -50,51 +50,35 @@
       "androidTab": "Android",
       "iosTab": "iPhone",
       "usingAndroid": "Using Chrome on Android.",
-      "usingIos": "Using Safari on iPhone."
+      "usingIos": "Using {{browser}} on iPhone."
     },
     "continueOnPhone": {
       "title": "Continue on your phone",
-      "desc": "Type this address into your phone's browser, or copy it and send it to yourself.",
+      "desc": "Scan this code with your phone's camera, or type the address below into your phone's browser.",
       "copy": "Copy link",
-      "copied": "Copied"
+      "copied": "Copied",
+      "qrAlt": "QR code that opens the MAPA install page on your phone"
     },
     "hero": {
       "title": "Install MAPA on your phone",
       "desc": "Apply for medical assistance from your home screen — no need to remember the website URL. It installs straight from your browser: no app-store account, no file to download, and no security warning."
     },
     "cta": {
-      "install": "Install MAPA app",
       "installButton": "Install MAPA",
-      "preparing": "Preparing install…",
       "tryAgain": "Try Install Again",
-      "preparingHint": "Chrome is preparing the install dialog — this takes a few seconds.",
       "cancelledHint": "Install was cancelled. Tap again to retry.",
-      "androidUnsupportedHint": "Chrome isn't offering install on your device — the steps below will add MAPA to your home screen.",
-      "androidHint": "Chrome will ask you to confirm. Tap Install in the dialog.",
+      "androidUnsupportedHint": "Your browser isn't offering the install button right now. Follow the 3 steps below.",
       "androidHintReady": "Tap Install — Chrome will ask you to confirm.",
-      "androidHintNotReady": "Tap Install to see the steps for your phone.",
-      "iosHint": "Tap Install to see the steps for iPhone.",
-      "desktopHint": "MAPA is designed for phones — open this page on your phone to install.",
-      "androidManual": "Your browser hasn't offered the install option yet. You can install MAPA manually:",
+      "androidHintNotReady": "Tap Install to add MAPA to your home screen.",
+      "iosHint": "On iPhone, MAPA is added from the Share menu. Follow the 3 steps below.",
       "androidStep1": "Open this page in Google Chrome (if you're not already).",
       "androidStep2": "Tap the three-dot menu (top right of Chrome).",
       "androidStep3": "Tap 'Install app' or 'Add to Home screen'.",
-      "iosIntro": "On iPhone, install MAPA through Safari's Share menu:",
       "iosStep1": "Tap the Share button (square with an up arrow) at the bottom of the screen.",
       "iosStep2": "Scroll down and tap 'Add to Home Screen'.",
       "iosStep3": "Tap 'Add' in the top-right corner.",
-      "desktopTitle": "You're on a desktop computer",
-      "desktopDesc": "MAPA's mobile app is designed for phones. Open this page on your Android phone or iPhone to install it."
-    },
-    "fallback": {
-      "ios": "On iPhone, installing is done through Safari's Share menu. Follow the steps below.",
-      "desktop": "MAPA is designed for phones. Open this page on your Android phone or iPhone to install.",
-      "android": "Chrome hasn't offered the install option yet. Follow the manual steps below to install MAPA."
-    },
-    "manual": {
-      "iosTitle": "How to install on iPhone",
-      "desktopTitle": "Installing on desktop",
-      "androidTitle": "How to install manually"
+      "iosChromeStep1": "Tap the Share button (square with an up arrow) at the right of the address bar.",
+      "iosOtherStep1": "Open the browser menu, then tap Share."
     },
     "alreadyInstalled": {
       "title": "MAPA is already installed",
@@ -103,11 +87,21 @@
     "benefits": {
       "title": "Why install",
       "homescreen": "A MAPA icon on your home screen — no need to remember a website address.",
-      "faster": "Opens instantly, even on slow 4G.",
-      "offline": "Works without internet for things you've already opened.",
-      "notifs": "Get notified when your application status changes (coming soon)."
+      "faster": "Opens faster, straight from your home screen.",
+      "offline": "Shows what you last opened, even without signal.",
+      "notifs": "Updates on your request still reach you by email and in the app."
     },
-    "footer": "Free · Made by {{facility}} · No app store needed"
+    "footer": "Free · No app store needed",
+    "inApp": {
+      "title": "Open this page in {{browser}} first",
+      "desc": "You opened this link inside Facebook or Messenger. Apps can't be installed from there.",
+      "androidStep1": "Tap ⋮ at the top right of this screen.",
+      "androidStep2": "Tap 'Open in browser' or 'Open in Chrome'.",
+      "iosStep1": "Tap ••• or the Share icon at the bottom right of this screen.",
+      "iosStep2": "Tap 'Open in Safari' or 'Open in browser'.",
+      "step3": "On the page that opens, follow the install steps.",
+      "copyHint": "Or copy the link and paste it into {{browser}}."
+    }
   },
   "common": {
     "close": "Close",
@@ -197,7 +191,8 @@
       "journeyTitle": "Your application journey",
       "journeyDesc": "Your request goes through these stages. You will see the same ones on your status page.",
       "findOffice": "Find a hospital office",
-      "free": "Free. No fees at any step."
+      "free": "Free. No fees at any step.",
+      "installLink": "Install the MAPA app on your phone"
     },
     "cost": {
       "title": "Applying is free",
@@ -264,7 +259,8 @@
       "copyright": "© {{year}} MAPA · All rights reserved",
       "privacy": "Privacy Notice",
       "officialPortal": "{{org}} Official Portal",
-      "network": "MAPA network of participating hospitals"
+      "network": "MAPA network of participating hospitals",
+      "install": "Install the app"
     },
     "privacy": {
       "title": "Privacy Notice",
