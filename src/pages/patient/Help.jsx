@@ -7,6 +7,7 @@ import PatientPage from '../../components/patient/PatientPage'
 import ProfileModals from '../../components/ProfileModals'
 import { useAuth } from '../../contexts/AuthContext'
 import { ORG } from '../../config/org'
+import { displayEmail } from '../../utils/maskEmail'
 
 const SUPPORT_EMAIL = ORG.contactEmail
 
@@ -94,7 +95,7 @@ export default function PatientHelp() {
             </div>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-medium text-gray-800">{t('profile.help.emailSupport')}</span>
-              <span className="block text-xs text-gray-500 truncate">{SUPPORT_EMAIL}</span>
+              <span className="block text-xs text-gray-500 truncate">{displayEmail(SUPPORT_EMAIL)}</span>
             </span>
             <span className="text-xs text-blue-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
           </button>

@@ -11,6 +11,12 @@ import { auth, db, signInAnonymously } from '../firebase'
 import Logo from '../components/ui/Logo'
 import { ORG } from '../config/org'
 import { PH_REGIONS } from '../utils/hospitalConfig'
+import { PROVINCES_BY_REGION, citiesFor } from '../data/phProvinces'
+import { displayEmail } from '../utils/maskEmail'
+import EmailLink from '../components/ui/EmailLink'
+
+// The "Other (not listed)" choice in the address dropdowns.
+const OTHER = '__other__'
 import { OWNERSHIP_TYPES, ownershipOf, REPLY_WORKING_DAYS } from '../utils/onboarding'
 
 // "For hospitals" — the public page where a hospital REQUESTS TO JOIN the MAPA
@@ -74,7 +80,7 @@ const NEEDS = [
 
 // Each form field's input id, so an error can point at it.
 const FIELD_ID = {
-  hospitalName: 'fh-name', nhfrCode: 'fh-nhfr', hospitalType: 'fh-type', province: 'fh-province', city: 'fh-city',
+  hospitalName: 'fh-name', nhfrCode: 'fh-nhfr', hospitalType: 'fh-type', region: 'fh-region', province: 'fh-province', city: 'fh-city',
   officialPhone: 'fh-phone', officialEmail: 'fh-oemail', contactName: 'fh-contact', contactPosition: 'fh-position',
   email: 'fh-email', signatoryName: 'fh-sig', signatoryPosition: 'fh-sigpos',
   certifiedAuthority: 'fh-cert', privacyConsent: 'fh-privacy',
@@ -134,6 +140,7 @@ export function validateFields(d) {
   if (d.hospitalName.length < 3) add('hospitalName', 'Enter the hospital name as it appears on its DOH License to Operate.')
   if (d.nhfrCode.length < 3) add('nhfrCode', 'Enter the hospital’s NHFR facility code.')
   if (!OWNERSHIP_TYPES.some(o => o.value === d.hospitalType)) add('hospitalType', 'Choose the hospital’s ownership.')
+  if (!PH_REGIONS.includes(d.region)) add('region', 'Choose the region.')
   if (d.province.length < 2 || d.city.length < 2) add(d.province.length < 2 ? 'province' : 'city', 'Enter the province and the city or municipality.')
   if (d.officialPhone.replace(/\D/g, '').length < 7) add('officialPhone', 'Enter the hospital’s official phone number.')
   if (!EMAIL_RE.test(d.officialEmail)) add('officialEmail', 'Enter the hospital’s official email address.')
@@ -165,6 +172,25 @@ export default function ForHospitals() {
   const tick = (k) => (e) => { setForm((p) => ({ ...p, [k]: e.target.checked })); clear(k) }
   const toggleFunder = (f) => setForm((p) => ({ ...p, funders: p.funders.includes(f) ? p.funders.filter(x => x !== f) : [...p.funders, f] }))
   const signer = form.hospitalType ? ownershipOf(form.hospitalType) : null
+
+  // Address dropdowns: "Other (not listed)" switches a field to typing.
+  const [provinceOther, setProvinceOther] = useState(false)
+  const [cityOther, setCityOther] = useState(false)
+  const cityList = provinceOther ? null : citiesFor(form.region, form.province)
+  const chooseRegion = (e) => {
+    setForm((p) => ({ ...p, region: e.target.value, province: '', city: '' }))
+    setProvinceOther(false); setCityOther(false); clear('region')
+  }
+  const chooseProvince = (e) => {
+    const other = e.target.value === OTHER
+    setForm((p) => ({ ...p, province: other ? '' : e.target.value, city: '' }))
+    setProvinceOther(other); setCityOther(false); clear('province')
+  }
+  const chooseCity = (e) => {
+    const other = e.target.value === OTHER
+    setForm((p) => ({ ...p, city: other ? '' : e.target.value }))
+    setCityOther(other); clear('city')
+  }
 
   // Accessible props for a required input: required, invalid, and pointing at its message.
   const a11y = (k) => {
@@ -247,7 +273,7 @@ export default function ForHospitals() {
               Print this page or write the reference number down before you leave. It is not sent by email, and your letter of intent must quote it.
             </p>
             <ol className="mt-6 space-y-3 text-sm text-gray-700 list-decimal pl-5">
-              <li>Send a <strong>letter of intent</strong> signed by the head of facility, addressed to the MAPA Network Operator and quoting <span className="font-mono">{sent.referenceNo}</span>{ORG.contactEmail ? <>, to <a className="font-semibold text-brand-700 underline break-all" href={`mailto:${ORG.contactEmail}?subject=${encodeURIComponent(`Letter of intent — ${sent.referenceNo}`)}`}>{ORG.contactEmail}</a></> : null}.</li>
+              <li>Send a <strong>letter of intent</strong> signed by the head of facility, addressed to the MAPA Network Operator and quoting <span className="font-mono">{sent.referenceNo}</span>{ORG.contactEmail ? <>, to <EmailLink email={ORG.contactEmail} subject={`Letter of intent — ${sent.referenceNo}`} className="font-semibold text-brand-700 underline break-all" /></> : null}.</li>
               <li>Within <strong>{RESPONSE_WORKING_DAYS} working days</strong>, the network team will check your facility in the DOH National Health Facility Registry and call your hospital on the official number listed there.</li>
               <li>We will then send the agreement documents to <span className="break-all">{sent.officialEmail}</span>.</li>
             </ol>
@@ -386,16 +412,49 @@ export default function ForHospitals() {
                       </select>
                     </Field>
                   </div>
+                  {/* Region → province → city as dropdowns (2026-11-25). Every
+                      province has a list; a city list exists for BARMM and
+                      Metro Manila, so elsewhere the city is typed. "Other
+                      (not listed)" opens a typed field (e.g. Sulu, whose
+                      region is unsettled). */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <Field id="fh-region" label="Region" required error={errorFor('region')}>
+                      <select id="fh-region" className="input" value={form.region} onChange={chooseRegion} {...a11y('region')}>
+                        <option value="" disabled>Choose…</option>
+                        {PH_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </Field>
                     <Field id="fh-province" label="Province" required error={errorFor('province')}>
-                      <input id="fh-province" className="input" maxLength={80} value={form.province} onChange={set('province')} {...a11y('province')} />
+                      <select id="fh-province" className="input" disabled={!form.region}
+                        value={provinceOther ? OTHER : form.province} onChange={chooseProvince} {...a11y('province')}>
+                        <option value="" disabled>{form.region ? 'Choose…' : 'Choose the region first'}</option>
+                        {(PROVINCES_BY_REGION[form.region] ?? []).map((p) => <option key={p} value={p}>{p}</option>)}
+                        <option value={OTHER}>Other (not listed)</option>
+                      </select>
+                      {provinceOther && (
+                        <input className="input mt-2" maxLength={80} placeholder="Type the province" aria-label="Province (not listed)"
+                          value={form.province} onChange={set('province')} />
+                      )}
                     </Field>
                     <Field id="fh-city" label="City / municipality" required error={errorFor('city')}>
-                      <input id="fh-city" className="input" maxLength={80} value={form.city} onChange={set('city')} {...a11y('city')} />
-                    </Field>
-                    <Field id="fh-region" label="Region">
-                      <input id="fh-region" className="input" list="fh-regions" maxLength={40} value={form.region} onChange={set('region')} placeholder="e.g. BARMM" />
-                      <datalist id="fh-regions">{PH_REGIONS.map((r) => <option key={r} value={r} />)}</datalist>
+                      {cityList ? (
+                        <>
+                          <select id="fh-city" className="input" value={cityOther ? OTHER : form.city} onChange={chooseCity} {...a11y('city')}>
+                            <option value="" disabled>Choose…</option>
+                            {cityList.map((c) => <option key={c} value={c}>{c}</option>)}
+                            <option value={OTHER}>Other (not listed)</option>
+                          </select>
+                          {cityOther && (
+                            <input className="input mt-2" maxLength={80} placeholder="Type the city or municipality" aria-label="City or municipality (not listed)"
+                              value={form.city} onChange={set('city')} />
+                          )}
+                        </>
+                      ) : (
+                        <input id="fh-city" className="input" maxLength={80} value={form.city} onChange={set('city')}
+                          disabled={!form.province && !provinceOther}
+                          placeholder={form.province || provinceOther ? 'Type the city or municipality' : 'Choose the province first'}
+                          {...a11y('city')} />
+                      )}
                     </Field>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -477,7 +536,7 @@ export default function ForHospitals() {
                       The MAPA network operator collects the names, positions and work contact details above, and the facility details, only to evaluate this request,
                       verify the facility and contact your office about joining. They are seen only by the network team. If the hospital joins, they become part of its
                       onboarding record; if the request is declined or withdrawn, they are deleted one year after the last action.
-                      You may ask to access, correct or delete them{ORG.contactEmail ? <> by writing to <a className="underline break-all" href={`mailto:${ORG.contactEmail}`}>{ORG.contactEmail}</a></> : null}.
+                      You may ask to access, correct or delete them{ORG.contactEmail ? <> by writing to <EmailLink email={ORG.contactEmail} className="underline break-all" /></> : null}.
                     </p>
                   </div>
                   <div>
@@ -520,7 +579,7 @@ export default function ForHospitals() {
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-brand-100/80">
             <li><Link to="/" className="inline-flex min-h-[44px] items-center hover:text-white">For patients</Link></li>
             <li><Link to="/login" className="inline-flex min-h-[44px] items-center hover:text-white">Staff log in</Link></li>
-            {ORG.contactEmail && <li className="break-all">Contact: {ORG.contactEmail}</li>}
+            {ORG.contactEmail && <li className="break-all">Contact: {displayEmail(ORG.contactEmail)}</li>}
             <li>© {new Date().getFullYear()} MAPA</li>
           </ul>
         </div>

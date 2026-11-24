@@ -7,6 +7,7 @@ import SearchableSelect from './ui/SearchableSelect'
 import { notify } from '../utils/notifications'
 import { withTenant, tenantWhere } from '../utils/hospitals'
 import { ORG } from '../config/org'
+import { displayEmail } from '../utils/maskEmail'
 import MfaEnrollModal from './MfaEnrollModal'
 
 // Phase 2.4: profile photos now live in Cloud Storage at
@@ -727,7 +728,7 @@ function HelpModal({ onClose, onOpenReport }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-800">{t('profile.help.emailSupport')}</p>
-            <p className="text-xs text-gray-500">{ORG.contactEmail}</p>
+            <p className="text-xs text-gray-500">{displayEmail(ORG.contactEmail)}</p>
           </div>
           <span className="text-xs text-blue-500 font-medium flex-shrink-0">{t('profile.help.openLink')} →</span>
         </button>

@@ -22,6 +22,8 @@ import { hasReservedToken } from '../../utils/names'
 import { ORG, accessCodeRe, accessCodePrefixFor, ACCESS_CODE_PREFIX_PATTERN, DEFAULT_HOSPITAL_ID } from '../../config/org'
 import toast from 'react-hot-toast'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
+import { displayEmail } from '../../utils/maskEmail'
+import EmailLink from '../../components/ui/EmailLink'
 import { isBirthdate, blankCodeExpired } from '../../utils/codeIssue'
 import { PENDING_CODE_KEY, claimAccessCode } from '../../utils/accessCodes'
 import { RELATIONSHIPS } from '../../data/relationships'
@@ -1135,10 +1137,11 @@ export default function Register() {
                           {t('register.step3.codeUsedRecoveryHospital', { hospital: codeIssuer.facilityName })}
                         </p>
                         {codeIssuer.contactEmail && (
-                          <a href={`mailto:${codeIssuer.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                          <EmailLink email={codeIssuer.contactEmail} subject="Report: access code already used"
+                            body={`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`}
                             className="mt-1 inline-flex min-h-[44px] items-center text-xs text-amber-700 font-semibold underline underline-offset-2 break-all">
-                            {t('register.step3.codeUsedRecoveryEmail', { email: codeIssuer.contactEmail })} →
-                          </a>
+                            {t('register.step3.codeUsedRecoveryEmail', { email: displayEmail(codeIssuer.contactEmail) })} →
+                          </EmailLink>
                         )}
                       </>
                     ) : (
@@ -1146,10 +1149,11 @@ export default function Register() {
                         <p className="text-xs text-amber-700">
                           {t('register.step3.codeUsedRecovery')}
                         </p>
-                        <a href={`mailto:${ORG.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                        <EmailLink email={ORG.contactEmail} subject="Report: access code already used"
+                          body={`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`}
                           className="mt-1 inline-flex min-h-[44px] items-center text-xs text-amber-700 font-semibold underline underline-offset-2">
                           {t('register.step3.codeUsedRecoveryAction')} →
-                        </a>
+                        </EmailLink>
                       </>
                     )}
                   </div>
