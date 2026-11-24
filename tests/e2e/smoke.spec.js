@@ -30,8 +30,24 @@ test('register page renders step 1', async ({ page }) => {
   await assertNoErrorBoundary(page)
 })
 
-test('install page renders the install action', async ({ page }) => {
+// The install page's main action depends on the browser (PR #447): a desktop
+// gets a QR code to continue on a phone, an Android phone the Install button.
+test('install page on desktop offers the QR code', async ({ page }) => {
   await page.goto('/install')
-  await expect(page.getByRole('button', { name: /install mapa/i })).toBeVisible()
+  await expect(page.getByRole('img', { name: /qr code/i })).toBeVisible()
   await assertNoErrorBoundary(page)
+})
+
+test.describe('on an Android phone', () => {
+  test.use({
+    viewport: { width: 360, height: 780 },
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-A145F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+    isMobile: true,
+    hasTouch: true,
+  })
+  test('install page renders the install action', async ({ page }) => {
+    await page.goto('/install')
+    await expect(page.getByRole('button', { name: /install mapa/i })).toBeVisible()
+    await assertNoErrorBoundary(page)
+  })
 })

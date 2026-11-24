@@ -1,31 +1,37 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import QRCode from 'qrcode'
 import {
   MdArrowBack, MdDownload, MdCheckCircle,
-  MdHome, MdFlashOn, MdWifiOff, MdNotifications,
-  MdLaptop, MdVerifiedUser, MdSmartphone, MdContentCopy, MdCheck,
+  MdHome, MdFlashOn, MdWifiOff, MdMailOutline,
+  MdVerifiedUser, MdSmartphone, MdContentCopy, MdCheck, MdOpenInBrowser,
 } from 'react-icons/md'
-import toast from 'react-hot-toast'
 import Logo from '../../components/ui/Logo'
 import LanguageToggle from '../../components/LanguageToggle'
+import { detectInstallPlatform } from '../../utils/installPlatform'
+
+// Install page review (2026-11-25): guidance follows the visitor's BROWSER as
+// well as their phone (utils/installPlatform.js) — a Facebook/Messenger in-app
+// browser is told to open the page in Chrome/Safari first, every iPhone browser
+// gets the Share-menu steps, Android gets Chrome's install dialog when it's
+// ready and the steps at once when it isn't (no waiting), and a desktop gets a
+// QR code to continue on a phone.
+
+const BROWSER_NAME = { safari: 'Safari', chrome: 'Chrome', edge: 'Edge', firefox: 'Firefox' }
+const installUrl = () => `${window.location.origin}/install`
 
 // ── Decorative home-screen mockup (aria-hidden — purely illustrative) ──────
-// A portrait phone: dark bezel, notch, a full home screen of app icons with
-// MAPA highlighted, and a home indicator — so it reads as a phone, not a card.
+// Shown beside the content on wide screens only; on a phone the reader is
+// already holding one, and it pushed the steps below the first screen.
 function PhonePreview() {
   return (
     <div aria-hidden="true" className="mx-auto w-[220px] rounded-[2.4rem] bg-gray-900 p-2 shadow-xl">
-      {/* Screen */}
       <div className="relative overflow-hidden rounded-[1.9rem] bg-gradient-to-b from-brand-50 via-white to-gray-50">
-        {/* Notch / status pill */}
         <div className="flex h-7 items-center justify-center">
           <div className="h-1.5 w-14 rounded-full bg-gray-900/15" />
         </div>
-        {/* App grid — MAPA highlighted, then muted placeholder apps (3 rows).
-            Fixed 36px square icons genuinely fit the phone's content width:
-            220px − 16 (phone p-2) − 24 (px-3) = 180px; 4×36 + 3×10 = 174 ≤ 180.
-            So the icons never overflow their columns or overlap. */}
+        {/* Fixed 36px icons fit the 180px content width: 4×36 + 3×10 = 174. */}
         <div className="px-3 pb-2 pt-1">
           <div className="grid grid-cols-4 gap-x-2.5 gap-y-4 justify-items-center">
             <div className="flex flex-col items-center gap-1.5">
@@ -41,7 +47,6 @@ function PhonePreview() {
             ))}
           </div>
         </div>
-        {/* Home indicator */}
         <div className="flex justify-center pb-2.5 pt-2">
           <div className="h-1 w-16 rounded-full bg-gray-900/20" />
         </div>
@@ -50,53 +55,101 @@ function PhonePreview() {
   )
 }
 
-// ── "Continue on your phone" — copy the install URL (desktop visitors) ─────
-function ContinueOnPhone({ t }) {
+// ── Copy the install link (desktop QR card + in-app notice) ────────────────
+function CopyLinkButton({ t }) {
   const [copied, setCopied] = useState(false)
-  const url = 'mapa-web-six.vercel.app/install'
   const copy = () => {
-    navigator.clipboard?.writeText(`https://${url}`)
+    navigator.clipboard?.writeText(installUrl())
       .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
       .catch(() => setCopied(false))
   }
   return (
-    <div className="lp-card p-4">
+    <button type="button" onClick={copy}
+      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200">
+      {copied ? <MdCheck size={16} className="text-brand-500" /> : <MdContentCopy size={16} />}
+      {copied ? t('installPage.continueOnPhone.copied') : t('installPage.continueOnPhone.copy')}
+    </button>
+  )
+}
+
+// ── Desktop: a QR code to open this page on a phone ────────────────────────
+function ContinueOnPhone({ t }) {
+  const [qr, setQr] = useState('')
+  const url = installUrl()
+  useEffect(() => {
+    QRCode.toDataURL(url, { margin: 1, width: 220, color: { dark: '#0b3b32', light: '#ffffff' } })
+      .then(setQr).catch(() => setQr(''))
+  }, [url])
+  return (
+    <div className="lp-card p-5">
       <div className="flex items-start gap-3">
-        <span className="lp-chip h-9 w-9 bg-brand-50 text-brand-600">
-          <MdSmartphone size={17} />
+        <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600">
+          <MdSmartphone size={18} />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-gray-900">{t('installPage.continueOnPhone.title')}</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">{t('installPage.continueOnPhone.desc')}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <code className="truncate rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700">{url}</code>
-            <button type="button" onClick={copy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-brand-50 hover:text-brand-600 hover:border-brand-200">
-              {copied ? <MdCheck size={14} className="text-brand-500" /> : <MdContentCopy size={14} />}
-              {copied ? t('installPage.continueOnPhone.copied') : t('installPage.continueOnPhone.copy')}
-            </button>
-          </div>
+          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{t('installPage.continueOnPhone.desc')}</p>
         </div>
+      </div>
+      {qr && (
+        <img src={qr} alt={t('installPage.continueOnPhone.qrAlt')} width="176" height="176"
+          className="mx-auto mt-4 h-44 w-44 rounded-xl border border-gray-100" />
+      )}
+      <p className="mt-4 break-all rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 font-mono text-sm text-gray-800">{url}</p>
+      <div className="mt-3"><CopyLinkButton t={t} /></div>
+    </div>
+  )
+}
+
+// ── In-app browser (Facebook, Messenger…): open the page in a real browser ──
+function InAppNotice({ t, mobileOs }) {
+  const browser = mobileOs === 'ios' ? 'Safari' : 'Chrome'
+  const steps = mobileOs === 'ios'
+    ? ['inApp.iosStep1', 'inApp.iosStep2', 'inApp.step3']
+    : ['inApp.androidStep1', 'inApp.androidStep2', 'inApp.step3']
+  return (
+    <div className="lp-card p-5 border-amber-200 bg-amber-50/60 space-y-4" role="region" aria-labelledby="inapp-title">
+      <div className="flex items-start gap-3">
+        <span className="lp-chip h-10 w-10 bg-white text-amber-600 shadow-sm"><MdOpenInBrowser size={20} /></span>
+        <div className="min-w-0">
+          <h2 id="inapp-title" className="text-base font-bold text-gray-900">{t('installPage.inApp.title', { browser })}</h2>
+          <p className="text-sm text-gray-600 mt-1 leading-relaxed">{t('installPage.inApp.desc')}</p>
+        </div>
+      </div>
+      <ol className="space-y-2.5 pl-1">
+        {steps.map((k, i) => (
+          <li key={k} className="flex gap-3 text-sm text-gray-800">
+            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-amber-700 border border-amber-200">{i + 1}</span>
+            <span className="leading-relaxed pt-0.5">{t(`installPage.${k}`)}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="flex flex-wrap items-center gap-3">
+        <CopyLinkButton t={t} />
+        <span className="text-xs text-gray-500">{t('installPage.inApp.copyHint', { browser })}</span>
       </div>
     </div>
   )
 }
 
 // ── Tabbed manual steps — pick Android or iPhone regardless of device ──────
-function StepsSection({ t, platform, stepsRef }) {
+function StepsSection({ t, platform, iosBrowser, stepsRef }) {
   const [active, setActive] = useState(platform === 'ios' ? 'ios' : 'android')
-  // Re-sync to the detected platform if it resolves after mount.
   useEffect(() => { setActive(platform === 'ios' ? 'ios' : 'android') }, [platform])
 
+  // Where the Share button is depends on the iPhone browser.
+  const iosFirst = iosBrowser === 'chrome' ? 'iosChromeStep1'
+    : (iosBrowser === 'edge' || iosBrowser === 'firefox') ? 'iosOtherStep1'
+    : 'iosStep1'
   const stepKeys = active === 'ios'
-    ? ['iosStep1', 'iosStep2', 'iosStep3']
+    ? [iosFirst, 'iosStep2', 'iosStep3']
     : ['androidStep1', 'androidStep2', 'androidStep3']
   const using = active === 'ios'
-    ? t('installPage.steps.usingIos')
+    ? t('installPage.steps.usingIos', { browser: BROWSER_NAME[iosBrowser] ?? 'Safari' })
     : t('installPage.steps.usingAndroid')
 
   return (
-    <section ref={stepsRef} aria-labelledby="install-steps-heading" className="space-y-4 scroll-mt-6">
+    <section ref={stepsRef} aria-labelledby="install-steps-heading" className="space-y-4 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="install-steps-heading" className="font-display text-xl font-bold tracking-tight text-brand-900">
           {t('installPage.steps.title')}
@@ -106,7 +159,7 @@ function StepsSection({ t, platform, stepsRef }) {
           {[['android', t('installPage.steps.androidTab')], ['ios', t('installPage.steps.iosTab')]].map(([id, label]) => (
             <button key={id} role="tab" type="button" aria-selected={active === id}
               onClick={() => setActive(id)}
-              className={`rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+              className={`min-h-[44px] rounded-md px-4 text-sm font-semibold transition-colors ${
                 active === id ? 'bg-brand-500 text-white' : 'text-gray-500 hover:text-gray-800'
               }`}>
               {label}
@@ -126,232 +179,127 @@ function StepsSection({ t, platform, stepsRef }) {
           </li>
         ))}
       </ol>
-      {platform === 'desktop' && (
-        <p className="text-xs text-gray-500 flex items-start gap-2">
-          <MdLaptop size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-          {t('installPage.cta.desktopDesc')}
-        </p>
-      )}
     </section>
   )
 }
 
 /**
- * Public /install page.
- *
- * Reached by the Landing "Download App" button — primary install path
- * for visitors who haven't signed up yet.
- *
- * The page always shows a big primary Install button. Tap behavior is
- * "smart":
- *   - If we captured beforeinstallprompt (stashed on window by the inline
- *     script in index.html), tap fires the native Chrome install dialog.
- *   - If we haven't yet (Chrome's engagement heuristic hasn't tripped),
- *     tap scrolls to the manual install steps + toasts a one-line
- *     explanation. The patient never sees a "no button" dead-end.
- *   - On iOS Safari, tap scrolls to the Share-sheet steps (no install
- *     API on iOS).
- *   - On desktop, tap toasts a "open this on your phone" hint.
- *
- * Already-installed detection (display-mode standalone) replaces the
- * install button with a green "MAPA is already installed" card.
+ * Public /install page — reached from the landing page (header icon, hero
+ * link, footer). What it offers depends on the visitor's browser:
+ *   - installed (standalone)  → "already installed"
+ *   - in-app browser          → open in Chrome / Safari first (+ copy link)
+ *   - iPhone (any browser)    → the Share-menu steps, straight away
+ *   - Android                 → Chrome's install dialog if it's ready; if not,
+ *                               the steps at once (the button switches to the
+ *                               dialog if Chrome offers it later)
+ *   - desktop                 → a QR code to continue on a phone
  */
 export default function InstallApp() {
   const { t } = useTranslation()
   const [deferredPrompt, setDeferredPrompt] = useState(() => window.__mapaDeferredInstallPrompt ?? null)
-  const [platform,       setPlatform]       = useState('unknown')
-  const [installed,      setInstalled]      = useState(false)
-  // Drives the button's visible state without changing its rendered shape:
-  //   - 'idle'        the default "Install MAPA" copy
-  //   - 'preparing'   "Preparing install…" while we poll for the Chrome
-  //                   prompt to arm (tap itself is engagement; this often
-  //                   tips Chrome over the threshold within a few seconds)
-  //   - 'cancelled'   user cancelled the Chrome dialog; reset to a "Try
-  //                   again" prompt that re-arms on next tap
-  //   - 'unsupported' the user is on a browser/platform without the
-  //                   beforeinstallprompt API; iOS Safari, Firefox, etc.
-  //                   Button click reveals the platform-specific manual
-  //                   steps inline so there's still a clear path.
-  const [buttonState,    setButtonState]    = useState('idle')
-  const manualStepsRef = useRef(null)
+  const [env, setEnv] = useState({ platform: 'unknown', iosBrowser: null, mobileOs: null })
+  const [installed, setInstalled] = useState(false)
+  // 'idle' | 'prompting' (Chrome's dialog is open) | 'cancelled' | 'steps'
+  // (no dialog available: the steps are the way, and the hint says so).
+  const [buttonState, setButtonState] = useState('idle')
+  const stepsRef = useRef(null)
 
   useEffect(() => {
-    // Detect platform once on mount.
-    const ua       = window.navigator.userAgent
-    const isIos    = /iPad|iPhone|iPod/.test(ua) && !window.MSStream
-    const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)
-    const isAndroid = /Android/.test(ua)
-    const isMobile  = isIos || isAndroid
+    setEnv(detectInstallPlatform(window.navigator.userAgent, {
+      platform: window.navigator.platform, maxTouchPoints: window.navigator.maxTouchPoints,
+    }))
+    setInstalled(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
 
-    if (isIos && isSafari)     setPlatform('ios')
-    else if (isAndroid)        setPlatform('android')
-    else if (!isMobile)        setPlatform('desktop')
-    else                       setPlatform('android')   // safe default
-
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true
-    setInstalled(standalone)
-
-    // Capture the event if it fires AFTER React mounts. The inline
-    // script in index.html catches the early-firing case; this listener
-    // catches the late-firing case. Belt-and-braces.
+    // The inline script in index.html stashes an early prompt; these catch
+    // a late one and a completed install.
     const onAvailable = () => setDeferredPrompt(window.__mapaDeferredInstallPrompt)
-    const onInstalled = () => {
-      setDeferredPrompt(null)
-      setInstalled(true)
-    }
+    const onInstalled = () => { setDeferredPrompt(null); setInstalled(true) }
     window.addEventListener('mapa-install-available', onAvailable)
     window.addEventListener('mapa-install-completed', onInstalled)
-
     return () => {
       window.removeEventListener('mapa-install-available', onAvailable)
       window.removeEventListener('mapa-install-completed', onInstalled)
     }
   }, [])
 
-  // Install handler. The patient taps once and the button either installs
-  // immediately or polls for Chrome to arm the prompt while showing a
-  // "Preparing install…" state. The tap itself is engagement (Chrome's
-  // beforeinstallprompt heuristic counts user gestures), so during the
-  // poll window Chrome usually arms the prompt and the install proceeds
-  // without the patient needing to do anything else.
-  //
-  // For iOS / desktop / other-browser cases where there is no native
-  // install API at all, the button click reveals the platform-specific
-  // manual flow inline and the button state flips to 'unsupported' so
-  // the user sees clear instructions instead of a useless spinner.
-  const tryNativePrompt = async (promptObj) => {
-    try {
-      promptObj.prompt()
-      const { outcome } = await promptObj.userChoice
-      if (outcome === 'accepted') {
-        // appinstalled fires separately and flips `installed` state.
-        setButtonState('idle')
-      } else {
-        setButtonState('cancelled')
-      }
-      setDeferredPrompt(null)
-      window.__mapaDeferredInstallPrompt = null
-      return outcome
-    } catch (err) {
-      console.warn('[InstallApp] prompt() failed:', err)
-      setButtonState('idle')
-      return 'failed'
-    }
+  // Chrome offered its prompt after we fell back to the steps: the button
+  // becomes a real install again.
+  useEffect(() => {
+    if (deferredPrompt && (buttonState === 'cancelled' || buttonState === 'steps')) setButtonState('idle')
+  }, [deferredPrompt, buttonState])
+
+  const showSteps = () => {
+    setButtonState('steps')
+    stepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const handleInstallClick = async () => {
-    // iOS Safari has no install API at all -- the only path is the Share
-    // sheet. Reveal the manual steps inline and stop pretending the
-    // button can install.
-    if (platform === 'ios') {
-      setButtonState('unsupported')
-      manualStepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
-    }
-    // Desktop visitors should install on their phone. Same shape -- show
-    // the desktop guidance inline rather than toasting it.
-    if (platform === 'desktop') {
-      setButtonState('unsupported')
-      return
-    }
-
-    // Android Chrome path.
-    // Already armed? install immediately.
     const armed = deferredPrompt ?? window.__mapaDeferredInstallPrompt
-    if (armed) {
-      setButtonState('preparing')
-      await tryNativePrompt(armed)
-      return
+    // No install dialog right now: show the steps at once — no waiting.
+    if (!armed) { showSteps(); return }
+    setButtonState('prompting')
+    try {
+      armed.prompt()
+      const { outcome } = await armed.userChoice
+      setButtonState(outcome === 'accepted' ? 'idle' : 'cancelled')
+    } catch (err) {
+      console.warn('[InstallApp] prompt() failed:', err)
+      setButtonState('idle')
+      showSteps()
+    } finally {
+      setDeferredPrompt(null)
+      window.__mapaDeferredInstallPrompt = null
     }
-
-    // Not armed yet. Poll for up to 8 seconds while the patient's tap
-    // accumulates as engagement for Chrome. Most cold-visit users see
-    // the prompt arm within this window.
-    setButtonState('preparing')
-    for (let i = 0; i < 32; i++) {
-      await new Promise(r => setTimeout(r, 250))
-      const p = window.__mapaDeferredInstallPrompt
-      if (p) {
-        await tryNativePrompt(p)
-        return
-      }
-    }
-
-    // 8 seconds and Chrome still hasn't armed it. Surface the manual
-    // steps inline so the patient has a clear next action; do NOT toast
-    // a fallback that fades away.
-    setButtonState('unsupported')
-    manualStepsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // Reset to idle whenever Chrome arms the prompt while we're in a
-  // 'cancelled' or 'unsupported' state, so the next tap goes straight to
-  // a real install.
-  useEffect(() => {
-    if (deferredPrompt && (buttonState === 'cancelled' || buttonState === 'unsupported')) {
-      setButtonState('idle')
-    }
-  }, [deferredPrompt, buttonState])
+  const { platform, iosBrowser, mobileOs } = env
 
-  // Shared: the smart install button + its dynamic hint (logic unchanged).
-  const installCta = installed ? (
-    <div className="lp-card p-4 flex items-start gap-3 border-green-200 bg-green-50">
-      <MdCheckCircle size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-green-800">{t('installPage.alreadyInstalled.title')}</p>
-        <p className="text-xs text-green-700 mt-1 leading-relaxed">{t('installPage.alreadyInstalled.desc')}</p>
+  // What goes under the title: depends on the visitor's browser.
+  let primary = null
+  if (installed) {
+    primary = (
+      <div className="lp-card p-4 flex items-start gap-3 border-green-200 bg-green-50">
+        <MdCheckCircle size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-green-800">{t('installPage.alreadyInstalled.title')}</p>
+          <p className="text-xs text-green-700 mt-1 leading-relaxed">{t('installPage.alreadyInstalled.desc')}</p>
+        </div>
       </div>
-    </div>
-  ) : (
-    <div>
-      <button onClick={handleInstallClick}
-        disabled={buttonState === 'preparing'}
-        className="w-full sm:w-auto sm:min-w-[260px] bg-brand-500 hover:bg-brand-600 active:bg-brand-700 disabled:bg-brand-400 text-white font-semibold px-6 py-4 rounded-2xl inline-flex items-center justify-center gap-2.5 text-base shadow-lg shadow-brand-900/15 transition-colors">
-        {buttonState === 'preparing' ? (
-          <>
-            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            {t('installPage.cta.preparing')}
-          </>
-        ) : buttonState === 'cancelled' ? (
-          <>
-            <MdDownload size={22} />
-            {t('installPage.cta.tryAgain')}
-          </>
-        ) : (
-          <>
-            <MdDownload size={22} />
-            {t('installPage.cta.installButton')}
-          </>
-        )}
-      </button>
-      <p className="text-xs text-gray-500 mt-2.5">
-        {buttonState === 'preparing' ? t('installPage.cta.preparingHint')
-         : buttonState === 'cancelled' ? t('installPage.cta.cancelledHint')
-         : buttonState === 'unsupported' && platform === 'ios' ? t('installPage.cta.iosHint')
-         : buttonState === 'unsupported' && platform === 'desktop' ? t('installPage.cta.desktopHint')
-         : buttonState === 'unsupported' ? t('installPage.cta.androidUnsupportedHint')
-         : platform === 'ios'     ? t('installPage.cta.iosHint')
-         : platform === 'desktop' ? t('installPage.cta.desktopHint')
-         : deferredPrompt          ? t('installPage.cta.androidHintReady')
-         :                           t('installPage.cta.androidHintNotReady')}
-      </p>
-    </div>
-  )
+    )
+  } else if (platform === 'inapp') {
+    primary = <InAppNotice t={t} mobileOs={mobileOs} />
+  } else if (platform === 'desktop') {
+    primary = <ContinueOnPhone t={t} />
+  } else if (platform === 'ios') {
+    primary = <p className="rounded-xl bg-brand-50 px-4 py-3 text-sm font-medium text-brand-800">{t('installPage.cta.iosHint')}</p>
+  } else if (platform === 'android') {
+    primary = (
+      <div>
+        <button type="button" onClick={handleInstallClick} disabled={buttonState === 'prompting'}
+          className="w-full sm:w-auto sm:min-w-[260px] min-h-[52px] bg-brand-500 hover:bg-brand-600 active:bg-brand-700 disabled:bg-brand-400 text-white font-semibold px-6 rounded-2xl inline-flex items-center justify-center gap-2.5 text-base shadow-lg shadow-brand-900/15 transition-colors">
+          <MdDownload size={22} />
+          {buttonState === 'cancelled' ? t('installPage.cta.tryAgain') : t('installPage.cta.installButton')}
+        </button>
+        <p className="text-xs text-gray-500 mt-2.5" role="status">
+          {buttonState === 'cancelled' ? t('installPage.cta.cancelledHint')
+            : buttonState === 'steps' ? t('installPage.cta.androidUnsupportedHint')
+            : deferredPrompt ? t('installPage.cta.androidHintReady')
+            : t('installPage.cta.androidHintNotReady')}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-canvas text-gray-800 flex flex-col">
-
-      {/* Topbar — hide 'Back to home' when the app is already
-          installed; the Landing page redirects away in standalone
-          mode so the link would just round-trip the user. */}
+      {/* Topbar — no "Back to home" in the installed app (Landing redirects
+          away in standalone mode, so the link would round-trip). */}
       <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-canvas/85 backdrop-blur px-5 sm:px-6 py-3 flex items-center justify-between">
         <Logo size={32} withWordmark />
         <div className="flex items-center gap-2">
           <LanguageToggle />
           {!installed && (
-            <Link to="/" className="text-sm text-gray-500 hover:text-brand-600 font-medium flex items-center gap-1">
+            <Link to="/" className="inline-flex min-h-[44px] items-center gap-1 px-1 text-sm text-gray-500 hover:text-brand-600 font-medium">
               <MdArrowBack size={14} /> {t('installPage.backHome')}
             </Link>
           )}
@@ -360,10 +308,7 @@ export default function InstallApp() {
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-14">
-
-          {/* ── Left column ── */}
           <div className="min-w-0 space-y-10">
-
             {/* Hero */}
             <section className="space-y-5">
               <p className="text-sm font-semibold text-brand-600">{t('installPage.org')}</p>
@@ -373,10 +318,8 @@ export default function InstallApp() {
               <p className="text-base text-gray-500 leading-relaxed max-w-xl">
                 {t('installPage.hero.desc')}
               </p>
-
-              {installCta}
-
-              {!installed && (
+              {primary}
+              {!installed && platform !== 'inapp' && platform !== 'desktop' && (
                 <p className="flex items-center gap-2 text-sm text-gray-500">
                   <MdVerifiedUser size={16} className="text-brand-500 flex-shrink-0" />
                   {t('installPage.trustLine')}
@@ -384,19 +327,15 @@ export default function InstallApp() {
               )}
             </section>
 
-            {/* Phone preview — inline on mobile, in the aside on desktop */}
-            <div className="lg:hidden flex justify-center">
-              <PhonePreview />
-            </div>
-
-            {/* Tabbed manual steps */}
-            {!installed && (
-              <StepsSection t={t} platform={platform} stepsRef={manualStepsRef} />
+            {/* The steps — right after the hero on a phone (in-app visitors
+                get theirs in the notice above). */}
+            {!installed && platform !== 'inapp' && (
+              <StepsSection t={t} platform={platform} iosBrowser={iosBrowser} stepsRef={stepsRef} />
             )}
 
             <hr className="border-brand-900/10" />
 
-            {/* Why install — benefits */}
+            {/* Why install — only what's true today */}
             <section className="space-y-5">
               <div>
                 <h2 className="font-display text-xl font-bold tracking-tight text-brand-900">
@@ -406,10 +345,10 @@ export default function InstallApp() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 {[
-                  { Icon: MdHome,          textKey: 'benefits.homescreen' },
-                  { Icon: MdFlashOn,       textKey: 'benefits.faster'     },
-                  { Icon: MdWifiOff,       textKey: 'benefits.offline'    },
-                  { Icon: MdNotifications, textKey: 'benefits.notifs'     },
+                  { Icon: MdHome,        textKey: 'benefits.homescreen' },
+                  { Icon: MdFlashOn,     textKey: 'benefits.faster'     },
+                  { Icon: MdWifiOff,     textKey: 'benefits.offline'    },
+                  { Icon: MdMailOutline, textKey: 'benefits.notifs'     },
                 ].map(({ Icon, textKey }) => (
                   <div key={textKey} className="lp-card p-4 flex items-start gap-3">
                     <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600">
@@ -423,29 +362,17 @@ export default function InstallApp() {
               </div>
             </section>
 
-            {/* Trust footer */}
-            <p className="text-xs text-gray-500">
-              {t('installPage.footer')}
-            </p>
+            <p className="text-xs text-gray-500">{t('installPage.footer')}</p>
           </div>
 
-          {/* ── Right aside (desktop) — sticky phone preview + copy link ── */}
+          {/* Wide screens: the phone mockup beside the content. */}
           <aside className="hidden lg:block">
             <div className="sticky top-8 space-y-5">
               <PhonePreview />
               <p className="text-center text-xs text-gray-500">{t('installPage.phonePreviewCaption')}</p>
-              {!installed && <ContinueOnPhone t={t} />}
             </div>
           </aside>
         </div>
-
-        {/* Continue-on-phone also below the fold on smaller screens, but only
-            for desktop visitors (on a phone you're already where you install). */}
-        {!installed && platform === 'desktop' && (
-          <div className="mt-10 lg:hidden">
-            <ContinueOnPhone t={t} />
-          </div>
-        )}
       </main>
     </div>
   )
