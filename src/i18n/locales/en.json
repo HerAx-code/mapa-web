@@ -178,123 +178,30 @@
     },
     "nav": {
       "how": "How it works",
-      "programs": "Programs",
-      "forHospitals": "For hospitals"
-    },
-    "trust": {
-      "seeAll": "See all programs",
-      "fundedBy": "Funded by {{count}} partner programs",
-      "heading": "One application reaches every partner agency"
-    },
-    "doors": {
-      "patientsTitle": "For patients",
-      "patientsBody": "Apply once with your documents and a live selfie. You're assessed a single time — no repeated interviews — and you follow every agency's decision from one status page, in Filipino or English.",
-      "p1": "Apply once, assessed once",
-      "p2": "One tracker across all agencies",
-      "p3": "Works on phones and slow networks",
-      "patientsCta": "Get started",
-      "hospitalsTitle": "For hospitals",
-      "hospitalsBody": "Run your medical assistance desk digitally. Adopt MAPA by configuring it — your name, your funders, your documents — never forking or rewriting. One workflow, your settings.",
-      "h1": "Configure, don't rebuild",
-      "h2": "RA 11463 one-stop-shop workflow",
-      "h3": "Your data isolated per hospital",
-      "hospitalsCta": "Request onboarding"
-    },
-    "network": {
-      "eyebrow": "The bigger idea",
-      "heading": "One front door — not another silo",
-      "body": "A patient who needs help from several agencies shouldn't have to apply several times. MAPA assesses once and routes each part of the bill to each agency — no queuing, re-encoding, or applying again.",
-      "hospitals": "participating hospitals",
-      "agencies": "partner agencies",
-      "perPatient": "application per patient",
-      "balance": "balance — the goal"
+      "forHospitals": "For hospitals",
+      "offices": "Hospital offices"
     },
     "header": {
       "downloadApp": "Install App",
-      "mobileToast": "The MAPA mobile app is coming soon. Follow {{org}} for updates.",
       "register": "Register",
       "login": "Log In →",
       "dashboard": "Dashboard →"
     },
     "hero": {
-      "statLanguages": "languages: Filipino and English",
-      "statPrograms": "partner programs",
-      "statHospitals": "participating hospitals",
       "headlineNetwork": "Medical assistance at your hospital — one application, from your phone.",
       "badgeNetwork": "Medical assistance network of participating hospitals",
       "badge": "Official portal of {{facility}}",
       "tagline": "Apply once for medical financial assistance. The hospital's social-services office checks your request and sends it to the agencies that can help pay your bill.",
-      "ctaPatient": "Apply for Patient Account",
       "ctaDashboard": "Go to Dashboard",
-      "learnMore": "Learn more ↓",
       "headline": "Medical assistance at {{facility}} — one application, from your phone.",
-      "proof1Value": "One",
-      "proof1Label": "application for every partner agency",
-      "proof2Value": "Free",
-      "proof2Label": "no fees — never pay a fixer",
-      "proof3Value": "2 languages",
-      "proof3Label": "Filipino and English",
       "journeyTitle": "Your application journey",
-      "journeyDesc": "Every request moves through the same clear stages — track it from filing to release.",
-      "stage1Label": "Filed",
-      "stage1Detail": "You submit one request with your requirements.",
-      "stage2Label": "Reviewed & assessed",
-      "stage2Detail": "{{gateway}} verifies your documents and assesses your case.",
-      "stage3Label": "Endorsed & approved",
-      "stage3Detail": "Partner agencies fund it and your Guarantee Letter is issued.",
-      "stage4Label": "Released",
-      "stage4Detail": "The Guarantee Letter is applied to your hospital bill."
-    },
-    "prepare": {
-      "heading": "Before you register, prepare the following",
-      "codeTitle": "Patient Access Code (when you file)",
-      "codeDesc": "Optional at sign-up. You need one to file a request: the social-services office of the hospital you choose issues it in the patient's name (for example {{example}}).",
-      "emailTitle": "Email Address",
-      "emailDesc": "A working email address for account login, notifications, and password recovery.",
-      "mobileTitle": "Mobile Number",
-      "mobileDesc": "Your 11-digit Philippine mobile number (e.g. 09XXXXXXXXX).",
-      "addressTitle": "Home Address",
-      "addressDesc": "Your complete address — barangay, municipality, and province. Appears on your Guarantee Letter.",
-      "ready": "Already have these ready?",
-      "registerNow": "Register now →"
-    },
-    "steps": {
-      "heading": "How to get medical assistance",
-      "subtitle": "Create your account, choose a hospital, get a code from its social-services office, and file your request. One account works at every participating hospital.",
-      "s1Title": "Create Your MAPA Account",
-      "s1Desc": "Sign up online for free with your name, birthdate, email, contact number and address. If the patient is a family member, you can sign up for them. Already have a code? You can enter it now.",
-      "s2Title": "Choose a Hospital and Get Your Code",
-      "s2Desc": "Compare the participating hospitals, then visit the social-services office of the one you choose. They check the patient's ID and give you a Patient Access Code in the patient's name.",
-      "s3Title": "Submit Your Request",
-      "s3Desc": "Enter the code with the patient's last name and birthdate, upload the required documents and verify the ID with a selfie.",
-      "s4Title": "The Hospital Reviews Your Case",
-      "s4Desc": "A social worker verifies your documents and assesses your case remotely, and may message you if anything is needed — no interview to attend.",
-      "s5Title": "Get Endorsed & Receive Your Guarantee Letter",
-      "s5Desc": "The hospital endorses your request to agencies that can fund it. Get your Guarantee Letter to present at the named provider.",
-      "s6Title": "Your next requests",
-      "s6Desc": "Each code is for one request, in the patient's name. For recurring care such as dialysis or chemotherapy, the hospital can issue one code that covers a course of treatment. For a request at another hospital, get a code there.",
-      "startBtn": "Start with Step 1",
-      "footer": "Free · No fees required · Powered by {{gateway}}"
-    },
-    "programs": {
-      "showFewer": "Show fewer",
-      "showAll": "Show all {{count}} programs",
-      "noMatch": "No program matches “{{q}}”.",
-      "search": "Search programs",
-      "heading": "Available programs",
-      "subtitle": "Browse the programs that fund patients at participating hospitals. Slots reset daily at midnight.",
-      "applyNow": "Apply Now →",
-      "goToDashboard": "Go to Dashboard →",
-      "full": "Full",
-      "slotsBadge": "{{count}} slots",
-      "slotsRemaining": "{{remaining}} of {{total}} slots remaining today"
+      "journeyDesc": "Your request goes through these stages. You will see the same ones on your status page.",
+      "findOffice": "Find a hospital office",
+      "free": "Free. No fees at any step."
     },
     "cost": {
       "title": "Applying is free",
       "body": "MAPA will never ask you for payment — not for registration, not for your Access Code, and not for the release of your Guarantee Letter.",
-      "point1": "No registration fee",
-      "point2": "No processing fee",
-      "point3": "No fixer, no middleman",
       "warning": "If anyone asks you to pay to speed up your approval, they are not from {{gateway}}. Report it to {{gateway}} right away."
     },
     "eligibility": {
@@ -302,18 +209,14 @@
       "title": "Who can apply",
       "intro": "MAPA is for hospital patients who cannot pay their hospital bill. You do not need to be good with computers — the form is short, and staff can sit with you and help.",
       "qualifyHeading": "You may apply if…",
-      "q1": "You are being discharged from a participating hospital with your final bill, were discharged with an unpaid hospital bill, or are treated there as an outpatient.",
-      "q2": "You have an unpaid hospital bill or billing statement.",
-      "q3": "A social worker has classified you as an indigent patient.",
-      "q4": "You are the patient, or an immediate family member filing for them.",
+      "q1": "You have a bill at a participating hospital: you are being discharged with your final bill, were discharged with an unpaid bill, or are treated there as an outpatient.",
+      "q2": "You need help paying it. A social worker looks at your situation after you apply.",
+      "q3": "You are the patient, or a family member filing for them.",
       "codeHeading": "To file a request, you'll need a Patient Access Code",
       "codeBody": "It is handed to you in person, in the patient's name, at the social-services office of the hospital you choose. It is never sent by text, email, or social media — and no one online can give you one. You can create your account before you have it.",
       "codeSample": "Sample code",
-      "hospitalsHeading": "Participating hospitals",
-      "codeStartsWith": "{{prefix}}-…",
-      "hospitalsShowAll": "Show all {{count}} hospitals",
-      "hospitalsShowFewer": "Show fewer",
-      "codeCta": "Where is the office?"
+      "codeCta": "Find a hospital office",
+      "signupNeeds": "To sign up you need an email address and a mobile number."
     },
     "faq": {
       "heading": "Questions people ask us",
@@ -323,24 +226,30 @@
       "q2": "What is a Patient Access Code and how do I get one?",
       "a2": "It is a printed code given to you in person at the {{gateway}} office, after a social worker confirms you are a hospital patient with an unpaid hospital bill. The code links your online application to your real hospital record, so it cannot be requested by phone, text, or email. Bring a valid ID and your billing statement.",
       "q3": "Can I apply for a family member?",
-      "a3": "Yes. A spouse, parent, adult child, or authorized representative may file on behalf of the patient — common when the patient is still confined or cannot use a phone. You'll be asked for your relationship to the patient, your own valid ID, and an authorization letter signed by the patient or immediate family.",
+      "a3": "Yes. A spouse, parent, adult child or other representative may file for the patient. This is common when the patient is still confined or can't use a phone. You give your name and relationship to the patient, upload your own valid ID, take a selfie, and confirm that you are allowed to file for them.",
       "q4": "How long does it take?",
       "a4": "It depends on how complete your documents are and on each agency's review and available slots. {{gateway}} works to verify documents and assess your case as quickly as possible, and you can track every step in your account.",
-      "q5": "Do I have to travel to {{facility}} for an interview?",
-      "a5": "No. The assessment is done remotely — a social worker reviews your case online and messages you through the app if they need anything. If a short live conversation is needed, they send a Google Meet link. There is no scheduled office interview to attend.",
+      "q5": "Do I have to go to the hospital for an interview?",
+      "a5": "No. The assessment is done remotely. A social worker reviews your case online and messages you in the app if they need anything. There is no office interview to attend.",
       "q6": "Is my information safe?",
-      "a6": "Yes. MAPA is operated by {{gateway}} and handles your data under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the funding agency your request is endorsed to. You may ask for a copy of your data or ask that it be corrected at any time."
+      "a6": "Yes. Your data is handled under the Data Privacy Act of 2012 (RA 10173). Your documents and selfie are used only to verify your identity and your need for assistance, and are shared only with the hospital you file with and the funding agencies your request is sent to. You may ask for a copy of your data or ask that it be corrected at any time.",
+      "q7": "My treatment repeats, like dialysis or chemotherapy. Do I need a new code each time?",
+      "a7": "Each code is for one request. For recurring care, the hospital can issue one code that covers a course of treatment, for up to about three months. You still file one request at a time.",
+      "q8": "Can I apply at another hospital?",
+      "a8": "Yes. One account works at every participating hospital. Get a code from the social-services office of the hospital where the patient is treated, and file your request there.",
+      "q9": "Which agencies pay for the assistance?",
+      "a9": "The hospital sends your request to the partner agencies that can help with your case. You don't apply to them yourself. The current partner programs are:",
+      "partnersLabel": "Partner programs"
     },
     "help": {
       "title": "Need help? Visit the hospital.",
       "intro": "Staff at the social-services office of any participating hospital can register you, take your selfie and upload your documents for you. Bring your papers and someone will sit with you.",
       "onsite": "Walk-in assistance available — no appointment needed.",
-      "startBtn": "Start my application",
-      "addressLabel": "Address",
-      "phoneLabel": "Phone",
-      "emailLabel": "Email",
       "hoursLabel": "Office hours",
-      "hours": "Monday to Friday, 8:00 AM – 5:00 PM. Closed on holidays."
+      "hours": "Office hours differ by hospital. If you can, email the office before you go.",
+      "codePrefix": "Codes from this office start with {{prefix}}-",
+      "showAll": "Show all {{count}} hospitals",
+      "showFewer": "Show fewer"
     },
     "footer": {
       "officesLink": "Social-services offices",
@@ -352,10 +261,10 @@
       "dashboard": "Go to dashboard",
       "howItWorks": "How it works",
       "contact": "Contact us",
-      "hours": "Mon – Fri, 8:00 AM – 5:00 PM",
       "copyright": "© {{year}} MAPA · All rights reserved",
       "privacy": "Privacy Notice",
-      "officialPortal": "{{org}} Official Portal"
+      "officialPortal": "{{org}} Official Portal",
+      "network": "MAPA network of participating hospitals"
     },
     "privacy": {
       "title": "Privacy Notice",
@@ -379,6 +288,19 @@
       "access4": "System Administrators — full access for management and audit",
       "contactNote": "For data concerns, contact the <b>{{gateway}}</b> at {{contactEmail}}.",
       "close": "Close"
+    },
+    "journey": {
+      "submitted": "You file one request with your code, your documents and a selfie.",
+      "under_review": "{{gateway}} checks your documents.",
+      "assessment": "A social worker assesses your case and messages you in the app if anything is needed. There is no interview to attend.",
+      "endorsed": "The hospital sends your request to the agencies that can help pay.",
+      "funding": "The agencies decide. Each approval comes with a Guarantee Letter.",
+      "complete": "The Guarantee Letters are applied to your hospital bill."
+    },
+    "hospitals": {
+      "title": "Are you a hospital?",
+      "body": "Run your medical assistance desk on MAPA and reach partner agencies through one network.",
+      "cta": "For hospitals"
     }
   },
   "shell": {
@@ -1556,22 +1478,61 @@
     "journey": {
       "label": "Your progress",
       "stage": {
-        "submitted":    { "label": "Submitted",    "now": "Your request and documents are in with {{gateway}}.",                              "next": "{{gateway}} will start reviewing them soon." },
-        "under_review": { "label": "Under review",  "now": "{{gateway}} is verifying your documents and your bill.",                           "next": "Next, a social worker assesses your case." },
-        "assessment":   { "label": "Assessment",    "now": "A social worker is assessing your case and may message you.",          "next": "Next, {{gateway}} endorses your request to agencies." },
-        "endorsed":     { "label": "Endorsed",      "now": "{{gateway}} referred your request to one or more agencies.",                       "next": "Review your coverage plan and proceed." },
-        "funding":      { "label": "Funding",       "now": "Agencies are approving their share and issuing your Guarantee Letters.",    "next": "Next, your bill is fully covered." },
-        "complete":     { "label": "Complete",      "now": "Your bill is fully covered — claim your Guarantee Letters at the agency.",  "next": "" }
+        "submitted": {
+          "label": "Submitted",
+          "now": "Your request and documents are in with {{gateway}}.",
+          "next": "{{gateway}} will start reviewing them soon."
+        },
+        "under_review": {
+          "label": "Under review",
+          "now": "{{gateway}} is verifying your documents and your bill.",
+          "next": "Next, a social worker assesses your case."
+        },
+        "assessment": {
+          "label": "Assessment",
+          "now": "A social worker is assessing your case and may message you.",
+          "next": "Next, {{gateway}} endorses your request to agencies."
+        },
+        "endorsed": {
+          "label": "Endorsed",
+          "now": "{{gateway}} referred your request to one or more agencies.",
+          "next": "Review your coverage plan and proceed."
+        },
+        "funding": {
+          "label": "Funding",
+          "now": "Agencies are approving their share and issuing your Guarantee Letters.",
+          "next": "Next, your bill is fully covered."
+        },
+        "complete": {
+          "label": "Complete",
+          "now": "Your bill is fully covered — claim your Guarantee Letters at the agency.",
+          "next": ""
+        }
       }
     },
     "hero": {
       "step": "Step {{n}} of {{total}}",
       "trackCta": "See my request",
-      "s0": { "title": "Request received", "sub": "{{gateway}} will start reviewing your documents soon." },
-      "s1": { "title": "Under review", "sub": "{{gateway}} is checking your documents." },
-      "s2": { "title": "Assessment", "sub": "A social worker is assessing your case and may message you." },
-      "s3": { "title": "With the agencies", "sub": "{{gateway}} endorsed your request to a funding agency." },
-      "s4": { "title": "Partly approved", "sub": "An agency approved part of your request." }
+      "s0": {
+        "title": "Request received",
+        "sub": "{{gateway}} will start reviewing your documents soon."
+      },
+      "s1": {
+        "title": "Under review",
+        "sub": "{{gateway}} is checking your documents."
+      },
+      "s2": {
+        "title": "Assessment",
+        "sub": "A social worker is assessing your case and may message you."
+      },
+      "s3": {
+        "title": "With the agencies",
+        "sub": "{{gateway}} endorsed your request to a funding agency."
+      },
+      "s4": {
+        "title": "Partly approved",
+        "sub": "An agency approved part of your request."
+      }
     }
   },
   "register": {

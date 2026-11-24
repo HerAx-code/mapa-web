@@ -10,26 +10,18 @@ import {
   MdShield, MdArrowForward, MdDownload, MdClose, MdLogin,
   // Professional line icons replacing the emoji (a govt/medical portal
   // reads as amateur with emoji — matches CLAUDE.md "civic, professional").
-  MdBadge, MdMailOutline, MdSmartphone, MdLocationOn,
-  MdHowToReg, MdUploadFile, MdLocalHospital, MdVideocam, MdVerified,
-  MdSchedule,
+  MdMailOutline, MdLocationOn, MdLocalHospital, MdSchedule,
   MdCheck, MdWarningAmber, MdChevronRight, MdConfirmationNumber,
-  MdExpandMore, MdGroups, MdMoneyOff, MdFavorite, MdCheckCircle,
+  MdExpandMore, MdGroups, MdMoneyOff, MdFavorite,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import TermsModal from '../../components/TermsModal'
-import AgencyAvatar from '../../components/AgencyAvatar'
 import LanguageToggle from '../../components/LanguageToggle'
 import { usePublicHospitals } from '../../hooks/usePublicHospitals'
 
 // Per-role landing destination when a signed-in user hits Landing or
 // the PWA bounces them out of standalone mode. Patient lands on the
-// Dashboard (status, steps, interviews) to match the home-base
-// pattern used by every other surface in the app -- previously the
-// patient was sent straight to /patient/request, which conflicted
-// with the line-41 fallback ('/patient/dashboard') and threw a
-// fresh patient straight into the wizard instead of letting them
-// orient first.
+// Dashboard to orient first, rather than straight into the wizard.
 const DASHBOARD = {
   [ROLES.PATIENT]:      '/patient/dashboard',
   [ROLES.AGENCY]:       '/agency/dashboard',
@@ -39,12 +31,15 @@ const DASHBOARD = {
   [ROLES.PLATFORM_ADMIN]: '/platform/hospitals',
 }
 
+// The application journey uses the SAME stages, in the same words, as the
+// patient's own tracker (patient.journey.stage.*), so what a visitor reads here
+// is what they see on their status page later (landing relayout 2026-11-24).
+const JOURNEY = ['submitted', 'under_review', 'assessment', 'endorsed', 'funding', 'complete']
+
+const HOSPITALS_SHOWN = 4
+
 // One section-header treatment used everywhere on the page — a warm display
-// heading with a short amber accent bar. Repeating this exact motif (not a
-// tracked all-caps eyebrow) is what makes the sections read as chapters of
-// one page instead of unrelated bands.
-// Landing review (2026-11-16): every section uses the same left-aligned head
-// and the same content width (max-w-5xl).
+// heading with a short amber accent bar.
 function SectionHead({ title, sub }) {
   return (
     <div className="max-w-2xl mb-8">
@@ -57,39 +52,28 @@ function SectionHead({ title, sub }) {
   )
 }
 
+// Landing relayout (2026-11-24): seven blocks, each message said once, in the
+// order a first-time visitor on a phone needs it — hero with the one journey,
+// who can apply + the code, free + scam warning, hospital offices, FAQ, a
+// one-line band for hospitals, footer. Agencies appear by name only, in the
+// FAQ: patients don't choose an agency (the hospital endorses), so there are
+// no public slot counts.
 export default function Landing() {
-  const navigate    = useNavigate()
-  const { t }       = useTranslation()
-  const { user }    = useAuth()
-  const featuresRef = useRef(null)
-  const programsRef = useRef(null)
+  const navigate   = useNavigate()
+  const { t }      = useTranslation()
+  const { user }   = useAuth()
+  const journeyRef = useRef(null)
+  const officesRef = useRef(null)
 
   const [showPrivacy, setShowPrivacy] = useState(false)
-  const [showTerms, setShowTerms] = useState(false)
+  const [showTerms, setShowTerms]     = useState(false)
   const [agencies, setAgencies]       = useState([])
-  // Programs list scales to many agencies: the first PROGRAMS_SHOWN, then
-  // "Show all"; a search box appears past PROGRAMS_SEARCH_FROM.
-  const [showAllPrograms, setShowAllPrograms] = useState(false)
-  const [programQuery, setProgramQuery]       = useState('')
-  // Hospital prefix list scales the same way: first HOSPITALS_SHOWN, then expand.
   const [showAllHospitals, setShowAllHospitals] = useState(false)
   // Participating hospitals (public projection, multi-hospital).
   const hospitals = usePublicHospitals()
-  // Program-slot bars fill from empty the first time the Programs section
-  // scrolls into view — motion that conveys the data (how full each program
-  // is), not decoration. Starts already "in" under reduced motion so the
-  // bars render at their real width with no animation.
-  const [programsIn, setProgramsIn] = useState(
-    () => typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
-  )
 
-  // Installed-PWA users have no reason to see the marketing landing
-  // page. The 'Download App' CTA is meaningless (they already have
-  // the app), and the hero / partner showcase / footer wastes their
-  // data plan on content meant for discovery. Detect standalone mode
-  // and bounce them to login (or their dashboard if already signed
-  // in). The page still renders normally in a regular browser tab.
+  // Installed-PWA users have no reason to see the marketing landing page:
+  // send them to login (or their dashboard if already signed in).
   useEffect(() => {
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
@@ -100,52 +84,37 @@ export default function Landing() {
   }, [user, navigate])
 
   useEffect(() => {
-    // Reads the public projection (name + slots + enabled), NOT the rich
-    // `agencies` doc — that one is auth-gated because it carries budget /
-    // fundSource / contacts. The projection is maintained by the
-    // onAgencyWritten Cloud Function. If it's empty (function/backfill not yet
-    // run) the teaser simply shows nothing — never an error.
+    // Partner names only, from the public projection (agenciesPublic is
+    // written by onAgencyWritten; the rich `agencies` doc is auth-gated).
+    // Empty until synced — the FAQ answer then simply lists none.
     const unsub = onSnapshot(
       query(collection(db, 'agenciesPublic'), where('enabled', '==', true)),
       snap => setAgencies(
         snap.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a, b) => a.name?.localeCompare(b.name))
+          .filter(a => a.name)
+          .sort((a, b) => a.name.localeCompare(b.name))
       ),
       () => {}
     )
     return unsub
   }, [])
 
-  // Reveal the slot bars on first scroll into view. Skipped entirely under
-  // reduced motion (programsIn already starts true there).
+  // Escape closes the Privacy Notice.
   useEffect(() => {
-    if (programsIn) return
-    const el = programsRef.current
-    if (!el || typeof IntersectionObserver === 'undefined') { setProgramsIn(true); return }
-    const io = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setProgramsIn(true); io.disconnect() } },
-      { threshold: 0.2 },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [programsIn])
+    if (!showPrivacy) return
+    const onKey = e => { if (e.key === 'Escape') setShowPrivacy(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showPrivacy])
 
   // A signed-in user's ORG is their hospital; a visitor sees the network.
   const scoped = !!user?.tenantId
-  const PROGRAMS_SHOWN = 6
-  const HOSPITALS_SHOWN = 4
   const visibleHospitals = showAllHospitals ? hospitals : hospitals.slice(0, HOSPITALS_SHOWN)
-  const PROGRAMS_SEARCH_FROM = 12
-  const q = programQuery.trim().toLowerCase()
-  const matchingPrograms = q
-    ? agencies.filter(a => `${a.name ?? ''} ${a.location ?? ''}`.toLowerCase().includes(q))
-    : agencies
-  const visiblePrograms = (showAllPrograms || q) ? matchingPrograms : matchingPrograms.slice(0, PROGRAMS_SHOWN)
-  const scrollToPrograms = () => programsRef.current?.scrollIntoView({ behavior: 'smooth' })
   // An example access code from a real participating hospital.
   const exampleCode = `${hospitals[0]?.accessCodePrefix ?? accessCodePrefixFor(new Date().getFullYear()).split('-')[0]}-${new Date().getFullYear()}-00042`
 
+  const scrollTo = ref => ref.current?.scrollIntoView({ behavior: 'smooth' })
   const handleMainCTA = () => {
     if (user) navigate(DASHBOARD[user.role] ?? '/patient/dashboard')
     else navigate('/register')
@@ -153,19 +122,14 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-canvas text-gray-800">
-      {/* Topbar — one compact, seated row (not a stack of full-width buttons).
-          Brand left; language + install are icon actions on the right. Install is
-          an icon here because the InstallNudge banner only shows inside the
-          signed-in shell, not on this public page (hidden under 400px so the auth
-          buttons always fit). Auth: logged-out shows Register (primary) + Log In
-          (secondary, collapses to an icon on the narrowest phones); logged-in
-          shows a single Dashboard button. A near-solid ground + hairline keeps the
-          bar seated rather than floating. */}
+      {/* Topbar — brand left; language + install as icon actions; Register
+          (primary) + Log In (secondary, an icon on the narrowest phones), or a
+          single Dashboard button when signed in. */}
       <header className="sticky top-0 z-30 border-b border-brand-900/5 bg-canvas/95 backdrop-blur px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
         <Logo size={30} withWordmark />
         <nav aria-label={t('landing.nav.how')} className="hidden md:flex items-center gap-6 text-[14px] font-medium text-gray-600">
-          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}>{t('landing.nav.how')}</button>
-          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => programsRef.current?.scrollIntoView({ behavior: 'smooth' })}>{t('landing.nav.programs')}</button>
+          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => scrollTo(journeyRef)}>{t('landing.nav.how')}</button>
+          <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => scrollTo(officesRef)}>{t('landing.nav.offices')}</button>
           <button type="button" className="hover:text-brand-700 transition-colors" onClick={() => navigate('/for-hospitals')}>{t('landing.nav.forHospitals')}</button>
         </nav>
         <div className="flex items-center gap-1">
@@ -186,9 +150,6 @@ export default function Landing() {
             </button>
           ) : (
             <>
-              {/* Returning users: secondary action. Collapses to a labelled icon
-                  on the narrowest phones so the primary Register CTA always fits
-                  the single-row bar without horizontal scroll. */}
               <button
                 className="btn-secondary text-sm whitespace-nowrap px-3 sm:px-4"
                 aria-label={t('landing.header.login')}
@@ -196,7 +157,6 @@ export default function Landing() {
                 <MdLogin size={18} className="sm:hidden" />
                 <span className="hidden sm:inline">{t('landing.header.login')}</span>
               </button>
-              {/* Primary action: self-register with a Patient Access Code. */}
               <button
                 className="btn-primary text-sm whitespace-nowrap px-3 sm:px-4"
                 onClick={() => navigate('/register')}>
@@ -207,23 +167,20 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* ── Hero — the emotional anchor. Warm, hopeful, human: soft aurora +
-          an amber glow behind a big display headline, with the illustrative
-          "application journey" as an elevated card. The card is deliberately
-          static/illustrative, NOT a live status lookup (MAPA has no anonymous
+      {/* 1 · Hero — headline, one-sentence tagline, sign up or find an office,
+          and the one application journey (the tracker's own stages). The card
+          is illustrative, NOT a live status lookup (no anonymous
           status-by-reference — that would be an enumeration risk). */}
       <section className="relative overflow-hidden">
         <div className="hero-aurora" aria-hidden="true" />
         <div aria-hidden="true" className="pointer-events-none absolute -top-20 right-[-4rem] h-80 w-80 rounded-full bg-amber-200/25 blur-3xl" />
-        <div className="relative max-w-5xl mx-auto grid gap-12 px-5 sm:px-6 py-16 lg:grid-cols-2 lg:items-center lg:gap-12 lg:py-24">
-          {/* Left: copy + CTAs + proof points. Rises in on load as one
-              continuous staggered sequence. */}
+        <div className="relative max-w-5xl mx-auto grid gap-10 px-5 sm:px-6 py-12 sm:py-16 lg:grid-cols-2 lg:items-center lg:gap-12 lg:py-20">
           <div>
             <div className="hero-rise inline-flex items-center gap-2 bg-white border border-brand-100 rounded-full px-4 py-1.5 text-xs text-brand-700 font-semibold mb-6 shadow-sm">
               <MdShield size={14} className="text-brand-500" />
               {scoped ? t('landing.hero.badge') : t('landing.hero.badgeNetwork')}
             </div>
-            <h1 className="hero-rise font-display text-[38px] leading-[1.08] sm:text-5xl lg:text-[50px] font-extrabold tracking-tight text-brand-900 mb-5 max-w-xl" style={{ animationDelay: '90ms' }}>
+            <h1 className="hero-rise font-display text-[34px] leading-[1.1] sm:text-5xl lg:text-[50px] font-extrabold tracking-tight text-brand-900 mb-5 max-w-xl" style={{ animationDelay: '90ms' }}>
               {scoped ? t('landing.hero.headline') : t('landing.hero.headlineNetwork')}
             </h1>
             {/* A signed-in patient sees their hospital's address (if set);
@@ -244,31 +201,20 @@ export default function Landing() {
                 <MdArrowForward size={18} />
               </button>
               <button
-                className="btn-secondary px-6 py-3 text-base w-full sm:w-auto"
-                onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-                {t('landing.hero.learnMore')}
+                className="btn-secondary flex items-center justify-center gap-2 px-6 py-3 text-base w-full sm:w-auto"
+                onClick={() => scrollTo(officesRef)}>
+                <MdLocalHospital size={18} /> {t('landing.hero.findOffice')}
               </button>
             </div>
-            {/* Live network figures (the "free" and "one application" promises
-                have their own sections below, so they aren't repeated here). */}
-            <dl className="hero-rise mt-12 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-6 border-t border-brand-900/10 pt-8 max-w-xl" style={{ animationDelay: '390ms' }}>
-              {[
-                { value: hospitals.length || '—', label: t('landing.hero.statHospitals') },
-                { value: agencies.length || '—',  label: t('landing.hero.statPrograms') },
-                { value: '2',                     label: t('landing.hero.statLanguages') },
-              ].map((p, i) => (
-                <div key={i}>
-                  <dd className="font-display text-2xl font-bold tracking-tight text-brand-900">{p.value}</dd>
-                  <dt className="mt-1 text-sm text-gray-500 leading-snug">{p.label}</dt>
-                </div>
-              ))}
-            </dl>
+            <p className="hero-rise mt-5 flex items-center gap-2 text-sm font-medium text-brand-800" style={{ animationDelay: '390ms' }}>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+                <MdCheck size={13} />
+              </span>
+              {t('landing.hero.free')}
+            </p>
           </div>
 
-          {/* Right: the illustrative application-journey card — the hero's
-              memorable element. Elevated soft card; its steps build in one
-              after another so the eye is walked down the patient's path. */}
-          <div className="hero-rise lp-card p-6 sm:p-7 lg:justify-self-end w-full max-w-md" style={{ animationDelay: '240ms' }}>
+          <div ref={journeyRef} className="hero-rise lp-card p-6 sm:p-7 lg:justify-self-end w-full max-w-md scroll-mt-20" style={{ animationDelay: '240ms' }}>
             <h2 className="font-display text-lg font-bold tracking-tight text-brand-900">
               {t('landing.hero.journeyTitle')}
             </h2>
@@ -276,22 +222,17 @@ export default function Landing() {
               {t('landing.hero.journeyDesc')}
             </p>
             <ol className="mt-6">
-              {[
-                { label: t('landing.hero.stage1Label'), detail: t('landing.hero.stage1Detail') },
-                { label: t('landing.hero.stage2Label'), detail: t('landing.hero.stage2Detail') },
-                { label: t('landing.hero.stage3Label'), detail: t('landing.hero.stage3Detail') },
-                { label: t('landing.hero.stage4Label'), detail: t('landing.hero.stage4Detail') },
-              ].map((s, i, arr) => (
-                <li key={i} className="hero-step flex gap-3" style={{ animationDelay: `${460 + i * 120}ms` }}>
+              {JOURNEY.map((key, i) => (
+                <li key={key} className="hero-step flex gap-3" style={{ animationDelay: `${460 + i * 100}ms` }}>
                   <div className="flex flex-col items-center">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold ring-4 ring-brand-50">
                       {i + 1}
                     </span>
-                    {i < arr.length - 1 && <span className="w-px flex-1 bg-brand-100 my-1 min-h-[20px]" />}
+                    {i < JOURNEY.length - 1 && <span className="w-px flex-1 bg-brand-100 my-1 min-h-[16px]" />}
                   </div>
-                  <div className={i < arr.length - 1 ? 'pb-5' : ''}>
-                    <p className="text-sm font-semibold text-gray-800">{s.label}</p>
-                    <p className="mt-0.5 text-sm text-gray-500 leading-snug">{s.detail}</p>
+                  <div className={i < JOURNEY.length - 1 ? 'pb-4' : ''}>
+                    <p className="text-sm font-semibold text-gray-800">{t(`patient.journey.stage.${key}.label`)}</p>
+                    <p className="mt-0.5 text-sm text-gray-500 leading-snug">{t(`landing.journey.${key}`)}</p>
                   </div>
                 </li>
               ))}
@@ -300,72 +241,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Partner agencies — live names from the public projection (no
-          hardcoded funder list). Hidden until agencies are synced. */}
-      {/* One line however many agencies join: a count, up to six badges and
-          "+N", linking to the full (searchable) programs list below. */}
-      {agencies.length > 0 && (
-        <section className="border-y border-brand-900/5 bg-white px-5 sm:px-6">
-          <div className="max-w-5xl mx-auto py-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-            <p className="text-sm font-semibold text-gray-700">{t('landing.trust.fundedBy', { count: agencies.length })}</p>
-            <div className="flex items-center gap-1.5">
-              {agencies.slice(0, 6).map(a => (
-                <span key={a.id} title={a.name}><AgencyAvatar agency={a} className="w-9 h-9 rounded-xl text-[11px]" /></span>
-              ))}
-              {agencies.length > 6 && (
-                <span className="flex h-9 min-w-9 items-center justify-center rounded-xl bg-gray-100 px-2 text-xs font-semibold text-gray-600">+{agencies.length - 6}</span>
-              )}
-            </div>
-            <button type="button" onClick={scrollToPrograms}
-              className="sm:ml-auto inline-flex min-h-[44px] items-center gap-1 self-start sm:self-auto text-sm font-semibold text-brand-700 hover:text-brand-800">
-              {t('landing.trust.seeAll')} <MdChevronRight size={16} />
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Two doors — patients apply; hospitals join the network. New visitors only. */}
-      {!user && (
-        <section className="px-5 sm:px-6 pt-16 sm:pt-20">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="lp-card p-7 sm:p-8 flex flex-col">
-              <span className="lp-chip bg-brand-50 text-brand-600"><MdHowToReg size={22} /></span>
-              <h3 className="mt-4 font-display text-[24px] font-bold text-brand-900">{t('landing.doors.patientsTitle')}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-gray-600">{t('landing.doors.patientsBody')}</p>
-              <ul className="mt-4 space-y-2.5">
-                {['p1', 'p2', 'p3'].map(k => (
-                  <li key={k} className="flex gap-2.5 text-[14.5px] text-gray-800"><MdCheckCircle size={18} className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden="true" />{t(`landing.doors.${k}`)}</li>
-                ))}
-              </ul>
-              <button type="button" className="btn-primary mt-6 self-start min-h-[44px]" onClick={() => navigate('/register')}>{t('landing.cta.createAccount')}</button>
-            </div>
-            <div className="lp-card p-7 sm:p-8 flex flex-col bg-gradient-to-br from-white to-brand-50">
-              <span className="lp-chip bg-white text-brand-600 border border-brand-100"><MdLocalHospital size={22} /></span>
-              <h3 className="mt-4 font-display text-[24px] font-bold text-brand-900">{t('landing.doors.hospitalsTitle')}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-gray-600">{t('landing.doors.hospitalsBody')}</p>
-              <ul className="mt-4 space-y-2.5">
-                {['h1', 'h2', 'h3'].map(k => (
-                  <li key={k} className="flex gap-2.5 text-[14.5px] text-gray-800"><MdCheckCircle size={18} className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden="true" />{t(`landing.doors.${k}`)}</li>
-                ))}
-              </ul>
-              <button type="button" className="btn-secondary mt-6 self-start min-h-[44px]" onClick={() => navigate('/for-hospitals')}>{t('landing.doors.hospitalsCta')}</button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Who can apply — eligibility checklist + the Patient Access Code,
-          the real gate to registering. New visitors only. */}
-      {!user && <section id="eligibility" className="px-5 sm:px-6 py-16 sm:py-20">
+      {/* 2 · Who can apply + the Patient Access Code — the real gate to filing.
+          New visitors only. */}
+      {!user && <section id="eligibility" className="px-5 sm:px-6 py-14 sm:py-20">
         <div className="max-w-5xl mx-auto">
           <SectionHead title={t('landing.eligibility.title')} sub={t('landing.eligibility.intro')} />
           <div className="grid gap-6 lg:grid-cols-12 lg:gap-8 lg:items-start">
-            {/* Qualify checklist */}
             <div className="lg:col-span-7">
               <div className="lp-card p-6 sm:p-7">
                 <h3 className="text-base font-semibold text-gray-900 mb-4">{t('landing.eligibility.qualifyHeading')}</h3>
                 <ul className="space-y-3.5">
-                  {['q1', 'q2', 'q3', 'q4'].map(k => (
+                  {['q1', 'q2', 'q3'].map(k => (
                     <li key={k} className="flex items-start gap-3">
                       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white">
                         <MdCheck size={14} />
@@ -374,13 +260,14 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                {/* Scope (Phase 2A): admitted patients and outpatients at the hospital's
-                    own units — say plainly what isn't covered yet (outside providers). */}
+                {/* Scope (Phase 2A): admitted patients and outpatients at the
+                    hospital's own units — say plainly what isn't covered. */}
                 <p className="mt-4 rounded-xl bg-gray-50 px-3.5 py-2.5 text-xs leading-relaxed text-gray-600">{t('landing.eligibility.notCovered')}</p>
+                <p className="mt-4 text-sm text-gray-600">{t('landing.eligibility.signupNeeds')}</p>
               </div>
             </div>
             {/* Access-code card — amber, because it's the one thing they must
-                have before registering (and the anti-scam warning). */}
+                get in person (and the anti-scam point). */}
             <div className="lg:col-span-5">
               <div className="lp-card border-amber-200/70 bg-gradient-to-b from-amber-50 to-white p-6 sm:p-7">
                 <span className="lp-chip bg-white text-amber-600 shadow-sm">
@@ -390,142 +277,35 @@ export default function Landing() {
                 <p className="mt-2 text-sm leading-relaxed text-gray-600">{t('landing.eligibility.codeBody')}</p>
                 <div className="mt-5 rounded-xl border border-dashed border-amber-400 bg-white px-4 py-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.codeSample')}</p>
-                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900">
+                  <p className="mt-1 font-mono text-lg font-semibold tracking-[0.18em] text-gray-900 break-all">
                     {exampleCode}
                   </p>
                 </div>
-                {/* Multi-hospital: each hospital issues its own prefix. */}
-                {hospitals.length > 1 && (
-                  <div className="mt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t('landing.eligibility.hospitalsHeading')}</p>
-                    <ul className="mt-2 space-y-1.5">
-                      {visibleHospitals.map(h => (
-                        <li key={h.id} className="flex items-baseline justify-between gap-3 text-sm">
-                          <span className="text-gray-800">{h.facilityName}</span>
-                          <span className="font-mono text-xs text-gray-500 whitespace-nowrap">{t('landing.eligibility.codeStartsWith', { prefix: h.accessCodePrefix })}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {hospitals.length > HOSPITALS_SHOWN && (
-                      <button type="button"
-                        className="mt-2 inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
-                        onClick={() => setShowAllHospitals(v => !v)}>
-                        {showAllHospitals
-                          ? t('landing.eligibility.hospitalsShowFewer')
-                          : t('landing.eligibility.hospitalsShowAll', { count: hospitals.length })}
-                      </button>
-                    )}
-                  </div>
-                )}
-                <a href="#help" className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
+                <button type="button" onClick={() => scrollTo(officesRef)}
+                  className="mt-5 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors">
                   {t('landing.eligibility.codeCta')} <MdChevronRight size={16} />
-                </a>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </section>}
 
-      {/* What to prepare — four warm chips on the same ground (no separate
-          band), so it flows with the sections around it. New visitors only. */}
-      {!user && <section className="px-5 sm:px-6 pb-4 sm:pb-8">
+      {/* 3 · Applying is free — the biggest trust question for an indigent
+          patient, plus the warning against fixers. New visitors only. */}
+      {!user && <section className="px-5 sm:px-6 pb-4">
         <div className="max-w-5xl mx-auto">
-          <SectionHead title={t('landing.prepare.heading')} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { Icon: MdBadge,        title: t('landing.prepare.codeTitle'),    desc: t('landing.prepare.codeDesc', { example: exampleCode }) },
-              { Icon: MdMailOutline,  title: t('landing.prepare.emailTitle'),   desc: t('landing.prepare.emailDesc')   },
-              { Icon: MdSmartphone,   title: t('landing.prepare.mobileTitle'),  desc: t('landing.prepare.mobileDesc')  },
-              { Icon: MdLocationOn,   title: t('landing.prepare.addressTitle'), desc: t('landing.prepare.addressDesc') },
-            ].map((item, i) => (
-              <div key={i} className="lp-card p-5 flex sm:block items-center gap-4">
-                <span className="lp-chip bg-brand-50 text-brand-600 mb-0 sm:mb-4">
-                  <item.Icon size={22} />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{item.title}</p>
-                  <p className="mt-1 text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          {!user && (
-            <p className="text-sm text-gray-500 mt-6">
-              {t('landing.prepare.ready')}{' '}
-              <button onClick={() => navigate('/register')}
-                className="text-brand-700 font-semibold underline underline-offset-2 hover:text-brand-800">
-                {t('landing.cta.createAccount')} →
-              </button>
-            </p>
-          )}
-        </div>
-      </section>}
-
-      {/* How MAPA Works — the six real steps, as soft cards with warm icon
-          chips and a step number (a real sequence, so numbering earns its
-          place). New visitors only. */}
-      {!user && <section ref={featuresRef} className="px-5 sm:px-6 py-16 sm:py-20">
-        <div className="max-w-5xl mx-auto">
-          <SectionHead title={t('landing.steps.heading')} sub={t('landing.steps.subtitle')} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              { step: 1, Icon: MdHowToReg,      title: t('landing.steps.s1Title'), desc: t('landing.steps.s1Desc') },
-              { step: 2, Icon: MdBadge,         title: t('landing.steps.s2Title'), desc: t('landing.steps.s2Desc') },
-              { step: 3, Icon: MdUploadFile,    title: t('landing.steps.s3Title'), desc: t('landing.steps.s3Desc') },
-              { step: 4, Icon: MdLocalHospital, title: t('landing.steps.s4Title'), desc: t('landing.steps.s4Desc') },
-              { step: 5, Icon: MdVideocam,      title: t('landing.steps.s5Title'), desc: t('landing.steps.s5Desc') },
-              { step: 6, Icon: MdVerified,      title: t('landing.steps.s6Title'), desc: t('landing.steps.s6Desc') },
-            ].map(s => (
-              <div key={s.step} className="lp-card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="lp-chip bg-brand-50 text-brand-600">
-                    <s.Icon size={22} />
-                  </span>
-                  <span className="font-display text-xl font-bold text-brand-100">{`0${s.step}`}</span>
-                </div>
-                <p className="text-[15px] font-semibold text-gray-900">{s.title}</p>
-                <p className="mt-1 text-sm text-gray-500 leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-          {!user && (
-            <div className="mt-10">
-              <button
-                onClick={() => navigate('/register')}
-                className="btn-primary px-8 py-3 text-base flex items-center gap-2 shadow-lg shadow-brand-900/15">
-                {t('landing.cta.createAccount')} <MdArrowForward size={18} />
-              </button>
-              <p className="text-xs text-gray-500 mt-3">{t('landing.steps.footer')}</p>
-            </div>
-          )}
-        </div>
-      </section>}
-
-      {/* Applying is free — the single biggest trust question for an indigent
-          patient. A large rounded PINE PANEL floating on the warm ground (not
-          a full-bleed band), so it reads as a deliberate emphasis moment.
-          New visitors only. */}
-      {!user && <section className="px-5 sm:px-6 py-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 to-brand-800 p-8 sm:p-10 shadow-xl shadow-brand-900/25">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 to-brand-800 p-7 sm:p-9 shadow-xl shadow-brand-900/25">
             <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-            <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center lg:gap-12">
+            <div className="relative grid gap-6 lg:grid-cols-12 lg:items-center lg:gap-12">
               <div className="lg:col-span-7">
-                <span className="lp-chip bg-white/10 text-amber-300 mb-5">
-                  <MdMoneyOff size={24} />
-                </span>
-                <h2 className="font-display text-[26px] sm:text-3xl font-bold text-white mb-3">{t('landing.cost.title')}</h2>
-                <p className="text-brand-50/90 text-[15px] leading-relaxed mb-6 max-w-xl">{t('landing.cost.body')}</p>
-                <ul className="flex flex-wrap gap-x-6 gap-y-3">
-                  {['point1', 'point2', 'point3'].map(k => (
-                    <li key={k} className="flex items-center gap-2 text-sm font-semibold text-white">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/25 text-amber-200">
-                        <MdCheck size={13} />
-                      </span>
-                      {t(`landing.cost.${k}`)}
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="lp-chip h-10 w-10 bg-white/10 text-amber-300">
+                    <MdMoneyOff size={22} />
+                  </span>
+                  <h2 className="font-display text-[24px] sm:text-3xl font-bold text-white">{t('landing.cost.title')}</h2>
+                </div>
+                <p className="text-brand-50/90 text-[15px] leading-relaxed max-w-xl">{t('landing.cost.body')}</p>
               </div>
               <div className="lg:col-span-5">
                 <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-brand-900/40 p-5">
@@ -538,121 +318,10 @@ export default function Landing() {
         </div>
       </section>}
 
-      {/* Available Programs */}
-      <section ref={programsRef} className="px-5 sm:px-6 py-16 sm:py-20">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <SectionHead title={t('landing.programs.heading')} sub={t('landing.programs.subtitle')} />
-            <button
-              className="btn-primary text-sm w-full sm:w-auto flex-shrink-0 sm:mt-2 mb-6 sm:mb-0"
-              onClick={handleMainCTA}>
-              {user ? t('landing.programs.goToDashboard') : t('landing.cta.createAccount')}
-            </button>
-          </div>
-          {agencies.length > PROGRAMS_SEARCH_FROM && (
-            <div className="mb-4">
-              <label htmlFor="program-search" className="sr-only">{t('landing.programs.search')}</label>
-              <input id="program-search" type="search" className="input max-w-sm" placeholder={t('landing.programs.search')}
-                value={programQuery} onChange={e => setProgramQuery(e.target.value)} />
-            </div>
-          )}
-          {q && matchingPrograms.length === 0 && (
-            <p className="mb-4 text-sm text-gray-500">{t('landing.programs.noMatch', { q: programQuery.trim() })}</p>
-          )}
-          {agencies.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="lp-card p-5 animate-pulse">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-11 h-11 bg-gray-100 rounded-2xl flex-shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 bg-gray-100 rounded w-36" />
-                      <div className="h-2.5 bg-gray-100 rounded w-24" />
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {visiblePrograms.map((agency, i) => {
-                const total     = agency.slots?.total ?? 0
-                const remaining = agency.slots?.remaining ?? 0
-                const pct       = total > 0 ? Math.round(((total - remaining) / total) * 100) : 0
-                const isFull    = remaining === 0
-                const isLow     = !isFull && total > 0 && remaining / total <= 0.25
-                return (
-                  <div key={agency.id} className="lp-card p-5 transition-shadow hover:shadow-[0_1px_2px_rgba(8,80,65,0.05),0_24px_44px_-24px_rgba(8,80,65,0.32)]">
-                    <div className="flex items-center gap-3 mb-3">
-                      <AgencyAvatar agency={agency} className="w-11 h-11 rounded-2xl text-sm" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2" title={agency.name}>{agency.name}</h3>
-                        <p className="text-xs text-gray-500 truncate">{agency.location}</p>
-                      </div>
-                      <span className={`badge text-xs ${isFull ? 'badge-red' : isLow ? 'badge-amber' : 'badge-green'}`}>
-                        {isFull ? t('landing.programs.full') : t('landing.programs.slotsBadge', { count: remaining })}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full mb-1.5 overflow-hidden">
-                      <div
-                        className={`h-1.5 rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${isFull ? 'bg-red-400' : isLow ? 'bg-amber-400' : 'bg-brand-500'}`}
-                        style={{ width: programsIn ? `${pct}%` : '0%', transitionDelay: `${i * 80}ms` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500">{t('landing.programs.slotsRemaining', { remaining, total })}</p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {!q && matchingPrograms.length > PROGRAMS_SHOWN && (
-            <button type="button" className="btn-secondary mt-5 min-h-[44px] text-sm"
-              onClick={() => setShowAllPrograms(v => !v)}>
-              {showAllPrograms ? t('landing.programs.showFewer') : t('landing.programs.showAll', { count: matchingPrograms.length })}
-            </button>
-          )}
-        </div>
-      </section>
-
-      {/* The bigger idea — one front door. Live counts only (no unsourced
-          figures): participating hospitals + partner agencies from the public
-          projections; the other two are the product's promise, not stats. */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900 px-5 sm:px-6 text-white">
-        <div className="relative max-w-5xl mx-auto py-16 sm:py-20">
-          <div>
-            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold">{t('landing.network.eyebrow')}</span>
-            <h2 className="mt-4 font-display text-[28px] sm:text-[36px] font-bold leading-tight">{t('landing.network.heading')}</h2>
-            <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-brand-100">{t('landing.network.body')}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ — the real questions a worried first-time applicant asks. Native
-          <details> (zero JS, accessible) inside one soft card. Everyone. */}
-      <section id="faq" className="px-5 sm:px-6 py-16 sm:py-20">
-        <div className="max-w-5xl mx-auto">
-          <SectionHead title={t('landing.faq.heading')} sub={t('landing.faq.intro')} />
-          <div className="lp-card divide-y divide-gray-100 px-5 sm:px-6 max-w-3xl">
-            {['1', '2', '3', '4', '5', '6'].map(n => (
-              <details key={n} className="group">
-                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden py-4 min-h-[44px] text-[15px] font-semibold text-gray-900">
-                  <span>{t(`landing.faq.q${n}`)}</span>
-                  <span className="lp-chip h-8 w-8 bg-brand-50 text-brand-600 transition-transform group-open:rotate-180">
-                    <MdExpandMore size={20} />
-                  </span>
-                </summary>
-                <p className="pb-4 pr-4 text-sm leading-relaxed text-gray-600">{t(`landing.faq.a${n}`)}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Need help / Visit us — the human escape hatch for low-literacy users:
-          real contact details + a note that staff will do the whole
-          application with them in person. Everyone. */}
-      <section id="help" className="px-5 sm:px-6 py-16 sm:py-20">
+      {/* 4 · Visit a hospital office — the human fallback for people who can't
+          apply online, and the one list of participating hospitals (each with
+          the code prefix it issues). Everyone. */}
+      <section id="help" ref={officesRef} className="px-5 sm:px-6 py-14 sm:py-20 scroll-mt-14">
         <div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-12 lg:gap-12">
           <div className="lg:col-span-5">
             <SectionHead title={t('landing.help.title')} sub={t('landing.help.intro')} />
@@ -660,12 +329,6 @@ export default function Landing() {
               <MdGroups size={22} className="mt-0.5 flex-shrink-0 text-brand-700" />
               <p className="text-sm font-medium leading-relaxed text-brand-800">{t('landing.help.onsite')}</p>
             </div>
-            {!user && (
-              <button onClick={() => navigate('/register')}
-                className="btn-primary mt-5 px-6 py-3 text-base flex items-center gap-2 shadow-lg shadow-brand-900/15">
-                {t('landing.cta.createAccount')} <MdArrowForward size={18} />
-              </button>
-            )}
           </div>
           <div className="lg:col-span-7">
             {/* Each participating hospital's own office (hospitalsPublic) —
@@ -681,6 +344,7 @@ export default function Landing() {
                     {h.gatewayName && <p className="text-gray-600">{h.gatewayName}</p>}
                     {h.address && <p className="mt-1 flex gap-1.5 text-gray-600"><MdLocationOn size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{h.address}</p>}
                     {h.contactEmail && <p className="flex gap-1.5 text-gray-600 break-all"><MdMailOutline size={16} className="mt-0.5 flex-shrink-0 text-brand-500" />{h.contactEmail}</p>}
+                    <p className="mt-1 text-xs text-gray-500">{t('landing.help.codePrefix', { prefix: h.accessCodePrefix })}</p>
                   </div>
                 </li>
               ))}
@@ -690,8 +354,8 @@ export default function Landing() {
                     className="inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
                     onClick={() => setShowAllHospitals(v => !v)}>
                     {showAllHospitals
-                      ? t('landing.eligibility.hospitalsShowFewer')
-                      : t('landing.eligibility.hospitalsShowAll', { count: hospitals.length })}
+                      ? t('landing.help.showFewer')
+                      : t('landing.help.showAll', { count: hospitals.length })}
                   </button>
                 </li>
               )}
@@ -707,15 +371,54 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer — deep pine to close the page in the brand colour rather than
-          a generic slate, tying the whole palette together. */}
+      {/* 5 · FAQ — the real questions a worried first-time applicant asks.
+          Native <details> (zero JS, accessible). The funding-agency answer
+          lists partner names only. Everyone. */}
+      <section id="faq" className="px-5 sm:px-6 pb-16 sm:pb-20">
+        <div className="max-w-5xl mx-auto">
+          <SectionHead title={t('landing.faq.heading')} sub={t('landing.faq.intro')} />
+          <div className="lp-card divide-y divide-gray-100 px-5 sm:px-6 max-w-3xl">
+            {['1', '2', '3', '4', '5', '7', '8', '9', '6'].map(n => (
+              <details key={n} className="group">
+                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden py-4 min-h-[44px] text-[15px] font-semibold text-gray-900">
+                  <span>{t(`landing.faq.q${n}`)}</span>
+                  <span className="lp-chip h-8 w-8 bg-brand-50 text-brand-600 transition-transform group-open:rotate-180">
+                    <MdExpandMore size={20} />
+                  </span>
+                </summary>
+                <p className="pb-4 pr-4 text-sm leading-relaxed text-gray-600">{t(`landing.faq.a${n}`)}</p>
+                {n === '9' && agencies.length > 0 && (
+                  <ul className="pb-4 flex flex-wrap gap-2" aria-label={t('landing.faq.partnersLabel')}>
+                    {agencies.map(a => (
+                      <li key={a.id} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{a.name}</li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6 · For hospitals — one line; the full pitch lives at /for-hospitals. */}
+      <section className="border-t border-brand-900/5 bg-white px-5 sm:px-6">
+        <div className="max-w-5xl mx-auto py-8 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+          <span className="lp-chip h-10 w-10 bg-brand-50 text-brand-600"><MdLocalHospital size={20} /></span>
+          <div className="min-w-0">
+            <p className="font-display text-lg font-bold text-brand-900">{t('landing.hospitals.title')}</p>
+            <p className="text-sm text-gray-600">{t('landing.hospitals.body')}</p>
+          </div>
+          <button type="button" onClick={() => navigate('/for-hospitals')}
+            className="btn-secondary sm:ml-auto self-start sm:self-auto min-h-[44px] whitespace-nowrap">
+            {t('landing.hospitals.cta')}
+          </button>
+        </div>
+      </section>
+
+      {/* Footer — deep pine to close the page in the brand colour. */}
       <footer className="bg-brand-900 text-white pt-14 pb-6 px-5 sm:px-6">
         <div className="max-w-5xl mx-auto">
-
-          {/* Top section — 3 columns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-10">
-
-            {/* Brand */}
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Logo size={32} />
@@ -729,11 +432,17 @@ export default function Landing() {
               </p>
             </div>
 
-            {/* Quick links */}
             <div>
               <p className="text-xs font-semibold text-brand-100 uppercase tracking-widest mb-3">{t('landing.footer.quickLinks')}</p>
               <ul className="space-y-2">
-                {!user && (
+                {user ? (
+                  <li>
+                    <button onClick={() => navigate(DASHBOARD[user.role] ?? '/')}
+                      className="text-xs text-brand-100/70 hover:text-white transition-colors">
+                      {t('landing.footer.dashboard')}
+                    </button>
+                  </li>
+                ) : (
                   <>
                     <li>
                       <button onClick={() => navigate('/register')}
@@ -749,24 +458,14 @@ export default function Landing() {
                     </li>
                   </>
                 )}
-                {user && (
-                  <li>
-                    <button onClick={() => navigate(DASHBOARD[user.role] ?? '/')}
-                      className="text-xs text-brand-100/70 hover:text-white transition-colors">
-                      {t('landing.footer.dashboard')}
-                    </button>
-                  </li>
-                )}
                 <li>
-                  <button
-                    onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  <button onClick={() => scrollTo(journeyRef)}
                     className="text-xs text-brand-100/70 hover:text-white transition-colors">
                     {t('landing.footer.howItWorks')}
                   </button>
                 </li>
                 <li>
-                  <button
-                    onClick={() => navigate('/for-hospitals')}
+                  <button onClick={() => navigate('/for-hospitals')}
                     className="text-xs text-brand-100/70 hover:text-white transition-colors">
                     {t('landing.footer.forHospitals')}
                   </button>
@@ -774,53 +473,52 @@ export default function Landing() {
               </ul>
             </div>
 
-            {/* Contact */}
             <div>
               <p className="text-xs font-semibold text-brand-100 uppercase tracking-widest mb-3">{t('landing.footer.contact')}</p>
               <ul className="space-y-2 text-xs text-brand-100/70">
                 <li className="flex items-center gap-2">
                   <MdMailOutline size={15} className="flex-shrink-0 text-brand-300" />
-                  <span>{ORG.contactEmail}</span>
+                  <span className="break-all">{ORG.contactEmail}</span>
                 </li>
                 <li>
-                  <a href="#help" className="hover:text-white transition-colors">{t('landing.footer.officesLink')}</a>
+                  <button onClick={() => scrollTo(officesRef)} className="hover:text-white transition-colors">{t('landing.footer.officesLink')}</button>
                 </li>
               </ul>
             </div>
           </div>
 
-          {/* Bottom bar */}
           <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-brand-100/60 flex items-center gap-1.5">
               <MdFavorite size={12} className="text-amber-400" />
               {t('landing.footer.copyright', { year: new Date().getFullYear() })}
             </p>
-            <div className="flex items-center gap-4 text-xs text-brand-100/60">
-              <button
-                onClick={() => setShowPrivacy(true)}
-                className="hover:text-white transition-colors">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-brand-100/60">
+              <button onClick={() => setShowPrivacy(true)} className="hover:text-white transition-colors">
                 {t('landing.footer.privacy')}
               </button>
-              <span>·</span>
-              <button
-                onClick={() => setShowTerms(true)}
-                className="hover:text-white transition-colors">
+              <span aria-hidden="true">·</span>
+              <button onClick={() => setShowTerms(true)} className="hover:text-white transition-colors">
                 {t('terms.title')}
               </button>
-              <span>·</span>
-              <span>{t('landing.footer.officialPortal')}</span>
+              <span aria-hidden="true">·</span>
+              {/* "Official portal" only for a signed-in user's own hospital; a
+                  visitor is on the network page, not one hospital's portal. */}
+              <span>{scoped ? t('landing.footer.officialPortal') : t('landing.footer.network')}</span>
             </div>
           </div>
         </div>
       </footer>
-      {/* Privacy Notice Modal */}
+
+      {/* Privacy Notice dialog */}
       {showPrivacy && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           onClick={e => e.target === e.currentTarget && setShowPrivacy(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+          <div role="dialog" aria-modal="true" aria-labelledby="privacy-title"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-              <h2 className="text-base font-semibold text-gray-900">{t('landing.privacy.title')}</h2>
-              <button onClick={() => setShowPrivacy(false)} className="text-gray-500 hover:text-gray-600">
+              <h2 id="privacy-title" className="text-base font-semibold text-gray-900">{t('landing.privacy.title')}</h2>
+              <button autoFocus onClick={() => setShowPrivacy(false)} aria-label={t('landing.privacy.close')}
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                 <MdClose size={20} />
               </button>
             </div>
