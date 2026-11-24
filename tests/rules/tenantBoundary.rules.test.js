@@ -216,7 +216,7 @@ describe('writes stay inside the writer\'s hospital', () => {
   // Registration creates a no-code account; claiming a code runs on the server.
   it('registration self-creates a no-code account; the browser code-claim is refused (PR 3.4)', async () => {
     // Open sign-up (2026-11-15): no code, no hospital — allowed.
-    await assertSucceeds(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', name: 'Pat' }))
+    await assertSucceeds(setDoc(ref('newPat1', 'users/newPat1'), { role: 'patient', name: 'Pat', createdAt: serverTimestamp() }))
     // The browser register-with-code batch is refused whichever hospital it names.
     await assertFails(registerWithCode(as('newPat1'), { uid: 'newPat1', code: 'CODE-B2', tenantId: A }))
     await assertFails(registerWithCode(as('newPat2'), { uid: 'newPat2', code: 'CODE-B2', tenantId: B }))

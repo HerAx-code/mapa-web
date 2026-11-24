@@ -477,6 +477,27 @@ common path, the caps are ceilings rather than tight quotas, and a rare cleanup
 (or the terminal-clear) reconciles. Documented in
 `docs/patient-abuse-hardening-plan.md` §3/§5.
 
+### A11. No identity proofing at sign-up (decision 2026-11-24)
+
+Creating a patient account checks no ID, face or selfie, on purpose. An
+account alone reaches no money: filing needs an access code issued in person
+against a real ID and bound to the patient's last name + birthdate
+(`claimAccessCode`), the ID + live selfie are checked at filing by a social
+worker, and duplicate accounts are flagged (`identityIndex`). A selfie at
+sign-up has nothing trusted to compare with, would collect sensitive personal
+information (NPC: proportionality) from people who never file, would turn
+away older users and cheap phones (World Bank ID4D: biometric exclusion), and
+can't work when a family member signs up for a confined patient. This follows
+NIST SP 800-63A-4 / Login.gov / GOV.UK One Login: prove identity when the
+transaction needs it. Research: claude.ai artifact "Identity at Sign-up".
+
+What sign-up does guard: **the email is confirmed before the first request**
+(new accounts from 2026-11-25 Manila; `patientEmailConfirmed()` in
+firestore.rules, `src/utils/emailConfirm.js`, tested in
+`tests/rules/emailConfirm.rules.test.js`). `users.createdAt` is the server
+time at sign-up and pinned, so it can't be backdated. Still open: automated
+sign-ups (App Check is monitor-only).
+
 ### A8. AI-agent compromise via planted UI content
 
 T2 was discovered as one instance; the broader class is "any

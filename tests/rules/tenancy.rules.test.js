@@ -50,7 +50,7 @@ describe('users.tenantId', () => {
   // Registration requires the code; the code's hospital is the patient's.
   it('a patient self-creates a no-code account; registering with a code runs on the server (PR 3.4)', async () => {
     // Open sign-up (2026-11-15): a no-code account is allowed (it has no hospital).
-    await assertSucceeds(setDoc(doc(as('patient-2b'), 'users', 'patient-2b'), { role: 'patient', name: 'Ana' }))
+    await assertSucceeds(setDoc(doc(as('patient-2b'), 'users', 'patient-2b'), { role: 'patient', name: 'Ana', createdAt: serverTimestamp() }))
     // Claiming a code moved to claimAccessCode (server); the browser batch is refused.
     await assertFails(registerWithCode(as('patient-2'), { uid: 'patient-2', code: 'MAPA-2026-00009', tenantId: 'hospital-1' }))
   })

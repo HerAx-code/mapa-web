@@ -1533,12 +1533,29 @@
         "title": "Bahagyang naaprubahan",
         "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan."
       }
+    },
+    "emailConfirm": {
+      "title": "Kumpirmahin muna ang inyong email",
+      "body": "Bago maghain ng kahilingan, buksan ang link na ipinadala namin sa:",
+      "step1": "Buksan ang inyong email at hanapin ang mensahe mula sa MAPA. Tingnan din ang Spam o Promotions folder.",
+      "step2": "I-tap ang link sa mensahe. May lalabas na pahinang nagsasabing na-verify na ang inyong email.",
+      "step3": "Bumalik dito at i-tap ang \"Nabuksan ko na ang link\".",
+      "check": "Nabuksan ko na ang link",
+      "checking": "Sinusuri…",
+      "resend": "Ipadala muli ang link",
+      "sending": "Ipinapadala…",
+      "resendIn": "Maipapadala muli sa loob ng {{s}} s",
+      "sent": "Nagpadala kami ng bagong link sa {{email}}.",
+      "notYet": "Hindi pa nakukumpirma ang inyong email. Buksan ang pinakabagong link na ipinadala namin, at subukang muli.",
+      "tooMany": "Masyadong maraming link ang naipadala. Maghintay ng ilang minuto, at subukang muli.",
+      "sendFailed": "Hindi naipadala ang link. Tingnan ang inyong koneksyon at subukang muli.",
+      "checkFailed": "Hindi namin ito masuri ngayon. Tingnan ang inyong koneksyon at subukang muli.",
+      "wrongEmail": "Mali ba ang email na ito, o hindi ninyo ito mabuksan? Humingi ng tulong sa social-services office ng inyong ospital."
     }
   },
   "register": {
-    "stepFinish": "Tapusin",
     "backHome": "Bumalik sa Home",
-    "title": "Mag-apply para sa Patient Account",
+    "title": "Gumawa ng inyong account",
     "subtitle": "Gumawa ng account upang mag-apply para sa tulong medikal.",
     "brand": {
       "headline": "Mag-apply para sa inyong patient account.",
@@ -1587,7 +1604,8 @@
       "selectCity": "Pumili ng lungsod / munisipalidad",
       "otherNotListed": "Iba pa (wala sa listahan)",
       "otherProvince": "Ilagay ang probinsya",
-      "otherCity": "Ilagay ang lungsod / munisipalidad"
+      "otherCity": "Ilagay ang lungsod / munisipalidad",
+      "lockedHint": "Dapat tugma ang inyong apelyido at petsa ng kapanganakan sa ID ng pasyente. Hindi na ito mababago pagkatapos mag-sign up."
     },
     "step2": {
       "sectionTitle": "Pag-setup ng Account",
@@ -1598,27 +1616,29 @@
       "confirmPassword": "Kumpirmahin ang Password",
       "confirmPlaceholder": "Ulitin ang inyong password",
       "showPassword": "Ipakita ang password",
-      "hidePassword": "Itago ang password"
+      "hidePassword": "Itago ang password",
+      "passwordAgain": "Para sa inyong kaligtasan, hindi sine-save ang password habang pinupunan ang form na ito. I-type itong muli para magpatuloy."
     },
     "step3": {
       "boundHint": "Gagana lamang ang code para sa pasyenteng pinagbigyan nito: dapat tugma ang inyong apelyido at petsa ng kapanganakan sa talaan ng ospital.",
       "officialName": "Gagamitin ng inyong account ang pangalang itinala ng ospital: {{name}}",
-      "nextBody": "Gumagana ang inyong MAPA account sa lahat ng kalahok na ospital. Tuwing hihingi kayo ng tulong, pipiliin ninyo ang ospital at ilalagay ang access code na ibinigay ng social-services office nito.",
-      "nextTitle": "Susunod: piliin ang ospital",
       "sectionTitle": "Patient Access Code (opsyonal)",
       "sectionDesc": "May code na ba kayo mula sa social-services office ng ospital? Ilagay ito para doon maisumite ang inyong unang kahilingan. Wala pang code? Iwanang blangko at gumawa ng account — maglalagay kayo ng code kapag hihingi na kayo ng tulong.",
       "accessCode": "Patient Access Code (opsyonal)",
-      "accessCodeHint": "Ipasok ang 5-digit na numero pagkatapos ng prefix",
       "joiningHospital": "Magpaparehistro ka sa {{hospital}}.",
-      "prefixHint": "Ang mga letra bago ang unang gitling (gaya ng {{prefix}}-) ang nagsasabi sa MAPA kung saang ospital ka kabilang.",
       "verifyBtn": "I-verify",
       "verified": "Na-verify",
       "edit": "I-edit",
-      "reviewToggle": "Suriin ang inyong detalye bago isumite",
-      "noCodeHint": "Wala pang code? Ayos lang. Pagkatapos magparehistro, maaari ninyong ikumpara ang mga ospital; kapag hihingi na kayo ng tulong, bibigyan kayo ng code ng social-services office ng ospital.",
+      "reviewToggle": "Suriin ang inyong detalye bago gumawa ng account",
       "codeUsedRecovery": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, iulat ito sa {{gateway}} para masuri at mabigyan ng bago.",
       "codeUsedRecoveryAction": "I-email ang {{gateway}}",
-      "termsAgree": "Sumasang-ayon ako sa <link>Privacy Notice</link> at <termslink>Terms of Use</termslink>. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal."
+      "termsAgree": "Sumasang-ayon ako sa <privacylink>Privacy Notice</privacylink> at <termslink>Terms of Use</termslink>. Pinapayagan ko ang {{gateway}} na kolektahin ang aking personal na impormasyon para sa layuning medikal.",
+      "codeHint": "I-type ang buong code mula sa inyong slip, halimbawa {{example}}. Ang mga letra sa simula ang nagsasabi kung aling ospital ang nagbigay nito.",
+      "reviewLocked": "Ihambing ang apelyido at petsa ng kapanganakan sa ID ng pasyente. Hindi na ito mababago pagkatapos mag-sign up.",
+      "reviewName": "Buong pangalan",
+      "cantChange": "Hindi na mababago",
+      "codeUsedRecoveryHospital": "Kung naniniwala kayong ginamit ang inyong code nang walang pahintulot, ipaalam sa social-services office ng {{hospital}}, na nagbigay nito. Masusuri nila ito at mabibigyan kayo ng bago.",
+      "codeUsedRecoveryEmail": "I-email ang {{email}}"
     },
     "back": "Bumalik",
     "next": "Sunod",
@@ -1659,10 +1679,10 @@
       "generic": "Nabigo ang pagpaparehistro."
     },
     "toast": {
-      "codeSaved": "Na-save ang access code. Gagamitin ito kapag pinili ninyo ang ospital na iyon.",
       "codeVerified": "Na-verify ang access code!",
-      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account.",
-      "alreadyRegistered": "Nakarehistro ka na gamit ang access code na ito. Mangyaring mag-login."
+      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account. Nagpadala kami ng link sa {{email}}. Buksan ito bago kayo maghain ng kahilingan.",
+      "alreadyRegistered": "Nakarehistro ka na gamit ang access code na ito. Mangyaring mag-login.",
+      "codeNotUsed": "Handa na ang inyong account, pero hindi nagamit ang access code: {{reason}} Itatabi ito para sa paghahain ng inyong kahilingan."
     },
     "password": {
       "tooShort": "Masyadong maikli",
@@ -1670,7 +1690,8 @@
       "good": "Maayos",
       "weakNeed8": "Mahina — kailangan ng 8+ character",
       "weakAddLN": "Mahina — magdagdag ng titik at numero"
-    }
+    },
+    "stepJump": "Bumalik sa hakbang {{num}}: {{label}}"
   },
   "tour": {
     "patient": {
