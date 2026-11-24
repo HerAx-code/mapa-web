@@ -6,7 +6,9 @@ import {
   collection, query, where, onSnapshot, getDocs,
   doc, updateDoc, writeBatch, serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../../firebase'
+import { db, auth } from '../../firebase'
+import { needsEmailConfirm } from '../../utils/emailConfirm'
+import ConfirmEmailCard from '../../components/patient/ConfirmEmailCard'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   generateRequestId, computeFunding,
@@ -129,6 +131,9 @@ export default function RequestAssistance() {
   // patient), so a deliberate ack always unblocks submit.
   const [qualityAck,    setQualityAck]    = useState({})
   const [selfieFor,     setSelfieFor]     = useState(null)
+  // Set once the patient confirms their email on the ConfirmEmailCard (the
+  // Auth user's emailVerified changes in place, without a re-render).
+  const [emailConfirmed, setEmailConfirmed] = useState(false)
   const [replacing,     setReplacing]     = useState(null)
   const [proceeding,    setProceeding]    = useState(false)
   const [loading,       setLoading]       = useState(true)
@@ -1207,6 +1212,19 @@ export default function RequestAssistance() {
           confirmLabel={t('patient.track.withdrawYes')}
           confirmLabelBusy={t('patient.track.withdrawing')}
         />
+      </Layout>
+    )
+  }
+
+  // ── Confirm the email first (registration research 2026-11-24) ─────────────
+  // Before the hospital/code step, so no code is claimed by an account that
+  // can't file yet. The rules refuse the request too (patientEmailConfirmed).
+  if (!loading && !activeRequest && !emailConfirmed && needsEmailConfirm(user, auth.currentUser)) {
+    return (
+      <Layout breadcrumb={t('patient.request.navLabel')}>
+        <div className="px-4 py-6 sm:p-6 w-full max-w-xl mx-auto">
+          <ConfirmEmailCard email={user?.email || auth.currentUser?.email || ''} onConfirmed={() => setEmailConfirmed(true)} />
+        </div>
       </Layout>
     )
   }

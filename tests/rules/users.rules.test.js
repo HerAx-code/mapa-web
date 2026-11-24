@@ -1,7 +1,7 @@
 import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { registerWithCode } from './helpers/marketplace.js'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -51,7 +51,7 @@ describe('users.create — patient self-create only with role=patient', () => {
     // Registration creates the account with no hospital (patientSelfCreate),
     // then claimAccessCode (server) claims any code — the browser batch is refused.
     await assertSucceeds(setDoc(doc(testEnv.authenticatedContext('new-user-1').firestore(), 'users', 'new-user-1'),
-      { role: 'patient', agencyId: null, name: 'Juan Dela Cruz', email: 'juan@example.com' }))
+      { role: 'patient', agencyId: null, name: 'Juan Dela Cruz', email: 'juan@example.com', createdAt: serverTimestamp() }))
     await seedCode()
     await assertFails(registerWithCode(testEnv.authenticatedContext('new-user-3').firestore(),
       { uid: 'new-user-3', code: 'MAPA-2026-00001', tenantId: 'hospital-1' }))
@@ -60,7 +60,7 @@ describe('users.create — patient self-create only with role=patient', () => {
   it('rejects registration with an unclaimed code, a wrong hospital, or agency links', async () => {
     await seedCode()
     const db = testEnv.authenticatedContext('new-user-2').firestore()
-    const base = { role: 'patient', agencyId: null, name: 'Ana' }
+    const base = { role: 'patient', agencyId: null, name: 'Ana', createdAt: serverTimestamp() }
     // Open sign-up (2026-11-15): no code at all is allowed — see the open sign-up test.
     await assertSucceeds(setDoc(doc(testEnv.authenticatedContext('new-user-open').firestore(), 'users', 'new-user-open'), base))
     // naming a code it did not claim in the same write

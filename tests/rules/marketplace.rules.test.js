@@ -208,7 +208,7 @@ describe('hospitalsPublicStats — public counts, no client writes', () => {
 // (assignPatientId); a patient can't pick one at sign-up.
 describe('patient display IDs', () => {
   it('a network sign-up without a patientId is allowed; one that sets it is refused', async () => {
-    await assertSucceeds(setDoc(ref('fresh1', 'users/fresh1'), pat({ hospitalId: null })))
-    await assertFails(setDoc(ref('fresh2', 'users/fresh2'), pat({ hospitalId: null, patientId: 'PAT-000001' })))
+    await assertSucceeds(setDoc(ref('fresh1', 'users/fresh1'), pat({ hospitalId: null, createdAt: serverTimestamp() })))
+    await assertFails(setDoc(ref('fresh2', 'users/fresh2'), pat({ hospitalId: null, patientId: 'PAT-000001', createdAt: serverTimestamp() })))
   })
 })

@@ -1533,6 +1533,24 @@
         "title": "Bahagyang naaprubahan",
         "sub": "May ahensyang nag-apruba ng bahagi ng iyong kahilingan."
       }
+    },
+    "emailConfirm": {
+      "title": "Kumpirmahin muna ang inyong email",
+      "body": "Bago maghain ng kahilingan, buksan ang link na ipinadala namin sa:",
+      "step1": "Buksan ang inyong email at hanapin ang mensahe mula sa MAPA. Tingnan din ang Spam o Promotions folder.",
+      "step2": "I-tap ang link sa mensahe. May lalabas na pahinang nagsasabing na-verify na ang inyong email.",
+      "step3": "Bumalik dito at i-tap ang \"Nabuksan ko na ang link\".",
+      "check": "Nabuksan ko na ang link",
+      "checking": "Sinusuri…",
+      "resend": "Ipadala muli ang link",
+      "sending": "Ipinapadala…",
+      "resendIn": "Maipapadala muli sa loob ng {{s}} s",
+      "sent": "Nagpadala kami ng bagong link sa {{email}}.",
+      "notYet": "Hindi pa nakukumpirma ang inyong email. Buksan ang pinakabagong link na ipinadala namin, at subukang muli.",
+      "tooMany": "Masyadong maraming link ang naipadala. Maghintay ng ilang minuto, at subukang muli.",
+      "sendFailed": "Hindi naipadala ang link. Tingnan ang inyong koneksyon at subukang muli.",
+      "checkFailed": "Hindi namin ito masuri ngayon. Tingnan ang inyong koneksyon at subukang muli.",
+      "wrongEmail": "Mali ba ang email na ito, o hindi ninyo ito mabuksan? Humingi ng tulong sa social-services office ng inyong ospital."
     }
   },
   "register": {
@@ -1661,7 +1679,7 @@
     },
     "toast": {
       "codeVerified": "Na-verify ang access code!",
-      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account.",
+      "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account. Nagpadala kami ng link sa {{email}}. Buksan ito bago kayo maghain ng kahilingan.",
       "alreadyRegistered": "Nakarehistro ka na gamit ang access code na ito. Mangyaring mag-login.",
       "codeNotUsed": "Handa na ang inyong account, pero hindi nagamit ang access code: {{reason}} Itatabi ito para sa paghahain ng inyong kahilingan."
     },

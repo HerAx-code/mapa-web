@@ -1533,6 +1533,24 @@
         "title": "Partly approved",
         "sub": "An agency approved part of your request."
       }
+    },
+    "emailConfirm": {
+      "title": "Confirm your email first",
+      "body": "Before you file a request, open the link we sent to:",
+      "step1": "Open your email and find the message from MAPA. Check the Spam or Promotions folder too.",
+      "step2": "Tap the link in the message. A page will say your email is verified.",
+      "step3": "Come back here and tap \"I've opened the link\".",
+      "check": "I've opened the link",
+      "checking": "Checking…",
+      "resend": "Send the link again",
+      "sending": "Sending…",
+      "resendIn": "Send again in {{s}} s",
+      "sent": "We sent a new link to {{email}}.",
+      "notYet": "Your email isn't confirmed yet. Open the newest link we sent, then try again.",
+      "tooMany": "Too many links were sent. Wait a few minutes, then try again.",
+      "sendFailed": "The link couldn't be sent. Check your connection and try again.",
+      "checkFailed": "We couldn't check right now. Check your connection and try again.",
+      "wrongEmail": "Is this email wrong, or can't you open it? Ask the social-services office of your hospital for help."
     }
   },
   "register": {
@@ -1661,7 +1679,7 @@
     },
     "toast": {
       "codeVerified": "Access code verified!",
-      "welcome": "Welcome, {{name}}! Your account has been created.",
+      "welcome": "Welcome, {{name}}! Your account has been created. We sent a link to {{email}}. Open it before you file a request.",
       "alreadyRegistered": "You have already registered with this access code. Please log in.",
       "codeNotUsed": "Your account is ready, but the access code wasn't used: {{reason}} It is kept for when you file a request."
     },

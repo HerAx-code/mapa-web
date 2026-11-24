@@ -8,7 +8,7 @@ import {
 import Logo from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import LanguageToggle from '../../components/LanguageToggle'
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser, sendEmailVerification } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, functions, signInAnonymously, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
@@ -631,6 +631,12 @@ export default function Register() {
         throw createErr
       }
 
+      // Confirm the email address (registration research 2026-11-24): the
+      // link must be opened before the first request is filed (the rules check
+      // it; the filing page explains and can resend). Never blocks sign-up —
+      // if sending fails, the filing page offers to send it again.
+      sendEmailVerification(cred.user).catch((err) => console.warn('[Register] verification email not sent:', err?.code))
+
       let joinedTenant = null
       if (codeTyped()) {
         try {
@@ -670,7 +676,7 @@ export default function Register() {
       // whose claim failed stays pending; see the claim's catch above.)
       if (joinedTenant) { try { sessionStorage.removeItem(PENDING_CODE_KEY) } catch {} }
 
-      toast.success(t('register.toast.welcome', { name: form.firstName }))
+      toast.success(t('register.toast.welcome', { name: form.firstName, email: normalizedEmail }), { duration: 8000 })
       // No hospital yet: start by comparing hospitals; with a code, file there.
       navigate(joinedTenant ? '/patient/request' : '/patient/hospitals')
     } catch (err) {

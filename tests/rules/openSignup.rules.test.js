@@ -31,7 +31,8 @@ beforeEach(async () => {
 })
 
 const as = (u) => env.authenticatedContext(u).firestore()
-const profile = { role: 'patient', agencyId: null, name: 'Ana Cruz', birthdate: '1990-05-01', hospitalId: null }
+// createdAt: the server time, as Register writes it (email confirmation, 2026-11-24).
+const profile = { role: 'patient', agencyId: null, name: 'Ana Cruz', birthdate: '1990-05-01', hospitalId: null, createdAt: serverTimestamp() }
 
 describe('open sign-up', () => {
   it('creates a network account with no hospital and no code', async () => {

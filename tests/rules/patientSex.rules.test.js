@@ -1,7 +1,7 @@
 import { loadRules } from './helpers/rules.js'
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 
 // Phase 3B (2026-11-16): sex (for the DOH monthly report) — female or male,
 // filled in once by the patient; hospital staff can correct it.
@@ -37,7 +37,7 @@ describe('patient sex', () => {
     await assertSucceeds(updateDoc(doc(as('staffA'), 'users', 'set'), { sex: 'male' }))
   })
   it('sign-up accepts only a valid sex', async () => {
-    await assertFails(setDoc(doc(as('newbie'), 'users', 'newbie'), { role: 'patient', name: 'N', sex: 'unknown' }))
-    await assertSucceeds(setDoc(doc(as('newbie'), 'users', 'newbie'), { role: 'patient', name: 'N', sex: 'female' }))
+    await assertFails(setDoc(doc(as('newbie'), 'users', 'newbie'), { role: 'patient', name: 'N', sex: 'unknown', createdAt: serverTimestamp() }))
+    await assertSucceeds(setDoc(doc(as('newbie'), 'users', 'newbie'), { role: 'patient', name: 'N', sex: 'female', createdAt: serverTimestamp() }))
   })
 })

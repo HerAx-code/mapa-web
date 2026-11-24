@@ -207,6 +207,21 @@ service cloud.firestore {
       return tenantOf(request.resource.data) == userTenantId();
     }
 
+    // Email confirmation before filing (registration research 2026-11-24).
+    // A patient account created on or after EMAIL_CONFIRM_FROM (2026-11-25
+    // 00:00 Manila = 2026-11-24 16:00 UTC; src/utils/emailConfirm.js, kept in
+    // agreement by tests/utils/emailConfirm.test.js) must have opened its
+    // verification link. Older accounts never got one: exempt. createdAt is
+    // the server's time at sign-up and pinned afterwards (users rules), so a
+    // patient can't backdate it; a missing or non-timestamp createdAt is an
+    // older account.
+    function patientEmailConfirmed() {
+      let created = get(/databases/$(database)/documents/users/$(uid())).data.get('createdAt', null);
+      return request.auth.token.get('email_verified', false) == true ||
+        !(created is timestamp) ||
+        created < timestamp.date(2026, 11, 24) + duration.value(16, 'h');
+    }
+
     // Gateway write to an existing doc: it is in the admin's hospital and stays
     // there (moving records between hospitals is a platform action, Phase 6).
     function hospitalAdminWrite() {
@@ -269,6 +284,10 @@ service cloud.firestore {
         // agencyIds and the hospital fields stay server/claim-owned.
         (uid() == userId && request.resource.data.role == 'patient' &&
           !('agencyIds' in request.resource.data) &&
+          // Email confirmation (2026-11-24): the account's creation time decides
+          // whether it must confirm its email before filing, so it is the
+          // server's time, never a value the patient chooses.
+          request.resource.data.get('createdAt', null) == request.time &&
           // Phase 5 PR 5.2 (N3): the display ID comes from the server's counter.
           !('patientId' in request.resource.data) &&
           // Phase 3B: sex for the DOH monthly report.
@@ -319,6 +338,8 @@ service cloud.firestore {
           // tolerates roles that lack these fields (staff have no hospitalId).
           // name is pinned for patients only, so staff can still self-rename.
           request.resource.data.get('patientId', null)  == resource.data.get('patientId', null) &&
+          // createdAt decides email confirmation (patientEmailConfirmed): pinned.
+          request.resource.data.get('createdAt', null)  == resource.data.get('createdAt', null) &&
           // The access code (hospitalId) and the hospitals (tenantId current,
           // tenantIds all) are pinned — EXCEPT the marketplace switch, which
           // must prove the new code was just claimed by this patient, issued by
@@ -554,6 +575,8 @@ service cloud.firestore {
                        // Holding period (Patients page): no new request while it is on.
                        get(/databases/$(database)/documents/users/$(uid()))
                          .data.get('cooldown', 0) == 0 &&
+                       // A new account confirms its email before filing.
+                       patientEmailConfirmed() &&
                        request.resource.data.get('patientHospitalId', '') is string &&
                        request.resource.data.get('patientHospitalId', '') != '' &&
                        request.resource.data.patientHospitalId ==
