@@ -1536,9 +1536,8 @@
     }
   },
   "register": {
-    "stepFinish": "Finish",
     "backHome": "Back to Home",
-    "title": "Apply for Patient Account",
+    "title": "Create your account",
     "subtitle": "Create an account to apply for medical assistance.",
     "brand": {
       "headline": "Apply for your patient account.",
@@ -1587,7 +1586,8 @@
       "selectCity": "Select city / municipality",
       "otherNotListed": "Other (not listed)",
       "otherProvince": "Enter province",
-      "otherCity": "Enter city / municipality"
+      "otherCity": "Enter city / municipality",
+      "lockedHint": "Your last name and birthdate must match the patient's ID. They can't be changed after you sign up."
     },
     "step2": {
       "sectionTitle": "Account Setup",
@@ -1603,22 +1603,23 @@
     "step3": {
       "boundHint": "The code works only for the patient it was issued to: your last name and birthdate must match the hospital's record.",
       "officialName": "Your account will use the name the hospital recorded: {{name}}",
-      "nextBody": "Your MAPA account works at every participating hospital. Each time you ask for help, you choose the hospital and enter the access code its social-services office gave you.",
-      "nextTitle": "Next: choose your hospital",
       "sectionTitle": "Patient Access Code (optional)",
       "sectionDesc": "Already have a code from a hospital's social-services office? Enter it to file your first request there. No code yet? Leave this blank and create your account — you'll enter a code when you ask for help.",
       "accessCode": "Patient Access Code (optional)",
-      "accessCodeHint": "Enter the 5-digit number after the prefix",
       "joiningHospital": "You are registering with {{hospital}}.",
-      "prefixHint": "The letters before the first dash (like {{prefix}}-) tell MAPA which hospital you belong to.",
       "verifyBtn": "Verify",
       "verified": "Verified",
       "edit": "Edit",
-      "reviewToggle": "Review your details before submitting",
-      "noCodeHint": "No code yet? That's fine. After you sign up you can compare hospitals; when you ask for help, the hospital's social-services office will give you a code.",
+      "reviewToggle": "Check your details before you create the account",
       "codeUsedRecovery": "If you believe your code was claimed without your knowledge, report it to {{gateway}} so they can investigate and issue a new one.",
       "codeUsedRecoveryAction": "Email {{gateway}}",
-      "termsAgree": "I agree to the <link>Privacy Notice</link> and <termslink>Terms of Use</termslink>. I consent to {{gateway}} collecting my personal information for medical assistance purposes."
+      "termsAgree": "I agree to the <link>Privacy Notice</link> and <termslink>Terms of Use</termslink>. I consent to {{gateway}} collecting my personal information for medical assistance purposes.",
+      "codeHint": "Type the whole code from your slip, for example {{example}}. The letters at the start name the hospital that issued it.",
+      "reviewLocked": "Check the last name and birthdate against the patient's ID. They can't be changed after you sign up.",
+      "reviewName": "Full name",
+      "cantChange": "Can't be changed later",
+      "codeUsedRecoveryHospital": "If you believe your code was claimed without your knowledge, tell the social-services office of {{hospital}}, which issued it. They can check and give you a new one.",
+      "codeUsedRecoveryEmail": "Email {{email}}"
     },
     "back": "Back",
     "next": "Next",
@@ -1659,10 +1660,10 @@
       "generic": "Registration failed."
     },
     "toast": {
-      "codeSaved": "Access code saved. You'll use it when you choose that hospital.",
       "codeVerified": "Access code verified!",
       "welcome": "Welcome, {{name}}! Your account has been created.",
-      "alreadyRegistered": "You have already registered with this access code. Please log in."
+      "alreadyRegistered": "You have already registered with this access code. Please log in.",
+      "codeNotUsed": "Your account is ready, but the access code wasn't used: {{reason}} It is kept for when you file a request."
     },
     "password": {
       "tooShort": "Too short",

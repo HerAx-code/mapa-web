@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   MdShield, MdVerified, MdVisibility, MdVisibilityOff,
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
-  MdSchedule, MdPlace,
+  MdSchedule, MdPlace, MdLock,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
@@ -197,6 +197,8 @@ export default function Register() {
   // participating hospital's, else this deployment's own.
   const publicHospitals = usePublicHospitals()
   const examplePrefix = publicHospitals[0]?.accessCodePrefix || ORG.accessCodePrefix
+  // A whole example code from a real hospital, for the hint and format error.
+  const exampleCode = `${examplePrefix}-${CURRENT_YEAR}-00042`
   const [verifying, setVerifying]           = useState(false)
   const [loading, setLoading]               = useState(false)
   const [showPw, setShowPw]                 = useState(false)
@@ -219,11 +221,23 @@ export default function Register() {
     email: '',
     contactNumber: '',
     barangay: '', city: '', province: '',
-    hospitalId: HOSPITAL_PREFIX,
+    // Starts EMPTY (register review 2026-11-24): codes carry the issuing
+    // hospital's own prefix, so pre-filling this deployment's prefix led
+    // patients to type only the digits after it and get "code not found".
+    hospitalId: '',
     ...(draft?.form ?? {}),
+    // An older draft may still hold the old pre-filled prefix.
+    ...(draft?.form?.hospitalId === HOSPITAL_PREFIX ? { hospitalId: '' } : {}),
     // Always start with empty passwords regardless of any persisted state
     password: '', confirmPassword: '',
   })
+
+  // The hospital whose prefix the typed code carries (for "code already used").
+  const codeIssuer = publicHospitals.find(h => h.accessCodePrefix && h.accessCodePrefix === form.hospitalId.split('-')[0]) ?? null
+  // The birthdate spelled out for the review, so a wrong year is obvious.
+  const birthdateLabel = isBirthdate(form.birthdate)
+    ? new Date(`${form.birthdate}T00:00:00`).toLocaleDateString((i18n.language ?? '').startsWith('fil') ? 'fil-PH' : 'en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+    : ''
 
   // A patient-bound code was matched against the last name + birthdate; if
   // either changes afterwards, verify the code again.
@@ -360,7 +374,7 @@ export default function Register() {
   const validateStep3 = () => {
     const e = {}
     if (codeTyped()) {
-      if (!ACCESS_CODE_RE.test(form.hospitalId)) e.hospitalId = t('register.errors.codeFormat', { year: CURRENT_YEAR })
+      if (!ACCESS_CODE_RE.test(form.hospitalId)) e.hospitalId = t('register.errors.codeFormat', { codeExample: exampleCode })
       else if (!hospitalVerified)                e.hospitalId = t('register.errors.codeVerifyFirst')
     }
     if (!agreedToTerms)                        e.terms      = t('register.errors.termsRequired')
@@ -432,7 +446,7 @@ export default function Register() {
   const handleVerify = async (codeArg, opts = {}) => {
     const code = typeof codeArg === 'string' ? codeArg : form.hospitalId
     if (!ACCESS_CODE_RE.test(code)) {
-      setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeFormat', { year: CURRENT_YEAR }) }))
+      setErrors(prev => ({ ...prev, hospitalId: t('register.errors.codeFormat', { codeExample: exampleCode }) }))
       return
     }
     if (countRecentVerifyAttempts() >= VERIFY_MAX) {
@@ -636,7 +650,10 @@ export default function Register() {
             : code.includes('not-found') ? t('register.errors.codeNotFound')
             : code.includes('failed-precondition') ? t('register.errors.codeUsed')
             : t('register.errors.generic')
-          toast.error(msg)
+          // Say the account IS made and keep the code for filing (HospitalGate
+          // pre-fills it), so the patient doesn't have to type it again.
+          try { sessionStorage.setItem(PENDING_CODE_KEY, form.hospitalId.trim().toUpperCase()) } catch { /* private mode */ }
+          toast.error(t('register.toast.codeNotUsed', { reason: msg }), { duration: 9000 })
         }
       }
 
@@ -649,8 +666,9 @@ export default function Register() {
       // Successful registration — discard the draft so a future visit to
       // /register doesn't pre-fill someone else's data.
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
-      // The code (if any) was claimed here — don't offer it again when filing.
-      if (codeTyped()) { try { sessionStorage.removeItem(PENDING_CODE_KEY) } catch {} }
+      // The code was claimed here — don't offer it again when filing. (A code
+      // whose claim failed stays pending; see the claim's catch above.)
+      if (joinedTenant) { try { sessionStorage.removeItem(PENDING_CODE_KEY) } catch {} }
 
       toast.success(t('register.toast.welcome', { name: form.firstName }))
       // No hospital yet: start by comparing hospitals; with a code, file there.
@@ -800,13 +818,22 @@ export default function Register() {
                     </div>
                     <div>
                       <label htmlFor="reg-managerRelationship" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.managerRelationship')} <span className="text-red-400">*</span></label>
-                      <select id="reg-managerRelationship" data-field="managerRelationship" className={inputCls('managerRelationship')}
-                        value={form.managerRelationship} onChange={set('managerRelationship')}>
-                        <option value="">{t('register.step1.selectRelationship')}</option>
-                        {RELATIONSHIPS.filter(r => r.value !== 'non_relative').map(r => (
-                          <option key={r.value} value={r.value}>{(i18n.language ?? '').startsWith('fil') ? r.fil : r.en}</option>
-                        ))}
-                      </select>
+                      {/* The same picker as the other dropdowns on this step
+                          (it was the one native <select>, 41 px tall). A short
+                          fixed list, so no search box. */}
+                      <SearchableSelect
+                        id="reg-managerRelationship"
+                        dataField="managerRelationship"
+                        triggerClassName="min-h-[44px]"
+                        searchable={false}
+                        error={!!errors.managerRelationship}
+                        placeholder={t('register.step1.selectRelationship')}
+                        value={form.managerRelationship}
+                        onChange={v => set('managerRelationship')({ target: { value: v } })}
+                        options={RELATIONSHIPS.filter(r => r.value !== 'non_relative').map(r => ({
+                          value: r.value,
+                          label: (i18n.language ?? '').startsWith('fil') ? r.fil : r.en,
+                        }))} />
                       <FieldError msg={errors.managerRelationship} />
                     </div>
                   </div>
@@ -842,6 +869,7 @@ export default function Register() {
                   <label htmlFor="reg-suffix" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step1.suffix')}</label>
                   <SearchableSelect
                     id="reg-suffix"
+                    triggerClassName="min-h-[44px]"
                     value={form.suffix}
                     onChange={v => set('suffix')({ target: { value: v } })}
                     options={SUFFIXES.map(s => ({ value: s, label: s || `— ${t('register.step1.suffixNone')} —` }))} />
@@ -856,6 +884,12 @@ export default function Register() {
                   max={new Date().toISOString().slice(0, 10)} autoComplete="bday"
                   value={form.birthdate} onChange={set('birthdate')} />
                 <FieldError msg={errors.birthdate} />
+                {/* Said up front: these two prove the access code is the
+                    patient's and are locked once the account exists. */}
+                <p className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-800">
+                  <MdLock size={13} className="mt-0.5 flex-shrink-0 text-amber-600" aria-hidden="true" />
+                  {t('register.step1.lockedHint')}
+                </p>
               </div>
 
               {/* Sex — for the DOH monthly assistance report (Phase 3B). */}
@@ -897,6 +931,7 @@ export default function Register() {
                   onChange={onAddressChange}
                   errors={{ province: errors.province, city: errors.city, barangay: errors.barangay }}
                   hideLabels
+                  triggerClassName="min-h-[44px]"
                   labels={{
                     selectProvince:    t('register.step1.selectProvince'),
                     selectCity:        t('register.step1.selectCity'),
@@ -994,7 +1029,7 @@ export default function Register() {
               </div>
 
               <div>
-                <label htmlFor="reg-accessCode" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')} <span className="text-red-400">*</span></label>
+                <label htmlFor="reg-accessCode" className="block text-sm font-medium text-gray-700 mb-1">{t('register.step3.accessCode')}</label>
                 {/* Stack vertically on mobile so the input has room to show
                     the full "<PREFIX>-YYYY-NNNNN" code without truncation.
                     Verify uses the secondary button style — it's a sub-action,
@@ -1004,7 +1039,7 @@ export default function Register() {
                     id="reg-accessCode"
                     data-field="hospitalId"
                     className={`${inputCls('hospitalId')} flex-1 font-mono ${hospitalVerified ? 'border-green-400 bg-green-50' : ''}`}
-                    placeholder={`${HOSPITAL_PREFIX}00001`}
+                    placeholder={exampleCode}
                     value={form.hospitalId}
                     onChange={handleHospitalIdChange}
                     // Numeric keypad once the prefix + year are in; a text
@@ -1021,14 +1056,14 @@ export default function Register() {
                       </span>
                       <button
                         type="button"
-                        className="text-xs text-gray-500 hover:text-gray-600 underline underline-offset-2"
+                        className="inline-flex min-h-[44px] items-center px-2 text-sm text-gray-600 hover:text-gray-800 underline underline-offset-2"
                         onClick={() => setHospitalVerified(false)}>
                         {t('register.step3.edit')}
                       </button>
                     </div>
                   ) : (
                     <button type="button"
-                      className="btn-secondary px-4 sm:flex-shrink-0 flex items-center justify-center min-h-[40px] sm:min-w-[80px]"
+                      className="btn-secondary px-4 sm:flex-shrink-0 flex items-center justify-center min-h-[44px] sm:min-w-[80px]"
                       onClick={handleVerify} disabled={verifying}>
                       {verifying
                         ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -1037,11 +1072,10 @@ export default function Register() {
                   )}
                 </div>
                 <FieldError msg={errors.hospitalId} />
+                {/* Two hints only: type the WHOLE code (its prefix names the
+                    hospital), and it must match the patient's record. */}
                 {!errors.hospitalId && !hospitalVerified && (
-                  <>
-                    <p className="text-xs text-gray-500 mt-1">{t('register.step3.accessCodeHint')}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 lg:hidden">{t('register.step3.prefixHint', { prefix: examplePrefix })}</p>
-                  </>
+                  <p className="text-xs text-gray-500 mt-1">{t('register.step3.codeHint', { example: exampleCode })}</p>
                 )}
                 {hospitalVerified && codeHospitalName && (
                   <p className="text-sm text-green-700 mt-1">{t('register.step3.joiningHospital', { hospital: codeHospitalName })}</p>
@@ -1056,38 +1090,77 @@ export default function Register() {
                     actionable recovery path — they may be a real holder
                     whose code was claimed by someone else. Without this
                     fallback, the patient is stuck with no way forward. */}
+                {/* The code shows as already used: send the patient to the
+                    office that ISSUED it (its prefix names the hospital), not
+                    the network address. Fall back to the network address
+                    only when the prefix matches no participating hospital. */}
                 {errors.hospitalId === t('register.errors.codeUsed') && (
                   <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-xs text-amber-700 mb-2">
-                      {t('register.step3.codeUsedRecovery')}
-                    </p>
-                    <a href={`mailto:${ORG.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
-                      className="text-xs text-amber-700 font-semibold underline underline-offset-2">
-                      {t('register.step3.codeUsedRecoveryAction')} →
-                    </a>
+                    {codeIssuer ? (
+                      <>
+                        <p className="text-xs text-amber-700">
+                          {t('register.step3.codeUsedRecoveryHospital', { hospital: codeIssuer.facilityName })}
+                        </p>
+                        {codeIssuer.contactEmail && (
+                          <a href={`mailto:${codeIssuer.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                            className="mt-1 inline-flex min-h-[44px] items-center text-xs text-amber-700 font-semibold underline underline-offset-2 break-all">
+                            {t('register.step3.codeUsedRecoveryEmail', { email: codeIssuer.contactEmail })} →
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs text-amber-700">
+                          {t('register.step3.codeUsedRecovery')}
+                        </p>
+                        <a href={`mailto:${ORG.contactEmail}?subject=${encodeURIComponent('Report: access code already used')}&body=${encodeURIComponent(`I tried to register with access code ${form.hospitalId} but it shows as already used. I am the rightful holder.`)}`}
+                          className="mt-1 inline-flex min-h-[44px] items-center text-xs text-amber-700 font-semibold underline underline-offset-2">
+                          {t('register.step3.codeUsedRecoveryAction')} →
+                        </a>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                <p className="text-xs text-blue-700">
-                  {t('register.step3.noCodeHint')}
-                </p>
-              </div>
-
-              {/* Review summary — collapsed by default. Lets the patient
-                  catch typos in email / phone / name before submitting. */}
-              <details className="border border-gray-100 rounded-xl overflow-hidden group">
-                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between list-none">
+              {/* Review summary — OPEN by default (register review
+                  2026-11-24): the last name and birthdate can't be changed
+                  after sign-up and must match the patient's ID, so they are
+                  shown and marked here, not hidden behind a toggle. */}
+              <details open className="border border-gray-200 rounded-xl overflow-hidden group">
+                <summary className="px-4 py-3 min-h-[44px] cursor-pointer text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between list-none">
                   <span>{t('register.step3.reviewToggle')}</span>
                   <MdArrowForward size={16} className="text-gray-500 transition-transform group-open:rotate-90" />
                 </summary>
-                <dl className="px-4 pb-3 pt-1 space-y-2 border-t border-gray-50">
+                <div className="px-4 pb-3 pt-2 border-t border-gray-100">
+                  <p className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <MdLock size={14} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
+                    {t('register.step3.reviewLocked')}
+                  </p>
+                <dl className="space-y-2">
                   <div>
-                    <dt className="text-xs text-gray-500">{t('register.step1.firstName')}</dt>
+                    <dt className="text-xs text-gray-500">{t('register.step3.reviewName')}</dt>
                     <dd className="text-sm text-gray-800">
-                      {[form.firstName, form.middleName, form.lastName, form.suffix].filter(Boolean).join(' ') || '—'}
+                      {officialName?.name || [form.firstName, form.middleName, form.lastName, form.suffix].filter(Boolean).join(' ') || '—'}
                     </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500 flex items-center gap-1">
+                      {t('register.step1.lastName')}
+                      <MdLock size={12} className="text-amber-600" aria-label={t('register.step3.cantChange')} />
+                    </dt>
+                    <dd className="text-sm font-semibold text-gray-900">{officialName?.nameParts?.lastName || form.lastName || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500 flex items-center gap-1">
+                      {t('register.step1.birthdate')}
+                      <MdLock size={12} className="text-amber-600" aria-label={t('register.step3.cantChange')} />
+                    </dt>
+                    <dd className="text-sm font-semibold text-gray-900">{birthdateLabel || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">{t('register.step1.sex')}</dt>
+                    <dd className="text-sm text-gray-800">{form.sex ? t(`register.step1.sex_${form.sex}`) : '—'}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">{t('register.step2.email')}</dt>
@@ -1104,6 +1177,7 @@ export default function Register() {
                     </dd>
                   </div>
                 </dl>
+                </div>
               </details>
 
               {/* Terms — Privacy Notice opens an in-page modal so the

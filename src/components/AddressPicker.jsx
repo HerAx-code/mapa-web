@@ -25,6 +25,8 @@ import SearchableSelect from './ui/SearchableSelect'
  *   labels          per-field i18n overrides (defaults below)
  *   disabled        disables the whole picker
  *   className       extra classes on the outer stack
+ *   triggerClassName extra classes on each dropdown button (e.g. a taller
+ *                   touch target on patient forms)
  *   hideLabels      render fields without internal <label>s (when the
  *                   parent provides its own labels)
  *
@@ -61,6 +63,7 @@ export default function AddressPicker({
   disabled = false,
   className = '',
   hideLabels = false,
+  triggerClassName = '',
 }) {
   const labels = { ...defaultAddressLabels, ...(labelsProp ?? {}) }
   // A11y: useId() gives us a stable, render-collision-free prefix so
@@ -158,6 +161,7 @@ export default function AddressPicker({
         <SearchableSelect
           id={provinceId}
           dataField="province"
+          triggerClassName={triggerClassName}
           ariaLabel={labels.province}
           error={!!errors.province}
           placeholder={labels.selectProvince}
@@ -203,6 +207,7 @@ export default function AddressPicker({
             <SearchableSelect
               id={cityId}
               dataField="city"
+              triggerClassName={triggerClassName}
               ariaLabel={labels.city}
               error={!!errors.city}
               placeholder={value.province ? labels.selectCity : labels.pickProvinceFirst}
@@ -252,6 +257,7 @@ export default function AddressPicker({
               <SearchableSelect
                 id={barangayId}
                 dataField="barangay"
+                triggerClassName={triggerClassName}
                 ariaLabel={labels.barangay}
                 error={!!errors.barangay}
                 placeholder={labels.selectBarangay}
