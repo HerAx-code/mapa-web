@@ -27,7 +27,10 @@ export const roleNeedsMfa = (role) => MFA_ROLES.includes(role)
 //                (resetStaffMfa). Stage 2, about two weeks later, makes the
 //                rules and functions refuse staff sessions without one.
 //   'prompt'   — the old optional menu item only. 'off' — nothing.
-export const MFA_MODE = 'required' // 'off' | 'prompt' | 'required'
+// Turned OFF (owner decision 2026-11-24, "not yet needed"): staff are no longer
+// forced to enrol at sign-in. Set back to 'required' before real staff rely on
+// it. Stage 2 (enforceStaffMfa / ENFORCE_STAFF_MFA) is also off.
+export const MFA_MODE = 'off' // 'off' | 'prompt' | 'required'
 
 // Is this signed-in Firebase user already enrolled in a second factor?
 export function isMfaEnrolled(fbUser) {
