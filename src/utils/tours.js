@@ -64,12 +64,6 @@ export const patientDashboardTour = (t) => [
     body:     t('tour.patient.s3.body'),
     position: 'top',
   },
-  {
-    targetId: 'patient-docs',
-    title:    t('tour.patient.s4.title'),
-    body:     t('tour.patient.s4.body'),
-    position: 'top',
-  },
 ]
 
 export const agencyDashboardTour = [

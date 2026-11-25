@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import {
-  MdCancel, MdMenuBook, MdArrowForward, MdClose, MdLocalHospital,
-  MdReceipt, MdPending, MdHourglassEmpty, MdAssignment, MdSchedule, MdCheckCircle,
+  MdMenuBook, MdArrowForward, MdClose, MdLocalHospital,
+  MdReceipt, MdHourglassEmpty, MdAssignment, MdSchedule, MdCheckCircle,
 } from 'react-icons/md'
 import StatusHero from './StatusHero'
 import BalanceHero from './BalanceHero'
@@ -19,7 +19,7 @@ import { tsToDate } from '../../utils/dates'
 //   2. active request, pre-funding      → pine StatusHero (Step X of 6 + one action)
 //   3. active request, funding onward    → money BalanceHero
 //   4. legacy slice with a live status   → per-status card
-//   5. only rejected/closed apps         → "try another program" card
+//   5. past case(s), nothing active      → "file a new request" card
 //   6. some progress / dismissed welcome → compact link
 //   7. brand-new patient                 → welcome hero
 // Every visual is unchanged from the prior inline tree; only the location moved.
@@ -42,7 +42,7 @@ const STATUS_VISUAL = {
 
 export default function PatientHero({
   loading, activeRequest, funding, nextAction,
-  activeApp, appCount = 0, docStats = { verified: 0, pending: 0 },
+  activeApp, pastCase = false, docStats = { verified: 0, pending: 0 },
   welcomeDismissed, dismissWelcome, navigate,
 }) {
   const { t } = useTranslation()
@@ -101,25 +101,28 @@ export default function PatientHero({
     )
   }
 
-  // 5. only rejected/closed apps
-  if (appCount > 0) {
+  // 5. an earlier case has ended and nothing is active. Patients don't pick
+  //    programs any more: each new request needs a new access code from a
+  //    hospital (review 2026-11-25). Neutral — the case may have been funded.
+  if (pastCase) {
     return (
-      <div className="card p-5 border-2 border-red-200 bg-red-50">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-100 text-red-600">
-            <MdCancel size={22} />
+      <div className="card p-5 border border-brand-100">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-50 text-brand-600">
+            <MdLocalHospital size={22} />
           </div>
-          <h2 className="text-lg font-bold text-red-800">{t('patient.dashboard.rejectedCard.title')}</h2>
+          <h2 className="text-lg font-bold text-gray-900 leading-tight min-w-0">{t('patient.dashboard.pastCard.title')}</h2>
         </div>
-        <p className="text-sm text-red-700 leading-relaxed mb-4">
-          {appCount === 1
-            ? t('patient.dashboard.rejectedCard.descOne')
-            : t('patient.dashboard.rejectedCard.descMany', { count: appCount })}
-        </p>
+        <p className="text-sm text-gray-600 leading-relaxed mb-4">{t('patient.dashboard.pastCard.desc')}</p>
         <button
-          className="w-full py-3 rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
-          onClick={() => navigate('/patient/programs')}>
-          {t('patient.dashboard.rejectedCard.btn')} →
+          className="w-full min-h-[48px] rounded-xl font-semibold text-sm bg-brand-500 hover:bg-brand-600 text-white transition-colors"
+          onClick={() => navigate('/patient/request')}>
+          {t('patient.dashboard.pastCard.btn')} →
+        </button>
+        <button
+          className="w-full mt-2 min-h-[44px] inline-flex items-center justify-center text-sm text-brand-600 hover:text-brand-800 transition-colors"
+          onClick={() => navigate('/patient/status')}>
+          {t('patient.dashboard.pastCard.history')} →
         </button>
       </div>
     )
@@ -155,10 +158,10 @@ export default function PatientHero({
       <button
         onClick={dismissWelcome}
         aria-label={t('common.close')}
-        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center text-brand-600 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
+        className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center text-brand-600 hover:text-brand-700 hover:bg-brand-100 rounded-lg transition-colors">
         <MdClose size={16} />
       </button>
-      <div className="flex items-center gap-3 mb-2 pr-8">
+      <div className="flex items-center gap-3 mb-2 pr-10">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-100 text-brand-600">
           <MdLocalHospital size={22} />
         </div>

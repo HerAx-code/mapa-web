@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next'
 import {
   MdUpload, MdCheckCircle, MdPending,
   MdArrowForward, MdExpandMore, MdExpandLess,
-  MdAssignment, MdCancel, MdCheck, MdChatBubbleOutline,
+  MdAssignment, MdCancel, MdChatBubbleOutline,
+  MdEmail, MdSchedule, MdHandshake, MdReceipt,
 } from 'react-icons/md'
 import Layout from '../../components/Layout'
 import JourneyStrip from '../../components/patient/JourneyStrip'
@@ -21,45 +22,41 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   collection, query, where, orderBy, onSnapshot,
 } from 'firebase/firestore'
-import { db } from '../../firebase'
+import { db, auth } from '../../firebase'
 import { ORG } from '../../config/org'
 import { isGLExpired } from '../../utils/constants'
 import { isSliceTerminal, computeFunding, REQ_RANK } from '../../utils/requests'
 import { peso } from '../../utils/format'
+import { needsEmailConfirm } from '../../utils/emailConfirm'
+import { patientNextAction, caseDocuments } from '../../utils/patientNextAction'
 import AnnouncementFeedCard from '../../components/AnnouncementFeedCard'
 import { useFeedAnnouncements } from '../../utils/announcements'
 
-
-
-
 // Short "when" for the messages preview.
-const formatWhen = (ts) => {
+const formatWhen = (ts, t) => {
   const d = tsToDate(ts)
   if (!d) return ''
   const diff = Date.now() - d.getTime()
   const hrs  = Math.floor(diff / 3_600_000)
-  if (hrs < 1)  return 'now'
-  if (hrs < 24) return `${hrs}h`
+  if (hrs < 1)  return t('patient.dashboard.messagesCard.now')
+  if (hrs < 24) return t('patient.dashboard.messagesCard.hoursAgo', { count: hrs })
   const days = Math.floor(hrs / 24)
-  if (days < 7) return `${days}d`
+  if (days < 7) return t('patient.dashboard.messagesCard.daysAgo', { count: days })
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
-// ── Coverage / balance breakdown ────────────────────────────────────────────
-// Wholly derived from the request doc (totalBill / philhealthCovered /
-// otherCovered / amountNeeded + the server-derived amountCommitted) — no extra
-// query, no touch to the funding path. Surfaces the PhilHealth-first model:
-// bill → PhilHealth first charge → residual the agencies co-fund → approved →
-// remaining. Legacy requests with no totalBill fall back to amountNeeded.
-function CoverageCard({ request, t }) {
-  const bill     = Number(request.totalBill ?? request.amountNeeded) || 0
-  const disc     = Number(request.discountsApplied) || 0
-  const ph       = Number(request.philhealthCovered) || 0
-  const other    = Number(request.otherCovered) || 0
-  const needed   = Number(request.amountNeeded) || 0
-  const approved = Number(request.amountCommitted) || 0
-  const balance  = Math.max(0, needed - approved)
-  const pct      = needed > 0 ? Math.min(100, Math.round((approved / needed) * 100)) : 0
+// ── Bill breakdown ──────────────────────────────────────────────────────────
+// How the amount needed was reached: bill − discounts − PhilHealth − other.
+// Collapsed by default (review 2026-11-25): the hero and the coverage bar
+// already show approved and remaining, so this is detail on request.
+// Legacy requests with no totalBill fall back to amountNeeded.
+function BillBreakdown({ request, t }) {
+  const [open, setOpen] = useState(false)
+  const bill   = Number(request.totalBill ?? request.amountNeeded) || 0
+  const disc   = Number(request.discountsApplied) || 0
+  const ph     = Number(request.philhealthCovered) || 0
+  const other  = Number(request.otherCovered) || 0
+  const needed = Number(request.amountNeeded) || 0
   if (needed <= 0 && bill <= 0) return null
 
   const rows = [
@@ -71,31 +68,25 @@ function CoverageCard({ request, t }) {
   ]
 
   return (
-    <div className="card p-5">
-      <h3 className="text-sm font-semibold text-gray-800 mb-3">{t('patient.dashboard.coverage.title')}</h3>
-      <dl className="space-y-2">
-        {rows.map((r, i) => (
-          <div key={i} className={`flex items-center justify-between text-sm ${r.strong ? 'pt-2 mt-1 border-t border-gray-100' : ''}`}>
-            <dt className={r.muted ? 'text-gray-500' : r.strong ? 'font-semibold text-gray-800' : 'text-gray-600'}>{r.label}</dt>
-            <dd className={`tabular-nums ${r.muted ? 'text-brand-600' : r.strong ? 'font-semibold text-gray-900' : 'text-gray-800'}`}>{r.value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mt-4">
-        <div className="flex items-baseline justify-between text-sm mb-1.5">
-          <span className="text-gray-600">{t('patient.dashboard.coverage.approved')}</span>
-          <span className="font-semibold text-gray-900 tabular-nums">{peso(approved)} <span className="text-gray-500 font-normal">/ {peso(needed)}</span></span>
-        </div>
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs text-gray-500">{t('patient.dashboard.coverage.funded', { pct })}</span>
-          <span className="text-sm font-semibold text-gray-800">
-            {t('patient.dashboard.coverage.remaining')}: <span className="tabular-nums">{peso(balance)}</span>
-          </span>
-        </div>
-      </div>
+    <div className="card overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+        className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors">
+        <span className="text-sm font-semibold text-gray-800">{t('patient.dashboard.coverage.title')}</span>
+        <span className="flex items-center gap-1 text-sm text-gray-600">
+          <span className="tabular-nums">{peso(needed)}</span>
+          {open ? <MdExpandLess size={20} aria-hidden="true" /> : <MdExpandMore size={20} aria-hidden="true" />}
+        </span>
+      </button>
+      {open && (
+        <dl className="space-y-2 px-4 pb-4 pt-3 border-t border-gray-100">
+          {rows.map((r, i) => (
+            <div key={i} className={`flex items-center justify-between gap-3 text-sm ${r.strong ? 'pt-2 mt-1 border-t border-gray-100' : ''}`}>
+              <dt className={r.muted ? 'text-gray-500' : r.strong ? 'font-semibold text-gray-800' : 'text-gray-600'}>{r.label}</dt>
+              <dd className={`tabular-nums ${r.muted ? 'text-brand-600' : r.strong ? 'font-semibold text-gray-900' : 'text-gray-800'}`}>{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   )
 }
@@ -124,14 +115,14 @@ function DocumentsList({ docs, t, navigate }) {
               <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${m.bg} ${m.cls}`}>
                 <Icon size={14} />
               </span>
-              <span className="flex-1 min-w-0 text-sm text-gray-800 truncate">{d.documentTypeName ?? d.name ?? 'Document'}</span>
+              <span className="flex-1 min-w-0 text-sm text-gray-800 truncate">{d.documentTypeName ?? d.name ?? t('patient.dashboard.docsCard.untitled')}</span>
               <span className={`text-xs flex-shrink-0 font-medium ${m.cls}`}>{m.label}</span>
             </li>
           )
         })}
       </ul>
       <button onClick={() => navigate('/patient/request')}
-        className="w-full border-t border-gray-100 px-4 py-2.5 text-left text-sm font-medium text-brand-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+        className="w-full min-h-[44px] border-t border-gray-100 px-4 py-2.5 text-left text-sm font-medium text-brand-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
         <MdUpload size={16} /> {t('patient.dashboard.docsCard.manage')}
       </button>
     </div>
@@ -148,7 +139,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
           <MdChatBubbleOutline size={15} className="text-gray-500" /> {t('patient.dashboard.messagesCard.title')}
         </h3>
         <button onClick={() => navigate('/patient/messages')}
-          className="text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
+          className="-my-2 -mr-2 min-h-[44px] px-2 text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
           {t('patient.dashboard.messagesCard.viewAll')} <MdArrowForward size={14} />
         </button>
       </div>
@@ -164,7 +155,7 @@ function MessagesPreview({ convos, uid, t, navigate }) {
                 <div className="flex items-center gap-2">
                   {unread && <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0" aria-hidden="true" />}
                   <span className={`text-sm truncate ${unread ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>{sender}</span>
-                  <span className="ml-auto text-xs text-gray-500 flex-shrink-0">{formatWhen(c.lastAt)}</span>
+                  <span className="ml-auto text-xs text-gray-500 flex-shrink-0">{formatWhen(c.lastAt, t)}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{c.lastMessage || '—'}</p>
               </button>
@@ -180,22 +171,39 @@ function MessagesPreview({ convos, uid, t, navigate }) {
 // TrackStatus so both surfaces read as one flow. Imported at the top.
 
 // ── Next-action card ─────────────────────────────────────────────────────────
-// Surfaces the single most pressing real action (fix a rejected doc / respond
-// to an agency). Renders nothing when the ball is in the gateway's court.
-function NextActionCard({ action }) {
-  const Icon = action.icon
+// The one thing the patient should do now (utils/patientNextAction.js), or
+// nothing when the ball is with the hospital or an agency.
+const ACTION_ICON = {
+  confirmEmail: MdEmail, hold: MdSchedule, fixDoc: MdUpload,
+  proceed: MdHandshake, respond: MdAssignment, collectGL: MdReceipt,
+}
+
+// The action's words: title, a detail line and the button label.
+function actionText(action, t) {
+  const k = `patient.dashboard.nextAction.${action.kind}`
+  const detail = action.kind === 'collectGL'
+    ? t(`${k}.detail`, { agency: action.detail, count: Math.max(0, action.days ?? 0) })
+    : action.kind === 'confirmEmail' || action.kind === 'hold'
+      ? t(`${k}.detail`)
+      : action.detail
+  return { title: t(`${k}.title`, { count: action.count ?? 1 }), detail, cta: t(`${k}.cta`) }
+}
+
+function NextActionCard({ action, t, navigate }) {
+  const Icon = ACTION_ICON[action.kind] ?? MdAssignment
+  const { title, detail, cta } = actionText(action, t)
   return (
-    <button onClick={action.onClick}
+    <button onClick={() => navigate(action.path)}
       className="w-full text-left rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5 flex items-start gap-3 hover:bg-amber-100/60 transition-colors">
       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 border border-amber-200">
         <Icon size={18} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{action.eyebrow}</p>
-        <p className="text-sm font-semibold text-gray-900 mt-0.5">{action.title}</p>
-        {action.detail && <p className="text-xs text-gray-500 mt-0.5">{action.detail}</p>}
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{t('patient.dashboard.nextAction.eyebrow')}</p>
+        <p className="text-sm font-semibold text-gray-900 mt-0.5">{title}</p>
+        {detail && <p className="text-xs text-gray-600 mt-0.5">{detail}</p>}
       </div>
-      <span className="text-sm font-semibold text-amber-700 flex-shrink-0 self-center">{action.cta} →</span>
+      <span className="text-sm font-semibold text-amber-700 flex-shrink-0 self-center">{cta} →</span>
     </button>
   )
 }
@@ -214,7 +222,7 @@ export default function PatientDashboard() {
   // presentation while storage keeps the original casing for records.
   const firstName = (() => {
     const raw = (user?.name?.split(' ')[0] || '').replace(/[,;]+$/, '')
-    if (!raw) return 'Patient'
+    if (!raw) return t('patient.dashboard.nameFallback')
     return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase()
   })()
 
@@ -230,16 +238,14 @@ export default function PatientDashboard() {
   const [activeApp,  setActiveApp]  = useState(null)
   const [apps,       setApps]       = useState([])
   const [activeRequest, setActiveRequest] = useState(null)
+  const [requestCount, setRequestCount]   = useState(0)
+  const [reqLoading, setReqLoading] = useState(true)
   const [appCount,   setAppCount]   = useState(0)
   const [docStats,   setDocStats]   = useState({ verified: 0, pending: 0 })
   const [docList,    setDocList]    = useState([])
   const [convos,     setConvos]     = useState([])
-  const [loading,    setLoading]    = useState(true)
+  const [appsLoading, setAppsLoading] = useState(true)
   const [docLoading, setDocLoading] = useState(true)
-  // Default the steps guide OPEN for new patients (no application yet) —
-  // they need the orientation most. Returning patients with an active
-  // application can collapse it themselves.
-  const [stepsOpen,  setStepsOpen]  = useState(null)
   // Welcome hero is great onboarding for first-time visitors but turns
   // into noise on every subsequent visit. Per-device localStorage flag
   // (keyed by uid so multiple accounts on the same phone get fresh
@@ -277,9 +283,9 @@ export default function PatientDashboard() {
       // this filter the Dashboard kept showing "Your application is in
       // progress" for slices the patient already claimed weeks ago.
       setActiveApp(all.find(a => !isSliceTerminal(a, { isGLExpired })) ?? null)
-      setLoading(false)
+      setAppsLoading(false)
     }, (err) => {
-      setLoading(false)
+      setAppsLoading(false)
       console.error('[PatientDashboard] applications snapshot error:', err)
     })
     return unsub
@@ -292,9 +298,14 @@ export default function PatientDashboard() {
       query(collection(db, 'requests'), where('patientId', '==', user.uid)),
       snap => {
         const reqs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        setRequestCount(reqs.length)
         setActiveRequest(reqs.find(r => isRequestActive(r)) ?? null)
+        setReqLoading(false)
       },
-      (err) => console.error('[PatientDashboard] requests snapshot error:', err),
+      (err) => {
+        setReqLoading(false)
+        console.error('[PatientDashboard] requests snapshot error:', err)
+      },
     )
     return unsub
   }, [user?.uid])
@@ -338,102 +349,44 @@ export default function PatientDashboard() {
     return unsub
   }, [user?.uid])
 
-  const hasApp       = appCount > 0
-  const hasActivity  = hasApp || !!activeRequest
-  const activeStatus = activeApp?.status ?? null
-  // Resolve null (initial) to true for new patients, false for returning ones
-  // (an active co-funding request counts as activity too).
-  const stepsOpenEffective = stepsOpen ?? (!loading && !hasActivity)
-
-  // ── Step guide ────────────────────────────────────────────────────────
-  // Title/desc strings come from patient.dashboard.steps.* in the locale
-  // files; the action/path/done predicates stay here as code.
-  const STEPS = [
-    {
-      num: 1, title: t('patient.dashboard.steps.s1Title'),
-      desc:   t('patient.dashboard.steps.s1Desc'),
-      path:   '/patient/request',
-      done:   docStats.verified > 0,
-    },
-    {
-      num: 2, title: t('patient.dashboard.steps.s2Title'),
-      desc:   t('patient.dashboard.steps.s2Desc'),
-      path:   '/patient/programs',
-      done:   hasApp,
-    },
-    {
-      num: 3, title: t('patient.dashboard.steps.s3Title'),
-      desc:   t('patient.dashboard.steps.s3Desc'),
-      path:   '/patient/status',
-      done:   ['approved','certificate'].includes(activeStatus),
-    },
-    {
-      num: 4, title: t('patient.dashboard.steps.s4Title'),
-      desc:   t('patient.dashboard.steps.s4Desc'),
-      path:   '/patient/status',
-      done:   ['approved','certificate'].includes(activeStatus),
-    },
-    {
-      num: 5, title: t('patient.dashboard.steps.s5Title'),
-      desc:   t('patient.dashboard.steps.s5Desc'),
-      // R11 (2026-06-03): previously path=null meant the row had no tap
-      // target. Patient saw "Done" with no way to navigate to the GL,
-      // hitting "where is it?" /patient/status is where the
-      // 'Download GL' button lives and where the GL viewer can be
-      // opened, so route there for both done + not-done states.
-      path:   '/patient/status',
-      done:   activeStatus === 'certificate',
-    },
-  ]
-
-  const doneCount      = STEPS.filter(s => s.done).length
-  const currentStepNum = STEPS.find(s => !s.done)?.num ?? null
-
-  // One-line "what's next" cue shown directly under the greeting.
-  // Mirrors the detailed status card below but compresses it to a single
-  // sentence so the patient knows the score before scrolling.
-  const greetingStatus = (() => {
-    if (loading) return null
-    if (activeStatus && ['reviewing','awaiting_info','approved','certificate'].includes(activeStatus)) {
-      return t(`patient.dashboard.greeting.${activeStatus}`)
-    }
-    if (appCount > 0)             return t('patient.dashboard.greeting.rejected')
-    if (docStats.verified === 0)  return t('patient.dashboard.greeting.uploadDocs')
-    return t('patient.dashboard.greeting.findProgram')
-  })()
+  const loading     = appsLoading || reqLoading
+  // Anything filed, ever. A patient with no history sees the welcome, the
+  // "How it works" guide and the tour; a returning one doesn't.
+  const hasActivity = appCount > 0 || requestCount > 0
 
   // Funding figures for the balance hero — computed over the active request's
   // own slices (committed + outstanding) against amountNeeded.
   const reqSlices = activeRequest ? apps.filter(a => a.requestId === activeRequest.id) : []
   const funding   = activeRequest ? computeFunding(activeRequest.amountNeeded, reqSlices) : null
+  const reqRank   = activeRequest ? (REQ_RANK[activeRequest.status] ?? 0) : 0
 
-  // The single most pressing next action (or null when the ball is with the gateway).
-  const nextAction = (() => {
-    const rejected = docList.find(d => d.status === 'rejected')
-    if (rejected) return {
-      icon: MdUpload, eyebrow: t('patient.dashboard.nextAction.eyebrow'),
-      title: t('patient.dashboard.nextAction.fixDoc'),
-      detail: rejected.documentTypeName ?? rejected.name ?? '',
-      cta: t('patient.dashboard.nextAction.upload'),
-      onClick: () => navigate('/patient/request'),
-    }
-    if (activeApp?.status === 'awaiting_info') return {
-      icon: MdAssignment, eyebrow: t('patient.dashboard.nextAction.eyebrow'),
-      title: t('patient.dashboard.nextAction.respond'),
-      detail: activeApp.agencyName ?? '',
-      cta: t('patient.dashboard.nextAction.view'),
-      onClick: () => navigate('/patient/status'),
-    }
-    return null
-  })()
+  // The active case's own documents (never a past case's, never one already
+  // replaced by a corrected upload).
+  const caseDocs = caseDocuments(activeRequest, docList)
 
-  // Only show doc section once they have docs or an active application.
-  // Hide once their GL has been issued — by then the doc-workflow phase
-  // is complete and the card is just visual noise.
-  const showDocSection = !docLoading
-    && (hasApp || docStats.verified > 0 || docStats.pending > 0)
-    && activeStatus !== 'certificate'
-    && activeStatus !== 'approved'
+  // The single most pressing thing to do, or null when the ball is elsewhere.
+  const nextAction = loading ? null : patientNextAction({
+    activeRequest, slices: reqSlices, docs: docList,
+    cooldown: user?.cooldown,
+    emailUnconfirmed: needsEmailConfirm(user, auth?.currentUser),
+  })
+  // The pine StatusHero (before endorsement) carries the action as its button.
+  const heroAction = nextAction
+    ? { cta: actionText(nextAction, t).cta, onClick: () => navigate(nextAction.path) }
+    : null
+  const heroCarriesAction = !!(activeRequest && funding && reqRank < 3)
+
+  // Documents: while the hospital is still checking them, or while one of
+  // them still needs something. Once endorsed and all verified, it's noise.
+  const showDocSection = !docLoading && caseDocs.length > 0
+    && (reqRank < 3 || caseDocs.some(d => d.status !== 'verified'))
+
+  // "How it works" — first-run orientation, in the order things really happen.
+  const STEPS = [1, 2, 3, 4].map(n => ({
+    num: n,
+    title: t(`patient.dashboard.steps.s${n}Title`),
+    desc:  t(`patient.dashboard.steps.s${n}Desc`),
+  }))
 
   return (
     <Layout breadcrumb={t('patient.dashboard.title')}>
@@ -450,9 +403,6 @@ export default function PatientDashboard() {
           <h1 className="font-display text-lg sm:text-2xl font-bold tracking-tight text-gray-800 sm:text-gray-900">
             {t('patient.dashboard.subtitle', { name: firstName })}
           </h1>
-          {greetingStatus && (
-            <p className="hidden sm:block text-sm text-gray-500 mt-1 leading-snug">{greetingStatus}</p>
-          )}
         </div>
 
         {/* R38: "What's new" feed — renders null when empty so it stays
@@ -475,15 +425,20 @@ export default function PatientDashboard() {
             loading={loading}
             activeRequest={activeRequest}
             funding={funding}
-            nextAction={nextAction}
+            nextAction={heroAction}
             activeApp={activeApp}
-            appCount={appCount}
+            pastCase={hasActivity && !activeRequest}
             docStats={docStats}
             welcomeDismissed={welcomeDismissed}
             dismissWelcome={dismissWelcome}
             navigate={navigate}
           />
         </div>{/* /patient-hero wrapper */}
+
+        {/* The one thing to do now, right under the hero — unless the pine
+            StatusHero already carries it as its button. */}
+        {nextAction && !heroCarriesAction
+          && <NextActionCard action={nextAction} t={t} navigate={navigate} />}
 
         {/* At-a-glance journey strip — the redesign's "where am I" answered
             without reading, right under the hero. Full detail lives in the
@@ -497,100 +452,45 @@ export default function PatientDashboard() {
         {/* Per-agency path-to-zero — funding stage only. Makes co-funding
             legible at a glance; sits right under the strip so it reads high on
             mobile (matches the redesign mockup). */}
-        {activeRequest && funding && (REQ_RANK[activeRequest.status] ?? 0) >= 3 && reqSlices.length > 0 && (
+        {activeRequest && funding && reqRank >= 3 && reqSlices.length > 0 && (
           <CoverageBar request={activeRequest} slices={reqSlices} />
         )}
 
-        {/* Next action (when the ball is with the patient). When the pine
-            StatusHero is showing it already carries this action as its CTA, so
-            we don't repeat it as a separate card. The old duplicate event
-            timeline (TimelineCard) was removed — the JourneyStrip (glance) +
-            the detail stepper on My Application are the one journey model now. */}
-        {nextAction && !(activeRequest && funding && (REQ_RANK[activeRequest.status] ?? 0) < 3)
-          && <NextActionCard action={nextAction} />}
+        {/* How the amount needed was reached — collapsed. */}
+        {activeRequest && <BillBreakdown request={activeRequest} t={t} />}
 
-        {/* Step guide — first-run onboarding only. Once the patient has an
-            active request or application, the one journey model (the strip here
-            + the detail stepper on My Application) is the progress surface, so
-            this collapses out to keep a returning patient's dashboard action-first. */}
-        {!hasActivity && (
-        <div data-tour-id="patient-steps" className="card overflow-hidden">
-          <button
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
-            onClick={() => setStepsOpen(!stepsOpenEffective)}>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800">{t('patient.dashboard.steps.title')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('patient.dashboard.steps.completedOf', { done: doneCount, total: STEPS.length })}</p>
-              {/* Visual progress bar — gives an at-a-glance read of journey
-                  progress without needing to expand the accordion. */}
-              <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden max-w-xs">
-                <div className="h-full bg-brand-500 transition-all" style={{ width: `${(doneCount / STEPS.length) * 100}%` }} />
-              </div>
-            </div>
-            {stepsOpenEffective
-              ? <MdExpandLess size={20} className="text-gray-500 flex-shrink-0 ml-3" />
-              : <MdExpandMore size={20} className="text-gray-500 flex-shrink-0 ml-3" />
-            }
+        {/* How it works — first-run orientation only (nothing filed yet). Once
+            there is a case, the journey strip + My Application show progress. */}
+        {!loading && !hasActivity && (
+        <section data-tour-id="patient-steps" className="card overflow-hidden" aria-labelledby="how-it-works">
+          <h2 id="how-it-works" className="px-4 pt-4 text-sm font-semibold text-gray-800">{t('patient.dashboard.steps.title')}</h2>
+          <ol className="mt-2 divide-y divide-gray-50">
+            {STEPS.map((step) => (
+              <li key={step.num} className="flex items-start gap-3 py-3.5 px-4">
+                <span aria-hidden="true" className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5 ${
+                  step.num === 1 ? 'bg-brand-500 text-white' : 'border-2 border-gray-200 text-gray-500'}`}>
+                  {step.num}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{step.title}</p>
+                  <p className="text-xs mt-0.5 leading-relaxed text-gray-600">{step.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <button onClick={() => navigate('/patient/request')}
+            className="w-full min-h-[44px] border-t border-gray-100 px-4 py-2.5 text-left text-sm font-semibold text-brand-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+            {t('patient.dashboard.steps.start')} <MdArrowForward size={16} />
           </button>
-
-          {stepsOpenEffective && (
-            <div className="divide-y divide-gray-50 border-t border-gray-100">
-              {STEPS.map((step) => {
-                const isActive  = step.num === currentStepNum
-                const clickable = !!step.path
-                // Whole-row click target instead of a tiny "Manage →" text link.
-                // Per CLAUDE.md mobile-first guideline: touch targets ≥44px.
-                const RowTag    = clickable ? 'button' : 'div'
-                return (
-                  <RowTag key={step.num}
-                    onClick={clickable ? () => navigate(step.path) : undefined}
-                    className={`w-full flex items-start gap-3 py-4 px-4 text-left transition-colors ${
-                      isActive ? 'bg-brand-50' : ''
-                    } ${clickable ? 'hover:bg-gray-50 cursor-pointer' : ''}`}>
-                    <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium mt-0.5
-                      ${step.done
-                        ? 'bg-brand-500 text-white'
-                        : isActive
-                          ? 'border-2 border-brand-500 text-brand-500 bg-white'
-                          : 'border-2 border-gray-200 text-gray-500'}`}>
-                      {step.done ? <MdCheck size={14} /> : step.num}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${
-                        step.done ? 'text-gray-800'
-                        : isActive ? 'text-brand-700'
-                        : 'text-gray-500'}`}>
-                        {step.title}
-                        {step.done   && <span className="ml-1.5 badge badge-green text-xs">{t('patient.dashboard.steps.done')}</span>}
-                        {isActive    && <span className="ml-1.5 badge badge-blue text-xs">{t('patient.dashboard.steps.current')}</span>}
-                      </p>
-                      <p className={`text-xs mt-0.5 leading-relaxed ${isActive ? 'text-brand-600' : 'text-gray-500'}`}>
-                        {step.desc}
-                      </p>
-                    </div>
-                    {clickable && (
-                      <MdArrowForward
-                        size={16}
-                        className={`flex-shrink-0 mt-1 ${isActive ? 'text-brand-500' : 'text-gray-300'}`}
-                      />
-                    )}
-                  </RowTag>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        </section>
         )}
           </div>{/* /main column */}
 
-          {/* Aside — coverage breakdown + itemized documents + messages. Stacks
+          {/* Aside — the case's documents + messages. Stacks
               after the main column on phone; sits beside it on desktop. */}
           <div className="space-y-4 min-w-0 lg:col-span-4">
-            {activeRequest && <CoverageCard request={activeRequest} t={t} />}
-            {showDocSection && docList.length > 0 && (
-              <div data-tour-id="patient-docs">
-                <DocumentsList docs={docList} t={t} navigate={navigate} />
-              </div>
+            {showDocSection && (
+              <DocumentsList docs={caseDocs} t={t} navigate={navigate} />
             )}
             <MessagesPreview convos={convos} uid={user?.uid} t={t} navigate={navigate} />
           </div>
@@ -605,11 +505,10 @@ export default function PatientDashboard() {
 
       </PatientPage>
 
-      {/* First-visit guided tour. Auto-fires once per user (localStorage-
-          scoped to uid), four steps spotlighting the greeting, hero card,
-          steps card, and docs summary. Strings come from i18n so the
-          tour speaks Filipino when the language toggle is set. */}
-      <Tour steps={patientDashboardTour(t)} storageKey="patient-dashboard" />
+      {/* First-visit guided tour, for a new account only (nothing filed yet):
+          it spotlights the greeting, the hero and "How it works", which a
+          returning patient doesn't have. Once per user (localStorage). */}
+      {!loading && !hasActivity && <Tour steps={patientDashboardTour(t)} storageKey="patient-dashboard" />}
     </Layout>
   )
 }
