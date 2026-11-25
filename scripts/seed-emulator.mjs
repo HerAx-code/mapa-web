@@ -21,6 +21,11 @@ const env = {
   ...process.env,
   FIREBASE_AUTH_EMULATOR_HOST: process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099',
   FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080',
+  // The functions emulator host:port. We wait for this too (below) so Firestore
+  // triggers — onHospitalWritten, onAgencyWritten, assignPatientId — are wired
+  // before we write; otherwise the seed's creates land before the triggers are
+  // listening and the public mirrors (hospitalsPublic/agenciesPublic) stay empty.
+  FUNCTIONS_EMULATOR_HOST: process.env.FUNCTIONS_EMULATOR_HOST || '127.0.0.1:5001',
   // The project id the emulator and the app share. A local label only — the
   // emulator never contacts the real project. Keep it equal to the app's
   // VITE_FIREBASE_PROJECT_ID so Auth tokens line up.
@@ -41,6 +46,7 @@ const tcpOk = (host, port) => new Promise((resolve) => {
 })
 const [aHost, aPort] = env.FIREBASE_AUTH_EMULATOR_HOST.split(':')
 const [fHost, fPort] = env.FIRESTORE_EMULATOR_HOST.split(':')
+const [fnHost, fnPort] = env.FUNCTIONS_EMULATOR_HOST.split(':')
 const waitFor = async (host, port, name, timeoutMs = 90000) => {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -54,11 +60,18 @@ const waitFor = async (host, port, name, timeoutMs = 90000) => {
 console.log('[seed:emulator] Waiting for the emulators to be ready…')
 await waitFor(fHost, fPort, 'Firestore')
 await waitFor(aHost, aPort, 'Auth')
+await waitFor(fnHost, fnPort, 'Functions')
+// The functions port opens a beat before every trigger finishes wiring, so give
+// the Firestore triggers a moment to register before the first write lands.
+await new Promise((r) => setTimeout(r, 3000))
 console.log('[seed:emulator] Emulators are up.\n')
 
 // bootstrap-users.js seeds the hospitals + demo accounts; bootstrap-reference-data.js
-// seeds the agencies and reference data. Admin SDK (rules-bypassing), idempotent.
-for (const script of ['bootstrap-users.js', 'bootstrap-reference-data.js']) {
+// seeds the canonical agencies and reference data; seed-demo-agencies.mjs then
+// applies the DEMO 6-funder overlay (enables all six, partners 3 per hospital,
+// adds the Malasakit doc) WITHOUT touching src/data/agencies.seed.js. Admin SDK
+// (rules-bypassing), idempotent.
+for (const script of ['bootstrap-users.js', 'bootstrap-reference-data.js', 'seed-demo-agencies.mjs']) {
   console.log(`\n=== ${script} ===`)
   execFileSync(process.execPath, [`scripts/${script}`], { stdio: 'inherit', env })
 }
