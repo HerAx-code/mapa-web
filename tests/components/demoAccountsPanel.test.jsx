@@ -10,11 +10,18 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import DemoAccountsPanel from '../../src/components/DemoAccountsPanel'
 import { USERS } from '../../scripts/demo-accounts.js'
 
+// Accounts the panel must hide. The seeded demo list has none since every
+// demo funder was made active (#450), so the test brings its own.
+const HIDDEN = [
+  { email: 'off@example.test', password: 'x', profile: { role: 'agency', agencyId: 'doh', active: false } },
+  { email: 'nopanel@example.test', password: 'x', profile: { role: 'agency_admin', agencyId: 'doh', active: true }, loginPanel: false },
+]
+
 // The component prefers a private demo-accounts.local.json when one exists on
 // the machine; tests pin the source so they don't depend on that file.
 const seeded = async () => ({
   source: 'seeded',
-  accounts: USERS.map((u) => ({ email: u.email, password: u.password, role: u.profile.role, agencyId: u.profile.agencyId, active: u.profile.active, loginPanel: u.loginPanel })),
+  accounts: [...USERS, ...HIDDEN].map((u) => ({ email: u.email, password: u.password, role: u.profile.role, agencyId: u.profile.agencyId, active: u.profile.active, loginPanel: u.loginPanel })),
 })
 const select = () => screen.findByLabelText(/Demo accounts/)
 
@@ -34,8 +41,8 @@ describe('DemoAccountsPanel', () => {
   it('hides deactivated and switched-off accounts', async () => {
     render(<DemoAccountsPanel onPick={() => {}} load={seeded} />)
     const box = await select()
-    const hidden = USERS.filter((u) => u.profile.active === false || u.loginPanel === false)
-    expect(hidden.length).toBeGreaterThan(0)
+    const hidden = [...USERS, ...HIDDEN].filter((u) => u.profile.active === false || u.loginPanel === false)
+    expect(hidden.length).toBeGreaterThanOrEqual(2)
     for (const u of hidden) expect(box.querySelector(`option[value="${u.email}"]`)).toBeNull()
   })
 
