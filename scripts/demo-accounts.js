@@ -16,16 +16,16 @@
  *   - 6 agency coordinators (one per agency)
  *   - 1 demo patient
  *
- * RA 11463 reconciliation (2026-07-24). The Malasakit Center is a
- * COORDINATION HUB, not a funding agency (see
- * docs/malasakit-center-research-2026-07-23.md), so its two agency
- * logins are seeded `active: false` -- kept for the historical
- * Guarantee Letter that admin@malasakit (Dr. Roberto Velasco) approved,
- * but unable to sign in (AuthContext blocks active === false). DOH-MAIP,
- * a real RA 11463 funder that had no accounts, gets a fresh admin +
- * coordinator. This mirrors the agencies collection: doh created,
- * malasakit kept-but-disabled. The five ACTIVE funders are now
- * DOH / PhilHealth / AMBaG / PCSO / DSWD.
+ * Demo network (2026-11-25). Six symmetric funding agencies, each with a
+ * working admin + coordinator, split three per hospital (partnering is set by
+ * scripts/seed-demo-agencies.mjs, emulator only):
+ *   - demo-hospital-a (DGH): DOH / PhilHealth / AMBaG
+ *   - demo-hospital-b (DPH): PCSO / DSWD / Malasakit
+ * All six are plain enabled funders for the demo. This is DEMO-ONLY and does
+ * NOT reflect the canonical agency model in src/data/agencies.seed.js, where
+ * PhilHealth is first-charge coverage (not endorsable) and Malasakit is not a
+ * funder. The demo overlay enables both and adds the Malasakit agency doc so
+ * the network is uniform and easy to drive.
  *
  * Adding a new demo account: add it here. Both scripts pick it up
  * automatically on next run. The login page's demo panel
@@ -59,21 +59,16 @@ export const USERS = [
     profile: { name: 'Staff Admin (DPH)', role: 'staff_admin', rank: 'low', agencyId: null, contact: null, cooldown: 0, deletion: false, tenantId: 'demo-hospital-b' },
   },
 
-  // Agency admins (one per funding agency; malasakit deactivated -- see header)
+  // Agency admins (one per funding agency; all active funders for the demo)
   {
-    // Coordination hub, not a funder. active:false -> cannot sign in.
-    // Retained because this account approved the historical GL on the
-    // one completed application (Dr. Roberto Velasco).
     email: 'admin@malasakit.gov.ph', password: 'agency123',
-    profile: { name: 'Dr. Roberto Velasco',   role: 'agency_admin', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: false },
+    profile: { name: 'Dr. Roberto Velasco',   role: 'agency_admin', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
     email: 'admin@doh.gov.ph', password: 'agency123',
     profile: { name: 'Dr. Elena Marasigan',   role: 'agency_admin', agencyId: 'doh',       rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
-    // PhilHealth is modelled as first-charge coverage, not a GL-issuing funder.
-    loginPanel: false,
     email: 'admin@philhealth.gov.ph', password: 'agency123',
     profile: { name: 'Dr. Ramon Aquino',      role: 'agency_admin', agencyId: 'philhealth',rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
@@ -90,17 +85,16 @@ export const USERS = [
     profile: { name: 'Datu Hakim Sangcopan',  role: 'agency_admin', agencyId: 'dswd',      rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
 
-  // Agency coordinators (frontline; malasakit deactivated -- see header)
+  // Agency coordinators (frontline; all active funders for the demo)
   {
     email: 'coordinator@malasakit.gov.ph', password: 'agency123',
-    profile: { name: 'Maria Santos',    role: 'agency', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: false },
+    profile: { name: 'Maria Santos',    role: 'agency', agencyId: 'malasakit', rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
     email: 'coordinator@doh.gov.ph', password: 'agency123',
     profile: { name: 'Joel Bautista',   role: 'agency', agencyId: 'doh',       rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },
   {
-    loginPanel: false,
     email: 'coordinator@philhealth.gov.ph', password: 'agency123',
     profile: { name: 'Grace Villanueva',role: 'agency', agencyId: 'philhealth',rank: null, contact: null, cooldown: 0, deletion: false, active: true },
   },

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   MdShield, MdVerified, MdVisibility, MdVisibilityOff,
   MdCheckCircle, MdArrowForward, MdArrowBack, MdCancel,
-  MdSchedule, MdPlace, MdLock,
+  MdSchedule, MdPlace, MdLock, MdWarning,
 } from 'react-icons/md'
 import Logo from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
@@ -291,6 +291,28 @@ export default function Register() {
   const onAddressChange = ({ province, city, barangay }) => {
     setForm(prev => ({ ...prev, province, city, barangay }))
     setErrors(prev => ({ ...prev, province: '', city: '', barangay: '' }))
+  }
+
+  // DEV ONLY (same build-time flag as the login demo panel): fill every step's
+  // fields with a valid demo patient so a tester can register in a couple of
+  // clicks. A fresh unique email each time avoids "email already in use"; the
+  // address is a real BARMM triple so the cascading pickers show it; the access
+  // code is left blank (optional — a network account the tester codes at filing).
+  const SHOW_DEMO = import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true'
+  const fillDemoPatient = () => {
+    setForm(prev => ({
+      ...prev,
+      managedByFamily: false, managerName: '', managerRelationship: '',
+      firstName: 'Juan', middleName: 'Reyes', lastName: 'Dela Paz', suffix: '',
+      birthdate: '1990-05-01', sex: 'male',
+      contactNumber: '09171234567',
+      province: 'Cotabato City', city: 'Cotabato City', barangay: 'Bagua',
+      email: `demo.patient.${Date.now().toString(36)}@example.com`,
+      password: 'Patient123!', confirmPassword: 'Patient123!',
+      hospitalId: '',
+    }))
+    setErrors({})
+    setAgreedToTerms(true)
   }
 
   // Email availability pre-check — fires on blur of the email field so the
@@ -806,6 +828,20 @@ export default function Register() {
             {/* Step indicator — past steps are clickable so the patient can
                 edit a typo without manually clicking Back N times. */}
           <StepIndicator current={step} steps={STEPS} onJump={(n) => { setErrors({}); setStep(n) }} />
+
+          {/* DEV ONLY — one-click fill of a valid demo patient (dropped from
+              production builds; same build-time flag as the login demo panel). */}
+          {SHOW_DEMO && step === 1 && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-amber-800">
+                <MdWarning size={13} aria-hidden="true" /> Demo — dev only
+              </span>
+              <button type="button" onClick={fillDemoPatient}
+                className="btn-secondary text-sm min-h-[44px] px-4 flex-shrink-0">
+                Fill demo patient
+              </button>
+            </div>
+          )}
 
           {/* All step content + nav buttons live inside one <form> so the
               keyboard's Go / Done key triggers the appropriate action.
