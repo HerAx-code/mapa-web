@@ -1021,15 +1021,12 @@
       "activeRequestTitle": "Ang inyong kahilingan ng tulong",
       "activeRequestDesc": "Pinoproseso ng {{gateway}} ang inyong kahilingan. Subaybayan ang progreso at coverage sa Aking Aplikasyon.",
       "coverage": {
-        "title": "Coverage at balanse",
+        "title": "Paghahati ng bayarin",
         "bill": "Kabuuang bayarin sa ospital",
         "discounts": "Diskwento ng senior citizen / PWD",
         "philhealth": "Naunang saklaw (hal. PhilHealth)",
         "other": "Iba pang coverage",
-        "needed": "Halagang kailangan",
-        "approved": "Naaprubahan hanggang ngayon",
-        "funded": "{{pct}}% natustusan",
-        "remaining": "Natitira"
+        "needed": "Halagang kailangan"
       },
       "coverageBar": {
         "title": "Sino ang tumutulong sa iyong {{total}}",
@@ -1061,11 +1058,15 @@
         "verified": "Na-verify",
         "pending": "Sinusuri",
         "rejected": "Kailangang ayusin",
-        "manage": "Pamahalaan ang mga dokumento"
+        "manage": "Pamahalaan ang mga dokumento",
+        "untitled": "Dokumento"
       },
       "messagesCard": {
         "title": "Mga mensahe",
-        "viewAll": "Lahat"
+        "viewAll": "Lahat",
+        "now": "ngayon",
+        "hoursAgo": "{{count}} oras",
+        "daysAgo": "{{count}} araw"
       },
       "hero": {
         "eyebrow": "Kahilingan ng tulong",
@@ -1077,23 +1078,35 @@
       },
       "nextAction": {
         "eyebrow": "Kailangan ng aksyon",
-        "fixDoc": "Mag-upload muli ng dokumento",
-        "upload": "Mag-upload",
-        "respond": "Tumugon sa ahensya",
-        "view": "Tingnan",
-        "interview": "Sumali sa inyong panayam",
-        "join": "Buksan"
-      },
-      "greeting": {
-        "uploadDocs": "Magsimula sa pagsusumite ng inyong kahilingan ng tulong.",
-        "findProgram": "Handa na ang inyong mga dokumento — isumite ang inyong kahilingan ng tulong.",
-        "pending": "Sinusuri ang inyong kahilingan — walang kailangang gawin ngayon.",
-        "reviewing": "Bini-verify ng {{gateway}} ang inyong mga dokumento.",
-        "awaiting_info": "Kailangan ng aksyon: humihingi ng karagdagang impormasyon ang {{gateway}}.",
-        "interview": "Naka-iskedyul ang interview — sumali sa Google Meet sa takdang oras.",
-        "approved": "Naaprubahan! Inihahanda na ang inyong Guarantee Letter.",
-        "certificate": "Handa na ang inyong Guarantee Letter.",
-        "rejected": "Hindi naaprubahan ang inyong kahilingan sa pagkakataong ito."
+        "confirmEmail": {
+          "title": "Kumpirmahin ang inyong email address",
+          "detail": "Buksan ang link na ipinadala namin sa inyong email. Makakapagsumite kayo ng kahilingan kapag nakumpirma na ito.",
+          "cta": "Kumpirmahin"
+        },
+        "hold": {
+          "title": "Naka-hold ang mga bagong kahilingan",
+          "detail": "Naglagay ang inyong ospital ng holding period sa inyong account. Nasa inyong Messages ang dahilan.",
+          "cta": "Messages"
+        },
+        "fixDoc": {
+          "title": "Mag-upload muli ng dokumento",
+          "cta": "Mag-upload"
+        },
+        "proceed": {
+          "title_one": "May ahensyang handang tumulong — tanggapin ito",
+          "title_other": "{{count}} ahensya ang handang tumulong — tanggapin sila",
+          "cta": "Tingnan"
+        },
+        "respond": {
+          "title": "May tanong sa inyo ang isang ahensya",
+          "cta": "Sumagot"
+        },
+        "collectGL": {
+          "title": "Handa na ang inyong Guarantee Letter",
+          "detail_one": "{{agency}} · gamitin sa loob ng {{count}} araw",
+          "detail_other": "{{agency}} · gamitin sa loob ng {{count}} araw",
+          "cta": "Tingnan"
+        }
       },
       "noApplication": "Wala ka pang aktibong aplikasyon.",
       "browseSomeAgencies": "Maghanap ng Programa upang magsimula",
@@ -1139,12 +1152,6 @@
           "btn": "Buksan ang Guarantee Letter"
         }
       },
-      "rejectedCard": {
-        "title": "Hindi Aprubado ang Aplikasyon",
-        "descOne": "Hindi aprubado ang inyong nakaraang aplikasyon. Maaari kayong mag-apply muli sa ibang programa.",
-        "descMany": "Hindi aprubado ang inyong nakaraang {{count}} aplikasyon. Maaari kayong mag-apply muli sa ibang programa.",
-        "btn": "Maghanap ng Programa"
-      },
       "welcomeCard": {
         "title": "Maligayang pagdating sa MAPA!",
         "startTitle": "Simulan ang inyong aplikasyon",
@@ -1173,20 +1180,23 @@
         "verifiedMany": "{{count}} mga na-verify na dokumento"
       },
       "steps": {
-        "title": "Mga Hakbang ng Aplikasyon",
-        "completedOf": "{{done}} sa {{total}} na hakbang ay tapos na",
-        "done": "Tapos",
-        "current": "Kasalukuyan",
-        "s1Title": "Isumite ang Inyong Kahilingan",
-        "s1Desc": "Magsimula ng kahilingan, i-upload ang mga kinakailangang dokumento, at i-verify ang inyong ID.",
-        "s2Title": "Susuriin at I-eendorso ng {{gateway}}",
-        "s2Desc": "Bini-verify ng {{gateway}} ang inyong mga dokumento at i-eendorso ang inyong kahilingan sa mga ahensyang makakapagpondo nito.",
-        "s3Title": "Subaybayan ang Inyong Progreso",
-        "s3Desc": "Sundan ang status at funding coverage ng inyong kahilingan anumang oras.",
-        "s4Title": "Pagsusuri ng {{gateway}}",
-        "s4Desc": "Sinusuri ng isang social worker ang inyong kaso nang malayuan at maaaring mag-message kung may hindi malinaw — walang panayam na dadaluhan.",
-        "s5Title": "Tanggapin ang Inyong Guarantee Letter",
-        "s5Desc": "Kapag napondohan na ng mga ahensya ang inyong pangangailangan, kunin ang Guarantee Letter upang iharap sa pinangalanang provider."
+        "title": "Paano ito gumagana",
+        "start": "Magsimula ng kahilingan",
+        "s1Title": "Isumite ang inyong kahilingan",
+        "s1Desc": "Kumuha ng access code sa social-services office ng isang ospital, at i-upload dito ang inyong bill at mga dokumento.",
+        "s2Title": "Sinusuri ng {{gateway}}",
+        "s2Desc": "Bini-verify ng isang social worker ang inyong mga dokumento at sinusuri ang inyong kaso nang malayuan. Maaari nila kayong i-message — walang panayam na dadaluhan.",
+        "s3Title": "Pinopondohan ng mga ahensya ang bayarin",
+        "s3Desc": "Ipinapadala ng {{gateway}} ang inyong kahilingan sa mga partner na ahensya. Kapag may nag-alok ng tulong, i-tap ang Proceed para tanggapin ito.",
+        "s4Title": "Kunin ang inyong Guarantee Letter",
+        "s4Desc": "Gamitin ito bago mag-expire. Nakasulat sa sulat kung saan ito ihaharap."
+      },
+      "nameFallback": "kaibigan",
+      "pastCard": {
+        "title": "Tapos na ang inyong huling kahilingan",
+        "desc": "Kailangan muli ng tulong? Kumuha ng bagong access code sa social-services office ng isang ospital, at magsumite ng bagong kahilingan.",
+        "btn": "Magsumite ng bagong kahilingan",
+        "history": "Tingnan ang mga nakaraang kahilingan"
       }
     },
     "track": {
@@ -1694,12 +1704,8 @@
         "body": "Nandito ang inyong aktibong hiling o ang get-started card. I-tap para gawin ang susunod na hinihiling ng {{gateway}}."
       },
       "s3": {
-        "title": "Ang inyong 5-hakbang na paglalakbay",
-        "body": "Subaybayan ang inyong progreso: upload → review → pagsusuri → pag-apruba → Guarantee Letter. I-tap ang anumang hakbang para magpatuloy."
-      },
-      "s4": {
-        "title": "Status ng dokumento",
-        "body": "Tingnan ang bilang ng na-verify at nakabinbing dokumento. I-tap para mag-upload o tingnan ang mga dahilan ng rejection."
+        "title": "Paano ito gumagana",
+        "body": "Apat na hakbang mula sa pagsumite ng kahilingan hanggang sa inyong Guarantee Letter."
       },
       "track": {
         "s1": {

@@ -1021,15 +1021,12 @@
       "activeRequestTitle": "Your assistance request",
       "activeRequestDesc": "{{gateway}} is processing your request. Track its progress and coverage under My Application.",
       "coverage": {
-        "title": "Coverage & balance",
+        "title": "Bill breakdown",
         "bill": "Total hospital bill",
         "discounts": "Senior citizen / PWD discount",
         "philhealth": "Prior coverage (e.g. PhilHealth)",
         "other": "Other coverage",
-        "needed": "Amount needed",
-        "approved": "Approved so far",
-        "funded": "{{pct}}% funded",
-        "remaining": "Remaining"
+        "needed": "Amount needed"
       },
       "coverageBar": {
         "title": "Who's covering your {{total}}",
@@ -1061,11 +1058,15 @@
         "verified": "Verified",
         "pending": "Under review",
         "rejected": "Needs fixing",
-        "manage": "Manage documents"
+        "manage": "Manage documents",
+        "untitled": "Document"
       },
       "messagesCard": {
         "title": "Messages",
-        "viewAll": "View all"
+        "viewAll": "View all",
+        "now": "now",
+        "hoursAgo": "{{count}}h",
+        "daysAgo": "{{count}}d"
       },
       "hero": {
         "eyebrow": "Assistance request",
@@ -1077,23 +1078,35 @@
       },
       "nextAction": {
         "eyebrow": "Action needed",
-        "fixDoc": "Re-upload a document",
-        "upload": "Upload",
-        "respond": "Respond to the agency",
-        "view": "View",
-        "interview": "Join your assessment interview",
-        "join": "Open"
-      },
-      "greeting": {
-        "uploadDocs": "Get started by submitting your assistance request.",
-        "findProgram": "Your documents are ready — submit your assistance request.",
-        "pending": "Your request is under review — no action needed right now.",
-        "reviewing": "{{gateway}} is verifying your documents.",
-        "awaiting_info": "Action needed: {{gateway}} asked you for more information.",
-        "interview": "Interview scheduled — join the Google Meet at the scheduled time.",
-        "approved": "Approved! Your Guarantee Letter is being prepared.",
-        "certificate": "Your Guarantee Letter is ready.",
-        "rejected": "Your request was not approved this time."
+        "confirmEmail": {
+          "title": "Confirm your email address",
+          "detail": "Open the link we emailed you. You can file a request once it is confirmed.",
+          "cta": "Confirm"
+        },
+        "hold": {
+          "title": "New requests are on hold",
+          "detail": "Your hospital put a holding period on your account. The reason is in your Messages.",
+          "cta": "Messages"
+        },
+        "fixDoc": {
+          "title": "Upload a document again",
+          "cta": "Upload"
+        },
+        "proceed": {
+          "title_one": "An agency offered to help — accept it",
+          "title_other": "{{count}} agencies offered to help — accept them",
+          "cta": "Review"
+        },
+        "respond": {
+          "title": "An agency asked you a question",
+          "cta": "Answer"
+        },
+        "collectGL": {
+          "title": "Your Guarantee Letter is ready",
+          "detail_one": "{{agency}} · use it within {{count}} day",
+          "detail_other": "{{agency}} · use it within {{count}} days",
+          "cta": "View"
+        }
       },
       "noApplication": "You don't have an active application yet.",
       "browseSomeAgencies": "Find Programs to start an application",
@@ -1139,12 +1152,6 @@
           "btn": "Open Guarantee Letter"
         }
       },
-      "rejectedCard": {
-        "title": "Application Not Approved",
-        "descOne": "Your previous application was not approved. You may apply again to a different program.",
-        "descMany": "Your previous {{count}} applications were not approved. You may apply again to a different program.",
-        "btn": "Browse Programs"
-      },
       "welcomeCard": {
         "title": "Welcome to MAPA!",
         "startTitle": "Start your application",
@@ -1173,20 +1180,23 @@
         "verifiedMany": "{{count}} verified documents"
       },
       "steps": {
-        "title": "Application Steps",
-        "completedOf": "{{done}} of {{total}} steps completed",
-        "done": "Done",
-        "current": "Current",
-        "s1Title": "Submit Your Request",
-        "s1Desc": "Start a request, upload your required documents, and verify your ID.",
-        "s2Title": "{{gateway}} Reviews & Endorses",
-        "s2Desc": "{{gateway}} verifies your documents and endorses your request to the agencies that can help fund it.",
-        "s3Title": "Track Your Progress",
-        "s3Desc": "Follow your request's status and funding coverage anytime.",
-        "s4Title": "{{gateway}} Assessment",
-        "s4Desc": "A social worker assesses your case remotely and may message you if anything is unclear — no interview to attend.",
-        "s5Title": "Receive your Guarantee Letter",
-        "s5Desc": "Once agencies fund your care, get your Guarantee Letter to present at the named provider."
+        "title": "How it works",
+        "start": "Start a request",
+        "s1Title": "File your request",
+        "s1Desc": "Get an access code at a hospital's social-services office, then upload your bill and documents here.",
+        "s2Title": "{{gateway}} checks and assesses",
+        "s2Desc": "A social worker verifies your documents and assesses your case remotely. They may message you — there is no interview to attend.",
+        "s3Title": "Agencies fund your bill",
+        "s3Desc": "{{gateway}} sends your request to partner agencies. When one offers to help, tap Proceed to accept it.",
+        "s4Title": "Get your Guarantee Letter",
+        "s4Desc": "Use it before it expires. The letter says where to present it."
+      },
+      "nameFallback": "friend",
+      "pastCard": {
+        "title": "Your last request has ended",
+        "desc": "Need help again? Get a new access code from a hospital's social-services office, then file a new request.",
+        "btn": "File a new request",
+        "history": "See past requests"
       }
     },
     "track": {
@@ -1694,12 +1704,8 @@
         "body": "Your current request or the get-started card lives here. Tap it to act on the next step {{gateway}} needs from you."
       },
       "s3": {
-        "title": "Your 5-step journey",
-        "body": "Track your progress from upload → review → assessment → approval → Guarantee Letter. Tap any step to jump in."
-      },
-      "s4": {
-        "title": "Document status",
-        "body": "Verified and pending document counts at a glance. Tap to manage uploads or check rejection reasons."
+        "title": "How it works",
+        "body": "Four steps from filing your request to your Guarantee Letter."
       },
       "track": {
         "s1": {
