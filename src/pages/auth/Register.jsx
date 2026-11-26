@@ -710,7 +710,13 @@ export default function Register() {
       // before onAuthStateChanged re-reads the doc (timing fix)
       // Brand the session with the patient's hospital before the first page.
       if (joinedTenant) await loadHospital(joinedTenant)
-      updateUser({ uid, ...userData, tenantId: joinedTenant, tenantIds: joinedTenant ? [joinedTenant] : [] })
+      // `userData.createdAt` is still the serverTimestamp() SENTINEL here (no
+      // .toDate()), so needsEmailConfirm() would read it as "unknown" and skip
+      // the email-confirm gate for this brand-new account — letting the patient
+      // reach Submit with an unverified token the rules then reject. Seed the
+      // client state with a real timestamp (the server doc keeps the
+      // authoritative one) so the gate shows correctly before the next re-read.
+      updateUser({ uid, ...userData, createdAt: new Date(), tenantId: joinedTenant, tenantIds: joinedTenant ? [joinedTenant] : [] })
 
       // Successful registration — discard the draft so a future visit to
       // /register doesn't pre-fill someone else's data.

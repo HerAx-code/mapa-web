@@ -733,6 +733,28 @@ export default function RequestAssistance() {
   const handleSubmit = async () => {
     if (submitting) return
     if (activeRequest)            { toast.error(t('patient.request.errActive')); return }
+
+    // The request `create` rule reads `email_verified` from the ID TOKEN
+    // (patientEmailConfirmed), not from the Auth user object. reload() — and a
+    // server-side flip by an admin — updates `currentUser.emailVerified`
+    // WITHOUT reminting the token, so the UI can believe the email is confirmed
+    // while the token the batch sends still says false → "Missing or
+    // insufficient permissions." Check the token's own claim (cached, no
+    // network) and, only when it's stale, reload + force-refresh so the batch
+    // carries the up-to-date claim. If it's genuinely unconfirmed, drop back to
+    // the ConfirmEmailCard instead of attempting a write the rules will reject.
+    try {
+      const cu = auth.currentUser
+      if (cu) {
+        const res = await cu.getIdTokenResult()
+        if (res.claims.email_verified !== true) {
+          await cu.reload()
+          if (cu.emailVerified) await cu.getIdToken(true)
+        }
+      }
+    } catch { /* offline — let the batch surface the real error below */ }
+    if (needsEmailConfirm(user, auth.currentUser)) { setEmailConfirmed(false); return }
+
     if (!user.hospitalId || !codeReady) { toast.error(t('patient.gate.errNoCode')); setChanging(true); return }
     if (!form.careSetting)        { toast.error(t('patient.request.errCare')); return }
     if (outpatient && !form.careUnit) { toast.error(t('patient.request.errUnit')); return }
