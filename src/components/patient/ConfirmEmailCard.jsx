@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { sendEmailVerification } from 'firebase/auth'
 import { MdMarkEmailUnread, MdRefresh } from 'react-icons/md'
@@ -15,12 +15,34 @@ export default function ConfirmEmailCard({ email, onConfirmed }) {
   const [busy, setBusy] = useState('') // '' | 'send' | 'check'
   const [wait, setWait] = useState(0)
   const [note, setNote] = useState(null) // { tone: 'ok' | 'warn', text }
+  const onConfirmedRef = useRef(onConfirmed)
+  onConfirmedRef.current = onConfirmed
 
   useEffect(() => {
     if (wait <= 0) return undefined
     const id = setTimeout(() => setWait(w => w - 1), 1000)
     return () => clearTimeout(id)
   }, [wait])
+
+  // Auto-detect an already-confirmed email on mount: the patient may have
+  // opened the link in another tab, or an admin may have marked it verified.
+  // reload() refreshes currentUser without reminting the ID token the rules
+  // read, so force a fresh token (getIdToken(true)) before advancing — then the
+  // patient never has to click when it's already done. Runs once.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!auth.currentUser) return
+      try {
+        await auth.currentUser.reload()
+        if (!cancelled && auth.currentUser.emailVerified) {
+          await auth.currentUser.getIdToken(true)
+          if (!cancelled) onConfirmedRef.current?.()
+        }
+      } catch { /* offline — the manual "I've confirmed" button still works */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const resend = async () => {
     if (!auth.currentUser || busy || wait > 0) return
