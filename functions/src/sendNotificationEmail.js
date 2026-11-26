@@ -1,9 +1,9 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore')
-const { defineSecret, defineString } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { mayEmail, emailLimitFor } = require('./emailScope')
 const { bumpWindowCounter } = require('./rateLimit')
+const { SMTP_USER, SMTP_PASS, NETWORK_NAME, escapeHtml, sendMail } = require('./mailer')
 
 /**
  * sendNotificationEmail — the ONLY place MAPA sends email (Phase 1, T1).
@@ -23,17 +23,8 @@ const { bumpWindowCounter } = require('./rateLimit')
  * Replaces the Vercel /api/send-email and /api/send-sms endpoints, which
  * mailed any address with any content for any signed-in account (gap I5).
  */
-const SMTP_USER = defineSecret('SMTP_USER')
-const SMTP_PASS = defineSecret('SMTP_PASS')
-// The display From address isn't secret: an optional plain parameter
-// (functions/.env or deploy prompt). Empty = "MAPA <SMTP_USER>".
-const SMTP_FROM = defineString('SMTP_FROM', { default: '' })
-
-const NETWORK_NAME = process.env.ORG_NAME || 'MAPA'
-
-const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
-  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-))
+// SMTP transport, secrets and the From header live in ./mailer (shared with
+// sendVerificationEmail) so the two senders can't drift apart.
 
 function renderEmail({ title, body, footer }) {
   const subject = String(title || `${NETWORK_NAME} notification`).slice(0, 200)
@@ -124,18 +115,6 @@ exports.handleNotificationEmail = handleNotificationEmail
 exports.renderEmail = renderEmail
 exports.escapeHtml = escapeHtml
 
-let transporter = null
-function mailer() {
-  if (!transporter) {
-    const nodemailer = require('nodemailer')
-    transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com', port: 465, secure: true,
-      auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
-    })
-  }
-  return transporter
-}
-
 exports.sendNotificationEmail = onDocumentCreated({
   document: 'notifications/{uid}/items/{notifId}',
   region: 'asia-southeast1',
@@ -144,12 +123,11 @@ exports.sendNotificationEmail = onDocumentCreated({
   secrets: [SMTP_USER, SMTP_PASS],
 }, async (event) => {
   try {
-    const from = SMTP_FROM.value() || `${NETWORK_NAME} <${SMTP_USER.value()}>`
     const result = await handleNotificationEmail({
       db: getFirestore(),
       uid: event.params.uid,
       notifId: event.params.notifId,
-      sendMail: (m) => mailer().sendMail({ from, ...m }),
+      sendMail,
     })
     if (result?.state === 'failed') logger.warn('[sendNotificationEmail] not sent', { uid: event.params.uid, ...result })
     return result

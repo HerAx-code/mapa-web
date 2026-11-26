@@ -1550,7 +1550,8 @@
       "tooMany": "Masyadong maraming link ang naipadala. Maghintay ng ilang minuto, at subukang muli.",
       "sendFailed": "Hindi naipadala ang link. Tingnan ang inyong koneksyon at subukang muli.",
       "checkFailed": "Hindi namin ito masuri ngayon. Tingnan ang inyong koneksyon at subukang muli.",
-      "wrongEmail": "Mali ba ang email na ito, o hindi ninyo ito mabuksan? Humingi ng tulong sa social-services office ng inyong ospital."
+      "wrongEmail": "Mali ba ang email na ito, o hindi ninyo ito mabuksan? Humingi ng tulong sa social-services office ng inyong ospital.",
+      "startOver": "Mag-sign out at gumamit ng ibang email"
     }
   },
   "register": {
@@ -1682,7 +1683,8 @@
       "codeVerified": "Na-verify ang access code!",
       "welcome": "Maligayang pagdating, {{name}}! Nagawa na ang inyong account. Nagpadala kami ng link sa {{email}}. Buksan ito bago kayo maghain ng kahilingan.",
       "alreadyRegistered": "Nakarehistro ka na gamit ang access code na ito. Mangyaring mag-login.",
-      "codeNotUsed": "Handa na ang inyong account, pero hindi nagamit ang access code: {{reason}} Itatabi ito para sa paghahain ng inyong kahilingan."
+      "codeNotUsed": "Handa na ang inyong account, pero hindi nagamit ang access code: {{reason}} Itatabi ito para sa paghahain ng inyong kahilingan.",
+      "verifyEmailFailed": "Hindi namin naipadala ang inyong kumpirmasyong email ngayon. Sa susunod na pahina, i-tap ang \"Ipadala muli ang link\"."
     },
     "password": {
       "tooShort": "Masyadong maikli",

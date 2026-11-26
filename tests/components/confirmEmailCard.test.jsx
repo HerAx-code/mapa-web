@@ -10,8 +10,8 @@ import i18n from '../../src/i18n'
 
 const currentUser = { emailVerified: false, reload: vi.fn(), getIdToken: vi.fn() }
 vi.mock('../../src/firebase', () => ({ auth: { currentUser } }))
-const sendEmailVerification = vi.fn()
-vi.mock('firebase/auth', () => ({ sendEmailVerification: (...a) => sendEmailVerification(...a) }))
+const requestVerificationEmail = vi.fn()
+vi.mock('../../src/utils/verificationEmail', () => ({ requestVerificationEmail: (...a) => requestVerificationEmail(...a) }))
 
 const renderCard = async (onConfirmed = vi.fn()) => {
   await i18n.changeLanguage('en')
@@ -25,7 +25,7 @@ describe('ConfirmEmailCard', () => {
     currentUser.emailVerified = false
     currentUser.reload.mockReset().mockResolvedValue()
     currentUser.getIdToken.mockReset().mockResolvedValue('t')
-    sendEmailVerification.mockReset().mockResolvedValue()
+    requestVerificationEmail.mockReset().mockResolvedValue({ sent: true })
   })
 
   it('shows the address and resends the link, then waits before another', async () => {
@@ -33,7 +33,7 @@ describe('ConfirmEmailCard', () => {
     expect(screen.getByText('juan@example.com')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Send the link again' }))
     expect(await screen.findByText('We sent a new link to juan@example.com.')).toBeTruthy()
-    expect(sendEmailVerification).toHaveBeenCalledWith(currentUser)
+    expect(requestVerificationEmail).toHaveBeenCalled()
     expect(screen.getByRole('button', { name: /Send again in \d+ s/ }).disabled).toBe(true)
   })
 

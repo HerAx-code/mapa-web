@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { sendEmailVerification } from 'firebase/auth'
 import { MdMarkEmailUnread, MdRefresh } from 'react-icons/md'
 import { auth } from '../../firebase'
+import { requestVerificationEmail } from '../../utils/verificationEmail'
 
 // Shown on the filing page to a patient whose email isn't confirmed yet
 // (registration research 2026-11-24; see src/utils/emailConfirm.js). The rules
@@ -48,12 +48,14 @@ export default function ConfirmEmailCard({ email, onConfirmed }) {
     if (!auth.currentUser || busy || wait > 0) return
     setBusy('send'); setNote(null)
     try {
-      await sendEmailVerification(auth.currentUser)
+      await requestVerificationEmail()
       setNote({ tone: 'ok', text: t('patient.emailConfirm.sent', { email }) })
       setWait(RESEND_WAIT_S)
     } catch (err) {
-      setNote({ tone: 'warn', text: err?.code === 'auth/too-many-requests' ? t('patient.emailConfirm.tooMany') : t('patient.emailConfirm.sendFailed') })
-      if (err?.code === 'auth/too-many-requests') setWait(RESEND_WAIT_S)
+      const code = String(err?.code || '')
+      const tooMany = code.includes('resource-exhausted') || code.includes('too-many-requests')
+      setNote({ tone: 'warn', text: tooMany ? t('patient.emailConfirm.tooMany') : t('patient.emailConfirm.sendFailed') })
+      if (tooMany) setWait(RESEND_WAIT_S)
     } finally {
       setBusy('')
     }
