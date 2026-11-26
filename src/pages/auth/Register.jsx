@@ -300,6 +300,18 @@ export default function Register() {
   // address is a real BARMM triple so the cascading pickers show it; the access
   // code is left blank (optional — a network account the tester codes at filing).
   const SHOW_DEMO = import.meta.env.VITE_SHOW_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_ENABLE_SEED === 'true'
+  // A real inbox for demo sign-ups: the hard email-verification gate needs the
+  // confirmation link to arrive. VITE_DEMO_PATIENT_EMAIL=you@gmail.com becomes
+  // you+demo.<stamp>@gmail.com (plus-addressing), so every fill is unique but
+  // lands in your inbox. Unset → the old unreachable @example.com address.
+  const demoEmail = () => {
+    const stamp = Date.now().toString(36)
+    const base = (import.meta.env.VITE_DEMO_PATIENT_EMAIL || '').trim()
+    const at = base.indexOf('@')
+    return at > 0
+      ? `${base.slice(0, at)}+demo.${stamp}${base.slice(at)}`
+      : `demo.patient.${stamp}@example.com`
+  }
   const fillDemoPatient = () => {
     setForm(prev => ({
       ...prev,
@@ -308,7 +320,7 @@ export default function Register() {
       birthdate: '1990-05-01', sex: 'male',
       contactNumber: '09171234567',
       province: 'Cotabato City', city: 'Cotabato City', barangay: 'Bagua',
-      email: `demo.patient.${Date.now().toString(36)}@example.com`,
+      email: demoEmail(),
       password: 'Patient123!', confirmPassword: 'Patient123!',
       hospitalId: '',
     }))
