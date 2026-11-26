@@ -17,6 +17,7 @@ import { ROLES } from './utils/constants'
 import Landing            from './pages/auth/Landing'
 import Login              from './pages/auth/Login'
 import Register           from './pages/auth/Register'
+import VerifyEmail         from './pages/auth/VerifyEmail'
 import InstallApp         from './pages/auth/InstallApp'
 import PatientDashboard   from './pages/patient/Dashboard'
 import NotFound           from './pages/NotFound'
@@ -128,6 +129,9 @@ export default function App() {
           } />
 
           {/* Patient */}
+          {/* Hard email-confirmation gate (owner decision 2026-11-26). skipEmailGate
+              is set here only, so PrivateRoute's redirect to this page can't loop. */}
+          <Route path="/verify-email"       element={<PrivateRoute allowedRoles={PATIENT_ROLES} skipEmailGate><VerifyEmail /></PrivateRoute>} />
           <Route path="/patient/dashboard"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientDashboard /></PrivateRoute>} />
           <Route path="/patient/programs"   element={<PrivateRoute allowedRoles={PATIENT_ROLES}><MedicalPrograms /></PrivateRoute>} />
           <Route path="/patient/hospitals"  element={<PrivateRoute allowedRoles={PATIENT_ROLES}><PatientHospitals /></PrivateRoute>} />

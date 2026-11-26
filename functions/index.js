@@ -79,6 +79,7 @@ exports.eraseAccount = eraseAccount
 exports.disableAccount = disableAccount
 exports.resetStaffMfa = resetStaffMfa
 exports.sendNotificationEmail = sendNotificationEmail
+exports.sendVerificationEmail = require('./src/sendVerificationEmail').sendVerificationEmail
 exports.onAnnouncementCreated = onAnnouncementCreated
 exports.announcementReminders = announcementReminders
 

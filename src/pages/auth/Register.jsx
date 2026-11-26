@@ -8,11 +8,12 @@ import {
 import Logo from '../../components/ui/Logo'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import LanguageToggle from '../../components/LanguageToggle'
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser, sendEmailVerification } from 'firebase/auth'
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, deleteUser } from 'firebase/auth'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, functions, signInAnonymously, httpsCallable } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { loadHospital } from '../../utils/hospitals'
+import { requestVerificationEmail } from '../../utils/verificationEmail'
 import { useTranslation, Trans } from 'react-i18next'
 import ProfileModals from '../../components/ProfileModals'
 import TermsModal from '../../components/TermsModal'
@@ -674,11 +675,16 @@ export default function Register() {
         throw createErr
       }
 
-      // Confirm the email address (registration research 2026-11-24): the
-      // link must be opened before the first request is filed (the rules check
-      // it; the filing page explains and can resend). Never blocks sign-up —
-      // if sending fails, the filing page offers to send it again.
-      sendEmailVerification(cred.user).catch((err) => console.warn('[Register] verification email not sent:', err?.code))
+      // Confirm the email address (registration research 2026-11-24; hard gate
+      // owner decision 2026-11-26). Sent through MAPA's own SMTP
+      // (requestVerificationEmail → sendVerificationEmail), with a native
+      // fallback. Never blocks sign-up: the account is created either way and
+      // the /verify-email gate lets the patient resend. A failure is surfaced
+      // (not swallowed) so the patient knows to resend rather than wait forever.
+      requestVerificationEmail().catch((err) => {
+        console.warn('[Register] verification email not sent:', err?.code)
+        toast.error(t('register.toast.verifyEmailFailed'), { duration: 8000 })
+      })
 
       let joinedTenant = null
       if (codeTyped()) {
