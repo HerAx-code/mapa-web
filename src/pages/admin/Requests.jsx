@@ -1485,9 +1485,18 @@ export default function Requests() {
       if (typeof t.seconds === 'number') return t.seconds * 1000
       const d = new Date(t); return Number.isNaN(d.getTime()) ? 0 : d.getTime()
     }
+    // Last change (updatedAt), falling back to submission — for the Resolved
+    // tab, where nothing is waiting and the newest outcome matters most.
+    const lastMs = (r) => {
+      const t = r?.updatedAt
+      if (t && typeof t.toDate === 'function') return t.toDate().getTime()
+      if (t && typeof t.seconds === 'number') return t.seconds * 1000
+      return subMs(r)
+    }
     const arr = [...list]
     if (sort === 'balance')       arr.sort((a, b) => fundMap.get(b.id).balance - fundMap.get(a.id).balance)
     else if (sort === 'coverage') arr.sort((a, b) => fundMap.get(a.id).pct - fundMap.get(b.id).pct)
+    else if (filter === 'resolved') arr.sort((a, b) => lastMs(b) - lastMs(a)) // most recent first
     else /* waiting */            arr.sort((a, b) => subMs(a) - subMs(b))
     return arr
   }, [requests, filter, category, assignee, overdueOnly, search, sort, slicesByRequest])
@@ -1708,7 +1717,7 @@ export default function Requests() {
               value={sort}
               onChange={setSort}
               options={[
-                { value: 'waiting',  label: 'Longest waiting' },
+                { value: 'waiting',  label: filter === 'resolved' ? 'Most recent' : 'Longest waiting' },
                 { value: 'balance',  label: 'Largest balance' },
                 { value: 'coverage', label: 'Least covered' },
               ]} />

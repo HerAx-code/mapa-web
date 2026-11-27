@@ -45,9 +45,14 @@ export default function EligibilityCertCard({ request, user }) {
   const readiness = coeReadiness(request)
   const active = cert && cert.status !== 'voided' ? cert : null
   // What would print blank right now (for the warning before generating).
-  const missing = useMemo(() => (patient ? coeMissing(buildCoeSnapshot({ request, patient, controlNo: '' })) : []), [request, patient])
+  const missing = useMemo(() => (patient ? coeMissing(buildCoeSnapshot({ request, patient, settings: settings ?? {}, controlNo: '' })) : []), [request, patient, settings])
 
   const generate = async () => {
+    // Open the print window NOW, while the click still counts as the user's
+    // gesture: opened after the awaits below, pop-up blockers stop it — and the
+    // certificate would already be numbered. Blocked → stop before numbering.
+    const win = openPrintWindow()
+    if (!win) return
     setBusy(true)
     try {
       const org = await fetchHospitalBranding(request.tenantId)
@@ -81,9 +86,10 @@ export default function EligibilityCertCard({ request, user }) {
         action: 'coe_generated', targetType: 'request', targetId: request.id, targetName: request.requestId ?? '',
         details: `Certificate of Eligibility ${out.controlNo} generated`, requestId: request.id, patientId: request.patientId,
       })
-      printSnapshot(out.snapshot)
+      printSnapshot(out.snapshot, win)
       toast.success(`Certificate ${out.controlNo} generated. Print, sign and stamp it, then upload the scan.`)
     } catch (e) {
+      try { win.close() } catch { /* already closed */ }
       console.error('[CoE] generate failed', e)
       toast.error(e?.message === 'COE_ACTIVE'
         ? 'This case already has a certificate. Void it first to issue a new one.'
@@ -91,11 +97,31 @@ export default function EligibilityCertCard({ request, user }) {
     } finally { setBusy(false) }
   }
 
-  const printSnapshot = (snapshot) => {
-    const url = URL.createObjectURL(new Blob([buildEligibilityCertificateHTML(snapshot)], { type: 'text/html' }))
-    const win = window.open(url, '_blank', 'width=900,height=1100')
-    if (!win) { URL.revokeObjectURL(url); toast.error('Please allow pop-ups to print the certificate.'); return }
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  // A same-origin blank window, opened synchronously from the click.
+  const openPrintWindow = () => {
+    const win = window.open('', '_blank', 'width=900,height=1100')
+    if (!win) { toast.error('Please allow pop-ups for this site to print the certificate.'); return null }
+    try { win.document.write('<p style="font:14px sans-serif;padding:24px;color:#555">Preparing the certificate…</p>') } catch { /* ignore */ }
+    return win
+  }
+
+  // Writes the certificate into the window, wires its Print button and opens
+  // the print dialog. The certificate page carries no script of its own (CSP-safe).
+  const printSnapshot = (snapshot, preOpened = null) => {
+    const win = preOpened ?? openPrintWindow()
+    if (!win) return
+    try {
+      win.document.open()
+      win.document.write(buildEligibilityCertificateHTML(snapshot))
+      win.document.close()
+      win.document.getElementById('coe-print-btn')?.addEventListener('click', () => win.print())
+      win.focus()
+      // Let the layout settle (seals, fonts) before the dialog snapshots it.
+      setTimeout(() => { try { win.print() } catch { /* window closed */ } }, 400)
+    } catch (e) {
+      console.warn('[CoE] could not open the print window:', e)
+      toast.error('Could not open the certificate for printing.')
+    }
   }
 
   const saveSigned = async ({ base64, contentType, fileName }) => {

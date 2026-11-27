@@ -46,10 +46,58 @@ describe('buildCoeSnapshot', () => {
     expect(snap.validUntil.slice(0, 7)).toBe('2027-11')
   })
   it('lists what will print blank', () => {
-    expect(coeMissing(snap)).toEqual([])
+    const full = buildCoeSnapshot({
+      request: { ...request, intakeSheet: { ...sheet, completedByUid: 'sw1' } }, patient, org, controlNo: 'N', now,
+      settings: { coeNotedByName: 'Maria Santos', coeSocialWorkers: { sw1: { rsw: true, licenseNo: '0012345' } } },
+    })
+    expect(coeMissing(full)).toEqual([])
     // Annex A asks only for name and address: no birthdate/sex blanks.
     const bare = buildCoeSnapshot({ request: { ...request, assistanceType: '', intakeSheet: { ...sheet, hospitalCaseNumber: '' } }, patient: { name: 'X' }, controlNo: 'N' })
-    expect(coeMissing(bare)).toEqual(['address', 'assistance / service', 'hospital case number'])
+    expect(coeMissing(bare)).toEqual([
+      'address', 'assistance / service', 'hospital case number',
+      "the assessor's RSW license (not set in Hospital Settings)", 'the issuing head (Hospital Settings)',
+    ])
+  })
+})
+
+describe('RSW credential and license numbers (2026-11-27)', () => {
+  const withUid = { ...request, intakeSheet: { ...sheet, completedByUid: 'sw1' } }
+  const settings = {
+    coeNotedByName: 'Maria Santos', coeNotedByLicense: '0098765',
+    coeSocialWorkers: { sw1: { rsw: true, licenseNo: ' 0012345 ' }, other: { rsw: true, licenseNo: '1' } },
+  }
+  it('prints ", RSW" and the license only for a staff member marked as an RSW', () => {
+    const snap = buildCoeSnapshot({ request: withUid, patient, org, settings, controlNo: 'N', now })
+    expect(snap).toMatchObject({ socialWorkerRsw: true, socialWorkerLicense: '0012345', notedBy: { license: '0098765' } })
+    const html = buildEligibilityCertificateHTML(snap)
+    expect(html).toContain('Ana Reyes, RSW')
+    expect(html).toContain('License No.: <strong>0012345</strong>')
+    expect(html).toContain('License No.: <strong>0098765</strong>')
+    expect(html).not.toContain('Licence')
+  })
+  it('an assessor not marked (or with no uid) gets no credential and a blank line', () => {
+    for (const req of [request, { ...request, intakeSheet: { ...sheet, completedByUid: 'nobody' } }]) {
+      const snap = buildCoeSnapshot({ request: req, patient, org, settings, controlNo: 'N', now })
+      expect(snap.socialWorkerRsw).toBe(false)
+      const html = buildEligibilityCertificateHTML(snap)
+      expect(html).toContain('<p class="sig-name">Ana Reyes</p>')
+      expect(html).not.toContain('Ana Reyes, RSW')
+    }
+    const unticked = buildCoeSnapshot({ request: withUid, patient, org, controlNo: 'N', now, settings: { coeSocialWorkers: { sw1: { rsw: false, licenseNo: '9' } } } })
+    expect(unticked).toMatchObject({ socialWorkerRsw: false, socialWorkerLicense: '' })
+  })
+  it('a certificate generated before this change reprints as it was signed (", RSW")', () => {
+    const snap = buildCoeSnapshot({ request, patient, org, controlNo: 'N', now })
+    delete snap.socialWorkerRsw; delete snap.socialWorkerLicense; delete snap.notedBy.license
+    const html = buildEligibilityCertificateHTML(snap)
+    expect(html).toContain('Ana Reyes, RSW')
+    expect(html).not.toContain('undefined')
+  })
+  it('has a Print button that never prints on paper', () => {
+    const html = buildEligibilityCertificateHTML(buildCoeSnapshot({ request, patient, org, controlNo: 'N', now }))
+    expect(html).toMatch(/class="printbar noprint"[\s\S]*id="coe-print-btn"/)
+    expect(html).toMatch(/@media print \{ \.noprint \{ display: none; \}/)
+    expect(html).not.toContain('<script')
   })
 })
 
@@ -57,10 +105,17 @@ describe('buildEligibilityCertificateHTML', () => {
   const snap = buildCoeSnapshot({ request, patient, org, controlNo: 'CRMC-COE-2026-00001', now })
   const html = buildEligibilityCertificateHTML(snap)
   it('uses the Malasakit Annex A wording with the AO 2021-0044 class', () => {
-    expect(html).toContain('CERTIFICATE OF ELIGIBILITY<span class="sub">(INDIGENCY)</span>')
+    // Laid out like the Guarantee Letter (2026-11-27): seals, the class in its own box.
+    expect(html).toContain('<p class="cert-title">Certificate of Eligibility</p>')
+    expect(html).toContain('<p class="cert-sub">(Indigency)</p>')
+    expect(html).toContain('Republic of the Philippines')
+    expect(html).toContain('<svg class="seal"')
+    expect(html).toContain('>MSS</text>')
+    expect(html).toContain('<span class="patient-name">Juan Dela Cruz</span>')
     expect(html).toContain('Malasakit Center Form – Annex A')
-    expect(html).toContain('is an indigent/needy patient')
-    expect(html).toContain('with classification of <strong>Indigent (C3)</strong>')
+    expect(html).toContain('is an indigent/needy patient with classification of')
+    expect(html).toContain('<p class="class-value">Indigent (C3)</p>')
+    expect(html).toContain('pursuant to Department of Health Administrative Order No. 2021-0044')
     expect(html).toContain('issued as a requirement for seeking financial and medical assistance from the Malasakit Center')
     expect(html).toContain('<strong>Laboratory Tests</strong> from <strong>Cotabato Regional and Medical Center</strong>')
     expect(html).toContain('Issued by:')
@@ -73,8 +128,9 @@ describe('buildEligibilityCertificateHTML', () => {
   it('Financially Capable: no indigency wording or Malasakit requirement; outpatient unit in the service', () => {
     const cap = buildEligibilityCertificateHTML({ ...snap, category: 'capable' })
     expect(cap).not.toContain('indigent/needy')
-    expect(cap).not.toContain('(INDIGENCY)')
-    expect(cap).toContain('<strong>Financially Capable</strong>')
+    expect(cap).not.toContain('(Indigency)')
+    expect(cap).not.toContain('Malasakit Center\n')
+    expect(cap).toContain('<p class="class-value">Financially Capable</p>')
     const out = buildEligibilityCertificateHTML({ ...snap, careSetting: 'outpatient', careUnit: 'dialysis' })
     expect(out).toContain('Laboratory Tests — Dialysis Unit')
   })

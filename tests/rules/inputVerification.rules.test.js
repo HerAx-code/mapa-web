@@ -88,6 +88,27 @@ describe('hospitalSettings (verification-call policy)', () => {
   })
 })
 
+// 2026-11-27: the certificate's issuer license and the hospital's RSWs.
+describe('hospitalSettings (certificate signatories)', () => {
+  const setSuper = () => testEnv.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'users', 'superA'), { role: 'super_admin', tenantId: A }))
+  const coe = (extra = {}) => ({
+    tenantId: A, coeNotedByName: 'Maria Santos', coeNotedByTitle: '', coeNotedByLicense: '0098765',
+    coeSocialWorkers: { sw1: { rsw: true, licenseNo: '0012345' } }, updatedBy: 'S', ...extra,
+  })
+  it('the Hospital Admin saves the issuer license and the RSW list', async () => {
+    await setSuper()
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), coe(), { merge: true }))
+    await assertSucceeds(setDoc(doc(as('superA'), 'hospitalSettings', A), coe({ coeSocialWorkers: {} }), { merge: true }))
+  })
+  it('refuses a non-string license, an RSW list that is not a map, and staff admins', async () => {
+    await setSuper()
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), coe({ coeNotedByLicense: 12345 }), { merge: true }))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), coe({ coeNotedByLicense: 'x'.repeat(31) }), { merge: true }))
+    await assertFails(setDoc(doc(as('superA'), 'hospitalSettings', A), coe({ coeSocialWorkers: ['sw1'] }), { merge: true }))
+    await assertFails(setDoc(doc(as('adminA'), 'hospitalSettings', A), coe(), { merge: true }))
+  })
+})
+
 // 2026-11-16: the DOH AO 2021-0044 poverty line, saved by its own card (merge).
 describe('hospitalSettings (poverty line)', () => {
   const line = (extra = {}) => ({ tenantId: A, povertyLinePerCapita: 2577, povertyLineYear: 2023, region: 'BARMM', updatedBy: 'S', ...extra })

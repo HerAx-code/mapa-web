@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteField, serverTimestamp, collection, query, where, onSnapshot } from 'firebase/firestore'
 import { useHospitalSettings } from '../../hooks/useVerification'
 import { policyOf } from '../../utils/verificationPolicy'
 import toast from 'react-hot-toast'
@@ -7,7 +7,7 @@ import Layout from '../../components/Layout'
 import { db } from '../../firebase'
 import { useAuth } from '../../contexts/AuthContext'
 import { applyHospital } from '../../config/org'
-import { currentTenantId, clearBrandingCache } from '../../utils/hospitals'
+import { currentTenantId, clearBrandingCache, tenantWhere } from '../../utils/hospitals'
 import { logAudit } from '../../utils/auditLog'
 import { validateHospital, normalizePrefix } from '../../utils/hospitalConfig'
 import { CASE_TIMERS, caseTimerDays } from '../../shared/caseTimers'
@@ -302,22 +302,50 @@ function CertificateCard({ user, tenantId }) {
   const saved = useHospitalSettings()
   const [name, setName] = useState(null)
   const [title, setTitle] = useState(null)
+  const [license, setLicense] = useState(null)
+  // 2026-11-27: which staff are registered social workers, with their PRC
+  // license numbers ({ [uid]: { rsw, licenseNo } }). Only these get ", RSW"
+  // and a license number on the certificates they assess.
+  const [workers, setWorkers] = useState(null)
+  const [staff, setStaff] = useState([])
   const [saving, setSaving] = useState(false)
   const nameValue = name ?? (saved?.coeNotedByName ?? '')
   const titleValue = title ?? (saved?.coeNotedByTitle ?? '')
+  const licenseValue = license ?? (saved?.coeNotedByLicense ?? '')
+  const workersValue = workers ?? (saved?.coeSocialWorkers ?? {})
+
+  useEffect(() => {
+    if (!tenantId) return undefined
+    const q = query(collection(db, 'users'), ...tenantWhere(), where('role', 'in', ['super_admin', 'staff_admin']))
+    return onSnapshot(q, (snap) => setStaff(
+      snap.docs.map(d => ({ uid: d.id, ...d.data() })).filter(s => s.active !== false)
+        .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
+    ), (e) => console.error('[HospitalSettings] staff list failed', e))
+  }, [tenantId])
+
+  const setWorker = (uid, patch) => setWorkers(() => {
+    const cur = workersValue[uid] ?? { rsw: false, licenseNo: '' }
+    return { ...workersValue, [uid]: { ...cur, ...patch } }
+  })
 
   const save = async () => {
     setSaving(true)
     try {
+      // Keep only staff marked RSW; trim license numbers.
+      const coeSocialWorkers = Object.fromEntries(Object.entries(workersValue)
+        .filter(([, w]) => w?.rsw === true)
+        .map(([uid, w]) => [uid, { rsw: true, licenseNo: String(w.licenseNo ?? '').trim().slice(0, 30) }]))
       await setDoc(doc(db, 'hospitalSettings', tenantId), {
         tenantId, coeNotedByName: nameValue.trim().slice(0, 100), coeNotedByTitle: titleValue.trim().slice(0, 100),
+        coeNotedByLicense: licenseValue.trim().slice(0, 30), coeSocialWorkers,
         updatedAt: serverTimestamp(), updatedBy: user.name ?? '',
       }, { merge: true })
       logAudit(user, {
         action: 'coe_settings_updated', targetType: 'hospital', targetId: tenantId, targetName: tenantId,
-        details: `Certificate of Eligibility issued by: ${nameValue.trim() || '(blank line)'}${titleValue.trim() ? `, ${titleValue.trim()}` : ''}`,
+        details: `Certificate of Eligibility issued by: ${nameValue.trim() || '(blank line)'}${titleValue.trim() ? `, ${titleValue.trim()}` : ''}`
+          + ` · registered social workers: ${Object.keys(coeSocialWorkers).length}`,
       })
-      setName(null); setTitle(null)
+      setName(null); setTitle(null); setLicense(null); setWorkers(null)
       toast.success('Certificate settings saved.')
     } catch (e) {
       console.error(e)
@@ -342,6 +370,38 @@ function CertificateCard({ user, tenantId }) {
         <Field label="Title" hint="Default: Head, Medical Social Work Department">
           <input className="input" maxLength={100} value={titleValue} onChange={(e) => setTitle(e.target.value)} />
         </Field>
+        <Field label="Issuer's PRC license no." hint="Leave blank to print a line to write on">
+          <input className="input" maxLength={30} value={licenseValue} onChange={(e) => setLicense(e.target.value)} />
+        </Field>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-800">Registered social workers</p>
+        <p className="text-xs text-gray-500 mt-1">
+          The certificate prints ", RSW" and a license number after the assessor's name only for staff marked here.
+          Anyone else assesses without them, so the certificate never claims a credential that isn't on record.
+        </p>
+        {staff.length === 0
+          ? <p className="text-xs text-gray-500 mt-2">No active staff accounts.</p>
+          : (
+            <ul className="mt-2 divide-y divide-gray-100 rounded-lg border border-gray-100">
+              {staff.map((s) => {
+                const w = workersValue[s.uid] ?? { rsw: false, licenseNo: '' }
+                return (
+                  <li key={s.uid} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                    <label className="flex flex-1 min-w-[12rem] items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 accent-brand-500" checked={w.rsw === true}
+                        onChange={(e) => setWorker(s.uid, { rsw: e.target.checked })} />
+                      <span>{s.name || s.email}</span>
+                    </label>
+                    <input className="input text-sm w-44" maxLength={30} placeholder="PRC license no."
+                      aria-label={`PRC license number for ${s.name || s.email}`}
+                      disabled={w.rsw !== true} value={w.licenseNo ?? ''}
+                      onChange={(e) => setWorker(s.uid, { licenseNo: e.target.value })} />
+                  </li>
+                )
+              })}
+            </ul>
+          )}
       </div>
       <div className="flex justify-end">
         <button className="btn-primary text-sm" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save certificate settings'}</button>
