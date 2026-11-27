@@ -61,6 +61,29 @@ describe('bucketOf — post-endorsement + terminal', () => {
   })
 })
 
+describe('fully funded with guarantee letters still open (D4: not finished)', () => {
+  it('stays with the agencies until every letter is settled', () => {
+    expect(bucketOf(req({ status: 'fully_funded', openLetters: 2 }))).toBe('endorsed')
+    expect(coarseBucketOf(req({ status: 'fully_funded', openLetters: 2 }))).toBe('awaiting_agency')
+  })
+  it('resolves once no letter is open (or the count is absent on older cases)', () => {
+    for (const openLetters of [0, undefined]) {
+      expect(bucketOf(req({ status: 'fully_funded', openLetters }))).toBe('completed')
+      expect(coarseBucketOf(req({ status: 'fully_funded', openLetters }))).toBe('resolved')
+    }
+  })
+  it('a stamped nothingPendingSince never sends a funded case to "Endorse more or close"', () => {
+    const r = req({ status: 'fully_funded', openLetters: 1, nothingPendingSince: { seconds: 1 } })
+    expect(bucketOf(r)).toBe('endorsed')
+    expect(coarseBucketOf(r)).toBe('awaiting_agency')
+  })
+  it('closed / rejected stay resolved whatever the letter count', () => {
+    for (const status of ['closed', 'rejected']) {
+      expect(coarseBucketOf(req({ status, openLetters: 3 }))).toBe('resolved')
+    }
+  })
+})
+
 describe('bucketOf — edge cases', () => {
   it('a brand-new request with no attached docs sits in verify', () => {
     expect(bucketOf({ status: 'submitted', attachedDocuments: [] })).toBe('verify')

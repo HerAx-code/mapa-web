@@ -11,6 +11,7 @@
 
 import { deriveRequestStage, TERMINAL_REQUEST_STATUSES } from './requestStage'
 import { caseTimerDays } from '../shared/caseTimers'
+import { isRequestFinished } from '../shared/caseState'
 
 // verify → assess → endorse (the pre-endorsement stages), then decide
 // (endorsed, but nothing waiting at any agency: "Endorse more or close",
@@ -55,9 +56,15 @@ export function autoCloseInDays(request, settings = {}, now = Date.now()) {
   return Math.max(0, Math.ceil((ms + days * 86400000 - now) / 86400000))
 }
 
+// Fully funded but a guarantee letter is still open (not redeemed, expired or
+// reversed): the case isn't finished (D4, src/shared/caseState.js), so the
+// queue keeps it with the agencies until every letter is settled.
+const lettersStillOpen = (request) => request?.status === 'fully_funded' && !isRequestFinished(request)
+
 // Which queue bucket a request belongs to.
 export function bucketOf(request) {
   const status = request?.status
+  if (lettersStillOpen(request)) return 'endorsed'
   if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'completed'
   if (isEndorseMoreOrClose(request)) return 'decide'
   if (ENDORSED_STATUSES.includes(status)) return 'endorsed'
@@ -103,6 +110,7 @@ export const COARSE_LABELS = {
 
 export function coarseBucketOf(request) {
   const status = request?.status
+  if (lettersStillOpen(request)) return 'awaiting_agency'
   if (TERMINAL_REQUEST_STATUSES.includes(status)) return 'resolved'
   // Endorsed, nothing waiting at any agency: the hospital's move (P4-A).
   if (isEndorseMoreOrClose(request)) return 'needs_action'
