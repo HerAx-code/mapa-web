@@ -45,7 +45,7 @@ export default function EligibilityCertCard({ request, user }) {
   const readiness = coeReadiness(request)
   const active = cert && cert.status !== 'voided' ? cert : null
   // What would print blank right now (for the warning before generating).
-  const missing = useMemo(() => (patient ? coeMissing(buildCoeSnapshot({ request, patient, controlNo: '' })) : []), [request, patient])
+  const missing = useMemo(() => (patient ? coeMissing(buildCoeSnapshot({ request, patient, settings: settings ?? {}, controlNo: '' })) : []), [request, patient, settings])
 
   const generate = async () => {
     setBusy(true)
@@ -95,6 +95,16 @@ export default function EligibilityCertCard({ request, user }) {
     const url = URL.createObjectURL(new Blob([buildEligibilityCertificateHTML(snapshot)], { type: 'text/html' }))
     const win = window.open(url, '_blank', 'width=900,height=1100')
     if (!win) { URL.revokeObjectURL(url); toast.error('Please allow pop-ups to print the certificate.'); return }
+    // The certificate page carries no script of its own (CSP-safe): this window
+    // (same origin — a blob URL) wires its Print button and opens the print
+    // dialog once it has loaded.
+    win.addEventListener('load', () => {
+      try {
+        win.document.getElementById('coe-print-btn')?.addEventListener('click', () => win.print())
+        win.focus()
+        win.print()
+      } catch (e) { console.warn('[CoE] could not open the print dialog:', e) }
+    }, { once: true })
     setTimeout(() => URL.revokeObjectURL(url), 60_000)
   }
 

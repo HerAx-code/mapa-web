@@ -46,10 +46,58 @@ describe('buildCoeSnapshot', () => {
     expect(snap.validUntil.slice(0, 7)).toBe('2027-11')
   })
   it('lists what will print blank', () => {
-    expect(coeMissing(snap)).toEqual([])
+    const full = buildCoeSnapshot({
+      request: { ...request, intakeSheet: { ...sheet, completedByUid: 'sw1' } }, patient, org, controlNo: 'N', now,
+      settings: { coeNotedByName: 'Maria Santos', coeSocialWorkers: { sw1: { rsw: true, licenseNo: '0012345' } } },
+    })
+    expect(coeMissing(full)).toEqual([])
     // Annex A asks only for name and address: no birthdate/sex blanks.
     const bare = buildCoeSnapshot({ request: { ...request, assistanceType: '', intakeSheet: { ...sheet, hospitalCaseNumber: '' } }, patient: { name: 'X' }, controlNo: 'N' })
-    expect(coeMissing(bare)).toEqual(['address', 'assistance / service', 'hospital case number'])
+    expect(coeMissing(bare)).toEqual([
+      'address', 'assistance / service', 'hospital case number',
+      "the assessor's RSW license (not set in Hospital Settings)", 'the issuing head (Hospital Settings)',
+    ])
+  })
+})
+
+describe('RSW credential and license numbers (2026-11-27)', () => {
+  const withUid = { ...request, intakeSheet: { ...sheet, completedByUid: 'sw1' } }
+  const settings = {
+    coeNotedByName: 'Maria Santos', coeNotedByLicense: '0098765',
+    coeSocialWorkers: { sw1: { rsw: true, licenseNo: ' 0012345 ' }, other: { rsw: true, licenseNo: '1' } },
+  }
+  it('prints ", RSW" and the license only for a staff member marked as an RSW', () => {
+    const snap = buildCoeSnapshot({ request: withUid, patient, org, settings, controlNo: 'N', now })
+    expect(snap).toMatchObject({ socialWorkerRsw: true, socialWorkerLicense: '0012345', notedBy: { license: '0098765' } })
+    const html = buildEligibilityCertificateHTML(snap)
+    expect(html).toContain('Ana Reyes, RSW')
+    expect(html).toContain('License No.: <strong>0012345</strong>')
+    expect(html).toContain('License No.: <strong>0098765</strong>')
+    expect(html).not.toContain('Licence')
+  })
+  it('an assessor not marked (or with no uid) gets no credential and a blank line', () => {
+    for (const req of [request, { ...request, intakeSheet: { ...sheet, completedByUid: 'nobody' } }]) {
+      const snap = buildCoeSnapshot({ request: req, patient, org, settings, controlNo: 'N', now })
+      expect(snap.socialWorkerRsw).toBe(false)
+      const html = buildEligibilityCertificateHTML(snap)
+      expect(html).toContain('Ana Reyes</div>')
+      expect(html).not.toContain('Ana Reyes, RSW')
+    }
+    const unticked = buildCoeSnapshot({ request: withUid, patient, org, controlNo: 'N', now, settings: { coeSocialWorkers: { sw1: { rsw: false, licenseNo: '9' } } } })
+    expect(unticked).toMatchObject({ socialWorkerRsw: false, socialWorkerLicense: '' })
+  })
+  it('a certificate generated before this change reprints as it was signed (", RSW")', () => {
+    const snap = buildCoeSnapshot({ request, patient, org, controlNo: 'N', now })
+    delete snap.socialWorkerRsw; delete snap.socialWorkerLicense; delete snap.notedBy.license
+    const html = buildEligibilityCertificateHTML(snap)
+    expect(html).toContain('Ana Reyes, RSW')
+    expect(html).not.toContain('undefined')
+  })
+  it('has a Print button that never prints on paper', () => {
+    const html = buildEligibilityCertificateHTML(buildCoeSnapshot({ request, patient, org, controlNo: 'N', now }))
+    expect(html).toMatch(/class="printbar noprint"[\s\S]*id="coe-print-btn"/)
+    expect(html).toContain('@media print { .noprint { display: none; } }')
+    expect(html).not.toContain('<script')
   })
 })
 

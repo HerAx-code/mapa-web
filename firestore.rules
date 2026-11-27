@@ -1166,6 +1166,9 @@ service cloud.firestore {
                                                             'povertyLinePerCapita', 'povertyLineYear', 'region',
                                                             'povertyLineCitation', 'povertyLineCitationShort', 'povertyLineStatus',
                                                             'coeNotedByName', 'coeNotedByTitle',
+                                                            // 2026-11-27: the issuer's PRC license and
+                                                            // which staff are RSWs ({ uid: { rsw, licenseNo } }).
+                                                            'coeNotedByLicense', 'coeSocialWorkers',
                                                             'sliceProceedDays', 'nothingPendingDays',
                                                             'updatedAt', 'updatedBy']) &&
                       // Phase 4 (P4-C): the case timers' limits, whole days within
@@ -1181,6 +1184,8 @@ service cloud.firestore {
                       request.resource.data.get('povertyLineStatus', 'current') in ['interim', 'current'] &&
                       request.resource.data.get('coeNotedByName', '') is string && request.resource.data.get('coeNotedByName', '').size() <= 100 &&
                       request.resource.data.get('coeNotedByTitle', '') is string && request.resource.data.get('coeNotedByTitle', '').size() <= 100 &&
+                      request.resource.data.get('coeNotedByLicense', '') is string && request.resource.data.get('coeNotedByLicense', '').size() <= 30 &&
+                      request.resource.data.get('coeSocialWorkers', {}) is map && request.resource.data.get('coeSocialWorkers', {}).size() <= 200 &&
                       request.resource.data.tenantId == tenantId &&
                       (request.resource.data.get('interviewAboveAmount', null) == null ||
                        (request.resource.data.interviewAboveAmount is number && request.resource.data.interviewAboveAmount > 0)) &&

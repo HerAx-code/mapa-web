@@ -49,6 +49,16 @@ const toIso = (ts) => {
   return d && !Number.isNaN(d.getTime()) ? d.toISOString() : null
 }
 
+// The assessor's credential from hospitalSettings.coeSocialWorkers (keyed by
+// uid): { socialWorkerRsw, socialWorkerLicense }. Unknown → not an RSW.
+export function socialWorkerCredential(settings, uid) {
+  const sw = uid ? settings?.coeSocialWorkers?.[uid] : null
+  return {
+    socialWorkerRsw: sw?.rsw === true,
+    socialWorkerLicense: sw?.rsw === true ? String(sw.licenseNo ?? '').trim() : '',
+  }
+}
+
 // The frozen content of one certificate. `patient` is users/{patientId};
 // `org` the case hospital's branding; `settings` its hospitalSettings.
 export function buildCoeSnapshot({ request, patient = {}, org = {}, settings = {}, controlNo, now = new Date() }) {
@@ -88,9 +98,18 @@ export function buildCoeSnapshot({ request, patient = {}, org = {}, settings = {
     validMonths: Number(s.classificationValidMonths) === 12 ? 12 : 6,
     validUntil:  until ? until.toISOString() : null,
     socialWorker: s.completedBy ?? '',
+    // 2026-11-27: ", RSW" and the PRC license number print only for staff the
+    // Hospital Admin marked as registered social workers in Hospital Settings
+    // (hospitalSettings.coeSocialWorkers[uid]); a certificate never claims a
+    // credential MAPA wasn't told about. Looked up by the assessor's uid.
+    ...socialWorkerCredential(settings, s.completedByUid),
     // Annex A: "Issued by" the Head of the Medical Social Work Department
     // (stored as coeNotedBy* in hospitalSettings).
-    notedBy: { name: settings?.coeNotedByName ?? '', title: settings?.coeNotedByTitle || 'Head, Medical Social Work Department' },
+    notedBy: {
+      name: settings?.coeNotedByName ?? '',
+      title: settings?.coeNotedByTitle || 'Head, Medical Social Work Department',
+      license: settings?.coeNotedByLicense ?? '',
+    },
     representative: request.filedBy?.name
       ? { name: request.filedBy.name, relationship: request.filedBy.relationship ?? '' }
       : null,
@@ -104,6 +123,10 @@ export function coeMissing(snap) {
   if (!snap.patient.address) out.push('address')
   if (!snap.assistanceType) out.push('assistance / service')
   if (!snap.hospitalCaseNumber) out.push('hospital case number')
+  // Hospital Settings → Certificate of Eligibility marks who is an RSW.
+  if (snap.socialWorker && snap.socialWorkerRsw === false) out.push("the assessor's RSW license (not set in Hospital Settings)")
+  else if (snap.socialWorkerRsw && !snap.socialWorkerLicense) out.push("the assessor's license number")
+  if (!snap.notedBy?.name) out.push('the issuing head (Hospital Settings)')
   return out
 }
 
@@ -119,6 +142,11 @@ const peso = (n) => {
   const v = Number(n)
   return `₱${v.toLocaleString('en-PH', Number.isInteger(v) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
+
+// ", RSW" after the assessor's name. Certificates generated before
+// 2026-11-27 have no socialWorkerRsw and were signed with ", RSW" printed, so a
+// reprint keeps it; newer ones show it only for a registered social worker.
+const swIsRsw = (snap) => (snap.socialWorkerRsw === undefined ? true : snap.socialWorkerRsw === true)
 
 export function buildEligibilityCertificateHTML(snap) {
   // 2026-11-17: wording follows the Malasakit "Annex A — Certificate of
@@ -157,8 +185,11 @@ export function buildEligibilityCertificateHTML(snap) {
   .bottom { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; margin-top: 24px; align-items: end; }
   .stamp { border: 1px dashed #888; height: 3cm; display: flex; align-items: center; justify-content: center; color: #999; font-size: 11px; }
   .foot { margin-top: 22px; border-top: 1px solid #999; padding-top: 6px; font-size: 10px; color: #444; display: flex; justify-content: space-between; gap: 12px; }
+  .printbar { display: flex; justify-content: flex-end; gap: 8px; align-items: center; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 12px; color: #555; }
+  .printbar button { font: inherit; font-weight: bold; font-size: 14px; padding: 10px 22px; min-height: 44px; border: 0; border-radius: 8px; background: #0f5132; color: #fff; cursor: pointer; }
   @media print { .noprint { display: none; } }
 </style></head><body>
+  <div class="printbar noprint"><span>Print on A4, then sign, stamp and upload the scan.</span><button type="button" id="coe-print-btn">Print</button></div>
   <div class="head">
     <div class="h1">${esc(snap.hospital.name)}</div>
     ${snap.hospital.address ? `<div class="h2">${esc(snap.hospital.address)}</div>` : ''}
@@ -194,16 +225,16 @@ export function buildEligibilityCertificateHTML(snap) {
     <div class="sig">
       <div class="label">Assessed by:</div>
       <div class="line"></div>
-      <div class="name">${snap.socialWorker ? `${esc(snap.socialWorker)}, RSW` : '<span class="blank" style="width:200px"></span>'}</div>
+      <div class="name">${snap.socialWorker ? `${esc(snap.socialWorker)}${swIsRsw(snap) ? ', RSW' : ''}` : '<span class="blank" style="width:200px"></span>'}</div>
       <div class="meta">Medical Social Worker</div>
-      <div class="meta">Licence No.: <span class="blank" style="width:120px"></span></div>
+      <div class="meta">License No.: ${fill(snap.socialWorkerLicense, 120)}</div>
     </div>
     <div class="sig">
       <div class="label">Issued by:</div>
       <div class="line"></div>
       <div class="name">${snap.notedBy.name ? esc(snap.notedBy.name) : '<span class="blank" style="width:200px"></span>'}</div>
       <div class="meta">${esc(snap.notedBy.title || 'Head, Medical Social Work Department')}</div>
-      <div class="meta">Licence No.: <span class="blank" style="width:120px"></span></div>
+      <div class="meta">License No.: ${fill(snap.notedBy.license, 120)}</div>
     </div>
   </div>
 
