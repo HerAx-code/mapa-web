@@ -781,6 +781,10 @@ export default function TrackStatus() {
         {/* ── Past Applications ── */}
         {!loading && tab === 'past' && (
           <div className="space-y-3">
+            {/* A finished case's signed Certificate of Eligibility stays valid
+                6–12 months, so the patient keeps access to it here. The notice
+                renders nothing unless the hospital uploaded the signed copy. */}
+            {pastRequests.map(r => <EligibilityCertNotice key={`coe-${r.id}`} request={r} />)}
             {pastApps.length === 0 ? (
               <div className="card p-8 text-center">
                 <p className="text-sm text-gray-500">{t('patient.track.noPast')}</p>
