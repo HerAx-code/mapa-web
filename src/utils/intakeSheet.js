@@ -71,14 +71,41 @@ export const relationshipLabel = (value) =>
 
 // Monthly expense lines, in display order. All six are required on the
 // patient wizard (₱0 allowed).
+//
+// 2026-11-27 (Tier 1 relabel; reports/Intake sheet expense labels.md): one
+// label for staff and patients (`label` === `en`, so the two views never name a
+// line differently), plus a one-line example hint in each language. The stored
+// keys are unchanged, so existing sheets read the same. Filipino labels
+// Pagkain / Pag-aaral / Iba pa follow the Malasakit Unified Intake Sheet
+// (JAO 2020-0001 Annex B); the other Filipino wording is unsourced and is to be
+// confirmed with the gateway's social workers before release.
 export const EXPENSE_FIELDS = [
-  { key: 'food',      label: 'Food',          en: 'Food',          fil: 'Pagkain' },
-  { key: 'utilities', label: 'Utilities',     en: 'Water & power', fil: 'Tubig at kuryente' },
-  { key: 'rent',      label: 'Rent',          en: 'Rent',          fil: 'Upa sa bahay' },
-  { key: 'education', label: 'Education',     en: 'Education',     fil: 'Pag-aaral' },
-  { key: 'medicine',  label: 'Medicine',      en: 'Medicine',      fil: 'Gamot' },
-  { key: 'other',     label: 'Other',         en: 'Other',         fil: 'Iba pa' },
+  { key: 'food', label: 'Food', en: 'Food', fil: 'Pagkain',
+    hintEn: 'For example, rice, ulam, milk, baby formula',
+    hintFil: 'Halimbawa: bigas, ulam, gatas, gatas ng bata' },
+  { key: 'utilities', label: 'Electricity and water', en: 'Electricity and water', fil: 'Kuryente at tubig',
+    hintEn: 'Include LPG, charcoal or firewood for cooking',
+    hintFil: 'Kasama ang LPG, uling o kahoy na panluto' },
+  { key: 'rent', label: 'Rent or house payment', en: 'Rent or house payment', fil: 'Upa o hulog sa bahay',
+    hintEn: 'Rent or monthly house payment; 0 if you own it or stay for free',
+    hintFil: 'Upa o buwanang hulog; 0 kung sariling bahay o nakikitira' },
+  { key: 'education', label: 'School costs', en: 'School costs', fil: 'Pag-aaral',
+    hintEn: 'For example, baon, school fare, projects, fees',
+    hintFil: 'Halimbawa: baon, pamasahe ng bata, proyekto, bayad sa eskwela' },
+  // Not the bill under assessment: counting it here would inflate the shortfall.
+  { key: 'medicine', label: 'Medicine and check-ups', en: 'Medicine and check-ups', fil: 'Gamot at pagpapagamot',
+    hintEn: 'Regular medicine and check-ups, not this hospital bill',
+    hintFil: 'Maintenance na gamot at check-up, hindi ang bill na ito' },
+  { key: 'other', label: 'Other regular costs', en: 'Other regular costs', fil: 'Iba pa',
+    hintEn: 'For example, fare, phone load, soap, loan payments',
+    hintFil: 'Halimbawa: pamasahe, load, sabon, bayad-utang' },
 ]
+
+// The Expenses section's one instruction (patient wizard).
+export const EXPENSE_INSTRUCTION = {
+  en: 'Your family\'s costs in a usual month. An estimate is OK. Put 0 if you have none.',
+  fil: 'Gastos ng pamilya sa karaniwang buwan. Puwedeng tantiya lang. Ilagay ang 0 kung wala.',
+}
 
 // Most household members (besides the patient) the wizard accepts.
 export const MAX_HOUSEHOLD_OTHERS = 20

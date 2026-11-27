@@ -1556,8 +1556,8 @@ export default function IntakeSheet({ collectionName = 'applications', patientFa
               </div>
               {verifyBar('expenses')}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {EXPENSE_FIELDS.map(({ key: k, label }) => (
-                  <Field key={k} label={label}>
+                {EXPENSE_FIELDS.map(({ key: k, label, hintEn }) => (
+                  <Field key={k} label={label} hint={hintEn}>
                     <PesoInput
                       value={sheet.expenses?.[k] ?? ''}
                       onChange={setExp(k)}

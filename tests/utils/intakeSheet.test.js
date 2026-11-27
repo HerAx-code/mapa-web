@@ -3,6 +3,7 @@ import {
   meansTestSuggestion, sheetSuggestion, povertyBasis, classCutoffs, maifipCatastrophic, meansCategoryLabel, isLegacyCategory,
   isIntakeComplete, needsMeansTestReason, billIncomeMonths, relationshipLabel, requiredFieldsStatus, factChanges, sameFact,
   mergeRemoteFacts, factsOf, sectionVerification, allSectionsVerified, sectionFacts,
+  EXPENSE_FIELDS, EXPENSE_INSTRUCTION,
 } from '../../src/utils/intakeSheet.js'
 
 // DOH AO 2021-0044 bands against a ₱2,500 line: C3 < 3,500 · C2 ≤ 4,500 · C1 ≤ 5,500 · capable above.
@@ -164,7 +165,7 @@ describe('factChanges (improvement A3)', () => {
     const rows = factChanges(before, after)
     expect(rows).toContainEqual({ key: 'monthlyIncome', label: 'Monthly income', from: '₱8,000', to: '₱3,000' })
     expect(rows).toContainEqual({ key: 'employmentType', label: 'Work situation', from: 'Employed', to: 'Unemployed' })
-    expect(rows).toContainEqual({ key: 'expenses.rent', label: 'Expenses: Rent', from: '₱0', to: '₱1,500' })
+    expect(rows).toContainEqual({ key: 'expenses.rent', label: 'Expenses: Rent or house payment', from: '₱0', to: '₱1,500' })
     expect(rows.find(r => r.key === 'familyMembers').to).toBe('Ana (Son / Daughter, 9); Ben (Spouse, 40)')
     expect(rows.some(r => r.key === 'expenses.food')).toBe(false)
   })
@@ -244,5 +245,31 @@ describe('section verification (revision 9)', () => {
     expect(isIntakeComplete(verified)).toBe(true)
     const keys = requiredFieldsStatus({ ...done, verificationRequired: true }).map(f => f.key)
     expect(keys).toEqual(expect.arrayContaining(['verify.family', 'verify.income', 'verify.expenses', 'verify.medical']))
+  })
+})
+
+// 2026-11-27 Tier 1 relabel (reports/Intake sheet expense labels.md).
+describe('EXPENSE_FIELDS labels and hints', () => {
+  it('keeps the six stored keys, so existing sheets read the same', () => {
+    expect(EXPENSE_FIELDS.map(f => f.key)).toEqual(['food', 'utilities', 'rent', 'education', 'medicine', 'other'])
+  })
+  it('staff and patients see the same English label (no "Utilities" vs "Water & power")', () => {
+    for (const f of EXPENSE_FIELDS) expect(f.label).toBe(f.en)
+    expect(EXPENSE_FIELDS.map(f => f.label)).not.toContain('Utilities')
+  })
+  it('every line has a short hint in English and Filipino', () => {
+    for (const f of EXPENSE_FIELDS) {
+      expect(f.fil).toBeTruthy()
+      expect(f.hintEn).toBeTruthy()
+      expect(f.hintFil).toBeTruthy()
+      expect(f.hintEn.length).toBeLessThanOrEqual(70)
+      expect(f.hintEn.endsWith('.')).toBe(false)
+    }
+  })
+  it('medicine excludes the bill under assessment; the instruction says usual month, estimate, 0', () => {
+    expect(EXPENSE_FIELDS.find(f => f.key === 'medicine').hintEn).toMatch(/not this hospital bill/)
+    expect(EXPENSE_INSTRUCTION.en).toMatch(/usual month/)
+    expect(EXPENSE_INSTRUCTION.en).toMatch(/estimate/)
+    expect(EXPENSE_INSTRUCTION.en).toMatch(/Put 0/)
   })
 })
