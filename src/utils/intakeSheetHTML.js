@@ -4,7 +4,7 @@
 
 import { tsToDate } from './dates'
 import { ORG } from '../config/org'
-import { relationshipLabel, shortfallLabel, SUPPORTING_CIRCUMSTANCES } from './intakeSheet'
+import { relationshipLabel, shortfallLabel, SUPPORTING_CIRCUMSTANCES, EXPENSE_FIELDS } from './intakeSheet'
 import { classificationSummary } from './classificationReuse'
 
 // HTML-escape every stored value before it goes into the markup. Most of the
@@ -73,8 +73,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser, org = OR
   const seal = sealFor(org)
   const s = sheet ?? {}
   const exp = s.expenses ?? {}
-  const totalExp = ['food','utilities','rent','education','medicine','other']
-    .reduce((sum, k) => sum + (Number(exp[k]) || 0), 0)
+  const totalExp = EXPENSE_FIELDS.reduce((sum, f) => sum + (Number(exp[f.key]) || 0), 0)
 
   const author = s.completedBy || currentUser?.name || ''
 
@@ -271,12 +270,7 @@ export function buildIntakeSheetHTML({ app, sheet, agency, currentUser, org = OR
   <!-- D. Monthly Expenses -->
   <div class="section-header">D. Monthly Expenses</div>
   <div class="field-grid">
-    <div class="field"><span class="field-label">Food:</span> <span class="field-value">${peso(exp.food)}</span></div>
-    <div class="field"><span class="field-label">Utilities:</span> <span class="field-value">${peso(exp.utilities)}</span></div>
-    <div class="field"><span class="field-label">Rent:</span> <span class="field-value">${peso(exp.rent)}</span></div>
-    <div class="field"><span class="field-label">Education:</span> <span class="field-value">${peso(exp.education)}</span></div>
-    <div class="field"><span class="field-label">Medicine:</span> <span class="field-value">${peso(exp.medicine)}</span></div>
-    <div class="field"><span class="field-label">Other:</span> <span class="field-value">${peso(exp.other)}</span></div>
+    ${EXPENSE_FIELDS.map(f => `<div class="field"><span class="field-label">${esc(f.label)}:</span> <span class="field-value">${peso(exp[f.key])}</span></div>`).join('\n    ')}
     <div class="field full" style="border-bottom: none; padding-top: 6px;">
       <span class="field-label">Total Monthly Expenses:</span>
       <span class="field-value"><strong>₱${totalExp.toLocaleString()}</strong></span>

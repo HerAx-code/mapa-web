@@ -14,7 +14,7 @@ import SearchableSelect from '../../components/ui/SearchableSelect'
 import { useAuth } from '../../contexts/AuthContext'
 import Layout from '../../components/Layout'
 import {
-  blankSheet, EMPTY_FAMILY_MEMBER, RELATIONSHIPS, EXPENSE_FIELDS, MAX_HOUSEHOLD_OTHERS,
+  blankSheet, EMPTY_FAMILY_MEMBER, RELATIONSHIPS, EXPENSE_FIELDS, EXPENSE_INSTRUCTION, MAX_HOUSEHOLD_OTHERS,
   SHORTFALL_SOURCES, EXPENSE_DOUBLE_CHECK_RATIO, expenseTotal, monthlyShortfall, expensesLookMistyped,
   FACT_SECTIONS, sectionVerification,
 } from '../../utils/intakeSheet'
@@ -664,17 +664,19 @@ export default function IntakeWizard() {
           {/* ── Expenses ── */}
           {cur.key === 'expenses' && (
             <>
-              <p className="text-sm text-gray-500">{L('About how much do you spend each month? Enter 0 if you don\'t pay for something.', 'Halos magkano ang gastos kada buwan? Ilagay ang 0 kung wala kayong binabayaran dito.')}</p>
+              <p className="text-sm text-gray-500">{L(EXPENSE_INSTRUCTION.en, EXPENSE_INSTRUCTION.fil)}</p>
               {EXPENSE_FIELDS.map(row => {
                 const f = `expenses.${row.key}`
+                const hintId = `${fieldId(f)}-hint`
                 return (
                   <div key={row.key}>
                     <label htmlFor={fieldId(f)} className="block text-base font-medium text-gray-800">
-                      {L(row.en, row.fil)} <span className="text-red-400">*</span>
+                      {L(row.en, row.fil)} <span className="sr-only">{L('in pesos', 'sa piso')}</span> <span className="text-red-400">*</span>
                     </label>
+                    <p id={hintId} className="text-sm text-gray-500">{L(row.hintEn, row.hintFil)}</p>
                     <div className="relative mt-1">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base">₱</span>
-                      <input id={fieldId(f)} type="number" min="0" inputMode="numeric"
+                      <input id={fieldId(f)} aria-describedby={hintId} type="number" min="0" inputMode="numeric"
                         className={`${inputCls} pl-8 ${errorField === f ? inputErrCls : ''}`}
                         value={sheet.expenses?.[row.key] ?? ''} onChange={setExp(row.key)} placeholder="0" />
                     </div>
