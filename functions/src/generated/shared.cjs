@@ -238,12 +238,55 @@ var LEGACY_MEANS_CATEGORIES = {
 };
 var isLegacyCategory = (v) => !!v && v in LEGACY_MEANS_CATEGORIES;
 var EXPENSE_FIELDS = [
-  { key: "food", label: "Food", en: "Food", fil: "Pagkain" },
-  { key: "utilities", label: "Utilities", en: "Water & power", fil: "Tubig at kuryente" },
-  { key: "rent", label: "Rent", en: "Rent", fil: "Upa sa bahay" },
-  { key: "education", label: "Education", en: "Education", fil: "Pag-aaral" },
-  { key: "medicine", label: "Medicine", en: "Medicine", fil: "Gamot" },
-  { key: "other", label: "Other", en: "Other", fil: "Iba pa" }
+  {
+    key: "food",
+    label: "Food",
+    en: "Food",
+    fil: "Pagkain",
+    hintEn: "For example, rice, ulam, milk, baby formula",
+    hintFil: "Halimbawa: bigas, ulam, gatas, gatas ng bata"
+  },
+  {
+    key: "utilities",
+    label: "Electricity and water",
+    en: "Electricity and water",
+    fil: "Kuryente at tubig",
+    hintEn: "Include LPG, charcoal or firewood for cooking",
+    hintFil: "Kasama ang LPG, uling o kahoy na panluto"
+  },
+  {
+    key: "rent",
+    label: "Rent or house payment",
+    en: "Rent or house payment",
+    fil: "Upa o hulog sa bahay",
+    hintEn: "Rent or monthly house payment; 0 if you own it or stay for free",
+    hintFil: "Upa o buwanang hulog; 0 kung sariling bahay o nakikitira"
+  },
+  {
+    key: "education",
+    label: "School costs",
+    en: "School costs",
+    fil: "Pag-aaral",
+    hintEn: "For example, baon, school fare, projects, fees",
+    hintFil: "Halimbawa: baon, pamasahe ng bata, proyekto, bayad sa eskwela"
+  },
+  // Not the bill under assessment: counting it here would inflate the shortfall.
+  {
+    key: "medicine",
+    label: "Medicine and check-ups",
+    en: "Medicine and check-ups",
+    fil: "Gamot at pagpapagamot",
+    hintEn: "Regular medicine and check-ups, not this hospital bill",
+    hintFil: "Maintenance na gamot at check-up, hindi ang bill na ito"
+  },
+  {
+    key: "other",
+    label: "Other regular costs",
+    en: "Other regular costs",
+    fil: "Iba pa",
+    hintEn: "For example, fare, phone load, soap, loan payments",
+    hintFil: "Halimbawa: pamasahe, load, sabon, bayad-utang"
+  }
 ];
 var MAX_HOUSEHOLD_OTHERS = 20;
 var expenseTotal = (s) => EXPENSE_FIELDS.reduce((sum, f) => sum + (Number(s?.expenses?.[f.key]) || 0), 0);
